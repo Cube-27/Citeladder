@@ -19,7 +19,7 @@ type OpenApiParameter = {
   schema: JsonSchema;
 };
 
-type OpenApiContent = Record<string, { schema: JsonSchema }>;
+type OpenApiContent = Record<string, { schema: JsonSchema; example?: unknown }>;
 
 type OpenApiOperation = {
   tags?: string[];

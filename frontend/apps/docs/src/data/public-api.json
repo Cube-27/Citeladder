@@ -9147,6 +9147,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Project"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "name": "Example name",
+                  "brand_name": "Example brand name",
+                  "website_url": "https://example.com/page",
+                  "industry": "Example industry",
+                  "subindustry": "Example subindustry",
+                  "primary_market": "Example primary market",
+                  "country_code": "Example country code",
+                  "language_code": "Example language code",
+                  "benchmark_mode": "consumer_like",
+                  "default_repetitions": 1,
+                  "brand": {
+                    "aliases": ["Example aliases"],
+                    "logo_url": null,
+                    "matching": {
+                      "mode": "always",
+                      "context_terms": [],
+                      "exclusion_phrases": [],
+                      "common_word": false
+                    }
+                  },
+                  "owned_domains": ["example.com"],
+                  "unintended_domains": ["example.com"],
+                  "competitors": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000003",
+                      "name": "Example name",
+                      "aliases": ["Example aliases"],
+                      "domains": ["example.com"],
+                      "logo_url": null,
+                      "matching": {
+                        "mode": null,
+                        "context_terms": null,
+                        "exclusion_phrases": null,
+                        "common_word": null
+                      }
+                    }
+                  ],
+                  "prompt_sets": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000004",
+                      "project_id": "00000000-0000-4000-8000-000000000005",
+                      "name": "Example name",
+                      "kind": "brand",
+                      "description": "Example description",
+                      "prompt_count": 1,
+                      "prompts": [null],
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -9164,6 +9220,8 @@
             }
           }
         ],
+        "summary": "Get a project",
+        "description": "Returns one project: its brand, website, markets, owned domains, competitors, prompt sets and the defaults its audits start from. A project outside the key's reach answers 404.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9218,7 +9276,17 @@
                     ],
                     "additionalProperties": false
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": null,
+                    "label": "Example label",
+                    "country_code": "Example country code",
+                    "language_code": "Example language code",
+                    "is_default": true,
+                    "created_at": null
+                  }
+                ]
               }
             }
           }
@@ -9235,6 +9303,8 @@
             }
           }
         ],
+        "summary": "List markets",
+        "description": "Lists the markets a project measures, each a country and language pair. The default market is flagged, and visibility reads that take a market filter accept these ids.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9248,6 +9318,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PagesPage"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "site_url_id": "00000000-0000-4000-8000-000000000001",
+                      "crawl_id": "00000000-0000-4000-8000-000000000002",
+                      "normalized_url": "https://example.com/page",
+                      "display_url": "https://example.com/page",
+                      "title": null,
+                      "monitored": true,
+                      "analysis_status": "not_selected",
+                      "error_code": "Example error code",
+                      "linked_from": [null],
+                      "issue_count": null,
+                      "web_fundamentals_score": null,
+                      "web_fundamentals_coverage": null,
+                      "web_fundamentals_state": "measured",
+                      "aeo_readiness_score": null,
+                      "aeo_measurement_coverage": null,
+                      "aeo_measurement_state": "measured",
+                      "aeo_measurement_reason": "Example aeo measurement reason",
+                      "main_content_indexable": null,
+                      "robots_excluded": true,
+                      "last_audited": null,
+                      "page_kind": null,
+                      "inbound_count": null,
+                      "main_content_inbound_count": null,
+                      "depth_from_home": null
+                    }
+                  ],
+                  "next_cursor": null,
+                  "root_errors": [
+                    {
+                      "method": "Example method",
+                      "target": "Example target",
+                      "outcome": "Example outcome",
+                      "error_code": "Example error code",
+                      "status_code": null,
+                      "latency_ms": null
+                    }
+                  ]
                 }
               }
             }
@@ -9336,6 +9447,8 @@
             }
           }
         ],
+        "summary": "List crawled pages",
+        "description": "Lists the pages one site crawl found, one page at a time, with filters for status, page kind and monitoring.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9349,6 +9462,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteIssuesPage"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "group_id": "00000000-0000-4000-8000-000000000001",
+                      "crawl_id": "00000000-0000-4000-8000-000000000002",
+                      "rule_id": "Example rule id",
+                      "page_kinds": ["Example page kinds"],
+                      "dimension": "technical",
+                      "category": "Example category",
+                      "severity": "critical",
+                      "finding_class": "defect",
+                      "title": "Example title",
+                      "description": "Example description",
+                      "remediation": "Example remediation",
+                      "remediation_route": "Example remediation route",
+                      "affected_url_count": 1,
+                      "analyzer_version": "Example analyzer version",
+                      "rule_version": "Example rule version",
+                      "created_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "next_cursor": null,
+                  "summary": {
+                    "issue_count": 1,
+                    "defect_issue_type_count": 1,
+                    "advisory_issue_type_count": 1,
+                    "occurrence_count": 1,
+                    "severity_counts": {
+                      "example": 1
+                    },
+                    "dimension_counts": {
+                      "example": 1
+                    },
+                    "affected_url_count": 1,
+                    "monitored_affected_url_count": 1,
+                    "section_counts": {
+                      "example": 1
+                    }
+                  }
                 }
               }
             }
@@ -9496,6 +9649,8 @@
             }
           }
         ],
+        "summary": "List Site Health issues",
+        "description": "Lists the issue groups one crawl found, with severity, category and how many pages each affects.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9509,6 +9664,52 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteIssueDetail"
+                },
+                "example": {
+                  "group_id": "00000000-0000-4000-8000-000000000001",
+                  "crawl_id": "00000000-0000-4000-8000-000000000002",
+                  "rule_id": "Example rule id",
+                  "dimension": "technical",
+                  "category": "Example category",
+                  "severity": "critical",
+                  "finding_class": "defect",
+                  "title": "Example title",
+                  "description": "Example description",
+                  "remediation": "Example remediation",
+                  "remediation_route": "Example remediation route",
+                  "occurrences": [
+                    {
+                      "occurrence_id": "00000000-0000-4000-8000-000000000003",
+                      "evaluation_id": "00000000-0000-4000-8000-000000000004",
+                      "crawl_id": "00000000-0000-4000-8000-000000000005",
+                      "rule_id": "Example rule id",
+                      "site_url_id": "00000000-0000-4000-8000-000000000006",
+                      "normalized_url": "https://example.com/page",
+                      "display_url": "https://example.com/page",
+                      "title": null,
+                      "page_kind": null,
+                      "dimension": "technical",
+                      "category": "Example category",
+                      "severity": "critical",
+                      "finding_class": "defect",
+                      "issue_title": "Example issue title",
+                      "description": "Example description",
+                      "remediation": "Example remediation",
+                      "reason_code": "Example reason code",
+                      "evidence": {
+                        "example": null
+                      },
+                      "analyzer_version": "Example analyzer version",
+                      "rule_version": "Example rule version",
+                      "created_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "occurrence_count": 1,
+                  "affected_url_count": 1,
+                  "analyzer_version": "Example analyzer version",
+                  "rule_version": "Example rule version",
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "next_cursor": null
                 }
               }
             }
@@ -9573,6 +9774,8 @@
             }
           }
         ],
+        "summary": "Get a Site Health issue",
+        "description": "Returns one issue group of a crawl with the pages it affects and the evidence for each.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9586,6 +9789,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteHealthDashboard"
+                },
+                "example": {
+                  "project_id": "00000000-0000-4000-8000-000000000001",
+                  "crawl": null,
+                  "score_summary": null,
+                  "phase": "empty",
+                  "snapshot_id": null,
+                  "quota": {
+                    "used": 1,
+                    "limit": 1
+                  },
+                  "root_errors": [
+                    {
+                      "method": "Example method",
+                      "target": "Example target",
+                      "outcome": "Example outcome",
+                      "error_code": "Example error code",
+                      "status_code": null,
+                      "latency_ms": null
+                    }
+                  ]
                 }
               }
             }
@@ -9620,6 +9844,8 @@
             }
           }
         ],
+        "summary": "Get Site Health",
+        "description": "Returns the Site Health dashboard for a crawl: scores, issue counts and what changed since the crawl before it. Pass crawl_id to read an earlier crawl.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9633,6 +9859,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AiTrafficPages"
+                },
+                "example": {
+                  "window_start": "Example window start",
+                  "window_end": "Example window end",
+                  "items": [
+                    {
+                      "url_hash": "Example url hash",
+                      "canonical_url": "https://example.com/page",
+                      "display_path": "Example display path",
+                      "folder": "Example folder",
+                      "resource_class": "Example resource class",
+                      "crawl": {
+                        "state": "not_connected",
+                        "value": null,
+                        "coverage": null,
+                        "reason": null
+                      },
+                      "referrals": {
+                        "state": "not_connected",
+                        "value": null,
+                        "coverage": null,
+                        "reason": null
+                      },
+                      "citations": {
+                        "state": "not_connected",
+                        "value": null,
+                        "coverage": null,
+                        "reason": null
+                      },
+                      "findings": {
+                        "state": "not_connected",
+                        "value": null,
+                        "coverage": null,
+                        "reason": null
+                      },
+                      "key_events": null,
+                      "last_crawl": null,
+                      "errors_4xx": null,
+                      "errors_5xx": null
+                    }
+                  ],
+                  "next_cursor": null,
+                  "observed_crawl_coverage": {
+                    "state": "Example state",
+                    "share": null,
+                    "known_pages": 1,
+                    "observed_pages": null,
+                    "inventory_date": null,
+                    "inventory_complete": true,
+                    "sample_mode": true,
+                    "label": "Observed crawl coverage"
+                  }
                 }
               }
             }
@@ -9821,6 +10099,8 @@
             }
           }
         ],
+        "summary": "List AI traffic pages",
+        "description": "Lists the pages AI bots requested, with request counts, for a date range and filters.",
         "x-citeladder-scope": "read"
       }
     },
@@ -9834,6 +10114,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AiTrafficOverview"
+                },
+                "example": {
+                  "crawl": {
+                    "unit": "requests",
+                    "identity_level": "path",
+                    "connection": "not_connected",
+                    "coverage": "complete",
+                    "reporting_timezone": "Example reporting timezone",
+                    "last_processed_at": null,
+                    "requests": null,
+                    "pages": null,
+                    "active_bots": null,
+                    "error_share": null,
+                    "failed_verification_requests": null,
+                    "series": [
+                      {
+                        "date": "Example date",
+                        "purpose": null,
+                        "requests": 1
+                      }
+                    ]
+                  },
+                  "referrals": {
+                    "project_id": "00000000-0000-4000-8000-000000000001",
+                    "window_start": null,
+                    "window_end": null,
+                    "granularity": "day",
+                    "referral_volume": [
+                      {
+                        "date": null,
+                        "value": null
+                      }
+                    ],
+                    "referral_share": [
+                      {
+                        "date": null,
+                        "value": null
+                      }
+                    ],
+                    "sources": [
+                      {
+                        "ai_source": null,
+                        "sessions": null,
+                        "share": null
+                      }
+                    ],
+                    "analyzer_version": "Example analyzer version",
+                    "formula_version": "Example formula version",
+                    "scope": "property-wide",
+                    "reporting_timezone": null,
+                    "currency_code": null,
+                    "analytics_quality": {},
+                    "unattributed_landing": null,
+                    "source_measures": [],
+                    "channel_comparison": [],
+                    "landing_pages": []
+                  },
+                  "citations": {
+                    "unit": "tracked_citations",
+                    "label": "Example label",
+                    "state": "measured",
+                    "count": 1,
+                    "sources": [
+                      {
+                        "audit_id": null,
+                        "analyzer_version": null
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -10015,6 +10364,8 @@
             }
           }
         ],
+        "summary": "Get AI traffic overview",
+        "description": "Returns visits from AI bots and assistants over a date range, split by purpose and verification status.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10028,6 +10379,50 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CrawlCoverageResponse"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "source_id": "00000000-0000-4000-8000-000000000001",
+                      "reporting_date": "Example reporting date",
+                      "reporting_timezone": "Example reporting timezone",
+                      "coverage": "complete",
+                      "reason": "Example reason",
+                      "batch_count": 1,
+                      "heartbeat_count": 1,
+                      "max_gap_minutes": 1
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000002",
+                      "kind": "webhook",
+                      "setup": "cloudflare_worker",
+                      "preset": "Example preset",
+                      "buffer_interval_seconds": null,
+                      "format": "Example format",
+                      "collection_point": "Example collection point",
+                      "sampling": {
+                        "kind": null
+                      },
+                      "origin": "Example origin",
+                      "host": "Example host",
+                      "status": "active",
+                      "state": "active",
+                      "stall_reason": null,
+                      "stalled_at": null,
+                      "pull": null,
+                      "token_prefix": null,
+                      "connection": "not_connected",
+                      "last_accepted_batch": null,
+                      "last_processed_at": null,
+                      "rejected_lines": 1,
+                      "overlapping_lines": 1,
+                      "unsupported_uploads": 1,
+                      "unsupported_batches": 1
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -10209,6 +10604,8 @@
             }
           }
         ],
+        "summary": "Get AI traffic coverage",
+        "description": "Returns how completely each log source collected AI traffic over a date range: coverage per reporting date with batch and heartbeat counts, and each source’s collection state. Per-page requests are in the AI traffic pages list.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10222,6 +10619,100 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisibilityAdsResponse"
+                },
+                "example": {
+                  "state": "value",
+                  "source_audit_ids": ["00000000-0000-4000-8000-000000000001"],
+                  "parser_versions": ["Example parser versions"],
+                  "metrics_version": "Example metrics version",
+                  "presence": {
+                    "answers": 1,
+                    "answers_with_ads": 1,
+                    "rate": null
+                  },
+                  "engines": [
+                    {
+                      "engine": "Example engine",
+                      "applicability": "applicable",
+                      "answers": 1,
+                      "presence": null
+                    }
+                  ],
+                  "brand": {
+                    "appearances": 1,
+                    "share": null,
+                    "best_rank": null
+                  },
+                  "advertisers_seen": 1,
+                  "advertisers": [
+                    {
+                      "name": "Example name",
+                      "domain": "example.com",
+                      "ownership": "owned",
+                      "appearances": 1,
+                      "prompts": 1,
+                      "share": 1,
+                      "first_seen_at": "2026-01-15T09:30:00.000Z",
+                      "last_seen_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "creatives": {
+                    "items": [
+                      {
+                        "advertiser_name": "Example advertiser name",
+                        "advertiser_domain": "example.com",
+                        "ownership": "owned",
+                        "title": "Example title",
+                        "snippet": "Example snippet",
+                        "landing_url": "https://example.com/page",
+                        "appearances": 1,
+                        "prompts": 1,
+                        "first_seen_at": "2026-01-15T09:30:00.000Z",
+                        "last_seen_at": "2026-01-15T09:30:00.000Z"
+                      }
+                    ],
+                    "total": 1,
+                    "next_cursor": null
+                  },
+                  "prompts": [
+                    {
+                      "prompt": "Example prompt",
+                      "topic": "Example topic",
+                      "presence": {
+                        "answers": 1,
+                        "answers_with_ads": 1,
+                        "rate": null
+                      },
+                      "ads_seen": 1,
+                      "top_advertiser": null,
+                      "competitor_ad_answers": {
+                        "brand_mentioned": 1,
+                        "brand_not_mentioned": 1
+                      }
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "key": "Example key",
+                      "label": "Example label",
+                      "presence": {
+                        "answers": 1,
+                        "answers_with_ads": 1,
+                        "rate": null
+                      }
+                    }
+                  ],
+                  "runs": [
+                    {
+                      "key": "Example key",
+                      "label": "Example label",
+                      "presence": {
+                        "answers": 1,
+                        "answers_with_ads": 1,
+                        "rate": null
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -10372,6 +10863,8 @@
             }
           }
         ],
+        "summary": "List ads in answers",
+        "description": "Lists the ads that appeared in AI answers for a selection, with a summary of the creatives and the answers they appeared in.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10385,6 +10878,195 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PerceptionResponse"
+                },
+                "example": {
+                  "state": "value",
+                  "reason": null,
+                  "source_audit_ids": ["00000000-0000-4000-8000-000000000001"],
+                  "brand": null,
+                  "coverage": {
+                    "mentions": 1,
+                    "classified": 1,
+                    "pending": 1,
+                    "not_assessable": 1,
+                    "low_confidence": 1,
+                    "unavailable": [
+                      {
+                        "reason": "model_not_configured",
+                        "count": 1
+                      }
+                    ]
+                  },
+                  "entities": [
+                    {
+                      "name": "Example name",
+                      "is_brand": true,
+                      "score": {
+                        "positive": null,
+                        "neutral": null,
+                        "negative": null,
+                        "mixed": null,
+                        "classified": null,
+                        "positive_share": null,
+                        "negative_share": null,
+                        "net_sentiment": null
+                      },
+                      "coverage": {
+                        "mentions": null,
+                        "classified": null,
+                        "pending": null,
+                        "not_assessable": null,
+                        "low_confidence": null,
+                        "unavailable": null
+                      }
+                    }
+                  ],
+                  "engines": [
+                    {
+                      "key": "Example key",
+                      "label": "Example label",
+                      "score": {
+                        "positive": null,
+                        "neutral": null,
+                        "negative": null,
+                        "mixed": null,
+                        "classified": null,
+                        "positive_share": null,
+                        "negative_share": null,
+                        "net_sentiment": null
+                      },
+                      "coverage": {
+                        "mentions": null,
+                        "classified": null,
+                        "pending": null,
+                        "not_assessable": null,
+                        "low_confidence": null,
+                        "unavailable": null
+                      }
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "key": "Example key",
+                      "label": "Example label",
+                      "score": {
+                        "positive": null,
+                        "neutral": null,
+                        "negative": null,
+                        "mixed": null,
+                        "classified": null,
+                        "positive_share": null,
+                        "negative_share": null,
+                        "net_sentiment": null
+                      },
+                      "coverage": {
+                        "mentions": null,
+                        "classified": null,
+                        "pending": null,
+                        "not_assessable": null,
+                        "low_confidence": null,
+                        "unavailable": null
+                      }
+                    }
+                  ],
+                  "prompts": [
+                    {
+                      "key": "Example key",
+                      "label": "Example label",
+                      "score": {
+                        "positive": null,
+                        "neutral": null,
+                        "negative": null,
+                        "mixed": null,
+                        "classified": null,
+                        "positive_share": null,
+                        "negative_share": null,
+                        "net_sentiment": null
+                      },
+                      "coverage": {
+                        "mentions": null,
+                        "classified": null,
+                        "pending": null,
+                        "not_assessable": null,
+                        "low_confidence": null,
+                        "unavailable": null
+                      }
+                    }
+                  ],
+                  "themes": [
+                    {
+                      "theme": "Example theme",
+                      "positive": 1,
+                      "negative": 1,
+                      "quotes": [
+                        {
+                          "text": null,
+                          "theme": null,
+                          "polarity": null,
+                          "entity": null,
+                          "is_brand": null,
+                          "logical_engine": null,
+                          "prompt": null,
+                          "run_id": null,
+                          "execution_id": null,
+                          "observed_at": null,
+                          "extractor_version": null,
+                          "template_version": null
+                        }
+                      ]
+                    }
+                  ],
+                  "negative_quotes": [
+                    {
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "polarity": "positive",
+                      "entity": "Example entity",
+                      "is_brand": true,
+                      "logical_engine": "Example logical engine",
+                      "prompt": "Example prompt",
+                      "run_id": "00000000-0000-4000-8000-000000000002",
+                      "execution_id": "00000000-0000-4000-8000-000000000003",
+                      "observed_at": "2026-01-15T09:30:00.000Z",
+                      "extractor_version": "Example extractor version",
+                      "template_version": "Example template version"
+                    }
+                  ],
+                  "drivers": [
+                    {
+                      "domain": "example.com",
+                      "answers": 1,
+                      "example_url": null
+                    }
+                  ],
+                  "recommended": {
+                    "mentioned": 1,
+                    "recommended": 1,
+                    "recommended_against": 1,
+                    "rate": null,
+                    "limitation": "Example limitation"
+                  },
+                  "trend": [
+                    {
+                      "audit_id": "00000000-0000-4000-8000-000000000004",
+                      "completed_at": "2026-01-15T09:30:00.000Z",
+                      "score": {
+                        "positive": 1,
+                        "neutral": 1,
+                        "negative": 1,
+                        "mixed": 1,
+                        "classified": 1,
+                        "positive_share": null,
+                        "negative_share": null,
+                        "net_sentiment": null
+                      },
+                      "mentions": 1,
+                      "extractor_version": "Example extractor version",
+                      "template_version": "Example template version",
+                      "metrics_version": "Example metrics version",
+                      "comparable": true
+                    }
+                  ]
                 }
               }
             }
@@ -10508,6 +11190,8 @@
             }
           }
         ],
+        "summary": "Get answer perception",
+        "description": "Returns how AI answers describe the brand: a summary of themes and the quotes behind them, for a selection of audits.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10521,6 +11205,142 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Visibility"
+                },
+                "example": {
+                  "project_id": "00000000-0000-4000-8000-000000000001",
+                  "audit_id": "00000000-0000-4000-8000-000000000002",
+                  "audit_status": "draft",
+                  "analyzer_version": "Example analyzer version",
+                  "scoring_rule_version": "Example scoring rule version",
+                  "cohort": "core",
+                  "coverage": {},
+                  "total_completed": 1,
+                  "total_failed": null,
+                  "visibility_score": null,
+                  "visibility_rate": null,
+                  "owned_citation_rate": null,
+                  "prompt_performance_score": null,
+                  "counts": {
+                    "state": "Example state",
+                    "responses": 1,
+                    "brand_responses": null,
+                    "owned_citation_responses": null,
+                    "entity_presences": null,
+                    "expected": null,
+                    "failed": null,
+                    "not_run": null
+                  },
+                  "comparison_key": null,
+                  "comparison": {
+                    "status": "Example status",
+                    "baseline_audit_id": null,
+                    "baseline_audit_ids": ["00000000-0000-4000-8000-000000000003"],
+                    "baseline_at": null,
+                    "baseline_counts": null,
+                    "current_counts": null,
+                    "deltas": {
+                      "example": 1
+                    },
+                    "rankings": [
+                      {
+                        "name": null,
+                        "is_brand": null,
+                        "logo_url": null,
+                        "website_url": null,
+                        "mention_rate": null,
+                        "citation_rate": null,
+                        "share_of_voice": null,
+                        "mention_count": null,
+                        "visibility_delta": null,
+                        "gap_count": null,
+                        "matched_visibility_rate": null,
+                        "matched_visibility_delta": null,
+                        "matched_response_count": null,
+                        "avg_position": null
+                      }
+                    ],
+                    "skipped_runs": 1,
+                    "matched_cells": 1,
+                    "current_cells": 1,
+                    "baseline_cells": 1,
+                    "current_values": {
+                      "example": 1
+                    },
+                    "baseline_values": {
+                      "example": 1
+                    },
+                    "current_rankings": [
+                      {
+                        "name": null,
+                        "is_brand": null,
+                        "logo_url": null,
+                        "website_url": null,
+                        "mention_rate": null,
+                        "citation_rate": null,
+                        "share_of_voice": null,
+                        "mention_count": null,
+                        "visibility_delta": null,
+                        "gap_count": null,
+                        "matched_visibility_rate": null,
+                        "matched_visibility_delta": null,
+                        "matched_response_count": null,
+                        "avg_position": null
+                      }
+                    ]
+                  },
+                  "citation_totals": {
+                    "citations": 1,
+                    "owned_citations": 1,
+                    "owned_share": null
+                  },
+                  "selection_mode": "latest",
+                  "source_audit_ids": ["00000000-0000-4000-8000-000000000004"],
+                  "configuration_groups": {
+                    "example": 1
+                  },
+                  "from_at": null,
+                  "to_at": null,
+                  "model_provenance": [],
+                  "rankings": [
+                    {
+                      "name": "Example name",
+                      "is_brand": true,
+                      "logo_url": null,
+                      "website_url": null,
+                      "mention_rate": null,
+                      "citation_rate": null,
+                      "share_of_voice": null,
+                      "mention_count": 1,
+                      "visibility_delta": null,
+                      "gap_count": null,
+                      "matched_visibility_rate": null,
+                      "matched_visibility_delta": null,
+                      "matched_response_count": null,
+                      "avg_position": null
+                    }
+                  ],
+                  "per_engine": [
+                    {
+                      "logical_engine": "Example logical engine",
+                      "total_completed": 1,
+                      "brand_mention_rate": null,
+                      "owned_citation_rate": null,
+                      "search_use_rate": null,
+                      "visibility_score": null,
+                      "counts": {
+                        "state": null,
+                        "responses": null,
+                        "brand_responses": null,
+                        "owned_citation_responses": null,
+                        "entity_presences": null,
+                        "expected": null,
+                        "failed": null,
+                        "not_run": null
+                      }
+                    }
+                  ],
+                  "avg_position": null,
+                  "created_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -10659,6 +11479,8 @@
             }
           }
         ],
+        "summary": "Get visibility",
+        "description": "Returns the visibility projection for a selection of audits, optionally compared with a baseline. Rates are null when a run could not determine them; null is not zero.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10675,7 +11497,102 @@
                   "items": {
                     "$ref": "#/components/schemas/PromptMetricItem"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "audit_id": "00000000-0000-4000-8000-000000000002",
+                    "prompt_id": null,
+                    "prompt_index": 1,
+                    "prompt_text": "Example prompt text",
+                    "prompt_snapshot_id": null,
+                    "cohort": "Example cohort",
+                    "composite_score": null,
+                    "source_audit_ids": ["00000000-0000-4000-8000-000000000003"],
+                    "previous_score": null,
+                    "immediate_delta": null,
+                    "rolling_four": [1],
+                    "per_engine_scores": {
+                      "example": 1
+                    },
+                    "components": {
+                      "example": 1
+                    },
+                    "engine_agreement": 1,
+                    "repetition_agreement": 1,
+                    "evidence_coverage": 1,
+                    "trend_confidence": 1,
+                    "decline_confirmed": true,
+                    "analyzer_version": "Example analyzer version",
+                    "scoring_rule_version": "Example scoring rule version",
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "theme": "Example theme",
+                    "intent": "Example intent",
+                    "visibility_rate": null,
+                    "owned_citation_rate": null,
+                    "avg_position": null,
+                    "visibility_delta": null,
+                    "comparison_status": "Example comparison status",
+                    "comparison": null,
+                    "counts": {
+                      "state": "Example state",
+                      "responses": 1,
+                      "brand_responses": null,
+                      "owned_citation_responses": null,
+                      "entity_presences": null,
+                      "expected": null,
+                      "failed": null,
+                      "not_run": null
+                    },
+                    "answer_states": null,
+                    "action_id": null,
+                    "mentions": 1,
+                    "brands": [
+                      {
+                        "kind": "brand",
+                        "name": "Example name",
+                        "responses": 1,
+                        "logo_url": null,
+                        "website": null
+                      }
+                    ],
+                    "named": [
+                      {
+                        "kind": "brand",
+                        "name": "Example name"
+                      }
+                    ],
+                    "sources": [
+                      {
+                        "domain": "example.com",
+                        "citations": 1,
+                        "owned": true
+                      }
+                    ],
+                    "outcomes": [
+                      {
+                        "logical_engine": "Example logical engine",
+                        "transport_model": "Example transport model",
+                        "counts": {
+                          "state": null,
+                          "responses": null,
+                          "brand_responses": null,
+                          "owned_citation_responses": null,
+                          "entity_presences": null,
+                          "expected": null,
+                          "failed": null,
+                          "not_run": null
+                        },
+                        "visibility_rate": null,
+                        "owned_citation_rate": null,
+                        "answer_states": null,
+                        "gap_counts": {
+                          "example": 1
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
             }
           }
@@ -10817,6 +11734,8 @@
             }
           }
         ],
+        "summary": "List prompt metrics",
+        "description": "Returns per-prompt visibility metrics for a selection, splitting each prompt’s answers into mentioned and cited, mentioned only, cited only or neither.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10830,6 +11749,53 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptHistory"
+                },
+                "example": {
+                  "prompt": {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "text": "Example text",
+                    "topic_id": null,
+                    "status": "Example status"
+                  },
+                  "cohort": "core",
+                  "market_id": null,
+                  "logical_engine": null,
+                  "points": [
+                    {
+                      "audit_id": "00000000-0000-4000-8000-000000000002",
+                      "completed_at": "2026-01-15T09:30:00.000Z",
+                      "prompt_text": "Example prompt text",
+                      "counts": {
+                        "state": null,
+                        "responses": null,
+                        "brand_responses": null,
+                        "owned_citation_responses": null,
+                        "entity_presences": null,
+                        "expected": null,
+                        "failed": null,
+                        "not_run": null
+                      },
+                      "mention_rate": null,
+                      "owned_citation_rate": null,
+                      "answer_states": null,
+                      "source_analysis_ids": ["00000000-0000-4000-8000-000000000003"],
+                      "comparison_key": null,
+                      "analyzer_version": "Example analyzer version",
+                      "scoring_rule_version": "Example scoring rule version",
+                      "comparable_with_previous": null,
+                      "source_snapshot_id": "00000000-0000-4000-8000-000000000004"
+                    }
+                  ],
+                  "implementations": [
+                    {
+                      "implementation_event_id": "00000000-0000-4000-8000-000000000005",
+                      "action_id": "00000000-0000-4000-8000-000000000006",
+                      "title": "Example title",
+                      "status": "open",
+                      "implemented_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "latest": null
                 }
               }
             }
@@ -10898,6 +11864,8 @@
             }
           }
         ],
+        "summary": "Get a prompt’s history",
+        "description": "Returns how one prompt’s visibility changed across audits.",
         "x-citeladder-scope": "read"
       }
     },
@@ -10911,7 +11879,61 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisibilityTrendList"
-                }
+                },
+                "example": [
+                  {
+                    "audit_id": null,
+                    "completed_at": "2026-01-15T09:30:00.000Z",
+                    "logical_engine": null,
+                    "visibility_score": null,
+                    "visibility_rate": null,
+                    "prompt_performance_score": null,
+                    "counts": {
+                      "state": "Example state",
+                      "responses": 1,
+                      "brand_responses": null,
+                      "owned_citation_responses": null,
+                      "entity_presences": null,
+                      "expected": null,
+                      "failed": null,
+                      "not_run": null
+                    },
+                    "comparison_key": null,
+                    "run_count": 1,
+                    "source_audit_ids": ["00000000-0000-4000-8000-000000000001"],
+                    "brand_mention_rate": null,
+                    "owned_citation_rate": null,
+                    "sov": {
+                      "mention": null
+                    },
+                    "rankings": [
+                      {
+                        "name": null,
+                        "is_brand": null,
+                        "logo_url": null,
+                        "website_url": null,
+                        "mention_rate": null,
+                        "citation_rate": null,
+                        "share_of_voice": null,
+                        "mention_count": null,
+                        "visibility_delta": null,
+                        "gap_count": null,
+                        "matched_visibility_rate": null,
+                        "matched_visibility_delta": null,
+                        "matched_response_count": null,
+                        "avg_position": null
+                      }
+                    ],
+                    "avg_position": null,
+                    "transport_model": null,
+                    "retrieval_enabled": null,
+                    "model_provenance": [],
+                    "source_snapshot_ids": ["00000000-0000-4000-8000-000000000002"],
+                    "analyzer_versions": ["Example analyzer versions"],
+                    "scoring_rule_versions": ["Example scoring rule versions"],
+                    "spans_version_boundary": true
+                  }
+                ]
               }
             }
           }
@@ -11022,6 +12044,8 @@
             }
           }
         ],
+        "summary": "Get visibility trends",
+        "description": "Returns visibility over time for the project, bucketed by the granularity you choose. Filter by market, engine and cohort.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11035,6 +12059,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisibilityFanoutSummary"
+                },
+                "example": {
+                  "event_count": 1,
+                  "distinct_queries": 1,
+                  "matched_queries": 1,
+                  "coverage": {
+                    "example": 1
+                  },
+                  "next_cursor": null,
+                  "total_answers": 1,
+                  "answers": [
+                    {
+                      "audit_id": "00000000-0000-4000-8000-000000000001",
+                      "task_id": "00000000-0000-4000-8000-000000000002",
+                      "prompt_text": "Example prompt text",
+                      "logical_engine": "Example logical engine",
+                      "brand_mentioned": true,
+                      "owned_domain_cited": true
+                    }
+                  ],
+                  "items": [
+                    {
+                      "query": "Example query",
+                      "event_count": 1,
+                      "prompt_count": 1,
+                      "engines": ["Example engines"],
+                      "response_count": 1,
+                      "brand_response_count": 1
+                    }
+                  ]
                 }
               }
             }
@@ -11183,6 +12237,8 @@
             }
           }
         ],
+        "summary": "Get query fan-out",
+        "description": "Returns the follow-up searches AI engines ran while answering your prompts, grouped by query, with the answers that used them.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11196,6 +12252,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisibilitySources"
+                },
+                "example": {
+                  "previous_cursor": null,
+                  "total": 1,
+                  "responses": 1,
+                  "prompts": 1,
+                  "total_citations": 1,
+                  "category_totals": {
+                    "example": 1
+                  },
+                  "next_cursor": null,
+                  "as_of": "Example as of",
+                  "comparison_status": "Example comparison status",
+                  "retrieval": {
+                    "responses": 1,
+                    "unavailable_engines": ["Example unavailable engines"]
+                  },
+                  "items": [
+                    {
+                      "key": "Example key",
+                      "retrieved": null,
+                      "responses": 1,
+                      "prompts": 1,
+                      "annotations": 1,
+                      "urls": 1,
+                      "response_rate": null,
+                      "prompt_coverage": null,
+                      "retrieval_rate": null,
+                      "citation_share": null,
+                      "citation_rate": null,
+                      "ownership": ["Example ownership"],
+                      "categories": ["Example categories"],
+                      "taxonomy_versions": ["Example taxonomy versions"],
+                      "category_unavailable": true,
+                      "response_delta": null,
+                      "url_hash": null,
+                      "inspection_state": null,
+                      "opportunity_id": null,
+                      "standing": null,
+                      "action_id": null,
+                      "title": null,
+                      "page_format": null,
+                      "page_format_method": null,
+                      "last_cited_at": null,
+                      "mentions": 1,
+                      "brands": [
+                        {
+                          "kind": null,
+                          "name": null,
+                          "responses": null,
+                          "logo_url": null,
+                          "website": null
+                        }
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -11441,6 +12553,8 @@
             }
           }
         ],
+        "summary": "List cited sources",
+        "description": "Lists the domains and pages AI answers cited, with how often and whether each is owned, a competitor or a third party. Use as_of to read a past selection.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11454,6 +12568,30 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisibilityMarkets"
+                },
+                "example": {
+                  "cohort": "core",
+                  "markets": [
+                    {
+                      "market": {
+                        "id": null,
+                        "label": "Example label",
+                        "country_code": "Example country code",
+                        "language_code": "Example language code",
+                        "is_default": true,
+                        "created_at": null
+                      },
+                      "state": "measured",
+                      "audit_id": null,
+                      "measured_at": null,
+                      "mention_rate": null,
+                      "share_of_voice": null,
+                      "net_sentiment": null,
+                      "comparison_status": null,
+                      "mention_rate_delta": null,
+                      "share_of_voice_delta": null
+                    }
+                  ]
                 }
               }
             }
@@ -11481,6 +12619,8 @@
             }
           }
         ],
+        "summary": "List visibility markets",
+        "description": "Lists the markets that have visibility data, for the market filter of the other reads.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11657,6 +12797,72 @@
                     "normalization_version"
                   ],
                   "additionalProperties": false
+                },
+                "example": {
+                  "project_id": "00000000-0000-4000-8000-000000000001",
+                  "range": "Example range",
+                  "granularity": "Example granularity",
+                  "compare": "Example compare",
+                  "selected": {
+                    "snapshot_id": null,
+                    "window_start": "Example window start",
+                    "window_end": "Example window end",
+                    "evidence_state": "not_run",
+                    "totals": {
+                      "clicks": null,
+                      "impressions": null,
+                      "ctr": null,
+                      "position": null,
+                      "sessions": null,
+                      "key_events": null
+                    },
+                    "series": {
+                      "clicks": [
+                        {
+                          "date": "Example date",
+                          "value": null
+                        }
+                      ],
+                      "impressions": [
+                        {
+                          "date": "Example date",
+                          "value": null
+                        }
+                      ],
+                      "ctr": [
+                        {
+                          "date": "Example date",
+                          "value": null
+                        }
+                      ],
+                      "position": [
+                        {
+                          "date": "Example date",
+                          "value": null
+                        }
+                      ]
+                    }
+                  },
+                  "comparison": null,
+                  "coverage": {
+                    "earliest_date": null,
+                    "latest_date": null,
+                    "covered_days": 1,
+                    "analytics_quality": {}
+                  },
+                  "dimension_counts": {
+                    "query": 1,
+                    "page": 1,
+                    "country": 1,
+                    "device": 1,
+                    "search_appearance": 1,
+                    "day": 1,
+                    "bing_query": 1,
+                    "bing_page": 1
+                  },
+                  "unavailable_dimensions": ["Example unavailable dimensions"],
+                  "formula_version": "Example formula version",
+                  "normalization_version": "Example normalization version"
                 }
               }
             }
@@ -11766,6 +12972,8 @@
             }
           }
         ],
+        "summary": "Get performance",
+        "description": "Returns search performance for a date range, optionally compared with another range, as a series and a selected snapshot.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11833,6 +13041,25 @@
                   },
                   "required": ["dimension", "items", "next_cursor", "total_count", "page_size"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "dimension": "Example dimension",
+                  "items": [
+                    {
+                      "dimension_key": "Example dimension key",
+                      "display_value": "Example display value",
+                      "metrics": {
+                        "clicks": null,
+                        "impressions": null,
+                        "ctr": null,
+                        "position": null
+                      },
+                      "comparison_metrics": null
+                    }
+                  ],
+                  "next_cursor": null,
+                  "total_count": 1,
+                  "page_size": 1
                 }
               }
             }
@@ -11918,6 +13145,8 @@
             }
           }
         ],
+        "summary": "Get the performance table",
+        "description": "Returns the rows behind a performance snapshot for one dimension, one page at a time, optionally compared with another snapshot.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11931,6 +13160,40 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionsPage"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "project_id": "00000000-0000-4000-8000-000000000002",
+                      "target_kind": "Example target kind",
+                      "target_label": "Example target label",
+                      "target_url": null,
+                      "target_prompt_id": null,
+                      "origin": "evidence",
+                      "status": "open",
+                      "measurement": null,
+                      "priority_score": null,
+                      "priority_band": null,
+                      "families": ["Example families"],
+                      "approach": "Example approach",
+                      "goal": "read_site",
+                      "grouping": "seo",
+                      "skill_id": "Example skill id",
+                      "member_count": 1,
+                      "declarable_member_count": 1,
+                      "page_count": null,
+                      "summary": null,
+                      "handoff": null,
+                      "evidence_cleared_at": null,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "next_cursor": null,
+                  "status_counts": {
+                    "example": 1
+                  }
                 }
               }
             }
@@ -12055,6 +13318,8 @@
             }
           }
         ],
+        "summary": "List actions",
+        "description": "Lists the actions CiteLadder recommends, one page at a time. Filter by status, priority, approach, topic and more.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12068,6 +13333,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionTree"
+                },
+                "example": {
+                  "group_by": "goal",
+                  "status_counts": {
+                    "example": 1
+                  },
+                  "goals": [
+                    {
+                      "goal": "read_site",
+                      "count": 1,
+                      "blocking": true
+                    }
+                  ],
+                  "groups": [
+                    {
+                      "key": "Example key",
+                      "count": 1,
+                      "groupings": [
+                        {
+                          "grouping": null,
+                          "count": 1,
+                          "items": [null],
+                          "next_cursor": null
+                        }
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -12174,6 +13466,8 @@
             }
           }
         ],
+        "summary": "Get the action tree",
+        "description": "Returns the project’s actions grouped by goal and category, with the same filters as the list.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12187,6 +13481,40 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UrlActions"
+                },
+                "example": {
+                  "site_url_id": "00000000-0000-4000-8000-000000000001",
+                  "url": "https://example.com/page",
+                  "page_kind": null,
+                  "last_crawled_at": "2026-01-15T09:30:00.000Z",
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000002",
+                      "project_id": "00000000-0000-4000-8000-000000000003",
+                      "target_kind": "Example target kind",
+                      "target_label": "Example target label",
+                      "target_url": null,
+                      "target_prompt_id": null,
+                      "origin": "evidence",
+                      "status": "open",
+                      "measurement": null,
+                      "priority_score": null,
+                      "priority_band": null,
+                      "families": ["Example families"],
+                      "approach": "Example approach",
+                      "goal": "read_site",
+                      "grouping": "seo",
+                      "skill_id": "Example skill id",
+                      "member_count": 1,
+                      "declarable_member_count": 1,
+                      "page_count": null,
+                      "summary": null,
+                      "handoff": null,
+                      "evidence_cleared_at": null,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ]
                 }
               }
             }
@@ -12214,6 +13542,8 @@
             }
           }
         ],
+        "summary": "List a URL’s actions",
+        "description": "Lists the actions that apply to one page of the site.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12227,6 +13557,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionUrlsPage"
+                },
+                "example": {
+                  "whole_site": true,
+                  "total": 1,
+                  "items": [
+                    {
+                      "site_url_id": "00000000-0000-4000-8000-000000000001",
+                      "url": "https://example.com/page",
+                      "page_kind": null,
+                      "open_action_count": 1
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -12262,6 +13605,8 @@
             }
           }
         ],
+        "summary": "List an action’s URLs",
+        "description": "Lists the pages one action applies to, one page at a time.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12275,6 +13620,101 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionDetail"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "target_kind": "Example target kind",
+                  "target_label": "Example target label",
+                  "target_url": null,
+                  "target_prompt_id": null,
+                  "origin": "evidence",
+                  "status": "open",
+                  "measurement": null,
+                  "priority_score": null,
+                  "priority_band": null,
+                  "families": ["Example families"],
+                  "approach": "Example approach",
+                  "goal": "read_site",
+                  "grouping": "seo",
+                  "skill_id": "Example skill id",
+                  "member_count": 1,
+                  "declarable_member_count": 1,
+                  "page_count": null,
+                  "summary": null,
+                  "handoff": {
+                    "context": "action",
+                    "message": "Example message"
+                  },
+                  "evidence_cleared_at": null,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z",
+                  "member_measurement": {
+                    "example": "next_visibility_run"
+                  },
+                  "declarable_since": "Example declarable since",
+                  "diagnosis": {
+                    "what_happened": [
+                      {
+                        "opportunity_id": "00000000-0000-4000-8000-000000000003",
+                        "rule_id": "Example rule id",
+                        "title": "Example title",
+                        "family": "Example family",
+                        "priority_score": 1
+                      }
+                    ],
+                    "approach": "Example approach",
+                    "skill_id": "Example skill id",
+                    "donts": ["Example donts"],
+                    "measure_with": ["Example measure with"]
+                  },
+                  "members": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000004",
+                      "project_id": "00000000-0000-4000-8000-000000000005",
+                      "rule_id": "Example rule id",
+                      "opportunity_type": "visibility",
+                      "severity": "critical",
+                      "priority_score": 1,
+                      "title": "Example title",
+                      "target_key": "Example target key",
+                      "target_prompt_id": null,
+                      "target_url": null,
+                      "target_theme": null,
+                      "target_label": null,
+                      "action_id": null,
+                      "system_rank": 1,
+                      "display_rank": 1,
+                      "order_source": "system",
+                      "priority_factors": {
+                        "example": "Example example"
+                      },
+                      "evidence_summary": {
+                        "count": 1,
+                        "kinds": ["Example kinds"]
+                      },
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z",
+                      "remediation": "Example remediation",
+                      "content_gap_evidence": null
+                    }
+                  ],
+                  "declaration": null,
+                  "editable_page": false,
+                  "cohort": null,
+                  "urls": {
+                    "whole_site": true,
+                    "total": 1,
+                    "items": [
+                      {
+                        "site_url_id": null,
+                        "url": null,
+                        "page_kind": null,
+                        "open_action_count": null
+                      }
+                    ],
+                    "next_cursor": null
+                  }
                 }
               }
             }
@@ -12302,6 +13742,8 @@
             }
           }
         ],
+        "summary": "Get an action",
+        "description": "Returns one action with its findings and the evidence behind them.",
         "x-citeladder-scope": "read"
       },
       "patch": {
@@ -12313,6 +13755,35 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionItem"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "target_kind": "Example target kind",
+                  "target_label": "Example target label",
+                  "target_url": null,
+                  "target_prompt_id": null,
+                  "origin": "evidence",
+                  "status": "open",
+                  "measurement": null,
+                  "priority_score": null,
+                  "priority_band": null,
+                  "families": ["Example families"],
+                  "approach": "Example approach",
+                  "goal": "read_site",
+                  "grouping": "seo",
+                  "skill_id": "Example skill id",
+                  "member_count": 1,
+                  "declarable_member_count": 1,
+                  "page_count": null,
+                  "summary": null,
+                  "handoff": {
+                    "context": "action",
+                    "message": "Example message"
+                  },
+                  "evidence_cleared_at": null,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -12353,10 +13824,15 @@
                 },
                 "required": ["status"],
                 "additionalProperties": false
+              },
+              "example": {
+                "status": "Example status"
               }
             }
           }
         },
+        "summary": "Update an action’s status",
+        "description": "Moves one action to a new status and returns it.",
         "x-citeladder-scope": "actions:write"
       }
     },
@@ -12370,6 +13846,11 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionBulkStatusResult"
+                },
+                "example": {
+                  "updated": 1,
+                  "skipped": 1,
+                  "truncated": true
                 }
               }
             }
@@ -12403,10 +13884,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ActionBulkStatusRequest"
+              },
+              "example": {
+                "to": "open"
               }
             }
           }
         },
+        "summary": "Update many actions’ status",
+        "description": "Moves several actions to one status, chosen by id or by a filter, and returns how many changed. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "actions:write"
       }
     },
@@ -12420,6 +13906,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionDeclaration"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "action_id": "00000000-0000-4000-8000-000000000002",
+                  "output_revision_id": null,
+                  "member_opportunity_ids": ["00000000-0000-4000-8000-000000000003"],
+                  "opportunity_snapshot_id": null,
+                  "resolved_before_snapshot_id": null,
+                  "target_site_url_ids": ["00000000-0000-4000-8000-000000000004"],
+                  "target_external_url": null,
+                  "declared_implemented_at": "2026-01-15T09:30:00.000Z",
+                  "deployed_by": null,
+                  "deployment_reference": null,
+                  "expected_checks": [
+                    {
+                      "kind": "issue_family",
+                      "rule_id": "Example rule id",
+                      "baseline_crawl_id": "00000000-0000-4000-8000-000000000005",
+                      "site_url_ids": [null],
+                      "page_count": 1
+                    }
+                  ],
+                  "state": "declared",
+                  "limitations": ["Example limitations"],
+                  "verification_events": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000006",
+                      "observation_kind": "observed",
+                      "observed_at": "2026-01-15T09:30:00.000Z",
+                      "crawl_id": null,
+                      "audit_id": null,
+                      "source_analysis_ids": ["00000000-0000-4000-8000-000000000007"],
+                      "source_rule_evaluation_ids": ["00000000-0000-4000-8000-000000000008"],
+                      "source_metric_ids": ["00000000-0000-4000-8000-000000000009"],
+                      "result": {
+                        "example": null
+                      },
+                      "verifier_version": "Example verifier version",
+                      "limitations": ["Example limitations"],
+                      "created_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "legs": [
+                    {
+                      "leg": "next_visibility_run",
+                      "state": "waiting",
+                      "due_at": null,
+                      "last_evidence_at": null,
+                      "source_id": null
+                    }
+                  ],
+                  "checks": [
+                    {
+                      "index": 1,
+                      "kind": "Example kind",
+                      "leg": "next_visibility_run",
+                      "state": "waiting",
+                      "reason": null,
+                      "observed_at": null,
+                      "source_kind": null,
+                      "source_id": null,
+                      "subject": null,
+                      "prompt_id": null,
+                      "pages": null
+                    }
+                  ],
+                  "measured_until": "Example measured until",
+                  "created_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -12430,6 +13984,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActionDeclaration"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "action_id": "00000000-0000-4000-8000-000000000002",
+                  "output_revision_id": null,
+                  "member_opportunity_ids": ["00000000-0000-4000-8000-000000000003"],
+                  "opportunity_snapshot_id": null,
+                  "resolved_before_snapshot_id": null,
+                  "target_site_url_ids": ["00000000-0000-4000-8000-000000000004"],
+                  "target_external_url": null,
+                  "declared_implemented_at": "2026-01-15T09:30:00.000Z",
+                  "deployed_by": null,
+                  "deployment_reference": null,
+                  "expected_checks": [
+                    {
+                      "kind": "issue_family",
+                      "rule_id": "Example rule id",
+                      "baseline_crawl_id": "00000000-0000-4000-8000-000000000005",
+                      "site_url_ids": [null],
+                      "page_count": 1
+                    }
+                  ],
+                  "state": "declared",
+                  "limitations": ["Example limitations"],
+                  "verification_events": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000006",
+                      "observation_kind": "observed",
+                      "observed_at": "2026-01-15T09:30:00.000Z",
+                      "crawl_id": null,
+                      "audit_id": null,
+                      "source_analysis_ids": ["00000000-0000-4000-8000-000000000007"],
+                      "source_rule_evaluation_ids": ["00000000-0000-4000-8000-000000000008"],
+                      "source_metric_ids": ["00000000-0000-4000-8000-000000000009"],
+                      "result": {
+                        "example": null
+                      },
+                      "verifier_version": "Example verifier version",
+                      "limitations": ["Example limitations"],
+                      "created_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "legs": [
+                    {
+                      "leg": "next_visibility_run",
+                      "state": "waiting",
+                      "due_at": null,
+                      "last_evidence_at": null,
+                      "source_id": null
+                    }
+                  ],
+                  "checks": [
+                    {
+                      "index": 1,
+                      "kind": "Example kind",
+                      "leg": "next_visibility_run",
+                      "state": "waiting",
+                      "reason": null,
+                      "observed_at": null,
+                      "source_kind": null,
+                      "source_id": null,
+                      "subject": null,
+                      "prompt_id": null,
+                      "pages": null
+                    }
+                  ],
+                  "measured_until": "Example measured until",
+                  "created_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -12473,10 +14095,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ActionDeclarationRequestInput"
+              },
+              "example": {
+                "declared_implemented_at": "2026-01-15T09:30:00.000Z"
               }
             }
           }
         },
+        "summary": "Record an implementation",
+        "description": "Declares that an action was implemented, so CiteLadder can measure its effect. A repeat of the same declaration returns the existing one with status 200. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "actions:write"
       }
     },
@@ -12493,7 +14120,45 @@
                   "items": {
                     "$ref": "#/components/schemas/SearchRun"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "status": "reviewed",
+                    "action": "Example action",
+                    "pricing_version": "Example pricing version",
+                    "credential_mode": "byok",
+                    "estimated_cost_usd": null,
+                    "provider_reported_cost_usd": null,
+                    "estimated_credits": null,
+                    "charged_credits": null,
+                    "planned_calls": 1,
+                    "completed_calls": 1,
+                    "planned_rows": 1,
+                    "received_rows": 1,
+                    "uncertain_calls": 1,
+                    "error_code": "Example error code",
+                    "error_detail": "Example error detail",
+                    "expires_at": "2026-01-15T09:30:00.000Z",
+                    "confirmed_at": null,
+                    "cancelled_at": null,
+                    "completed_at": null,
+                    "frozen_scope": {
+                      "example": null
+                    },
+                    "call_plan": [
+                      {
+                        "example": null
+                      }
+                    ],
+                    "reused_datasets": [
+                      {
+                        "example": null
+                      }
+                    ],
+                    "created_at": "2026-01-15T09:30:00.000Z"
+                  }
+                ]
               }
             }
           }
@@ -12532,6 +14197,8 @@
             }
           }
         ],
+        "summary": "List search intelligence runs",
+        "description": "Lists the project’s search intelligence runs, newest first.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12545,6 +14212,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SearchDatasetPage"
+                },
+                "example": {
+                  "dataset": {
+                    "research_scope": "exact_host",
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "run_id": "00000000-0000-4000-8000-000000000002",
+                    "dataset_kind": "Example dataset kind",
+                    "target_domain": "example.com",
+                    "target_hostname": "Example target hostname",
+                    "target_origin": "Example target origin",
+                    "acquisition": {
+                      "example": null
+                    },
+                    "comparison_origin": "Example comparison origin",
+                    "location_code": null,
+                    "language_code": "Example language code",
+                    "status": "Example status",
+                    "coverage": "Example coverage",
+                    "requested_rows": 1,
+                    "raw_rows_received": 1,
+                    "unique_rows_saved": 1,
+                    "provider_total": null,
+                    "truncated": true,
+                    "summary": {
+                      "example": null
+                    },
+                    "collection_started_at": null,
+                    "collection_ended_at": null,
+                    "published_at": null,
+                    "filtered_saved_count": null
+                  },
+                  "rows": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000003",
+                      "dataset_id": "00000000-0000-4000-8000-000000000004",
+                      "call_id": null,
+                      "row_kind": "Example row kind",
+                      "keyword": "Example keyword",
+                      "domain": "example.com",
+                      "url": "https://example.com/page",
+                      "search_volume": null,
+                      "difficulty": null,
+                      "intent": "Example intent",
+                      "rank_group": null,
+                      "owned_rank_group": null,
+                      "etv": null,
+                      "backlinks": null,
+                      "referring_main_domains": null,
+                      "dataforseo_rank": null,
+                      "auxiliary": {
+                        "example": null
+                      },
+                      "action_id": null
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -12655,6 +14378,8 @@
             }
           }
         ],
+        "summary": "List search dataset rows",
+        "description": "Lists the rows of one search intelligence dataset, one page at a time, with sort, search and volume filters.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12668,6 +14393,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BusinessMap"
+                },
+                "example": {
+                  "offerings": [
+                    {
+                      "offering": "Example offering",
+                      "attributes": [null],
+                      "situations": [null],
+                      "audiences": [null],
+                      "exclusions": [
+                        {
+                          "first": null,
+                          "second": null
+                        }
+                      ]
+                    }
+                  ],
+                  "available_offerings": ["Example available offerings"]
                 }
               }
             }
@@ -12685,6 +14427,8 @@
             }
           }
         ],
+        "summary": "Get the business map",
+        "description": "Returns the project’s business map: the offerings CiteLadder found for the business and those still available to add.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12701,7 +14445,24 @@
                   "items": {
                     "$ref": "#/components/schemas/ObservedCompetitor"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "audit_id": "00000000-0000-4000-8000-000000000002",
+                    "name": "Example name",
+                    "domain": "example.com",
+                    "qualification_reason": "Example qualification reason",
+                    "prompt_count": 1,
+                    "engine_count": 1,
+                    "market_relevant": true,
+                    "analyzer_version": "Example analyzer version",
+                    "source_analysis_ids": ["Example source analysis ids"],
+                    "source_artifact_ids": ["Example source artifact ids"],
+                    "status": "Example status",
+                    "created_at": "2026-01-15T09:30:00.000Z"
+                  }
+                ]
               }
             }
           }
@@ -12718,6 +14479,8 @@
             }
           }
         ],
+        "summary": "List competitor suggestions",
+        "description": "Lists companies that AI answers mentioned alongside the brand and that are not tracked competitors yet. Accept one to start tracking it.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12731,6 +14494,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Competitor"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "name": "Example name",
+                  "aliases": ["Example aliases"],
+                  "domains": ["example.com"],
+                  "logo_url": null,
+                  "matching": {
+                    "mode": "always",
+                    "context_terms": [],
+                    "exclusion_phrases": [],
+                    "common_word": false
+                  }
                 }
               }
             }
@@ -12768,6 +14544,8 @@
             }
           }
         ],
+        "summary": "Accept a competitor suggestion",
+        "description": "Turns a suggested company into a tracked competitor and returns the competitor. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "competitors:write"
       }
     },
@@ -12781,6 +14559,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptGenerateResponse"
+                },
+                "example": {
+                  "candidates": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "run_id": "00000000-0000-4000-8000-000000000002",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000003",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "cohort": "core",
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "expires_at": "2026-01-15T09:30:00.000Z",
+                      "quality_status": "not_judged",
+                      "quality_flags": [],
+                      "grounded": false
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000004",
+                      "project_id": "00000000-0000-4000-8000-000000000005",
+                      "parent_id": null,
+                      "name": "Example name",
+                      "description": "Example description",
+                      "origin": "manual",
+                      "active_count": 1,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "dropped_duplicates": 1,
+                  "requested_count": 0,
+                  "candidates_generated": 0,
+                  "quality_gate": "off",
+                  "quality_rejected": 0,
+                  "admission_drops": {},
+                  "shortfall_reason": null
                 }
               }
             }
@@ -12952,10 +14770,15 @@
                     }
                   }
                 }
+              },
+              "example": {
+                "count": 10
               }
             }
           }
         },
+        "summary": "Generate prompts",
+        "description": "Asks CiteLadder to propose new prompts for a prompt set, optionally for chosen topics. The proposals arrive as candidates to review; nothing is added to the prompt set until you accept them. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -12969,6 +14792,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptSet"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "name": "Example name",
+                  "kind": "brand",
+                  "description": "Example description",
+                  "prompt_count": 1,
+                  "prompts": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000003",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -12996,6 +14850,8 @@
             }
           }
         ],
+        "summary": "Get a prompt set",
+        "description": "Returns one prompt set with its prompts. Each prompt carries its latest measurement, which is measured, not measured or unavailable; none of these is zero.",
         "x-citeladder-scope": "read"
       }
     },
@@ -13009,6 +14865,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptSet"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "name": "Example name",
+                  "kind": "brand",
+                  "description": "Example description",
+                  "prompt_count": 1,
+                  "prompts": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000003",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13102,10 +14989,19 @@
                 },
                 "required": ["prompts"],
                 "additionalProperties": false
+              },
+              "example": {
+                "prompts": [
+                  {
+                    "text": "Example text"
+                  }
+                ]
               }
             }
           }
         },
+        "summary": "Import prompts",
+        "description": "Imports a list of prompts into a prompt set and returns the updated set. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -13122,7 +15018,25 @@
                   "items": {
                     "$ref": "#/components/schemas/PromptCandidate"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "run_id": "00000000-0000-4000-8000-000000000002",
+                    "prompt_set_id": "00000000-0000-4000-8000-000000000003",
+                    "topic_id": null,
+                    "text": "Example text",
+                    "intent": "",
+                    "buyer_stage": "",
+                    "prompt_intent": "",
+                    "cohort": "core",
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "expires_at": "2026-01-15T09:30:00.000Z",
+                    "quality_status": "not_judged",
+                    "quality_flags": [],
+                    "grounded": false
+                  }
+                ]
               }
             }
           }
@@ -13149,6 +15063,8 @@
             }
           }
         ],
+        "summary": "List prompt candidates",
+        "description": "Lists the candidate prompts a generation run proposed and nobody has accepted or rejected yet. Review them with the candidate review operation.",
         "x-citeladder-scope": "read"
       }
     },
@@ -13162,6 +15078,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptCandidateReviewResponse"
+                },
+                "example": {
+                  "accepted": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000002",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "rejected_count": 1,
+                  "dropped_duplicates": 1,
+                  "unavailable_count": 1
                 }
               }
             }
@@ -13225,10 +15167,15 @@
                     }
                   }
                 }
+              },
+              "example": {
+                "accept_ids": []
               }
             }
           }
         },
+        "summary": "Review prompt candidates",
+        "description": "Accepts or rejects candidate prompts by id. Accepted candidates become prompts of the set. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -13242,6 +15189,25 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Prompt"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "prompt_set_id": "00000000-0000-4000-8000-000000000002",
+                  "topic_id": null,
+                  "text": "Example text",
+                  "theme": "Example theme",
+                  "intent": "",
+                  "buyer_stage": "",
+                  "prompt_intent": "",
+                  "persona": "",
+                  "cohort": "core",
+                  "branded": true,
+                  "enabled": true,
+                  "status": "active",
+                  "origin": "manual",
+                  "over_plan_limit": true,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13368,10 +15334,15 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "example": {
+                "text": "Example text"
               }
             }
           }
         },
+        "summary": "Update a prompt",
+        "description": "Changes a prompt’s text or its classification. Send only the fields to change; the updated prompt is returned.",
         "x-citeladder-scope": "prompts:write"
       },
       "delete": {
@@ -13403,6 +15374,8 @@
             }
           }
         ],
+        "summary": "Delete a prompt",
+        "description": "Deletes a prompt from its prompt set. Answers already recorded for it stay in past audits.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -13419,7 +15392,20 @@
                   "items": {
                     "$ref": "#/components/schemas/Topic"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "project_id": "00000000-0000-4000-8000-000000000002",
+                    "parent_id": null,
+                    "name": "Example name",
+                    "description": "Example description",
+                    "origin": "manual",
+                    "active_count": 1,
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "updated_at": "2026-01-15T09:30:00.000Z"
+                  }
+                ]
               }
             }
           }
@@ -13436,6 +15422,8 @@
             }
           }
         ],
+        "summary": "List topics",
+        "description": "Lists the topics that organise the project’s prompts, including nested topics.",
         "x-citeladder-scope": "read"
       },
       "post": {
@@ -13447,6 +15435,17 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Topic"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "parent_id": null,
+                  "name": "Example name",
+                  "description": "Example description",
+                  "origin": "manual",
+                  "active_count": 1,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13505,10 +15504,15 @@
                   }
                 },
                 "required": ["name"]
+              },
+              "example": {
+                "name": "Example name"
               }
             }
           }
         },
+        "summary": "Create a topic",
+        "description": "Creates a topic, optionally under a parent topic, and returns it. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -13522,6 +15526,17 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Topic"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "parent_id": null,
+                  "name": "Example name",
+                  "description": "Example description",
+                  "origin": "manual",
+                  "active_count": 1,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13592,10 +15607,15 @@
                     ]
                   }
                 }
+              },
+              "example": {
+                "name": "Example name"
               }
             }
           }
         },
+        "summary": "Update a topic",
+        "description": "Renames a topic, changes its description or moves it under another parent.",
         "x-citeladder-scope": "prompts:write"
       },
       "delete": {
@@ -13627,6 +15647,8 @@
             }
           }
         ],
+        "summary": "Delete a topic",
+        "description": "Deletes a topic. Its prompts are kept.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -13640,6 +15662,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuditSchedule"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "project_id": "00000000-0000-4000-8000-000000000003",
+                  "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                  "audit_scope": "brand",
+                  "cadence": "one_time",
+                  "interval_minutes": null,
+                  "timezone": "Example timezone",
+                  "engines": ["chatgpt"],
+                  "market_ids": ["00000000-0000-4000-8000-000000000005"],
+                  "repetitions": null,
+                  "benchmark_mode": null,
+                  "enabled": true,
+                  "next_run_at": null,
+                  "last_run_at": null,
+                  "failure_count": 1,
+                  "last_error": "Example last error",
+                  "last_failure_at": null,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13773,10 +15817,17 @@
                   }
                 },
                 "required": ["prompt_set_id", "cadence", "engines"]
+              },
+              "example": {
+                "prompt_set_id": "00000000-0000-4000-8000-000000000001",
+                "cadence": "one_time",
+                "engines": ["chatgpt"]
               }
             }
           }
         },
+        "summary": "Create an audit schedule",
+        "description": "Creates a schedule that launches audits of a prompt set on a cadence and returns it. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "schedules:write"
       },
       "get": {
@@ -13791,7 +15842,31 @@
                   "items": {
                     "$ref": "#/components/schemas/AuditSchedule"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "workspace_id": "00000000-0000-4000-8000-000000000002",
+                    "project_id": "00000000-0000-4000-8000-000000000003",
+                    "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                    "audit_scope": "brand",
+                    "cadence": "one_time",
+                    "interval_minutes": null,
+                    "timezone": "Example timezone",
+                    "engines": ["chatgpt"],
+                    "market_ids": ["00000000-0000-4000-8000-000000000005"],
+                    "repetitions": null,
+                    "benchmark_mode": null,
+                    "enabled": true,
+                    "next_run_at": null,
+                    "last_run_at": null,
+                    "failure_count": 1,
+                    "last_error": "Example last error",
+                    "last_failure_at": null,
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "updated_at": "2026-01-15T09:30:00.000Z"
+                  }
+                ]
               }
             }
           }
@@ -13808,6 +15883,8 @@
             }
           }
         ],
+        "summary": "List audit schedules",
+        "description": "Lists the schedules that launch the project’s audits automatically.",
         "x-citeladder-scope": "read"
       }
     },
@@ -13821,6 +15898,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuditSchedule"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "project_id": "00000000-0000-4000-8000-000000000003",
+                  "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                  "audit_scope": "brand",
+                  "cadence": "one_time",
+                  "interval_minutes": null,
+                  "timezone": "Example timezone",
+                  "engines": ["chatgpt"],
+                  "market_ids": ["00000000-0000-4000-8000-000000000005"],
+                  "repetitions": null,
+                  "benchmark_mode": null,
+                  "enabled": true,
+                  "next_run_at": null,
+                  "last_run_at": null,
+                  "failure_count": 1,
+                  "last_error": "Example last error",
+                  "last_failure_at": null,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13848,6 +15947,8 @@
             }
           }
         ],
+        "summary": "Get an audit schedule",
+        "description": "Returns one audit schedule with its cadence, time zone and engines.",
         "x-citeladder-scope": "read"
       },
       "patch": {
@@ -13859,6 +15960,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuditSchedule"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "project_id": "00000000-0000-4000-8000-000000000003",
+                  "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                  "audit_scope": "brand",
+                  "cadence": "one_time",
+                  "interval_minutes": null,
+                  "timezone": "Example timezone",
+                  "engines": ["chatgpt"],
+                  "market_ids": ["00000000-0000-4000-8000-000000000005"],
+                  "repetitions": null,
+                  "benchmark_mode": null,
+                  "enabled": true,
+                  "next_run_at": null,
+                  "last_run_at": null,
+                  "failure_count": 1,
+                  "last_error": "Example last error",
+                  "last_failure_at": null,
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
                 }
               }
             }
@@ -13984,10 +16107,15 @@
                     ]
                   }
                 }
+              },
+              "example": {
+                "prompt_set_id": "00000000-0000-4000-8000-000000000001"
               }
             }
           }
         },
+        "summary": "Update an audit schedule",
+        "description": "Changes a schedule’s prompt set, cadence, time zone or engines. Send only the fields to change.",
         "x-citeladder-scope": "schedules:write"
       },
       "delete": {
@@ -14019,6 +16147,8 @@
             }
           }
         ],
+        "summary": "Delete an audit schedule",
+        "description": "Deletes a schedule. Audits it already launched are kept.",
         "x-citeladder-scope": "schedules:write"
       }
     },
@@ -14032,6 +16162,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Audit"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "project_id": "00000000-0000-4000-8000-000000000003",
+                  "parent_audit_id": null,
+                  "status": "draft",
+                  "cancelable": true,
+                  "benchmark_mode": "Example benchmark mode",
+                  "audit_scope": "brand",
+                  "model_provenance": [],
+                  "repetitions": 1,
+                  "random_seed": "Example random seed",
+                  "requested_count": 1,
+                  "completed_count": 1,
+                  "failed_count": 1,
+                  "error_message": "Example error message",
+                  "engine_snapshots": [
+                    {
+                      "logical_engine": "Example logical engine",
+                      "transport_provider": "Example transport provider",
+                      "transport_model": "Example transport model"
+                    }
+                  ],
+                  "market": {
+                    "id": null,
+                    "country_code": "Example country code",
+                    "language_code": "Example language code"
+                  },
+                  "launch_id": null,
+                  "not_applicable_engines": ["chatgpt"],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z",
+                  "started_at": null,
+                  "completed_at": null
                 }
               }
             }
@@ -14059,6 +16224,8 @@
             }
           }
         ],
+        "summary": "Get an audit",
+        "description": "Returns one audit with its status and progress. A launched audit is queued and runs on its own, so poll this to see it finish.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14072,6 +16239,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Audit"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "workspace_id": "00000000-0000-4000-8000-000000000002",
+                  "project_id": "00000000-0000-4000-8000-000000000003",
+                  "parent_audit_id": null,
+                  "status": "draft",
+                  "cancelable": true,
+                  "benchmark_mode": "Example benchmark mode",
+                  "audit_scope": "brand",
+                  "model_provenance": [],
+                  "repetitions": 1,
+                  "random_seed": "Example random seed",
+                  "requested_count": 1,
+                  "completed_count": 1,
+                  "failed_count": 1,
+                  "error_message": "Example error message",
+                  "engine_snapshots": [
+                    {
+                      "logical_engine": "Example logical engine",
+                      "transport_provider": "Example transport provider",
+                      "transport_model": "Example transport model"
+                    }
+                  ],
+                  "market": {
+                    "id": null,
+                    "country_code": "Example country code",
+                    "language_code": "Example language code"
+                  },
+                  "launch_id": null,
+                  "not_applicable_engines": ["chatgpt"],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z",
+                  "started_at": null,
+                  "completed_at": null
                 }
               }
             }
@@ -14109,6 +16311,8 @@
             }
           }
         ],
+        "summary": "Cancel an audit",
+        "description": "Stops an audit that has not finished and returns it. Answers already recorded are kept. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "audits:run"
       }
     },
@@ -14135,6 +16339,62 @@
                   },
                   "required": ["items", "next_cursor"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "workspace_id": "00000000-0000-4000-8000-000000000002",
+                      "name": "Example name",
+                      "brand_name": "Example brand name",
+                      "website_url": "https://example.com/page",
+                      "industry": "Example industry",
+                      "subindustry": "Example subindustry",
+                      "primary_market": "Example primary market",
+                      "country_code": "Example country code",
+                      "language_code": "Example language code",
+                      "benchmark_mode": "consumer_like",
+                      "default_repetitions": 1,
+                      "brand": {
+                        "aliases": ["Example aliases"],
+                        "logo_url": null,
+                        "matching": {
+                          "mode": null,
+                          "context_terms": null,
+                          "exclusion_phrases": null,
+                          "common_word": null
+                        }
+                      },
+                      "owned_domains": ["example.com"],
+                      "unintended_domains": ["example.com"],
+                      "competitors": [
+                        {
+                          "id": null,
+                          "name": null,
+                          "aliases": null,
+                          "domains": null,
+                          "logo_url": null,
+                          "matching": null
+                        }
+                      ],
+                      "prompt_sets": [
+                        {
+                          "id": null,
+                          "project_id": null,
+                          "name": null,
+                          "kind": null,
+                          "description": null,
+                          "prompt_count": null,
+                          "prompts": null,
+                          "created_at": null,
+                          "updated_at": null
+                        }
+                      ],
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -14169,6 +16429,8 @@
             }
           }
         ],
+        "summary": "List projects",
+        "description": "Returns the projects the key can reach, one page at a time. A key limited to some projects lists only those. Start here to find the project_id every other path needs.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14185,7 +16447,40 @@
                   "items": {
                     "$ref": "#/components/schemas/PromptSet"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "project_id": "00000000-0000-4000-8000-000000000002",
+                    "name": "Example name",
+                    "kind": "brand",
+                    "description": "Example description",
+                    "prompt_count": 1,
+                    "prompts": [
+                      {
+                        "id": "00000000-0000-4000-8000-000000000003",
+                        "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                        "topic_id": null,
+                        "text": "Example text",
+                        "theme": "Example theme",
+                        "intent": null,
+                        "buyer_stage": null,
+                        "prompt_intent": null,
+                        "persona": "",
+                        "cohort": null,
+                        "branded": true,
+                        "enabled": true,
+                        "status": null,
+                        "origin": "manual",
+                        "over_plan_limit": true,
+                        "created_at": "2026-01-15T09:30:00.000Z",
+                        "updated_at": "2026-01-15T09:30:00.000Z"
+                      }
+                    ],
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "updated_at": "2026-01-15T09:30:00.000Z"
+                  }
+                ]
               }
             }
           }
@@ -14202,6 +16497,8 @@
             }
           }
         ],
+        "summary": "List prompt sets",
+        "description": "Lists the project’s prompt sets. A prompt set is the group of prompts an audit runs together.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14364,6 +16661,36 @@
                   },
                   "required": ["items", "next_cursor"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000002",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z",
+                      "latest_measurement": {
+                        "state": "measured",
+                        "audit_id": "00000000-0000-4000-8000-000000000003",
+                        "mention_rate": null,
+                        "citation_rate": null
+                      }
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -14458,6 +16785,8 @@
             }
           }
         ],
+        "summary": "List prompts",
+        "description": "Lists the project’s prompts, one page at a time. Filter by prompt set, topic or status. Each prompt carries its latest measurement, which is measured, not measured or unavailable.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14481,6 +16810,29 @@
                   },
                   "required": ["prompts"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "prompts": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000002",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ]
                 }
               }
             }
@@ -14583,10 +16935,19 @@
                 },
                 "required": ["prompts"],
                 "additionalProperties": false
+              },
+              "example": {
+                "prompts": [
+                  {
+                    "text": "Example text"
+                  }
+                ]
               }
             }
           }
         },
+        "summary": "Create prompts",
+        "description": "Adds a batch of prompts to a prompt set and returns the created prompts. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },
@@ -14633,6 +16994,17 @@
                   },
                   "required": ["items", "next_cursor"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000002",
+                      "generator_version": "Example generator version",
+                      "created_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -14687,6 +17059,8 @@
             }
           }
         ],
+        "summary": "List prompt generation runs",
+        "description": "Lists the prompt generation runs of a prompt set, newest first, one page at a time.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14703,7 +17077,22 @@
                   "items": {
                     "$ref": "#/components/schemas/Competitor"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "name": "Example name",
+                    "aliases": ["Example aliases"],
+                    "domains": ["example.com"],
+                    "logo_url": null,
+                    "matching": {
+                      "mode": "always",
+                      "context_terms": [],
+                      "exclusion_phrases": [],
+                      "common_word": false
+                    }
+                  }
+                ]
               }
             }
           }
@@ -14720,6 +17109,8 @@
             }
           }
         ],
+        "summary": "List competitors",
+        "description": "Lists the competitors the project tracks, with the names, aliases and domains used to recognise them in answers.",
         "x-citeladder-scope": "read"
       },
       "post": {
@@ -14731,6 +17122,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Competitor"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "name": "Example name",
+                  "aliases": ["Example aliases"],
+                  "domains": ["example.com"],
+                  "logo_url": null,
+                  "matching": {
+                    "mode": "always",
+                    "context_terms": [],
+                    "exclusion_phrases": [],
+                    "common_word": false
+                  }
                 }
               }
             }
@@ -14790,10 +17194,15 @@
                 },
                 "required": ["name"],
                 "additionalProperties": false
+              },
+              "example": {
+                "name": "Example name"
               }
             }
           }
         },
+        "summary": "Add a competitor",
+        "description": "Starts tracking a competitor by name, aliases and domains, and returns it. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "competitors:write"
       }
     },
@@ -14807,6 +17216,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Competitor"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "name": "Example name",
+                  "aliases": ["Example aliases"],
+                  "domains": ["example.com"],
+                  "logo_url": null,
+                  "matching": {
+                    "mode": "always",
+                    "context_terms": [],
+                    "exclusion_phrases": [],
+                    "common_word": false
+                  }
                 }
               }
             }
@@ -14863,10 +17285,15 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "example": {
+                "name": "Example name"
               }
             }
           }
         },
+        "summary": "Update a competitor",
+        "description": "Changes a competitor’s name, aliases or domains. Send only the fields to change.",
         "x-citeladder-scope": "competitors:write"
       },
       "delete": {
@@ -14898,6 +17325,8 @@
             }
           }
         ],
+        "summary": "Remove a competitor",
+        "description": "Stops tracking a competitor. Answers already recorded keep what they found.",
         "x-citeladder-scope": "competitors:write"
       }
     },
@@ -14924,6 +17353,46 @@
                   },
                   "required": ["items", "next_cursor"],
                   "additionalProperties": false
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000001",
+                      "workspace_id": "00000000-0000-4000-8000-000000000002",
+                      "project_id": "00000000-0000-4000-8000-000000000003",
+                      "parent_audit_id": null,
+                      "status": "draft",
+                      "cancelable": true,
+                      "benchmark_mode": "Example benchmark mode",
+                      "audit_scope": "brand",
+                      "model_provenance": [],
+                      "repetitions": 1,
+                      "random_seed": "Example random seed",
+                      "requested_count": 1,
+                      "completed_count": 1,
+                      "failed_count": 1,
+                      "error_message": "Example error message",
+                      "engine_snapshots": [
+                        {
+                          "logical_engine": "Example logical engine",
+                          "transport_provider": "Example transport provider",
+                          "transport_model": "Example transport model"
+                        }
+                      ],
+                      "market": {
+                        "id": null,
+                        "country_code": "Example country code",
+                        "language_code": "Example language code"
+                      },
+                      "launch_id": null,
+                      "not_applicable_engines": ["chatgpt"],
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z",
+                      "started_at": null,
+                      "completed_at": null
+                    }
+                  ],
+                  "next_cursor": null
                 }
               }
             }
@@ -14968,6 +17437,8 @@
             }
           }
         ],
+        "summary": "List audits",
+        "description": "Lists the project’s audits, newest first, one page at a time.",
         "x-citeladder-scope": "read"
       },
       "post": {
@@ -14982,7 +17453,44 @@
                   "items": {
                     "$ref": "#/components/schemas/Audit"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "workspace_id": "00000000-0000-4000-8000-000000000002",
+                    "project_id": "00000000-0000-4000-8000-000000000003",
+                    "parent_audit_id": null,
+                    "status": "draft",
+                    "cancelable": true,
+                    "benchmark_mode": "Example benchmark mode",
+                    "audit_scope": "brand",
+                    "model_provenance": [],
+                    "repetitions": 1,
+                    "random_seed": "Example random seed",
+                    "requested_count": 1,
+                    "completed_count": 1,
+                    "failed_count": 1,
+                    "error_message": "Example error message",
+                    "engine_snapshots": [
+                      {
+                        "logical_engine": "Example logical engine",
+                        "transport_provider": "Example transport provider",
+                        "transport_model": "Example transport model"
+                      }
+                    ],
+                    "market": {
+                      "id": null,
+                      "country_code": "Example country code",
+                      "language_code": "Example language code"
+                    },
+                    "launch_id": null,
+                    "not_applicable_engines": ["chatgpt"],
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "updated_at": "2026-01-15T09:30:00.000Z",
+                    "started_at": null,
+                    "completed_at": null
+                  }
+                ]
               }
             }
           }
@@ -15099,10 +17607,17 @@
                   }
                 },
                 "required": ["engines", "max_attempts"]
+              },
+              "example": {
+                "prompt_set_id": "00000000-0000-4000-8000-000000000001",
+                "engines": ["chatgpt"],
+                "max_attempts": 12
               }
             }
           }
         },
+        "summary": "Launch an audit",
+        "description": "Queues an audit of a prompt set, or of chosen prompts, on the engines you name, and returns the created audits. Each recorded answer spends one prompt run; set max_attempts to cap the spend, and estimate first with the estimate operation. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "audits:run"
       }
     },
@@ -15116,6 +17631,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuditEstimate"
+                },
+                "example": {
+                  "retrieval_enabled": true,
+                  "prompt_count": 1,
+                  "engine_count": 1,
+                  "repetition_count": 1,
+                  "market_count": 1,
+                  "execution_count": 1,
+                  "maximum_attempt_count": 1,
+                  "maximum_wall_clock_seconds": 1,
+                  "cost_status": "complete",
+                  "estimated_total_cost_microusd": null,
+                  "engines": [
+                    {
+                      "logical_engine": "chatgpt",
+                      "transport_provider": "openai",
+                      "transport_model": "Example transport model",
+                      "retrieval_enabled": null,
+                      "prompt_count": 1,
+                      "repetition_count": 1,
+                      "market_count": 1,
+                      "execution_count": 1,
+                      "maximum_attempt_count": 1,
+                      "estimated_input_tokens": null,
+                      "estimated_output_tokens": null,
+                      "estimated_search_calls": null,
+                      "estimated_token_cost_microusd": null,
+                      "estimated_search_cost_microusd": null,
+                      "estimated_total_cost_microusd": null,
+                      "cost_status": "complete",
+                      "pricing_version": "Example pricing version"
+                    }
+                  ]
                 }
               }
             }
@@ -15200,10 +17748,16 @@
                   }
                 },
                 "required": ["engines"]
+              },
+              "example": {
+                "prompt_set_id": "00000000-0000-4000-8000-000000000001",
+                "engines": ["chatgpt"]
               }
             }
           }
         },
+        "summary": "Estimate an audit",
+        "description": "Returns the number of answers an audit would ask for and its maximum attempt count, without creating anything. Pass the maximum as max_attempts when launching to cap the cost. It needs only the read scope.",
         "x-citeladder-scope": "read"
       }
     }

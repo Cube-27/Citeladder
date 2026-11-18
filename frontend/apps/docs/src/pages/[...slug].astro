@@ -1,19 +1,25 @@
 ---
 import { websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
-import { articleHeadings, articles } from '../lib/content';
+import { API_GROUP, articleHeadings, articles } from '../lib/content';
 import { docsArticleJsonLd, updatedLabel } from '../lib/structured-data';
 import DocsShell from '../layouts/DocsShell.astro';
-import ApiReference from '../components/ApiReference.astro';
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import Prose from '@/components/content/Prose.astro';
 import ToolReference from '../components/ToolReference.astro';
 
 export function getStaticPaths() {
-  return articles.map((article, index) => ({
-    params: { slug: article.slug === 'index' ? undefined : article.slug },
-    props: { article, previous: articles[index - 1], next: articles[index + 1] },
-  }));
+  // The API section pages through itself, the guides through theirs.
+  const neighbours = (article: (typeof articles)[number]) =>
+    articles.filter((other) => (other.group === API_GROUP) === (article.group === API_GROUP));
+  return articles.map((article) => {
+    const siblings = neighbours(article);
+    const index = siblings.indexOf(article);
+    return {
+      params: { slug: article.route === '' ? undefined : article.route },
+      props: { article, previous: siblings[index - 1], next: siblings[index + 1] },
+    };
+  });
 }
 
 const { article, previous, next } = Astro.props;
@@ -40,7 +46,7 @@ const toc = headings.map((heading) => ({
   updated={article.updated}
   jsonLd={jsonLd}
   toc={toc}
-  wide={article.toolReference || article.apiReference}
+  wide={article.toolReference}
   previous={previous && { title: previous.title, href: previous.href }}
   next={next && { title: next.title, href: next.href }}
 >
@@ -55,5 +61,4 @@ const toc = headings.map((heading) => ({
   </ArticleHeader>
   <Prose variant="docs"><Content /></Prose>
   {article.toolReference && <ToolReference />}
-  {article.apiReference && <ApiReference />}
 </DocsShell>

@@ -36,10 +36,22 @@ test('search recovers, supports keyboard dismissal and navigates to a guide', as
 test('guides and local anchors resolve, and missing pages return 404', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/');
-  const routes = await page
-    .getByRole('navigation', { name: 'Documentation', exact: true })
-    .getByRole('link')
-    .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
+  const railRoutes = () =>
+    page
+      .locator('nav.cl-docs-side a')
+      .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
+  const guideRoutes = await railRoutes();
+  // The API section has its own rail; its endpoint groups start closed.
+  await page.goto('/api/');
+  const routes = [...new Set([...guideRoutes, ...(await railRoutes())])];
+  // Generated pages, such as a schema's, are reached by links rather than the rail.
+  const sitemap = await (await page.request.get('/sitemap.xml')).text();
+  const registered = new Set([
+    ...routes,
+    ...[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+      (match) => new URL(match[1] ?? '').pathname,
+    ),
+  ]);
   // One visit per route records its rendered ids, so anchors are checked
   // against them instead of re-navigating to every hash link.
   const ids = new Map<string, Set<string>>();
@@ -68,7 +80,7 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
       assets.push(link);
       continue;
     }
-    expect(routes, `Unregistered docs link ${link}`).toContain(url.pathname);
+    expect(registered, `Unregistered docs link ${link}`).toContain(url.pathname);
     if (url.hash)
       expect(ids.get(url.pathname)?.has(decodeURIComponent(url.hash.slice(1))), link).toBe(true);
   }

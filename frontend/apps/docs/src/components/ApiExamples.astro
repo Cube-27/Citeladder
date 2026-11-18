@@ -1,0 +1,139 @@
+---
+/**
+ * ApiExamples — the endpoint page's right column: a request card whose bar
+ * switches the language (cURL, JavaScript, Python) beside a Copy button, and
+ * a response card whose bar names the status beside its own Copy button. Both
+ * cards are CodeBlock markup, so the system's copy behaviour and look apply.
+ */
+import CodeBlock from '@/components/content/CodeBlock.astro';
+import type { ApiOperation } from '../lib/api-reference';
+import ApiCopyButton from './ApiCopyButton.astro';
+import { buildSnippets } from '../lib/api-snippets';
+
+interface Props {
+  operation: ApiOperation;
+}
+const { operation } = Astro.props;
+const snippets = buildSnippets(operation);
+const { status, body } = operation.response;
+const responseExample =
+  body?.example === null || body?.example === undefined
+    ? null
+    : JSON.stringify(body.example, null, 2);
+---
+
+<CodeBlock />
+<div class="cl-docs-examples" data-api-examples>
+  <figure
+    class="cl-code"
+    data-api-request
+    data-snippets={JSON.stringify(Object.fromEntries(snippets.map((s) => [s.id, s.code])))}
+  >
+    <figcaption class="cl-code-bar">
+      <div class="cl-docs-lang-tabs" role="tablist" aria-label="Request language">
+        {
+          snippets.map((snippet, index) => (
+            <button
+              type="button"
+              role="tab"
+              class="cl-docs-lang-tab"
+              aria-selected={index === 0 ? 'true' : 'false'}
+              id={`api-lang-${snippet.id}`}
+              aria-controls="api-request-panel"
+              data-api-lang={snippet.id}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              {snippet.label}
+            </button>
+          ))
+        }
+      </div>
+      <ApiCopyButton />
+    </figcaption>
+    <pre class="cl-code-pre" role="tabpanel" id="api-request-panel" aria-labelledby={`api-lang-${snippets[0]?.id}`} tabindex="0"><code
+        >{snippets[0]?.code}</code
+      ></pre>
+  </figure>
+  {
+    responseExample && (
+      <figure class="cl-code">
+        <figcaption class="cl-code-bar">
+          <span class="cl-docs-status-tab">{status}</span>
+          <ApiCopyButton />
+        </figcaption>
+        <pre class="cl-code-pre" tabindex="0"><code>{responseExample}</code></pre>
+      </figure>
+    )
+  }
+</div>
+
+<style>
+  .cl-docs-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  /* The response body is long: it scrolls inside its card, not the page. */
+  .cl-docs-examples :global(.cl-code-pre) {
+    max-height: 420px;
+  }
+  .cl-docs-lang-tabs {
+    display: flex;
+    gap: 2px;
+  }
+  .cl-docs-lang-tab,
+  .cl-docs-status-tab {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-sm);
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-transform: uppercase;
+  }
+  .cl-docs-lang-tab {
+    cursor: pointer;
+  }
+  .cl-docs-lang-tab:hover,
+  .cl-docs-lang-tab[aria-selected='true'],
+  .cl-docs-status-tab {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+</style>
+
+<script>
+  // The language tabs swap the one code element's text, so Copy reads what is shown.
+  for (const root of document.querySelectorAll<HTMLElement>('[data-api-request]')) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-api-lang]')];
+    const code = root.querySelector('code');
+    const snippets: Record<string, string> = JSON.parse(root.dataset.snippets ?? '{}');
+    const select = (selected: HTMLButtonElement) => {
+      for (const tab of tabs) {
+        const on = tab === selected;
+        tab.setAttribute('aria-selected', String(on));
+        tab.tabIndex = on ? 0 : -1;
+      }
+      code?.parentElement?.setAttribute('aria-labelledby', selected.id);
+      if (code) code.textContent = snippets[selected.dataset.apiLang ?? ''] ?? '';
+    };
+    for (const [index, tab] of tabs.entries()) {
+      tab.addEventListener('click', () => select(tab));
+      tab.addEventListener('keydown', (event) => {
+        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        if (step === 0) return;
+        const next = tabs[(index + step + tabs.length) % tabs.length];
+        if (!next) return;
+        select(next);
+        next.focus();
+      });
+    }
+  }
+</script>

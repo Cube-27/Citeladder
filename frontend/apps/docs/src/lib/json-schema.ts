@@ -58,8 +58,8 @@ export type ReferenceRow = {
   defaultValue?: string;
 };
 
-/** The anchor of a named schema's entry on the API reference page. */
-export const schemaAnchor = (name: string) => `schema-${name}`;
+/** The page of a named schema. */
+export const schemaHref = (name: string) => `/api/schemas/${name}/`;
 
 function joined(labels: TypePart[][], separator: string): TypePart[] {
   return labels.flatMap((label, index) => (index === 0 ? label : [{ text: separator }, ...label]));

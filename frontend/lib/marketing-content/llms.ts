@@ -74,7 +74,7 @@ export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
     '',
     '- Base URL: https://api.citeladder.com/v1. Authenticate with `Authorization: Bearer <API key>`; Owners and Admins create scoped keys in Settings → API keys.',
     '- OpenAPI document: https://api.citeladder.com/v1/openapi.json',
-    `- Guide and reference: ${docsHref('/api/')} and ${docsHref('/api/reference/')}`,
+    `- Guide and reference: ${docsHref('/api/')} and ${docsHref('/api/endpoints/')}`,
     '',
     '## Engines measured',
     '',

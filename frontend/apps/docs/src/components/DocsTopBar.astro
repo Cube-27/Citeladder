@@ -19,9 +19,10 @@ import DocsSidebar from './DocsSidebar.astro';
 const path = Astro.url.pathname;
 const website = websiteHref('/');
 const sections = [
-  { href: '/', label: 'Guides', selected: !/^\/(agent|mcp|changelog)(\/|$)/.test(path) },
+  { href: '/', label: 'Guides', selected: !/^\/(agent|mcp|api|changelog)(\/|$)/.test(path) },
   { href: '/agent/', label: 'Agent', selected: path.startsWith('/agent') },
   { href: '/mcp/', label: 'MCP', selected: path.startsWith('/mcp') },
+  { href: '/api/', label: 'API', selected: path === '/api' || path.startsWith('/api/') },
   { href: '/changelog/', label: 'Changelog', selected: path.startsWith('/changelog') },
 ];
 ---

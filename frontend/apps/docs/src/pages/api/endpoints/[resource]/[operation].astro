@@ -1,0 +1,30 @@
+---
+import ApiEndpoint from '../../../../components/ApiEndpoint.astro';
+import ApiPage from '../../../../layouts/ApiPage.astro';
+import { API_OPERATIONS } from '../../../../lib/api-reference';
+
+export function getStaticPaths() {
+  const link = (operation?: (typeof API_OPERATIONS)[number]) =>
+    operation && { title: operation.summary, href: operation.href };
+  return API_OPERATIONS.map((operation, index) => ({
+    params: { resource: operation.resource.id, operation: operation.slug },
+    props: {
+      operation,
+      previous: link(API_OPERATIONS[index - 1]),
+      next: link(API_OPERATIONS[index + 1]),
+    },
+  }));
+}
+
+const { operation, previous, next } = Astro.props;
+---
+
+<ApiPage
+  title={operation.summary}
+  eyebrow={operation.resource.label}
+  description={operation.description}
+  previous={previous}
+  next={next}
+>
+  <ApiEndpoint operation={operation} />
+</ApiPage>
