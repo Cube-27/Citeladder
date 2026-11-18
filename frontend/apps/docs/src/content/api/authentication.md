@@ -28,14 +28,14 @@ curl https://api.citeladder.com/v1/projects \
 
 ## Scopes
 
-| Scope               | Lets the key                                                                    |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `read`              | Read projects, prompts, audits, answers, visibility and every other report      |
-| `prompts:write`     | Create, edit, import, activate, archive and delete prompts and topics; generate |
-| `competitors:write` | Add, edit and remove competitors; accept or reject competitor suggestions       |
-| `audits:run`        | Launch and cancel audits                                                        |
-| `schedules:write`   | Create, change, pause and delete audit schedules                                |
-| `actions:write`     | Change an action's status and record an implementation                          |
+| Scope               | Lets the key                                                                     |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `read`              | Read projects, prompts, audits, answers, visibility and the other public reports |
+| `prompts:write`     | Create, edit, import, activate, archive and delete prompts and topics; generate  |
+| `competitors:write` | Add, edit and remove competitors; accept or reject competitor suggestions        |
+| `audits:run`        | Launch and cancel audits                                                         |
+| `schedules:write`   | Create, change, pause and delete audit schedules                                 |
+| `actions:write`     | Change an action's status and record an implementation                           |
 
 Each [endpoint](/api/endpoints/) page names the scope it needs.
 

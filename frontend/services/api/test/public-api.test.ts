@@ -7,7 +7,6 @@ import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
 
 import { budget, spendBudget } from '../src/abuse/usage.ts';
 import { createApiKey } from '../src/api-keys/keys.ts';
-import { createApp } from '../src/app.ts';
 import { WorkspaceContext } from '../src/auth/workspace.ts';
 import { policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
@@ -17,15 +16,12 @@ import { withIdempotency } from '../src/public-api/idempotency.ts';
 import { mutateMember } from '../src/workspaces/service.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { actionRow } from './opportunity-fixtures.ts';
-import { billingAccount, grant, prompt, promptSet, topic } from './prompt-fixtures.ts';
-import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
-import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
-import { frozen } from './visibility-read-support.ts';
+import { billingAccount, prompt, promptSet, topic } from './prompt-fixtures.ts';
+import { publicApiHarness } from './public-api-support.ts';
+import { asOwner, sessionToken } from './support.ts';
 
-const config = testConfig();
-const db = testDatabase(config);
-const app = createApp(config, db);
-const fixtures = new VisibilityFixtures(db);
+const { config, db, app, fixtures, validProjects, withApiAccess, browser, createKey, api } =
+  publicApiHarness();
 
 afterEach(async () => {
   await fixtures.cleanup();
@@ -33,67 +29,6 @@ afterEach(async () => {
 afterAll(async () => {
   await db.destroy();
 });
-
-/** A paid workspace: API access and ten keys, as every paid plan grants. */
-async function withApiAccess<T extends Tenant>(tenant: T): Promise<T> {
-  const account = await billingAccount(db, tenant.workspaceId);
-  await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
-  await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
-  await validProjects(tenant.workspaceId);
-  return tenant;
-}
-
-/** The shared project fixture's benchmark mode predates the project contract's enum. */
-async function validProjects(workspaceId: string) {
-  await db
-    .updateTable('projects')
-    .set({ benchmark_mode: 'consumer_like' })
-    .where('workspace_id', '=', workspaceId)
-    .execute();
-}
-
-async function browser(userId: string, workspaceId: string, path: string, body?: unknown) {
-  return app.request(`/api/v1${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      cookie: `${config.session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
-      'x-workspace-id': workspaceId,
-      'content-type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
-
-async function createKey(
-  tenant: Tenant,
-  input: { scopes?: string[]; project_ids?: string[]; expires_at?: string } = {},
-) {
-  const response = await browser(tenant.userId, tenant.workspaceId, '/api-keys', {
-    name: 'CI export',
-    ...input,
-  });
-  expect(response.status).toBe(201);
-  return (await response.json()) as {
-    key: { id: string; prefix: string; scopes: string[] };
-    secret: string;
-  };
-}
-
-function api(
-  secret: string,
-  path: string,
-  options: { method?: string; body?: unknown; idempotencyKey?: string } = {},
-) {
-  return app.request(`/v1${path}`, {
-    method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
-    headers: {
-      authorization: `Bearer ${secret}`,
-      'content-type': 'application/json',
-      ...(options.idempotencyKey ? { 'idempotency-key': options.idempotencyKey } : {}),
-    },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-  });
-}
 
 /** A public write behind `withIdempotency`, authenticated as the given key. */
 function idempotentApp(
@@ -821,83 +756,5 @@ describe('public API requests', () => {
       ...JSON.stringify(document).matchAll(/"\$ref":"#\/components\/schemas\/([^"]+)"/g),
     ];
     expect(refs.filter(([, name]) => !(name! in document.components.schemas))).toEqual([]);
-  });
-});
-
-describe('public answers', () => {
-  /** A key held to one project, two runs of one of its prompts, and another project's run. */
-  async function answeredPrompt() {
-    const tenant = await withApiAccess(await fixtures.tenant());
-    const other = { ...tenant, projectId: await fixtures.project(tenant.workspaceId) };
-    await validProjects(tenant.workspaceId);
-    const promptId = await prompt(db, await promptSet(db, tenant.projectId), 'best crm');
-    const otherPrompt = await prompt(db, await promptSet(db, other.projectId), 'best crm');
-    const run = (owner: Tenant, day: string) =>
-      fixtures.audit(owner, { completedAt: new Date(`${day}T00:00:00Z`), configuration: frozen() });
-    const answer = async (owner: Tenant, auditId: string, id: string) =>
-      (
-        await fixtures.execution(owner, {
-          auditId,
-          promptId: id,
-          promptIndex: 0,
-          promptText: 'best crm',
-        })
-      ).taskId;
-    const early = await run(tenant, '2026-03-02');
-    const late = await run(tenant, '2026-03-09');
-    const otherRun = await run(other, '2026-03-09');
-    const answers = {
-      early: await answer(tenant, early, promptId),
-      late: await answer(tenant, late, promptId),
-      other: await answer(other, otherRun, otherPrompt),
-    };
-    const { secret } = await createKey(tenant, { project_ids: [tenant.projectId] });
-    return { tenant, other, promptId, otherPrompt, late, otherRun, answers, secret };
-  }
-
-  const taskIds = async (response: Response, field: 'execution_id' | 'task_id') => {
-    const body = (await response.json()) as {
-      items: Record<string, unknown>[];
-      next_cursor: unknown;
-    };
-    return { ids: body.items.map((item) => item[field]), next: body.next_cursor };
-  };
-
-  it('pages one prompt’s answers by keyset and refuses a prompt outside the key’s project', async () => {
-    const { tenant, other, promptId, otherPrompt, answers, secret } = await answeredPrompt();
-    const path = `/projects/${tenant.projectId}/prompts/${promptId}/answers`;
-
-    const first = await taskIds(await api(secret, `${path}?limit=1`), 'execution_id');
-    const second = await taskIds(
-      await api(secret, `${path}?limit=1&cursor=${encodeURIComponent(String(first.next))}`),
-      'execution_id',
-    );
-    const crossed = await api(
-      secret,
-      `/projects/${tenant.projectId}/prompts/${otherPrompt}/answers`,
-    );
-    const outside = await api(
-      secret,
-      `/projects/${other.projectId}/prompts/${otherPrompt}/answers`,
-    );
-
-    expect([first.ids, typeof first.next, second.ids, second.next]).toEqual([
-      [answers.late],
-      'string',
-      [answers.early],
-      null,
-    ]);
-    expect([crossed.status, outside.status]).toEqual([404, 404]);
-  });
-
-  it('lists one run’s answers and refuses a run from another project', async () => {
-    const { tenant, late, otherRun, answers, secret } = await answeredPrompt();
-    const path = `/projects/${tenant.projectId}/visibility/answers`;
-
-    const run = await taskIds(await api(secret, `${path}?audit_id=${late}`), 'task_id');
-    const crossed = await api(secret, `${path}?audit_id=${otherRun}`);
-
-    expect(run.ids).toEqual([answers.late]);
-    expect(crossed.status).toBe(404);
   });
 });

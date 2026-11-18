@@ -10936,7 +10936,7 @@
           }
         ],
         "summary": "List a prompt’s answers",
-        "description": "Lists every successful answer one prompt got across runs, newest run first, one page at a time: the engine, the brands named in order, your position, whether you were cited and whether the engine searched the web. Filter by market, engine, date, brand named, cited and search use.",
+        "description": "Lists every successful answer one prompt got across runs in one market, newest run first, one page at a time: the engine, the brands named in order, your position, whether you were cited and whether the engine searched the web. Without market it reads the project’s default market; pass market to read another. Filter by engine, date, brand named, cited and search use.",
         "x-citeladder-scope": "read"
       }
     },
