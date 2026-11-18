@@ -14,7 +14,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPositionExact } from '@/lib/visibility/dashboard';
 import type { AnswerStates, PromptHistory, PromptMetricItem } from '@citeladder/contracts';
 
-const NOT_MEASURED = <Absence state="not_measured" narrow />;
+const NOT_MEASURED = <Absence state="not_measured" />;
 const NO_ANSWER = (
   <Absence
     state="unavailable"

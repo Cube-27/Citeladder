@@ -5,7 +5,6 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
 import { SectionContent, TitledSection } from '@/components/ui/section';
-import { StateBlock } from '@/components/ui/state-block';
 import { StepChart } from '@/components/ui/step-chart';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -20,9 +19,8 @@ import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
 
 /**
- * Visibility and owned citation rate per run, with declared work marked. The
- * key figures above already print the latest values, so a single run draws no
- * chart (it would only restate them); its data stays under Show run data.
+ * Visibility and owned citation rate per run, with declared work marked. A
+ * single run plots its one point per line, as the Insights trend does.
  */
 export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
@@ -34,24 +32,17 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
     >
       <SectionContent>
         <Stack gap="workspace">
-          {points.length > 1 ? (
-            <StepChart
-              label="Visibility over time"
-              name="Visibility"
-              data={mentionRatePoints(points, timeZone)}
-              series={[{ label: 'Owned citation rate', values: ownedCitationValues(points) }]}
-              events={implementationEvents(history.implementations, timeZone)}
-              eventsLabel="Marked implemented"
-              yMax={100}
-              yFormat={formatWholePercent}
-            />
-          ) : (
-            <StateBlock
-              kind="empty"
-              inline
-              message="One run has measured this prompt so far: the trend starts with the next run."
-            />
-          )}
+          <StepChart
+            label="Visibility over time"
+            name="Visibility"
+            data={mentionRatePoints(points, timeZone)}
+            series={[{ label: 'Owned citation rate', values: ownedCitationValues(points) }]}
+            events={implementationEvents(history.implementations, timeZone)}
+            eventsLabel="Marked implemented"
+            yMax={100}
+            yFormat={formatWholePercent}
+            lonePoint="plot"
+          />
           <RunData points={points} />
         </Stack>
       </SectionContent>

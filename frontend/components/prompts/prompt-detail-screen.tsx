@@ -4,11 +4,10 @@ import { useParams } from 'react-router-dom';
 
 import { RecordPage } from '@/components/templates/record-page';
 import { ActionButton } from '@/components/ui/actions';
-import { AllFilters } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
-import { FilterControls } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
@@ -48,13 +47,8 @@ export function PromptDetailScreen() {
     enabled: Boolean(promptId),
   });
 
-  // The period stays in view; the rest share the Prompts list's All filters.
-  const filters = (
-    <Inline gap="item">
-      <FilterControls filters={[answerFilters.period]} />
-      <AllFilters filters={answerFilters.more} />
-    </Inline>
-  );
+  // The period stays in view; the rest share All filters.
+  const filters = <FilterBar {...pageStripFilters(answerFilters.definitions)} />;
   if (query.isError)
     return (
       <RecordPage back={BACK} filters={filters}>

@@ -409,8 +409,8 @@ function measuredColumnsFor({
   return [visibility, ...(compared ? [CHANGE_COLUMN] : []), ...MEASURED_COLUMNS];
 }
 
-/** No run has measured it: a muted dash, the words in its tooltip and accessible name. */
-const NOT_MEASURED = <Absence state="not_measured" narrow />;
+/** No run has measured it: Absence prints the muted dash, its words in the tooltip and name. */
+const NOT_MEASURED = <Absence state="not_measured" />;
 
 /** Measured with no completed answer: unavailable, never "not measured" or zero. */
 const NO_ANSWERS = <Absence state="unavailable" label="No completed answers" narrow />;
