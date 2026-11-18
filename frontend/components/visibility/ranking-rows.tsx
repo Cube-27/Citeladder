@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { CellMeter } from '@/components/ui/meter';
 import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
-import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
+import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
 import { orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
@@ -44,11 +44,13 @@ export function RankingRowsTable({
   );
   // Runs measured before mention offsets were persisted have no position.
   const anyPosition = ordered.some((row) => row.avg_position != null);
+  // Runs finalized before first-named answers were persisted have no win rate.
+  const anyWin = ordered.some((row) => row.win_answers != null);
   return (
     <TitledSection title={TITLE} description={description}>
       <DataTable
         label={TITLE}
-        columns={rankingColumns({ anyPosition, anyChange })}
+        columns={rankingColumns({ anyPosition, anyWin, anyChange })}
         minWidth="md"
         state={
           ordered.length
@@ -88,6 +90,11 @@ export function RankingRowsTable({
                   {row.avg_position == null ? <Absence /> : formatPositionExact(row.avg_position)}
                 </TableCell>
               ) : null}
+              {anyWin ? (
+                <TableCell numeric>
+                  <WinRateValue row={row} />
+                </TableCell>
+              ) : null}
               {anyChange ? (
                 <TableCell numeric>
                   <Delta value={change} unit=" pp" />
@@ -119,10 +126,17 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
   );
 }
 
+/** Named first in N of M; no answer naming a tracked brand is not applicable, not zero. */
+function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
+  if (row.win_rate != null) return <span>{formatRate(row.win_rate)}</span>;
+  return <Absence narrow state={row.win_answers === 0 ? 'not_applicable' : 'unavailable'} />;
+}
+
 function rankingColumns({
   anyPosition,
+  anyWin,
   anyChange,
-}: Readonly<{ anyPosition: boolean; anyChange: boolean }>): DataTableColumn[] {
+}: Readonly<{ anyPosition: boolean; anyWin: boolean; anyChange: boolean }>): DataTableColumn[] {
   return [
     { key: 'brand', label: 'Brand', kind: 'identity' },
     // Wide enough for the 120px bar beside its rate.
@@ -140,6 +154,17 @@ function rankingColumns({
             key: 'position',
             label: 'Position',
             hint: POSITION_HINT,
+            width: 'short',
+            kind: 'number',
+          } as const,
+        ]
+      : []),
+    ...(anyWin
+      ? [
+          {
+            key: 'win_rate',
+            label: 'Win rate',
+            hint: WIN_RATE_HINT,
             width: 'short',
             kind: 'number',
           } as const,

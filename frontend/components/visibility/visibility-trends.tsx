@@ -8,7 +8,7 @@ import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
 import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
-import type { Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
+import type { RankingRow, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
 import {
   formatPosition,
   formatPositionExact,
@@ -19,8 +19,8 @@ import { brandStanding, orderByVisibility, standingHeadline } from '@/lib/visibi
 import { toChartPoints, toCompetitorSeries, toNamedChartPoints } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
-import { formatDisplayDate, pluralCount } from '@/lib/format';
-import { SHARE_OF_VOICE_HINT, VISIBILITY_METRICS } from '@/lib/config/visibility';
+import { availabilityLabel, formatCount, formatDisplayDate, pluralCount } from '@/lib/format';
+import { SHARE_OF_VOICE_HINT, VISIBILITY_METRICS, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -118,6 +118,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
             value: formatPosition(position),
           },
         ]),
+    winRateSegment(brand, unmeasured),
     {
       key: 'sov',
       label: 'Share of voice',
@@ -126,6 +127,28 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
     },
   ];
   return <FigureStrip segments={segments} />;
+}
+
+/**
+ * Win rate (AV-7): of the answers naming a brand you track, the share naming
+ * yours first. No such answer is not applicable; a run finalized before the
+ * derivation is unavailable.
+ */
+function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null): FigureSegment {
+  const answers = brand?.win_answers ?? null;
+  const rate = brand?.win_rate ?? null;
+  return {
+    key: 'win_rate',
+    label: 'Win rate',
+    marker: <InfoHint label="Win rate">{WIN_RATE_HINT}</InfoHint>,
+    value: unmeasured ?? (rate === null ? null : formatRate(rate)),
+    missingLabel: availabilityLabel(answers === null ? 'unavailable' : 'not_applicable'),
+    delta: answers ? (
+      <span className={textRole('caption')}>
+        {`Named first in ${formatCount(brand?.win_count ?? 0)} of ${formatCount(answers)}`}
+      </span>
+    ) : null,
+  };
 }
 
 /**
