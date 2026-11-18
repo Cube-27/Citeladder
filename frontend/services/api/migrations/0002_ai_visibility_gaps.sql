@@ -145,3 +145,53 @@ CREATE INDEX ix_claim_verdict_overrides_ws_verdict_newest ON public.claim_verdic
 -- Append-only: the app role adds overrides and never rewrites or removes them;
 -- cascades still remove them with their verdict (referential actions run as owner).
 REVOKE UPDATE, DELETE ON public.claim_verdict_overrides FROM citeladder_app;
+
+-- Answer formats (AV-8): what a scraper answer showed besides text, parsed at
+-- analysis from the answer's own stored artifact. 'not_applicable': an API
+-- engine; 'unavailable': a scraper envelope without an item list; NULL: analysed
+-- before this derivation existed (unavailable). In-text links are distinct link
+-- targets written in the answer text, set only when the formats were observed.
+ALTER TABLE public.response_analyses
+    ADD COLUMN answer_format_state character varying(16),
+    ADD COLUMN answer_formats text[],
+    ADD COLUMN in_text_link_count integer,
+    ADD CONSTRAINT ck_response_analyses_answer_formats CHECK (
+        CASE
+            WHEN answer_format_state = 'observed' THEN answer_formats IS NOT NULL AND in_text_link_count >= 0
+            WHEN answer_format_state IS NULL OR answer_format_state IN ('unavailable', 'not_applicable')
+                THEN answer_formats IS NULL AND in_text_link_count IS NULL
+            ELSE false
+        END
+    );
+
+-- Fanout search terms (AV-8): one row per finalized run, the normalized words
+-- of its answers' fanout queries with searches, share, tracked brands matched
+-- and the share change against previous_audit_id (NULL: nothing to compare).
+CREATE TABLE public.audit_fanout_terms (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    previous_audit_id uuid,
+    total_searches integer NOT NULL,
+    unreported_engines text[] NOT NULL,
+    terms jsonb NOT NULL,
+    source_analysis_ids jsonb NOT NULL,
+    analyzer_version character varying(32) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_audit_fanout_terms_total CHECK (total_searches >= 0)
+);
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT uq_audit_fanout_terms_audit UNIQUE (audit_id);
+
+CREATE INDEX ix_audit_fanout_terms_workspace_project ON public.audit_fanout_terms USING btree (workspace_id, project_id);
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
