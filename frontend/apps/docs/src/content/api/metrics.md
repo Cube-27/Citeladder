@@ -45,7 +45,7 @@ Like the app, the API keeps unknown, unavailable, not measured and zero apart. N
 
 ## Comparison status
 
-A comparison with a baseline run reports a `status`. Ordinary deltas (`deltas`, `visibility_delta`) are filled only when it is `comparable`; on `matched_subset` the `matched_*` fields carry the rate and change over the shared cells instead.
+A comparison with a baseline run reports a `status`. The comparison's `deltas` cover every cell when it is `comparable`, only the shared cells on `matched_subset`, and are empty otherwise. A row's `visibility_delta` is filled only when `comparable`; on `matched_subset` its `matched_*` fields carry the rate and change over the shared cells instead.
 
 | Status                 | Meaning                                                                                 |
 | ---------------------- | --------------------------------------------------------------------------------------- |

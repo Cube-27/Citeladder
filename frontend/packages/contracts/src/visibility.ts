@@ -172,14 +172,18 @@ export const visibilityComparisonSchema = responseObject({
   status: z
     .string()
     .describe(
-      '`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. `deltas` fill only when comparable; `matched_*` rows only on `matched_subset`.',
+      '`comparable`, `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`.',
     ),
   baseline_audit_id: uuid().nullable(),
   baseline_audit_ids: z.array(uuid()),
   baseline_at: z.string().nullable(),
   baseline_counts: measurementCountsSchema.nullable(),
   current_counts: measurementCountsSchema.nullable(),
-  deltas: z.record(z.string(), z.number().nullable()),
+  deltas: z
+    .record(z.string(), z.number().nullable())
+    .describe(
+      'Change per metric against the baseline, rates in percentage points: over every cell when `comparable`, over the shared cells on `matched_subset`, empty otherwise.',
+    ),
   rankings: z.array(rankingRowSchema),
   skipped_runs: z.number().int(),
   matched_cells: z.number().int(),

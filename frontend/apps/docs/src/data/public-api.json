@@ -8937,7 +8937,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "description": "`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. `deltas` fill only when comparable; `matched_*` rows only on `matched_subset`."
+            "description": "`comparable`, `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`."
           },
           "baseline_audit_id": {
             "anyOf": [
@@ -8989,7 +8989,8 @@
             },
             "additionalProperties": {
               "type": ["number", "null"]
-            }
+            },
+            "description": "Change per metric against the baseline, rates in percentage points: over every cell when `comparable`, over the shared cells on `matched_subset`, empty otherwise."
           },
           "rankings": {
             "type": "array",
