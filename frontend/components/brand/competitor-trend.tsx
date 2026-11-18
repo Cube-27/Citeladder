@@ -47,25 +47,34 @@ export function CompetitorTrend({
         <SectionTitle id="competitor-trend">{name} against you</SectionTitle>
       </SectionHeader>
       <SectionContent>
-        {query.isError ? (
-          <Notice
-            kind="read"
-            {...readErrorProps(query)}
-            title="Couldn't load the history"
-            fallback="Check your connection and try again."
-          />
-        ) : query.isSuccess && !query.data.length ? (
-          <StateBlock kind="empty" inline message="No runs in this period." />
-        ) : (
-          <TrendChart
-            name={name}
-            metric={metric}
-            points={query.data ?? []}
-            busy={query.isFetching}
-          />
-        )}
+        <TrendBody name={name} metric={metric} query={query} />
       </SectionContent>
     </Section>
+  );
+}
+
+function TrendBody({
+  name,
+  metric,
+  query,
+}: Readonly<{
+  name: string;
+  metric: Metric;
+  query: UseQueryResult<VisibilityTrendPoint[], unknown>;
+}>) {
+  if (query.isError)
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        title="Couldn't load the history"
+        fallback="Check your connection and try again."
+      />
+    );
+  if (query.isSuccess && !query.data.length)
+    return <StateBlock kind="empty" inline message="No runs in this period." />;
+  return (
+    <TrendChart name={name} metric={metric} points={query.data ?? []} busy={query.isFetching} />
   );
 }
 

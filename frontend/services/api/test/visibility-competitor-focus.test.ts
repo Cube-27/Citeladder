@@ -146,15 +146,16 @@ describe('GET /visibility/competitors/{name}', () => {
     ]);
     expect([
       unknown.status,
-      record(unknown.body.error).message,
+      record(unknown.body.error).code,
       foreign.status,
       record(foreign.body.error).message,
       listed.status,
-    ]).toEqual([404, 'Competitor not found', 404, 'Project not found', 200]);
-    // The outsider's own roster entry does not open this tenant's run.
+    ]).toEqual([404, 'competitor_not_found', 404, 'Project not found', 200]);
+    // The outsider's own roster entry does not open this tenant's run, and
+    // that is not read as an unknown competitor.
     const crossed = await get(outsider, route(outsider, '/competitors/Globex'), {
       audit_id: auditId,
     });
-    expect(crossed.status).toBe(404);
+    expect([crossed.status, record(crossed.body.error).code]).toEqual([404, 'not_found']);
   });
 });

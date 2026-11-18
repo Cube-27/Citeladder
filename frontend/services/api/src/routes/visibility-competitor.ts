@@ -1,7 +1,7 @@
 /** One roster competitor against the brand: a `visibility` family route, served by `visibility.ts`. */
 import { competitorFocusSchema } from '@citeladder/contracts/visibility-competitor';
 
-import { notFound } from '../errors.ts';
+import { ApiError } from '../errors.ts';
 import { getCompetitorFocus } from '../visibility/competitor-focus.ts';
 import { defineGetRoute } from './define.ts';
 import {
@@ -32,7 +32,8 @@ export const competitorFocusRoute = defineGetRoute({
         path.name,
       ),
     );
-    if (focus === null) throw notFound('Competitor');
+    if (focus === null)
+      throw new ApiError(404, 'Competitor not found', { code: 'competitor_not_found' });
     return focus;
   },
 });

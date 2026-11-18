@@ -1,12 +1,8 @@
-import { render as renderUi, screen, within } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import type { RankingRow } from '@citeladder/contracts';
+import { renderWithProviders as render } from '@/test/render';
 import { RankingRowsTable } from './ranking-rows';
-
-// The app shell owns the TooltipProvider the column hints need.
-const render = (ui: ReactElement) => renderUi(ui, { wrapper: TooltipProvider });
 
 function row(overrides: Partial<RankingRow> = {}): RankingRow {
   return {
@@ -53,6 +49,10 @@ describe('RankingRowsTable', () => {
       />,
     );
     expect(screen.getByText('You')).toBeVisible();
+    // A competitor opens its page; your own row is not a link.
+    expect(
+      screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([['Globex', expect.stringMatching(/\/competitors\/Globex$/)]]);
     expect(screen.getByRole('columnheader', { name: /^Position/ })).toBeVisible();
     expect(cellsOf('Acme').slice(2)).toEqual(['40.0%', '1.5']);
     expect(cellsOf('Globex').slice(2)).toEqual(['40.0%', 'Not measured']);

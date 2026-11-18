@@ -10,13 +10,12 @@ import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
+import { competitorHref, orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
-import { competitorHref } from '@/lib/visibility/ranking';
 
 const TITLE = 'You and your competitors';
 

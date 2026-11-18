@@ -33,9 +33,8 @@ import {
 type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
-/** A name the roster does not hold: 404 with no machine code (unmeasured reads carry one). */
 const isUnknownCompetitor = (error: unknown) =>
-  error instanceof ApiError && error.status === 404 && !error.code;
+  error instanceof ApiError && error.code === 'competitor_not_found';
 
 /**
  * Brand → Competitors → one competitor (AV-6): its key figures beside yours,

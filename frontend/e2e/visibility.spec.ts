@@ -277,7 +277,7 @@ function pendingPerception() {
     state: 'pending',
     reason: null,
     source_audit_ids: [AUDIT_LATEST],
-    brand: { name: 'Acme', is_brand: true, score, coverage },
+    brand: { name: 'Acme', is_brand: true, score, coverage, theme_mentions: [] },
     coverage,
     entities: [],
     engines: [],
