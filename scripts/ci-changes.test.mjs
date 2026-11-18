@@ -216,6 +216,9 @@ test('every app E2E spec is selected by the product sources it exercises', () =>
     appSuiteSpecs.filter((spec) => !mapped.has(spec)),
     [],
   );
+  assert.deepEqual(selectE2EFiles(['frontend/components/prompts/prompt-library.tsx']), [
+    'e2e/geometry-census.spec.ts',
+  ]);
   assert.deepEqual(selectE2EFiles(['frontend/components/performance/metric-cards.tsx']), [
     'e2e/performance-states.spec.ts',
   ]);
