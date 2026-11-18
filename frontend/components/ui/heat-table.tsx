@@ -30,7 +30,7 @@ type HeatTableProps = Readonly<{
 }>;
 
 /**
- * HeatTable — a matrix of figures: row labels in a 176px column, then one
+ * HeatTable — a matrix of figures: row labels in a fixed column, then one
  * centred column per item, each cell a heat-tinted value over its basis.
  */
 export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps) {
@@ -38,7 +38,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
     <Table fixed ariaLabelledBy={labelledBy}>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-44">{corner}</TableHead>
+          <TableHead className="w-40">{corner}</TableHead>
           {columns.map((column) => (
             <TableHead key={column.key} className="text-center">
               {column.header}
@@ -57,7 +57,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     className="rounded-mark flex min-h-10 flex-col items-center justify-center"
                     style={{ backgroundImage: HATCH }}
                   >
-                    <span className={textRole('caption', 'italic')}>{cell.label}</span>
+                    <i className={textRole('caption')}>{cell.label}</i>
                   </div>
                 ) : (
                   <div
@@ -115,7 +115,7 @@ export function RankTable({
     <Table fixed ariaLabelledBy={labelledBy}>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[200px]">{corner}</TableHead>
+          <TableHead className="w-54">{corner}</TableHead>
           {columns.map((index) => (
             <TableHead key={index} className="text-center">
               #{index + 1}
