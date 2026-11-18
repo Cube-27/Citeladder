@@ -15,13 +15,13 @@ test('app code may not import a website-only atom; its own atoms and the website
     {
       source: [
         'import { Card } from "@/components/ui/card";',
-        "import { StatRow } from '@/components/ui/stat-row';",
+        "import { TrendChart } from '@/components/ui/trend-chart';",
       ].join('\n'),
       label: app,
       owns: true,
       expected: [
         `${app}: ui/card is the website's; the app uses Section, Slip or Well`,
-        `${app}: ui/stat-row is the website's; the app uses FigureStrip`,
+        `${app}: ui/trend-chart is the website's; the app uses StepChart`,
       ],
     },
     { source: "import { Tag } from '@/components/ui/tag';", label: app, owns: true, expected: [] },
