@@ -2,7 +2,7 @@ import type { NetSentiment, WebSearchShare } from '@citeladder/contracts';
 
 import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
-import { formatRate, measured } from '@/lib/visibility/dashboard';
+import { formatRate } from '@/lib/visibility/dashboard';
 import { sentimentReading } from '@/lib/visibility/perception';
 
 /**
@@ -47,8 +47,7 @@ export function SentimentValue({
 /** The share of answers that searched, among engines that report search use. */
 export function WebSearchValue({ value }: Readonly<{ value: WebSearchShare | undefined }>) {
   if (!value) return <Absence />;
-  const share = measured(formatRate(value.share));
-  if (value.share === null || share === null)
+  if (value.share === null)
     return (
       <Absence
         state="unavailable"
@@ -56,5 +55,5 @@ export function WebSearchValue({ value }: Readonly<{ value: WebSearchShare | und
         reason="The engines that answered this prompt don't report whether they searched."
       />
     );
-  return <>{share}</>;
+  return <>{formatRate(value.share)}</>;
 }

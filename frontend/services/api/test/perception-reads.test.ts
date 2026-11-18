@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { entitySentiments } from '../src/visibility/perception.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -261,6 +262,27 @@ describe('GET /visibility/perception', () => {
       negative: 1,
       net_sentiment: -100,
     });
+  });
+
+  it('leaves a pool with a run admitted without perception unknown, not a partial sentiment', async () => {
+    const unperceived = await fixtures.audit(tenant, {
+      configuration: { ...CONFIGURATION, perception: undefined },
+    });
+    await answer(tenant, unperceived, { entities: [{ name: 'Acme', kind: 'brand' }] });
+    const pool = (auditIds: string[]) =>
+      entitySentiments(db, {
+        workspaceId: tenant.workspaceId,
+        projectId: tenant.projectId,
+        marketId: null,
+        auditId: null,
+        auditIds,
+        logicalEngine: null,
+        cohort: 'all',
+        fromAt: null,
+        toAt: null,
+      });
+    const [perceivedOnly, mixed] = [await pool([auditId]), await pool([auditId, unperceived])];
+    expect([perceivedOnly.map((entity) => entity.name), mixed]).toEqual([['Acme', 'Rival'], []]);
   });
 
   it('reads pending before any classification lands, then unavailable with its reason', async () => {

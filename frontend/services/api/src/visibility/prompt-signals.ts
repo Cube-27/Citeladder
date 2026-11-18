@@ -3,15 +3,12 @@
  * its persisted answers. Each travels with its counts so a period pools the
  * counts, never the shares.
  */
-import type { netSentimentSchema, webSearchShareSchema } from '@citeladder/contracts/visibility';
-import type { z } from 'zod';
+import type { NetSentiment, WebSearchShare as WebSearch } from '@citeladder/contracts/visibility';
 
 import { netSentiment, pooledSentiment, type Mention } from '../perception/metrics.ts';
 import type { BrandCount } from './brand-identities.ts';
 import { searchOf } from './prompt-answers.ts';
 
-type WebSearch = z.infer<typeof webSearchShareSchema>;
-type NetSentiment = z.infer<typeof netSentimentSchema>;
 type Answer = { id: string; search_used: boolean; fanout_state: string };
 
 /** The brand's share of every tracked-brand naming; null when nobody was named. */

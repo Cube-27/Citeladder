@@ -165,21 +165,20 @@ async function selectionAnswers(
   options: { citations: boolean },
 ) {
   const scoped = await scopedSelection(db, selection);
-  const rows = (
-    await evidenceScope(db, scoped)
-      .select([
-        'ra.id',
-        'ra.audit_id',
-        'ra.task_id',
-        'ra.logical_engine',
-        'ra.entity_assessments',
-        'audit.configuration',
-        'snapshot.text as prompt',
-        'snapshot.theme as topic',
-        utcTextOf(observedAt).as('observed_at'),
-      ])
-      .execute()
-  ).flatMap((row) => {
+  const selected = await evidenceScope(db, scoped)
+    .select([
+      'ra.id',
+      'ra.audit_id',
+      'ra.task_id',
+      'ra.logical_engine',
+      'ra.entity_assessments',
+      'audit.configuration',
+      'snapshot.text as prompt',
+      'snapshot.theme as topic',
+      utcTextOf(observedAt).as('observed_at'),
+    ])
+    .execute();
+  const rows = selected.flatMap((row) => {
     const versions = frozenPerceptionVersions(row.configuration);
     return versions ? [{ ...row, versions }] : [];
   });
@@ -214,7 +213,11 @@ async function selectionAnswers(
       citations: (citations.get(row.id) ?? []).map(({ domain, url }) => ({ domain, url })),
     };
   });
-  return { answers, auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText) };
+  return {
+    answers,
+    auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
+    partial: rows.length < selected.length,
+  };
 }
 
 export async function getPerception(
@@ -225,9 +228,14 @@ export async function getPerception(
   return { ...perceptionSummary(answers, policy.perception), source_audit_ids: auditIds };
 }
 
-/** Each named business's net sentiment over the selection, the brand first. */
+/**
+ * Each named business's net sentiment over the selection, the brand first; an
+ * empty list when any selected answer's run was admitted without perception,
+ * so a pool never reads as the sentiment of only its perceived runs.
+ */
 export async function entitySentiments(db: Database, selection: RunSelection) {
-  const { answers } = await selectionAnswers(db, selection, { citations: false });
+  const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
+  if (partial) return [];
   return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
     name,
     is_brand,

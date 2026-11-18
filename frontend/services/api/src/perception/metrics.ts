@@ -11,7 +11,7 @@ import type {
   PerceptionScore,
 } from '@citeladder/contracts/visibility-perception';
 
-import type { netSentimentSchema } from '@citeladder/contracts/visibility';
+import type { NetSentiment } from '@citeladder/contracts/visibility';
 import { z } from 'zod';
 import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
@@ -19,7 +19,6 @@ import { compareText } from '../text-order.ts';
 import { isNamed } from './passages.ts';
 import type { VerifiedAspect } from './validate.ts';
 
-type NetSentiment = z.infer<typeof netSentimentSchema>;
 type UnavailableReason = PerceptionCoverage['unavailable'][number]['reason'];
 type ClassifiedLabel = 'positive' | 'neutral' | 'negative' | 'mixed';
 
