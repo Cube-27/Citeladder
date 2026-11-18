@@ -261,11 +261,10 @@ export function brandWins(metrics: Metrics) {
   return winCounts(storedWinTally(metrics.win_tally), brandName(metrics));
 }
 
-/** The brand's win counts per frozen topic, summed over `sources`. */
+/** The brand's win counts per frozen topic over `sources`; null if any predates the derivation. */
 export function topicWins(sources: readonly Metrics[]) {
+  if (sources.some((metrics) => metrics.per_topic_win_tally == null)) return null;
   const byTopic = new Map<string, ReturnType<typeof brandWins>[]>();
-  // A run from before the derivation has no topics to list: every topic is then unavailable.
-  const complete = sources.every((metrics) => metrics.per_topic_win_tally != null);
   for (const metrics of sources) {
     for (const [topic, tally] of Object.entries(metricObject(metrics.per_topic_win_tally))) {
       const parts = byTopic.get(topic) ?? [];
@@ -275,7 +274,7 @@ export function topicWins(sources: readonly Metrics[]) {
   }
   return [...byTopic]
     .sort(([left], [right]) => compareText(left, right))
-    .map(([topic, parts]) => ({ topic, ...sumWinCounts(complete ? parts : []) }));
+    .map(([topic, parts]) => ({ topic, ...sumWinCounts(parts) }));
 }
 
 /** One engine's slice of an aggregate, `{}` when that engine was not measured. */

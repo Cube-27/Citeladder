@@ -235,7 +235,7 @@ describe('GET /visibility', () => {
       win_answers: null,
       win_rate: null,
     });
-    expect(before.body.win_by_topic).toEqual([]);
+    expect(before.body.win_by_topic).toBeNull();
   });
 
   it("reads a cohort's own aggregate, and a single engine's slice has no stored score", async () => {
