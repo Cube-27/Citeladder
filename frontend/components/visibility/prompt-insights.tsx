@@ -1,24 +1,24 @@
 import { useMutation, type UseQueryResult } from '@tanstack/react-query';
+import { UserPlus } from 'lucide-react';
 
-import { textRole } from '@/components/ui/typography';
-import { Stack } from '@/components/ui/layout';
-import { DraftSheet } from '@/components/ui/draft-sheet';
-import { pluralCount } from '@/lib/format';
-import type { ObservedCompetitor } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
-import { visibilityMutations } from '@/lib/api/visibility-queries';
-import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
+import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { Tag } from '@/components/ui/tag';
+import type { ObservedCompetitor } from '@citeladder/contracts';
+import { visibilityMutations } from '@/lib/api/visibility-queries';
+import { formatCount, pluralCount } from '@/lib/format';
+import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+
+const TITLE = 'Suggested competitors';
 
 /**
  * Competitors the runs observed but the project does not yet track, with the
- * action that adds one to the roster.
- *
- * This module also used to own the Visibility dashboard's "Prompt analysis"
- * card. Prompt results now live on the prompt rows in the Prompts section,
- * where the prompt is the object rather than a detail of a measurement.
+ * action that adds one to the roster. Every suggestion today is a domain the
+ * answers cited repeatedly, so that is what "Found by" says.
  */
 export function CompetitorSuggestions({
   projectId,
@@ -33,86 +33,80 @@ export function CompetitorSuggestions({
   );
   // Adding a competitor edits the project; a role without write reads the list.
   const canWrite = useWorkspaceCapability('write');
-
+  const rows = suggestionsQuery.data ?? [];
   return (
-    <Section aria-labelledby="competitor-suggestions">
-      <SectionHeader>
-        <SectionTitle id="competitor-suggestions">Competitor suggestions</SectionTitle>
-        <SectionDescription>
-          Observed repeatedly in third-party citations. Verify relevance before adding.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title={TITLE}
+      description="Suggestions never join your competitors until you accept them."
+    >
       <Stack>
-        <SuggestionRows
-          suggestionsQuery={suggestionsQuery}
-          adding={acceptMutation.isPending}
-          onAdd={canWrite ? (candidateId) => acceptMutation.mutate(candidateId) : undefined}
-        />
         {acceptMutation.isError ? (
           <Notice tone="negative">Could not add that competitor. Try again.</Notice>
         ) : null}
+        <DataTable
+          label={TITLE}
+          columns={columns(canWrite)}
+          minWidth="md"
+          state={tableState(suggestionsQuery)}
+        >
+          {rows.map((candidate) => (
+            <TableRow key={candidate.id}>
+              <TableCell>
+                <TableCellLines title primary={candidate.name} secondary={candidate.domain} />
+              </TableCell>
+              <TableCell>
+                <Tag>Cited domain</Tag>
+              </TableCell>
+              <TableCell numeric>{pluralCount(candidate.prompt_count, 'prompt')}</TableCell>
+              <TableCell numeric>{formatCount(candidate.engine_count)}</TableCell>
+              {canWrite ? (
+                <TableActionsCell>
+                  <Button
+                    variant="secondary"
+                    onClick={() => acceptMutation.mutate(candidate.id)}
+                    disabled={acceptMutation.isPending}
+                    aria-label={`Accept ${candidate.name} as a competitor`}
+                  >
+                    Accept
+                  </Button>
+                </TableActionsCell>
+              ) : null}
+            </TableRow>
+          ))}
+        </DataTable>
       </Stack>
-    </Section>
+    </TitledSection>
   );
 }
 
-function SuggestionRows({
-  suggestionsQuery,
-  adding,
-  onAdd,
-}: Readonly<{
-  suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
-  adding: boolean;
-  /** Adds a candidate to the roster; omitted for a role that may not. */
-  onAdd?: (candidateId: string) => void;
-}>) {
-  return (
-    <>
-      {suggestionsQuery.isError ? (
-        <Notice
-          kind="read"
-          {...readErrorProps(suggestionsQuery)}
-          title="Couldn't load competitor suggestions"
-          fallback="The request failed or timed out."
-        />
-      ) : null}
-      {suggestionsQuery.data?.length ? (
-        // Each candidate is a draft for a person to decide on: the dashed
-        // sheet says nobody has added it yet.
-        <Stack as="ul" aria-label="Suggested competitors">
-          {suggestionsQuery.data.map((candidate) => (
-            <DraftSheet
-              as="li"
-              key={candidate.id}
-              state="draft"
-              marker="Suggested competitor"
-              actions={
-                onAdd ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => onAdd(candidate.id)}
-                    disabled={adding}
-                    // The visible words lead the name, so a voice command can use them.
-                    aria-label={`Add competitor ${candidate.name}`}
-                  >
-                    Add competitor
-                  </Button>
-                ) : undefined
-              }
-            >
-              <p className={textRole('subheading', 'min-w-0 break-words')}>{candidate.name}</p>
-              <p className="type-caption">
-                {candidate.domain} · {pluralCount(candidate.prompt_count, 'prompt')} ·{' '}
-                {pluralCount(candidate.engine_count, 'engine')}
-              </p>
-            </DraftSheet>
-          ))}
-        </Stack>
-      ) : null}
-      {/* Only an answered, empty list is "none yet"; a failed read says so above. */}
-      {suggestionsQuery.isSuccess && !suggestionsQuery.data.length ? (
-        <StateBlock kind="empty" inline message="No repeated citation candidates yet." />
-      ) : null}
-    </>
-  );
+function columns(canWrite: boolean): DataTableColumn[] {
+  return [
+    { key: 'name', label: 'Name', kind: 'identity' },
+    { key: 'found', label: 'Found by', kind: 'status' },
+    { key: 'seen', label: 'Seen in', kind: 'number', width: 'metric' },
+    { key: 'engines', label: 'Engines', kind: 'number' },
+    ...(canWrite ? [{ key: 'actions', label: 'Actions', kind: 'actions' } as const] : []),
+  ];
+}
+
+/** A failed read says so; only an answered, empty list is "none yet". */
+function tableState(
+  query: UseQueryResult<ObservedCompetitor[], unknown>,
+): DataTableState | undefined {
+  if (query.isError)
+    return {
+      kind: 'error',
+      ...readErrorProps(query),
+      title: "Couldn't load competitor suggestions",
+      fallback: 'The request failed or timed out.',
+    };
+  if (query.isPending) return { kind: 'loading', label: 'Loading suggestions…' };
+  if (!query.data.length)
+    return {
+      kind: 'empty',
+      headingLevel: 3,
+      icon: UserPlus,
+      heading: 'No repeated citation candidates yet.',
+    };
+  return undefined;
 }

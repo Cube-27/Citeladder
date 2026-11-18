@@ -19,6 +19,7 @@ import { commerceQueries } from '@/lib/api/commerce';
 import { demandApi, demandQueries } from '@/lib/api/demand';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { runsQueries } from '@/lib/api/runs';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -197,7 +198,14 @@ describe('prefetchRoute', () => {
     expect(asked).toEqual(['latest issues']);
   });
 
+  const visibilitySelectionKeys = [
+    runsQueries.list(PROJECT).queryKey,
+    projectQueries.markets(PROJECT).queryKey,
+    visibilityQueries.project(PROJECT, INITIAL_VISIBILITY_PARAMS).queryKey,
+  ];
   it.each([
+    ['/insights', visibilitySelectionKeys],
+    ['/competitors', visibilitySelectionKeys],
     ['/agent', [actionsQueries.list(PROJECT).queryKey]],
     ['/actions', [actionsQueries.tree(PROJECT, DEFAULT_ACTION_TREE).queryKey]],
     ['/agent/skills', [agentQueries.skills(PROJECT.workspaceId).queryKey]],

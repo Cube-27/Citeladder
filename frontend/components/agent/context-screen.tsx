@@ -16,11 +16,9 @@ import {
 } from '@/components/knowledge-base/use-brand-profile-form';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
-import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { Stack } from '@/components/ui/layout';
 import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
-import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { BrandProfile, Project } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -125,9 +123,6 @@ function ContextPanels({
   brandFacts: ReactNode;
   instructions: ReactNode;
 }>) {
-  const suggestions = useQuery(
-    visibilityQueries.competitorSuggestions({ workspaceId, projectId: project.id }),
-  );
   return (
     <>
       <TabPanel value="facts">
@@ -152,10 +147,7 @@ function ContextPanels({
         )}
       </TabPanel>
       <TabPanel value="competitors">
-        <Stack gap="workspace">
-          <TrackedCompetitorsCard project={project} />
-          <CompetitorSuggestions projectId={project.id} suggestionsQuery={suggestions} />
-        </Stack>
+        <TrackedCompetitorsCard project={project} />
       </TabPanel>
       <TabPanel value="brand-facts">{brandFacts}</TabPanel>
       <TabPanel value="instructions">{instructions}</TabPanel>

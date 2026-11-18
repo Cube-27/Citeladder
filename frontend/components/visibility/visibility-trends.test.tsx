@@ -1,11 +1,11 @@
 import { screen } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
+import type { Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
 import { renderWithProviders as render } from '@/test/render';
 
-import { VisibilityTrends } from './visibility-trends';
+import { BrandTrend, InsightsLede } from './visibility-trends';
 
 const ranking = (name: string, mention: number | null, isBrand = false) => ({
   name,
@@ -51,67 +51,55 @@ function point(completedAt: string, brandRate: number): VisibilityTrendPoint {
 }
 
 const loaded = (points: VisibilityTrendPoint[]) =>
-  ({ data: points, isError: false, isPending: false }) as unknown as UseQueryResult<
+  ({ data: points, isError: false, isSuccess: true }) as unknown as UseQueryResult<
     VisibilityTrendPoint[]
   >;
 
-function renderTrends(query = loaded([])) {
-  render(
-    <VisibilityTrends
-      query={query}
-      selected={selected}
-      selectionBusy={false}
-      engineFilter="all"
-      surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
-      surfaceEngine={null}
-      hasRuns
-      isFiltered={false}
-    />,
-  );
-}
+afterEach(() => window.history.replaceState(null, '', '/'));
 
-describe('Visibility trends', () => {
-  it('shows no Over time card for a single period, only the table', () => {
-    renderTrends(loaded([point('2026-11-03T00:00:00Z', 0.31)]));
-    expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
-    expect(screen.queryByText('Over time')).toBeNull();
-    expect(screen.queryByRole('group', { name: /over time/u })).toBeNull();
+describe('Insights lede', () => {
+  it('heads with the rank and the brand ahead, and shows Position only when served', () => {
+    const { unmount } = render(<InsightsLede selected={selected} />);
+    expect(screen.getByRole('heading', { name: "You're #2 in AI visibility" })).toBeVisible();
+    expect(screen.getByText('Kmart Australia is named more often.')).toBeVisible();
+    expect(screen.getByText('Position')).toBeVisible();
+    unmount();
+
+    const unpositioned = {
+      ...selected,
+      avg_position: null,
+      rankings: rankings.map((row) => ({ ...row, avg_position: null })),
+    } as Visibility;
+    render(<InsightsLede selected={unpositioned} />);
+    expect(screen.getByText('Share of voice')).toBeVisible();
+    expect(screen.queryByText('Position')).toBeNull();
   });
+});
 
-  it('keeps the line chart, each line named at its end, from the second run on', () => {
-    const { container } = render(
-      <VisibilityTrends
-        query={loaded([point('2026-11-01T00:00:00Z', 0.25), point('2026-11-03T00:00:00Z', 0.31)])}
-        selected={selected}
-        selectionBusy={false}
-        engineFilter="all"
-        surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
-        surfaceEngine={null}
-        hasRuns
-        isFiltered={false}
-      />,
-    );
-    expect(screen.getByRole('group', { name: /^Visibility over time/u })).toBeVisible();
-    expect(screen.getByText('Over time')).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
-    // Each line is named at its end, or in the key when those names would collide.
-    const names = [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li')].map(
+describe('Your brand over time', () => {
+  const twoRuns = loaded([
+    point('2026-11-01T00:00:00Z', 0.25),
+    point('2026-11-03T00:00:00Z', 0.31),
+  ]);
+  const lineNames = (container: HTMLElement) =>
+    [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li')].map(
       (label) => label.textContent ?? '',
     );
-    expect(names.some((name) => name.startsWith('You'))).toBe(true);
-    expect(names.some((name) => name.startsWith('Kmart Australia'))).toBe(true);
-    // The table and the chart share one row, the table the wider of the two.
-    const row = screen
-      .getByRole('region', { name: 'Brand and competitors' })
-      .closest('[data-app-grid]');
-    expect(row?.getAttribute('data-app-grid')).toBe('table-chart');
-    expect(row?.contains(screen.getByRole('group', { name: /^Visibility over time/u }))).toBe(true);
-  });
 
-  it('names the headline mean position apart from the table Rank', () => {
-    renderTrends();
-    expect(screen.getByText('Average position in answers')).toBeVisible();
-    expect(screen.queryByText('Average position')).toBeNull();
-    expect(screen.getByRole('columnheader', { name: 'Rank' })).toBeVisible();
+  it('plots a focused brand alone, and falls back to every brand for one this selection never measured', () => {
+    window.history.replaceState(null, '', '/insights?brand=Kmart%20Australia');
+    const focused = render(<BrandTrend query={twoRuns} selected={selected} />);
+    expect(screen.getByRole('button', { name: /Focus.*Kmart Australia/ })).toBeVisible();
+    expect(lineNames(focused.container).some((name) => name.startsWith('You'))).toBe(false);
+    focused.unmount();
+
+    // A brand carried in from another run's URL must not draw an empty chart
+    // captioned with a brand this run never measured.
+    window.history.replaceState(null, '', '/insights?brand=Ghost');
+    const fallback = render(<BrandTrend query={twoRuns} selected={selected} />);
+    const roster = lineNames(fallback.container);
+    expect(screen.getByRole('button', { name: /Focus.*All brands/ })).toBeVisible();
+    expect(roster.some((name) => name.startsWith('You'))).toBe(true);
+    expect(roster.some((name) => name.startsWith('Kmart Australia'))).toBe(true);
   });
 });

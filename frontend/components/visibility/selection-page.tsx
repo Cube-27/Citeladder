@@ -1,0 +1,90 @@
+import type { FilterDefinition } from '@/components/ui/all-filters';
+import { readErrorProps } from '@/components/ui/notice';
+import { SectionStack } from '@/components/ui/section';
+import { StateBlock } from '@/components/ui/state-block';
+import { VisibilityEmptyState } from '@/components/visibility/empty-state';
+import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
+import type { VisibilityView } from '@/lib/visibility/dashboard';
+import type {
+  useVisibilityFilters,
+  useVisibilityQueries,
+} from '@/lib/visibility/use-visibility-dashboard';
+
+/**
+ * The frame every screen over the visibility selection shares (the Sources
+ * tabs, Insights, Competitors): the runs' state, and the page's filters.
+ */
+type Filters = ReturnType<typeof useVisibilityFilters>;
+type Queries = ReturnType<typeof useVisibilityQueries>;
+
+export type SelectionPageState = 'loading' | 'error' | 'empty' | null;
+
+export function selectionPageState(queries: Queries): SelectionPageState {
+  if (queries.auditsQuery.isLoading) return 'loading';
+  // A failed poll over cached runs keeps the data on screen; the next poll retries.
+  if (queries.hasRuns) return null;
+  return queries.auditsQuery.isError ? 'error' : 'empty';
+}
+
+export function SelectionPageStateBlock({
+  state,
+  queries,
+}: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries }>) {
+  if (state === 'empty') return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
+  // Loading takes the overview's shape: its figures, then its chart, then its table.
+  if (state === 'loading')
+    return (
+      <SectionStack aria-busy>
+        <StateBlock kind="loading" label="Loading visibility…" shape={{ kind: 'figures' }} />
+        <StateBlock kind="loading" label="Loading the trend…" shape={{ kind: 'chart' }} />
+        <StateBlock kind="loading" label="Loading the evidence…" shape={{ kind: 'table' }} />
+      </SectionStack>
+    );
+  return (
+    <StateBlock
+      kind="error"
+      {...readErrorProps(queries.auditsQuery)}
+      title="Couldn't load this project's runs"
+      fallback="Check your connection and try again."
+    />
+  );
+}
+
+/**
+ * The page's filters: the ones every view shares (market, measurement,
+ * prompts, surface, period). A tab's table keeps its own in its toolbar.
+ */
+export function useSelectionPageFilters({
+  view,
+  filters,
+  queries,
+}: Readonly<{
+  view: VisibilityView;
+  filters: Filters;
+  queries: Queries;
+}>): readonly FilterDefinition[] {
+  return useVisibilityFilterMenu({
+    view,
+    runs: queries.runOptions,
+    selectedRunId: filters.selectedRunId,
+    onSelectMeasurement: filters.selectMeasurement,
+    engine: filters.engine,
+    onChangeEngine: filters.setEngine,
+    promptOptions: queries.promptOptions,
+    promptId: filters.promptId,
+    onChangePrompt: filters.setPromptId,
+    range: filters.range,
+    onChangeRange: filters.setRange,
+    granularity: filters.granularity,
+    onChangeGranularity: filters.setGranularity,
+    cohort: filters.cohort,
+    onChangeCohort: filters.setCohort,
+    selectionMode: filters.selectionMode,
+    onChangeSelectionMode: filters.setSelectionMode,
+    outcome: filters.outcome,
+    onChangeOutcome: filters.setOutcome,
+    markets: queries.markets,
+    market: filters.market,
+    onChangeMarket: filters.setMarket,
+  });
+}

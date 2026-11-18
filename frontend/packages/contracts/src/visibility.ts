@@ -81,7 +81,7 @@ export const rankingRowSchema = responseObject({
 // Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
 // server-side from the persisted MetricSnapshot for the selected audit
 // (defaults to the latest completed audit). No cross-run trend in this payload
-// — the Trends tab reads /visibility/trends for that.
+// — the Insights page reads /visibility/trends for that.
 export const visibilityComparisonSchema = responseObject({
   status: z.string(),
   baseline_audit_id: uuid().nullable(),

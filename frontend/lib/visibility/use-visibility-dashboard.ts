@@ -18,6 +18,7 @@ import {
   VISIBILITY_TABS,
   toRunOptions,
   type VisibilityTab,
+  type VisibilityView,
 } from '@/lib/visibility/dashboard';
 import { pollAudits } from '@/lib/runs/status';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
@@ -43,7 +44,7 @@ const pageKeys = [
 ];
 const tabCodec = stringUrlCodec(
   VISIBILITY_TABS.map(({ id }) => id),
-  'trends' as VisibilityTab,
+  'sources' as VisibilityTab,
 );
 // The URL accepts any engine the wire contract names; the toolbar offers the catalogue's.
 const engineCodec = stringUrlCodec(['all', ...logicalEngineSchema.options], 'all');
@@ -71,6 +72,27 @@ function setRange(value: TrendRange) {
 /** A link to Visibility Sources for one run, in the URL keys `useVisibilityFilters` reads. */
 export function visibilityRunSourcesHref(runId: string) {
   return `/visibility?${new URLSearchParams({ tab: 'sources', run: runId }).toString()}`;
+}
+
+/** The evidence filters an answers slice replaces; the shared selection keys stay. */
+const EVIDENCE_SLICE_KEYS = ['cursor', 'as_of', 'outcome', 'competitor', 'prompt', 'domain', 'url'];
+
+/**
+ * Query fanouts narrowed to one slice, from a Brand page: the shared filters
+ * (market, measurement, prompts) carry over, the page's own keys do not.
+ */
+export function visibilityEvidenceHref(
+  search: string,
+  slice: Readonly<Record<string, string | null>>,
+): string {
+  const params = new URLSearchParams(search);
+  for (const key of [...EVIDENCE_SLICE_KEYS, 'brand', 'metric']) params.delete(key);
+  params.set('tab', 'query-fanout');
+  for (const [key, value] of Object.entries(slice)) {
+    if (value === null) params.delete(key);
+    else params.set(key, value);
+  }
+  return `/visibility?${params.toString()}`;
 }
 
 export function useVisibilityFilters() {
@@ -169,7 +191,6 @@ export function useVisibilityFilters() {
     fromAt,
     toAt,
     isFiltered,
-    isTrendFiltered: engine !== 'all' || range !== 'all' || cohort !== 'core',
     clearEvidenceFilters: () =>
       setUrlParams({
         engine: null,
@@ -187,13 +208,7 @@ export function useVisibilityFilters() {
     openEvidence: (slice: Record<string, string | null>) =>
       setUrlParams({
         tab: 'query-fanout',
-        cursor: null,
-        as_of: null,
-        outcome: null,
-        competitor: null,
-        prompt: null,
-        domain: null,
-        url: null,
+        ...Object.fromEntries(EVIDENCE_SLICE_KEYS.map((key) => [key, null])),
         ...slice,
       }),
   };
@@ -222,18 +237,19 @@ function resolvedSelection(
   };
 }
 
-export function useVisibilityQueries(filters: ReturnType<typeof useVisibilityFilters>) {
+/** The selection's reads; `view` decides which of the optional ones the screen draws. */
+export function useVisibilityQueries(
+  filters: ReturnType<typeof useVisibilityFilters>,
+  view: VisibilityView,
+) {
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
+  const insights = view === 'insights';
   const { queryClient, auditsQuery, runOptions, hasRuns, activeRun } = useVisibilityRuns(
     requestScope,
     filters.market,
   );
-  const { markets, marketRowsQuery } = useMarketVisibility(
-    requestScope,
-    filters.cohort,
-    filters.activeTab === 'trends',
-  );
+  const { markets, marketRowsQuery } = useMarketVisibility(requestScope, filters.cohort, insights);
 
   const engine = filters.engine === 'all' ? undefined : filters.engine;
   const from = useMemo(
@@ -259,14 +275,14 @@ export function useVisibilityQueries(filters: ReturnType<typeof useVisibilityFil
   const trendOptions = visibilityQueries.trends(requestScope, trendParams);
   const trendQuery = useQuery({
     ...trendOptions,
-    enabled: filters.activeTab === 'trends',
+    enabled: insights,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   const { surfaceEngine, surfaceRatesQuery } = useSurfaceRates({
     requestScope,
     engine,
     cohort: filters.cohort,
-    onTrendsTab: filters.activeTab === 'trends',
+    onInsights: insights,
     activeRunId,
     selectedRunIds,
   });
@@ -286,14 +302,9 @@ export function useVisibilityQueries(filters: ReturnType<typeof useVisibilityFil
     // Scoped to the project, so a switch still returns to an explicit load
     // rather than relabelling the previous workspace's evidence.
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
-    enabled: hasEvidenceScope && isEvidenceTab(filters.activeTab),
+    enabled: hasEvidenceScope && isEvidenceTab(view),
   });
   const prefetchTab = (tab: VisibilityTab) => {
-    if (tab === 'trends') {
-      warmQuery(queryClient, projectionOptions);
-      warmQuery(queryClient, trendOptions);
-      return;
-    }
     // Competitor analysis reads the project's page inventory, not this run's
     // evidence. Warming the evidence request for it would spend a round trip
     // on a dataset that tab never shows.

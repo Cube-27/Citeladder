@@ -5,8 +5,8 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  * Visibility workspace e2e (Task 4).
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
- * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
- * Sources, Ads, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
+ * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Sources,
+ * Ads, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
@@ -439,14 +439,11 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   });
   await page.goto(fixtureProjectPath('/visibility'));
 
-  // Trends always leads with the ranking table; the Over time chart joins it
-  // only once two periods exist.
-  await expect(page.getByText('Brand and competitors', { exact: true })).toBeVisible();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-
-  // Sources — the cited domains, with the URLs half one switch away.
-  await page.getByRole('tab', { name: 'Sources', exact: true }).click();
-  await expect(page).toHaveURL(/[?&]tab=sources/);
+  // Sources leads — the cited domains, with the URLs half one switch away.
+  await expect(page.getByRole('tab', { name: 'Sources', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(page.getByRole('radio', { name: 'Domains' })).toBeVisible();
   await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -496,7 +493,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(4);
+  await expect(tablist.getByRole('tab')).toHaveCount(3);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -532,18 +529,17 @@ for (const width of [1280, 375]) {
         truncated: false,
       },
     });
-    await page.goto(fixtureProjectPath(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`));
+    await page.goto(fixtureProjectPath(`/insights?run=${AUDIT_EARLIER}&engine=gemini`));
     await page.getByRole('button', { name: 'Gemini API', exact: true }).click();
-    // The drill-down lands on Query fanouts, which is where execution evidence
-    // is rendered now that the Mentions tab is gone. What this test is for is
-    // unchanged: the selected run and engine must be the run and engine the
-    // evidence request asks for.
-    await expect(page).toHaveURL(/[?&]tab=query-fanout/);
+    // The drill-down leaves Insights for Sources' Query fanouts, where
+    // execution evidence is rendered: the selected run and engine must be the
+    // run and engine the evidence request asks for.
+    await expect(page).toHaveURL(/\/visibility\?.*tab=query-fanout/);
     await expect(page.getByRole('tabpanel')).toHaveCount(1);
     await expect.poll(() => evidenceUrls.at(-1)?.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
     const evidenceUrl = evidenceUrls.at(-1)!;
     expect(evidenceUrl.searchParams.get('engine')).toBe('gemini');
     await page.goBack();
-    await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
+    await expect(page).toHaveURL(new RegExp(`/insights\\?.*run=${AUDIT_EARLIER}.*engine=gemini`));
   });
 }

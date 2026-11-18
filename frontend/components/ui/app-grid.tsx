@@ -19,9 +19,6 @@ import { cn } from '@/lib/utils';
  *   `main-aside`  — 2fr + 1fr (a chart beside a ranked list or facts);
  *                   stacks below 1280px.
  *   `halves`      — two peers (usage and invoices); stack below 1280px.
- *   `table-chart` — 5fr + 4fr: a table of several figure columns beside
- *                   its history chart, so every row keeps its name and the
- *                   chart keeps room for its lines; stacks below 1280px.
  *   `slips`       — as many slips as fit, each at least 280 (two at 982).
  *
  * Grids never nest a second AppGrid and never set widths on their children.
@@ -31,7 +28,6 @@ const LAYOUT = {
   thirds: 'column-split:grid-cols-3',
   'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
   halves: 'column-wide:grid-cols-2',
-  'table-chart': 'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
   slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
 } as const;
 

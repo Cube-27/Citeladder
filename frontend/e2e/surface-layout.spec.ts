@@ -32,7 +32,7 @@ const overview = {
   next_action: {
     kind: 'monitor',
     title: 'No open Action — watch the trend',
-    href: '/visibility?tab=trends',
+    href: '/insights',
     opportunity_id: null,
   },
   track: {

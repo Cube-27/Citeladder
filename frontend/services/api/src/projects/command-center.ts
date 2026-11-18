@@ -251,7 +251,7 @@ function nextAction({
     };
   if (!crawled) return step('crawl', 'Run the first site crawl', '/site');
   if (!connected) return step('connect', 'Connect GSC or GA4', '/settings?tab=integrations');
-  return step('monitor', 'No open Action — watch the trend', '/visibility?tab=trends');
+  return step('monitor', 'No open Action — watch the trend', '/insights');
 }
 async function loopEvidence(db: Database, scope: ProjectScope) {
   const [mapping, crawl, demand, snapshot] = await Promise.all([

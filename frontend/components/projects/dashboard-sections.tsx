@@ -282,7 +282,7 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
       id="citation-share-track"
       title="Owned citation rate"
       description="Answers that link to a page you own"
-      link={{ href: '/visibility?tab=trends', label: 'Open Trends' }}
+      link={{ href: '/insights?metric=owned_citation_rate', label: 'Open Insights' }}
       fill="figure"
     >
       <FigureStrip

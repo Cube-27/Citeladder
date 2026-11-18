@@ -13,7 +13,7 @@ import {
   isEvidenceTab,
   type PromptOption,
   type RunOption,
-  type VisibilityTab,
+  type VisibilityView,
 } from '@/lib/visibility/dashboard';
 import { ANSWER_OUTCOMES } from '@/lib/config/visibility';
 import { PROMPT_COHORTS, type PromptCohort } from '@/lib/visibility/prompt-cohort';
@@ -41,7 +41,7 @@ const COHORT_LABELS = {
 } as const satisfies Record<PromptCohort, string>;
 
 type ToolbarProps = Readonly<{
-  activeTab: VisibilityTab;
+  view: VisibilityView;
   selectionMode?: 'run' | 'range';
   onChangeSelectionMode: (mode: 'run' | 'range') => void;
   runs: RunOption[];
@@ -68,7 +68,7 @@ type ToolbarProps = Readonly<{
 }>;
 
 /**
- * The filters every AI visibility tab shares, for its All filters menu. Every
+ * The filters every AI visibility view shares, for its All filters menu. Every
  * one answers a question a customer would ask: which market, which
  * measurement, about which prompts and surfaces, over what period.
  *
@@ -82,7 +82,7 @@ type ToolbarProps = Readonly<{
  */
 export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[] {
   const catalog = useEngineCatalog();
-  const evidence = isEvidenceTab(props.activeTab);
+  const evidence = isEvidenceTab(props.view);
   const pooled = props.selectionMode === 'range';
   const filters: (FilterDefinition | null)[] = [
     marketFilter(props),
@@ -108,7 +108,7 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
           onChange: props.onChangeRange,
         })
       : null,
-    pooled && props.activeTab === 'trends'
+    pooled && props.view === 'insights'
       ? choiceFilter({
           id: 'granularity',
           label: 'Group by',

@@ -13,14 +13,14 @@ import { useProjectMarkets } from '@/lib/project/use-project-markets';
 export function useMarketVisibility(
   requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
   cohort: VisibilityCohortParam,
-  onTrendsTab: boolean,
+  onInsights: boolean,
 ) {
   const { workspaceId, projectId } = requestScope;
   const markets = useProjectMarkets(projectId, workspaceId);
   const params = { cohort };
   const marketRowsQuery = useQuery({
     ...visibilityQueries.markets(requestScope, params),
-    enabled: onTrendsTab && markets.length > 1,
+    enabled: onInsights && markets.length > 1,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   return { markets, marketRowsQuery };

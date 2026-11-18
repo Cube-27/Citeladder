@@ -89,31 +89,14 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     warmQuery(client, topicsQueries.list(scope));
     warmQuery(client, visibilityQueries.latestPerPrompt(scope));
   },
-  '/visibility': async (client, scope) => {
-    const [
-      { runsQueries },
-      { INITIAL_VISIBILITY_PARAMS },
-      { visibilityQueries },
-      { projectQueries },
-    ] = await Promise.all([
-      import('@/lib/api/runs'),
-      import('@/lib/api/visibility'),
-      import('@/lib/api/visibility-queries'),
-      import('@/lib/api/projects'),
-    ]);
-    warmQuery(client, runsQueries.list(scope));
-    // The market picker's list, which the screen reads beside the runs.
-    warmQuery(client, projectQueries.markets(scope));
-    // The landing selection, built from the screen's own defaults. A key
-    // spelled out here drifted from the one the screen reads and warmed an
-    // entry nothing consumed.
-    warmQuery(client, visibilityQueries.project(scope, INITIAL_VISIBILITY_PARAMS));
-  },
+  '/visibility': prefetchVisibilitySelection,
+  '/insights': prefetchVisibilitySelection,
+  '/competitors': prefetchVisibilitySelection,
   // The same selection as Sources, and the pilot gate that adds Fact-checking.
   '/perception': async (client, scope) => {
     const { projectQueries } = await import('@/lib/api/projects');
     warmQuery(client, projectQueries.brandFacts(scope));
-    await ROUTE_PREFETCHERS['/visibility']?.(client, scope);
+    await prefetchVisibilitySelection(client, scope);
   },
   '/runs': async (client, scope) => {
     const { runsQueries } = await import('@/lib/api/runs');
@@ -238,6 +221,28 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   const key = siteHealthQueries.issues(workspaceId, crawlId, params).queryKey;
   if (client.getQueryData(key) === undefined) client.setQueryData(key, page);
   warmSummary(crawlId);
+}
+
+/** Warm the reads every screen over the visibility selection opens on (Sources, Insights, Competitors). */
+async function prefetchVisibilitySelection(client: QueryClient, scope: ProjectScope) {
+  const [
+    { runsQueries },
+    { INITIAL_VISIBILITY_PARAMS },
+    { visibilityQueries },
+    { projectQueries },
+  ] = await Promise.all([
+    import('@/lib/api/runs'),
+    import('@/lib/api/visibility'),
+    import('@/lib/api/visibility-queries'),
+    import('@/lib/api/projects'),
+  ]);
+  warmQuery(client, runsQueries.list(scope));
+  // The market picker's list, which the screen reads beside the runs.
+  warmQuery(client, projectQueries.markets(scope));
+  // The landing selection, built from the screen's own defaults. A key
+  // spelled out here drifted from the one the screen reads and warmed an
+  // entry nothing consumed.
+  warmQuery(client, visibilityQueries.project(scope, INITIAL_VISIBILITY_PARAMS));
 }
 
 /** Warm the Actions page's one read: the New tree, grouped by goal. */
