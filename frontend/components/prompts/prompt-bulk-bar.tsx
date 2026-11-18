@@ -68,8 +68,7 @@ export function usePromptBulk(
 }
 
 /** Why Activate is held for this selection, or null when it can run. */
-function activateHold(selected: Selected, max: number): string | null {
-  if (selected.length > max) return `Select up to ${max} prompts at a time`;
+function activateHold(selected: Selected): string | null {
   const beyond = selected.filter((prompt) => prompt.over_plan_limit).length;
   if (beyond > 0)
     return `${pluralCount(beyond, 'selected prompt')} ${beyond === 1 ? 'is' : 'are'} beyond your plan's prompt limit; delete prompts or upgrade to activate ${beyond === 1 ? 'it' : 'them'}`;
@@ -78,8 +77,7 @@ function activateHold(selected: Selected, max: number): string | null {
   return null;
 }
 
-function archiveHold(selected: Selected, max: number): string | null {
-  if (selected.length > max) return `Select up to ${max} prompts at a time`;
+function archiveHold(selected: Selected): string | null {
   if (selected.every((prompt) => prompt.status === 'archived'))
     return 'These prompts are already archived';
   return null;
@@ -131,8 +129,9 @@ export function PromptBulkBar({
   onChange: (change: PromptBulkChange) => void;
   onDelete: () => void;
 }>) {
-  const busy = pending ? 'Changing the selected prompts' : null;
-  const tooMany = selected.length > max ? `Select up to ${max} prompts at a time` : null;
+  const held =
+    (pending ? 'Changing the selected prompts' : null) ??
+    (selected.length > max ? `Select up to ${max} prompts at a time` : null);
   return (
     <SelectionBar
       label="Selected prompts"
@@ -142,19 +141,19 @@ export function PromptBulkBar({
       onClear={onClear}
     >
       <HeldButton
-        hold={busy ?? activateHold(selected, max)}
+        hold={held ?? activateHold(selected)}
         onClick={() => onChange({ kind: 'status', status: 'active' })}
       >
         Activate
       </HeldButton>
       <HeldButton
-        hold={busy ?? archiveHold(selected, max)}
+        hold={held ?? archiveHold(selected)}
         onClick={() => onChange({ kind: 'status', status: 'archived' })}
       >
         Archive
       </HeldButton>
       <Menu>
-        <MenuTrigger asChild disabled={Boolean(busy ?? tooMany)}>
+        <MenuTrigger asChild disabled={held !== null}>
           <Button>
             Assign topic
             <Icon icon={ChevronDown} className="opacity-80" />
@@ -173,7 +172,7 @@ export function PromptBulkBar({
           <MenuItem onSelect={() => onChange({ kind: 'topic', topicId: null })}>No topic</MenuItem>
         </MenuContent>
       </Menu>
-      <HeldButton variant="danger" hold={busy ?? tooMany} onClick={onDelete}>
+      <HeldButton variant="danger" hold={held} onClick={onDelete}>
         Delete
       </HeldButton>
     </SelectionBar>

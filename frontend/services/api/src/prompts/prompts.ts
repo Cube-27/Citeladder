@@ -382,7 +382,22 @@ async function applyPromptUpdate(
   if (input.text != null || activates || refiled) {
     await requireBinding(db, projectScope, input.text ?? prompt.text, topicId);
   }
-  const changes: Partial<PromptRow> = {
+  const row = await db
+    .updateTable('prompts')
+    .set({
+      ...editedColumns(input),
+      ...(topicGiven ? { topic_id: topicId } : {}),
+      updated_at: new Date(),
+    })
+    .where('id', '=', prompt.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return promptView(row, overLimit);
+}
+
+/** The columns an edit sets, apart from its topic. */
+function editedColumns(input: z.infer<typeof promptUpdate>): Partial<PromptRow> {
+  return {
     ...(input.text == null
       ? {}
       : { text: input.text, normalized_text_hash: promptTextHash(input.text) }),
@@ -393,15 +408,7 @@ async function applyPromptUpdate(
     ...(input.cohort == null ? {} : cohortColumns(input.cohort)),
     ...(input.enabled == null ? {} : { enabled: input.enabled }),
     ...(input.status == null ? {} : { status: input.status }),
-    ...(topicGiven ? { topic_id: topicId } : {}),
   };
-  const row = await db
-    .updateTable('prompts')
-    .set({ ...changes, updated_at: new Date() })
-    .where('id', '=', prompt.id)
-    .returningAll()
-    .executeTakeFirstOrThrow();
-  return promptView(row, overLimit);
 }
 
 export async function deletePrompt(
@@ -411,6 +418,34 @@ export async function deletePrompt(
 ): Promise<void> {
   const prompt = await scopedPrompt(db, scope.workspaceId, promptId, scope.projectId);
   await db.deleteFrom('prompts').where('id', '=', prompt.id).execute();
+}
+
+/** File prompts already scoped to the project under `topicId` (null: none). */
+export async function refilePrompts(
+  db: Kysely<DB>,
+  scope: ProjectScope,
+  change: Readonly<{ promptIds: readonly string[]; topicId: string | null }>,
+): Promise<void> {
+  await db
+    .updateTable('prompts')
+    .set({ topic_id: change.topicId, updated_at: new Date() })
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', 'in', change.promptIds)
+    .execute();
+}
+
+/** Delete prompts already scoped to the project; how many rows went. */
+export async function deleteScopedPrompts(
+  db: Kysely<DB>,
+  scope: ProjectScope,
+  promptIds: readonly string[],
+): Promise<number> {
+  const result = await db
+    .deleteFrom('prompts')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', 'in', promptIds)
+    .executeTakeFirst();
+  return Number(result.numDeletedRows);
 }
 
 type Failed<T> = { item: T; failure: BindingFailure; code: string; message: string };

@@ -337,12 +337,15 @@ export const promptsMutations = {
                 ...(bySet.get(prompt.prompt_set_id) ?? []),
                 prompt.id,
               ]);
-            for (const [setId, ids] of bySet)
-              await promptsApi.bulkStatus(
-                setId,
-                { prompt_ids: ids, status: change.status },
-                scoped(scope),
-              );
+            await Promise.all(
+              [...bySet].map(([setId, ids]) =>
+                promptsApi.bulkStatus(
+                  setId,
+                  { prompt_ids: ids, status: change.status },
+                  scoped(scope),
+                ),
+              ),
+            );
             return prompt_ids.length;
           }
           case 'topic':
