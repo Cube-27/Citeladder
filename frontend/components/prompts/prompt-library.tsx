@@ -77,6 +77,11 @@ function usePromptToggle(scope: ProjectScope) {
   return { press, mutation };
 }
 
+/** Each topic's name by id; none until the topic list is read. */
+function topicNamesOf(topics: readonly Topic[] | undefined) {
+  return topics && new Map(topics.map((topic) => [topic.id, topic.name]));
+}
+
 /** A failed Enable/Disable; the row's status has already rolled back. */
 function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error: unknown } }>) {
   if (!toggle.isError) return null;
@@ -342,7 +347,7 @@ export function PromptLibrary() {
           selection={edits ? selection : undefined}
           measurements={measurements}
           setNames={setNames}
-          topicNames={topicsQuery.data && new Map(topics.map((topic) => [topic.id, topic.name]))}
+          topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
         />
       </>

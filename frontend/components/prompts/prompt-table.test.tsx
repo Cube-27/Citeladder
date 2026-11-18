@@ -254,10 +254,12 @@ describe('PromptTable pagination', () => {
     ]);
     // Measured zero share, too few classified, and no engine reporting search
     // are three different readings, none of them a zero sentiment or 0% search.
-    expect(unnamedCells.slice(3, 6).map((cell) => cell.textContent)).toEqual([
+    // A prompt whose answers never named you has no position: not named, not unmeasured.
+    expect(unnamedCells.slice(3, 7).map((cell) => cell.textContent)).toEqual([
       '0.0%',
       'Too few',
       'Not available',
+      'Not named',
     ]);
     // An average position keeps its decimal; it is not a rank.
     expect(cells[6]!.textContent).toBe('2.0');

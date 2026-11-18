@@ -498,18 +498,21 @@ function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement
         <WebSearchValue value={measurement?.webSearch} />
       </TableCell>
       <TableCell numeric>
-        {measurement?.position == null ? (
-          <Absence state="not_measured" />
-        ) : (
-          <span
-            title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
-          >
-            {formatPositionExact(measurement.position)}
-          </span>
-        )}
+        <AveragePosition measurement={measurement} />
       </TableCell>
     </>
   );
+}
+
+/** The average position; never named and an unrecorded order stay apart from no run. */
+function AveragePosition({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
+  if (!measurement) return <Absence state="not_measured" />;
+  if (measurement.position === null) {
+    if (measurement.visibilityRate === 0) return <Absence state="none" label="Not named" />;
+    return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
+  }
+  const position = formatPositionExact(measurement.position);
+  return <span title={`Average of ${position} across this prompt's answers`}>{position}</span>;
 }
 
 /**

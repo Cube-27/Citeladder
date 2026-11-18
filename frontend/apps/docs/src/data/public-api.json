@@ -3735,6 +3735,60 @@
         "type": "string",
         "enum": ["defect", "advisory", "diagnostic"]
       },
+      "FirstNamed": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "brand"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "name"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "competitor"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "name"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "none"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "unavailable"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        ]
+      },
       "ImplementationState": {
         "type": "string",
         "enum": ["declared", "observed", "verified", "contradicted"]
@@ -5794,6 +5848,9 @@
               "$ref": "#/components/schemas/PromptAnswerBrand"
             }
           },
+          "first_named": {
+            "$ref": "#/components/schemas/FirstNamed"
+          },
           "brand_mentioned": {
             "type": "boolean"
           },
@@ -5825,6 +5882,7 @@
           "run_at",
           "logical_engine",
           "brands",
+          "first_named",
           "brand_mentioned",
           "position",
           "cited",
@@ -10953,6 +11011,7 @@
                       "run_at": "2026-01-15T09:30:00.000Z",
                       "logical_engine": "Example logical engine",
                       "brands": [null],
+                      "first_named": null,
                       "brand_mentioned": true,
                       "position": null,
                       "cited": true,

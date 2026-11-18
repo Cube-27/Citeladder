@@ -779,6 +779,18 @@ async function expectOneGeometry(page: Page) {
     })),
   );
 
+  // The project edit panel open, so its mention-rule Switch is drawn.
+  records.push(
+    ...(await census(page, '/projects', {
+      label: '/projects (edit panel)',
+      prepare: async (current) => {
+        await current.getByRole('button', { name: /manage project/i }).click();
+        await current.getByRole('menuitem', { name: 'Edit active project' }).click();
+        await expect(current.getByRole('switch').first()).toBeVisible();
+      },
+    })),
+  );
+
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
