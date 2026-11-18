@@ -111,15 +111,13 @@ describe('PromptLibrary first load', () => {
       'Prompt',
       'Topic',
       'Visibility',
-      expect.stringMatching(/^Share of voice/),
-      expect.stringMatching(/^Sentiment/),
-      expect.stringMatching(/^Web search/),
-      expect.stringMatching(/^Position/),
       'Change',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
-      'Status',
+      expect.stringMatching(/^Position/),
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
       'Actions',
     ]);
     const row = within(table).getByRole('row', { name: new RegExp(prompt.text.slice(0, 20)) });
@@ -179,7 +177,7 @@ describe('PromptLibrary first load', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
-    ).toEqual(['', 'Prompt', 'Topic', 'Status', 'Actions']);
+    ).toEqual(['', 'Prompt', 'Topic', 'Actions']);
   });
 });
 
@@ -230,8 +228,8 @@ describe('PromptLibrary failed read', () => {
 
 describe('PromptLibrary by role', () => {
   it.each([
-    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Topic', 'Status', 'Actions']],
-    ['viewer', [], ['Prompt', 'Topic', 'Status']],
+    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Topic', 'Actions']],
+    ['viewer', [], ['Prompt', 'Topic']],
   ] as const)(
     'offers a %s exactly the controls its role may use',
     async (role, pageActions, headers) => {
@@ -378,12 +376,12 @@ describe('PromptLibrary Enable/Disable', () => {
     return held;
   }
 
-  /** Picks the row menu's Enable or Disable; returns the row's status cell. */
+  /** Picks the row menu's Enable or Disable; returns the prompt cell, whose caption says Disabled. */
   async function press(user: ReturnType<typeof userEvent.setup>, item: 'Enable' | 'Disable') {
     const table = await screen.findByRole('table', { name: 'Prompts' });
     await user.click(within(table).getByRole('button', { name: 'Prompt actions' }));
     await user.click(await screen.findByRole('menuitem', { name: item }));
-    return () => within(table).getAllByRole('row')[1]!.lastElementChild!.previousElementSibling;
+    return () => within(table).getByRole('link', { name: prompt.text }).closest('td');
   }
 
   it('flips at once and rolls back with the failure when the save fails', async () => {
@@ -400,7 +398,7 @@ describe('PromptLibrary Enable/Disable', () => {
     answer(HttpResponse.json({ error: { message: 'down' } }, { status: 503 }));
 
     expect(await screen.findByText(/Could not turn the prompt on or off/)).toBeVisible();
-    expect(status()).toHaveTextContent('Active');
+    expect(status()).not.toHaveTextContent('Disabled');
   });
 
   it('ignores a second press while saving, keeps the new state once saved and re-reads the library', async () => {

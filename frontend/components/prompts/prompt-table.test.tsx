@@ -65,7 +65,6 @@ describe('PromptTable pagination', () => {
                     position: 2,
                     shareOfVoice: null,
                     sentiment: null,
-                    webSearch: undefined,
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
@@ -85,10 +84,10 @@ describe('PromptTable pagination', () => {
     // Not "not measured": no run will ever measure it one prompt at a time.
     // One cell spans the figures and says it once; the reason is in the head.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
-    expect(shelfCells[2]!.getAttribute('colspan')).toBe('8');
+    expect(shelfCells[2]!.getAttribute('colspan')).toBe('7');
     expect(shelfCells[2]!.textContent).toBe('Measured with Shopping');
     expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(1);
-    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 7);
+    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 6);
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
   });
 
@@ -117,10 +116,7 @@ describe('PromptTable pagination', () => {
     expect(cells(filed)).toEqual(['Prompt number 1', 'Espresso at home']);
     // Kept after a downgrade, but audits skip it until a slot frees. Filed
     // under no topic is a finding; a topic the list doesn't name is not.
-    expect(cells(overLimit)).toEqual([
-      'Prompt number 2Not measured: beyond the plan limit',
-      'No topic',
-    ]);
+    expect(cells(overLimit)).toEqual(['Prompt number 2Beyond the plan limit', 'No topic']);
     expect(
       within(overLimit!).getAllByRole('cell')[1]!.querySelector('[data-absence]'),
     ).toHaveAttribute('data-absence', 'none');
@@ -178,7 +174,6 @@ describe('PromptTable pagination', () => {
                       negative: 5,
                       net_sentiment: 50,
                     },
-                    webSearch: { searched: 3, reported: 4, share: 0.75 },
                     answer: ANSWER,
                     mentions: 4,
                     brands: [
@@ -206,7 +201,6 @@ describe('PromptTable pagination', () => {
                       negative: 2,
                       net_sentiment: 0,
                     },
-                    webSearch: { searched: 0, reported: 0, share: null },
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
@@ -233,48 +227,40 @@ describe('PromptTable pagination', () => {
       'Prompt',
       'Topic',
       'Visibility',
-      expect.stringMatching(/^Share of voice/),
-      expect.stringMatching(/^Sentiment/),
-      expect.stringMatching(/^Web search/),
-      expect.stringMatching(/^Position/),
       'Change',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
-      'Status',
+      expect.stringMatching(/^Position/),
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
       'Actions',
     ]);
     const cells = within(row!).getAllByRole('cell');
     const unnamedCells = within(unnamedRow!).getAllByRole('cell');
-    expect([2, 3, 4, 5].map((index) => cells[index]!.textContent)).toEqual([
-      '50.0%',
-      '40.0%',
-      '+50',
-      '75.0%',
-    ]);
-    // Measured zero share, too few classified, and no engine reporting search
-    // are three different readings, none of them a zero sentiment or 0% search.
-    // A prompt whose answers never named you has no position: not named, not unmeasured.
-    expect(unnamedCells.slice(3, 7).map((cell) => cell.textContent)).toEqual([
+    expect([2, 8, 9].map((index) => cells[index]!.textContent)).toEqual(['50.0%', '40.0%', '+50']);
+    // Measured zero share and too few classified are different readings, neither
+    // a zero sentiment. A prompt whose answers never named you has no position:
+    // not named, not unmeasured.
+    expect(unnamedCells.slice(7, 10).map((cell) => cell.textContent)).toEqual([
+      'Not named',
       '0.0%',
       'Too few',
-      'Not available',
-      'Not named',
     ]);
     // An average position keeps its decimal; it is not a rank.
-    expect(cells[6]!.textContent).toBe('2.0');
+    expect(cells[7]!.textContent).toBe('2.0');
     // Three marks, each named for a screen reader, then the fourth as overflow.
-    expect(cells[8]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
-    expect(cells[9]!.textContent).toBe('25.0%');
+    expect(cells[4]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
+    expect(cells[5]!.textContent).toBe('25.0%');
     // Measured, and no brand named: zero, not the "not measured" mark.
-    expect(unnamedCells[8]!.textContent).toBe('None');
+    expect(unnamedCells[4]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
-    expect(cells[7]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(cells[3]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_applicable',
     );
-    expect(unnamedCells[7]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(unnamedCells[3]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'unavailable',
     );
@@ -355,30 +341,6 @@ describe('PromptTable pagination', () => {
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
   });
 
-  it('states each status without offering a menu when the reader may not edit', () => {
-    render(
-      <MemoryRouter>
-        <TooltipProvider>
-          <PromptTable
-            prompts={[
-              makePrompt(1),
-              makePrompt(2, { enabled: false }),
-              makePrompt(3, { status: 'archived' }),
-            ]}
-          />
-        </TooltipProvider>
-      </MemoryRouter>,
-    );
-
-    const [, ...rows] = screen.getAllByRole('row');
-    expect(rows.map((row) => within(row).getAllByRole('cell').at(-1)!.textContent)).toEqual([
-      'Active',
-      'Disabled',
-      'Archived',
-    ]);
-    expect(screen.queryByRole('button', { name: 'Prompt actions' })).toBeNull();
-  });
-
   it('opens the prompt from a click on its row, but not from the row controls', async () => {
     const user = userEvent.setup();
     const onToggleEnabled = vi.fn();
@@ -411,7 +373,7 @@ describe('PromptTable pagination', () => {
       ['/prompts', 1, 1],
     );
 
-    await user.click(screen.getByText('Active'));
+    await user.click(screen.getByText('No topic'));
     expect(path()).toBe(`/prompts/${prompt.id}`);
   });
 });

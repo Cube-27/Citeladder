@@ -72,10 +72,10 @@ export const ANSWER_STATES = [
 ] as const satisfies readonly { key: keyof AnswerStates; label: string; meaning: string }[];
 
 /** One competitor named in answers that left the brand out. */
-export type CompetitorGap = { name: string; answers: number; engines: string[] };
+type CompetitorGap = { name: string; answers: number; engines: string[] };
 
 /** Competitors named where the brand was not, most answers first. */
-export function competitorGaps(outcomes: readonly Outcome[]): CompetitorGap[] {
+function competitorGaps(outcomes: readonly Outcome[]): CompetitorGap[] {
   const byName = new Map<string, CompetitorGap>();
   for (const outcome of outcomes) {
     for (const [name, answers] of Object.entries(outcome.gap_counts)) {

@@ -1,0 +1,135 @@
+import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Disclosure } from '@/components/ui/disclosure';
+import { Stack } from '@/components/ui/layout';
+import { SectionContent, TitledSection } from '@/components/ui/section';
+import { StepChart } from '@/components/ui/step-chart';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatCount, formatDisplayDate, formatPercent } from '@/lib/format';
+import {
+  implementationEvents,
+  mentionRatePoints,
+  ownedCitationValues,
+} from '@/lib/prompts/history';
+import { formatWholePercent } from '@/lib/visibility/dashboard';
+import type { PromptHistory } from '@citeladder/contracts';
+
+/**
+ * Visibility and owned citation rate per run, with declared work marked. A
+ * single run plots its one point per line, as the Insights trend does.
+ */
+export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
+  const timeZone = useDisplayTimeZone();
+  const { points } = history;
+  return (
+    <TitledSection
+      title="Trend"
+      description="Each point is one run. A run with no successful answer is a gap, and a change in measurement conditions starts a new line."
+    >
+      <SectionContent>
+        <Stack gap="workspace">
+          <StepChart
+            label="Visibility over time"
+            name="Visibility"
+            data={mentionRatePoints(points, timeZone)}
+            series={[{ label: 'Owned citation rate', values: ownedCitationValues(points) }]}
+            events={implementationEvents(history.implementations, timeZone)}
+            eventsLabel="Marked implemented"
+            yMax={100}
+            yFormat={formatWholePercent}
+            lonePoint="plot"
+          />
+          <RunData points={points} />
+        </Stack>
+      </SectionContent>
+    </TitledSection>
+  );
+}
+
+/** The chart's data as a table: every run that measured the prompt, newest first. */
+function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
+  const timeZone = useDisplayTimeZone();
+  return (
+    <Disclosure title={`Show run data (${formatCount(points.length)})`}>
+      <DataTable label="Runs that measured this prompt" columns={RUN_DATA_COLUMNS}>
+        {[...points].reverse().map((point) => (
+          <TableRow key={point.audit_id}>
+            <TableCell>
+              <TableCellLines
+                primary={formatDisplayDate(point.completed_at, timeZone)}
+                secondary={point.comparable_with_previous === false ? 'New conditions' : undefined}
+              />
+            </TableCell>
+            <TableCell numeric>
+              {point.mention_rate === null ? (
+                <Absence state="unavailable" label="No successful answer" />
+              ) : (
+                formatPercent(point.mention_rate)
+              )}
+            </TableCell>
+            <TableCell numeric>
+              {point.owned_citation_rate === null ? (
+                <Absence
+                  state={point.counts.responses === 0 ? 'unavailable' : 'not_measured'}
+                  narrow
+                />
+              ) : (
+                formatPercent(point.owned_citation_rate)
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </Disclosure>
+  );
+}
+
+const RUN_DATA_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'date', label: 'Run date', kind: 'identity' },
+  { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
+  { key: 'owned', label: 'Owned rate', width: 'figure', kind: 'number' },
+];
+
+/** The Actions measured on this prompt, and when each was marked implemented. */
+export function PromptImplementations({ history }: Readonly<{ history: PromptHistory }>) {
+  const timeZone = useDisplayTimeZone();
+  if (!history.implementations.length) return null;
+  return (
+    <DataTable
+      title="Work marked implemented"
+      columns={IMPLEMENTATION_COLUMNS}
+      footer={
+        <p className="type-caption">
+          A marker shows when work went live, not that it changed these rates: other changes and
+          answer-engine updates can overlap.
+        </p>
+      }
+    >
+      {history.implementations.map((item) => (
+        <TableRow key={`${item.action_id}:${item.implemented_at}`}>
+          <TableCell>
+            <ClampText tooltip={item.title}>
+              <TextLink href={`/actions/${item.action_id}`} text="inherit">
+                {item.title}
+              </TextLink>
+            </ClampText>
+          </TableCell>
+          <TableCell>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
+          <TableCell>
+            <ActionStatusBadge status={item.status} />
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
+  );
+}
+
+const IMPLEMENTATION_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'action', label: 'Action', kind: 'identity' },
+  { key: 'live', label: 'Live from', width: 'date', kind: 'date' },
+  { key: 'status', label: 'Status', width: 'status' },
+];

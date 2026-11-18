@@ -1,18 +1,17 @@
 import { useMutation } from '@tanstack/react-query';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { useId, type ComponentProps } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
-import { SelectionBar } from '@/components/ui/selection-dock';
+import { SelectionDock } from '@/components/ui/selection-dock';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
 import { promptsMutations, type PromptBulkChange } from '@/lib/api/prompts';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
-import { pluralCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import type { Prompt, Topic } from '@citeladder/contracts';
 
 type Selected = readonly Prompt[];
@@ -106,11 +105,11 @@ function HeldButton({
 }
 
 /**
- * The table's top bar: the count of prompts shown, or, while any is ticked,
- * what can be done to them. One height either way, so ticking moves nothing.
+ * What can be done to the ticked prompts, in the dock held over the foot of
+ * the column: it takes no height, so ticking moves nothing, and the view tab
+ * already counts the prompts.
  */
 export function PromptBulkBar({
-  shown,
   selected,
   topics,
   max,
@@ -119,7 +118,6 @@ export function PromptBulkBar({
   onChange,
   onDelete,
 }: Readonly<{
-  shown: number;
   selected: Selected;
   topics: readonly Topic[];
   /** The most prompts one bulk request takes. */
@@ -133,12 +131,9 @@ export function PromptBulkBar({
     (pending ? 'Changing the selected prompts' : null) ??
     (selected.length > max ? `Select up to ${max} prompts at a time` : null);
   return (
-    <SelectionBar
+    <SelectionDock
       label="Selected prompts"
-      selected={selected.length}
-      idle={<span className={textRole('caption')}>{pluralCount(shown, 'prompt')}</span>}
-      hint="Shift-click selects a range"
-      onClear={onClear}
+      summary={selected.length > 0 ? `${formatCount(selected.length)} selected` : null}
     >
       <HeldButton
         hold={held ?? activateHold(selected)}
@@ -175,6 +170,7 @@ export function PromptBulkBar({
       <HeldButton variant="danger" hold={held} onClick={onDelete}>
         Delete
       </HeldButton>
-    </SelectionBar>
+      <IconButton icon={X} label="Clear selection" onClick={onClear} />
+    </SelectionDock>
   );
 }
