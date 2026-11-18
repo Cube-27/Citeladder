@@ -216,7 +216,7 @@ function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
  * The narrowest a column may be: its role's steps (a flexible column the
  * identity minimum), a date's full width, and never less than its head label.
  */
-export function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
+function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
   const role = COLUMN_WIDTH[widthOf(column)];
   const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));

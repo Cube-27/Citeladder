@@ -144,11 +144,12 @@ const SLIP_RADIUS = 8;
  */
 const QUERY_STATE_PADDING = 0;
 /**
- * A row of a title over its caption (`TableCellLines`): 8 + a body line (20)
- * + 4 + a caption line (16) + 8, the last row included.
+ * A row of a title over its caption (`TableCellLines`): a two-line table holds
+ * every row at 56, the title (20) + 4 + caption (16) centred in it.
  */
 const TABLE_ROW_HEIGHT_TWO_LINES = 56;
-const TABLE_CELL_PADDING_Y = 8;
+/** Rows are a height with content centred in it: 4 keeps a 32 control in a 40 row. */
+const TABLE_CELL_PADDING_Y = 4;
 /** A DataTable's title-and-toolbar row is one control high. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
 /** A FigureStrip cell is padded 12; a strip's cells share one height. */
