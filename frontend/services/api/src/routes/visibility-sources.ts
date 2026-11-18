@@ -76,6 +76,8 @@ export const visibilitySourceRoutes = [
   }),
   defineGetRoute({
     ...family,
+    exposure: 'both',
+    publicPath: '/v1/projects/{project_id}/visibility/answers',
     path: '/api/v1/projects/{project_id}/visibility/evidence',
     params: {
       path: PROJECT_PATH,

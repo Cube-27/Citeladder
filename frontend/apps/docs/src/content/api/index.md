@@ -42,7 +42,14 @@ curl https://api.citeladder.com/v1/projects/$PROJECT/audits \
 
 ## Values that are not numbers
 
-Like the app, the API keeps unknown, unavailable, not measured and zero apart. A prompt's `latest_measurement` is `{"state": "measured", …}`, whose rates are `null` when that run could not determine them, `{"state": "not_measured"}`, or `{"state": "unavailable"}` for a brand-diagnostic prompt, which has no per-prompt visibility reading. Never treat a missing value as zero.
+Like the app, the API keeps unknown, unavailable, not measured and zero apart. Never treat a missing value as zero.
+
+- **Latest measurement.** A prompt's `latest_measurement` is `{"state": "measured", …}`, whose rates are `null` when that run could not determine them, `{"state": "not_measured"}`, or `{"state": "unavailable"}` for a brand-diagnostic prompt, which has no per-prompt visibility reading.
+- **Win rate.** Of the answers naming at least one tracked business, the share that named this one first. `win_answers` is `null` when the answers were recorded before CiteLadder counted wins (unavailable), and `0` when no answer named a tracked business (not applicable). `win_rate` is `null` in both cases.
+- **Sentiment.** A `sentiment` object counts the brand's `mentions`, how many were `classified`, and the `positive` and `negative` ones. `net_sentiment` is positive minus negative over classified, from −100 to +100, and `null` when nothing was classified. `sentiment` itself is `null` when the runs were measured without perception. The app shows a figure only from 20 classified mentions; apply your own minimum with the counts.
+- **Web search.** `web_search.share` is the share of answers that searched the web among those whose engine reports search use. It is `null` when no engine reported it, which is not 0%. On a single answer, `search` is `used`, `not_used` or `not_reported`.
+- **Position.** `avg_position` and an answer's `position` are `null` when the brand was not named or the answer had no ranking.
+- **Changes.** A fan-out query's `change`, and other movements against a previous run, are `null` when there was no comparable earlier run.
 
 ## Versioning
 

@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { Hono, type Context } from 'hono';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
 
 import { budget, spendBudget } from '../src/abuse/usage.ts';
 import { createApiKey } from '../src/api-keys/keys.ts';
-import { createApp } from '../src/app.ts';
 import { WorkspaceContext } from '../src/auth/workspace.ts';
 import { policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
@@ -17,14 +16,12 @@ import { withIdempotency } from '../src/public-api/idempotency.ts';
 import { mutateMember } from '../src/workspaces/service.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { actionRow } from './opportunity-fixtures.ts';
-import { billingAccount, grant, prompt, promptSet, topic } from './prompt-fixtures.ts';
-import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
-import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
+import { billingAccount, prompt, promptSet, topic } from './prompt-fixtures.ts';
+import { publicApiHarness } from './public-api-support.ts';
+import { asOwner, sessionToken } from './support.ts';
 
-const config = testConfig();
-const db = testDatabase(config);
-const app = createApp(config, db);
-const fixtures = new VisibilityFixtures(db);
+const { config, db, app, fixtures, validProjects, withApiAccess, browser, createKey, api } =
+  publicApiHarness();
 
 afterEach(async () => {
   await fixtures.cleanup();
@@ -32,67 +29,6 @@ afterEach(async () => {
 afterAll(async () => {
   await db.destroy();
 });
-
-/** A paid workspace: API access and ten keys, as every paid plan grants. */
-async function withApiAccess<T extends Tenant>(tenant: T): Promise<T> {
-  const account = await billingAccount(db, tenant.workspaceId);
-  await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
-  await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
-  await validProjects(tenant.workspaceId);
-  return tenant;
-}
-
-/** The shared project fixture's benchmark mode predates the project contract's enum. */
-async function validProjects(workspaceId: string) {
-  await db
-    .updateTable('projects')
-    .set({ benchmark_mode: 'consumer_like' })
-    .where('workspace_id', '=', workspaceId)
-    .execute();
-}
-
-async function browser(userId: string, workspaceId: string, path: string, body?: unknown) {
-  return app.request(`/api/v1${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      cookie: `${config.session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
-      'x-workspace-id': workspaceId,
-      'content-type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
-
-async function createKey(
-  tenant: Tenant,
-  input: { scopes?: string[]; project_ids?: string[]; expires_at?: string } = {},
-) {
-  const response = await browser(tenant.userId, tenant.workspaceId, '/api-keys', {
-    name: 'CI export',
-    ...input,
-  });
-  expect(response.status).toBe(201);
-  return (await response.json()) as {
-    key: { id: string; prefix: string; scopes: string[] };
-    secret: string;
-  };
-}
-
-function api(
-  secret: string,
-  path: string,
-  options: { method?: string; body?: unknown; idempotencyKey?: string } = {},
-) {
-  return app.request(`/v1${path}`, {
-    method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
-    headers: {
-      authorization: `Bearer ${secret}`,
-      'content-type': 'application/json',
-      ...(options.idempotencyKey ? { 'idempotency-key': options.idempotencyKey } : {}),
-    },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-  });
-}
 
 /** A public write behind `withIdempotency`, authenticated as the given key. */
 function idempotentApp(
@@ -426,7 +362,36 @@ describe('public API requests', () => {
     await spendBudget(db, perKey, key.id, { amount: perKey.limit });
     const throttled = await api(secret, '/projects');
     expect(throttled.status).toBe(429);
-    expect(Number(throttled.headers.get('retry-after'))).toBeGreaterThanOrEqual(1);
+    const retryAfter = throttled.headers.get('retry-after');
+    expect(Number(retryAfter)).toBeGreaterThanOrEqual(1);
+    expect([throttled.headers.get('ratelimit-policy'), throttled.headers.get('ratelimit')]).toEqual(
+      ['"key";q=600;w=60, "workspace";q=1200;w=60', `"key";r=0;t=${retryAfter}`],
+    );
+  });
+
+  it('reports what is left of the key’s and the workspace’s windows on every response', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const { key, secret } = await createKey(tenant);
+    // 18 seconds into a fixed minute window, so 42 seconds remain.
+    vi.useFakeTimers({ toFake: ['Date'], now: Math.ceil(Date.now() / 60_000) * 60_000 + 18_000 });
+    try {
+      await spendBudget(db, budget('public_api_key'), key.id, { amount: 10 });
+      const listed = await api(secret, '/projects');
+      const missing = await api(secret, `/projects/${randomUUID()}/topics`);
+
+      for (const [response, status, remaining] of [
+        [listed, 200, '"key";r=589;t=42, "workspace";r=1199;t=42'],
+        [missing, 404, '"key";r=588;t=42, "workspace";r=1198;t=42'],
+      ] as const) {
+        expect([
+          response.status,
+          response.headers.get('ratelimit-policy'),
+          response.headers.get('ratelimit'),
+        ]).toEqual([status, '"key";q=600;w=60, "workspace";q=1200;w=60', remaining]);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps a key inside its project allowlist and its workspace', async () => {

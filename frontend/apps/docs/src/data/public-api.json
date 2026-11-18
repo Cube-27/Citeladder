@@ -1930,6 +1930,58 @@
         ],
         "additionalProperties": false
       },
+      "AnswerFormat": {
+        "type": "string",
+        "enum": ["shopping", "map", "comparison", "image"]
+      },
+      "AnswerFormats": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "observed"
+              },
+              "formats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AnswerFormat"
+                }
+              },
+              "in_text_links": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "formats", "in_text_links"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "unavailable"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "not_applicable"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        ]
+      },
       "AnswerStates": {
         "type": "object",
         "properties": {
@@ -2572,6 +2624,61 @@
       "BuyerStage": {
         "type": "string",
         "enum": ["", "awareness", "consideration", "decision", "implementation"]
+      },
+      "Citation": {
+        "type": "object",
+        "properties": {
+          "ordinal": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/CitationClassification"
+          },
+          "source_class": {
+            "type": ["string", "null"]
+          },
+          "source_origin": {
+            "type": "string"
+          },
+          "source_taxonomy_version": {
+            "type": ["string", "null"]
+          },
+          "is_owned": {
+            "type": "boolean"
+          },
+          "is_unintended": {
+            "type": "boolean"
+          },
+          "matched_competitor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "ordinal",
+          "url",
+          "title",
+          "domain",
+          "classification",
+          "is_owned",
+          "is_unintended",
+          "matched_competitor"
+        ],
+        "additionalProperties": false
+      },
+      "CitationClassification": {
+        "type": "string",
+        "enum": ["owned", "unintended", "competitor", "third_party"]
       },
       "CitedDomain": {
         "type": "object",
@@ -5584,6 +5691,122 @@
           "over_plan_limit"
         ],
         "additionalProperties": false
+      },
+      "PromptAnswer": {
+        "type": "object",
+        "properties": {
+          "execution_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "audit_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "run_at": {
+            "type": "string"
+          },
+          "logical_engine": {
+            "type": "string"
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptAnswerBrand"
+            }
+          },
+          "brand_mentioned": {
+            "type": "boolean"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cited": {
+            "type": "boolean"
+          },
+          "search": {
+            "$ref": "#/components/schemas/PromptAnswerSearch"
+          },
+          "answer_formats": {
+            "$ref": "#/components/schemas/AnswerFormats"
+          }
+        },
+        "required": [
+          "execution_id",
+          "audit_id",
+          "run_at",
+          "logical_engine",
+          "brands",
+          "brand_mentioned",
+          "position",
+          "cited",
+          "search",
+          "answer_formats"
+        ],
+        "additionalProperties": false
+      },
+      "PromptAnswerBrand": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["brand", "competitor"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "logo_url": {
+            "type": ["string", "null"]
+          },
+          "website": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["kind", "name", "logo_url", "website"],
+        "additionalProperties": false
+      },
+      "PromptAnswerPage": {
+        "type": "object",
+        "properties": {
+          "market_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptAnswer"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["market_id", "items", "next_cursor"],
+        "additionalProperties": false
+      },
+      "PromptAnswerSearch": {
+        "type": "string",
+        "enum": ["used", "not_used", "not_reported"]
       },
       "PromptCandidate": {
         "type": "object",
@@ -8766,6 +8989,260 @@
         ],
         "additionalProperties": false
       },
+      "VisibilityEvidenceResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityExecutionEvidence"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          },
+          "as_of": {
+            "type": ["string", "null"]
+          },
+          "prompt_options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "label"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["items", "truncated"],
+        "additionalProperties": false
+      },
+      "VisibilityExecutionEvidence": {
+        "type": "object",
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt_snapshot_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt_index": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "prompt_text": {
+            "type": "string"
+          },
+          "repetition": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "completed_at": {
+            "type": ["string", "null"]
+          },
+          "logical_engine": {
+            "type": "string"
+          },
+          "transport_provider": {
+            "type": "string"
+          },
+          "transport_model": {
+            "type": "string"
+          },
+          "retrieval_enabled": {
+            "default": null,
+            "type": ["boolean", "null"]
+          },
+          "search_used": {
+            "type": "boolean"
+          },
+          "search_query_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "query_text_available": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queries_available",
+              "count_only",
+              "no_search",
+              "unavailable",
+              "no_exposed_queries"
+            ]
+          },
+          "search_events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sequence": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "query": {
+                  "type": "string"
+                },
+                "call_id": {
+                  "type": "string"
+                },
+                "call_sequence": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "query_sequence": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["sequence", "query", "call_id", "call_sequence", "query_sequence"],
+              "additionalProperties": false
+            }
+          },
+          "event_source": {
+            "type": "string",
+            "enum": ["raw_artifact", "audit_task", "none"]
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["brand", "competitor"]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "first_offset": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "artifact_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "analyzer_version": {
+                  "type": "string"
+                }
+              },
+              "required": ["kind", "name", "first_offset", "artifact_id", "analyzer_version"],
+              "additionalProperties": false
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            }
+          }
+        },
+        "required": [
+          "audit_id",
+          "task_id",
+          "analysis_id",
+          "artifact_id",
+          "prompt_snapshot_id",
+          "prompt_id",
+          "prompt_index",
+          "prompt_text",
+          "repetition",
+          "completed_at",
+          "logical_engine",
+          "transport_provider",
+          "transport_model",
+          "retrieval_enabled",
+          "search_used",
+          "search_query_count",
+          "query_text_available",
+          "state",
+          "search_events",
+          "event_source",
+          "mentions",
+          "citations"
+        ],
+        "additionalProperties": false
+      },
       "VisibilityFanoutSummary": {
         "type": "object",
         "properties": {
@@ -10277,6 +10754,192 @@
         "x-citeladder-scope": "read"
       }
     },
+    "/v1/projects/{project_id}/prompts/{prompt_id}/answers": {
+      "get": {
+        "tags": ["prompts"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptAnswerPage"
+                },
+                "example": {
+                  "market_id": null,
+                  "items": [
+                    {
+                      "execution_id": "00000000-0000-4000-8000-000000000001",
+                      "audit_id": "00000000-0000-4000-8000-000000000002",
+                      "run_at": "2026-01-15T09:30:00.000Z",
+                      "logical_engine": "Example logical engine",
+                      "brands": [null],
+                      "brand_mentioned": true,
+                      "position": null,
+                      "cited": true,
+                      "search": "used",
+                      "answer_formats": null
+                    }
+                  ],
+                  "next_cursor": null
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "brand",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "cited",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["boolean", "null"]
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["used", "not_used", "not_reported"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "summary": "List a prompt’s answers",
+        "description": "Lists every successful answer one prompt got across runs in one market, newest run first, one page at a time: the engine, the brands named in order, your position, whether you were cited and whether the engine searched the web. Without market it reads the project’s default market; pass market to read another. Filter by engine, date, brand named, cited and search use.",
+        "x-citeladder-scope": "read"
+      }
+    },
     "/v1/projects/{project_id}/ai-traffic/pages": {
       "get": {
         "tags": ["ai-traffic"],
@@ -11309,7 +11972,7 @@
           }
         ],
         "summary": "List ads in answers",
-        "description": "Lists the ads that appeared in AI answers for a selection, with a summary of the creatives and the answers they appeared in.",
+        "description": "Lists the ads that appeared in AI answers for a selection, with a summary of the creatives and the answers they appeared in. Filter by topic.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11642,7 +12305,7 @@
           }
         ],
         "summary": "Get answer perception",
-        "description": "Returns how AI answers describe the brand: a summary of themes and the quotes behind them, for a selection of audits.",
+        "description": "Returns how AI answers describe the brand and its competitors for a selection of audits: themes with the quotes behind them, and sentiment by engine, topic, prompt and over time. Each sentiment carries its classified count; the app shows a figure only from 20 classified mentions.",
         "x-citeladder-scope": "read"
       }
     },
@@ -11963,7 +12626,7 @@
           }
         ],
         "summary": "Get visibility",
-        "description": "Returns the visibility projection for a selection of audits, optionally compared with a baseline. Rates are null when a run could not determine them; null is not zero.",
+        "description": "Returns the visibility projection for a selection of audits, optionally compared with a baseline. Filter by topic to read only answers to prompts filed under it when their run froze its topics. Each brand in rankings carries its win rate, average position and net sentiment. Rates are null when a run could not determine them; null is not zero.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12228,7 +12891,7 @@
           }
         ],
         "summary": "List prompt metrics",
-        "description": "Returns per-prompt visibility metrics for a selection, splitting each prompt’s answers into mentioned and cited, mentioned only, cited only or neither.",
+        "description": "Returns per-prompt visibility metrics for a selection: mention and citation rates, share of voice, average position, win rate, the brand’s sentiment, how often answers searched the web, and the sources and brands the answers named. A web search share is null when no engine reported search use, which is not 0%.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12560,7 +13223,7 @@
           }
         ],
         "summary": "Get visibility trends",
-        "description": "Returns visibility over time for the project, bucketed by the granularity you choose. Filter by market, engine and cohort.",
+        "description": "Returns visibility over time for the project, bucketed by the granularity you choose. Filter by market, topic, engine, model, retrieval and cohort. Each point lists the events behind a change: a prompt panel change, an engine model change or an Action going live.",
         "x-citeladder-scope": "read"
       }
     },
@@ -12865,7 +13528,7 @@
           }
         ],
         "summary": "Get query fan-out",
-        "description": "Returns the follow-up searches AI engines ran while answering your prompts, grouped by query, with the answers that used them.",
+        "description": "Returns the follow-up searches AI engines ran while answering your prompts, grouped by query, with the answers that used them. Each query has its share of the query occurrences, its change since the previous comparable run (null when not compared) and the tracked brands it names. order is top, rising or falling; search narrows the queries by text.",
         "x-citeladder-scope": "read"
       }
     },
@@ -13198,7 +13861,341 @@
           }
         ],
         "summary": "List cited sources",
-        "description": "Lists the domains and pages AI answers cited, with how often and whether each is owned, a competitor or a third party. Use as_of to read a past selection.",
+        "description": "Lists the domains and pages AI answers cited, with how often and whether each is owned, a competitor or a third party. Filter by topic, and use as_of to read a past selection.",
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/visibility/answers": {
+      "get": {
+        "tags": ["visibility"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisibilityEvidenceResponse"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "audit_id": "00000000-0000-4000-8000-000000000001",
+                      "task_id": "00000000-0000-4000-8000-000000000002",
+                      "analysis_id": "00000000-0000-4000-8000-000000000003",
+                      "artifact_id": null,
+                      "prompt_snapshot_id": "00000000-0000-4000-8000-000000000004",
+                      "prompt_id": null,
+                      "prompt_index": 1,
+                      "prompt_text": "Example prompt text",
+                      "repetition": 1,
+                      "completed_at": null,
+                      "logical_engine": "Example logical engine",
+                      "transport_provider": "Example transport provider",
+                      "transport_model": "Example transport model",
+                      "retrieval_enabled": null,
+                      "search_used": true,
+                      "search_query_count": 1,
+                      "query_text_available": true,
+                      "state": "queries_available",
+                      "search_events": [
+                        {
+                          "sequence": null,
+                          "query": null,
+                          "call_id": null,
+                          "call_sequence": null,
+                          "query_sequence": null
+                        }
+                      ],
+                      "event_source": "raw_artifact",
+                      "mentions": [
+                        {
+                          "kind": null,
+                          "name": null,
+                          "first_offset": null,
+                          "artifact_id": null,
+                          "analyzer_version": null
+                        }
+                      ],
+                      "citations": [null]
+                    }
+                  ],
+                  "truncated": true,
+                  "total": 1,
+                  "next_cursor": null,
+                  "as_of": null,
+                  "prompt_options": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000005",
+                      "label": "Example label"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "audit_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "audit_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["brand_absent", "uncited", "competitor_gap"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "competitor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "cohort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "core",
+              "type": "string",
+              "enum": ["core", "comparison", "all"]
+            }
+          }
+        ],
+        "summary": "List answers",
+        "description": "Lists the answers of a selection of audits, newest first: each answer’s prompt, engine and model, the searches it ran, the brands it mentioned and the pages it cited. Pass audit_id for one run’s answers, and filter by prompt, outcome, competitor, domain or URL.",
         "x-citeladder-scope": "read"
       }
     },
@@ -13281,7 +14278,7 @@
           }
         ],
         "summary": "List visibility markets",
-        "description": "Lists the markets that have visibility data, for the market filter of the other reads.",
+        "description": "Lists the markets that have visibility data, for the market filter of the other reads. Filter by topic to list only markets with answers in it.",
         "x-citeladder-scope": "read"
       }
     },
@@ -16076,7 +17073,7 @@
           }
         },
         "summary": "Update a prompt",
-        "description": "Changes a prompt’s text or its classification. Send only the fields to change; the updated prompt is returned.",
+        "description": "Changes a prompt’s text, classification, topic, status (active or archived) or whether it runs. This is how to activate, archive or refile a prompt. Send only the fields to change; the updated prompt is returned.",
         "x-citeladder-scope": "prompts:write"
       },
       "delete": {
