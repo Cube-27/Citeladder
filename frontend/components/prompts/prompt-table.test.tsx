@@ -232,7 +232,8 @@ describe('PromptTable pagination', () => {
     // Three marks, each named for a screen reader, then the fourth as overflow.
     expect(cells[3]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
     expect(cells[4]!.textContent).toBe('25.0%');
-    expect(cells[6]!.textContent).toBe('#2');
+    // An average position keeps its decimal; it is not a rank.
+    expect(cells[6]!.textContent).toBe('2.0');
     // Measured, and no brand named: zero, not the "not measured" mark.
     expect(unnamedCells[3]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and

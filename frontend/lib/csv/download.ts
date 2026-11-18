@@ -22,7 +22,9 @@ type CsvCell = string | number | null | undefined;
  */
 function escapeCell(value: CsvCell): string {
   if (value === null || value === undefined) return '';
-  const text = String(value);
+  // A number is never a formula: "-12" must import as a negative number.
+  if (typeof value === 'number') return String(value);
+  const text = value;
   const risky = /^\s*[=+\-@]|^[\t\r\n]/.test(text);
   const body = risky ? `'${text}` : text;
   return /[",\n\r]/.test(body) ? `"${body.replaceAll('"', '""')}"` : body;

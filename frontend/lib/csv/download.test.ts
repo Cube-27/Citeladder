@@ -23,9 +23,16 @@ describe('toCsv', () => {
   });
 
   it('defuses a value a spreadsheet would treat as a formula', () => {
-    const csv = toCsvForTest(['Title'], [['=1+1'], ['+SUM(A1)'], ['@cmd'], ['-5 tips']]);
+    const csv = toCsvForTest(['Title'], [['=1+1'], ['+SUM(A1)'], ['@cmd'], ['-5 tips'], [-12.5]]);
     // Each gains a leading apostrophe, and the quoting follows from it.
-    expect(csv.split('\r\n').slice(1)).toEqual(["'=1+1", "'+SUM(A1)", "'@cmd", "'-5 tips"]);
+    // A negative number stays a number.
+    expect(csv.split('\r\n').slice(1)).toEqual([
+      "'=1+1",
+      "'+SUM(A1)",
+      "'@cmd",
+      "'-5 tips",
+      '-12.5',
+    ]);
   });
 
   it('renders an absent value as an empty cell, never as "null"', () => {
