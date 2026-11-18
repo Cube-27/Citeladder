@@ -269,7 +269,7 @@ export function StepChart({
             fillId={fillId}
             endLabels={endLabels}
             events={placed}
-            eventLabels={!eventLegend && placed.length <= 3}
+            eventLegend={eventLegend}
           />
           <StepChartTip
             data={data}
@@ -281,7 +281,7 @@ export function StepChart({
             shown={shown}
           />
         </div>
-        {eventLegend ? <EventLegend events={placed} /> : null}
+        <EventLegend events={placed} shown={eventLegend} />
       </div>
       <StepChartTable
         label={label}
@@ -484,7 +484,7 @@ function StepPlot({
   fillId,
   endLabels,
   events,
-  eventLabels,
+  eventLegend,
 }: Readonly<{
   data: readonly TrendPoint[];
   lines: readonly Line[];
@@ -496,7 +496,7 @@ function StepPlot({
   fillId: string;
   endLabels: ReturnType<typeof placeEndLabels>;
   events: ReturnType<typeof placedEvents>;
-  eventLabels: boolean;
+  eventLegend: boolean;
 }>) {
   const breaks = data.map((point) => point.breakBefore === true);
   const bottom = scale.padTop + scale.plotHeight;
@@ -568,7 +568,7 @@ function StepPlot({
           />
         ) : null,
       )}
-      <EventTicks events={events} top={scale.padTop} bottom={bottom} labelled={eventLabels} />
+      <EventTicks events={events} top={scale.padTop} bottom={bottom} legend={eventLegend} />
       {active === null ? null : (
         <line
           x1={Math.round(scale.x(active)) + 0.5}

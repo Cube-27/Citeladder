@@ -241,13 +241,14 @@ export function EventTicks({
   events,
   top,
   bottom,
-  labelled,
+  legend,
 }: Readonly<{
   events: readonly PlacedEvent[];
   top: number;
   bottom: number;
-  labelled: boolean;
+  legend: boolean;
 }>) {
+  const labelled = !legend && events.length <= 3;
   return (
     <g data-event-ticks="">
       {groupedEvents(events).map((event) => (
@@ -288,8 +289,11 @@ export function EventTicks({
 }
 
 /** A chart's events in words under the plot, one "date · label" each with its diamond. */
-export function EventLegend({ events }: Readonly<{ events: readonly PlacedEvent[] }>) {
-  if (!events.length) return null;
+export function EventLegend({
+  events,
+  shown,
+}: Readonly<{ events: readonly PlacedEvent[]; shown: boolean }>) {
+  if (!shown || !events.length) return null;
   return (
     <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
       {events.map((event) => (
