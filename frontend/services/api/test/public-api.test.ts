@@ -480,9 +480,10 @@ describe('public API requests', () => {
         created_at: new Date(),
       })
       .execute();
+    const foreignPrompt = await prompt(db, setId, 'Which trail shoes grip wet rock?');
     const foreignIds: Record<string, string> = {
       prompt_set_id: setId,
-      prompt_id: await prompt(db, setId, 'Which trail shoes grip wet rock?'),
+      prompt_id: foreignPrompt,
       topic_id: await topic(db, other, 'Trail running'),
       action_id: action.id,
       audit_id: auditId,
@@ -499,6 +500,10 @@ describe('public API requests', () => {
       },
       'post /v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts': {
         prompts: [{ text: 'Which trail shoes drain fast?' }],
+      },
+      'post /v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts/bulk-status': {
+        prompt_ids: [foreignPrompt],
+        status: 'archived',
       },
       'patch /v1/projects/{project_id}/prompts/{prompt_id}': { enabled: false },
       'patch /v1/projects/{project_id}/topics/{topic_id}': { name: 'Road running' },
@@ -577,7 +582,7 @@ describe('public API requests', () => {
       outcomes.push(`${response.status} ${contract.method} ${contract.path}`);
     }
     expect(outcomes.filter((outcome) => !outcome.startsWith('404 '))).toEqual([]);
-    expect(outcomes).toHaveLength(17);
+    expect(outcomes).toHaveLength(18);
     expect(await state()).toEqual(before);
   });
 
@@ -731,6 +736,50 @@ describe('public API requests', () => {
     );
     expect(elsewhere.status).toBe(400);
     expect(await errorCode(elsewhere)).toBe('invalid_cursor');
+  });
+
+  it('changes a selection of prompts in one call and refuses one naming another workspace’s prompt', async () => {
+    const tenant = await withApiAccess(await auditTenant(db, fixtures));
+    const trail = await topic(db, tenant.projectId, 'Trail running');
+    const mine = await prompt(db, tenant.setId, 'Which trail shoes grip wet rock?', {
+      status: 'archived',
+    });
+    const foreign = await auditTenant(db, fixtures);
+    const theirs = await prompt(db, foreign.setId, 'Which trail shoes drain fast?', {
+      status: 'archived',
+    });
+    const { secret } = await createKey(tenant, { scopes: ['prompts:write'] });
+    const root = `/projects/${tenant.projectId}`;
+    const send = (path: string, body: unknown) =>
+      api(secret, `${root}${path}`, { body, idempotencyKey: randomUUID() });
+    const rows = async () =>
+      (
+        await db
+          .selectFrom('prompts')
+          .select(['id', 'status', 'topic_id'])
+          .where('id', 'in', [mine, theirs])
+          .execute()
+      )
+        .map((row) => `${row.id === mine ? 'mine' : 'theirs'} ${row.status} ${row.topic_id}`)
+        .sort();
+    const status = `/prompt-sets/${tenant.setId}/prompts/bulk-status`;
+
+    const refused = await Promise.all([
+      send(status, { prompt_ids: [mine, theirs], status: 'active' }),
+      send('/prompts/bulk-topic', { prompt_ids: [mine, theirs], topic_id: trail }),
+      send('/prompts/bulk-delete', { prompt_ids: [mine, theirs] }),
+    ]);
+    expect(refused.map((response) => response.status)).toEqual([404, 404, 404]);
+    expect(await rows()).toEqual(['mine archived null', 'theirs archived null']);
+
+    const filed = await send('/prompts/bulk-topic', { prompt_ids: [mine], topic_id: trail });
+    expect([filed.status, await filed.json()]).toEqual([200, { count: 1 }]);
+    const activated = await send(status, { prompt_ids: [mine], status: 'active' });
+    expect(activated.status).toBe(200);
+    expect(await rows()).toEqual([`mine active ${trail}`, 'theirs archived null']);
+    const deleted = await send('/prompts/bulk-delete', { prompt_ids: [mine] });
+    expect([deleted.status, await deleted.json()]).toEqual([200, { count: 1 }]);
+    expect(await rows()).toEqual(['theirs archived null']);
   });
 
   it('publishes every public operation in the OpenAPI document without a key', async () => {

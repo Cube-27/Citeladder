@@ -14,7 +14,13 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
 import { ACTIONS_WRITE, setActionStatus } from '../commands/actions.ts';
 import { AUDITS_CANCEL, cancelAudit } from '../commands/audits.ts';
-import { addCompetitor, COMPETITORS_WRITE, removeCompetitor } from '../commands/competitors.ts';
+import {
+  acceptSuggestion,
+  addCompetitor,
+  COMPETITORS_WRITE,
+  rejectSuggestion,
+  removeCompetitor,
+} from '../commands/competitors.ts';
 import { authorize, type Authorized, type Permission } from '../commands/permission.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit } from '../audits/estimate.ts';
@@ -53,6 +59,7 @@ type DirectKind =
   | 'update_prompt_text'
   | 'add_competitor'
   | 'remove_competitor'
+  | 'review_competitor_suggestion'
   | 'update_action_status'
   | 'cancel_audit'
   | 'delete_topic'
@@ -190,6 +197,92 @@ function generated(
   };
 }
 
+/**
+ * Rehearse one status or topic change over a selection. A prompt outside the
+ * project refuses the whole selection; one already in the target state is
+ * skipped and counted in the preview.
+ */
+async function preparePromptChange(
+  context: Context,
+  args: {
+    project_id: string;
+    change: 'activate' | 'archive' | 'assign_topic';
+    prompt_ids: string[];
+    topic_id?: string | null;
+  },
+): Promise<Evidence> {
+  const { change: wanted, topic_id: topicId } = args;
+  if (wanted === 'assign_topic' && topicId === undefined)
+    throw new McpInputError(
+      'change assign_topic needs topic_id; pass null to take the prompts out of every topic.',
+    );
+  if (wanted !== 'assign_topic' && topicId)
+    throw new McpInputError('topic_id goes only with change assign_topic.');
+  const actor = authorize(
+    await writeActor(context.db, context.principal, args.project_id),
+    preparedChanges.update_prompts.permission,
+  );
+  const scope = { workspaceId: actor.workspaceId, projectId: args.project_id };
+  const rows = await scopedPrompts(context.db, scope, args.prompt_ids);
+  const change = newChange(args.project_id);
+  const rehearse = (input: Parameters<typeof preparedChanges.update_prompts.rehearse>[4]) =>
+    preparedChanges.update_prompts.rehearse(
+      context.db,
+      context.config,
+      actor,
+      change,
+      input,
+      (trx) => promptOccupancy(trx, actor.workspaceId),
+    );
+  if (wanted === 'assign_topic') {
+    const target = topicId ?? null;
+    const moving = rows.filter((row) => row.topic_id !== target);
+    if (!isNonEmpty(moving))
+      return { state: 'nothing_to_change', preview: 'These prompts are already filed there.' };
+    const { payload } = await rehearse({
+      kind: 'topic',
+      topic_id: target,
+      prompt_ids: moving.map((row) => row.id),
+    });
+    const topics = await listTopics(context.db, scope);
+    const name = topics.find((topic) => topic.id === target)?.name;
+    const where = name === undefined ? 'out of every topic' : `under the topic "${name}"`;
+    const skipped = rows.length - moving.length;
+    return prepared(context, {
+      change,
+      actor,
+      kind: 'update_prompts',
+      payload,
+      preview: `File ${moving.length} prompt(s) ${where}: ${quoted(moving.map((row) => row.text))}. Past runs keep the topic they had.${skipped ? ` ${skipped} already filed there.` : ''}`,
+    });
+  }
+  const status = wanted === 'activate' ? 'active' : 'archived';
+  const changing = rows.filter((row) => row.status !== status);
+  if (!isNonEmpty(changing))
+    return { state: 'nothing_to_change', preview: `These prompts are already ${status}.` };
+  const groups = [...Map.groupBy(changing, (row) => row.prompt_set_id)].map(([setId, members]) => ({
+    prompt_set_id: setId,
+    prompt_ids: members.map((row) => row.id),
+  }));
+  const { payload, inspected: slots } = await rehearse({ kind: 'status', status, groups });
+  const skipped = rows.length - changing.length;
+  const effect =
+    status === 'archived'
+      ? 'Future audits stop measuring them; past results stay.'
+      : `Audits measure them from the next run. Prompt slots after: ${slots.used} of ${slots.allowance}.`;
+  return prepared(
+    context,
+    {
+      change,
+      actor,
+      kind: 'update_prompts',
+      payload,
+      preview: `${wanted === 'activate' ? 'Activate' : 'Archive'} ${changing.length} prompt(s): ${quoted(changing.map((row) => row.text))}. ${effect}${skipped ? ` ${skipped} already ${status}.` : ''}`,
+    },
+    status === 'active' ? { prompt_slots: slots } : {},
+  );
+}
+
 const writeDefinitions = {
   create_topic: direct('create_topic', PROMPTS_WRITE, {
     title: 'Create a topic',
@@ -236,7 +329,7 @@ const writeDefinitions = {
   update_prompt_text: direct('update_prompt_text', PROMPTS_WRITE, {
     title: 'Edit a prompt',
     description:
-      "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt use prepare_archive_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
+      "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt or refile it under a topic use prepare_update_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
     schema: z.strictObject({
       ...project,
       prompt_id: uuid.describe('A prompt id from read_prompt_portfolio.'),
@@ -291,6 +384,25 @@ const writeDefinitions = {
       return { summary: `Stopped tracking ${competitor.name}.` };
     },
   }),
+  review_competitor_suggestion: direct('review_competitor_suggestion', COMPETITORS_WRITE, {
+    title: 'Accept or reject a competitor suggestion',
+    description:
+      'Decide one competitor suggestion that read_competitors view suggestions listed, after the user chose: accept tracks it as a competitor (its domain, or the name answers used), reject hides it from later suggestions. Runs at once and records who decided. Refused if the suggestion is not in this project, if the project has reached its competitor limit, or if it was already decided the other way; remove_competitor undoes an accept.',
+    schema: z.strictObject({
+      ...project,
+      suggestion_id: uuid.describe('A suggestion id from read_competitors view suggestions.'),
+      decision: z.enum(['accept', 'reject']).describe('accept tracks it; reject hides it.'),
+    }),
+    annotations: hints(false, true),
+    run: async (trx, actor, args) => {
+      if (args.decision === 'reject') {
+        const rejected = await rejectSuggestion(trx, actor, args.project_id, args.suggestion_id);
+        return { summary: `Rejected the suggestion ${rejected.name}.` };
+      }
+      const competitor = await acceptSuggestion(trx, actor, args.project_id, args.suggestion_id);
+      return { summary: `Now tracking ${competitor.name}.`, competitor: { id: competitor.id } };
+    },
+  }),
   update_action_status: direct('update_action_status', ACTIONS_WRITE, {
     title: 'Update an Action status',
     description:
@@ -327,7 +439,7 @@ const writeDefinitions = {
   delete_topic: direct('delete_topic', PROMPTS_WRITE, {
     title: 'Delete a topic',
     description:
-      'Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_archive_prompts.',
+      'Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_update_prompts.',
     schema: z.strictObject({
       ...project,
       name: topicCreate.shape.name.describe('The topic name, ignoring case.'),
@@ -545,53 +657,29 @@ const writeDefinitions = {
       );
     },
   }),
-  prepare_archive_prompts: tool({
-    title: 'Prepare to archive prompts',
+  prepare_update_prompts: tool({
+    title: 'Prepare a prompt change',
     description:
-      'Preview archiving tracked prompts so future audits stop measuring them; past results stay. Nothing changes until the user agrees and you call confirm_change.',
+      'Preview one change to tracked prompts: activate them so audits measure them, archive them so future audits stop measuring them (past results stay), or assign_topic to file them under one topic (topic_id null takes them out of every topic; past runs keep the topic they had). Every prompt id must be in the project or nothing changes; prompts already in that state are skipped. Activation and refiling are refused when a prompt does not fit its topic or the plan has no prompt slots. Nothing changes until the user agrees and you call confirm_change. Prompts cannot be deleted here; the user deletes them in CiteLadder.',
     schema: z.strictObject({
       ...project,
-      prompt_ids: z.array(uuid).min(1).max(200).describe('Prompt ids from read_prompt_portfolio.'),
+      change: z
+        .enum(['activate', 'archive', 'assign_topic'])
+        .describe('activate, archive, or assign_topic (needs topic_id).'),
+      prompt_ids: z
+        .array(uuid)
+        .min(1)
+        .max(policy.prompts.bulk_prompts_max)
+        .describe('Prompt ids from read_prompt_portfolio or read_prompt_metrics.'),
+      topic_id: uuid
+        .nullable()
+        .optional()
+        .describe(
+          'With assign_topic: a topic id from read_prompt_portfolio topics or create_topic, or null to take the prompts out of every topic.',
+        ),
     }),
     annotations: hints(true, true),
-    run: async (context, args) => {
-      const actor = authorize(
-        await writeActor(context.db, context.principal, args.project_id),
-        preparedChanges.archive_prompts.permission,
-      );
-      const rows = await scopedPrompts(
-        context.db,
-        { workspaceId: actor.workspaceId, projectId: args.project_id },
-        args.prompt_ids,
-      );
-      const active = rows.filter((row) => row.status !== 'archived');
-      if (!active.length)
-        return { state: 'nothing_to_change', preview: 'These prompts are already archived.' };
-      const groups = [...Map.groupBy(active, (row) => row.prompt_set_id)].map(
-        ([setId, members]) => ({
-          prompt_set_id: setId,
-          prompt_ids: members.map((row) => row.id),
-        }),
-      );
-      const change = newChange(args.project_id);
-      const { payload } = await preparedChanges.archive_prompts.rehearse(
-        context.db,
-        context.config,
-        actor,
-        change,
-        { groups },
-        noInspection,
-      );
-      const skipped = rows.length - active.length;
-      const skippedNote = skipped ? ` ${skipped} already archived.` : '';
-      return prepared(context, {
-        change,
-        actor,
-        kind: 'archive_prompts',
-        payload,
-        preview: `Archive ${active.length} prompt(s): ${quoted(active.map((row) => row.text))}. Future audits stop measuring them; past results stay.${skippedNote}`,
-      });
-    },
+    run: (context, args) => preparePromptChange(context, args),
   }),
   prepare_launch_audit: tool({
     title: 'Prepare to launch an audit',

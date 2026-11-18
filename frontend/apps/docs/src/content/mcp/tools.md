@@ -55,7 +55,9 @@ Clients that support MCP prompts list `business_health_review`, which starts a g
 
 ## Make changes
 
-A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `delete_topic`, `confirm_topics`, `update_prompt_text`, `add_competitor`, `remove_competitor`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_archive_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
+A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `delete_topic`, `confirm_topics`, `update_prompt_text`, `add_competitor`, `remove_competitor`, `review_competitor_suggestion`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_update_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
+
+`review_competitor_suggestion` accepts or rejects one suggestion that `read_competitors` lists with `view: suggestions`. `prepare_update_prompts` activates, archives or files a selection of prompts under one topic as a single change; every prompt must be in the project, or nothing changes. Prompts cannot be deleted over MCP: delete them in CiteLadder.
 
 To generate prompts, the assistant follows the Prompt Builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the ones you agree to with `confirm_topics`, offers your search data with `read_seed_queries`, then runs `generate_prompts` once you agree to the run. Topic previews and generation spend AI credits. Generated prompts wait in **Prompts** for your review; only the ones you accept are tracked.
 

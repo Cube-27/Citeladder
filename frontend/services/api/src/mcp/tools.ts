@@ -449,7 +449,7 @@ export const definitions = {
   read_prompt_portfolio: projectTool({
     title: 'Read prompts',
     description:
-      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_archive_prompts and prepare_launch_audit.',
+      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_update_prompts and prepare_launch_audit.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: optional(
@@ -522,7 +522,7 @@ export const definitions = {
   read_competitors: projectTool({
     title: 'Read competitors',
     description:
-      "Read the competitors. view list is the tracked roster (names, aliases, domains) and the brand's own domains. view focus is one tracked competitor against the brand over a run: how many answers named it, the sources cited where it was named, and the prompts where it was named instead of the brand; it defaults to the latest completed run and takes topic_id. view suggestions lists pending competitor suggestions from audits (a cited domain or a name answers used), with how many prompts and engines raised them; a suggestion is a signal for the person to accept or reject in CiteLadder, not a tracked competitor. Use read_visibility_overview for every brand's rates side by side.",
+      "Read the competitors. view list is the tracked roster (names, aliases, domains) and the brand's own domains. view focus is one tracked competitor against the brand over a run: how many answers named it, the sources cited where it was named, and the prompts where it was named instead of the brand; it defaults to the latest completed run and takes topic_id. view suggestions lists pending competitor suggestions from audits (a cited domain or a name answers used), with how many prompts and engines raised them; a suggestion is a signal, not a tracked competitor, until the user accepts it (review_competitor_suggestion, or in CiteLadder). Use read_visibility_overview for every brand's rates side by side.",
     schema: z.strictObject({
       ...project,
       view: z

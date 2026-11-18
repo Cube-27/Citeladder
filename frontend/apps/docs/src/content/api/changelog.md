@@ -8,6 +8,16 @@ updated: '2026-11-18'
 
 Additions and changes within `v1`. Existing fields keep their meaning; new fields and operations are added without a new version.
 
+## November 18, 2026: Bulk prompt changes
+
+New operations, under the `prompts:write` scope:
+
+- [Activate or archive prompts](/api/endpoints/prompts/activate-or-archive-prompts/) (`POST /prompt-sets/{prompt_set_id}/prompts/bulk-status`): up to 500 prompts of one prompt set in one change.
+- [File prompts under a topic](/api/endpoints/prompts/file-prompts-under-a-topic/) (`POST /prompts/bulk-topic`): up to 500 of the project's prompts; `topic_id: null` takes them out of every topic.
+- [Delete prompts](/api/endpoints/prompts/delete-prompts/) (`POST /prompts/bulk-delete`): up to 500 of the project's prompts.
+
+Each is all or nothing: an id that is not a prompt of the path's prompt set or project refuses the whole request with 404, and nothing changes. Send an `Idempotency-Key` with each.
+
 ## November 18, 2026: Field and parameter descriptions
 
 The visibility, perception, query fan-out, prompt metric and competitor suggestion fields, and the shared selection parameters (`audit_id`, `audit_ids`, `market`, `topic`, `engine`, `cohort`, `selection_mode`, `baseline_*`, `standing`, `granularity` and others), now carry a `description` in [openapi.json](https://api.citeladder.com/v1/openapi.json) and on the endpoint pages. [Metrics and states](/api/metrics/) defines each metric. No field or behaviour changed.

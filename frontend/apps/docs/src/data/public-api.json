@@ -5886,6 +5886,18 @@
         "type": "string",
         "enum": ["used", "not_used", "not_reported"]
       },
+      "PromptBulkResult": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["count"],
+        "additionalProperties": false
+      },
       "PromptCandidate": {
         "type": "object",
         "properties": {
@@ -16871,6 +16883,120 @@
         "x-citeladder-scope": "read"
       }
     },
+    "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts/bulk-status": {
+      "post": {
+        "tags": ["prompt-sets"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptSet"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "project_id": "00000000-0000-4000-8000-000000000002",
+                  "name": "Example name",
+                  "kind": "brand",
+                  "description": "Example description",
+                  "prompt_count": 1,
+                  "prompts": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000003",
+                      "prompt_set_id": "00000000-0000-4000-8000-000000000004",
+                      "topic_id": null,
+                      "text": "Example text",
+                      "theme": "Example theme",
+                      "intent": "",
+                      "buyer_stage": "",
+                      "prompt_intent": "",
+                      "persona": "",
+                      "cohort": "core",
+                      "branded": true,
+                      "enabled": true,
+                      "status": "active",
+                      "origin": "manual",
+                      "over_plan_limit": true,
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "updated_at": "2026-01-15T09:30:00.000Z"
+                    }
+                  ],
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "updated_at": "2026-01-15T09:30:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "prompt_set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt_ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "status": {
+                    "$ref": "#/components/schemas/PromptStatus"
+                  }
+                },
+                "required": ["prompt_ids", "status"],
+                "additionalProperties": false
+              },
+              "example": {
+                "prompt_ids": ["00000000-0000-4000-8000-000000000001"],
+                "status": "active"
+              }
+            }
+          }
+        },
+        "summary": "Activate or archive prompts",
+        "description": "Sets the status of up to 500 prompts of one prompt set to active or archived in one change, and returns the updated set. Every id must be a prompt of that set, or nothing changes. Activation is refused when a prompt does not fit its topic or the plan has no prompt slots for it. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
+        "x-citeladder-scope": "prompts:write"
+      }
+    },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/import": {
       "post": {
         "tags": ["prompt-sets"],
@@ -17392,6 +17518,163 @@
         ],
         "summary": "Delete a prompt",
         "description": "Deletes a prompt from its prompt set. Answers already recorded for it stay in past audits.",
+        "x-citeladder-scope": "prompts:write"
+      }
+    },
+    "/v1/projects/{project_id}/prompts/bulk-topic": {
+      "post": {
+        "tags": ["prompts"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptBulkResult"
+                },
+                "example": {
+                  "count": 1
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt_ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "topic_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["prompt_ids", "topic_id"],
+                "additionalProperties": false
+              },
+              "example": {
+                "prompt_ids": ["00000000-0000-4000-8000-000000000001"],
+                "topic_id": "00000000-0000-4000-8000-000000000002"
+              }
+            }
+          }
+        },
+        "summary": "File prompts under a topic",
+        "description": "Files up to 500 of the project’s prompts under one topic in one change; topic_id null takes them out of every topic. Past runs keep the topic they froze. Every id must be a prompt of the project, or nothing changes, and an active prompt that does not fit the topic refuses the whole change. Returns how many prompts were filed. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
+        "x-citeladder-scope": "prompts:write"
+      }
+    },
+    "/v1/projects/{project_id}/prompts/bulk-delete": {
+      "post": {
+        "tags": ["prompts"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptBulkResult"
+                },
+                "example": {
+                  "count": 1
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt_ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": ["prompt_ids"],
+                "additionalProperties": false
+              },
+              "example": {
+                "prompt_ids": ["00000000-0000-4000-8000-000000000001"]
+              }
+            }
+          }
+        },
+        "summary": "Delete prompts",
+        "description": "Deletes up to 500 of the project’s prompts in one change. Every id must be a prompt of the project, or nothing is deleted. Answers already recorded stay in past audits. Returns how many prompts were deleted. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "prompts:write"
       }
     },

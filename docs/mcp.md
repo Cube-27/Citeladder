@@ -260,8 +260,8 @@ this way are active immediately. Each executed change records an
 
 Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
-`readOnlyHint: false`, `destructiveHint` on archive, cancel,
-`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames, status updates and `generate_prompts` (by `run_key`).
+`readOnlyHint: false`, `destructiveHint` on `prepare_update_prompts`, cancel,
+`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames, status updates, suggestion reviews and `generate_prompts` (by `run_key`).
 Only `confirm_change` carries `openWorldHint: true`: a confirmed audit launch
 asks external AI engines. The server
 instructions require the user's yes before any change tool, and for a prepare

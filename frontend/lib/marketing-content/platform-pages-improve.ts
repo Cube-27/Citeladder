@@ -287,7 +287,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         points: [
           'Weekly AI visibility brief across engines and competitors',
           'Site fix brief from the latest Site Health crawl',
-          'With Allow changes: add prompts, track or drop competitors, launch audits and schedules, and dismiss or mark Actions implemented, each after you agree; no crawls, purchases or publishing',
+          'With Allow changes: add, activate, archive or refile prompts, track or drop competitors and review suggested ones, launch audits and schedules, and dismiss or mark Actions implemented, each after you agree; no crawls, purchases or publishing',
         ],
         media: { kind: 'full', screen: 'visibility' },
       },

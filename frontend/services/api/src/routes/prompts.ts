@@ -162,8 +162,9 @@ export const promptRoutes = [
   }),
   definePostRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicSet}/prompts/bulk-status`,
     path: `${setRoot}/prompts/bulk-status`,
-    ...write,
     params: { path: setPath, query: noQuery },
     body: promptBulkStatus,
     response: promptSetSchema,
@@ -268,7 +269,7 @@ export const promptRoutes = [
   definePostRoute({
     family,
     ...inProject,
-    ...write,
+    ...publicWrite,
     path: `${api}/projects/{project_id}/prompts/bulk-topic`,
     params: { path: { project_id: uuid }, query: noQuery },
     body: promptBulkTopic,
@@ -286,7 +287,7 @@ export const promptRoutes = [
   definePostRoute({
     family,
     ...inProject,
-    ...write,
+    ...publicWrite,
     path: `${api}/projects/{project_id}/prompts/bulk-delete`,
     params: { path: { project_id: uuid }, query: noQuery },
     body: promptBulkDelete,

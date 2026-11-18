@@ -8,6 +8,14 @@ updated: '2026-11-18'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## November 18, 2026: Bulk prompt changes in the API and MCP
+
+The REST API can now activate or archive, file under a topic, and delete a selection of up to 500 prompts in one call, with a `prompts:write` key. A call that names a prompt from outside the project changes nothing.
+
+An assistant connected over MCP with **Allow changes** can now accept or reject a competitor suggestion, and activate, archive or file a selection of prompts under a topic as one change it previews first and makes only after you agree. Prompts cannot be deleted over MCP.
+
+**For your team:** see the [API changelog](/api/changelog/) and the [MCP tool reference](/mcp/tools/#make-changes).
+
 ## November 18, 2026: An API section with a page for every endpoint
 
 The docs now have an **API** section beside the guides and MCP. Its overview covers authentication and scopes, pagination, idempotency, rate limits and errors, and every endpoint has its own page with a description, its parameters, the response fields and copyable cURL, JavaScript and Python examples. Each shared schema has a page too. The old single-page reference now redirects to the endpoint list.

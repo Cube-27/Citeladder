@@ -294,7 +294,9 @@ the same command layer as the browser. Creating or spending POSTs require an
 Of the AI visibility Phase 1 reads, only answers are public: one prompt's
 answers across runs and the answers of a run selection, under the `read` scope.
 The other Phase 1 reads (topics, matrix, competitor focus, fact-checking and the
-rest) stay in the app. v1 keeps its conventions: no RFC 9457 problem details and
+rest) stay in the app. Of the app-only writes, only the bulk prompt changes are
+public: status, topic and delete over a selection, under `prompts:write`. Brand
+facts get no public scope, and verdict overrides stay in the app. v1 keeps its conventions: no RFC 9457 problem details and
 no switch to offset paging. Each endpoint documents its own paging honestly,
 and responses carry the draft IETF RateLimit headers. The API and MCP
 references are kept current with what ships: tool and operation descriptions,
@@ -303,8 +305,9 @@ changelog.
 
 Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4);
 owner, 18 November 2026 (AI visibility gaps plan): public API reads "Answers"
-only, v1 conventions "Keep v1 as is", and "referesh tool descriptions and fix
-links and subsequently update docs subdomain and changelog".
+only, public API writes "Prompts only", v1 conventions "Keep v1 as is", and
+"referesh tool descriptions and fix links and subsequently update docs subdomain
+and changelog".
 [Public API](public-api.md) owns the shipped behavior.
 
 ## MCP writes are confirmed user decisions
@@ -319,7 +322,14 @@ Prompts added this way are active immediately, with no candidate staging,
 unlike generated prompts. Existing grants are not re-consented (greenfield).
 The in-app Agent stays read-only.
 
-Source: owner decisions D4.2 and D4.4 of 10 October 2026 (competitive tracker F4).
+A competitor suggestion is accepted or rejected directly, like adding a
+competitor. Activating, archiving and filing a selection of prompts under a
+topic is one prepared change. Prompts cannot be deleted over MCP.
+
+Source: owner decisions D4.2 and D4.4 of 10 October 2026 (competitive tracker F4);
+owner, 18 November 2026 (AI visibility gaps plan): confirmed writes for
+accepting and rejecting competitor suggestions and for bulk activate, archive
+and assign-topic as one prepared change, "no prompt delete over MCP".
 [MCP](mcp.md#changes) owns the shipped behavior.
 
 ## MCP reads grow by views first
