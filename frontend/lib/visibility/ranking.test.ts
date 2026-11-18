@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import type { RankingRow } from '@citeladder/contracts';
 
-import { brandStanding, standingHeadline } from './ranking';
+import { brandStanding, standingHeadline, winRateAbsence } from './ranking';
 
 function row(name: string, mention: number | null, isBrand = false): RankingRow {
   return {
@@ -73,5 +73,15 @@ describe('Insights headline', () => {
     ],
   ])('%s', (_, rows, expected) => {
     expect(headline(rows)).toEqual(expected);
+  });
+});
+
+describe('win rate absence', () => {
+  it.each([
+    ['no answer named a tracked brand', 0, 'not_applicable'],
+    ['the run stored no first-named data', null, 'not_measured'],
+    ['the read did not serve win rate', undefined, 'not_measured'],
+  ] as const)('%s', (_, winAnswers, expected) => {
+    expect(winRateAbsence({ win_answers: winAnswers })).toBe(expected);
   });
 });

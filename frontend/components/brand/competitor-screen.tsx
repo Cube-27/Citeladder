@@ -23,7 +23,9 @@ import {
 import { ApiError } from '@/lib/api/errors';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { gatedFigure, netReading } from '@/lib/visibility/perception';
+import { availabilityLabel } from '@/lib/format';
+import { sentimentFigureValue } from '@/lib/visibility/perception';
+import { winRateAbsence } from '@/lib/visibility/ranking';
 import { selectionEnabled, topicSelectionParams } from '@/lib/visibility/use-source-analysis';
 import {
   useVisibilityFilters,
@@ -142,15 +144,15 @@ const FIGURES: readonly Figure[] = [
   {
     key: 'win',
     label: 'Win rate',
-    read: (row) => plain(measured(formatRate(row.win_rate ?? null))),
+    read: (row) => ({
+      value: measured(formatRate(row.win_rate ?? null)),
+      missingLabel: availabilityLabel(winRateAbsence(row)),
+    }),
   },
   {
     key: 'sentiment',
     label: 'Sentiment',
-    read: ({ sentiment }) =>
-      sentiment
-        ? gatedFigure(netReading(sentiment.net_sentiment, sentiment.classified))
-        : plain(null),
+    read: ({ sentiment }) => sentimentFigureValue(sentiment),
   },
 ];
 

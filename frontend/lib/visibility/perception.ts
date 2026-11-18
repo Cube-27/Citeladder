@@ -5,7 +5,7 @@
  */
 import type { NetSentiment } from '@citeladder/contracts';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
-import { formatPercent, measured } from '@/lib/format';
+import { availabilityLabel, formatPercent, measured } from '@/lib/format';
 import type {
   PerceptionCoverage,
   PerceptionResponse,
@@ -37,6 +37,24 @@ export function sentimentReading(
   const reading = netReading(sentiment.net_sentiment, classified, minimum);
   if (reading.kind === 'too_few') return { kind: 'too_few', classified, mentions, minimum };
   return { kind: 'value', net: reading.text, classified, mentions };
+}
+
+/** The words for a brand no answer named: distinct from a classified "None". */
+export const NOT_NAMED = 'Not named';
+
+/** A sentiment reading as a figure's value and the word for its absence. */
+export function sentimentFigureValue(sentiment: NetSentiment | null | undefined): {
+  value: string | null;
+  missingLabel: string;
+} {
+  const reading = sentimentReading(sentiment);
+  const missingLabel =
+    reading.kind === 'no_mentions'
+      ? NOT_NAMED
+      : reading.kind === 'too_few'
+        ? 'Too few classified'
+        : availabilityLabel('not_measured');
+  return { value: reading.kind === 'value' ? reading.net : null, missingLabel };
 }
 
 /** A 0–1 share as a whole percentage, or null. */

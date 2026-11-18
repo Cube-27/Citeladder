@@ -381,6 +381,10 @@ describe('GET /visibility/trends', () => {
     expect(weekly.body[0]!.source_audit_ids).toEqual([early]);
     expect(weekly.body[1]!.sov).not.toHaveProperty('response');
     expect(weekly.body[1]!.sov).toHaveProperty('mention');
+    // A point folding more runs than one selection reads no sentiment, never a partial one.
+    expect(
+      weekly.body.map((point) => (point.rankings as { sentiment: unknown }[])[0]?.sentiment),
+    ).toEqual([null, null]);
   }, 60_000);
 
   it('reads the newest trend_max_runs runs and never folds part of a cut bucket', async () => {

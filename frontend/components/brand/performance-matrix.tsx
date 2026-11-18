@@ -1,5 +1,4 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useState } from 'react';
 
 import type { MatrixDimension, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Button } from '@/components/ui/button';
@@ -13,18 +12,27 @@ import { textRole } from '@/components/ui/typography';
 import { downloadCsv } from '@/lib/csv/download';
 import { MATRIX_DIMENSIONS, MATRIX_METRICS } from '@/lib/config/visibility';
 import { pluralCount } from '@/lib/format';
+import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   cellAt,
   cellReading,
   heatScale,
+  matrixCsvMetricHeader,
   matrixCsvRows,
   READING_LABELS,
   type CellReading,
-  type MatrixMetric,
 } from '@/lib/visibility/matrix';
 import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const DIMENSIONS = MATRIX_DIMENSIONS.map((option) => option.value);
+const metricCodec = stringUrlCodec(
+  MATRIX_METRICS.map((item) => item.value),
+  'mention_rate',
+);
+const rowsCodec = stringUrlCodec(DIMENSIONS, 'engine');
+const columnsCodec = stringUrlCodec(DIMENSIONS, 'brand');
 
 const dimensionLabel = (dimension: MatrixDimension) =>
   MATRIX_DIMENSIONS.find((option) => option.value === dimension)?.label ?? dimension;
@@ -38,9 +46,11 @@ const dimensionLabel = (dimension: MatrixDimension) =>
 export function PerformanceMatrix({
   query,
 }: Readonly<{ query: UseQueryResult<VisibilityMatrix> }>) {
-  const [metric, setMetric] = useState<MatrixMetric>('mention_rate');
-  const [rows, setRows] = useState<MatrixDimension>('engine');
-  const [columns, setColumns] = useState<MatrixDimension>('brand');
+  const [metric, setMetric] = useUrlState('matrix_metric', metricCodec);
+  const [rows, setRows] = useUrlState('matrix_rows', rowsCodec);
+  const [linkedColumns, setColumns] = useUrlState('matrix_columns', columnsCodec);
+  // A hand-edited address can name one dimension twice; the grid needs two.
+  const columns = linkedColumns === rows ? (rows === 'brand' ? 'engine' : 'brand') : linkedColumns;
   const axisText = useAxisText();
   const data = query.data;
   const rowText = data ? axisText(data.axes, rows) : [];
@@ -62,10 +72,13 @@ export function PerformanceMatrix({
       [
         dimensionLabel(rows),
         dimensionLabel(columns),
-        MATRIX_METRICS.find((item) => item.value === metric)?.label ?? metric,
+        matrixCsvMetricHeader(
+          metric,
+          MATRIX_METRICS.find((item) => item.value === metric)?.label ?? metric,
+        ),
         'Answers',
       ],
-      matrixCsvRows(readings, rowText, columnText),
+      matrixCsvRows({ readings, rowLabels: rowText, columnLabels: columnText, metric }),
     );
   const heatValue = (reading: CellReading): HeatValue =>
     reading.kind === 'value'
@@ -134,10 +147,12 @@ export function PerformanceMatrix({
             onValueChange={setColumns}
           />
           <Button
-            onClick={() => {
-              setRows(columns);
-              setColumns(rows);
-            }}
+            onClick={() =>
+              setUrlParams({
+                matrix_rows: rowsCodec.serialize(columns),
+                matrix_columns: columnsCodec.serialize(rows),
+              })
+            }
           >
             Switch axis
           </Button>

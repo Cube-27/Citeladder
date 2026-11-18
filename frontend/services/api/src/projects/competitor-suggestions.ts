@@ -74,17 +74,40 @@ function view(row: Row): Suggestion {
 const keyOf = (row: Pick<Row, 'kind' | 'domain' | 'name_key'>) =>
   `${row.kind}:${row.domain ?? row.name_key ?? ''}`;
 
-/** Pending suggestions, one per domain or name (its latest audit's), strongest first. */
+type RosterRow = { name: string; aliases: unknown; domains: unknown };
+
+/** Whether a tracked competitor already stands for the candidate, by name, alias or domain. */
+function tracks(row: RosterRow, candidate: Pick<Row, 'name' | 'domain'>): boolean {
+  const { domain } = candidate;
+  return (
+    isTracked(candidate.name, [{ name: row.name, aliases: strings.parse(row.aliases) }]) ||
+    (domain !== null && strings.parse(row.domains).some((own) => domainMatches(domain, own)))
+  );
+}
+
+/**
+ * Pending suggestions, one per domain or name (its latest audit's), strongest
+ * first. One the roster now tracks (added by hand, or an alias since) is left out.
+ */
 export async function listSuggestions(db: Database, scope: ProjectScope): Promise<Suggestion[]> {
-  const rows = await suggestionRows(db, scope)
-    .selectAll()
-    .where('status', '=', PENDING)
-    .orderBy('created_at', 'desc')
-    .orderBy('id')
-    .execute();
+  const [rows, roster] = await Promise.all([
+    suggestionRows(db, scope)
+      .selectAll()
+      .where('status', '=', PENDING)
+      .orderBy('created_at', 'desc')
+      .orderBy('id')
+      .execute(),
+    db
+      .selectFrom('competitors')
+      .select(['name', 'aliases', 'domains'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute(),
+  ]);
   const latest = new Map<string, Row>();
   for (const row of rows) if (!latest.has(keyOf(row))) latest.set(keyOf(row), row);
   return [...latest.values()]
+    .filter((row) => !roster.some((competitor) => tracks(competitor, row)))
     .sort(
       (a, b) =>
         b.prompt_count - a.prompt_count ||
@@ -150,12 +173,7 @@ export function acceptSuggestion(
       .orderBy('created_at')
       .orderBy('id')
       .execute();
-    const { domain } = candidate;
-    let competitor = competitors.find(
-      (row) =>
-        isTracked(candidate.name, [{ name: row.name, aliases: strings.parse(row.aliases) }]) ||
-        (domain !== null && strings.parse(row.domains).some((own) => domainMatches(domain, own))),
-    );
+    let competitor = competitors.find((row) => tracks(row, candidate));
     if (competitor === undefined) {
       if (competitors.length >= MAX_COMPETITORS)
         throw new ApiError(

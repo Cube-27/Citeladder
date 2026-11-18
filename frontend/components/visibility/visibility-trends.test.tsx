@@ -16,7 +16,7 @@ const ranking = (name: string, mention: number | null, isBrand = false) => ({
   citation_rate: 0.1,
   share_of_voice: 0.2,
   mention_count: 3,
-  avg_position: isBrand ? 2 : null,
+  avg_position: isBrand ? 2.46 : null,
 });
 
 const rankings = [
@@ -64,6 +64,10 @@ describe('Insights lede', () => {
     expect(screen.getByRole('heading', { name: "You're #2 in AI visibility" })).toBeVisible();
     expect(screen.getByText('Kmart Australia is named more often.')).toBeVisible();
     expect(screen.getByText('Position')).toBeVisible();
+    // The rank is a place; the position is an average and keeps its decimal.
+    expect(screen.getByText('2.5')).toBeVisible();
+    // No first-named data reads as not measured, never "unavailable".
+    expect(screen.getByText('Not measured')).toBeVisible();
     unmount();
 
     const unpositioned = {

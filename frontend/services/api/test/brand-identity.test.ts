@@ -521,6 +521,14 @@ describe('competitor suggestions', () => {
       expect.objectContaining({ kind: 'named_in_answers', name: 'Ledgerly', engine_total: 4 }),
     );
     expect(listed.body[1]).not.toHaveProperty('domain');
+
+    // Tracked by hand since: by an alias, and by a domain; another workspace's roster counts for nothing.
+    await fixtures.competitor(t.projectId, { name: 'Ledgerly Inc', aliases: ['Ledgerly'] });
+    await fixtures.competitor(t.projectId, { name: 'Weak Co', domains: ['weak.example'] });
+    const outsider = await fixtures.tenant();
+    await fixtures.competitor(outsider.projectId, { name: 'Strong' });
+    const relisted = await call<ObservedCompetitor[]>('/competitor-suggestions');
+    expect(relisted.body.map((row) => row.id)).toEqual([strong]);
   });
 
   it('records who rejected a suggestion and when, on every pending row of its domain', async () => {

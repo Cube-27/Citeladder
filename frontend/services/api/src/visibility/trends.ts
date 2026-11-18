@@ -9,6 +9,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { toUtc, type ParsedDatetime } from '../http/datetimes.ts';
 import { applyMarks, rankingMarks } from './ranking-marks.ts';
+import { withPointSentiments } from './ranking-sentiment.ts';
 import {
   loadMeasuredRuns,
   trendSource,
@@ -104,5 +105,6 @@ export async function getVisibilityTrends(
   ).slice(-visibility.trend_max_points);
   const marks = await rankingMarks(db, scope);
   for (const point of points) applyMarks(point.rankings, marks);
-  return withTrendEvents(db, scope, sources, points);
+  const withEvents = await withTrendEvents(db, scope, sources, points);
+  return withPointSentiments(db, scope, query, withEvents);
 }

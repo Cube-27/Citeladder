@@ -54,22 +54,27 @@ describe('RankingRowsTable', () => {
       screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([['Globex', expect.stringMatching(/\/competitors\/Globex$/)]]);
     expect(screen.getByRole('columnheader', { name: /^Position/ })).toBeVisible();
-    expect(cellsOf('Acme').slice(2)).toEqual(['40.0%', '1.5']);
-    expect(cellsOf('Globex').slice(2)).toEqual(['40.0%', 'Not measured']);
+    expect(cellsOf('Acme').slice(2, 4)).toEqual(['40.0%', '1.5']);
+    expect(cellsOf('Globex').slice(2, 4)).toEqual(['40.0%', 'Not measured']);
   });
   it('distinguishes measured zero, unavailable rates, and incomparable changes', () => {
     render(
       <RankingRowsTable
-        rows={[row({ mention_rate: 0 }), row({ name: 'Unknown', mention_rate: null })]}
+        rows={[
+          row({ mention_rate: 0, win_answers: 0, win_rate: null }),
+          row({ name: 'Unknown', mention_rate: null, win_answers: null }),
+        ]}
       />,
     );
     expect(screen.getByText('0.0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
     expect(within(unknown).getAllByText('Not measured').length).toBeGreaterThan(0);
-    // With no prior run NO brand has a change, and no brand has a position,
-    // so neither column is drawn.
-    expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull();
+    // No brand has a position, so that column is not drawn; win rate and
+    // change stay columns with an absence in each cell.
     expect(screen.queryByRole('columnheader', { name: /^Position/ })).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Change' })).toBeVisible();
+    expect(cellsOf('Acme')[3]).toMatch(/Not applicable$/);
+    expect(cellsOf('Unknown')[3]).toMatch(/Not measured$/);
   });
   it('compares brands without an asymmetric answers-without-you column', () => {
     render(

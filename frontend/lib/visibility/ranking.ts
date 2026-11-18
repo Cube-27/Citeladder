@@ -1,9 +1,19 @@
-import type { RankingRow } from '@citeladder/contracts';
-import { formatPosition } from '@/lib/visibility/dashboard';
+import type { RankingRow, WinCounts } from '@citeladder/contracts';
+import { formatRank } from '@/lib/visibility/dashboard';
 
 /** Where one roster competitor's page lives: keyed by its roster name. */
 export function competitorHref(name: string): `/${string}` {
   return `/competitors/${encodeURIComponent(name)}`;
+}
+
+/**
+ * Why a win rate is missing (AV-7): no answer naming a tracked brand is not
+ * applicable; a run finalized without first-named data is not measured.
+ */
+export function winRateAbsence(
+  row: Pick<WinCounts, 'win_answers'> | undefined,
+): 'not_applicable' | 'not_measured' {
+  return row?.win_answers === 0 ? 'not_applicable' : 'not_measured';
 }
 
 /** Stable identity for one ranking row, matching the table's React key. */
@@ -99,7 +109,7 @@ export function standingHeadline(standing: BrandStanding): {
     case 'ranked': {
       const sub = [neighbourLine(standing), tieLine(standing.tied)].filter(Boolean).join(' ');
       return {
-        headline: `You're ${formatPosition(standing.rank)} in AI visibility`,
+        headline: `You're ${formatRank(standing.rank)} in AI visibility`,
         sub: sub || null,
       };
     }

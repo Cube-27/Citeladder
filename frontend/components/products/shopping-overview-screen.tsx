@@ -24,7 +24,7 @@ import { commerceQueries } from '@/lib/api/commerce';
 import { PRODUCT_WINDOW_DAYS, type ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';
 import { formatCount, formatMean, pluralCount } from '@/lib/format';
-import { formatPosition, formatRate } from '@/lib/products/product-columns';
+import { formatRate } from '@/lib/products/product-columns';
 import { targetHref } from '@/lib/products/targets';
 import {
   overviewSearch,
@@ -102,7 +102,7 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
         <Measured value={row.win_rate} format={formatRate} />
       </TableCell>
       <TableCell>
-        <Measured value={row.position} format={formatPosition} />
+        <Measured value={row.position} format={formatMean} />
       </TableCell>
     </>
   );

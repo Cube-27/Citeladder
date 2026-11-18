@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
-import { entitySentiments } from '../src/visibility/perception.ts';
+import { perceivedAnswers, sentimentsOf } from '../src/visibility/perception.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { frozen } from './visibility-read-support.ts';
@@ -297,7 +297,7 @@ describe('GET /visibility/perception', () => {
       metrics: {
         total_completed: 6,
         share_of_voice: { mention_counts: { Acme: 5, Rival: 1 } },
-        competitor_mention_rate: { Rival: 1 / 6 },
+        competitor_mention_rate: { Rival: 1 / 6, Ghost: 0 },
       },
     });
     // Each answer above is its own prompt; index 0 holds the first (Acme negative).
@@ -309,12 +309,20 @@ describe('GET /visibility/perception', () => {
     const base = `/api/v1/projects/${tenant.projectId}/visibility`;
     const ranking = await get(tenant, base, { audit_id: auditId });
     const prompts = await get(tenant, `${base}/prompts`, { audit_id: auditId });
+    const trend = await get(tenant, `${base}/trends`);
     expect(ranking.status).toBe(200);
-    expect((ranking.body.rankings as Body[]).map((row) => [row.name, row.sentiment])).toEqual([
+    const sentiments = (rows: unknown) => (rows as Body[]).map((row) => [row.name, row.sentiment]);
+    const expected = [
       // Five mentions, two confidently classified: one each way nets to zero.
       ['Acme', { mentions: 5, classified: 2, positive: 1, negative: 1, net_sentiment: 0 }],
       ['Rival', { mentions: 1, classified: 1, positive: 1, negative: 0, net_sentiment: 100 }],
-    ]);
+      // Perceived, never named: zero mentions ("Not named"), not unknown.
+      ['Ghost', { mentions: 0, classified: 0, positive: 0, negative: 0, net_sentiment: null }],
+    ];
+    expect(sentiments(ranking.body.rankings)).toEqual(expected);
+    // The trend point for this run carries the same sentiments over its own runs.
+    const point = (trend.body as unknown as Body[]).find((row) => row.audit_id === auditId);
+    expect(sentiments(point?.rankings)).toEqual(expected);
     // The brand's mentions only: Rival's positive label in that answer is not counted.
     expect((prompts.body as unknown as Body[])[0]!.sentiment).toEqual({
       mentions: 1,
@@ -330,8 +338,8 @@ describe('GET /visibility/perception', () => {
       configuration: { ...CONFIGURATION, perception: undefined },
     });
     await answer(tenant, unperceived, { entities: [{ name: 'Acme', kind: 'brand' }] });
-    const pool = (auditIds: string[]) =>
-      entitySentiments(db, {
+    const pool = async (auditIds: string[]) => {
+      const answers = await perceivedAnswers(db, {
         workspaceId: tenant.workspaceId,
         projectId: tenant.projectId,
         marketId: null,
@@ -342,8 +350,10 @@ describe('GET /visibility/perception', () => {
         fromAt: null,
         toAt: null,
       });
+      return answers && sentimentsOf(answers).map((entity) => entity.name);
+    };
     const [perceivedOnly, mixed] = [await pool([auditId]), await pool([auditId, unperceived])];
-    expect([perceivedOnly.map((entity) => entity.name), mixed]).toEqual([['Acme', 'Rival'], []]);
+    expect([perceivedOnly, mixed]).toEqual([['Acme', 'Rival'], null]);
     await fixtures.promptScore(tenant, unperceived, {
       promptIndex: 0,
       promptText: 'best tools?',

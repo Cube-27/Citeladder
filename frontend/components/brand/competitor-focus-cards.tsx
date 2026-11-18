@@ -7,7 +7,13 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { formatCount } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
+
+/** "10 of 32" when the read capped the list, else nothing. */
+function cappedCount(shown: number, total: number): string | undefined {
+  return total > shown ? `${formatCount(shown)} of ${formatCount(total)}` : undefined;
+}
 
 const SOURCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'domain', label: 'Domain' },
@@ -21,6 +27,7 @@ export function CompetitorSources({ focus }: Readonly<{ focus: CompetitorFocus }
   return (
     <DataTable
       title={`Sources when ${name} is named`}
+      description={cappedCount(focus.sources.length, focus.sources_total)}
       label={`Sources when ${name} is named`}
       columns={SOURCE_COLUMNS}
       footer="“You’re cited too”: the domain is also cited in answers that name you."
@@ -68,7 +75,12 @@ export function NamedInsteadOfYou({ focus }: Readonly<{ focus: CompetitorFocus }
   return (
     <DataTable
       title="Named instead of you"
-      description="Rows open the prompt"
+      description={[
+        cappedCount(focus.named_instead.length, focus.named_instead_total),
+        'Rows open the prompt',
+      ]
+        .filter(Boolean)
+        .join(' · ')}
       label="Named instead of you"
       columns={PROMPT_COLUMNS}
       state={

@@ -9,6 +9,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
+import { useToast } from '@/components/ui/toast';
 import type { ObservedCompetitor } from '@citeladder/contracts';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -53,6 +54,7 @@ export function CompetitorSuggestions({
   suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
 }>) {
   const workspaceId = useActiveWorkspaceId();
+  const { notify } = useToast();
   const acceptMutation = useMutation(
     visibilityMutations.acceptCompetitorSuggestion({ workspaceId, projectId }),
   );
@@ -99,7 +101,11 @@ export function CompetitorSuggestions({
                 <TableActionsCell>
                   <Button
                     variant="secondary"
-                    onClick={() => acceptMutation.mutate(candidate.id)}
+                    onClick={() =>
+                      acceptMutation.mutate(candidate.id, {
+                        onSuccess: () => notify(`${candidate.name} added to your competitors`),
+                      })
+                    }
                     disabled={deciding}
                     aria-label={`Accept ${candidate.name} as a competitor`}
                   >
@@ -107,7 +113,11 @@ export function CompetitorSuggestions({
                   </Button>
                   <Button
                     variant="quiet"
-                    onClick={() => rejectMutation.mutate(candidate.id)}
+                    onClick={() =>
+                      rejectMutation.mutate(candidate.id, {
+                        onSuccess: () => notify(`${candidate.name} won't be suggested again`),
+                      })
+                    }
                     disabled={deciding}
                     aria-label={`Reject ${candidate.name} as a competitor`}
                   >
@@ -127,7 +137,7 @@ export function CompetitorSuggestions({
 function columns(canWrite: boolean): DataTableColumn[] {
   return [
     { key: 'name', label: 'Name', kind: 'identity' },
-    { key: 'found', label: 'Found by', kind: 'status' },
+    { key: 'found', label: 'Found by', kind: 'status', width: 'category' },
     { key: 'seen', label: 'Seen in', kind: 'number', width: 'metric' },
     { key: 'engines', label: 'Engines', kind: 'number' },
     ...(canWrite ? [{ key: 'actions', label: 'Actions', kind: 'actions' } as const] : []),

@@ -1,4 +1,5 @@
 import { Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
@@ -10,7 +11,12 @@ import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { competitorHref, orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
+import {
+  competitorHref,
+  orderByVisibility,
+  rankingRowKey,
+  winRateAbsence,
+} from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
@@ -42,22 +48,17 @@ export function RankingRowsTable({
   /** What the Change column compares against, stated once. */
   description?: string;
 }>) {
+  const navigate = useNavigate();
   const ordered = orderByVisibility(rows);
-  // With no prior run there is no change for ANY brand, so the column goes.
-  const anyChange = ordered.some(
-    (row) => (row.matched_visibility_delta ?? row.visibility_delta) != null,
-  );
   // Runs measured before mention offsets were persisted have no position.
   const anyPosition = ordered.some((row) => row.avg_position != null);
-  // Runs finalized before first-named answers were persisted have no win rate.
-  const anyWin = ordered.some((row) => row.win_answers != null);
   // Runs admitted without perception classify no mention.
   const anySentiment = ordered.some((row) => row.sentiment != null);
   return (
     <TitledSection title={TITLE} description={description}>
       <DataTable
         label={TITLE}
-        columns={rankingColumns({ anyPosition, anyWin, anySentiment, anyChange })}
+        columns={rankingColumns({ anyPosition, anySentiment })}
         minWidth="md"
         state={
           ordered.length
@@ -76,15 +77,30 @@ export function RankingRowsTable({
           // runs share; the note above the table says which one it is.
           const change = row.matched_visibility_delta ?? row.visibility_delta;
           return (
-            <TableRow key={rankingRowKey(row)} highlight={row.is_brand}>
+            <TableRow
+              key={rankingRowKey(row)}
+              highlight={row.is_brand}
+              {...(row.is_brand
+                ? {}
+                : {
+                    className: 'cursor-pointer',
+                    onClick: () => navigate(competitorHref(row.name)),
+                  })}
+            >
               <TableCell>
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                   <ClampText lines={1} className={textRole('emphasis')}>
+                    {/* The whole row opens the competitor; the name is the keyboard's way in. */}
                     {row.is_brand ? (
                       row.name
                     ) : (
-                      <TextLink href={competitorHref(row.name)} text="inherit" underline="hover">
+                      <TextLink
+                        href={competitorHref(row.name)}
+                        text="inherit"
+                        underline="hover"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         {row.name}
                       </TextLink>
                     )}
@@ -103,21 +119,17 @@ export function RankingRowsTable({
                   {row.avg_position == null ? <Absence /> : formatPositionExact(row.avg_position)}
                 </TableCell>
               ) : null}
-              {anyWin ? (
-                <TableCell numeric>
-                  <WinRateValue row={row} />
-                </TableCell>
-              ) : null}
+              <TableCell numeric>
+                <WinRateValue row={row} />
+              </TableCell>
               {anySentiment ? (
                 <TableCell numeric>
                   <SentimentValue sentiment={row.sentiment} />
                 </TableCell>
               ) : null}
-              {anyChange ? (
-                <TableCell numeric>
-                  <Delta value={change} unit=" pp" />
-                </TableCell>
-              ) : null}
+              <TableCell numeric>
+                <Delta value={change} unit=" pp" />
+              </TableCell>
             </TableRow>
           );
         })}
@@ -147,19 +159,15 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
 /** No answer naming a tracked brand is not applicable, not zero. */
 function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.win_rate != null) return <span>{formatRate(row.win_rate)}</span>;
-  return <Absence narrow state={row.win_answers === 0 ? 'not_applicable' : 'unavailable'} />;
+  return <Absence narrow state={winRateAbsence(row)} />;
 }
 
 function rankingColumns({
   anyPosition,
-  anyWin,
   anySentiment,
-  anyChange,
 }: Readonly<{
   anyPosition: boolean;
-  anyWin: boolean;
   anySentiment: boolean;
-  anyChange: boolean;
 }>): DataTableColumn[] {
   return [
     { key: 'brand', label: 'Brand', kind: 'identity' },
@@ -183,17 +191,7 @@ function rankingColumns({
           } as const,
         ]
       : []),
-    ...(anyWin
-      ? [
-          {
-            key: 'win_rate',
-            label: 'Win rate',
-            hint: WIN_RATE_HINT,
-            width: 'short',
-            kind: 'number',
-          } as const,
-        ]
-      : []),
+    { key: 'win_rate', label: 'Win rate', hint: WIN_RATE_HINT, width: 'short', kind: 'number' },
     ...(anySentiment
       ? [
           {
@@ -205,8 +203,6 @@ function rankingColumns({
           } as const,
         ]
       : []),
-    ...(anyChange
-      ? [{ key: 'change', label: 'Change', width: 'short', kind: 'number' } as const]
-      : []),
+    { key: 'change', label: 'Change', width: 'short', kind: 'number' },
   ];
 }

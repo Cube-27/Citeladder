@@ -9,8 +9,8 @@ import { StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
-import { formatCount, pluralCount } from '@/lib/format';
-import { formatPosition, formatRate, holderCaption } from '@/lib/products/product-columns';
+import { formatCount, formatMean, pluralCount } from '@/lib/format';
+import { formatRate, holderCaption } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { SectionContent, TitledSection } from '@/components/ui/section';
@@ -71,7 +71,7 @@ export function CompetingProducts({
             <span className="type-caption tabular-nums">
               Position{' '}
               <Value
-                value={row.position === null ? null : formatPosition(row.position)}
+                value={row.position === null ? null : formatMean(row.position)}
                 absent="unavailable"
               />
             </span>
@@ -204,7 +204,7 @@ export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDeta
               />{' '}
               · Position{' '}
               <Value
-                value={row.position === null ? null : formatPosition(row.position)}
+                value={row.position === null ? null : formatMean(row.position)}
                 absent="unavailable"
               />
             </>

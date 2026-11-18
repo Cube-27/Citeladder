@@ -93,23 +93,24 @@ function TrendChart({
   const { label: engineLabel } = useEngineCatalog();
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
-  // A point that did not measure the competitor is a gap, never a zero.
-  const theirs = toNamedChartPoints(points, metric, name, timeZone);
-  const yours = toChartPoints(points, metric, timeZone).map((point) => point.value);
-  const axis = trendAxis(metric, [theirs.map((point) => point.value), yours]);
+  // Your line is the chart's first (the "you" tone); a point that did not
+  // measure the competitor is a gap in theirs, never a zero.
+  const yours = toChartPoints(points, metric, timeZone);
+  const theirs = toNamedChartPoints(points, metric, name, timeZone).map((point) => point.value);
+  const axis = trendAxis(metric, [yours.map((point) => point.value), theirs]);
   const events = toTrendEvents(points, { timeZone, engineLabel });
   return (
     <Stack aria-busy={busy}>
       <StepChart
         label={`${metricLabel} over time`}
-        name={name}
-        data={theirs.map((point) => ({
+        name="You"
+        data={yours.map((point) => ({
           ...point,
           value: axis.plot(point.value),
           label: `${point.dateLabel} · ${axis.format(point.value)}`,
           axisLabel: point.label,
         }))}
-        series={[{ label: 'You', values: yours.map(axis.plot) }]}
+        series={[{ label: name, values: theirs.map(axis.plot) }]}
         events={events}
         eventLegend
         yMin={axis.yMin}
