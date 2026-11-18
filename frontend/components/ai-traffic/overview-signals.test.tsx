@@ -145,7 +145,7 @@ it('shows a measured zero as 0 and a window with no completed run as not run yet
   );
   const cell = within(figure('Tracked citations'));
   expect(basis('Tracked citations')).toHaveAccessibleDescription(
-    /No AI Visibility run completed in this window\./,
+    /No visibility run completed in this window\./,
   );
   expect(cell.getByText('Not run yet')).toBeVisible();
   expect(cell.queryByText('0')).not.toBeInTheDocument();

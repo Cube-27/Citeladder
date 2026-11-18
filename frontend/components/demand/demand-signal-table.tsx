@@ -119,7 +119,7 @@ export function DemandSignalTable({
   // height (a single page just ends).
   return (
     <DataTable
-      title="Search demand signals"
+      title="Demand signals"
       description={description}
       columns={COLUMNS}
       rowLines={2}

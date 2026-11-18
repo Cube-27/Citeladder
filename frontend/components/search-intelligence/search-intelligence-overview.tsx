@@ -112,7 +112,7 @@ export function SearchIntelligenceOverview({
       />
       <SearchSummaryEvidence
         datasets={[footprint, backlinks].filter((item) => item !== undefined)}
-        note="Provider estimates and observed rankings are separate from first-party Search Demand data."
+        note="Provider estimates and observed rankings are separate from first-party Demand data."
       />
     </Stack>
   );

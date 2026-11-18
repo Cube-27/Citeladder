@@ -125,7 +125,7 @@ const NOTHING_MEASURED: DataTableState = {
 };
 
 /**
- * Path-level AI Traffic: the coverage line over one cursor-paged table. A
+ * Path-level AI traffic: the coverage line over one cursor-paged table. A
  * page turn or filter keeps the rows, the line and the pager on screen until
  * the next page lands. The crawler drawer reads the same view for one bot.
  */
@@ -161,7 +161,7 @@ export function TrafficPages({
     <Stack gap="workspace">
       <CoverageLine data={page} />
       <DataTable
-        label="Path-level AI Traffic with separate signal units"
+        label="Path-level AI traffic with separate signal units"
         columns={columns}
         minWidth="lg"
         {...table}
@@ -280,7 +280,7 @@ function TrafficPageRow({
           <Pressable
             onClick={() => onOpen(r.url_hash)}
             className="flex w-auto max-w-full min-w-0"
-            aria-label={`View AI Traffic for ${r.canonical_url}`}
+            aria-label={`View AI traffic for ${r.canonical_url}`}
           >
             <UrlText
               url={r.canonical_url}

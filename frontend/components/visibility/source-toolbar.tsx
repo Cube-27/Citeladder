@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Download } from 'lucide-react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
@@ -36,9 +35,8 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * The table's toolbar, above whichever table is showing: the Domains |
- * URLs switch (`view`, the inventory only), search, the filters (domain,
- * type, standing), then Export at the end.
+ * The table's toolbar, above whichever table is showing: search, the filters
+ * (domain, type, standing), then Export at the end.
  *
  * Export writes the rows AS SHOWN — after the filter, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
@@ -47,7 +45,6 @@ const URL_HEADERS = [
  */
 export function sourceTableToolbar({
   dimension,
-  view,
   search,
   onSearch,
   rows,
@@ -55,7 +52,6 @@ export function sourceTableToolbar({
   filters,
 }: Readonly<{
   dimension: 'domain' | 'url';
-  view?: ReactNode;
   search: string;
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
@@ -102,7 +98,6 @@ export function sourceTableToolbar({
   };
 
   return {
-    view,
     search: (
       <SearchField
         value={search}

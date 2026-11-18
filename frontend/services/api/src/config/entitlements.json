@@ -260,7 +260,7 @@
     "search_intelligence": {
       "status": 403,
       "code": "capability_not_granted",
-      "message": "Keyword Research is not included in your plan"
+      "message": "Keyword analyses are not included in your plan"
     },
     "team_members": {
       "status": 403,

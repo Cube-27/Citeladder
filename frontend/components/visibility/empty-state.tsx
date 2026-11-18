@@ -40,7 +40,7 @@ export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: Active
       kind="empty"
       icon={Rocket}
       heading="No visibility data yet"
-      description="AI Visibility shows how often AI engines mention and cite you, once a run has finished."
+      description="How often AI engines mention and cite you appears here once a run has finished."
       action={canRun ? <FirstRunAction /> : undefined}
     />
   );

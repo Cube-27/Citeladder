@@ -53,7 +53,7 @@ export const stallReasonLabel = (token: string) => label(STALL_REASON, token);
 
 /** Why the Overview has no tracked-citation figure for the window. */
 const CITATION_GAP = {
-  no_completed_run: 'No AI Visibility run completed in this window.',
+  no_completed_run: 'No visibility run completed in this window.',
   not_computed: 'A run in this window has not been counted yet.',
 } as const;
 export const citationGapLabel = (token: string) => label(CITATION_GAP, token);

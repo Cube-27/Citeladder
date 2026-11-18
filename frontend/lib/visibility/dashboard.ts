@@ -25,15 +25,20 @@ const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
 ]);
 
 /**
- * The Visibility workspace tabs, in display order. `sources` is the default.
- *   - sources:      the domains and URLs AI answers retrieved and cited
- *   - ads:         paid ads shown in ChatGPT Search answers, apart from sources
- *   - query-fanout: frozen prompts + generated search-query evidence
+ * The Sources page tabs, in display order. `domains` is the default.
+ *   - domains:        the domains AI answers retrieved and cited
+ *   - urls:           the cited pages
+ *   - read-not-cited: your pages an engine read and still did not cite
+ *   - query-fanout:   frozen prompts + generated search-query evidence
+ *   - ads:            paid ads shown in ChatGPT Search answers, apart from sources
  *
  * Every tab reads the selected measurement, so the run / engine / prompt /
  * period controls apply throughout and there is no per-tab exception.
  */
-export type VisibilityTab = 'sources' | 'ads' | 'query-fanout';
+export type VisibilityTab = 'domains' | 'urls' | 'read-not-cited' | 'query-fanout' | 'ads';
+
+/** The tabs that draw the Sources inventory. */
+export type SourceTab = Extract<VisibilityTab, 'domains' | 'urls' | 'read-not-cited'>;
 
 /**
  * Which screen reads the shared selection: a Visibility tab, or a Brand page
@@ -44,9 +49,11 @@ export type VisibilityView = VisibilityTab | 'insights' | 'competitors' | 'perce
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
-  { id: 'sources', label: 'Sources' },
-  { id: 'ads', label: 'Ads' },
+  { id: 'domains', label: 'Domains' },
+  { id: 'urls', label: 'URLs' },
+  { id: 'read-not-cited', label: 'Read, not cited' },
   { id: 'query-fanout', label: 'Query fanouts' },
+  { id: 'ads', label: 'Ads' },
 ] as const;
 
 /** The tabs backed by the shared execution-evidence query + cache key. */

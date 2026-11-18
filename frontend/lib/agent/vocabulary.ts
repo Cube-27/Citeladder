@@ -135,10 +135,10 @@ export function targetKindLabel(kind: string | null | undefined): string | null 
 }
 
 const FAMILY_LABEL: Record<string, string> = {
-  ai_visibility: 'AI Visibility',
+  ai_visibility: 'Insights',
   sources: 'Sources',
   search_console: 'Search Console',
-  search_intelligence: 'Keyword Research',
+  search_intelligence: 'Keywords',
   site_health: 'Site health',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
@@ -245,8 +245,8 @@ const CHECK_REASON: Record<string, string> = {
   no_traffic_snapshot: 'The Search Console window is no longer stored.',
   window_overlaps_declaration: 'That window includes the go-live day or earlier.',
   no_search_console_row: 'Search Console reported no row for this page or query.',
-  not_ranking_yet: 'A later Keyword Research analysis does not show you ranking yet.',
-  still_missing: 'A later Keyword Research analysis still lists this as a gap.',
+  not_ranking_yet: 'A later Keywords analysis does not show you ranking yet.',
+  still_missing: 'A later Keywords analysis still lists this as a gap.',
   prompts_not_in_run: 'None of these prompts was part of that run.',
   no_answers: 'That run has no answers to these prompts.',
   too_few_samples:
@@ -307,7 +307,7 @@ export function movementStateLabel(state: string): string {
 
 const SKILL_GROUP_LABEL: Record<string, string> = {
   strategy: 'Strategy',
-  demand: 'Search demand',
+  demand: 'Demand',
   owned_site: 'Your site',
   visibility: 'AI visibility',
   content: 'Content',

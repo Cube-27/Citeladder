@@ -687,7 +687,7 @@ describe('AI Traffic state and navigation', () => {
     expect(await openFilterRow(user, 'Chart interval', 'Week')).toBeVisible();
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
-    await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
+    await screen.findByRole('table', { name: 'Path-level AI traffic with separate signal units' });
     await user.click(screen.getByRole('button', { name: /^Resource class:/ }));
     const pageOption = await screen.findByRole('menuitemradio', { name: 'Page' });
     pageOption.focus();
@@ -714,7 +714,7 @@ describe('AI Traffic state and navigation', () => {
     expect(exportedPages.value?.get('resource_class')).toBe('page');
     expect(exportedPages.value?.get('sort')).toBe('requests_desc');
     await user.click(
-      screen.getByRole('button', { name: 'View AI Traffic for https://example.test/page' }),
+      screen.getByRole('button', { name: 'View AI traffic for https://example.test/page' }),
     );
     const panel = await screen.findByRole('dialog', { name: '/page' });
     expect(

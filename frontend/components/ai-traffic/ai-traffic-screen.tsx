@@ -58,7 +58,7 @@ export function AiTrafficScreen() {
   const tab = resolveTab(requested, crawlAvailable);
   useOverviewWarmup(leadsWithOverview(requested, crawlAvailable));
   const tabs: TabRowProps = {
-    ariaLabel: 'AI Traffic views',
+    ariaLabel: 'AI traffic views',
     items: crawlAvailable === false ? TRAFFIC_TABS.filter((t) => !t.crawlOnly) : TRAFFIC_TABS,
   };
   // The default view waits for crawl availability. The wait still draws the
@@ -73,7 +73,7 @@ export function AiTrafficScreen() {
         }}
       >
         <ReportPage tabs={<TabRow {...tabs} />}>
-          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'figures' }} />
+          <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'figures' }} />
         </ReportPage>
       </TabsRoot>
     );
@@ -132,8 +132,8 @@ function TrafficDataView({
     return (
       <ReportPage {...frame}>
         <Stack gap="workspace" className="min-w-0">
-          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'figures' }} />
-          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'chart' }} />
+          <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'figures' }} />
+          <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'chart' }} />
         </Stack>
       </ReportPage>
     );
@@ -145,7 +145,7 @@ function TrafficDataView({
         <StateBlock
           kind="error"
           {...readErrorProps(summary)}
-          title="Couldn't load AI Traffic"
+          title="Couldn't load AI traffic"
           fallback="Check your connection and try again."
         />
       </ReportPage>
