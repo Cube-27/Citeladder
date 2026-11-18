@@ -414,7 +414,9 @@ its own spacing, size or radius on them.
   (`components/ui/filter-bar.tsx`). The rest share **Filters**: a count of
   those set, a list of name and value with a submenu each, and each set one
   after the button as a removable value chip; a lone other filter is its own
-  chip. **Clear** appears once anything is set. While the period chip shows
+  chip unless the page's placement puts it in Filters. A page fixes which
+  filters sit in the row and which in Filters, so setting, pooling or hiding
+  one never recomposes the row. **Clear** appears once anything is set. While the period chip shows
   only its icon, the data window is the row's end text.
 - **Tables** (DataTable): a column is declared once with its kind, which sets
   the head's and the cells' alignment, face, format and truncation together.

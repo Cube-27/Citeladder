@@ -1,7 +1,7 @@
 import { CircleHelp } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
-import { choiceFilter, rangeFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { IconButton } from '@/components/ui/button';
 import { engineOptionMark } from '@/components/ui/engine-mark';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
@@ -44,7 +44,6 @@ const COHORT_LABELS = {
 type ToolbarProps = Readonly<{
   view: VisibilityView;
   selectionMode?: 'run' | 'range';
-  onChangeSelectionMode: (mode: 'run' | 'range') => void;
   runs: RunOption[];
   selectedRunId: string | null;
   /** Selects a run AND leaves range mode in one URL write. */
@@ -55,7 +54,8 @@ type ToolbarProps = Readonly<{
   promptId: string | null;
   onChangePrompt: (promptId: string | null) => void;
   range: TrendRange;
-  onChangeRange: (range: TrendRange) => void;
+  /** Pools every run in the period, in one URL write. */
+  onSelectPeriod: (range: TrendRange) => void;
   granularity: TrendGranularity;
   onChangeGranularity: (granularity: TrendGranularity) => void;
   cohort: PromptCohort;
@@ -77,10 +77,10 @@ type ToolbarProps = Readonly<{
  * one answers a question a customer would ask: which market, which
  * measurement, about which prompts and surfaces, over what period.
  *
- * A period and a grouping only mean something while the page pools every run
- * in a period; beside "Latest run" or one named run they read as a
- * contradiction, so they are listed only then. The prompt and
- * answer-outcome filters apply where answers are rendered (Query fanouts).
+ * The period is one of the measurement's choices, and a grouping only means
+ * something while the page pools every run in it, so Group by is listed only
+ * then, inside Filters. The prompt and answer-outcome filters apply where
+ * answers are rendered (Query fanouts).
  *
  * The analyst controls that named internal machinery (a comparison baseline,
  * a frozen configuration) stay honoured from the URL and are not offered.
@@ -92,14 +92,6 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
   const filters: Record<FilterId, FilterDefinition | null> = {
     market: marketFilter(props),
     measurement: measurementFilter(props),
-    range: pooled
-      ? rangeFilter({
-          value: props.range,
-          defaultValue: '90d',
-          options: RANGE_OPTIONS,
-          onChange: props.onChangeRange,
-        })
-      : null,
     cohort: choiceFilter({
       id: 'cohort',
       label: 'Prompts',
@@ -127,15 +119,15 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
           })
         : null,
   };
-  return filterOrder(props.view)
-    .map((id) => filters[id])
-    .filter((filter): filter is FilterDefinition => filter !== null);
+  const { row, inFilters } = placement(props.view);
+  const pick = (ids: readonly FilterId[]) =>
+    ids.map((id) => filters[id]).filter((filter): filter is FilterDefinition => filter !== null);
+  return [...pick(row), ...pick(inFilters).map((filter) => ({ ...filter, inFilters: true }))];
 }
 
 type FilterId =
   | 'market'
   | 'measurement'
-  | 'range'
   | 'cohort'
   | 'engine'
   | 'topic'
@@ -144,17 +136,20 @@ type FilterId =
   | 'granularity';
 
 /**
- * Each page's order, so the row's four icon chips are the ones it reads by
- * most (the filter placement approved 2026-11-18): the window first, its
- * period beside it while runs are pooled, then the page's own three.
+ * Each page's row and Filters, as the filter placement approved 2026-11-18
+ * draws them. A filter a page puts in Filters stays there whatever else is
+ * set or hidden, so the row never recomposes when a filter changes.
  */
-function filterOrder(view: VisibilityView): readonly FilterId[] {
+function placement(view: VisibilityView): Readonly<{
+  row: readonly FilterId[];
+  inFilters: readonly FilterId[];
+}> {
   const tail = ['prompt', 'outcome', 'granularity'] as const;
   if (view === 'insights')
-    return ['measurement', 'range', 'engine', 'market', 'cohort', 'topic', ...tail];
+    return { row: ['measurement', 'engine', 'market', 'cohort'], inFilters: ['topic', ...tail] };
   if (view === 'competitors' || view === 'competitor' || view === 'perception')
-    return ['measurement', 'range', 'engine', 'market', 'topic', 'cohort', ...tail];
-  return ['measurement', 'range', 'engine', 'cohort', 'topic', 'market', ...tail];
+    return { row: ['measurement', 'engine', 'market', 'topic'], inFilters: ['cohort', ...tail] };
+  return { row: ['measurement', 'engine', 'cohort', 'topic'], inFilters: ['market', ...tail] };
 }
 
 const DEFAULT_MARKET = 'default';
@@ -185,19 +180,20 @@ export function marketFilter({
 }
 
 const LATEST = '__latest__';
-const POOLED = '__range__';
+const PERIOD = 'period:';
 
 /**
- * Which measurement the page is reading: one run, or every run in the period.
- * One filter, because "which run am I looking at" is one question, not a mode
- * and a value held apart.
+ * Which measurement the page is reading: the latest run, every run in a
+ * period, or one named run. One filter, because "which runs am I looking at"
+ * is one question, not a mode and a window held apart.
  */
 function measurementFilter({
   runs,
   selectedRunId,
   onSelectMeasurement,
   selectionMode,
-  onChangeSelectionMode,
+  range,
+  onSelectPeriod,
 }: ToolbarProps): FilterDefinition {
   const pooled = selectionMode === 'range';
   const selected = runs.find((run) => run.id === selectedRunId);
@@ -205,22 +201,18 @@ function measurementFilter({
   // keeps a stale link from reading as a fresh measurement.
   const missingRunLabel = selectedRunId ? 'Run unavailable' : 'Latest run';
   const [latest] = runs;
+  const periods = RANGE_OPTIONS.map((option) => ({ ...option, value: `${PERIOD}${option.value}` }));
   return choiceFilter({
     id: 'measurement',
     label: 'Measurement',
     icon: 'period',
     // The run read, named at the row's end while the chip shows only its icon.
     windowLabel: latest ? `Latest run · ${latest.label}` : undefined,
-    value: pooled ? POOLED : (selectedRunId ?? LATEST),
+    value: pooled ? `${PERIOD}${range}` : (selectedRunId ?? LATEST),
     defaultValue: LATEST,
-    valueLabel: pooled ? 'All runs in period' : (selected?.label ?? missingRunLabel),
+    valueLabel: pooled ? undefined : (selected?.label ?? missingRunLabel),
     groups: [
-      {
-        options: [
-          { value: LATEST, label: 'Latest run' },
-          { value: POOLED, label: 'All runs in period' },
-        ],
-      },
+      { options: [{ value: LATEST, label: 'Latest run' }, ...periods] },
       ...(runs.length
         ? [
             {
@@ -231,16 +223,17 @@ function measurementFilter({
         : []),
     ],
     onChange: (value) => {
-      if (value === POOLED) onChangeSelectionMode('range');
+      const period = RANGE_OPTIONS.find((option) => `${PERIOD}${option.value}` === value);
+      if (period) onSelectPeriod(period.value);
       else onSelectMeasurement(value === LATEST ? null : value);
     },
   });
 }
 
 /**
- * Which measured surface the page is reading, in two groups. An answer engine
- * is ASKED a question and answers with a model; Google's AI Overview is
- * OBSERVED on a results page and has no model, so the filter says "surface".
+ * Which engine the page is reading, in two groups. An answer engine is ASKED
+ * a question and answers with a model; Google's AI Overview is OBSERVED on a
+ * results page and has no model, so it is grouped as an observed surface.
  */
 function engineFilter(
   { engine, onChangeEngine }: ToolbarProps,
@@ -255,13 +248,13 @@ function engineFilter(
   const observed = catalog.order.filter((key) => catalog.isSearchSurface(key));
   return choiceFilter<EngineFilter>({
     id: 'engine',
-    label: 'Surface',
+    label: 'Engines',
     icon: 'engines',
     value: engine,
     defaultValue: 'all',
-    valueLabel: engine === 'all' ? 'All surfaces' : catalog.label(engine),
+    valueLabel: engine === 'all' ? 'All engines' : catalog.label(engine),
     groups: [
-      { options: [{ value: 'all', label: 'All surfaces' }] },
+      { options: [{ value: 'all', label: 'All engines' }] },
       { label: 'Answer engines', options: asked.map(option) },
       ...(observed.length ? [{ label: 'Observed surfaces', options: observed.map(option) }] : []),
     ],

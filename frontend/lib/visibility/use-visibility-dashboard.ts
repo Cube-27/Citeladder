@@ -65,11 +65,14 @@ const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d'
 const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'day', 'week', 'month'], 'run');
 
 /**
- * Writes the URL directly rather than closing over hook state, so its identity
- * is stable across renders and memoized filter controls do not re-render.
+ * Pools every run in the period: the mode and its window in one URL write, so
+ * a stale `run` cannot outlive the switch. Writes the URL directly rather than
+ * closing over hook state, so its identity is stable across renders.
  */
-function setRange(value: TrendRange) {
+function selectPeriod(value: TrendRange) {
   setUrlParams({
+    selection: 'range',
+    run: null,
     range: value,
     from: rangeToFrom(value) ?? null,
     // No upper bound: a preset means "up to now", and pinning `to` to the
@@ -134,10 +137,9 @@ export function useVisibilityFilters() {
   const [range] = useUrlState('range', rangeCodec);
   const [fromAt] = useUrlState('from', optionalStringUrlCodec);
   const [toAt] = useUrlState('to', optionalStringUrlCodec);
-  const [selectionMode, setSelectionMode] = useUrlState(
+  const [selectionMode] = useUrlState(
     'selection',
     stringUrlCodec(['run', 'range'] as const, 'run'),
-    { clearKeys: [...pageKeys, 'run', 'configuration'] },
   );
   const [configuration, setConfiguration] = useUrlState('configuration', optionalStringUrlCodec, {
     clearKeys: pageKeys,
@@ -191,7 +193,7 @@ export function useVisibilityFilters() {
     promptId,
     setPromptId,
     range,
-    setRange,
+    selectPeriod,
     granularity,
     setGranularity,
     cohort,
@@ -208,7 +210,6 @@ export function useVisibilityFilters() {
     domain,
     url,
     selectionMode,
-    setSelectionMode,
     // One write, so selecting a run from range mode cannot leave
     // `selection=range` behind on a stale URL and ignore the run.
     selectMeasurement: (runId: string | null) =>
