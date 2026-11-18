@@ -45,8 +45,9 @@ async function fetchSurface(surface: SearchSurface) {
   const paths = searchPolicy.constants.locations_paths[surface];
   return surfaceLists(await fetchList(paths.locations), await fetchList(paths.languages));
 }
-const fetched = new Map<SearchSurface, SurfaceLists>();
-for (const surface of searchSurfaces) fetched.set(surface, await fetchSurface(surface));
+const fetched = await Promise.all(
+  searchSurfaces.map(async (surface) => [surface, await fetchSurface(surface)] as const),
+);
 // `searchSurfaces` is every key of the locations paths, so each surface was fetched above.
 const lists = Object.fromEntries(fetched) as Record<SearchSurface, SurfaceLists>;
 const text = serializeLocationsFile(

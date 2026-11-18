@@ -35,9 +35,11 @@ export function actionRoutes() {
   const app = createApp(config, db);
   const seeds: ActionSeed[] = [];
   afterAll(async () => {
-    for (const s of seeds) {
-      await db.deleteFrom('workspaces').where('id', '=', s.workspace_id).execute();
-      await db.deleteFrom('users').where('id', '=', s.user_id).execute();
+    if (seeds.length) {
+      const workspaceIds = seeds.map((s) => s.workspace_id);
+      const userIds = seeds.map((s) => s.user_id);
+      await db.deleteFrom('workspaces').where('id', 'in', workspaceIds).execute();
+      await db.deleteFrom('users').where('id', 'in', userIds).execute();
     }
     await db.destroy();
   });
