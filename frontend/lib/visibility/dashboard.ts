@@ -28,42 +28,22 @@ const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
  * The Visibility workspace tabs, in display order. `trends` is the default.
  *   - trends:       cross-run metrics + charts + ranking movement
  *   - sources:      the domains and URLs AI answers retrieved and cited
- *   - perception:   how answers portray the brand and competitors (sentiment)
- *   - accuracy:     the brand's factual claims checked against its confirmed
- *                   facts (fact-checking pilot workspaces only)
- *   - ads:          paid ads shown in ChatGPT Search answers, apart from sources
+ *   - ads:         paid ads shown in ChatGPT Search answers, apart from sources
  *   - query-fanout: frozen prompts + generated search-query evidence
  *
  * Every tab reads the selected measurement, so the run / engine / prompt /
  * period controls apply throughout and there is no per-tab exception.
  */
-export type VisibilityTab =
-  | 'trends'
-  | 'sources'
-  | 'perception'
-  | 'accuracy'
-  | 'ads'
-  | 'query-fanout';
+export type VisibilityTab = 'trends' | 'sources' | 'ads' | 'query-fanout';
 
-/**
- * The ordered tab definitions (id + human label) rendered by the tablist.
- * Accuracy is last: it shows once the brand-facts read answers, which the
- * loading tab row cannot know, so its arrival moves no other tab.
- */
+/** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
   { id: 'sources', label: 'Sources' },
-  { id: 'perception', label: 'Perception' },
   { id: 'ads', label: 'Ads' },
   { id: 'query-fanout', label: 'Query fanouts' },
-  { id: 'accuracy', label: 'Accuracy' },
 ] as const;
-
-/** The tabs a workspace sees: Accuracy only inside the fact-checking pilot. */
-export function visibleTabs(factChecking: boolean) {
-  return VISIBILITY_TABS.filter((tab) => factChecking || tab.id !== 'accuracy');
-}
 
 /** The tabs backed by the shared execution-evidence query + cache key. */
 export function isEvidenceTab(tab: VisibilityTab): boolean {

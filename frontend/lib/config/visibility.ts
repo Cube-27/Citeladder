@@ -9,6 +9,12 @@ export const VISIBILITY_METRICS = [
 export const SHARE_OF_VOICE_HINT =
   'Share of voice: your share of every brand mention across the brands you track.';
 
+/**
+ * Classified mentions a perception breakdown row needs before it shows shares;
+ * below it the row reads "too few classified", never a zero or a percentage.
+ */
+export const PERCEPTION_MIN_CLASSIFIED = 20;
+
 export const ANSWER_OUTCOMES = [
   { value: 'all', label: 'All answers' },
   { value: 'brand_absent', label: 'Brand absent' },

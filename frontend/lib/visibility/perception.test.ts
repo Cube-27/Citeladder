@@ -1,5 +1,133 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { coverageLine, formatNet, stateCopy, themeLabel } from './perception';
+import {
+  breakdownRow,
+  coverageLine,
+  formatNet,
+  negativeHeadline,
+  negativeThemesLine,
+  rankThemes,
+  sentimentTrend,
+  stateCopy,
+  themeLabel,
+} from './perception';
+
+const RUN = '11111111-1111-4111-8111-111111111111';
+
+function score(positive: number, neutral: number, negative: number, mixed = 0) {
+  const classified = positive + neutral + negative + mixed;
+  return {
+    positive,
+    neutral,
+    negative,
+    mixed,
+    classified,
+    positive_share: classified ? positive / classified : null,
+    negative_share: classified ? negative / classified : null,
+    net_sentiment: classified ? ((positive - negative) * 100) / classified : null,
+  };
+}
+
+function cover(mentions: number, classified: number) {
+  return {
+    mentions,
+    classified,
+    pending: mentions - classified,
+    not_assessable: 0,
+    low_confidence: 0,
+    unavailable: [],
+  };
+}
+
+const theme = (name: string, positive: number, negative: number) => ({
+  theme: name,
+  positive,
+  negative,
+  quotes: [],
+});
+
+describe('perception derivations', () => {
+  it('heads the tab with the negative share, and says so when nothing is negative', () => {
+    expect(negativeHeadline(score(12, 4, 4))).toBe(
+      'AI says something negative about you in 20% of classified mentions',
+    );
+    expect(negativeHeadline(score(3, 1, 0))).toBe(
+      'AI says nothing negative about you in classified mentions',
+    );
+    expect(negativeHeadline(score(0, 0, 0))).toBeNull();
+  });
+
+  it('names only the themes that lean negative', () => {
+    const themes = [theme('pricing', 1, 4), theme('support', 3, 3), theme('reliability', 0, 2)];
+    expect(negativeThemesLine(themes)).toBe(
+      'Pricing and Reliability draw more negative mentions than positive.',
+    );
+    expect(negativeThemesLine([theme('ease_of_use', 2, 3)])).toBe(
+      'Ease of use draws more negative mentions than positive.',
+    );
+    expect(negativeThemesLine([theme('support', 3, 3)])).toBe(
+      'No theme draws more negative mentions than positive.',
+    );
+  });
+
+  it('ranks themes by the chosen side and leaves out those with none on it', () => {
+    const themes = [theme('pricing', 1, 4), theme('support', 5, 0), theme('reliability', 2, 4)];
+    expect(rankThemes(themes, 'negative', 8).map((t) => t.theme)).toEqual([
+      'pricing',
+      'reliability',
+    ]);
+    expect(rankThemes(themes, 'positive', 2).map((t) => t.theme)).toEqual([
+      'support',
+      'reliability',
+    ]);
+  });
+
+  it('shows a breakdown share only from the minimum classified count', () => {
+    const row = (s: ReturnType<typeof score>, mentions: number) => ({
+      key: 'k',
+      label: 'K',
+      score: s,
+      coverage: cover(mentions, s.classified),
+    });
+    expect(breakdownRow(row(score(12, 4, 3, 1), 30), 20)).toEqual({
+      kind: 'value',
+      classified: 20,
+      mentions: 30,
+      positive: 0.6,
+      neutral: 0.2,
+      negative: 0.15,
+      net: 45,
+    });
+    expect(breakdownRow(row(score(10, 5, 4), 25), 20)).toEqual({
+      kind: 'too_few',
+      classified: 19,
+      mentions: 25,
+      needed: 20,
+    });
+    expect(breakdownRow(row(score(0, 0, 0), 4), 0).kind).toBe('too_few');
+  });
+
+  it('breaks the sentiment line at a point not comparable with the one before', () => {
+    const point = (day: string, net: number | null, comparable: boolean) => ({
+      audit_id: RUN,
+      completed_at: `2026-11-${day}T00:00:00Z`,
+      score: { ...score(1, 0, 0), net_sentiment: net },
+      mentions: 1,
+      extractor_version: 'x1',
+      template_version: 't1',
+      metrics_version: 'm1',
+      comparable,
+    });
+    const series = sentimentTrend(
+      [point('01', 10, false), point('08', null, true), point('15', -20, false)],
+      (iso) => iso.slice(5, 10),
+    );
+    expect(series.map(({ label, value, breakBefore }) => [label, value, breakBefore])).toEqual([
+      ['11-01', 10, false],
+      ['11-08', null, false],
+      ['11-15', -20, true],
+    ]);
+  });
+});
 
 describe('perception display', () => {
   it('signs net sentiment and keeps a missing value missing', () => {

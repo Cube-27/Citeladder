@@ -5,6 +5,7 @@ import {
   type AccuracyResponse,
 } from '@citeladder/contracts/fact-checking';
 import { ShieldCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -15,7 +16,6 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
-import type { SourceFilters } from '@/components/visibility/source-rows';
 import {
   accuracyCoverageLine,
   accuracyStateCopy,
@@ -25,9 +25,6 @@ import {
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatShare } from '@/lib/visibility/perception';
-import { useAccuracy } from '@/lib/visibility/use-accuracy';
-import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
-import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -35,33 +32,18 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 /**
  * What answers claimed about the brand, checked against its confirmed facts.
  * Accuracy always travels with its coverage, and a claim without a verdict is
- * a named state, never a zero.
+ * a named state, never a zero. `lede` heads the key figures' card.
  */
-export function VisibilityAccuracy({
-  filters,
-  queries,
-}: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
-  const query = useAccuracy(filters, queries);
-  return (
-    <AnalysisRead
-      query={query}
-      title="Couldn't load the fact checks"
-      busyLabel="Updating fact checks"
-      busy={query.isFetching}
-      ready={query.data}
-    >
-      {(data) => <AccuracyView data={data} />}
-    </AnalysisRead>
-  );
-}
-
-export function AccuracyView({ data }: Readonly<{ data: AccuracyResponse }>) {
+export function AccuracyView({
+  data,
+  lede,
+}: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
   const { label: engineLabel } = useEngineCatalog();
   if (data.state !== 'value')
     return <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />;
   return (
     <SectionStack>
-      <Headline data={data} />
+      <Headline data={data} lede={lede} />
       {/* The contradictions and the sources cited beside them are one
           question; the two-column table sits beside the claims where the
           width allows. */}
@@ -111,22 +93,28 @@ function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
   return <p className={textRole('caption', 'text-ink-2')}>{accuracyCoverageLine(coverage)}</p>;
 }
 
-function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
+function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
   const { coverage } = data.score;
   return (
-    // Stat cards on the ground: the strip is never a card inside a card.
-    <Section variant="group">
+    // Inside the lede's card the figures are cells; on the ground, stat cards.
+    <Section variant={lede ? 'card' : 'group'}>
       <SectionContent>
         <Stack gap="item">
+          {lede}
           <FigureStrip
             label="Fact checks"
             segments={[
               {
-                key: 'accuracy',
-                label: 'Accuracy',
-                value: formatShare(data.score.accuracy),
-                missingLabel: 'Unavailable',
-                sub: 'Supported, of claims that were supported or contradicted.',
+                key: 'claims',
+                label: 'Claims',
+                value: String(coverage.claims),
+                sub: 'In answers that named you.',
+              },
+              {
+                key: 'contradicted',
+                label: 'Contradicted',
+                value: String(coverage.contradicted),
+                sub: 'A confirmed fact states something incompatible.',
               },
               {
                 key: 'supported',
@@ -135,10 +123,11 @@ function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
                 sub: 'A confirmed fact states the same thing.',
               },
               {
-                key: 'contradicted',
-                label: 'Contradicted',
-                value: String(coverage.contradicted),
-                sub: 'A confirmed fact states something incompatible.',
+                key: 'accuracy',
+                label: 'Accuracy',
+                value: formatShare(data.score.accuracy),
+                missingLabel: 'Unavailable',
+                sub: 'Supported, of claims that were supported or contradicted.',
               },
               // Two different findings: no confirmed fact on the point, and a
               // fact that could not settle the claim. Never one summed figure.

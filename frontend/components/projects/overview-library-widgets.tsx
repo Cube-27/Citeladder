@@ -264,12 +264,12 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
   const { visibility, perception } = useLatestPerception(project);
   if (visibility.data === null)
     return (
-      <WidgetCard id="perception" href="/visibility?tab=perception">
+      <WidgetCard id="perception" href="/perception">
         {noMeasuredRun}
       </WidgetCard>
     );
   return (
-    <WidgetCard id="perception" href="/visibility?tab=perception" fill="figure">
+    <WidgetCard id="perception" href="/perception" fill="figure">
       <Loaded
         widget="perception"
         query={perception}

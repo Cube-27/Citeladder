@@ -56,7 +56,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/visibility',
       title: 'Sources',
-      tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
+      tabs: ['Trends', 'Sources', 'Ads', 'Query fanouts'],
       filters: true,
       shapes: ['figures', 'chart'],
     },

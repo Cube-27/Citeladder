@@ -4,8 +4,6 @@ import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
-import { VisibilityPerception } from '@/components/visibility/visibility-perception';
-import { VisibilityAccuracy } from '@/components/visibility/visibility-accuracy';
 import { VisibilityAds } from '@/components/visibility/visibility-ads';
 import { VisibilityByMarket } from '@/components/visibility/visibility-by-market';
 import { SelectionGate } from '@/components/visibility/selection-gate';
@@ -19,8 +17,7 @@ import type { FilterDefinition } from '@/components/ui/all-filters';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
-import { useBrandFacts } from '@/lib/project/use-brand-facts';
-import { visibleTabs, type VisibilityTab } from '@/lib/visibility/dashboard';
+import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
   EVIDENCE_LIMIT,
   useVisibilityFilters,
@@ -95,8 +92,6 @@ function VisibilityWorkspace({
   queries: ReturnType<typeof useVisibilityQueries>;
   state: VisibilityDashboardState;
 }>) {
-  // The Accuracy tab exists only inside the fact-checking pilot.
-  const factChecking = useBrandFacts().data?.enabled ?? false;
   const pageFilters = useVisibilityPageFilters({ filters, queries });
   // One frame across states: the tabs always show; the filters only over data
   // (on a failed refetch, over the data the page already showed).
@@ -111,7 +106,7 @@ function VisibilityWorkspace({
         actions={<VisibilityActions launch={state !== 'empty'} />}
         tabs={
           <TabRow
-            items={visibleTabs(factChecking).map((tab) => ({ value: tab.id, label: tab.label }))}
+            items={VISIBILITY_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
             ariaLabel="Visibility views"
             onIntent={queries.prefetchTab}
           />
@@ -207,8 +202,6 @@ function DashboardPanel({
       </SectionStack>
     ),
     sources: gated(() => <VisibilitySources filters={filters} queries={queries} />),
-    perception: gated(() => <VisibilityPerception filters={filters} queries={queries} />),
-    accuracy: gated(() => <VisibilityAccuracy filters={filters} queries={queries} />),
     ads: gated(() => <VisibilityAds filters={filters} queries={queries} />),
     'query-fanout': gated(() => (
       <FanoutEvidence

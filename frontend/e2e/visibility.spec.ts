@@ -6,7 +6,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
  * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
- * Sources, Perception, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
+ * Sources, Ads, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
@@ -451,12 +451,6 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Perception — how answers portray the brand, or why it cannot be shown yet.
-  await page.getByRole('tab', { name: 'Perception', exact: true }).click();
-  await expect(page).toHaveURL(/[?&]tab=perception/);
-  await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-
   // Ads — paid placements in ChatGPT Search answers; other engines are not applicable.
   await page.getByRole('tab', { name: 'Ads', exact: true }).click();
   await expect(page).toHaveURL(/[?&]tab=ads/);
@@ -472,6 +466,18 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
 
   expect(evidenceUrls.length).toBeGreaterThan(0);
   assertSameOriginApi(requests, baseURL!);
+});
+
+test('Perception reads the selected measurement and names a read still classifying', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto(fixtureProjectPath('/perception'));
+  await expect(page.getByRole('tab', { name: 'Brand', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
 });
 
 // The roving-tablist keyboard contract (Arrow/Home/End selection AND focus
@@ -490,7 +496,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(5);
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);

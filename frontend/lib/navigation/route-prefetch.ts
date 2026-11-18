@@ -109,6 +109,12 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     // entry nothing consumed.
     warmQuery(client, visibilityQueries.project(scope, INITIAL_VISIBILITY_PARAMS));
   },
+  // The same selection as Sources, and the pilot gate that adds Fact-checking.
+  '/perception': async (client, scope) => {
+    const { projectQueries } = await import('@/lib/api/projects');
+    warmQuery(client, projectQueries.brandFacts(scope));
+    await ROUTE_PREFETCHERS['/visibility']?.(client, scope);
+  },
   '/runs': async (client, scope) => {
     const { runsQueries } = await import('@/lib/api/runs');
     warmQuery(client, runsQueries.list(scope));
