@@ -303,7 +303,10 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
     // Tallest tab (24) plus four: the one issue, then 27 rows held as one blank space.
-    const held = screen.getByRole('region', { name: 'Issues' }).querySelector('tbody + tbody tr');
+    // The open drawer hides the page behind it.
+    const held = screen
+      .getByRole('region', { name: 'Issues', hidden: true })
+      .querySelector('tbody + tbody tr');
     expect(held?.getAttribute('style')).toMatch(/--data-table-rows: 27;/);
   });
 
@@ -598,24 +601,23 @@ describe('IssuesCatalog', () => {
     await waitFor(() => expect(seen.at(-1)?.get('severity')).toBe('medium'));
   });
 
-  it('lists advisories from the Show filter, with no severity to filter by', async () => {
+  it('lists advisories beside defects, and the Severity filter narrows to either', async () => {
     const seen: Array<string | null> = [];
     mswServer.use(
       http.get(ISSUES, ({ request }) => {
-        const findingClass = new URL(request.url).searchParams.get('finding_class');
-        if (!isSummaryRequest(request)) seen.push(findingClass);
+        const params = new URL(request.url).searchParams;
+        if (!isSummaryRequest(request)) seen.push(params.toString());
         return HttpResponse.json({
-          items:
-            findingClass === 'advisory'
-              ? [
-                  issue({
-                    rule_id: 'technical.title_length_band',
-                    title: 'Title length outside recommended band',
-                    finding_class: 'advisory',
-                    severity: 'low',
-                  }),
-                ]
-              : [issue()],
+          items: [
+            issue(),
+            issue({
+              group_id: OTHER,
+              rule_id: 'technical.title_length_band',
+              title: 'Title length outside recommended band',
+              finding_class: 'advisory',
+              severity: 'low',
+            }),
+          ],
           next_cursor: null,
           summary,
         });
@@ -624,31 +626,17 @@ describe('IssuesCatalog', () => {
 
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    expect(
-      await screen.findByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '47 issue types · 12 high severity · 50 pages affected',
-      ),
-    ).toBeInTheDocument();
-
-    await chooseFilter(user, 'Show', 'Advisories');
     const table = screen.getByRole('region', { name: 'Issues' });
     expect(
       await within(table).findByRole('button', { name: 'Title length outside recommended band' }),
     ).toBeInTheDocument();
     expect(within(table).getByText('Advisory')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '2 advisory types · 50 pages affected',
-      ),
-    ).toBeInTheDocument();
-    expect(await findFilter('Show', 'Advisories')).toBeVisible();
-    // Advisories carry no severity: the filter stays in its place, disabled.
-    expect(screen.getByRole('button', { name: 'Severity: All severities' })).toBeDisabled();
-    expect(seen).toContain('advisory');
+    expect(seen.at(-1)).not.toContain('finding_class');
+
+    await chooseFilter(user, 'Severity', 'Advisory');
+    await waitFor(() => expect(seen.at(-1)).toContain('finding_class=advisory'));
+    await chooseFilter(user, 'Severity', 'High');
+    await waitFor(() => expect(seen.at(-1)).toContain('severity=high&finding_class=defect'));
   });
 
   it('wires the page-kind filter as a server param, set and cleared', async () => {

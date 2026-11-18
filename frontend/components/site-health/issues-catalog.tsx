@@ -37,7 +37,6 @@ import type {
   SiteIssue,
 } from '@citeladder/contracts';
 import {
-  findingClassChange,
   ISSUE_PRIORITY_PARAMS,
   ISSUE_SECTIONS,
   ISSUE_SEVERITY_CHOICES,
@@ -45,13 +44,10 @@ import {
   issueSeverityChange,
   issueSeverityChoice,
   useIssueFilters,
-  type FindingClass,
   type IssueFilters,
 } from '@/lib/site-health/issue-filters';
-import { issueTitle, severityCount } from '@/lib/site-health/issues';
-import { textRole } from '@/components/ui/typography';
+import { issueTitle } from '@/lib/site-health/issues';
 import { formatCount } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 /**
  * The Issues screen's reads, none waiting on another: the listed page, the
@@ -162,13 +158,6 @@ export function IssuesCatalog({
             />
           ),
           filters: catalogFilters(filters, rows, updateFilters),
-          status: summary ? (
-            <IssueCount
-              summary={summary}
-              crawlSummary={crawlSummary}
-              findingView={filters.finding_class}
-            />
-          ) : null,
         }}
         state={tableState(issuesQuery)}
         rowCount={rows.length}
@@ -331,9 +320,8 @@ function SectionControl({
 }
 
 /**
- * The list's narrowing: severity (disabled for advisories, which carry none,
- * so the row keeps its place), the page type, whether it lists issues or
- * advisories, and a deep link's one-issue filter while it holds.
+ * The list's narrowing: severity (whose advisory level lists the advisories),
+ * the page type, and a deep link's one-issue filter while it holds.
  */
 function catalogFilters(
   filters: IssueFilters,
@@ -347,7 +335,6 @@ function catalogFilters(
       value: issueSeverityChoice(filters),
       defaultValue: 'all',
       defaultIsEvery: true,
-      disabled: filters.finding_class !== 'defect',
       onChange: (value) => updateFilters(issueSeverityChange(value)),
       groups: [
         { options: ISSUE_SEVERITY_CHOICES.map(({ key, label }) => ({ value: key, label })) },
@@ -356,21 +343,6 @@ function catalogFilters(
     pageKindFilter({
       value: filters.page_kind,
       onChange: (page_kind) => updateFilters({ page_kind }),
-    }),
-    choiceFilter<FindingClass>({
-      id: 'finding_class',
-      label: 'Show',
-      value: filters.finding_class,
-      defaultValue: 'defect',
-      onChange: (value) => updateFilters(findingClassChange(value)),
-      groups: [
-        {
-          options: [
-            { value: 'defect', label: 'Issues' },
-            { value: 'advisory', label: 'Advisories' },
-          ],
-        },
-      ],
     }),
     // A deep link's one-issue filter, counted on the button and cleared in its menu.
     ...(filters.rule_id
@@ -432,96 +404,4 @@ function useCatalogPager(
       onGo(nextCursor);
     },
   };
-}
-
-/**
- * The listed view's size, held as wide as the crawl's unfiltered counts read
- * in either view, so no filter resizes it and moves the row.
- */
-function IssueCount({
-  summary,
-  crawlSummary,
-  findingView,
-}: Readonly<{ summary: Summary; crawlSummary?: Summary; findingView: FindingClass }>) {
-  if (!crawlSummary) return <CountLine summary={summary} findingView={findingView} />;
-  // At least 2, so the sizers print plurals: "0 pages" is wider than "1 page".
-  const bound = {
-    ...crawlSummary,
-    defect_issue_type_count: Math.max(2, crawlSummary.defect_issue_type_count),
-    advisory_issue_type_count: Math.max(2, crawlSummary.advisory_issue_type_count),
-    affected_url_count: Math.max(2, crawlSummary.affected_url_count),
-  };
-  return (
-    <span className="grid">
-      <CountLine summary={summary} findingView={findingView} className="col-start-1 row-start-1" />
-      {(['defect', 'advisory'] as const).map((view) => (
-        <CountLine
-          key={view}
-          summary={bound}
-          findingView={view}
-          sizer
-          className="invisible col-start-1 row-start-1"
-        />
-      ))}
-    </span>
-  );
-}
-
-/** Issue types, the high-severity ones and the pages they reach. */
-function CountLine({
-  summary,
-  findingView,
-  className,
-  sizer = false,
-}: Readonly<{
-  summary: Summary;
-  findingView: FindingClass;
-  className?: string;
-  /** An unseen copy that only holds width. */
-  sizer?: boolean;
-}>) {
-  const Line = sizer ? 'span' : 'p';
-  const defects = findingView === 'defect';
-  const typeCount = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
-  const high = severityCount(summary.severity_counts, 'high');
-  return (
-    <Line
-      aria-hidden={sizer || undefined}
-      className={cn('type-caption whitespace-nowrap', className)}
-    >
-      <SummaryCount
-        value={typeCount}
-        singular={defects ? 'issue type' : 'advisory type'}
-        plural={defects ? 'issue types' : 'advisory types'}
-      />
-      {defects && high > 0 ? (
-        <>
-          <span aria-hidden> · </span>
-          <span>
-            <span className={textRole('emphasis', 'tabular-nums')}>{formatCount(high)}</span> high
-            severity
-          </span>
-        </>
-      ) : null}
-      <span aria-hidden> · </span>
-      <SummaryCount
-        value={summary.affected_url_count}
-        singular="page affected"
-        plural="pages affected"
-      />
-    </Line>
-  );
-}
-
-function SummaryCount({
-  value,
-  singular,
-  plural,
-}: Readonly<{ value: number; singular: string; plural: string }>) {
-  return (
-    <span>
-      <span className={textRole('emphasis', 'tabular-nums')}>{formatCount(value)}</span>{' '}
-      {value === 1 ? singular : plural}
-    </span>
-  );
 }

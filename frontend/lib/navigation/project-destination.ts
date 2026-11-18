@@ -134,7 +134,6 @@ const PROJECT_NEUTRAL_PARAMS = new Set([
   'severity',
   'category',
   'rule',
-  'finding_class',
   'page_kind',
 ]);
 

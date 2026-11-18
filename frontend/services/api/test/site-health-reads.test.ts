@@ -715,30 +715,51 @@ describe('issue catalog', () => {
     const stale = await page(seed, '/stale', { current: false });
     for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
     await issue(seed, home, 'technical.title_present');
-    await issue(seed, home, 'technical.meta_description_present');
+    await issue(seed, home, 'technical.canonical_integrity');
+    // A medium advisory on more pages than the medium defect still follows it.
+    for (const target of [home, product])
+      await issue(seed, target, 'technical.meta_description_present');
     // An issue of a superseded analysis is history, not the crawl's state.
     await issue(seed, stale, 'technical.https');
 
-    const body = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
-    expect(body.items.map((group: { rule_id: string }) => group.rule_id)).toEqual([
-      'technical.indexable',
-      'technical.title_present',
+    const list = (query = '') =>
+      json(seed, `/site-crawls/${seed.crawlId}/issues?${query}`, siteIssuesPageSchema);
+    const rules = (page: { items: { rule_id: string }[] }) => page.items.map((g) => g.rule_id);
+    const [indexable, title, canonical, meta] = ['indexable', 'title_present']
+      .concat('canonical_integrity', 'meta_description_present')
+      .map((rule) => `technical.${rule}`);
+    const body = await list();
+    expect(body.items.map((group) => [group.rule_id, group.finding_class])).toEqual([
+      [indexable, 'defect'],
+      [title, 'defect'],
+      [canonical, 'defect'],
+      [meta, 'advisory'],
     ]);
-    expect(body.items[0]).toMatchObject({
-      group_id: issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
-      affected_url_count: 2,
-    });
+    expect([body.items[0]!.group_id, body.items[0]!.affected_url_count]).toEqual([
+      issueGroupId(seed.crawlId, indexable!, 'defect'),
+      2,
+    ]);
+    expect(body.items[3]!.group_id).toBe(issueGroupId(seed.crawlId, meta!, 'advisory'));
     expect(body.summary).toMatchObject({
-      issue_count: 2,
+      issue_count: 3,
       advisory_issue_type_count: 1,
-      occurrence_count: 3,
-      severity_counts: { critical: 0, high: 2 },
+      occurrence_count: 6,
+      severity_counts: { critical: 0, high: 2, medium: 1 },
     });
-    const high = await json(
-      seed,
-      `/site-crawls/${seed.crawlId}/issues?severity=high`,
-      siteIssuesPageSchema,
-    );
+    // A class still narrows the list and its counts.
+    const defects = await list('finding_class=defect');
+    expect([rules(defects), defects.summary.occurrence_count]).toEqual([
+      [indexable, title, canonical],
+      4,
+    ]);
+    // Pages first, the two-page advisory leads the one-page defects, across a cursor.
+    const byPages = await list('sort=pages&limit=2');
+    const resumed = await list(`sort=pages&limit=2&cursor=${byPages.next_cursor}`);
+    expect([rules(byPages), rules(resumed)]).toEqual([
+      [indexable, meta],
+      [title, canonical],
+    ]);
+    const high = await list('severity=high');
     expect(high.items).toHaveLength(2);
     // Chips never narrow the counts they label.
     expect(high.summary.severity_counts.high).toBe(2);
@@ -923,7 +944,7 @@ describe('issue catalog', () => {
     // Issues the publication has not refreshed yet: nothing is persisted, not a zero catalog.
     const homeEvaluation = await issue(seed, home, 'technical.indexable', {}, false);
     expect(await catalog()).toEqual([]);
-    // The currency refresh writes both classes' catalogs in its transaction.
+    // The currency refresh writes each class's catalog and the combined one in its transaction.
     const productEvaluation = await issue(seed, product, 'technical.indexable');
     const evaluations = [homeEvaluation, productEvaluation].sort(compareText);
     const issueIds = (
@@ -936,18 +957,11 @@ describe('issue catalog', () => {
       .map((row) => row.id)
       .sort(compareText);
     // Each group keeps the exact issues and evaluations it folds.
+    const group_id = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const folded = [{ group_id, issue_ids: issueIds, evaluation_ids: evaluations }];
     expect(
       Object.fromEntries((await catalog()).map((row) => [row.finding_class, row.sources])),
-    ).toEqual({
-      advisory: [],
-      defect: [
-        {
-          group_id: issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
-          issue_ids: issueIds,
-          evaluation_ids: evaluations,
-        },
-      ],
-    });
+    ).toEqual({ advisory: [], all: folded, defect: folded });
     expect(
       (await catalog()).map((row) => [
         row.finding_class,
@@ -959,6 +973,7 @@ describe('issue catalog', () => {
       ]),
     ).toEqual([
       ['advisory', [], 0],
+      ['all', ['technical.indexable'], 2],
       ['defect', ['technical.indexable'], 2],
     ]);
     // A current issue no writer refreshed changes no unfiltered read.

@@ -104,10 +104,8 @@ const issuesQuery = {
   rule: text,
   site_url_id: optionalUuid,
   page_kind: text,
-  finding_class: {
-    scalar: { kind: 'literal', values: ['defect', 'advisory'] },
-    default: 'defect',
-  },
+  // Absent lists defects and advisories together.
+  finding_class: { scalar: { kind: 'literal', values: ['defect', 'advisory'] } },
 } as const;
 const download = z.unknown();
 const changeLimit = policy.site_health.change_intel;
@@ -146,7 +144,7 @@ const readIssues = (db: Database, workspaceId: string, crawlId: string, query: I
         rule: query.rule || null,
         siteUrlId: query.site_url_id,
         pageKind: query.page_kind || null,
-        findingClass: query.finding_class,
+        findingClass: query.finding_class ?? null,
       },
       query,
       { section: query.section ?? null, sort: query.sort },

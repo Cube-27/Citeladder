@@ -110,9 +110,7 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
     filters: table.locator('[data-filter-bar]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
     pageKind: table.locator('[data-filter-bar]').getByRole('button', { name: /^Page kind/ }),
-    show: table.locator('[data-filter-bar]').getByRole('button', { name: /^Show/ }),
     severity: table.locator('[data-filter-bar]').getByRole('button', { name: /^Severity/ }),
-    count: table.locator('[data-filter-bar] output'),
     summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').first(),
@@ -179,15 +177,15 @@ for (const width of [1280, 1600])
     await expect(rows.first()).toContainText('technical issue 1');
     await check('Technical tab');
 
-    await choose(/^Show/, 'Advisories');
+    await choose(/^Severity/, 'Advisory');
     await expect(rows.nth(1)).toContainText('technical issue 2');
-    await expect.poll(() => new URL(page.url()).searchParams.get('finding_class')).toBe('advisory');
-    await check('Show advisories');
-    await choose(/^Show/, 'Issues');
+    await expect.poll(() => new URL(page.url()).searchParams.get('severity')).toBe('advisory');
+    await check('Severity advisory');
+    await choose(/^Severity/, 'All severities');
     await expect(rows.nth(24)).toContainText('technical issue 25');
     await expect(table.getByText('technical issue 26')).toHaveCount(0);
     await expect(table.getByRole('button', { name: 'Next page' })).toBeEnabled();
-    await check('Show issues');
+    await check('Severity all after advisory');
 
     await choose(/^Severity/, 'High');
     await expect.poll(() => new URL(page.url()).searchParams.get('severity')).toBe('high');

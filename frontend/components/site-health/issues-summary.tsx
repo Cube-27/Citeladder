@@ -20,7 +20,7 @@ import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/comp
 /**
  * The top of the Issues screen: how many issue types the crawl has, how many
  * are high severity, and the few to fix first. It reads the crawl's
- * unfiltered defects, so it never changes as the list below is searched or
+ * unfiltered issues, so it never changes as the list below is searched or
  * filtered.
  */
 export function IssuesSummary({
@@ -28,7 +28,7 @@ export function IssuesSummary({
   fixes = [],
   onOpen,
 }: Readonly<{
-  /** The crawl's worst defects, unfiltered; its summary counts the whole crawl. */
+  /** The crawl's worst issues, unfiltered; its summary counts the whole crawl. */
   query: UseQueryResult<SiteIssuesPage>;
   /** How far each issue's fix has come; an issue with none fixed shows no line. */
   fixes?: readonly IssueFixProgress[];
