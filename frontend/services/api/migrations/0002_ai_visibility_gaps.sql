@@ -195,3 +195,7 @@ ALTER TABLE ONLY public.audit_fanout_terms
 
 ALTER TABLE ONLY public.audit_fanout_terms
     ADD CONSTRAINT audit_fanout_terms_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+-- Append-only like the baseline observation tables: the app role inserts
+-- untracked names and never rewrites or removes them (cascades run as owner).
+REVOKE UPDATE, DELETE ON public.answer_untracked_names FROM citeladder_app;
