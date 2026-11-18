@@ -1,0 +1,38 @@
+---
+/**
+ * ApiCopyButton — the status and Copy button of a CodeBlock bar, in the
+ * markup `code-copy.ts` listens for (Lucide's copy and check glyphs at 16px).
+ */
+---
+
+<output class="cl-code-status" data-code-copy-status></output>
+<button type="button" class="cl-code-copy" data-code-copy>
+  <svg
+    class="lucide cl-code-icon-copy"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+  </svg>
+  <svg
+    class="lucide cl-code-icon-check"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M20 6 9 17l-5-5"></path>
+  </svg>
+  Copy
+</button>

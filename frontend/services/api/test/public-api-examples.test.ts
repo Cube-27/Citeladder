@@ -43,7 +43,7 @@ it('describes every public operation with a summary, a description and a respons
   }
   const launch = document.paths['/v1/projects/{project_id}/audits']?.post;
   expect(launch?.summary).toBe('Launch an audit');
-  expect(launch?.requestBody?.content['application/json'].example).toEqual({
+  expect(launch?.requestBody?.content['application/json']?.example).toEqual({
     prompt_set_id: '00000000-0000-4000-8000-000000000001',
     engines: ['chatgpt'],
     max_attempts: 12,

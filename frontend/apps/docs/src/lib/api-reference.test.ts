@@ -27,7 +27,7 @@ const document = apiDocument.parse({
           content: {
             'application/json': {
               schema: { type: 'object' },
-              example: { text: 'Best CRM?', active: true, parent: null },
+              example: { text: "What's the best CRM?", active: true, parent: null },
             },
           },
         },
@@ -71,11 +71,11 @@ describe('request snippets', () => {
     const [curl, javascript, python] = buildSnippets(write);
     expect(curl?.code).toBe(
       [
-        'curl -X POST "https://api.citeladder.com/v1/projects/00000000-0000-4000-8000-000000000001/prompts?limit=00000000-0000-4000-8000-000000000001" \\',
+        'curl -X POST "https://api.citeladder.com/v1/projects/00000000-0000-4000-8000-000000000001/prompts?limit=1" \\',
         '  -H "Authorization: Bearer cl_live_…" \\',
         '  -H "Content-Type: application/json" \\',
         '  -H "Idempotency-Key: 00000000-0000-4000-8000-000000000001" \\',
-        `  -d '{"text":"Best CRM?","active":true,"parent":null}'`,
+        `  -d '{"text":"What'\\''s the best CRM?","active":true,"parent":null}'`,
       ].join('\n'),
     );
     expect(javascript?.code).toContain(

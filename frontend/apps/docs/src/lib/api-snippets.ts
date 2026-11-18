@@ -4,7 +4,7 @@
  */
 import type { ApiOperation } from './api-reference';
 
-export const API_ORIGIN = 'https://api.citeladder.com';
+const API_ORIGIN = 'https://api.citeladder.com';
 const FAKE_UUID = '00000000-0000-4000-8000-000000000001';
 const IDEMPOTENCY_KEY = 'Idempotency-Key';
 
@@ -15,13 +15,23 @@ type Snippet = {
   code: string;
 };
 
+/** A query value that fits the parameter's type: its first allowed value, else by type. */
+function queryExample(row: ApiOperation['parameters'][number]['rows'][number]): string {
+  if (row.values[0] !== undefined) return row.values[0];
+  const type = row.type.map((part) => part.text).join(' ');
+  if (/integer|number/.test(type)) return '1';
+  if (type.includes('boolean')) return 'true';
+  if (type.includes('uuid')) return FAKE_UUID;
+  return 'example';
+}
+
 /** The request line's URL: path parameters filled with a fake id, required query parameters added. */
-export function exampleUrl(operation: ApiOperation): string {
+function exampleUrl(operation: ApiOperation): string {
   const path = operation.path.replaceAll(/\{[^}]+\}/g, FAKE_UUID);
   const required = operation.parameters
     .filter((group) => group.title === 'Query parameters')
     .flatMap((group) => group.rows.filter((row) => row.required));
-  const query = required.map((row) => `${row.name}=${row.values[0] ?? FAKE_UUID}`).join('&');
+  const query = required.map((row) => `${row.name}=${queryExample(row)}`).join('&');
   return `${API_ORIGIN}${path}${query ? `?${query}` : ''}`;
 }
 
@@ -65,7 +75,8 @@ export function buildSnippets(operation: ApiOperation): Snippet[] {
   const curl = [
     `curl${method === 'GET' ? '' : ` -X ${method}`} "${url}"`,
     ...headers.map(([name, value]) => `-H "${name}: ${value}"`),
-    ...(json ? [`-d '${JSON.stringify(body)}'`] : []),
+    // An apostrophe closes a single-quoted shell argument, so it is written as '\''.
+    ...(json ? [`-d '${JSON.stringify(body).replaceAll("'", "'\\''")}'`] : []),
   ].join(' \\\n  ');
 
   const javascript = [

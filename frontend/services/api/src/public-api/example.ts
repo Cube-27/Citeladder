@@ -1,8 +1,8 @@
 /**
  * Deterministic example values for the public API document, built from a
  * schema's JSON Schema form. Identifiers are obviously fake UUIDs, URLs sit on
- * `example.com`, and a nullable value shows its non-null variant, so an
- * example never turns an unknown into zero.
+ * `example.com`, and a nullable response value shows as null, so an example
+ * never turns an unknown into zero.
  */
 import type { JsonSchema } from '../openapi/document.ts';
 
@@ -22,86 +22,110 @@ export type ExampleContext = {
   io: 'input' | 'output';
 };
 
+type Walk = (node: JsonSchema, depth: number, key: string) => unknown;
+
+/** `00000000-0000-4000-8000-000000000001`, the n-th fake identifier. */
+function fakeUuid(n: number): string {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
+function variantsOf(schema: JsonSchema): JsonSchema[] | undefined {
+  return (schema.anyOf ?? schema.oneOf) as JsonSchema[] | undefined;
+}
+
 function nullable(schema: JsonSchema): boolean {
-  const variants = (schema.anyOf ?? schema.oneOf) as JsonSchema[] | undefined;
   return (
     (Array.isArray(schema.type) && schema.type.includes('null')) ||
     schema.type === 'null' ||
-    (variants?.some((variant) => variant.type === 'null') ?? false)
+    (variantsOf(schema)?.some((variant) => variant.type === 'null') ?? false)
   );
 }
 
-/** `00000000-0000-4000-8000-000000000001`, the n-th fake identifier. */
-export function fakeUuid(n: number): string {
-  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+function stringExample(node: JsonSchema, key: string, nextId: () => string): string {
+  if (node.format === 'uuid') return nextId();
+  const format = typeof node.format === 'string' ? STRING_FORMATS[node.format] : undefined;
+  if (format) return format;
+  if (/(^|_)(url|link)$/.test(key)) return STRING_FORMATS.url ?? 'https://example.com';
+  if (/(^|_)domains?$/.test(key)) return 'example.com';
+  if (key.endsWith('_at')) return STRING_FORMATS['date-time'] ?? '';
+  return key ? `Example ${key.replaceAll('_', ' ')}` : 'example';
+}
+
+/** A schema's own value: a constant, its default or its first enumerated value. */
+function fixedValue(node: JsonSchema): { value: unknown } | undefined {
+  if (node.const !== undefined) return { value: node.const };
+  if (node.default !== undefined && node.default !== null) return { value: node.default };
+  if (Array.isArray(node.enum)) return { value: node.enum[0] };
+  return undefined;
+}
+
+function numberExample(node: JsonSchema): number {
+  return typeof node.minimum === 'number' && node.minimum > 0 ? node.minimum : 1;
+}
+
+/** A request names only what it must, or one field when nothing is required. */
+function shownProperties(node: JsonSchema, io: ExampleContext['io']) {
+  const properties = Object.entries((node.properties ?? {}) as Record<string, JsonSchema>);
+  if (io === 'output') return properties;
+  const required = new Set((node.required ?? []) as string[]);
+  return properties.filter(
+    ([name], index) => required.has(name) || (required.size === 0 && index === 0),
+  );
+}
+
+function objectExample(node: JsonSchema, io: ExampleContext['io'], walk: Walk, depth: number) {
+  const shown = shownProperties(node, io);
+  if (shown.length === 0 && typeof node.additionalProperties === 'object')
+    return { example: walk(node.additionalProperties as JsonSchema, depth + 1, 'example') };
+  // A response shows an unknown as null, never as a made-up value.
+  return Object.fromEntries(
+    shown.map(([name, property]) => [
+      name,
+      io === 'output' && nullable(property) ? null : walk(property, depth + 1, name),
+    ]),
+  );
+}
+
+function typedExample(
+  node: JsonSchema,
+  context: ExampleContext,
+  walk: Walk,
+  depth: number,
+  key: string,
+  nextId: () => string,
+): unknown {
+  const types = Array.isArray(node.type) ? node.type : [node.type];
+  const type = types.find((candidate) => candidate !== 'null') ?? types[0];
+  if (type === 'string') return stringExample(node, key, nextId);
+  if (type === 'integer' || type === 'number') return numberExample(node);
+  if (type === 'boolean') return true;
+  if (type === 'array') return node.items ? [walk(node.items as JsonSchema, depth + 1, key)] : [];
+  if (type === 'object') return objectExample(node, context.io, walk, depth);
+  return null;
 }
 
 export function exampleOf(schema: JsonSchema, context: ExampleContext): unknown {
   let counter = 0;
-  const build = (node: JsonSchema, depth: number, key: string): unknown => {
+  const nextId = () => fakeUuid((counter += 1));
+  const walk: Walk = (node, depth, key) => {
     if (depth > MAX_DEPTH) return null;
     if (typeof node.$ref === 'string' && node.$ref.startsWith(REF_PREFIX)) {
       const target = context.components[node.$ref.slice(REF_PREFIX.length)];
-      return target ? build(target, depth + 1, key) : null;
+      return target ? walk(target, depth + 1, key) : null;
     }
-    if (node.const !== undefined) return node.const;
-    if (node.default !== undefined && node.default !== null) return node.default;
-    if (Array.isArray(node.enum)) return node.enum[0];
-    const variants = (node.anyOf ?? node.oneOf) as JsonSchema[] | undefined;
+    const fixed = fixedValue(node);
+    if (fixed) return fixed.value;
+    const variants = variantsOf(node);
     if (variants) {
       const first = variants.find((variant) => variant.type !== 'null') ?? variants[0];
-      return first ? build(first, depth + 1, key) : null;
+      return first ? walk(first, depth + 1, key) : null;
     }
     if (Array.isArray(node.allOf))
       return Object.assign(
         {},
-        ...(node.allOf as JsonSchema[]).map((part) => build(part, depth + 1, key)),
+        ...(node.allOf as JsonSchema[]).map((part) => walk(part, depth + 1, key)),
       );
-    const types = Array.isArray(node.type) ? node.type : [node.type];
-    const type = types.find((candidate) => candidate !== 'null') ?? types[0];
-    switch (type) {
-      case 'string': {
-        if (node.format === 'uuid') return fakeUuid((counter += 1));
-        const format = typeof node.format === 'string' ? STRING_FORMATS[node.format] : undefined;
-        if (format) return format;
-        if (/(^|_)(url|link)$/.test(key)) return 'https://example.com/page';
-        if (/(^|_)domains?$/.test(key)) return 'example.com';
-        if (key.endsWith('_at')) return STRING_FORMATS['date-time'];
-        return key ? `Example ${key.replaceAll('_', ' ')}` : 'example';
-      }
-      case 'integer':
-      case 'number':
-        return typeof node.minimum === 'number' && node.minimum > 0 ? node.minimum : 1;
-      case 'boolean':
-        return true;
-      case 'array':
-        return node.items ? [build(node.items as JsonSchema, depth + 1, key)] : [];
-      case 'object': {
-        const properties = (node.properties ?? {}) as Record<string, JsonSchema>;
-        const required = new Set((node.required ?? []) as string[]);
-        // A request names only what it must (or one field when nothing is required);
-        // a response shows an unknown as null, never as a made-up value.
-        const shown = Object.entries(properties).filter(([name], index) =>
-          context.io === 'input'
-            ? required.has(name) || (required.size === 0 && index === 0)
-            : true,
-        );
-        const entries = shown.map(
-          ([name, property]) =>
-            [
-              name,
-              context.io === 'output' && nullable(property)
-                ? null
-                : build(property, depth + 1, name),
-            ] as const,
-        );
-        if (entries.length === 0 && typeof node.additionalProperties === 'object')
-          return { example: build(node.additionalProperties as JsonSchema, depth + 1, key) };
-        return Object.fromEntries(entries);
-      }
-      default:
-        return null;
-    }
+    return typedExample(node, context, walk, depth, key, nextId);
   };
-  return build(schema, 0, '');
+  return walk(schema, 0, '');
 }

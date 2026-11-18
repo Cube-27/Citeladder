@@ -151,7 +151,7 @@ export function groupOperations(operations: readonly ApiOperation[]) {
 }
 
 /** The named schemas operations reference, each with its page address. */
-export function buildSchemas(document: ApiDocument) {
+function buildSchemas(document: ApiDocument) {
   return Object.entries(document.components.schemas).map(([name, schema]) => ({
     name,
     href: schemaHref(name),
