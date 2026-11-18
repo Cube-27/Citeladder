@@ -3,7 +3,8 @@ import { redirect, type RouteObject } from 'react-router-dom';
 
 import { RouteLoadingScreen } from '@/components/layout/page-shell';
 import { ShellFallback } from '@/components/layout/shell-fallback';
-import { APP_ROUTES, HOME_PATH, type AppRouteRecord } from '@/lib/navigation/app-routes';
+import { APP_ROUTES, HOME_PATH } from '@/lib/navigation/app-routes';
+import type { AppRouteRecord } from '@/lib/navigation/route-types';
 import { registerRouteChunk } from '@/lib/navigation/route-chunks';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
 import { NotFoundScreen, RouteError, ScreenError, ShellRouteError } from './route-error';

@@ -54,7 +54,7 @@ type PageTab = (typeof TABS)[number]['value'];
 /** The tabs read from saved Keyword Research datasets; Demand reads Search Console. */
 type Tab = Exclude<PageTab, 'demand'>;
 const RESEARCH_TABS = TABS.flatMap(({ value }) => (value === 'demand' ? [] : [value]));
-const TAB_ROW = <TabRow items={TABS} ariaLabel="Keywords views" />;
+const TAB_ROW = <TabRow items={TABS} ariaLabel="Keyword research views" />;
 const TAB_CODEC = stringUrlCodec(
   TABS.map(({ value }) => value),
   'demand' as PageTab,
@@ -104,7 +104,7 @@ function selectDatasets(
 }
 
 /**
- * The Keywords page: Search demand on its first tab, then Keyword Research's
+ * The Keyword research page: Search demand on its first tab, then the
  * saved datasets. Each reads its own owner, so neither gates the other.
  */
 export function SearchIntelligencePage() {
@@ -200,8 +200,8 @@ function KeywordResearch({
         <StateBlock
           kind="error"
           {...readErrorProps(readiness)}
-          fallback="Keywords could not be loaded."
-          title="Keywords could not be loaded"
+          fallback="Keyword research could not be loaded."
+          title="Keyword research could not be loaded"
         />
       </KeywordResearchFrame>
     );
@@ -219,7 +219,7 @@ function KeywordResearch({
           kind="empty"
           icon={Settings2}
           heading="Add your website address"
-          description="Keywords needs the project’s homepage address."
+          description="Keyword research needs the project’s homepage address."
           action={<TextLink href="/projects">Edit the project</TextLink>}
         />
       </KeywordResearchFrame>

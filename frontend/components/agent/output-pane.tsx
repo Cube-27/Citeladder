@@ -190,7 +190,7 @@ function PromptBuilderHandoff({ kind }: Readonly<{ kind: AgentOutput['kind'] }>)
   if (kind !== 'prompt_plan' || !canWrite) return null;
   return (
     <Button asChild variant="primary" className="justify-self-start">
-      <ProjectLink href={PROMPT_BUILDER_HREF}>Open Prompt Builder</ProjectLink>
+      <ProjectLink href={PROMPT_BUILDER_HREF}>Open Prompt builder</ProjectLink>
     </Button>
   );
 }

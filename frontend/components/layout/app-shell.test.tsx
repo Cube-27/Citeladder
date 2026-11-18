@@ -213,7 +213,7 @@ describe('AppShell navigation drawer', () => {
     await user.click(menu);
 
     const drawer = screen.getByRole('dialog', { name: 'Navigation' });
-    expect(within(drawer).getByRole('link', { name: 'Keywords' })).toBeVisible();
+    expect(within(drawer).getByRole('link', { name: 'Keyword research' })).toBeVisible();
     expect(within(drawer).getByRole('link', { name: 'Sources' })).toBeVisible();
     // The page behind the modal drawer is hidden from assistive technology.
     expect(menu).toHaveAttribute('aria-expanded', 'true');

@@ -83,7 +83,7 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
       <StateBlock
         kind="empty"
         icon={Unplug}
-        heading="Keywords is unavailable"
+        heading="Keyword research is unavailable"
         description={`${shows} Keyword analyses are temporarily unavailable on your plan. Try again later.`}
       />
     );

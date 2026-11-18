@@ -161,7 +161,7 @@ async function frozenConnection(
     return { connection, source, identity };
   } catch (cause) {
     if (!(cause instanceof ProviderError) || source === 'byok') throw cause;
-    throw error('dataforseo_connection_required', 'Keywords is unavailable right now');
+    throw error('dataforseo_connection_required', 'Keyword research is unavailable right now');
   }
 }
 function assertSupportedMarket(payload: Review, location: number | null, language: string) {

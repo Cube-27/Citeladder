@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 
-import type { SidebarGroup } from './app-routes';
+import type { SidebarGroup } from './route-types';
 
 /**
  * Which sidebar groups the reader folded: a per-browser preference, kept

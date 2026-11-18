@@ -25,7 +25,7 @@ import { day, moment, rate } from './format';
 
 const views = [
   { value: 'overview', label: 'Overview' },
-  { value: 'trends', label: 'Trends' },
+  { value: 'trends', label: 'Insights' },
   { value: 'sources', label: 'Sources' },
   { value: 'site_health', label: 'Site Health' },
 ] as const;

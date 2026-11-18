@@ -19,11 +19,13 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { VISIBILITY_TABS, type SourceTab, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
   EVIDENCE_LIMIT,
+  useCanonicalSourcesTab,
   useVisibilityFilters,
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
 export function VisibilityDashboard() {
+  useCanonicalSourcesTab();
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, filters.activeTab);
   // The Sources filters are listed in the page's control row but stay owned

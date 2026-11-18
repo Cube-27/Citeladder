@@ -71,6 +71,23 @@ export const analyticsSelectionSchema = z.strictObject({
 });
 export type AnalyticsSelection = z.infer<typeof analyticsSelectionSchema>;
 
+/** The app page that shows an analytics view: the "open in app" handoff. */
+export function analyticsAppPath(view: AnalyticsSelection['view']): string {
+  switch (view) {
+    case 'overview':
+    case 'trends':
+      return '/insights';
+    case 'sources':
+      return '/visibility';
+    case 'site_health':
+      return '/site';
+    default: {
+      const exhaustive: never = view;
+      return exhaustive;
+    }
+  }
+}
+
 const applicationUrl = z.url().refine((value) => {
   const url = new URL(value);
   return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;

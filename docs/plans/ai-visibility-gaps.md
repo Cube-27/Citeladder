@@ -67,9 +67,9 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
   now") and asked for "a lable as "home" for overview and actions". The Dashboard
   sidebar is Home (Overview, Actions), Brand (Insights, Perception, Competitors),
   Tracking (Prompts, Sources, Runs), Website (Site health, Issues, AI traffic), Search
-  (Performance, Keywords) and Commerce (Shopping, Products), with Integrations in the
-  foot. Sources is today's AI Visibility page without Trends, Perception and Accuracy;
-  Search demand becomes the Keywords page's Demand tab.
+  (Performance, Keyword research; AV-22) and Commerce (Shopping, Products), with
+  Integrations in the foot. Sources is today's AI Visibility page without Trends,
+  Perception and Accuracy; Search demand becomes the Keyword research page's Demand tab.
 - **AV-17, Prompt builder page.** "we should also have a separate prompt builder page
   instead of sidebar": the builder leaves its side drawer for a page of its own, opened
   from Build prompts rather than listed in the sidebar.
@@ -88,6 +88,13 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
   itself" (2026-11-18): every schema change of this plan goes into
   `0002_ai_visibility_gaps.sql`, one header comment per part. Production is still on
   `0001_baseline` only (verified 2026-11-18).
+- **AV-22, Keyword research.** "it should be keyword research so change the sidebar
+  option to keyword researach not keywords" (2026-11-18): the page at
+  `/search-intelligence` is named Keyword research in the sidebar, its title, the
+  palette and app copy. Its Keywords tab keeps its name.
+- **AV-23, palette deep links.** "Add the three" (2026-11-18): the command palette lists
+  Fact-checking, Query fanouts and Prompt builder under their sidebar groups, opening
+  that tab or page.
 
 ## Where it lives
 
@@ -106,7 +113,7 @@ The `N` workstreams below fill them.
   opening the Prompt builder page (N6).
 - **Tracking → Sources:** tabs Domains, URLs, Read not cited, Query fanouts (W11 terms)
   and Ads. Answer formats show in the existing evidence drawer.
-- **Search → Keywords:** tabs Demand (today's Search demand page), Keywords, Organic
+- **Search → Keyword research:** tabs Demand (today's Search demand page), Keywords, Organic
   competitors and Backlinks (N5).
 
 ## Gap summary
@@ -162,7 +169,8 @@ theme list and sentiment ring, all from data the perception read already serves.
 **N4 Sources (S).** `/visibility` keeps Sources, Ads and Query fanouts once N1 and N2 have
 moved the rest; Sources' views become tabs: Domains, URLs, Read not cited.
 
-**N5 Keywords (S–M).** Search demand becomes the Keywords page's Demand tab, and the
+**N5 Keyword research (S–M, AV-22).** Search demand becomes the Keyword research
+page's Demand tab, and the
 page's Competitors tab is renamed Organic competitors. `/demand` and its sidebar row go.
 
 **N6 Prompt builder page (M, AV-17).** The builder drawer becomes `/prompts/build`: the
@@ -170,7 +178,7 @@ same four steps and the same generation pipeline, a step list on the left and Ba
 Next in a fixed footer. Prompts, Overview and the empty states open it.
 
 **N7 Copy (S).** In-page copy still names the old pages ("AI Visibility", "AI Traffic",
-"Keyword Research"): loading labels, empty states, agent vocabulary, prompt-source
+"Keyword Research" for Keyword research): loading labels, empty states, agent vocabulary, prompt-source
 labels. Rename them to the sidebar's words.
 
 ### Display only, on data we already have
@@ -291,7 +299,7 @@ labels. Rename them to the sidebar's words.
 ## Phase 3: docs site and changelog (AV-19)
 
 **D1 Docs site (M).** Update the public docs at `apps/docs/src/content/` to the new
-navigation and pages: page names and paths, the Brand pages, Sources, Keywords and the
+navigation and pages: page names and paths, the Brand pages, Sources, Keyword research and the
 Prompt builder page. Retire pages that describe removed tabs rather than leaving
 corrections beside them.
 

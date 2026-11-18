@@ -240,7 +240,7 @@ export function AddPromptsMenu({ onImport, onAdd, onGenerate }: AddPromptsHandle
           Write a prompt
         </MenuItem>
         <MenuItem icon={<Icon icon={Sparkles} />} onSelect={onGenerate}>
-          Prompt Builder
+          Prompt builder
         </MenuItem>
         <MenuItem icon={<Icon icon={Upload} />} onSelect={onImport}>
           Bulk upload

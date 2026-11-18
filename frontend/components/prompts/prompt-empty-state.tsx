@@ -31,7 +31,7 @@ export function PromptEmptyState({
       kind="empty"
       icon={MessageSquarePlus}
       heading="Choose the questions you want to track"
-      description="Generate buyer questions from your confirmed offerings with Prompt Builder, write your own, or upload a file."
+      description="Generate buyer questions from your confirmed offerings with Prompt builder, write your own, or upload a file."
       action={<AddPromptsMenu {...add} />}
     />
   );

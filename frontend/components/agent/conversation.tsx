@@ -384,7 +384,7 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
     opportunity: 'Recommendation',
     demand: 'Demand evidence',
     site_health: 'Page diagnosis',
-    search_intelligence: 'Selected Keywords rows',
+    search_intelligence: 'Selected Keyword research rows',
     issue_group: 'Selected issue group',
     site_facts: 'Selected crawl robots policy',
     upstream_revision: 'Selected document revision',

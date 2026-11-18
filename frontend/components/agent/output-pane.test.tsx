@@ -57,14 +57,14 @@ describe('a viewer', () => {
     renderPane('prompt_plan', 'viewer');
     expect(screen.getByRole('button', { name: 'Export Markdown' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Open Prompt Builder' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open Prompt builder' })).toBeNull();
   });
 });
 
 describe('a prompt plan', () => {
   it('hands off to the Prompt Builder instead of staging prompts itself', () => {
     renderPane('prompt_plan');
-    expect(screen.getByRole('link', { name: 'Open Prompt Builder' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open Prompt builder' })).toHaveAttribute(
       'href',
       expect.stringContaining('/prompts/build'),
     );
@@ -73,7 +73,7 @@ describe('a prompt plan', () => {
 
   it('is the only deliverable that offers the handoff', () => {
     renderPane('plan');
-    expect(screen.queryByRole('link', { name: 'Open Prompt Builder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Prompt builder' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Prompt plan' })).toBeVisible();
   });
 });
