@@ -41,6 +41,11 @@ const DIMENSION = {
   default: 'domain',
   description: 'Rows per publisher domain, or per cited page URL.',
 } as const;
+const AS_OF = {
+  scalar: { kind: 'datetime' },
+  description:
+    'Read runs finished by this time, with a timezone, so paging is stable. Omitted: now; later pages carry it in the cursor.',
+} as const;
 
 export const visibilitySourceRoutes = [
   defineGetRoute({
@@ -67,11 +72,7 @@ export const visibilitySourceRoutes = [
         },
         dimension: DIMENSION,
         ...WINDOW,
-        as_of: {
-          scalar: { kind: 'datetime' },
-          description:
-            'Read runs finished by this time, with a timezone, so paging is stable. Omitted: now; later pages carry it in the cursor.',
-        },
+        as_of: AS_OF,
         cursor: CURSOR,
         limit: LIMIT,
       },
@@ -104,7 +105,7 @@ export const visibilitySourceRoutes = [
         ...RUNS,
         ...TOPIC,
         cursor: CURSOR,
-        as_of: { scalar: { kind: 'datetime' } },
+        as_of: AS_OF,
         ...EVIDENCE_FILTERS,
         engine: ENGINE,
         ...WINDOW,

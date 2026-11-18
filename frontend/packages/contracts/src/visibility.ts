@@ -122,7 +122,8 @@ export const webSearchShareSchema = responseObject({
     .describe('`searched` / `reported`, 0–1. Null: no engine reported it (not available, not 0%).'),
 });
 
-const DELTA = 'Change in percentage points against the baseline run; absent when not comparable.';
+const DELTA =
+  'Change in percentage points against the baseline run; null or absent when not comparable.';
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean().describe('The tracked brand, not a competitor.'),
@@ -299,7 +300,12 @@ export const promptMetricItemSchema = responseObject({
     .describe("The brand's tone here. Null: measured without perception."),
   web_search: webSearchShareSchema.optional(),
   visibility_delta: z.number().nullable().optional().describe(DELTA),
-  comparison_status: z.string().optional().describe('As `comparison.status`.'),
+  comparison_status: z
+    .string()
+    .optional()
+    .describe(
+      'As `comparison.status`, or `no_matching_prompt` when the baseline lacks this prompt.',
+    ),
   comparison: visibilityComparisonSchema.nullable().optional(),
   counts: measurementCountsSchema.optional(),
   answer_states: answerStatesSchema.nullable().optional(),

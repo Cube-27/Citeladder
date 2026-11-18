@@ -53,7 +53,13 @@ const described = rows.some((row) => row.description || row.values.length || row
               {described && (
                 <td>
                   <div class="cl-docs-param-desc">
-                    {row.description}
+                    {row.description && (
+                      <span>
+                        {row.description
+                          .split('`')
+                          .map((part, index) => (index % 2 ? <code>{part}</code> : part))}
+                      </span>
+                    )}
                     {row.values.length > 0 && (
                       <span class="cl-docs-param-values">
                         <span class="cl-docs-param-values-label">One of</span>
@@ -185,7 +191,8 @@ const described = rows.some((row) => row.description || row.values.length || row
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
   }
-  .cl-docs-param-values code {
+  /* Descriptions mark code with backticks, as OpenAPI's CommonMark does. */
+  .cl-docs-param-desc code {
     padding: 1px 4px;
     border-radius: var(--radius-xs);
     background: var(--color-surface-sunken);

@@ -6501,11 +6501,11 @@
             "$ref": "#/components/schemas/WebSearchShare"
           },
           "visibility_delta": {
-            "description": "Change in percentage points against the baseline run; absent when not comparable.",
+            "description": "Change in percentage points against the baseline run; null or absent when not comparable.",
             "type": ["number", "null"]
           },
           "comparison_status": {
-            "description": "As `comparison.status`.",
+            "description": "As `comparison.status`, or `no_matching_prompt` when the baseline lacks this prompt.",
             "type": "string"
           },
           "comparison": {
@@ -6748,7 +6748,7 @@
             "maximum": 9007199254740991
           },
           "visibility_delta": {
-            "description": "Change in percentage points against the baseline run; absent when not comparable.",
+            "description": "Change in percentage points against the baseline run; null or absent when not comparable.",
             "type": ["number", "null"]
           },
           "gap_count": {
@@ -13413,7 +13413,7 @@
             "name": "granularity",
             "in": "query",
             "required": false,
-            "description": "One point per day, month, run, week; `run` plots each run.",
+            "description": "The length of each series point: `day`, `month`, `run`, `week`. `run` plots one point per run.",
             "schema": {
               "default": "run",
               "type": "string"
@@ -14302,6 +14302,7 @@
             "name": "as_of",
             "in": "query",
             "required": false,
+            "description": "Read runs finished by this time, with a timezone, so paging is stable. Omitted: now; later pages carry it in the cursor.",
             "schema": {
               "anyOf": [
                 {
