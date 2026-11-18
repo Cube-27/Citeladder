@@ -29,21 +29,26 @@ export type PageFrameSlots = Readonly<{
   crumb?: ReactNode;
   /** The masthead's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
-  /** The page tabs (40): the page's sub-views. */
+  /** The tab strip: the page's sub-views. */
   tabs?: ReactNode;
-  /** The filter bar (48): search, filters and view switch; count and export. */
+  /** The filter strip: view switch, search and filters; meta, count and export at its end. */
   filters?: ReactNode;
 }>;
 
 /**
- * The anatomy every shell page shares: the masthead, then the optional page
- * tabs and filter row, then the body. The first of them sits `--page-pad-block`
- * under the masthead, level with the sidebar's mode switch, with
- * `--page-pad-block` again below it. The filter row closes 12 below its
- * controls on a hairline across the main column, like the masthead's. The masthead's
- * menu button, search and "Ask agent" come from the shell. Geometry is tokens
- * only; a page passes content into the slots and sets none of its own. A
- * narrow route (its manifest `width`) centres the whole frame, title and
+ * A strip's closing hairline, across the whole main column like the
+ * masthead's, so a narrow page's strips still span it.
+ */
+const STRIP_RULE =
+  'before:border-rule relative isolate min-w-0 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b';
+
+/**
+ * The anatomy every shell page shares (owner, 2026-11-18): the masthead
+ * strip, then the optional tab strip (4 above 32 tabs) and filter strip (8
+ * around 32 controls, one line), each closed by a hairline across the main
+ * column, then the body `--page-pad-block` below. A page passes content into
+ * the slots and sets no strip geometry of its own. The masthead's
+ * menu button, search and "Ask agent" come from the shell. A narrow route (its manifest `width`) centres the whole frame, title and
  * actions included, in the chat's `max-w-thread`; `fill` keeps a workbench
  * across the main column. A page the window scrolls ends in
  * `--page-end-space` of empty space; a `fitted` one (a thread, a workbench)
@@ -94,19 +99,13 @@ export function PageFrame({
           end={shell?.agentTrigger}
         />
         {tabs ? (
-          <div
-            data-page-band="tabs"
-            className="flex min-w-0 items-end overflow-x-auto pt-[var(--page-pad-block)]"
-          >
+          // The current tab's underline sits on the strip's rule.
+          <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end pt-1')}>
             {tabs}
           </div>
         ) : null}
         {filters ? (
-          // A hairline under the filter row, across the main column like the masthead's.
-          <div
-            data-page-band="filters"
-            className="before:border-rule relative isolate flex min-w-0 items-center pt-[var(--page-pad-block)] pb-3 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b"
-          >
+          <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
             {filters}
           </div>
         ) : null}

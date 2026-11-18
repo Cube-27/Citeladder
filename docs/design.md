@@ -262,16 +262,23 @@ The space inside a group is at most half the space to the next group. The
 rhythm belongs to Section, the template and the grid: a page never sets a
 vertical gap.
 
-**Page anatomy**, identical on every shell page:
+**Page anatomy**, identical on every shell page. The top strips are the same
+height on every page and each closes on a hairline across the whole main
+column, a narrow page's included: rules span the width, only content is
+inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
 
-1. **Masthead** (56, sticky, a hairline under it): the menu button below
-   900px, the back link on a record, the page title, then search, secondary
-   actions, at most one primary action and Ask agent.
-2. **Page tabs** (32, optional).
-3. **Filter bar** (48, optional): view, search, filter chips, **Filters** and
-   the chips of what is set in it, Clear, then at the row's end the data
-   window, the count or a live note and one action (Export, Columns).
-4. **Sections**, 24 below the chrome and 32 apart.
+1. **Masthead** (52, sticky): the menu button below 900px, the back link on
+   a record, the page title, then search, secondary actions, at most one
+   primary action and Ask agent.
+2. **Tab strip** (optional): 4 above 32 tabs; the current tab's underline
+   sits on the strip's rule.
+3. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
+   view (Prompts' Active | Archived), search, filter chips, **Filters** and
+   the chips of what is set in it, Clear, then at the end the muted meta
+   (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
+   count or a live note), cut before the strip wraps, and one action.
+4. **Sections**, 16 below the strips and 32 apart. A FigureStrip on the page
+   itself is full-bleed like the strips, its first text on the content edge.
 
 Order is by likelihood of use: the most likely action comes first, left to
 right and top to bottom. A control sits in the row of the thing it acts on:

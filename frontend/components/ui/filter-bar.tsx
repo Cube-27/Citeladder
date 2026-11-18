@@ -15,7 +15,6 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
-import { cn } from '@/lib/utils';
 
 /**
  * What a route puts in its control row. A route passes these to its screen
@@ -86,14 +85,15 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
  * one order on every page: the view, the search, the filter chips, Filters
  * and the chips of the filters set in it, Clear once anything is set, then
  * the data window, the count and the action at the row's end. Every control
- * is 32px and 8 apart. The row is left-aligned, so a chip whose width follows
- * its value moves only what comes after it.
+ * is 32px and 8 apart. The
+ * row is left-aligned, so a chip whose width follows its value moves only
+ * what comes after it.
  *
- * From 900px it is one row and the search is 256 wide (200 at least), so it
- * never runs up to a view or tabs beside the row (owner, 2026-11-18); when the
- * row cannot hold everything, controls wrap as whole units, the actions at
- * the line's right end. Below 900px the bar stacks into one full-width column
- * in the same order.
+ * From 900px it is one line and the search is 256 wide (200 at least), so it
+ * never runs up to a view or tabs beside the row (owner, 2026-11-18). The
+ * meta at the end is cut before anything wraps; only controls that alone
+ * overflow the line wrap, as whole units. Below 900px the bar stacks into one
+ * full-width column in the same order.
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
@@ -141,33 +141,33 @@ export function FilterBar({ view, search, filters = [], status, actions }: Filte
           </Button>
         </div>
       ) : null}
-      {windowLabel ? (
-        // Outside the live region: the window is on the chip's name already.
-        <span className="type-caption rail:ms-auto rail:shrink min-w-0 truncate">
-          {windowLabel}
-          {status ? ' ·' : null}
-        </span>
-      ) : null}
-      {status === undefined ? null : (
-        <output
-          aria-live="polite"
-          className={cn(
-            'type-caption flex min-w-0 items-center gap-2 truncate empty:hidden',
-            !windowLabel && 'rail:ms-auto',
-            'rail:shrink',
-          )}
-        >
-          {status}
-        </output>
-      )}
-      {actions ? (
-        // At the line's end; after a pushed count it keeps the 8 between them.
+      {windowLabel || status !== undefined ? (
+        // The strip's meta takes what the controls leave and is cut there, so
+        // it never wraps the strip onto a second line.
         <div
-          className={cn(
-            'ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2',
-            '[output:not(:empty)+&]:ms-0',
-          )}
+          data-strip-meta=""
+          className="rail:min-w-24 rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden"
         >
+          {windowLabel ? (
+            // Outside the live region: the window is on the chip's name already.
+            <span className="type-caption min-w-0 shrink truncate">
+              {windowLabel}
+              {status ? ' ·' : null}
+            </span>
+          ) : null}
+          {status === undefined ? null : (
+            <output
+              aria-live="polite"
+              className="type-caption flex min-w-0 shrink items-center gap-2 truncate empty:hidden"
+            >
+              {status}
+            </output>
+          )}
+        </div>
+      ) : null}
+      {actions ? (
+        // At the line's end, after the meta that fills the line.
+        <div className="ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
           {actions}
         </div>
       ) : null}

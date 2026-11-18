@@ -43,7 +43,7 @@ import {
   type FilterTab,
   type RankedSignal,
 } from '@/lib/demand/signals';
-import { formatCount, formatWindowDate } from '@/lib/format';
+import { formatCount, formatStripDay } from '@/lib/format';
 import { InlineFigure } from '@/components/ui/typography';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -169,7 +169,7 @@ function SearchDemandView({
     setSelectedSignalId(signal.id);
   };
 
-  const windowLabel = `${formatWindowDate(snapshot.window_start)} – ${formatWindowDate(snapshot.window_end)}`;
+  const windowLabel = `${formatStripDay(snapshot.window_start)} – ${formatStripDay(snapshot.window_end)}`;
 
   // Counts for every tab in one pass, recomputed only when the snapshot does —
   // not on every keystroke in the search box.
@@ -280,12 +280,12 @@ function SearchDemandView({
           }
           // What the table holds, and over which window, closes the row.
           status={
-            // Each piece wraps to its own line on a narrow screen, never overprinting.
+            // Below 900 each piece wraps to its own line, never overprinting; from 900 the strip's meta is one line.
             <Inline
               as="span"
               gap="status"
               data-demand-status=""
-              className="items-baseline whitespace-normal"
+              className="rail:flex-nowrap rail:whitespace-nowrap items-baseline whitespace-normal"
             >
               <span>
                 <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>

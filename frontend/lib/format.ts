@@ -194,6 +194,44 @@ export function formatTimeZoneNote(timeZone: string, at: Date = new Date()): str
   }
 }
 
+/**
+ * A persisted instant in a strip's meta, short and zoneless (`18 Nov 09:12`),
+ * the one form every page's strip prints (owner, 2026-11-18).
+ */
+export function formatStripTimestamp(timestamp: string, timeZone: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  try {
+    const parts = dateFormat('strip', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone,
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((item) => item.type === type)?.value ?? '';
+    return `${part('day')} ${part('month')} ${part('hour')}:${part('minute')}`;
+  } catch {
+    return timeZone === 'UTC' ? timestamp : formatStripTimestamp(timestamp, 'UTC');
+  }
+}
+
+/** `2026-07-23` → `23 Jul`: a day in a strip's meta, in the strip's short form. */
+export function formatStripDay(isoDay: string): string {
+  const date = new Date(`${isoDay}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return isoDay;
+  const parts = dateFormat('strip-day', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('day')} ${part('month')}`;
+}
+
 /** Date portion of a persisted instant, using the same display timezone. */
 export function formatDisplayDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);

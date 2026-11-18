@@ -55,6 +55,8 @@ describe('visibility dashboard helpers', () => {
       },
     ]);
     expect(options.map((o) => o.id)).toEqual([AUDIT_C, AUDIT_A]);
+    // Runs are named in the strips' short form.
+    expect(options.map((o) => o.label)).toEqual(['14 Jul 00:00', '10 Jul 00:00']);
   });
 
   it('flags dashboard statuses', () => {
