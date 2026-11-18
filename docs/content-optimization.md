@@ -1,64 +1,34 @@
 # Content optimization
 
-Owner of the content-gap evidence and the `content_gaps` Opportunity family.
-The owner decisions (CO1–CO18, E1–E5) are in
-[decisions](decisions.md#content-optimization); CO1 and CO10 (a separate
-Content screen and per-page-kind routing) are superseded by the
-[Actions simplification](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)
-(AS1, AS5). Credits
-are [B73](billing-decisions.md#content-optimization-2026-11-10). Generic
-Opportunity, Action, declaration and verification behaviour is owned by
+Owner of the page workspace, suggestions and the content-gap evidence contract.
+The owner decisions (CO and E numbers) are in
+[decisions](decisions.md#actions-and-content); credits are
+[B73](billing-decisions.md#prompt-runs-and-ai-credits). Generic Opportunity,
+Action, declaration and verification behaviour is owned by
 [Opportunities](opportunities.md).
 
-## What ships (phase 1)
+## Content gaps
 
-**Evidence: content angles.** After a completed or partial visibility run, and
-after a crawl, an idempotent `content_angle_refresh` task
+**Evidence: content angles.** An idempotent `content_angle_refresh` task
 ([content gaps module](../frontend/services/api/src/content-gaps/)) groups the
-titles of competitor and publisher pages cited for the project's prompts in
-the default market's dashboard-ready runs of the last `window_days`, by prompt
-topic. Only citations from answers to tracked prompts are read: an answer
-whose snapshot names no prompt, or whose prompt is no longer in the library,
-is left out, so every angle has at least one prompt (AS5). A model only groups
-and names the pages, from each page's title, domain and URL path, and is told
-to group only content pages (articles, guides, how-tos, comparisons,
-listicles, reviews, case studies) and to leave out product pages, category or
-collection listings, store or brand home pages and search or tag pages (AS5).
-It also picks at most one owned content page per angle from a lexical
-shortlist; counts, prompts, engines and whether the owned page is already
-cited are computed in code. Runs, lineages, angles, members and owned matches
-are insert-only and workspace-scoped; a run is appended only when its inputs
-or versions changed. Its trigger and retention are in
-[Opportunities](opportunities.md#evidence-to-action) and its outcome in
+titles of competitor and publisher content pages cited for tracked prompts by
+prompt topic; a model only groups and names them, and counts, prompts, engines
+and owned-page citation are computed in code. Trigger, window, retention and
+the `content_gaps` family rules (thresholds are placeholders until calibrated,
+in the [config](../frontend/services/api/src/config/content-optimization.ts))
+live in [Opportunities](opportunities.md#evidence-to-action); the outcome is in
 [state machines](state-machines.md).
 
-**Family: `content_gaps`.** The latest succeeded run raises
-`content_gap_improve_page` on a matched owned content page that is not cited
-for the angle's prompts, and `content_gap_new_page` on a planned page when no
-content page matched. Thresholds (`min_citations`, `min_domains`) and the
-other tunables are in the
-[content optimization config](../frontend/services/api/src/config/content-optimization.ts);
-the thresholds are placeholders until calibrated
-([backlog](plans/backlog.md#acceptance-calibration-and-rollout)). Findings key
-on the angle's lineage, so relabelling keeps the Action. Retention, the "not
-computed yet" and "out of date" limitations, and planned-to-owned continuity
-are in [Opportunities](opportunities.md).
-
-**Actions.** Content-gap findings are ordinary Actions on the one Actions list
-(AS1), in the family `content_optimization`. One page is one Action, so a
+**Actions.** Content-gap findings are ordinary Actions on the one Actions list, in the family `content_optimization`. One page is one Action, so a
 content page's Site Health findings and content gaps share it. Issues is
 unchanged (CO11): Site Health issues on content pages still appear there.
 There are no scores or grades (CO14).
 
-An Action opens at `/actions/:actionId`. The Action read returns each
-content-gap finding's stored evidence (`content_gap_evidence`), and **Why this
-matters** renders it only, with no further read: the angle, the cited pages
-with title, site and classification, the counts and the run's window, and a
-link to the planned-page Action a page continues. The angle's prompts are
-stored with their text as of the refresh (`prompts: {id, text}`); a prompt no
-longer in the library when the refresh ran is stored with `text: null` and
-shown as such. The page reads no prompt library. Site Health findings on the
-page render as on any Action. The handoff into the Agent
+The Action read returns each content-gap finding's stored evidence
+(`content_gap_evidence`), which the page renders with no further read. The
+angle's prompts are stored with their text as of the refresh (`prompts: {id,
+text}`; `text: null` for a prompt already gone from the library), and the page
+reads no prompt library. The handoff into the Agent
 ([handoffs](agents.md#workspace-and-handoffs)) is the Action's `handoff`,
 persisted in its diagnosis. Its first finding whose approach branch in
 `APPROACH_TREE` names a workflow drives both the workflow and the prefilled
@@ -68,7 +38,7 @@ for an existing page), so a planned page that is also a search gap still opens
 on its content gap;
 an Action whose findings name none hands off with itself and its message.
 
-## What ships (phase 2: page documents)
+## Page documents
 
 **Starting a page chat.** A chat started with the `optimize_page` workflow
 (skill `content_optimize`, output kind `page`) names one page: the request's
@@ -116,19 +86,12 @@ and restores keep the page's SEO fields.
 
 A suggestion is one finding on a page document in the
 [rules engine's schema](plans/content-rules-engine.md#findings-and-anchoring),
-made against one revision: a `span` of the Markdown body (UTF-16 offsets and
-its exact quote with about 32 characters of context each side), an SEO `field`
-with the value it had (`expected`), or the `page`; what its judgement read
-(`depends_on`: its section, the whole body, or a field); a replacement, a
-`needs_input` question, or neither (advice); its rule, the category the rule
-sets, and its rationale; its source; and its rule's guidance. Suggestions are
-insert-only in `agent_output_suggestions`; every status change
-is an append-only
-`agent_output_suggestion_events` row (`open`, `applied`, `dismissed`,
-`reverted`, `stale`) with its actor and, when the text lands in a revision,
-that revision and the span there. Both are workspace-scoped.
+made against one revision (a body `span` with its exact quote, an SEO `field`
+with its `expected` value, or the `page`). Suggestions are insert-only in
+`agent_output_suggestions`; every status change is an append-only
+`agent_output_suggestion_events` row, workspace-scoped.
 
-- **The rule catalog** (CO13,
+- **The rule catalog** (
   [content-rules.ts](../frontend/services/api/src/config/content-rules.ts)).
   Every suggestion applies one catalog rule, seeded from the
   [rules engine's](plans/content-rules-engine.md#appendix-research-rule-catalog)
@@ -196,63 +159,38 @@ that revision and the span there. Both are workspace-scoped.
   an earlier one in the batch changed goes stale. Overlapping ones stay open
   as "choose one", needs-input ones are skipped, and the response counts
   applied, left to choose, needs input and stale.
-- **Reading them** (`GET …/outputs/{output_id}/suggestions`): the open, applied
-  and dismissed suggestions in position order with where each one's text is
-  now, each one's `guidance` (its rule's strength, source label and link), and
-  counts per status and open ones per category. Guidance is resolved from the
-  catalog when the suggestion is stored, with the catalog version, in
-  `rule_guidance`, so a later catalog change never rewrites
-  it; suggestions stored before the catalog have none. No scores (CO14) and no
-  Issues entries (CO11).
+- **Reading them** (`GET …/outputs/{output_id}/suggestions`) reports where each
+  suggestion's text is now. Guidance is resolved from the catalog when the
+  suggestion is stored, with the catalog version, in `rule_guidance`, so a later
+  catalog change never rewrites it. No scores (CO14) and no Issues entries (CO11).
 
-### The page workspace (CO7)
+### The page workspace
 
 A chat with a `page` document opens as the page workspace instead of the
 thread (E1); every other chat keeps the thread. The workspace is a lazy chunk
 (`components/agent/workspace/`), so CodeMirror never loads for other screens.
-
-- **The page.** The latest revision's Markdown body in CodeMirror with live
-  preview (E2): headings, bold, italics and links render styled and their
-  marks hide off the cursor's line. Open body suggestions are highlighted
-  where the suggestions read places them (blue ready, amber needs input), only
-  while the text on screen is that revision. A person's edit is a draft until
-  **Save changes** appends a revision with compare-and-set on the revision it
-  started from; while they type, highlights map through each change
-  (`mapPos` with `TrackDel`) and one whose boundary is deleted is dropped.
-  While a turn runs the page is read-only and shows `edit_document`'s
-  streamed body.
-- **Suggestions.** A card links its rule's source: "Required by" for a
-  policy, and otherwise worded as an option, with a heuristic labelled
-  "Heuristic". Every change names the revision on screen:
-  `agent_output_conflict` reads the chat and the suggestions again and says
-  the page changed; `agent_suggestion_conflict` shows the server's reason.
-  Changes wait while a turn runs or a draft is unsaved.
-- **SEO.** The fetch's page-local checks are shown with the fetch time;
-  editing the page does not rerun them (E5).
-- **Chat.** Ask AI and Add to context write a quoted reference into the
-  composer and never send.
+The page is the latest revision's Markdown in CodeMirror (E2); open body
+suggestions are highlighted only while the text on screen is the revision the
+suggestions read placed them on, and a person's edit is a draft until **Save
+changes** appends a revision with compare-and-set on the revision it started
+from. Every change names the revision on screen: `agent_output_conflict` says
+the page changed, `agent_suggestion_conflict` shows the server's reason, and
+changes wait while a turn runs or a draft is unsaved. The SEO tab shows the
+fetch's page-local checks with the fetch time; editing never reruns them.
 
 **Work with the agent** on an Action opens `optimize_page` for the Action's
 page when the Action read's `editable_page` is true: a page Action whose
-target is one of the latest crawl's content pages (E3, read-time).
+target is one of the latest crawl's content pages (read-time).
 
-**Analyze a page (CO6).** The Actions header's **Analyze a page** opens a
-dialog: one of the latest crawl's content pages (searched on the server by
-address or title, at most `analyze_page.page_list_max` listed at once), a
-topic that has active prompts, and that topic's prompts, all selected at
-first. `POST /projects/{id}/actions/analyze` with `{site_url_id, topic_id,
-prompt_ids}` refuses with 422 a project with no crawl, a page that is not one
-of the latest crawl's content pages, a topic of another project or with no
-active prompts, and any prompt outside that topic. It then starts the same
-`optimize_page` page chat as above (same admission, funding and fetch; nothing
-is charged until the page is read), and in that chat's transaction creates or
-reuses the page's Action through the Agent's target attachment
-(`attachOrCreateAction`), so a refused start leaves no Action. A repeat for
-the same page reuses its Action and starts a new chat, because each chat
-reads the live page afresh and may name other prompts; a retried request
-(same Idempotency-Key and body) returns the chat it started. The response is
-the Action id, the chat id and the run (null while the page is read), and the
-browser opens the chat.
+**Analyze a page (CO6).** The Actions header's **Analyze a page** picks one of
+the latest crawl's content pages, a topic with active prompts and that topic's
+prompts. `POST /projects/{id}/actions/analyze` starts the same `optimize_page`
+page chat as above (same admission, funding and fetch; nothing is charged until
+the page is read) and, in that chat's transaction, creates or reuses the page's
+Action through the Agent's target attachment (`attachOrCreateAction`), so a
+refused start leaves no Action. A repeat for the same page reuses its Action and
+starts a new chat, because each chat reads the live page afresh and may name
+other prompts.
 
 The chosen topic and prompts are recorded on the chat, not the Action: the
 chat's context carries `prompt_reference {topic_id, prompt_ids}`, and every
@@ -261,28 +199,21 @@ chosen prompts it still holds, and how many no longer resolve). An Action has
 one `target_prompt_id` and a diagnosis owned by its evidence, so neither holds
 a per-analysis prompt list.
 
-## What ships (phase 3: measurement)
+## Measurement
 
 Both content-gap rules freeze the declaration check `owned_url_cited`
 ([Opportunities](opportunities.md#explicit-implementation-declaration)), and
 Mark implemented in the page workspace declares the revision on screen.
 
-- **Improve page.** The declaration freezes the page's canonical URL and the
-  angle's prompts (those the library held at the refresh). It is met when a
-  later visibility run that asked one of those prompts cites that URL.
-- **New page.** It freezes the prompts and the owned URLs already cited for
-  them from the gap's window start to go-live. It is met when a later run
-  cites an owned URL outside that set for those prompts. The user names no
-  URL, and an angle matched later plays no part.
-- **Analyze a page.** A shipped revision from an Analyze a page chat also
-  freezes a page check on the page and prompts the chat was started for.
-
-A frozen check never follows a later reclustering, rematch or prompt edit. A
-run that asked none of the prompts reads as not measurable, never as not met.
-The check says only whether a URL was cited, never which version of the page
-the engine read; the Action detail says so beside it, and the causality notice
-stays. The declaration dialog names the page (or "a new page of yours") each
-gap will be measured by.
+An improve-page declaration freezes the page's canonical URL and the angle's
+prompts and is met when a later run that asked one of them cites that URL; a
+new-page declaration freezes the owned URLs already cited for those prompts from
+the gap's window start to go-live and is met when a later run cites an owned URL
+outside that set (the user names no URL). An Analyze a page revision also
+freezes a page check on the chat's page and prompts. A frozen check never
+follows a later reclustering, rematch or prompt edit; a run that asked none of
+the prompts reads as not measurable, never as not met; the check says only
+whether a URL was cited, not which version of the page the engine read.
 
 ## Not yet
 
@@ -292,7 +223,7 @@ gap will be measured by.
   checked for missing evidence in the workspace.
 - Reading the competitor and publisher pages cited for tracked prompts, and
   suggesting passage-level additions from what they cover (CO3).
-- The rules applied to Agent drafts of new content (CO18).
+- The rules applied to Agent drafts of new content.
 - Publishing to a CMS.
 - A prompt-score check beside `owned_url_cited`: a rule names one check kind,
   so a content-gap declaration does not also freeze prompt-score checks on the

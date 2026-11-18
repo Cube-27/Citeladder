@@ -18,50 +18,28 @@ load the SPA shell or call browser API routes. Evidence reads use the host bridg
 with only ephemeral selection/context state. [MCP](mcp.md) owns its tools, switches
 and client acceptance requirements.
 
-The product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
-app-host API, browser MCP consent and guarded navigation. The marketing
-Worker at `frontend/apps/marketing` builds every page at deploy time
-(`output: 'static'`) and serves it as a free static asset: the full HTML that
-search engines and AI crawlers read, without a Worker invocation per visit.
-The shared chrome (navigation, cookie consent banner and the consent-gated
-Google tag) is Astro markup with small module scripts in
-`frontend/components/marketing/chrome/` and `frontend/components/analytics/`;
-the page sections in `frontend/components/marketing/sections/` render to
-static HTML. The navbar's ThemeSwitch is the one island every page hydrates;
-other React islands hydrate only on pages with interactive tools, such as the
-blog explorer, contact form, pricing and the free tools.
-Only routes that read the request opt out with `prerender = false`: `/pricing`,
-the contact intake and `/health`. The 404 page is prerendered so scanner
-traffic never renders on demand (the free Workers plan stops a request past
-10 ms of CPU). Astro serves that page without running middleware, so the
-Worker entry (`apps/marketing/src/edge.ts`) runs first: it proxies only the
-exact apex webhook path, keeps the retired research redirects and answers
-`Accept: text/markdown` 404s with a Markdown body; the middleware only adds
-headers to on-demand pages. A generated `_redirects` file sends each page's trailing-slash
-variant to it with a 301. `/pricing`
+The marketing Worker builds every page at deploy time (`output: 'static'`) and
+serves it as a free static asset, so search engines and AI crawlers read full
+HTML without a Worker invocation per visit. Only routes that read the request
+opt out with `prerender = false`: `/pricing`, the contact intake and `/health`.
+The 404 page is prerendered so scanner traffic never renders on demand (the
+free Workers plan stops a request past 10 ms of CPU). Astro serves that page
+without running middleware, so the Worker entry (`apps/marketing/src/edge.ts`)
+runs first; the middleware only adds headers to on-demand pages. `/pricing`
 reads the public catalog through protected origin transport without visitor
 credentials. It serves a per-country copy from the edge cache for ten minutes
 and the last good copy for up to seven days while the API is unreachable; with
-no copy it answers 503 with `noindex`. Production delivery and acceptance remain
-operator gated. The first release retains captured prior VM artifacts for a
-bounded rollback; later frontend releases use accepted Worker versions.
+no copy it answers 503 with `noindex`.
 
 The marketing Worker owns public `/contact` and its same-origin
-`POST /api/v1/contact` intake. It validates bounded JSON, checks Origin and a
-honeypot, applies native Cloudflare limits by trusted client IP and a
-per-location burst cap, verifies a Cloudflare Turnstile token (action `contact`,
-hostname from `TURNSTILE_HOSTNAMES`, single use) and only then sends escaped
-HTML and plain text through Resend to
-`contact@citeladder.com`, with the visitor email as Reply-To. It stores no
-enquiries in the application database. The Resend key and
-`TURNSTILE_SECRET_KEY` are runtime Worker secrets, and the intake fails closed
-without either; the build check rejects output containing a Turnstile secret.
-The public Turnstile site key is baked in at build. The marketing policy allows
-the Turnstile origin for scripts and frames; only `/contact` loads it. Demo CTAs use `/contact`;
-legacy Cube27 contact URLs from published billing catalogs resolve to this
-intake without altering persisted catalogs. Cube27 product and legal identity
-remain in the public chrome and policies. Successful submission analytics
-require existing cookie consent and contain only the source page.
+`POST /api/v1/contact` intake. It verifies a Cloudflare Turnstile token (action
+`contact`, hostname from `TURNSTILE_HOSTNAMES`, single use) and only then sends
+mail through Resend. It stores no enquiries in the application database, and the
+intake fails closed without its Resend key and `TURNSTILE_SECRET_KEY` (runtime
+Worker secrets; the build check rejects output containing one). Legacy Cube27
+contact URLs from published billing catalogs resolve to this intake without
+altering persisted catalogs. Successful-submission analytics require existing
+cookie consent and contain only the source page.
 
 The product Worker runs before asset matching, so root, deep-link and direct
 HTML responses all carry the same enforced Content Security Policy and
@@ -69,148 +47,73 @@ HTML responses all carry the same enforced Content Security Policy and
 links stay `no-store`, and API responses are always `private, no-store`).
 Signing out sends `Clear-Site-Data: "cache"`, and a shell restored from the
 back-forward cache re-checks its session. The policy reports to the API's
-same-origin sink (`Reporting-Endpoints`, `report-to`), and a report-only policy
-requires Trusted Types against the default policy in `lib/trusted-types.ts`;
-neither is enforced yet. Every Worker response also carries the
-`frontend/lib/config/security-headers.ts` Permissions-Policy and
-`Cross-Origin-Opener-Policy: same-origin-allow-popups` (Razorpay's payment
-popups keep their opener), and the product host adds
-`Cross-Origin-Resource-Policy: same-origin`. Sign-in, registration and MCP
+same-origin sink, and a report-only policy requires Trusted Types against the
+default policy in `lib/trusted-types.ts`; neither is enforced yet. Every Worker
+response also carries the `frontend/lib/config/security-headers.ts`
+Permissions-Policy and `Cross-Origin-Opener-Policy: same-origin-allow-popups`
+(Razorpay's payment popups keep their opener). Sign-in, registration and MCP
 consent send no opener policy, because an MCP client's OAuth window passes
-through them and must stay connected to its opener. The policy allows the Turnstile origin for scripts and frames, which
-the sign-up and email-link forms load; the API, not the Worker, verifies their
-tokens ([workspace access](workspace-access.md)), and the product build bakes
-the public site key `PUBLIC_TURNSTILE_SITE_KEY` (Cloudflare's always-pass test
-key when served locally or built for Compose). Fingerprinted resources retain
-immutable caching. Marketing pages and
-resources use Cloudflare asset delivery; unmatched routes reach the Worker.
+through them and must stay connected to its opener. The policy allows the
+Turnstile origin for scripts and frames, which the sign-up and email-link forms
+load; the API, not the Worker, verifies their tokens
+([workspace access](workspace-access.md)).
 Astro hashes compiled hydration scripts into the policy: prerendered pages carry
 it as a `<meta>` element, and on-demand responses as a header that the marketing
-middleware preserves or replaces with a restrictive fallback for proxy and error
-responses. `scripts/check-marketing-worker-output.mjs` writes the static
-`_headers` (X-Frame-Options, HSTS, nosniff, referrer policy, and month-long caching
-for fonts and the favicon), because a meta policy cannot set `frame-ancestors`. Browser destinations live in
+middleware preserves or replaces with a restrictive fallback.
+`scripts/check-marketing-worker-output.mjs` writes the static `_headers`,
+because a meta policy cannot set `frame-ancestors`. Browser destinations live in
 `frontend/lib/config/content-security-policy.ts`; inline script and eval are
-not enabled. Inline styles support React layout, charts and consent pages.
-The app's pre-paint theme bootstrap is an external same-origin script. Upstream
-policies, including sandboxed logos and MCP consent, remain authoritative.
-The observed Cloudflare-injected Web Analytics beacon is allowed by its script
-path and reporting endpoint, following the
-[Cloudflare CSP requirements](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/).
-Google Analytics destinations are included only in a marketing build with a
-configured measurement ID, and loading still requires cookie consent.
-The documentation Worker serves assets only, with no Worker script, so Astro emits its policy as a
-`<meta>` element with the same script hashing; `X-Frame-Options` in its
-`_headers` file denies framing because browsers ignore `frame-ancestors` there.
+not enabled. The documentation Worker serves assets only, so its policy is a
+`<meta>` element and `X-Frame-Options` in its `_headers` denies framing.
 
 Supported browsers are the `browserslist` in `frontend/package.json`: Chrome
 and Edge 123, Firefox 132, Safari and iOS Safari 17.5, and Samsung Internet 27
 or newer (owner, 2026-11-13). Native popover needs iOS Safari 18.3, so no UI
 may depend on it alone. The product build targets the same versions
-(`apps/app/vite.config.ts`). `pnpm check:compat`
-(`scripts/check-browser-compat.mjs`) fails when browser source calls a global,
-static or well-known instance API that a matrix browser lacks, by MDN's
-browser-compat-data, unless only optional chaining reads it; TypeScript's `lib`
-covers JavaScript instance methods. Its stylesheet half
-(`scripts/check-css-compat.mjs`) does the same for CSS at-rules, properties,
-keyword values, functions and pseudo-classes, passing uses inside `@supports`
-or after a fallback declaration, and enhancements it lists with what older
-browsers show instead. On
-an older browser the app's external `public/browser-support.js` fills the root
-with an "Update your browser" notice before the shell runs, and `main.tsx` does
-not mount.
+(`apps/app/vite.config.ts`). `pnpm check:compat` fails when browser source uses
+an API or CSS feature a matrix browser lacks. On an older browser the app's
+external `public/browser-support.js` fills the root with an "Update your
+browser" notice before the shell runs, and `main.tsx` does not mount.
 
 ## Routes and shared shell
 
-### Public platform pages
+### Public pages
 
-The marketing content registry in `frontend/lib/marketing-content/nav.ts` owns
-the published Platform labels, destinations and groups for desktop/mobile
-navigation, footer, overview cards and sitemap. The Astro `/platform/[...slug]`
-route admits only those published destinations; substantive narratives live in
-`platform-pages.ts` and render on the server with the existing marketing primitives.
-Product pages have their own metadata and WebPage/breadcrumb relationships to
-the single CiteLadder software identity, plus FAQPage markup built from the FAQ
-each page renders. Unknown or held capability paths return
-404. The `/mcp` protocol endpoint and blocked former app roots remain unchanged.
-
-Illustrative product excerpts are the `Screen*` components in
-`frontend/components/marketing/screens/`, each shown in a `ProductFrame`: fixed-size
-screens, scaled whole to fit the frame and never cropped, composed from
-`components/ui`, drawn (no live controls) and filled from the
-one synthetic dataset in `demo-data.ts`. They import no app runtime and are named
-by the frame's label.
-Editorial publication never grants access: Agent/content workflows use demo
-CTAs, Commerce is project-dependent, and crawler analytics remains unpublished.
-Signup CTAs continue to use the existing public-signup switch and app URL helper.
-
-### Public research guides
-
-Reviewed SEO articles live as Markdown under
-`frontend/lib/marketing-content/blog-posts/research/`. The marketing
-`research-articles.ts` catalog reads their frontmatter for titles, descriptions,
-intent, canonical destinations, the resource listing and sitemap. The existing
-React Markdown/GFM stack renders the complete bodies on the server without
-hydration. `research-markdown.tsx` owns source-number anchors and focusable
-table overflow; the public shell and type roles remain shared.
-
-Canonical article paths, set in each article's frontmatter, use the site's
-no-trailing-slash convention.
-
-The citation destination retains its research body and a compact contextual link
-to `/platform/cited-sources`; it no longer appends a full commercial page.
-The guide and product page self-canonicalize separately. The existing measurement
-destination retains the distinct share-of-appearances worked example. The older
-`/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
-permanently to the measurement destination; `/blog/track-optimize-ai-citations`
-redirects to citation tracking. Slash variants redirect permanently to the
-canonical path. `public-routes.ts` is the one list of indexable pages: the
-sitemap and `llms.txt` both read it, so a page listed in one is listed in the
-other. It maps over the page records (`lib/marketing-content/pages.ts`, the
-policies in `legal-documents.ts`, platform, comparison, tool, post and guide
-records), each carrying its path, browser title, description and `updated`
-date; `updated` is the sitemap `<lastmod>` the post-deploy IndexNow ping diffs,
-so revise it with the page. Policies and root-level guides are served by one
-`[slug].astro` route from those records. Trial and free-tool numbers in copy
-come from `lib/config/public-trial.ts` and `lib/config/free-tools.ts`, and pages
-pick product images from the screen catalogue
+Marketing content registries under `frontend/lib/marketing-content/` own the
+published Platform pages, tools and policies; the Astro routes admit only
+registered destinations and unknown or held capability paths return 404.
+`public-routes.ts` (`apps/marketing/src`) is the one list of indexable pages:
+the sitemap and `llms.txt` both read it, so a page listed in one is listed in
+the other. Each page record carries a path, browser title, description and
+`updated` date; `updated` is the sitemap `<lastmod>` the post-deploy IndexNow
+ping diffs, so revise it with the page. Trial and free-tool numbers in copy come
+from `lib/config/public-trial.ts` and `lib/config/free-tools.ts`, and pages pick
+product images from the screen catalogue
 (`components/marketing/screens/screen-catalog.tsx`), never a `Screen*`
 component directly.
-Named competitor comparisons keep their separate product-versus-product intent.
 
-Only the four linked public JSON inputs/templates are served from
-`/research/citeladder-2026-10/` in `frontend/public`. Editorial handoff files and
-local research notes are not public assets. Source review dates are visible
-research metadata, never publication dates or sitemap `lastmod` values.
-Each guide emits `Article` JSON-LD with the CiteLadder organization as author
-and publisher and the visible review date as `dateModified`; it claims no person
-author and no `datePublished` until approved publication metadata exists.
-Breadcrumbs describe the visible navigation using the existing JSON-LD owner.
+Illustrative product excerpts are the `Screen*` components, each shown in a
+`ProductFrame`: fixed-size screens, scaled whole to fit the frame and never
+cropped, composed from `components/ui`, drawn (no live controls) and filled from
+the one synthetic dataset in `demo-data.ts`. They import no app runtime.
 
-### Public browser tools
+Research guides are Markdown under
+`frontend/lib/marketing-content/blog-posts/research/`, read by
+`apps/marketing/src/research-articles.ts` and rendered on the server by
+`components/marketing/content/prose-markdown.tsx`. Canonical paths use the
+site's no-trailing-slash convention; slash variants redirect permanently.
+Guides emit `Article` JSON-LD through `lib/seo/json-ld.ts` from frontmatter.
+Source review dates are visible research metadata, never publication dates or
+sitemap `lastmod` values. Editorial handoff files and local research notes are
+not public assets. The browser tools under `/tools` are browser-only utilities
+over bounded pasted input: they fetch no sites, call no providers and persist
+nothing, and their reports are not Site Health evidence.
 
-The marketing `/tools` hub links to six server-rendered `/tools/:slug` pages:
-crawler rules testing, robots.txt generation, meta/directive inspection,
-structured data generation, sitemap comparison and social previews. These are
-browser-only utilities over bounded pasted inputs and local files; they do not
-fetch sites, call providers, persist results or put submissions in URLs.
-The existing crawler catalog supplies public bot metadata and rules use the same
-`robots-parser` dependency as acquisition. Tool metadata lives in
-`lib/marketing-content/tools.ts`, browser admission in `lib/config/free-tools.ts`,
-and local transformations in `lib/free-tools/`. These reports are not persisted
-Site Health evidence or claims of live access, indexability or citation eligibility.
-Social previews read local raster images; published image URLs only enter exported
-markup. Sitemap indexes compare declared child sitemap addresses without recursion.
+### App routes
 
-### App routes and the documentation site
-
-Documentation content lives in `frontend/apps/docs/src/content` as Markdown.
-Its validated metadata drives navigation, static routes, search and the sitemap.
-The final navigation group is Updates, containing the changelog. Search runs
-locally over a static index; it has no backend, session or provider dependency.
-The MCP reference consumes the existing generated tool catalog. The former
-marketing `/docs/mcp` page is removed and 301s to the docs MCP guide; all owned
-links use the public docs origin.
+Documentation content lives in `frontend/apps/docs/src/content` as Markdown;
+its validated metadata drives navigation, routes, search and the sitemap. The
+former marketing `/docs/mcp` page 301s to the docs MCP guide.
 
 One authenticated layout retains the session, query client, workspace/project
 context and entitlement providers across app and onboarding navigation.
@@ -220,15 +123,12 @@ app destination: its path, title, scope, mode, lazy screen, nav placements, the
 collection a project switch lands on and whether its URL carries a credential.
 The router, navigation, compact navigation, Command Palette, user menu, page
 titles, workspace-only routes and mode homes all derive from it; UI visibility
-never replaces backend authorization. The shell has two route-derived modes, Dashboard
-and Agent. Dashboard navigation groups pages by the question they answer: Home
-(Overview, Actions with its open and in-progress count), Brand, Tracking, Website,
-Search and Commerce, then Integrations in the foot. A
-destination is current on its path and every path below it, whatever tab the
-screen shows; a destination that names a query parameter (a settings tab) also
-needs it. Every destination and mode link goes to its front door; the app
-remembers no previously opened screen (owner, 2026-11-16). The Agent mode's
-navigation and its API modules load only in that mode.
+never replaces backend authorization. The shell has two route-derived modes,
+Dashboard and Agent; the Agent mode's navigation and API modules load only in
+that mode. A destination is current on its path and every path below it,
+whatever tab the screen shows; a destination that names a query parameter (a
+settings tab) also needs it. Every destination and mode link goes to its front
+door; the app remembers no previously opened screen (owner, 2026-11-16).
 
 Navigation names the document `Screen · Project · CiteLadder` from the
 manifest's title, moves focus to the main region when the path changes (not
@@ -237,63 +137,54 @@ drawer. A project switch keeps the view parameters that mean the same thing in
 every project (tab, range, engine, status and the Site Health catalog filters)
 and drops the rest, because they can name the outgoing project's records. The
 project route's content remounts on a switch, so no draft, filter or mutation
-outcome held in component state carries into the next project.
-Opening the app makes no external fetch: brand and competitor logos are looked
-up after onboarding creates a project and after a project edit.
+outcome held in component state carries into the next project. Opening the app
+makes no external fetch: brand and competitor logos are looked up after
+onboarding creates a project and after a project edit.
 
-The Vite SPA preserves the authenticated shell while route content resolves.
-`shell-fallback` is the neutral pre-session structure only; after
-authentication, QueryState loading and recoverable gate notices render in the shell's
-content pane. In-place refresh retains data with scoped progress rather than
-collapsing the surface. Pointer or keyboard intent on a destination starts its
-route chunk and warms its primary read under the destination's exact query key;
-Overview warms its command center and layout together, then the reads of the
-widgets that layout names. Command Palette warms the destination of its
-highlighted row the same way. A prefetcher that files one read's answer under
-another key (Website and Issues seed the crawl-keyed page from the
-project-scoped newest-crawl read) still reads it through its own cache key, so
-repeated intent joins one request. A read whose 404 means "nothing measured yet" (the
-Visibility projection's `visibility_not_measured`, the latest Search Demand
-snapshot) caches that answer as `null` rather than as an error, so a warmed
-answer is not re-asked on mount. Metrics still being written
-(`visibility_metrics_pending`) are their own "being prepared" state, and any
-other 404 stays an error.
-A cold load of an address naming only its project starts the same warm from the
-route loader once the project resolves, beside the access, entitlement and Terms
-reads; those gates still decide what renders. No shell provider prefetches
-another screen's reads.
+The SPA preserves the authenticated shell while route content resolves: after
+authentication, QueryState loading and recoverable gate notices render in the
+shell's content pane, and an in-place refresh retains data with scoped progress
+rather than collapsing the surface. What is drawn before the page has one owner,
+`FirstFrame` (`components/layout/first-frame.tsx`), driven by the route
+manifest's `shell` flag: a shell route gets the shell and its page skeleton, a
+flow route its plain ground ([design](design.md), "One loading state per page
+load"; [engineering guidelines](engineering-guidelines.md#flow-routes-never-draw-the-app-shell)).
+A workspace gate still answering holds the content slot instead of replacing the
+tree, so a workspace switch keeps the shell mounted.
 
-The build (`apps/app/vite.config.ts`, `output.codeSplitting`) emits React,
-React Router and Zod as their own cache-stable vendor files and everything else
-the entry reaches statically as one boot file; each screen is its own route
-chunk, so a destination never downloads an unrelated screen. Heavy pieces a
-screen does not draw on arrival load lazily inside space already reserved for
-them: the execution evidence card (and its markdown renderer) inside the open
-drawer, and the Actions count beside its navigation row. Charts are plain SVG
-drawn by the screen's own chunk, with no chart library to load. `scripts/check-bundle-budget.mjs` holds the boot
-bytes.
+Pointer or keyboard intent on a destination starts its route chunk and warms its
+primary read under the destination's exact query key; Overview warms its command
+center and layout together, then the reads of the widgets that layout names.
+Command Palette warms the highlighted row's destination the same way. A
+prefetcher that files one read's answer under another key (Website and Issues
+seed the crawl-keyed page from the project-scoped newest-crawl read) still reads
+it through its own cache key, so repeated intent joins one request. A read whose
+404 means "nothing measured yet" (the Visibility projection's
+`visibility_not_measured`, the latest Search Demand snapshot) caches that answer
+as `null` rather than as an error, so a warmed answer is not re-asked on mount.
+Metrics still being written (`visibility_metrics_pending`) are their own "being
+prepared" state, and any other 404 stays an error. A cold load of an address
+naming only its project starts the same warm from the route loader once the
+project resolves, beside the access, entitlement and Terms reads; those gates
+still decide what renders. No shell provider prefetches another screen's reads.
 
-Route matching starts code downloads alongside session bootstrap. Pre-session
-loading uses the neutral shell; authenticated route loading uses QueryState
-inside the persistent shell. A screen that fails to render, including a replaced
-build chunk, shows Reload and Go to Overview inside the shell; an unknown app
-address shows a not-found screen there. Failures before the shell mounts offer a
-document reload. Once a project is authorized, its screen reads start without waiting for
-entitlement. Empty-workspace onboarding still waits for the allowance decision,
-and capability-specific controls retain their own entitlement gates.
-The session, membership, selected-project and entitlement reads use a shorter
-configurable browser timeout so stalled bootstrap requests reach the existing
-retry notices. `NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS` is baked into the Vite
-app build and defaults to 8 seconds per request attempt.
+Route matching starts code downloads alongside session bootstrap. A screen that
+fails to render, including a replaced build chunk, shows Reload and Go to
+Overview inside the shell; an unknown app address shows a not-found screen
+there. Failures before the shell mounts offer a document reload. Once a project
+is authorized, its screen reads start without waiting for entitlement.
+Empty-workspace onboarding still waits for the allowance decision, and
+capability-specific controls retain their own entitlement gates. The session,
+membership, selected-project and entitlement reads use a shorter browser timeout
+so stalled bootstrap requests reach the existing retry notices.
 
 ## Server, URL and local state
 
-Browser APIs use relative `/api/v1`. After cutover, the product Worker sends
-these requests through the shared authenticated origin transport. Marketing
-navigation uses direct app-origin links; the public pricing HTML is rendered
-from a validated catalog response and selection links carry only bounded public
-fields. Application documents use `no-cache` and missing fingerprinted
-assets return 404.
+Browser APIs use relative `/api/v1`, and the product Worker sends them through
+the shared authenticated origin transport. Marketing navigation uses direct
+app-origin links; the public pricing HTML is rendered from a validated catalog
+response and selection links carry only bounded public fields. Application
+documents use `no-cache` and missing fingerprinted assets return 404.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive
 filter/pagination changes only within the same owning project/crawl. A
@@ -306,11 +197,15 @@ exact count passes `total` so the pager and a full page are reserved from the
 first frame.
 
 Typed shareable tabs, filters, cursors and selected IDs belong to
-lib/navigation/url-state.ts, with explicit push/replace semantics. Component
+`lib/navigation/url-state.ts`, with explicit push/replace semantics. Component
 state owns ephemeral drafts and interactions. Read-mostly queries use the
 configured freshness/retention policy; explicit polling remains authoritative
 for active operations. Events accelerate projection invalidation, never replace
-persisted truth. No screen substitutes mock data or computes a backend metric.
+persisted truth: streams (`lib/sse/`) accelerate polling-backed projections
+only, and never construct rows from partial, replayed or unknown event
+payloads. Domain hooks own event classification and invalidation and never a
+second stream transport. No screen substitutes mock data or computes a backend
+metric.
 
 User-facing timestamps use a resolved display timezone passed to the shared
 formatter in `frontend/lib/format.ts`; API values remain UTC, and date-only
@@ -319,9 +214,9 @@ device-local choice (Auto, UTC, or a named IANA zone) in a same-origin preferenc
 cookie. Auto resolves the browser zone once per app load and falls back to UTC
 when unavailable. Server rendering uses UTC unless an explicit cookie zone is
 available; it never infers a browser zone.
-The Actions list owns its `status` and `target` URL filters. New chat reads
-typed evidence handoffs from its URL through `lib/agent/handoff.ts`; the URL
-carries identifiers and an optional prompt, never evidence content.
+New chat reads typed evidence handoffs from its URL through
+`lib/agent/handoff.ts`; the URL carries identifiers and an optional prompt,
+never evidence content.
 
 ## Component capability and technical ownership
 
@@ -345,14 +240,6 @@ exact retry. A transient same-scope refresh failure may retain persisted data
 with an inline notice; an access failure must remove protected evidence and
 mutation controls.
 
-Initial Runs list/schedule reads settle before their working surface appears.
-Performance starts readiness alongside its dashboard,
-then presents one first-use guidance state rather than stacking connection and
-missing-range notices. The page loader's reveal and rotation animate on separate
-elements so its delay cannot replace the spinning animation.
-
-## Frontend owner boundaries and shared mechanics
-
 A screen entry point coordinates route context, server-state hooks, mutations, and
 transient UI state. It delegates cohesive visual regions, domain-specific
 formatting, and interaction mechanics to focused sibling owners. A split must
@@ -364,52 +251,19 @@ screen from its internal presentation files.
 The zod response contracts are the `@citeladder/contracts` workspace package
 (`frontend/packages/contracts`), shared with the TypeScript API service. Import
 the package entry or a subpath (`@citeladder/contracts/project`); API client
-modules never declare response objects themselves.
+modules never declare response objects themselves, and validate through
+`strictValidate`. The frontend architecture guard rejects response object
+declarations in API client modules. `packages/contracts/src/site-health.ts` is
+the stable Site Health schema facade: do not import a focused file under
+`src/site-health/` from a feature to avoid it; move a genuinely shared
+primitive into the focused folder and re-export it through the facade.
 
-`packages/contracts/src/site-health.ts` is the stable Site Health schema
-facade. The package entry re-exports that facade, so API
-consumers retain their existing import boundary and inferred Zod schema names.
-Focused modules under `src/site-health/` own crawl lifecycle,
-dashboard/change/readiness, observed architecture, inventory, issues, page
-detail, pagination, and shared schema primitives. Do not import a focused file from a feature solely to
-avoid the facade; move a genuinely shared primitive into the focused schema
-folder and re-export it through the facade.
+### CSV import
 
-Demand Intelligence and Search Intelligence response schemas
-likewise live in the package and are re-exported by its entry. API clients validate through `strictValidate`; the contract
-drift map covers their declared response objects. The frontend architecture
-guard rejects response object declarations in API client modules.
-
-### CSV import mechanics
-
-`components/ui/csv-import.tsx` owns the reusable import trigger and dialog
-shell, accessible file input, same-file reset/reselection, pending state,
-preview framing, and `useCsvImportFile` lifecycle. File text loading,
-including the browser and test-environment fallback, belongs to
-`lib/csv/read-file-text.ts`: it decodes strictly as UTF-8 and refuses any
-other encoding, or a failed read, before anything is parsed or sent, with
-guidance to save as CSV UTF-8. Prompt and product modules retain ownership of
-their own CSV grammar, validation, preview columns, sample CSV download and
-import mutations; every import offers a sample in the format it reads and
-ignores a second submit while one is in flight. The shared layer must not make
-domain validity decisions or post a domain payload.
-
-### Event-stream mechanics
-
-`lib/sse/frames.ts` owns raw Server-Sent Event frame splitting and parsing.
-`lib/sse/use-event-stream.ts` owns the credentialed browser transport:
-workspace and resumption headers, chunk decoding, cancellation, reconnect
-backoff, and debounced invalidation delivery. Domain hooks retain event
-classification and query invalidation ownership and never own a second stream
-transport.
-
-Streams accelerate polling-backed projections only. They never become a
-client-side source of truth or construct rows from partial, replayed, or
-unknown event payloads.
-
-## Verification
-
-Use the affected-owner workflow in [Development](DEVELOPMENT.md#repository-validation-harness).
-Preserve the feature's meaningful authorization, API, loading/error,
-accessibility and navigation coverage. Shared visual rules remain in
-[Design](design.md), not class/font/pixel snapshots.
+`components/ui/csv-import.tsx` owns the reusable trigger and dialog shell and
+`lib/csv/read-file-text.ts` the file text loading, which decodes strictly as
+UTF-8 and refuses any other encoding, or a failed read, before anything is
+parsed or sent. Prompt and product modules own their CSV grammar, validation,
+preview columns, sample CSV and import mutations; every import offers a sample
+in the format it reads and ignores a second submit while one is in flight. The
+shared layer makes no domain validity decisions and posts no domain payload.

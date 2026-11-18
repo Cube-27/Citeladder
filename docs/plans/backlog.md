@@ -1,7 +1,7 @@
 # Backlog
 
 Closed into three tiers by the owner on 11 November 2026
-([decisions BL1–BL12](../decisions.md#backlog-closure), [B74](../billing-decisions.md#backlog-closure-2026-11-11)).
+([B74](../billing-decisions.md#decided-not-built)).
 This is the single remaining-work record; [plan status](ACTIVE.md) says what is
 active. Feature owners in [the documentation index](../README.md) and the
 accepted [invariants](../invariants.md) remain authoritative. Establish a

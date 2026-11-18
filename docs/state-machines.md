@@ -4,8 +4,8 @@ Cross-feature catalogue of every persisted lifecycle: its states, the invariants
 that hold over them and where each is enforced, and the transitions with their
 trigger, location and guard. Code, tests and the feature owners in the
 [documentation index](README.md) remain the authority; this file records where
-each rule is enforced so a change can find every writer. Line references drift;
-search the named function.
+each rule is enforced so a change can find every writer. Line numbers drift:
+search the named function, and add no new ones.
 
 Paths are relative to `frontend/services/api/src/` unless they start with
 `frontend/`; a named DB object is defined in `migrations/`. **Enforced**:
@@ -65,7 +65,7 @@ Edges `config/audits.json:2-13`, enforced only by `transitionAudit`
 (`audits/state.ts:7-44`, 409 on any other edge) under the caller's audit
 `FOR UPDATE`; the vocabulary itself is DB `ck_audits_status`. Terminal `cancelled`, `completed`, `failed`, `partially_completed`;
 active `analyzing`, `draft`, `queued`, `running`, `validating`
-(`audits.json:267-268`). `draft`, `validating`, `analyzing` and `reporting` are
+(`audit_active_statuses` in `config/audits.json`). `draft`, `validating`, `analyzing` and `reporting` are
 never committed: each is entered and left inside one transaction.
 
 | Invariant | Enforced |
@@ -198,7 +198,7 @@ external id unique; status vocabulary `ck_billing_subscription_status`. App: `en
 | * → evidence status | webhook or sweep | `settlement.ts:513-556` | `event.version >= provider_state_version`; not ended |
 | terminal evidence → `cancel_scheduled` until paid end / ended | `periodOutcome` → `endTerminal` | `settlement.ts` `endTerminal`, `periodOutcome` | an unrefunded paid period covers now and no full refund cancelled the row |
 | `cancelled` (still current) stays `cancelled` on later non-terminal evidence; a renewal charged meanwhile records its receipt, grants nothing and logs `billing.renewal_paid_after_cancellation` (B71) | `settlePeriod`, `periodOutcome` | `settlement.ts` `refundCancelled` | `is_current`, status `cancelled` |
-| current period refunded in full → `cancelled` (still current), `scheduled_change` → null | `endRefundedPayment` (B52; an upgrade bought in the period, B70) | `settlement.ts` `paidPeriod`, `endRefundedPayment` | `is_current`, period equals the payment's (an upgrade's: paid inside the current period) |
+| current period refunded in full → `cancelled` (still current), `scheduled_change` → null | `endRefundedPayment` (B52; an upgrade bought in the period too) | `settlement.ts` `paidPeriod`, `endRefundedPayment` | `is_current`, period equals the payment's (an upgrade's: paid inside the current period) |
 | `cancel_at_period_end` false → true | customer cancel; evidence; B52 | `billing/cancellation.ts:69-78`; `settlement.ts:541-542, 722` | sub `FOR UPDATE`, period end in future |
 | true → false | resume | `cancellation.ts:94-98` | not yet sent, before the lead time |
 | `cancellation_sent_at` null → now | sweep; evidence; refund | `recovery.ts:541-548`; `settlement.ts:487, 723` | `cancel_at_period_end` |
@@ -252,11 +252,7 @@ DB: `(provider, mode, event_id)` unique (`uq_billing_webhook_external`).
 | `queued` > `unclaimed_grace_seconds` → `failed interrupted` | runner `recover` | `agent/queue.ts:93-146` | SKIP LOCKED; settle + refund |
 | held, lease expired → `failed interrupted` | runner `recover` → `endInterrupted` | same | lease `<= now` |
 
-The lease is `lease_seconds` = 60 s (`agent/bindings.ts`,
-`config/model-gateway.json`), three 20 s heartbeats. The lane's `nextDue`
-includes held runs' `lease_expires_at` (`workers/agent-worker.ts`), and a
-heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
-(`agent/worker.ts`), fenced by `lockRun`.
+Lease and heartbeat timing is in [agents](agents.md#worker-and-funding).
 
 ### 4.2 Model attempts, tool attempts, outputs
 
@@ -269,19 +265,11 @@ heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 | `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 |
 | Transcript | saved at finish without the last response's unanswered `server_tool_use` (`savedTranscript`, `agent/runtime.ts`); replayed to the model `agent/transcript.ts:110` | App |
 
-### 4.3 Browser turn stream (`frontend/lib/agent/live-turns.ts`)
-
-| From → to | Trigger | Location | Guard |
-|---|---|---|---|
-| absent → `connected: true` | `startLiveTurn` once per accepted run | `live-turns.ts` `startLiveTurn`, `frontend/lib/api/agent.ts:77` | `turns.has(runId)` |
-| `connected` (429) → re-post | `/run` answers 429 | `live-turns.ts` `runStream` | waits `Retry-After`; at most `AGENT_RUN_RETRY.maxAttempts` posts |
-| `connected` → `connected: false` | stream ends, fetch fails, a non-2xx other than a retried 429, or no frame for `AGENT_STREAM_IDLE_MS` | `live-turns.ts` `startLiveTurn` (`finally`), `read` | idle timer re-armed by every frame, keep-alives included |
-| polling on | run active and not connected | `frontend/components/agent/use-chat-turns.ts:28-38` | re-read on stream close |
-
-`isRunActive` = `queued`/`leased`/`running`/`retry_wait`
-(`frontend/lib/agent/run-state.ts:176`); send is disabled while pending or
-active (`frontend/components/agent/chat-thread.tsx`), and the server answers
-409 `agent_run_active`.
+The browser turn stream (`frontend/lib/agent/live-turns.ts`) is in
+[agents](agents.md#streaming-and-the-chat). `isRunActive`
+(`frontend/lib/agent/run-state.ts`) is `queued`/`leased`/`running`/`retry_wait`;
+send is disabled while a run is active, and the server answers 409
+`agent_run_active`.
 
 ## 5. Site Health and crawl logs
 
@@ -299,18 +287,18 @@ never written.
 |---|---|
 | One active crawl per project | App: project `FOR UPDATE` + no active crawl `site-health/planner.ts:292-307`; reruns lock via `selection.ts:63-80` (no partial unique) |
 | One snapshot per crawl | DB `uq_site_health_snapshot_crawl` |
-| Terminal ⇒ no open lifecycle task | App: terminalize only when discover/setup/analyze drained `lifecycle.ts:257-273` |
-| `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts` `reconcileInventory`: coverage `complete` only |
+| Terminal ⇒ no open lifecycle task | App: terminalize only when discover/setup/analyze drained `site-health/terminal-publication.ts` `terminalize` |
+| `inventory_complete` ⇒ whole site inventoried | App `site-health/crawl-assessment.ts` `reconcileInventory`: coverage `complete` only |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | ∅ → `queued` (rerun: discovery `completed`; never `inventory_complete`) | create / page rerun | `planner.ts:195-228, 395-433` | project lock, no active crawl |
 | `queued` → `running` | first task runs | `site-task.ts:134-148` | `status = queued` |
-| analysis `pending` → `running` | reconcile | `lifecycle.ts:153-159` | crawl `FOR UPDATE`, active |
-| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts` `reconcileDiscovery`, `reconcileInventory` | no open discover/setup; failed iff `discovered_url_count = 0` |
+| analysis `pending` → `running` | reconcile | `site-health/crawl-assessment.ts` | crawl `FOR UPDATE`, active |
+| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `site-health/crawl-assessment.ts` `reconcileDiscovery`, `reconcileInventory` | no open discover/setup; failed iff `discovered_url_count = 0` |
 | discovery `running` → `sample_completed` | discover commit | `discover-task.ts:393-396` | sample cap; fenced task + crawl lock |
-| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts` `terminalize` | drained; failed iff nothing analyzed and either no discovery or applicable analyses (all failed) |
-| `running` → `failed` (`crawl_overdue`) | overdue watchdog | `lifecycle.ts:476-500` | crawl lock, active, age re-checked |
+| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `site-health/terminal-publication.ts` `terminalize` | drained; failed iff nothing analyzed and either no discovery or applicable analyses (all failed) |
+| `running` → `failed` (`crawl_overdue`) | overdue watchdog | `site-health/lifecycle.ts` `reconcileOverdue` | crawl lock, active, age re-checked |
 | `queued`/`running` → `cancelled` | Stop | `site-health/controls.ts:59-108` | crawl `FOR UPDATE`, not terminal; tasks cancelled in the tx |
 
 A crawl read without a named `crawl_id` (`currentSiteCrawl`, `reads/crawl.ts`)
@@ -326,7 +314,7 @@ observed inventory (`change-snapshot.ts` `observedInventory`).
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`enqueueNextGeneration`, `selection.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
+| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `reconcileOverdue`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`site-health/admission-writes.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
 | `site_discovery_frontier.status` | `pending` (`frontier.ts:280-301`) → `admitted` (`admission-writes.ts:350-362`); picked `FOR UPDATE SKIP LOCKED` inside the admitting tx | DB `uq_site_discovery_frontier_url` |
 | `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
@@ -414,15 +402,8 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 
 ### 7.2 Public API idempotency (`api_idempotency`)
 
-claim (`status_code` null = in progress) → completed (`status_code` 2xx, the
-stored response replays) or failed (`status_code` 500: a 5xx response or a
-thrown non-API error; the write may have committed), or deleted (released on a
-4xx refusal; purged after `retention_hours`, 24) `public-api/idempotency.ts`.
-A retry of a failed claim, or of a claim with no outcome older than
-`in_progress_max_seconds` (300; a crash before the outcome update), answers 409
-`idempotency_outcome_unknown`, `retryable: false`; a fresh claim answers 409
-`idempotency_conflict`, `retryable: true`. DB unique
-`(api_key_id, idempotency_key)`.
+The claim, replay and release states are in [public API](public-api.md)
+(`public-api/idempotency.ts`). DB unique `(api_key_id, idempotency_key)`.
 
 ### 7.3 Actions, prompts and brand facts
 

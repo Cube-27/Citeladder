@@ -8,40 +8,35 @@
 ## Authority and routing
 
 [Invariants](docs/invariants.md) own review-blocking constraints; read the
-sections affected by the change. Current code and tests establish shipped
-behavior, not permission to violate an accepted constraint: surface
-disagreements and repair them within the authorized scope; do not rewrite a
-safeguard merely to match a defect. Test design follows [Testing](#testing)
-below.
+sections affected by the change. Before changing code read
+[engineering guidelines](docs/engineering-guidelines.md), the failure modes that
+keep coming back; when one repeats, add or sharpen its entry there instead of
+writing history into a brief. Current code and tests establish shipped behavior,
+not permission to violate an accepted constraint: surface disagreements and
+repair them within the authorized scope; do not rewrite a safeguard merely to
+match a defect.
 
 Read a plan only for work assigned to it. An entry in
 [plan status](docs/plans/ACTIVE.md) is not execution authorization; never resume
 an old wave or fresh-chat protocol because a document mentions it.
 
-Situational workflow rules live in `.claude/skills/`, each in one place:
-`validate-change` (what to run and when) and `record-owner-decision` (where
-owner answers go). Skills never restate repository
-policy owned by a document. Packaged Agent `SKILL.md` files are production
-inputs owned by the [Agent](docs/agents.md), not engineering skills.
+Situational workflow rules live in `.claude/skills/`: `validate-change` (what to
+run and when) and `record-owner-decision` (where owner answers go). Skills never
+restate repository policy owned by a document. Packaged Agent `SKILL.md` files
+are production inputs owned by the [Agent](docs/agents.md), not engineering
+skills.
 
-## Non-negotiable guardrails
+## Guardrails
 
-- Every project-owned read and write is workspace-authorized. IDs are UUIDs,
-  never authorization; do not scope product data by `user_id`.
-- Reads render persisted projections, never crawl, sync, call providers/models,
-  or repair state. Raw evidence/attempts are append-only; derived results retain
-  exact source IDs and relevant processing versions.
-- PostgreSQL owns durable state and queues. Preserve leases, idempotency and
-  commit-before-network-I/O; do not add Redis without measured need.
-- Browser APIs use same-origin `/api/v1`. Tunable policy belongs in
-  `frontend/services/api/src/config/` or the owning frontend config, not service code.
-- Models may explain, generate, plan or classify bounded ambiguity; they do not
-  become raw truth or redefine deterministic metrics. Keep unknown, unavailable,
-  zero, historical, conflicting, excluded and not-applicable states distinct.
-- The Agent orchestrates existing owners, not a second knowledge store.
-  No autonomous publishing, prompt activation, external mutation or unbounded loop.
-
-These are reminders, not a replacement for the affected invariants.
+The invariants own these; this is the list to check before you start: workspace
+authorization on every project-owned read and write (no `user_id` scoping);
+reads render persisted projections and never crawl, sync or call a model;
+evidence append-only with provenance; PostgreSQL owns state and queues (no
+Redis); policy in config, not service code; browser APIs on same-origin
+`/api/v1`; unknown, zero, unavailable and not-applicable stay distinct; models
+never become raw truth or redefine deterministic metrics; the Agent orchestrates
+existing owners and never publishes, activates prompts, mutates externally or
+loops unboundedly.
 
 ## Implementation workflow
 
@@ -103,11 +98,9 @@ These are reminders, not a replacement for the affected invariants.
   timeouts; await the event or state. A `.skip` needs a reason and an issue link
   on the line above.
 
-Run only the smallest relevant native tests for the behavior at risk; CI runs
-the full selected owner suites, every build, E2E and release validation — never
-reproduce it locally. Never overlap test/check processes or repeat a successful
-run. Before running anything beyond focused tests (including `pnpm gate`), use
-the `validate-change` skill.
+Run only the smallest relevant native tests; CI runs everything else. Before
+running anything beyond focused tests (including `pnpm gate`), use the
+`validate-change` skill.
 
 ## Documentation
 
@@ -116,8 +109,9 @@ the `validate-change` skill.
   They are not feature catalogues, field lists, file maps or PR summaries.
 - A reason the code cannot show goes in a short nearby comment, or in the owner
   doc when it crosses boundaries. Link to the source; don't copy it.
-- When a documented decision changes, rewrite or delete the old text; never
-  append a correction. A new document needs a durable reason.
+- Each instruction lives in one place. When a documented decision changes,
+  rewrite or delete the old text; never append a correction. A new document
+  needs a durable reason.
 - Routine implementation and validation evidence belongs in the PR or CI
   record, never in progress, summary or evidence sidecars.
 
@@ -128,19 +122,17 @@ the `validate-change` skill.
   meaningful safety coverage to make validation green.
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
-- Schema changes are new numbered forward migrations
-  (`frontend/services/api/migrations/0002_<name>.sql` onwards) that apply to the
-  existing production schema in place; never edit an applied migration,
-  `0001_baseline.sql` included, and never rely on a database reset. Verify on the
-  one local development database (bring it forward with `pnpm --filter @citeladder/api migrate`; run
-  tests with `pnpm test:api <files>`, never create per-branch databases). Never
-  reset staging or production data.
+- Schema changes follow [invariant 17](docs/invariants.md#17-schema-changes-are-forward-migrations).
+  Use the one local development database: bring it forward with
+  `pnpm --filter @citeladder/api migrate`, run tests with
+  `pnpm test:api <files>`, never create per-branch databases. Never reset
+  staging or production data.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
-- Edit files with the Edit tool, not shell
-  rewrites, heredocs or throwaway edit scripts. Developer and agent workflow
-  scripts are Node, run through pnpm (`pnpm gate`, `pnpm test:api`); do not add
-  bash scripts for them. Stage explicit paths and preserve user-owned changes.
+- Edit files with the Edit tool, not shell rewrites, heredocs or throwaway edit
+  scripts. Developer and agent workflow scripts are Node, run through pnpm; do
+  not add bash scripts for them. Stage explicit paths and preserve user-owned
+  changes.
 
 ## Completion
 

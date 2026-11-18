@@ -18,15 +18,6 @@ not charge a second time.
 
 ## Layers and extension
 
-| Layer           | Responsibility                                                         |
-| --------------- | ---------------------------------------------------------------------- |
-| Native routes/  | HTTP translation, request validation and coded errors                  |
-| SQL baseline    | Tables, constraints and relational integrity (`migrations/`)          |
-| Native services/ | Business policy, authorized mutations and persisted projections       |
-| Native acquisition/ | External acquisition and provider transports                       |
-| Native analysis/ | Bounded deterministic derivation                                      |
-| Native workers/ | Lease, I/O/analysis and atomic terminal persistence                    |
-
 A product write that the public API or MCP also exposes goes through a command
 in `src/commands/`. The command declares its `permission` (capability and API
 key scope) once and takes only an actor checked against it (`Authorized`; a
@@ -46,13 +37,10 @@ own scoring or entitlement decisions; workers coordinate domain operations
 rather than restating them. Business logic does not move into generic utilities
 for convenience.
 
-Node 26, Hono and Kysely own the native service, workers and schema tooling.
-Compose names the native API `api-service` on port 8100; its `migrate` service
-runs the same image's one-shot migration/bootstrap. Seed/login tools run natively
-from the local checkout. Commercial operators are packaged into that image. Bounded
-provider provisioning, acquisition control, agreement references and interactive
-account administration run in the native API package/image. Browser calls stay same-origin
-`/api/v1`. Native startup refuses an unset or unknown `APP_ENV`: only
+Operators (commercial, provider provisioning, acquisition control, agreement
+references and account administration) are packaged into the API image; seed and
+login tools stay git-ignored under `frontend/services/api/local/`
+([Development](DEVELOPMENT.md)). Native startup refuses an unset or unknown `APP_ENV`: only
 `development`, `test` and `production` start, and nothing falls back to
 development. Outside development and test it enforces the shared production
 secret, database, proxy, demo and redirect-origin admission policy; the secret
@@ -120,23 +108,16 @@ event) or stays with the lane: the audit parent-first lock, parks and the per-cl
 lease owner (`src/queue/audit-queue.ts`: each claim leases to
 `<worker owner>:<nonce>`, because audit claims and uncertain reclaims charge no
 attempt to fence on; it also leases due audit schedules), the Agent
-turn start and Site Health's crawl lock. The owner also holds the lane logs
-(`src/queue/lane-log.ts`): every lane's failed attempt writes one
-`lane_task_failed` record, never the error message, and a refused heartbeat or a fence
-that finds the lease gone writes `lane_lease_lost` unless the row was cancelled
-or settled. An unpinned claim compares
+turn start and Site Health's crawl lock. A failed attempt's lane log never
+carries the error message. An unpinned claim compares
 `available_at` with the later of the application clock (producers) and the
 database clock (recovery), so clock skew never strands a due row. A claim ranks only the
 `claim_candidate_limit` oldest due rows plus as many highest-priority ones
 (`config/queue.json`), so its cost does not grow with the backlog and a deep
-low-priority backlog never hides newer high-priority work. Analytics retries back off exponentially from
-`retry_delay_seconds` up to `retry_max_delay_seconds`, jittered into the upper
-half of each wait.
+low-priority backlog never hides newer high-priority work.
 
-The periodic owners are MCP and usage-window cleanup, audit maintenance, Search
-Intelligence reconciliation, due audit schedules, integration dispatch/revocation,
-crawl-log maintenance and billing recovery; each runs once and logs its
-duration. Locally `tick.ts` runs them, then uses the remaining budget for that
+The periodic owners (listed in `workers/runner.ts`) each run once per tick and
+log their duration. Locally `tick.ts` runs them, then uses the remaining budget for that
 same drain. On Cloud Run, Cloud Scheduler calls the API's `/internal/tick`
 (`workers/scheduled-tick.ts`, admitted by Google ID token), which runs them
 under a short budget and starts the runner job only when a lane has work due.
@@ -199,14 +180,10 @@ identity for rate limits. Cloud Run uses a TCP startup probe;
 authenticated HTTP probes must send the origin and public-host headers. Runtime commands and environment settings are owned by
 [Development](DEVELOPMENT.md#scale-to-zero-runtime).
 
-1. Claim bounded work with `FOR UPDATE SKIP LOCKED`.
-2. Persist the lease and commit before network I/O.
-3. Heartbeat long work and recover expired leases.
-4. Write terminal state and derived rows atomically.
-5. Make cancellation, retries, and reconciliation idempotent.
-6. Never hold database transactions open across provider calls.
-
-The combined cross-domain lock order is owned by
+Queue work claims with `FOR UPDATE SKIP LOCKED`, commits the lease before
+network I/O and never holds a transaction across a provider call; terminal state
+and derived rows are written atomically, and cancellation, retries and
+reconciliation are idempotent. The combined cross-domain lock order is owned by
 [architecture](architecture.md#combined-transaction-lock-dag). Domain-specific
 lease, cancellation, retry and terminalization details belong to the affected
 feature owner. PostgreSQL concurrency needs its real boundary; an in-memory
@@ -214,16 +191,10 @@ mock cannot establish lock safety.
 
 ## API and persistence rules
 
-Every project query is workspace-authorized and product IDs are UUIDs.
-[Workspace access](workspace-access.md) owns the role and membership model.
-Reads project existing state without provider I/O, acquisition or repair.
-Raw evidence and provider attempts are append-only; derived rows retain direct
-source IDs and relevant versions. Native policy lives under
-`frontend/services/api/src/config/` and the owning service config modules.
-Opportunity reads preserve frozen format identifiers, including identifiers
-retired from the current catalog. Native entitlement resolution, operator
-grants and account-capacity locks are the sole business authority.
-Do not introduce Redis without measured need.
+[Workspace access](workspace-access.md) owns the role and membership model;
+[invariants](invariants.md) owns the rest (read-only reads, append-only
+evidence, no Redis). Opportunity reads preserve frozen format identifiers,
+including identifiers retired from the current catalog.
 
 The audit and Site Health event streams (Server-Sent Events) share one tail,
 [`http/event-stream.ts`](../frontend/services/api/src/http/event-stream.ts):
@@ -249,9 +220,6 @@ Backend schemas own the wire contract. Coordinate frontend schemas and API
 clients when a DTO changes. [API errors](api-error-contract.md) owns coded
 cross-stack error shapes; domain errors are translated at the HTTP boundary,
 not leaked as provider bodies or secret-bearing diagnostics.
-[Invariants](invariants.md) owns correctness, provenance and the forward-only
-migration policy. Setup and validation commands live in
-[Development](DEVELOPMENT.md).
 
 ## Observability
 

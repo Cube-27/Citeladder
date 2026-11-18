@@ -39,9 +39,7 @@ The body has the single key `error`; there is no top-level `detail`. Clients rea
 |---|---|
 | `code` | Stable and machine-readable. Clients branch on this, never on `message`. |
 | `message` | A human sentence. **Never** a raw JSON blob, stack trace, or bare token. |
-| `request_id` | The correlation id; also echoed in the `X-Request-ID` response header. |
 | `retryable` | Explicit per-error value when set, else classified from the status code. |
-| `details` | Present only when a code defines extras (e.g. `limit`). |
 
 ## 2. Backend production
 
@@ -50,16 +48,7 @@ unknown paths and uncaught exceptions into the same envelope. Method guards
 produce coded 405 responses. Request validation projects safe issue paths,
 messages and codes without echoing the input payload.
 
-Routes throw `ApiError` or the shared `notFound(resource)` helper:
-
-```typescript
-throw new ApiError(403, 'You already own a workspace', {
-  code: 'workspace_limit_exceeded',
-  details: { limit: 1 },
-});
-```
-
-A 409 refusal uses `conflict(code, message)`: the machine reason is the
+Routes throw `ApiError` or the shared `notFound(resource)` helper. A 409 refusal uses `conflict(code, message)`: the machine reason is the
 `code`, never the `message`. Billing refusals go through `refuse(reason)` in
 `billing/refusals.ts`, which pairs each reason code with its sentence, so a
 checkout refusal such as `billing_gstin_state_mismatch` reaches the buyer as
@@ -78,8 +67,6 @@ Never return stack traces, SQL, credentials or raw provider bodies.
 (`error.message` / `error.code` / `error.retryable` / `error.request_id`) and otherwise
 falls back to the response status text.
 
-**A raw JSON blob is never surfaced as a message** in any case.
-
 ### Transport guarantees
 
 - **Bounded timeout** per attempt (`getApiRequestTimeoutMs`, default 30s, override with
@@ -91,11 +78,10 @@ falls back to the response status text.
 
 ### Displaying a failure
 
-`MutationNotice` (`components/ui/mutation-notice.tsx` + `lib/api/mutation-notice.ts`) is
-the shared mutation-failure surface; with `ReadError` (`components/ui/read-error.tsx`) for a
-failed read, it is the only way a failure renders. A domain that words its own refusals
-(the Agent's `agentWriteFailure`) builds the same notice and swaps only the message; no
-screen renders a bare error Callout. Billing shows the server's sentence; it words only
+`Notice` (`components/ui/notice.tsx`, `kind="mutation"` or `kind="read"`, with
+`lib/api/mutation-notice.ts`) is the only way a failure renders. A domain that
+words its own refusals (the Agent's `agentWriteFailure`) builds the same notice
+and swaps only the message. Billing shows the server's sentence; it words only
 the reason codes its reads carry (`unavailable_reason`).
 
 - **4xx** — show the server's reason **verbatim**. It is actionable and user-caused; a
@@ -125,24 +111,13 @@ API/protocol ingress.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
 4. Cover it in the relevant API test under `frontend/services/api/test/`.
-Workspace creation additionally uses `workspace_limit_exceeded` with a safe
-`limit` detail when the account has reached the configured tenant-root cap.
-Site Health admission and page reruns return 403 `entitlement_unresolved`
-with `retryable: false` when persisted grants are corrupt or cannot be folded.
-The [public API](public-api.md) returns 401 `invalid_api_key` (with
-`WWW-Authenticate: Bearer`) for a missing, unknown, revoked or expired key;
-403 `api_access_not_in_plan` when the plan lacks API access; 409
-`api_key_limit_reached` (details `allowance`, `current`) at the key allowance;
-409 `idempotency_conflict` for a reused Idempotency-Key with another body or
-while its first request runs (retryable); 409 `idempotency_outcome_unknown`
-(not retryable) when the key's first request failed after it may have written,
-or is still unfinished past the configured age; and 409 `estimate_exceeds_limit`
-(details `maximum_attempt_count`, `max_attempts`) for a refused launch.
-Visibility selection reads return 404 `visibility_not_measured` when nothing
-is measured for the selection yet (no completed run, or a period with no
-measurement) and 404 `visibility_metrics_pending` when the run exists but its
-metrics are not written yet; a named run or project that does not exist stays
-`not_found`.
+
+Codes with cross-feature meaning: `entitlement_unresolved` (403,
+`retryable: false`) when persisted grants are corrupt or cannot be folded;
+`visibility_not_measured` (404) when nothing is measured for a selection yet,
+and `visibility_metrics_pending` (404) when the run exists but its metrics are
+not written; a named run or project that does not exist stays `not_found`.
+The public API's key and idempotency codes are in [public API](public-api.md).
 
 ## 6. Browser error reports
 
@@ -172,32 +147,20 @@ scheme, or what follows is a `key=value` query. A stack frame keeps its
 `:line:column`. Cloud Logging collects the record; nothing is stored in
 PostgreSQL and nothing is sent to a third party.
 
-A `slow_interaction` report is the page load's slowest interaction (Interaction
-to Next Paint) at or over `SLOW_INTERACTION_MS`, from the
-`INTERACTION_REPORT_SAMPLE_RATE` share of page loads that watch for one
-(`lib/interaction-timing.ts`): the event, the element's tag name, the phase
-timings and, where the browser has long animation frame timing, the longest
-scripts in the frames it spanned, without query strings. It is logged as an
-`info` `client.slow_interaction` record.
-
-`POST /api/v1/client-errors/csp-reports` takes the Reporting API's
-`application/reports+json` deliveries for the product's content security
-policies (any other type is 415), at most `CSP_REPORT_BATCH_LIMIT` reports and
-`max_csp_body_bytes`, and `csp_report_client_limit` per
-`csp_report_window_seconds` per client. The browser sends them without the
-session, so no reporter is recorded. Each `csp-violation` becomes a `warning`
-`client.csp_violation` record with the directive, disposition, document,
-blocked and source URLs without query strings, and, of the sample, only a
-Trusted Types sink name; other report types are dropped.
+A `slow_interaction` report (the page load's slowest interaction at or over
+`SLOW_INTERACTION_MS`, sampled by `INTERACTION_REPORT_SAMPLE_RATE`) is logged as
+an `info` `client.slow_interaction` record. `POST
+/api/v1/client-errors/csp-reports` takes the Reporting API's
+`application/reports+json` deliveries without the session (so no reporter is
+recorded); each `csp-violation` becomes a `warning` `client.csp_violation`
+record without query strings, and other report types are dropped.
 
 `frontend/lib/client-errors.ts` sends the reports: fire-and-forget with
 `keepalive` and `priority: 'low'`, one report per error per page load, and at most
 `CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. It
 reads the release at report time from the `<meta name="citeladder-release">`
 the app build writes into `index.html`, so no hashed script chunk changes with
-the commit. The project context hands it the active workspace. The callers are
-`LazyIsland`, `ScreenError` and `RouteError`, and the window `error` and
-`unhandledrejection` listeners the app installs once at start. Every
+the commit. Every
 `LazyIsland` shows its quiet fallback for a chunk that cannot load, and its
 caller chooses what any other error does: `defects="surface"` (charts,
 execution evidence) hands it to the screen's boundary, and `defects="contain"`

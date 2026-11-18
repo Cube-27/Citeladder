@@ -72,10 +72,6 @@ selectable.
 
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
-The library's Topic filter ends with "Add topic", whose dialog adds a topic or
-a subtopic under a chosen top-level topic, and "Manage topics…", whose dialog
-lists every topic with its count and renames (Enter saves, a failed save keeps
-the typed name) or deletes it.
 
 The [business map](../frontend/services/api/src/projects/business-map.ts), edited only in
 the Prompt Builder (Agent → Context shows it read-only with a link there), and
@@ -111,12 +107,9 @@ saved offerings into the buyer-facing categories they fall into, never
 product-line or model names: one bounded model call (`topic_calls`, reserved
 from the agent-call bucket and made outside any transaction) proposes
 categories, and deterministic code keeps only those naming a saved offering
-and sharing a word with its offerings or category vocabulary. It strips
-parenthetical qualifiers, specifications (any word with a digit), the brand, its
-aliases and product-line names (capitalised runs in the offerings that are not
-category vocabulary), caps names at `topic_name_max_words`, and merges
-proposals or drops repeats of existing topics at `topic_merge_jaccard` token
-overlap. An offering no kept category covers is proposed from its own cleaned
+and sharing a word with its offerings or category vocabulary; it strips
+specifications, the brand and product-line names, caps and merges names by
+config. An offering no kept category covers is proposed from its own cleaned
 name; a model failure or deadline falls back to the offerings alone. Topics are
 inserted under the project lock only while the project still has none, at most
 `topic_max`; the rest are reported as overflow, and the source,
@@ -143,9 +136,6 @@ Topic distinctness uses singular-normalized token identity, not character
 similarity: men's and women's departments must not merge because their spellings
 are close. The provider-restatement rule rejects a name only when every token
 is provider vocabulary; containment would incorrectly reject School Uniforms.
-An offer matching the business category stays eligible alongside other offers;
-provider-only labels are rejected. Configuration and native onboarding topic admission
-own these decisions, not a copied vocabulary list in documentation.
 
 The [universe planner](../frontend/services/api/src/prompts/generation-plan.ts)
 plans `count × GENERATION_OVERGENERATE_FACTOR` cells over the selected topics.
@@ -195,8 +185,7 @@ fails before provider I/O. `run_context` (at most `run_context_max_chars`) is a
 note for this run only, sent as reference data and never a business fact.
 `seed_source` (`search_console`, `search_intelligence` or `none`) and optional
 `seed_query_ids` restrict which persisted searches ground slots; omitted, every
-source grounds. They are part of the idempotency request and frozen in run provenance (`run_context`,
-`requested_distribution`, `cohort_quotas`, `seed_source`, `seed_query_ids`).
+source grounds. They are part of the idempotency request and frozen in run provenance.
 
 Draft batches receive a narrow brief (category, category terms, offerings,
 business model, buyer type, market scope, language and country, with their
@@ -271,17 +260,12 @@ shortfall is reported, never filled. Run provenance records `distribution`
 (counts by cohort, stage, intent, offering and persona, and located and bare
 drafts, bare meaning no facet besides offering and market) for
 admitted and selected drafts, measured by
-[generation metrics](../frontend/services/api/src/prompts/generation-metrics.ts);
-the same module scores fixture and live calibration sets against
-`eval_thresholds` in `config/prompt-generation.ts` (mean words within 6–12,
-openings compared by first word, stage coverage over the planned stages). `pnpm prompts:eval --live`
-is the operator-only live calibration over the business-context fixtures; it
-calls the configured provider and never runs in CI. `candidates_generated` counts what passed
+[generation metrics](../frontend/services/api/src/prompts/generation-metrics.ts),
+which also scores calibration sets (`pnpm prompts:eval --live` is the
+operator-only live run, never in CI). `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
 first admission rule it broke (`admission_drops`, also frozen in run
 provenance), and the Prompt Builder and agent handoff show that breakdown.
-Run provenance also records each dropped row's slot, normalized text hash,
-batch/index and admission phase alongside the generator and buyer-query policy versions.
 Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
 `evidence_refs`, plus one `{kind: 'observed_query', source, id,
 classifier_version, override_id}` per grounding search of its slot (the
@@ -299,7 +283,7 @@ beside the threshold metrics.
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
 through the [JEV connector](../frontend/services/api/src/models/jev.ts) when
 `JEV_API_KEY` is set (blank is off;
-[decision](decisions.md#typesafe-is-a-published-subprocessor-production-runs-jev)).
+[decision](decisions.md#billing-and-metering)).
 It judges the admitted draft pool within the configured call cap, one call per
 draft: yes/no fit, buyer relevance, decision value, naturalness, standalone,
 sensibility and one need (`single_need`: no two settings, audiences or
@@ -327,30 +311,24 @@ judged intent is one of `core_advice_intents` (learn, implement), flagged
 `advice_intent` whatever the drafter labelled it. **Uncertain**: an answer
 below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a
 missing answer (`incomplete`); the row is shown flagged. **Pass**: everything
-else. `names_a_business` uses its own provisional thresholds
-(`JEV_ANSWERABLE_FAIL_BELOW`, `JEV_ANSWERABLE_FLAG_BELOW`), recorded with the
-decision's thresholds. With `JEV_MODE=gate` (the default) a failed candidate never reaches
+else. With `JEV_MODE=gate` (the default) a failed candidate never reaches
 review: it is stored only as a text-free `gate_rejected` outcome record and
 counted in `quality_rejected`. Selection can use other surviving drafts from
 the same pool; any remaining shortfall is reported without a rewrite loop.
 `JEV_MODE=shadow` records and flags without removing anything. The thresholds
 (policy `jev-gate-1`) are provisional until calibrated from review outcomes
 with `frontend/services/api/src/prompts/calibration.ts`, an aggregate, text-free operator report; a
-threshold change bumps `JEV_POLICY_VERSION`. A JEV failure never removes
+threshold change bumps `policy_version` in `config/jev.ts`. A JEV failure never removes
 the candidate it failed on: it reports `quality_gate="unavailable"`, that
 unjudged candidate stays reviewable, candidates judged in the same request are
 still gated, and generation still succeeds. A duplicate choice that was not
 offered, or an answer outside [0, 1], counts as unavailable (`incomplete`). JEV calls are bounded by
 `JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket. Exhausting that cap
 reports partial unavailability; unjudged rows never claim to be checked.
-Commercial relevance and distinct needs remain human review criteria. Length
-is a 16-word admission cap with a 6–12 word calibration target; there are no
-opening quotas or automatic rewrite loops. Batching, bounded technical retries
-and partial-result behavior remain.
+Length is a 16-word admission cap with a 6–12 word calibration target; there
+are no opening quotas or automatic rewrite loops.
 
-Prompt generation retains its requested-count, topic, cohort and
-batching semantics. Saving/activation retains explicit user-action
-boundaries. Generation evidence freezes buyer-query policy, generator, slot,
+Generation evidence freezes buyer-query policy, generator, slot,
 context/source and actual provider/model provenance; historical prompts are not
 rewritten by a newer generator.
 
@@ -369,10 +347,6 @@ prompt text or a proposal of its own:
   `generate_prompts` with the agreed distribution and seeds. Candidates stay
   staged; the result links to `/prompts/build?step=review`, where only a
   person's Track activates them.
-
-Review intent survives loading; failed reads offer retry, and an empty or
-expired batch is explained rather than opening generation setup. Prompt-set
-creation waits for its list read and serializes local attempts per project.
 
 The Prompt Builder is the page `/prompts/build`: four steps down the left (the
 current one in the address as `?step=`, done ones reopenable), a fixed footer.
@@ -400,22 +374,11 @@ Generate pending, so it is never paid for twice.
    what this session drafted. "Generate more" on a short or empty line reuses
    the request narrowed to that topic's `topic_ids` or that segment's share.
 
-Each review row distinguishes judged
-(checked or flagged), checking off, unchecked and unavailable states, including
-after reopening; its quality description is associated with its checkbox. The library
-prioritizes question text, topic, measurement and enabled state; classification
-is secondary detail on the question, available on keyboard focus and to screen readers.
-
 `/prompts` opens directly on the prompt library: every prompt of every prompt
 set in the project, with adds going to the main brand set
-([decision](decisions.md#one-prompt-library-across-every-prompt-set)); a row
-names its set when the project has more than one.
-Active/Archived, search and
-All filters (Topic first, then intent, stage, persona, brands, sources, enabled,
-branded) sit in one
-control row over the full-width
-table with each prompt's topic tag, latest measured visibility and owned
-citation rate. Those figures come from `GET /visibility/prompts?latest=prompt`
+([decision](decisions.md#prompts-and-visibility)); a row
+names its set when the project has more than one. The table shows each prompt's
+latest measured visibility and owned citation rate. Those figures come from `GET /visibility/prompts?latest=prompt`
 ([per-prompt latest](../frontend/services/api/src/visibility/prompt-latest.ts)):
 each prompt's own latest scored brand run in the default market, so a run of
 other prompts never hides an earlier result. The library shows every cohort a
@@ -425,22 +388,16 @@ prompt's latest measurement with the run that measured that same prompt before
 it: a first measurement reads Not applicable, and a pair whose frozen
 comparison key, text, versions or answers do not allow it reads Unknown, never
 zero. Commerce runs write no per-prompt scores, so a Commerce prompt has no
-figures here. Source: owner, 15 November 2026, choosing "Show every group" and
-Change "Vs its previous measurement". The same read carries every brand named
+figures here. The same read carries every brand named
 and every domain cited in that measurement's answers, from the persisted
 mentions and citations: the Sources column and the Brands and Sources filters
-(owner, 17 November 2026) read only them, so a prompt no run measured matches
+read only them, so a prompt no run measured matches
 neither filter, and one with no completed answer shows its sources as unknown,
-not none. A prompt's question opens its detail view (below). Its actions are
-Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
-shared launch dialog and its admission/funding checks and stays disabled until
-the project has an active prompt. Prompt Builder and the empty states open
-`/prompts/build`; waiting suggestions link to its review step.
+not none. **Launch run** reuses the shared launch dialog and its
+admission/funding checks and stays disabled until the project has an active prompt.
 
-People control generation end to end in the Prompt Builder: topics, search
-queries and their source, distribution (branded share, competitor-alternative
-share, intent mix) and context (personas, services), per owner decision D of
-1 November 2026 in the [decision log](decisions.md). Outside the builder, a
+Users control generation end to end in the Prompt Builder
+([decision](decisions.md#prompts-and-visibility)). Outside the builder, a
 manual or imported prompt asks only for its text and topic: theme,
 intent and cohort are never required, never a user-facing validation
 error, and defaulted in code when absent. The prompt table shows branding,
@@ -453,13 +410,9 @@ naming the brand files it as `brand_diagnostic`, or `comparison` when it also
 names a competitor; otherwise `core`. Tags are not part of the audit
 prompt-panel hash, so correcting one keeps the comparison series.
 
-CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
-`question`) in any order; a file without a recognized header is a list of
-prompts. Optional `theme`, `intent`, `buyer_stage`, `persona` (alias
-`audience`), `cohort` and `enabled` columns are clipped
-or defaulted rather than rejected; the upload's column, row and cell-size bounds
-still reject a file before parsing, and the browser rejects a file over the row
-limit before it previews as ready (`import_max_rows` in `config/prompt-library.json`). The
+CSV import clips or defaults optional columns rather than rejecting them; the
+upload's column, row and cell-size bounds still reject a file before parsing
+(`import_max_rows` in `config/prompt-library.json`). The
 [browser parser](../frontend/lib/prompts/csv.ts) is the one CSV reader: it
 previews and posts parsed rows (the endpoint accepts only rows), and the
 dialog's sample file is generated from its column contract. Under the project
@@ -467,8 +420,7 @@ lock, [import](../frontend/services/api/src/prompts/prompts.ts) matches topic
 names case-insensitively, creates unknown names as manual topics only for rows
 that insert, and imports a blank topic unassigned. A binding or capacity failure
 rejects the whole import; duplicate rows are skipped while the rest import.
-Deleting a prompt or a topic asks for confirmation that states the effect; a
-topic delete unassigns its prompts and promotes its subtopics.
+A topic delete unassigns its prompts and promotes its subtopics.
 
 Manual create, text edits, activation, moving an active prompt to another topic
 and import pass
@@ -482,21 +434,10 @@ same rule to drafted and proposed text.
 
 ## Audit admission and execution
 
-[Audit config](../frontend/services/api/src/config/audits.ts) (values in
-`config/audits.json`) owns lifecycle, retry and attempt limits, scoring and read
-policy; [provider config](../frontend/services/api/src/config/providers.ts)
-owns transport/capacity policy and [cost config](../frontend/services/api/src/config/costs.json)
-owns versioned pricing and measured envelopes.
-Provider error bodies do not become public failure details.
-
-The [audit API](../frontend/services/api/src/routes/audits.ts),
-[creation owner](../frontend/services/api/src/audits/creation.ts) and
-[schedule-management owner](../frontend/services/api/src/audits/schedules.ts)
-persist explicit measurement requests. The TypeScript API owns the complete
-project audit-schedules route family; the TypeScript scheduler invokes the shared
-audit admission path when a stored schedule becomes due. Users select logical
-engines and repetitions, not transport
-measurement modes. Every brand/Commerce/manual/scheduled/repaired audit uses
+Provider error bodies do not become public failure details. A stored schedule
+that becomes due enters the same admission path as a manual launch
+([creation owner](../frontend/services/api/src/audits/creation.ts)). Users
+select logical engines and repetitions, not transport measurement modes. Every brand/Commerce/manual/scheduled/repaired audit uses
 the approved citation-capable policy.
 
 Manual launches and failure reruns start a separate, workspace-authorized
@@ -585,11 +526,8 @@ A DataForSEO refusal of the account itself (paused, unfunded or unsubscribed:
 fail with the same code before any provider call, other engines in the run
 continue, and the connection resumes on its own once the pause ends.
 
-Manual launch offers six independent engines: ChatGPT Search (`chatgpt_search`),
-Gemini (`gemini_consumer`), Google AI Overview, ChatGPT API, Gemini API, and
-Claude API. Connected consumer surfaces are selected once when the dialog opens;
-refetches preserve deliberate deselection. Saved schedules retain their engine IDs.
-One customer DataForSEO credential serves all three consumer surfaces. New and
+Manual launch offers six independent engines (`config/providers.json`); saved
+schedules retain their engine IDs. One customer DataForSEO credential serves all three consumer surfaces. New and
 updated connections receive the routes together. Existing connections can be
 provisioned explicitly with the credential-admin-only
 `POST /api/v1/provider-connections/{id}/provision-dataforseo-routes`; it adds missing
@@ -624,7 +562,7 @@ Anthropic reads its `web_search_result` blocks; the DataForSEO ChatGPT and
 Gemini scrapers read `search_results` (ads skipped). Gemini API grounding and
 AI Overview expose no retrieval and stay not available, never zero. Provider
 brand entities remain raw supplementary evidence, and nothing records
-query-to-source associations. Query Fanouts uses
+query-to-source associations. Query fanouts use
 only returned query text, distinguishing unavailable evidence from an explicitly
 empty query list. Neither state claims that no search occurred. Each exact
 query's count and the tracked brands it names are a per-run fact finalization
@@ -762,11 +700,8 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   recommended rate comes from the deterministic first-mention
   assessment (English phrasing only). Trend points carry their versions; a
   version or frozen-model change marks the point not comparable.
-- **Reads.** `GET /visibility/perception` (summary for a run, a run set or the
-  latest run) and `/visibility/perception/quotes` (keyset-paged), the
-  `perception` field of execution evidence, and the `read_perception` tool.
-  Reads never classify. `pnpm perception:eval --live` is the operator-only
-  calibration over hand-labelled fixtures.
+- **Reads.** `GET /visibility/perception` and `/visibility/perception/quotes`,
+  the `perception` field of execution evidence, and the `read_perception` tool.
 
 ### Fact-checking (pilot)
 
@@ -816,8 +751,6 @@ platform-funded like perception. The policy, topics, caps and templates are the
   fact groups verdicts on the fact revision the run froze, so editing a fact
   never moves past claims; a frozen fact no verdict cites is "pending" while
   claims are still being checked, then "not raised".
-  `pnpm facts:eval --live` is the operator-only calibration; the pilot's
-  false-contradiction rate is reviewed with the owner before general release.
 
 ## Ads in AI answers
 
@@ -837,8 +770,7 @@ or scoring, and no other engine reads as zero ads.
   raw and canonical landing URLs and the image URL (stored, never served).
   Ownership is owned, competitor (with the competitor id frozen at admission)
   or other, by the advertiser domain against the frozen owned and competitor
-  domains. Ads apply from the first audit after this shipped; there is no
-  backfill.
+  domains.
 - **Applicability.** Per answer: `applicable` when the marker is set, so zero
   ads is an observation; `unavailable` for a `chatgpt_search` answer without
   it; `not_applicable` for every other engine.
@@ -850,24 +782,23 @@ or scoring, and no other engine reads as zero ads.
   advertiser domain, title, snippet and canonical landing URL. Per prompt,
   answers where a competitor advertised are split by whether the brand was
   mentioned organically; these are counts, never a cause.
-- **Reads.** `GET /visibility/ads` (the latest run, a run or a run set; engine
-  and cohort filters; creatives keyset-paged up to 50), the `ads` field of
-  execution evidence and the `read_ai_ads` tool. Reads never parse. CSV
-  exports do not include ads.
+- **Reads.** `GET /visibility/ads`, the `ads` field of execution evidence and
+  the `read_ai_ads` tool. CSV exports do not include ads.
 
 ## Read and UI surface
 
-Visibility has Sources, Ads and Query Fanout; Sources is default. The trend, key
-figures and engine comparison live on Brand → Insights, the brand ranking with
-competitor suggestions on Brand → Competitors, and perception on Brand →
-Perception (AV-14, AV-16); all read the same selection and filters. Trends
+The trend, key figures and engine comparison live on Brand → Insights, the
+brand ranking with competitor suggestions on Brand → Competitors, perception on
+Brand → Perception, and cited sources on Sources
+(`frontend/lib/navigation/app-routes.ts` names every screen); all read the same
+selection and filters. Trends
 read the newest `trend_max_runs` runs in the window, bucket them and then cap the
 number of points (`trend_max_points`), so a run-heavy week stays one point. When
 the run bound cuts history, the bucket holding the cut is dropped whole rather
 than folded from part of its runs. A range selection pools
 counts, average position and model provenance across its runs and omits citation
 totals. Overview reads one run's persisted projection without a baseline
-comparison, from completed and partially completed runs, like the Visibility page.
+comparison, from completed and partially completed runs, like the Sources page.
 
 A run's comparable baseline follows one rule, the comparison walk
 (`visibility/comparison.ts`): the nearest earlier run in the same market whose
@@ -886,10 +817,6 @@ status is `comparable` and otherwise reports the status
 (`measurement.comparison_status`). A finalized run with no persisted row reads
 `baseline_pending`, distinct from `no_baseline`.
 
-A coverage strip under the headline tiles states the answers and engines behind
-the numbers, failed and not-run counts, the comparison baseline and, when a
-change is missing, why. Each failed execution shows a plain reason and next step
-for its error code, and a provider wait names the engine.
 Typed URL state retains run/period, engine, cohort, baseline, history, metric and
 evidence filters. The server resolves Latest to a concrete run or compatible
 run set, reused by dependent requests. An invalid explicit run never falls back
@@ -903,9 +830,7 @@ voice and net sentiment with the change since that market's previous comparable
 run; a market never measured is not run, never zero. The Overview, its
 comparisons and Action outcome checks follow the default market.
 
-Sources has Domains and URLs, each led by a searchable, sortable, exportable
-table with a usage series and a citation-type ring below it; a domain opens its URLs and the
-prompts that reached it, and a URL opens its own page. Fanout state and trimmed
+Fanout state and trimmed
 queries settle on each response analysis, retaining its artifact/task provenance
 and fanout projection version. Source/fanout totals are server aggregates over
 the full selection; source, fanout and answer keyset cursors bind filters and the
@@ -924,17 +849,11 @@ Series, movers, near misses and one URL's page still read `citations`.
 
 Citation rate is citations over the responses a source was RETRIEVED in, never
 over the responses in the selection, and never over a stored retrieval counter.
-A Retrieved column (read in, as a share of the answers whose engine exposes
-retrieval; `retrieval.unavailable_engines` names the others) sits beside Cited
-in; with no observed answer it reads not available. The URLs "Your pages read
-but not cited" filter (`/visibility/sources/near-misses`) lists owned pages engines read but
-did not cite. Top movers (`/visibility/sources/movers`, shown without a domain
-drill-down) rank domains or URLs by citation-share change in percentage points
-against the dashboard baseline, split into risers and fallers; without a
-comparable baseline it reports the comparison status instead.
-The cohort switch offers Unbranded prompts (`core`), Branded prompts
-(`comparison`) and All prompts (`all`, both together, computed at finalization
-like the others).
+Retrieved is the share of answers whose engine exposes retrieval
+(`retrieval.unavailable_engines` names the others); with no observed answer it
+reads not available. Top movers rank by citation-share change against the
+dashboard baseline and report the comparison status when none is comparable.
+The cohort switch's `all` is computed at finalization like the other cohorts.
 A URL's brand list is co-occurrence in the answers that cited it: mentions are
 persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions stay
@@ -942,9 +861,6 @@ on Competitors until accepted rather than becoming measurement evidence automati
 A suggestion is a repeatedly cited domain or an untracked name the perception call
 labelled (AV-11), suggested past the `observed_competitors.named` thresholds in
 `config/audits.json`; a rejected domain or name is never suggested again.
-
-Evidence-backed Opportunity sorting and a Trends summary are not planned
-([decision BL10](decisions.md#backlog-closure)).
 
 ### One prompt over time
 
@@ -963,18 +879,13 @@ prompt (prompt-targeted and earned), with each declaration's id and go-live
 time (the newest `trend_max_points` kept); `latest` is the
 newest such run's prompt row with per-engine outcomes: one per engine and
 model the run asked, so an engine whose every answer failed is listed with its
-failed count and no answer states. Prompt rows carry
-`answer_states` (mentioned and cited, mentioned only, cited only, neither; one
-answer counted once) and `action_id`, the live Action that targets the prompt
-(an Action whose evidence was cleared is not offered).
+failed count and no answer states. Each answer counts once in one of four
+`answer_states`; `action_id` is the live Action that targets the prompt (an
+Action whose evidence was cleared is not offered).
 
 `/prompts/{prompt_id}` charts mention and owned citation rates per run, breaks
 the line at non-comparable runs, and marks each implementation, with the list
 of that work and the notice that a marker shows when work went live, not that
-it moved a rate. Its Mentions and citations card shows the latest run's answer
-states overall and per engine (with each engine's failed answers), answer coverage, the competitors named where the
-brand was not, and the hand-off to the prompt's Action. Overview's "Where
-you're missing" lists the latest default-market run's prompts and engines whose
-answers named a competitor but not the brand, each linking to its Action (or
-its prompt when none exists yet). An Action's prompt checks and an earned
-brief's cited prompts link to the prompt's view.
+it moved a rate. Overview's "Where you're missing" lists the latest
+default-market run's prompts and engines whose answers named a competitor but
+not the brand, each linking to its Action (or its prompt when none exists yet).

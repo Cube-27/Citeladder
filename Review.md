@@ -1,10 +1,11 @@
 # CiteLadder review checklist
 
-This is the review checklist for humans and for an author's check of their own
-diff. It points at the rule owners
-rather than restating them: [CLAUDE.md](CLAUDE.md#non-negotiable-guardrails)
-summarizes the guardrails, [invariants](docs/invariants.md) own the binding
-constraints and [design](docs/design.md) owns visual and interaction rules.
+The checklist for a reviewer or an author's check of their own diff. It points at
+the rule owners rather than restating them: [invariants](docs/invariants.md) own
+the binding constraints, [design](docs/design.md) the visual and interaction
+rules, and [engineering guidelines](docs/engineering-guidelines.md) the repeated
+failure modes, each with a diff check. Walk the guideline checks that match the
+files in the diff.
 
 ## Before reviewing
 
@@ -18,26 +19,24 @@ constraints and [design](docs/design.md) owns visual and interaction rules.
 
 ## What to check
 
-- **Guardrails and invariants.** Walk the CLAUDE.md guardrails and the invariant
-  sections the diff can affect: workspace authorization, read-only reads,
-  immutable evidence and provenance, configuration ownership, distinct
-  unknown/zero states, same-origin browser APIs and explicit user intent.
+- **Invariants.** Walk the [invariant](docs/invariants.md) sections the diff can
+  affect, and the [guardrails](CLAUDE.md#guardrails).
 - **Boundaries.** Network URLs are scheme/host validated before credentialed
   requests. Secrets stay out of responses, logs, snapshots, browser storage and
-  fixtures. Third-party values are validated before coercion; apply the
+  fixtures. Apply the
   [input and extraction rules](docs/invariants.md#18-input-and-extraction-boundaries)
   when a parser, request schema, provider payload or settlement changes.
 - **Concurrency.** Integrity, idempotency, leases and lock ordering are verified
   at the real PostgreSQL boundary where they matter.
 - **Contracts.** Backend schemas remain the wire-contract source; a DTO change
-  updates the matching frontend schema, API module, query key, fixture and UI state.
+  updates the matching frontend schema, API module, query key, fixture and UI
+  state, and limits come from their owner
+  ([guidelines](docs/engineering-guidelines.md#take-limits-from-their-owner)).
 - **Frontend.** Semantic roles, labels, keyboard/focus behavior, truthful
   loading/error states and shared UI owners. No class, font or pixel snapshots
   acting as a second design system.
-- **Cutover.** When behavior is replaced or retired, apply the
-  [replacement gate](docs/invariants.md#replacement-and-retirement): callers
-  moved to one authority and superseded paths are gone. A retained bridge needs
-  its external caller, focused test and removal condition. A renamed file or new
+- **Cutover.** Apply the [replacement gate](docs/invariants.md#replacement-and-retirement):
+  callers moved to one authority and superseded paths gone. A renamed file or new
   implementation is not proof the old behavior is gone.
 
 ## Validation and tests

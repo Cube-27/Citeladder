@@ -12,14 +12,8 @@ uses Site Health and CSV. Reports, agents and reads never call these providers.
 crawler logs. This document retains GA4 referral data, projections, tasks and
 the `analytics/ai-referrals.ts` reader and its extended `read_ai_referrals` contract.
 
-Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
-owns sync settings, transports, dataset grains, traffic and referral catalogs
-and OAuth policy; the [analytics kind registry](../frontend/services/api/src/workers/analytics-kinds.ts)
-owns analytics task kinds. [Demand config](../frontend/services/api/src/config/demand.json)
-owns query/lexical policy and [Keyword Research config](../frontend/services/api/src/config/search-intelligence.json)
-owns acquisition and pricing. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds column defaults.
-Dataset arity and
-dimension separators derive from the native integration catalog.
+Dataset arity and dimension separators derive from the native integration
+catalog (`config/connected-data.ts`).
 
 ## Consent and mapping
 
@@ -45,7 +39,7 @@ and under the workspace lock before grant persistence; exchange holds no
 database transaction open.
 
 OAuth start accepts a same-origin `return_to` path. Only the configured app
-screens qualify (Performance, Search Demand, AI Traffic and Settings); the
+screens qualify (Performance, Keyword research, AI traffic and Settings); the
 validated path travels in the signed state, and the callback lands there with
 `connected=` or `error=`, otherwise on Settings → Integrations. A start that
 fails before consent redirects with the reason instead of returning JSON to a
@@ -357,7 +351,7 @@ for the resolved page's title, H1 and primary content, preserves meaningful shor
 terms such as `AI`, and remains unknown when page resolution or extracted
 content is unavailable. The relevance evidence and CTR gap must share the exact
 date, country and device scope; wording is correlational and never claims that
-missing terms caused the CTR result. The Search Demand evidence drawer renders
+missing terms caused the CTR result. The Demand tab's evidence drawer renders
 the three measured coverage values and missing title/H1 terms, or the explicit
 unavailable reason when the page could not be inspected.
 
@@ -365,28 +359,22 @@ The Opportunity refresh's
 [demand hits](../frontend/services/api/src/opportunities/refresh-hits.ts) alone
 map actionable signals to Opportunity rules; branded and ambiguous cohorts cannot become actionable hits.
 
-JourneyDefinition and reviewed conversion-journey mapping were proposed in older
-documentation but are not implemented persistence/API owners. Do not describe
-them as shipped, infer a conversion definition from GA4 events or interpret
-missing event configuration as zero. First-party generative-AI report ingestion
-is not implemented and is not planned ([decision BL10](decisions.md#backlog-closure)).
+Do not infer a conversion definition from GA4 events or interpret missing event
+configuration as zero. First-party generative-AI report ingestion
+is not implemented and is not planned ([backlog](plans/backlog.md#removed)).
 Building it would need a documented endpoint, supported authentication and an
 authorized successful response; never scrape an authenticated dashboard or
 substitute ordinary search traffic.
 
 ## Read and UI
 
-Manual Search Demand refresh accepts only a window already persisted in a
+Manual Demand refresh (Keyword research, Demand tab) accepts only a window already persisted in a
 Demand snapshot in the authorized project. One manual refresh may be pending
 per project, including leased and retry-wait work. A PostgreSQL workspace
 advisory lock spans validation, exact window/revision deduplication and enqueue
 in one transaction; duplicate retries consume no additional slot. Rejection
 returns structured 422 (unsaved window) or 429 with Retry-After (pending work).
-Sync/crawl projections remain automatic and bypass manual admission. Legacy
-queued Demand payloads without an origin marker conservatively hold a manual
-slot until terminal, without changing their execution or payload. Workspace
-rate and aggregate capacity budgets remain pending owner policy; these project
-controls do not close that capacity finding.
+Sync/crawl projections remain automatic and bypass manual admission.
 
 The [Performance API client](../frontend/lib/api/performance.ts) renders
 Search Console-aligned ranges. Day/Week/Month/Custom select a range; chart
@@ -399,25 +387,16 @@ action and show progress. A refused request or a failed or cancelled projection
 task shows the failure with Retry for that window, never "no imported data
 covers this range".
 
-With no imported source evidence, Performance keeps its scoped range controls
-and readiness path but does not reserve metric, chart, or dimension-table
-scaffolding. Persisted zero, partial-provider evidence, and an available
-selected window with a missing comparison remain measured states rather than
-the first-use empty state. Search Console headline totals control the metric
-strip and chart, while persisted Search Console dimension counts independently
-keep breakdown tables available. The Bing panel needs a persisted selected
-snapshot plus either a Bing connection (readiness `providers`) or persisted
-Bing query or page counts: a connected Bing that measured nothing shows its
-panel with zero rows, and a project without Bing never shows it.
+Persisted zero, partial-provider evidence, and an available selected window
+with a missing comparison are measured states, never the first-use empty state.
+Search Console headline totals control the metric strip and chart, while
+persisted dimension counts independently keep breakdown tables available. The
+Bing panel needs a persisted selected snapshot plus either a Bing connection or
+persisted Bing counts: a connected Bing that measured nothing shows its panel
+with zero rows, and a project without Bing never shows it.
 
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
-The browser resets cursor history when those inputs change.
-Search Demand shows each fact once; a filter chip whose detectors did not run
-in full shows their status, and the evidence drawer never shows internal IDs.
 [Data source setup](../frontend/components/integrations/data-source-setup.tsx)
 connects sources on the screens that need them; members see who to ask instead
 of consent controls, and Settings → Integrations remains the full management
-view. The AI Traffic Referrals tab keeps its range and granularity controls
-when the selected projection is empty, because another persisted range or
-granularity may still be available. Live provider acceptance is separate from
-the repository's tests.
+view. Live provider acceptance is separate from the repository's tests.

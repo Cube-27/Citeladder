@@ -19,26 +19,13 @@ live sign-off: see the
 [payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout).
 Enablement is then a configuration change, not code.
 
-Everything below marked "verified" is verified by LOCAL tests only. None of it
-is evidence that money can be taken correctly.
-
-## What the boundary guarantees today
-
-- Unknown or unconfigured providers fail closed before transport, without
-  fallback.
-- A new intent commits its provider/environment and frozen terms before network I/O.
-- Disabled checkout still permits stored-intent replay and
-  originating-environment recovery.
-- Foreign environments cannot cancel or settle a record.
-- Webhook authentication uses bounded exact bytes and vendor headers.
-- Duplicate events settle once; conflicting event digests quarantine.
-- Recurring paid evidence binds the captured payment to its subscription
-  invoice and period.
-- Uncertain creation is recovered without another create request.
-- Quote signing uses an independent secret with no gateway fallback.
-
-The owners are under `frontend/services/api/src/billing/`. Public pricing and
-billing reads consume persisted state without provider calls.
+Local tests are not evidence that money can be taken correctly. The boundary's
+guarantees (fail-closed providers, intent before network I/O, idempotent
+settlement, recovery without a second create) are in
+[billing and entitlements](billing-entitlements.md#explicit-purchase-to-settlement).
+Disabled checkout still permits stored-intent replay and
+originating-environment recovery; quote signing uses an independent secret with
+no gateway fallback.
 
 ## Configuration
 
@@ -59,8 +46,7 @@ lists where production sets each one. The traps:
   equals a Razorpay secret.
 - India prices need `BILLING_INDIA_GST_RATE` and
   `BILLING_INDIA_GST_APPROVAL_REFERENCE` together; there is no source default.
-  The rate is frozen with each India catalog price, and quotes use that
-  ([B45](billing-decisions.md)).
+  The rate is frozen with each India catalog price, and quotes use that.
 - Commercial terms (prices, grants, add-ons and top-ups) are never
   environment settings: they live in the published `BillingCatalogRevision`.
 

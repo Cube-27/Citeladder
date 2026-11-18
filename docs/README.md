@@ -1,33 +1,34 @@
 # CiteLadder documentation
 
-This is the single document-owner index. Current code and tests establish
-implemented behavior; accepted constraints remain binding when code disagrees.
-Historical records are evidence, not task authority.
+The single document-owner index. Current code and tests establish implemented
+behavior; accepted constraints remain binding when code disagrees. Git and PRs
+hold history; documents here are a working reference for agents, not a record.
 
-## Using the index
+Start with [CLAUDE.md](../CLAUDE.md) for agent workflow, then the feature owner
+below and only the shared contracts affected by the task. A code/document
+disagreement is a finding to resolve within the authorized scope, not permission
+to weaken a constraint.
 
-Start with [CLAUDE.md](../CLAUDE.md) for agent workflow. Select the
-feature owner below and only the shared contracts affected by the task.
-[Invariants](invariants.md) define constraints; owner documents explain the
-behavior and implementation boundaries. Code/document disagreement is a finding
-to resolve within the authorized scope, not permission to weaken a constraint.
-
-### Which document answers what
+## Which document answers what
 
 | Question | Read |
 |---|---|
 | How does a feature behave today? | Its owner under [Feature owners](#feature-owners) |
 | What must never break? | [Invariants](invariants.md), affected sections only |
-| Why was a cross-feature choice made? | [Decisions](decisions.md) |
+| Which mistakes keep coming back, and how do I check for them? | [Engineering guidelines](engineering-guidelines.md) |
+| What did the owner decide across features? | [Decisions](decisions.md) |
 | Any billing, pricing, credits or plan-gating decision | [Billing decision log](billing-decisions.md) (B-numbers) |
 | How billing, entitlements and usage accounting behave | [Billing and entitlements](billing-entitlements.md) |
-| Prices, allowances, add-ons and top-ups (the numbers) | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
-| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/costs.json`, `dataforseo.json`, `search-intelligence.json`; one `internal_costs` view reads every recorded cost |
+| Prices, allowances, add-ons and top-ups | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
+| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/costs.json`, `dataforseo.json`, `search-intelligence.json` |
 | Legal commitments, subprocessors, company details | [Legal decisions](operations/legal-decisions.md); page text in `frontend/lib/marketing-content/legal*.ts` |
-| What work is current, and what is queued | [Plan status](plans/ACTIVE.md), then the assigned plan; [backlog](plans/backlog.md) is queued, not assigned |
+| What work is current, and what is queued | [Plan status](plans/ACTIVE.md), then the assigned plan; the [backlog](plans/backlog.md) is queued, not assigned |
 | Setup, commands and validation | [Development](DEVELOPMENT.md) |
-| Deployment and operator procedures | [Operations](operations/) runbooks and the [billing operator guide](operations/billing-operator-guide.md) |
+| Deployment, billing and recovery procedures | [Operations](operations/) runbooks, [billing operator guide](operations/billing-operator-guide.md), [workers runbook](operations/WORKERS_RUNBOOK.md) |
+| Manual and external release gates | [Release acceptance](release-checklist.md) |
 | Product scope and positioning | [Product](../PRODUCT.md) |
+| Branch, PR and release participation | [Contributing](../CONTRIBUTING.md) |
+| Review checklist for a diff | [Review](../Review.md) |
 
 ## Feature owners
 
@@ -47,70 +48,29 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 | Hosted MCP tools, OAuth grants and confirmed changes | [MCP](mcp.md) |
 | API keys, the public REST API and the command layer | [Public API](public-api.md) |
 | Sessions, projects, memberships and roles | [Workspace access](workspace-access.md) |
+| Billing adapters versus accepted payment operation | [Billing provider readiness](billing-provider-readiness.md) |
 
 ## Shared contracts
 
-- [Agent workflow](../CLAUDE.md): rules for every task; situational workflow
-  rules are skills in `../.claude/skills/`.
-- [Contributing](../CONTRIBUTING.md): branch, PR and release participation.
-- [Product](../PRODUCT.md): users, purpose, positioning and non-goals.
-- [Architecture](architecture.md): cross-system ownership and evidence flow.
+- [Architecture](architecture.md): cross-system ownership, evidence flow, lock DAG.
 - [Backend](backend-architecture.md) and [frontend](frontend-architecture.md):
   shared layering, contracts, state and extension patterns.
 - [Design](design.md): the design system, its tokens and rules.
-- [Invariants](invariants.md): durable correctness and safety constraints.
 - [State machines](state-machines.md): every persisted lifecycle's states,
   where each invariant is enforced, and its transitions and known invalid states.
 - [API errors](api-error-contract.md): cross-stack error contract.
-- [Development](DEVELOPMENT.md): setup, isolation and validation commands.
-- [Review](../Review.md): review checklist for an author's own diff.
-
-## Work and decisions
-
-[Plan status](plans/ACTIVE.md) is the only current-work index.
-[Backlog](plans/backlog.md) holds the remaining work in two tiers, before launch
-and low priority (the build-now tier shipped on 11 November 2026). It is not an
-execution assignment.
-[Decisions](decisions.md) records accepted cross-feature choices and rationale.
-An indexed plan is not authorization to run it. Read a plan only for work
-assigned to that plan; completed plans retain evidence and limitations, not
-instructions to resume historical delivery checkpoints.
 
 ## Maintaining documentation
 
-[CLAUDE.md](../CLAUDE.md#documentation) owns what belongs in a document and
-when to change it. Index-specific rules:
+[CLAUDE.md](../CLAUDE.md#documentation) owns what belongs in a document.
+Index-specific rules:
 
 - Update this index only when document ownership or routing changes.
 - Update `plans/ACTIVE.md` only when plan selection, queue, blocker or
-  completion state changes, and `decisions.md` only for a qualifying
-  cross-feature decision.
-- When retiring a document, repair inbound links. Git and PRs retain
-  superseded history; deleting a document does not resolve an open finding.
-
-## Operations and retained evidence
-
-[Release acceptance](release-checklist.md) retains manual and external gates.
-[Billing decisions](billing-decisions.md) is the owner decision log for billing,
-entitlements and usage (B0 onward); [Billing and entitlements](billing-entitlements.md)
-owns the resulting behavior and the [billing improvement plan](plans/billing-improvement.md)
-its delivery.
-[Billing provider readiness](billing-provider-readiness.md) separates implemented
-adapters from accepted payment operation. The
-[provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost)
-holds the verified internal provider rates.
-[Workers operations](operations/WORKERS_RUNBOOK.md) owns protected
-origin provisioning, configuration and cutover release records.
-[Operations](operations/) contains live deployment, billing and recovery
-procedures; use the procedure relevant to the requested operation.
-[Legal decisions](operations/legal-decisions.md) owns company details and the
-open and resolved decisions behind the published legal pages.
-
-Fixtures consumed by current tests remain with those tests. Git and PRs retain
-historical plans, audits and dated evidence. Archived copies are disposable;
-current documentation must not link to or depend on them. Historical observations
-do not establish current acceptance.
-
-Published blog content belongs to
-[the marketing content modules](../frontend/lib/marketing-content/blog-posts/),
-not a parallel documentation draft.
+  completion state changes. An indexed plan is not authorization to run it.
+- Update `decisions.md` only through the
+  [record-owner-decision](../.claude/skills/record-owner-decision/SKILL.md) skill.
+- When retiring a document, repair inbound links.
+- Published blog content belongs to
+  [the marketing content modules](../frontend/lib/marketing-content/blog-posts/),
+  not a parallel documentation draft.

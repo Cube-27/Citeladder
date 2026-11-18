@@ -60,10 +60,7 @@ test secret in production, or siteverify being unreachable answers 503
 Cloudflare's always-pass test secret, answered locally without a network call
 (it accepts only the dummy token `XXXX.DUMMY.TOKEN.XXXX`). A signed-in person
 asks for their own password link with the session-authorized
-`POST /auth/password-link`, which needs no token. The sign-up and email-link
-forms hold submit (and a sign-up's Continue with Google) until the widget has
-handed over a token; the widget sits in a fixed-height slot between the fields
-and submit.
+`POST /auth/password-link`, which needs no token.
 
 Sign-in (`POST /auth/login`) is challenged (action `login`, body
 `turnstile_token`) once, in the current sign-in window
@@ -83,13 +80,6 @@ visitor's network rather than the exact address
 IPv4 address as it is, and an IPv6 address by its /64, or by its /56 for
 sign-up and MCP registration. Turnstile's `remoteip` still names the exact
 address.
-Once a public identity's mailbox is verified (mailed link, reset or Google), the
-runner tick's `signup-notices` phase
-([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))
-mails the owner one notice (`mailbox.signup_notice_recipient`) with Reply-To set
-to the new address. The `auth.signup_notified` security event marks it sent; a
-refused send retries on the next tick under the same Resend idempotency key,
-for as long as the verification is inside `signup_notice_window_seconds`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
@@ -99,13 +89,7 @@ creator's account holds the Terms decision recorded at sign-up or sign-in, recor
 acceptance, spends the shared
 daily trial budget for a public identity, and starts the trial. A person has one
 trial: a workspace created after handing ownership away inherits the window of
-their first. After sign-in the
-[workspace chooser](../frontend/components/auth/workspace-chooser.tsx) at
-`/workspaces` goes straight into the only workspace a person owns, sends someone
-with none to set one up, and otherwise lists their own workspace (or "Set up your
-own workspace" when they own none) beside every workspace they were invited to,
-with each one's access; the route loader takes those two shortcuts before the
-chooser paints. The frontend crosses the
+their first. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused. Crossing cancels in-flight requests and removes the
 stored project selection first; the departing page stays drawn until the next
@@ -163,18 +147,13 @@ resolved user, workspace and entitlement state stay on the request context, so a
 handler that needs the account, a capability flag or an allowance reuses them
 instead of reading again; `/auth/me` answers from the session read. Nothing is
 cached across requests, so removed membership, a revoked grant or an ended trial
-applies from the next request ([decision](decisions.md#access-is-looked-up-once-per-request)).
+applies from the next request ([decision](decisions.md#platform-and-schema)).
 Workers keep their own short-lived access reuse (`cachedWorkspaceAccess`).
 
 The [native role policy](../frontend/services/api/src/config/workspaces.json)
-owns the authorization matrix:
-
-| Role   | Product read | Product write/run | Billing, members, credentials, project deletion | Ownership transfer |
-| ------ | ------------ | ----------------- | ----------------------------------------------- | ------------------ |
-| Owner  | Yes          | Yes               | Yes                                             | Yes                |
-| Admin  | Yes          | Yes               | Yes                                             | No                 |
-| Member | Yes          | Yes               | No                                              | No                 |
-| Viewer | Yes          | No                | No                                              | No                 |
+owns the authorization matrix. Viewer is read-only, Member also writes and
+runs, Admin also manages billing, members, credentials and project deletion,
+and only the Owner transfers ownership.
 
 Registration origin is `public` or `operator` in the schema. The schema accepts only these four roles, at most one Owner per workspace and at
 most one owned workspace per person; Admin, Member and Viewer memberships are
@@ -192,11 +171,8 @@ authorized to publish the global billing catalog or administer other workspaces.
 Every workspace a person opens needs their acceptance of the current Terms
 revision (`/workspaces/{id}/policies`). This covers password, Google-created and
 operator-created identities. There is no consent screen after sign-in: the
-sign-in and sign-up forms close with one agreement statement ("By continuing"
-or "By creating an account, you agree to the Terms of Service and acknowledge
-the Privacy Policy", the Privacy Policy linked as notice), and every way in on
-them (email and password, Google) is described by it and stays disabled only
-until the published revision loads. `POST /auth/register`, `POST /auth/login` and every
+sign-in and sign-up forms carry one agreement statement that covers every way
+in (email and password, Google). `POST /auth/register`, `POST /auth/login` and every
 Google start refuse a request without `accept_terms` and the published revision
 (`GET /auth/policies`, public). The decision is recorded in
 `account_policy_acceptances` (actor, revision, context `signup` or `signin`,
@@ -223,14 +199,11 @@ renewed acceptance and never overwrites an earlier row. Privacy is a notice;
 optional analytics consent remains separate. The approved revision registry is
 `frontend/services/api/src/config/auth-runtime.json`; internal proposals never enter it.
 Signed enterprise-agreement references are separate append-only records. A
-platform administrator pipes local reference JSON into `pnpm --filter
-@citeladder/api agreement:record --actor <admin-email>` from `frontend/`; the command
-rolls back unless `--apply` is supplied. The JSON names `workspace_id`,
-`signatory_id`, an opaque `reference`, `document_sha256`, timezone-aware
-`signed_at`, and `authority_verified: true`. The operator must verify the
-signature and authority against the contract archive first. The signatory must
-be an active Owner/Admin of that workspace. Repeating the same reference and
-evidence is inert; conflicting evidence is refused. This records no contract
+platform administrator records one with `agreement:record` (preview by default;
+`src/cli/enterprise-agreement.ts`) after verifying signature and authority
+against the contract archive. The signatory must be an active Owner/Admin of
+that workspace. Repeating the same evidence is inert; conflicting evidence is
+refused. This records no contract
 body, changes no commercial terms, and does not substitute for ordinary user
 acceptance. Checkout-linked acceptance remains a later payment workstream.
 
@@ -291,15 +264,7 @@ signing out revokes every session (sign-out is always everywhere) and leaves MCP
 grants and API keys working. A separate, confirmed "Sign out everywhere and
 disconnect integrations" control (`POST /api/v1/auth/logout-and-disconnect`)
 also revokes the person's MCP grants and unexchanged codes and the API keys they created in the same
-transaction, recording `auth.logout_disconnect`. Settings → Account
-shows the email and the person's role in the selected workspace, never internal
-identifiers, and reports sign-in methods and verification state in plain words,
-with compact password, Google-linking and session controls. Settings → Workspace
-shows the selected workspace, the person's role and what it allows, Leave
-workspace for anyone but the Owner, and, for Owner/Admin, the members:
-role changes, removal, invitation revocation and (Owner only) ownership transfer
-each confirm in a dialog that names the person and the effect. The blocked-access screen opens
-the same controls in a recovery dialog. Mail is request-bounded, not a durable queue:
+transaction, recording `auth.logout_disconnect`. Mail is request-bounded, not a durable queue:
 a crash after commit is recovered by requesting a new link after cooldown.
 Eligible and ineligible recipients share the configured `AUTH_MAIL_TIMEOUT_MS`
 response wait budget (default 5000 ms), so provider latency does not reveal
@@ -374,10 +339,6 @@ Every project-owned link carries `?project=` when the selection is known; Settin
 remains workspace-owned. A bare post-login URL is only a bootstrap state and is
 replaced with the resolved project URL. Every additional-project entry point carries
 its workspace.
-Project creation refreshes the workspace allowance before another creation
-action can become available. Additional-project entry points stay disabled
-while allowance is unresolved or no project slots remain, including after a
-trial account creates its first project.
 
 Login enters the workspace chooser; the application gate then decides whether
 onboarding is appropriate. A person with no workspace is sent to set one up from
@@ -385,10 +346,8 @@ any project route, and may still reach Settings → Account and an invitation
 link. An empty workspace retains access to billing/members/settings. Viewers are
 offered no project editing, creation or deletion controls.
 Failed reads are retryable errors, not empty lists or exhausted allowances.
-The app `/pricing` continuation is also workspace-only: it resolves the
-selected workspace without requiring a project, and only Owner/Admin billing
-capability can start a purchase. Its selection URL is captured before the
-sign-in redirect; the server still authorizes every billing mutation.
+The app `/pricing` continuation is workspace-only
+([billing](billing-entitlements.md#read-and-ui-surfaces)).
 
 ## Dependencies
 
@@ -399,27 +358,11 @@ Accepted rationale is in [decisions](decisions.md).
 
 ## Operator account management
 
-`scripts/provision-dev-login.mjs` is the interactive **production** entry point
-(its historical filename is retained). Run it from the repository root:
-
-```bash
-node scripts/provision-dev-login.mjs
-```
-
-It uses the active `gcloud` login to verify the database instance against the
-database secret, authenticate SSH and open a loopback IAP tunnel; production
-keeps no operator password secret (BL9), so the manager prompts for the
-operator's password without echo. It passes the database URL to the manager's
-environment only, never the calling shell's, and closes only its own tunnel on
-exit. A first connection may ask gcloud's SSH host-key trust question. With a
-tunnel already open, use `--use-existing-tunnel --local-port 15432`. Project, instance, zone,
-database secret name and actor can be selected explicitly. No password is passed on argv or saved to disk.
-
-The platform menu lists identities/workspaces, creates batches of customer
-accounts with owned workspaces or immediate assignable memberships in an
-existing workspace, changes roles, resets passwords, grants/revokes evaluation
-access, removes members, and enables/disables or permanently deletes accounts.
-Customer identities retain platform role `user`; workspace Owner/Admin never
+`node scripts/provision-dev-login.mjs` (historical filename) is the interactive
+**production** entry point: it opens the IAP tunnel and prompts for the
+operator's password without echo, since production keeps no operator password
+secret (BL9). No password is passed on argv or saved to disk. Its platform menu
+administers customer identities; customer identities retain platform role `user`; workspace Owner/Admin never
 becomes platform administration. Existing identities are not overwritten by
 batch creation. Each mutation previews the real transaction and rolls back,
 then rechecks authenticated platform authority after explicit confirmation.
@@ -445,27 +388,13 @@ operator themself, any platform administrator and anyone who also belongs to
 another workspace, because a password is global; it records
 `auth.password_reset`.
 
-Trusted workspace operators can run the interactive
-[account manager](../frontend/services/api/src/cli/account-manager.ts) from a terminal
-with Node 26 and installed frontend dependencies (or the native API image).
-It requires an active Owner or Admin of the explicit target workspace. It lists
-members, creates or invites a user, changes
-an existing member's assignable role, and resets a member's password while
-invalidating existing sessions. Invitation tokens are shown once for secure
-delivery to the invitee; the invitee accepts while signed in. The tool does not
-issue grants or set project or prompt limits.
-
-```bash
-cd frontend
-pnpm --filter @citeladder/api account:manage \
-  --actor <workspace-owner-or-admin-email> --workspace-id <workspace-uuid>
-```
-
-Against production, open the IAP database tunnel from the
-[GCP runbook](operations/GCP_RUNBOOK.md#3-daily-operation) and run the same
-command from `frontend/` with `DATABASE_URL` pointing at `127.0.0.1:15432`.
-
-Passwords are prompted without echo and are never command-line arguments.
+The interactive
+[account manager](../frontend/services/api/src/cli/account-manager.ts)
+(`pnpm --filter @citeladder/api account:manage --actor <email> --workspace-id <uuid>`)
+requires an active Owner or Admin of the explicit target workspace; it issues no
+grants and sets no project or prompt limits, and shows invitation tokens once.
+Against production, use the IAP tunnel from the
+[GCP runbook](operations/GCP_RUNBOOK.md#3-daily-operation).
 
 The native account manager locks the workspace root before actor/target membership
 rows and user password updates. It rechecks active membership, the authenticated

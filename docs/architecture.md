@@ -27,11 +27,9 @@ positioning; [the index](README.md) routes to substantive feature documents.
 Billing owners follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 
-Site Health, [Content optimization](content-optimization.md), Search Demand
-and the Agent are the durable product capabilities; the Agent's skills deliver
-content creation, and
-AI Visibility is Track. Commerce reuses the same
-evidence and measurement owners rather than owning another crawler or runner.
+Commerce reuses the same evidence and measurement owners rather than owning
+another crawler or runner; the Agent's skills deliver content creation
+([Content optimization](content-optimization.md)).
 
 ## Evidence and action flow
 
@@ -49,27 +47,16 @@ reviewable deliverable attached to the target's Action. Only an explicit
 implementation declaration starts the Act → Verify record; later observations
 remain separate from that declaration.
 
-Command Center composes these persisted owners into Facts, evidence-labelled
-loop states and one next action. The next action puts measurement first:
-prompts, then the first audit (reported as running while one is in flight),
-then the top Action, then the site crawl and a search integration. Before an
-audit, measurement fields remain unavailable. Report reads return missing state rather than building a report.
-The Agent and MCP reuse these projections and own no second knowledge store.
+The Overview's next action (`projects/command-center.ts`) puts measurement
+first: prompts, then the first audit, then the top Action, then the site crawl
+and a search integration. The Agent and MCP reuse these projections and own no
+second knowledge store.
 
 ## Shared execution and automation
 
-PostgreSQL is durable state and queue. Workers claim with SKIP LOCKED, commit
-before I/O, maintain leases and terminalize idempotently. Reads never acquire,
-sync, score or repair. [Backend architecture](backend-architecture.md) owns
-shared worker/API mechanics; [frontend architecture](frontend-architecture.md)
-owns shell, query and URL state.
-
-Acquisition and deterministic processing may progress automatically after their
-authorized initiation and within frozen bounds. Models may explain, classify
-bounded ambiguity, plan or generate; they do not change deterministic metrics.
-Publishing, prompt activation, external mutation, billing changes and future
-durable-memory promotion retain their explicit user-decision boundaries.
-[Invariants](invariants.md) is the correctness authority.
+[Backend architecture](backend-architecture.md) owns shared worker/API
+mechanics; [frontend architecture](frontend-architecture.md) owns shell, query
+and URL state; [invariants](invariants.md) is the correctness authority.
 
 ## Languages and the TypeScript service
 
@@ -82,35 +69,23 @@ Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.
 
-The SQL migrations are the only schema author
-([migrations](DEVELOPMENT.md#migrations-forward-only)); the service holds Kysely
-types generated from a migrated database. A successful migration and bootstrap
-job admits API/worker rollout. Operator tools use the same PostgreSQL
-authorization, provenance and lock contracts as the API.
-
-`@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
-contracts the browser app validates with (TypeScript routes publish the same
-schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
-hand-owned API error-code vocabulary. Native config owns HTTP status defaults
-and retry classification. Application policy lives in native config.
+A successful migration and bootstrap job admits API/worker rollout
+([migrations](DEVELOPMENT.md#migrations-forward-only)). Operator tools use the
+same PostgreSQL authorization, provenance and lock contracts as the API.
+`@citeladder/contracts` holds the zod response contracts, the route-ownership
+manifest and the hand-owned error-code vocabulary; each handler's return type is
+checked against its schema.
 
 ## Delivery topology
 
-The marketing Worker serves `citeladder.com` as prerendered static pages, with
-on-demand pricing, contact and 404 routes, and keeps signed webhook paths on
-their established apex identity. The API host Worker serves
-`api.citeladder.com`: the public REST API, crawl-log ingest and MCP with its
-OAuth endpoints. The product
-Worker serves `app.citeladder.com`, including same-origin `/api/v1`, browser
-login, callbacks and consent. Each Worker reaches the native API on scale-to-zero
-Cloud Run (us-central1) with the origin token. Runner, tick and migration jobs
-share its images, and PostgreSQL runs alone on a private free-tier VM. There
-are no backups ([Google Cloud hosting](operations/GOOGLE_CLOUD.md)).
-The [Workers runbook](operations/WORKERS_RUNBOOK.md) owns the approved release,
-production acceptance and recovery order.
-
-Current work is only in [plan status](plans/ACTIVE.md); an architecture document
-does not assign a historical delivery wave.
+Three Workers front the one native API on scale-to-zero Cloud Run: marketing
+(`citeladder.com`, prerendered, plus on-demand `/pricing`, the contact intake and
+`/health`), the API host (`api.citeladder.com`: public REST API, crawl-log
+ingest, MCP and its OAuth endpoints) and the product app
+(`app.citeladder.com`, same-origin `/api/v1`). Each reaches the API with the
+origin token. [Google Cloud hosting](operations/GOOGLE_CLOUD.md) and the
+[Workers runbook](operations/WORKERS_RUNBOOK.md) own hosting, release,
+acceptance and recovery.
 
 ## Combined transaction lock DAG
 

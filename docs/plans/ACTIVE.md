@@ -29,12 +29,8 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 Commerce product tracking and backlog tier 1 shipped on 11 November 2026, and
 the Agent chat UX round on 13 November 2026; their plans were deleted. The
-owner decisions behind them are in
-[decisions](../decisions.md#commerce-product-tracking) (CM1–CM9),
-[backlog closure](../decisions.md#backlog-closure) (BL1–BL12, which also defer,
-move and remove other backlog work) and
-[Agent chat UX](../decisions.md#agent-chat-ux) (AC1–AC7); the feature owners in
-[the documentation index](../README.md) describe what shipped.
+owner decisions behind them are in [decisions](../decisions.md); the feature
+owners in [the documentation index](../README.md) describe what shipped.
 
 ## Partly delivered
 
@@ -50,7 +46,7 @@ move and remove other backlog work) and
   app agent substabtially and make it the main hero of the app ... the idea is
   to basically have parity between mcp and in app agent and the agent drives
   the app not the other way round". It changes accepted rules (the in-app
-  Agent is read-only under [MCP writes](../decisions.md#mcp-writes-are-confirmed-user-decisions)
+  Agent is read-only under [MCP writes](../decisions.md#agent-mcp-and-public-api)
   and invariants §10 and §13), so it needs a scoped plan and the owner's
   answers before work starts.
 - [Backlog](backlog.md): tier 2 (before launch: compliance, hardening, billing
