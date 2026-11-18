@@ -1,0 +1,153 @@
+import type { UseQueryResult } from '@tanstack/react-query';
+import { useState } from 'react';
+
+import type { MatrixDimension, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
+import { Button } from '@/components/ui/button';
+import { HeatScale, HeatTable, type HeatValue } from '@/components/ui/heat-table';
+import { Inline, Stack } from '@/components/ui/layout';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Select } from '@/components/ui/select';
+import { StateBlock } from '@/components/ui/state-block';
+import { SegmentedControl } from '@/components/ui/tabs';
+import { textRole } from '@/components/ui/typography';
+import { downloadCsv } from '@/lib/csv/download';
+import { MATRIX_DIMENSIONS, MATRIX_METRICS } from '@/lib/config/visibility';
+import { pluralCount } from '@/lib/format';
+import {
+  cellAt,
+  cellReading,
+  heatScale,
+  matrixCsvRows,
+  READING_LABELS,
+  type CellReading,
+  type MatrixMetric,
+} from '@/lib/visibility/matrix';
+import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+const dimensionLabel = (dimension: MatrixDimension) =>
+  MATRIX_DIMENSIONS.find((option) => option.value === dimension)?.label ?? dimension;
+
+/**
+ * Insights → Performance matrix (W6): one metric across two of engine, topic,
+ * market and brand, at most ten items an axis. A pair never asked reads "Not
+ * run"; sentiment under the classified minimum "Too few"; a value that does
+ * not apply "Not measured". Only measured values take the heat tint.
+ */
+export function PerformanceMatrix({
+  query,
+}: Readonly<{ query: UseQueryResult<VisibilityMatrix> }>) {
+  const [metric, setMetric] = useState<MatrixMetric>('mention_rate');
+  const [rows, setRows] = useState<MatrixDimension>('engine');
+  const [columns, setColumns] = useState<MatrixDimension>('brand');
+  const axisText = useAxisText();
+  const data = query.data;
+  const rowText = data ? axisText(data.axes, rows) : [];
+  const columnText = data ? axisText(data.axes, columns) : [];
+  const readings: CellReading[][] = data
+    ? rowText.map((_, i) =>
+        columnText.map((_, j) => cellReading(cellAt(data.grids, { rows, columns }, i, j), metric)),
+      )
+    : [];
+  const place = heatScale(
+    readings.flat().flatMap((r) => (r.kind === 'value' ? [r.value] : [])),
+    metric,
+  );
+  const options = (skip: MatrixDimension) =>
+    MATRIX_DIMENSIONS.filter((option) => option.value !== skip);
+  const exportCsv = () =>
+    downloadCsv(
+      `citeladder-matrix-${rows}-${columns}-${today()}`,
+      [
+        dimensionLabel(rows),
+        dimensionLabel(columns),
+        MATRIX_METRICS.find((item) => item.value === metric)?.label ?? metric,
+        'Answers',
+      ],
+      matrixCsvRows(readings, rowText, columnText),
+    );
+  const heatValue = (reading: CellReading): HeatValue =>
+    reading.kind === 'value'
+      ? {
+          kind: 'value',
+          text: reading.text,
+          detail: pluralCount(reading.answers, 'answer'),
+          tint: place(reading.value),
+        }
+      : { kind: 'void', label: READING_LABELS[reading.kind] };
+
+  function body() {
+    const state = matrixBodyState(query, 'matrix');
+    if (state || !data) return state;
+    if (!rowText.length || !columnText.length)
+      return (
+        <StateBlock
+          kind="empty"
+          inline
+          message="Nothing to compare on these axes in this selection."
+        />
+      );
+    return (
+      <HeatTable
+        labelledBy="insights-matrix"
+        corner={dimensionLabel(rows)}
+        columns={columnText.map((text, j) => ({
+          key: `${columns}-${j}`,
+          header: <AxisLabel axes={data.axes} dimension={columns} index={j} text={text} />,
+        }))}
+        rows={rowText.map((text, i) => ({
+          key: `${rows}-${i}`,
+          header: <AxisLabel axes={data.axes} dimension={rows} index={i} text={text} />,
+          cells: (readings[i] ?? []).map(heatValue),
+        }))}
+      />
+    );
+  }
+
+  return (
+    <Section aria-labelledby="insights-matrix">
+      <SectionHeader>
+        <SectionTitle id="insights-matrix">Performance matrix</SectionTitle>
+        <SectionDescription>Compare a metric across two dimensions</SectionDescription>
+      </SectionHeader>
+      <Stack>
+        <Inline className="flex-wrap">
+          <SegmentedControl
+            ariaLabel="Matrix metric"
+            value={metric}
+            options={MATRIX_METRICS}
+            onChange={setMetric}
+          />
+          <span className="flex-1" />
+          <Select
+            ariaLabel="Rows"
+            value={rows}
+            options={options(columns)}
+            onValueChange={setRows}
+          />
+          <span className={textRole('caption')}>vs</span>
+          <Select
+            ariaLabel="Columns"
+            value={columns}
+            options={options(rows)}
+            onValueChange={setColumns}
+          />
+          <Button
+            onClick={() => {
+              setRows(columns);
+              setColumns(rows);
+            }}
+          >
+            Switch axis
+          </Button>
+          <Button onClick={exportCsv} disabled={!readings.length}>
+            Export CSV
+          </Button>
+        </Inline>
+        {body()}
+        <HeatScale note="Up to 10 per axis" />
+      </Stack>
+    </Section>
+  );
+}

@@ -27,6 +27,7 @@ import {
   perceptionQuotePageSchema,
   perceptionResponseSchema,
 } from '@citeladder/contracts/visibility-perception';
+import { visibilityMatrixSchema } from '@citeladder/contracts/visibility-matrix';
 import { visibilityTopicsSchema } from '@citeladder/contracts/visibility-topics';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
@@ -50,6 +51,7 @@ import { getPromptHistory } from '../visibility/prompt-history.ts';
 import { getLatestPromptMetrics } from '../visibility/prompt-latest.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
 import { surfaceRates } from '../visibility/surface.ts';
+import { getVisibilityMatrix } from '../visibility/matrix.ts';
 import { getVisibilityTopics } from '../visibility/topics.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { defineGetRoute } from './define.ts';
@@ -288,6 +290,22 @@ export const visibilityRoutes = [
       const workspace = c.get('workspace');
       return selectionErrors(() =>
         getVisibilityTopics(
+          db,
+          marketScope(workspace.workspaceId, path.project_id, query),
+          dashboardQuery(query),
+        ),
+      );
+    },
+  }),
+  defineGetRoute({
+    ...family,
+    path: '/api/v1/projects/{project_id}/visibility/matrix',
+    params: { path: PROJECT_PATH, query: DASHBOARD_SELECTION },
+    response: visibilityMatrixSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      return selectionErrors(() =>
+        getVisibilityMatrix(
           db,
           marketScope(workspace.workspaceId, path.project_id, query),
           dashboardQuery(query),

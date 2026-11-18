@@ -74,7 +74,7 @@ const measured = {
 
 describe('topic dimension', () => {
   it('groups answers by the frozen topic, so refiling and renaming never move a run', async () => {
-    const { t, pricing, security, onboarding } = await refiledHistory();
+    const { t, pricing, security, onboarding, first } = await refiledHistory();
     const range = await read(t, t.projectId, '/topics?selection_mode=range');
     expect(range.status).toBe(200);
     expect(range.json.items).toMatchObject([
@@ -96,6 +96,15 @@ describe('topic dimension', () => {
       { kind: 'measured', topic_id: pricing, renamed_from: [], answers: 6 },
       { kind: 'not_run', topic_id: security, renamed_from: [] },
     ]);
+    // The matrix reads the first run as it froze: the refiled trail prompt stays under Security.
+    const matrix = await read(t, t.projectId, `/matrix?selection_mode=run&audit_id=${first}`);
+    expect(matrix.json.axes).toMatchObject({
+      topic: [
+        { topic_id: pricing, name: 'Pricing & plans', renamed_from: 'Pricing', answers: 3 },
+        { topic_id: security, name: 'Security', renamed_from: null, answers: 3 },
+        { topic_id: onboarding, answers: 0 },
+      ],
+    });
   });
 
   it('filters the dashboard, trend and Sources reads by the frozen topic', async () => {

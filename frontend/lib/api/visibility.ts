@@ -40,6 +40,7 @@ import {
 } from '@citeladder/contracts/fact-checking';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
+import { visibilityMatrixSchema } from '@citeladder/contracts/visibility-matrix';
 import { visibilityTopicsSchema } from '@citeladder/contracts/visibility-topics';
 import { definedQuery, withQuery } from './shared';
 import type {
@@ -388,6 +389,16 @@ export const visibilityApi = {
     const path = withQuery(`/projects/${projectId}/visibility/topics`, definedQuery(params));
     const res = await apiClient.get(path, options);
     return strictValidate(visibilityTopicsSchema, res, 'visibility.getVisibilityTopics');
+  },
+  /** The selection's performance matrix and top rankings (Insights). */
+  getVisibilityMatrix: async (
+    projectId: string,
+    params: Omit<ProjectVisibilityParams, 'baseline_id'>,
+    options?: ApiRequestOptions,
+  ) => {
+    const path = withQuery(`/projects/${projectId}/visibility/matrix`, definedQuery(params));
+    const res = await apiClient.get(path, options);
+    return strictValidate(visibilityMatrixSchema, res, 'visibility.getVisibilityMatrix');
   },
   getProjectVisibility: async (
     projectId: string,

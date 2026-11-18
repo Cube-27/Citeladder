@@ -55,6 +55,8 @@ export const visibilityKeys = {
     visibility.read('trends', scope, filters),
   topics: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('topics', scope, filters),
+  matrix: (scope: ProjectScope, filters: ListFilters = {}) =>
+    visibility.read('matrix', scope, filters),
   perception: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('perception', scope, filters),
   competitor: (scope: ProjectScope, name: string, filters: ListFilters = {}) =>

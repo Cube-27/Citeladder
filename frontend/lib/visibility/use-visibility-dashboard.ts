@@ -304,6 +304,12 @@ export function useVisibilityQueries(
     enabled: insights,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
+  const { baseline_id: _matrixBaseline, ...matrixParams } = selectedParams;
+  const matrixQuery = useQuery({
+    ...visibilityQueries.matrix(requestScope, matrixParams),
+    enabled: insights,
+    placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
+  });
   const trendOptions = visibilityQueries.trends(requestScope, trendParams);
   const trendQuery = useQuery({
     ...trendOptions,
@@ -358,6 +364,7 @@ export function useVisibilityQueries(
     visibilityQuery,
     trendQuery,
     topicsQuery,
+    matrixQuery,
     topic,
     evidenceQuery,
     surfaceRatesQuery,

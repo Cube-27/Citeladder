@@ -14,6 +14,8 @@
   "ads_creatives_max_limit": 50,
   "competitor_sources_limit": 10,
   "competitor_named_instead_limit": 10,
+  "matrix_axis_limit": 10,
+  "matrix_leaders": 5,
   "trend_granularities": ["day", "month", "run", "week"],
   "trend_default_granularity": "run",
   "trend_max_points": 100,

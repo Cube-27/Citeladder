@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { PerformanceMatrix } from '@/components/brand/performance-matrix';
+import { TopRankings } from '@/components/brand/top-rankings';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { SectionStack } from '@/components/ui/section';
@@ -24,7 +26,8 @@ import {
 
 /**
  * Brand → Insights (AV-14, AV-16): the lede with its key figures, your brand
- * over time, then by model, the observed surface's rates and by market.
+ * over time, the performance matrix and top rankings (W6), then by model, the
+ * observed surface's rates and by market.
  */
 export function InsightsScreen() {
   const filters = useVisibilityFilters();
@@ -46,6 +49,8 @@ export function InsightsScreen() {
               <SectionStack aria-busy={queries.visibilityQuery.isFetching}>
                 <InsightsLede selected={selected} />
                 <BrandTrend query={queries.trendQuery} selected={selected} />
+                <PerformanceMatrix query={queries.matrixQuery} />
+                <TopRankings query={queries.matrixQuery} />
                 <VisibilityByTopic
                   query={queries.topicsQuery}
                   topic={filters.topic}
