@@ -220,7 +220,12 @@ function measure({ route }: { route: string }) {
       add('tree-row.height', element, element.getBoundingClientRect().height);
       continue;
     }
-    if (element.matches('[data-figure-cell] > button')) continue;
+    if (element.matches('[data-figure-cell] > button')) {
+      // The whole cell is the target: its button covers the cell exactly.
+      const cell = element.parentElement?.getBoundingClientRect().height ?? 0;
+      add('figure-target.gap', element, cell - element.getBoundingClientRect().height);
+      continue;
+    }
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (
@@ -743,6 +748,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
+  expectOneValue(records, 'figure-target.gap', 0);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);

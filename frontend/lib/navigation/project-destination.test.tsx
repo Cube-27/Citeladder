@@ -275,8 +275,9 @@ describe('useSelectWorkspace', () => {
       `/insights?tab=trend&workspace=${OTHER}`,
     );
     expect(switchFrom(`/prompts/${PROJECT_2}`)).toBe(`/prompts?workspace=${OTHER}`);
-    expect(switchFrom('/settings/members')).toBe(`/settings/members?workspace=${OTHER}`);
+    expect(switchFrom('/settings')).toBe(`/settings?workspace=${OTHER}`);
     expect(switchFrom('/no-such-page')).toBe(`/projects?workspace=${OTHER}`);
+    expect(switchFrom(`/prompts/${PROJECT_2}/extra`)).toBe(`/projects?workspace=${OTHER}`);
   });
 
   it('does nothing when the active workspace is picked again', () => {

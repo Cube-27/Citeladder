@@ -24,6 +24,7 @@ export function GoalStrip({
   return (
     <FigureStrip
       label="Goals"
+      twoLineLabels
       segments={actionGoalSchema.options.map((goal) => {
         // A failed refresh says Unavailable rather than showing the last counts as current.
         const entry = failed ? undefined : goals?.find((candidate) => candidate.goal === goal);

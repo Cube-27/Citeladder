@@ -597,7 +597,7 @@ export function projectSwitchPathname(pathname: string): string {
  * (owner, 2026-11-18).
  */
 export function workspaceSwitchPathname(pathname: string): string {
-  return sectionRoute(pathname) ? projectSwitchPathname(pathname) : HOME_PATH;
+  return findAppRoute(pathname) ? projectSwitchPathname(pathname) : HOME_PATH;
 }
 
 /** Every entry listed at a placement, in manifest order (`listedLast` entries after). */

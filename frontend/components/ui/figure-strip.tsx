@@ -95,6 +95,7 @@ export function FigureStrip({
   testId,
   lead,
   subLine = false,
+  twoLineLabels = false,
 }: Readonly<{
   segments: readonly FigureSegment[];
   /** Accessible name for the group, when the section heading does not give one. */
@@ -102,6 +103,8 @@ export function FigureStrip({
   testId?: string;
   lead?: ReactNode;
   subLine?: boolean;
+  /** Labels long enough to wrap at any width: every cell reserves two label lines. */
+  twoLineLabels?: boolean;
 }>) {
   const { ref, width } = useStripWidth<HTMLDivElement>();
   const cells = figureRowCells({ count: segments.length, width });
@@ -124,7 +127,7 @@ export function FigureStrip({
               subLine={subLine}
               rowSize={size}
               rowStart={rowStart}
-              narrow={cellWidth(width, size) < FIGURE_MIN_WIDTH}
+              narrow={twoLineLabels || cellWidth(width, size) < FIGURE_MIN_WIDTH}
             />
           );
         })}
