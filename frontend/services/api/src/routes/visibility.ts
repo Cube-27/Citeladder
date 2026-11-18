@@ -457,14 +457,14 @@ export const visibilityRoutes = [
     ...family,
     exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/markets',
-    params: { path: PROJECT_PATH, query: { cohort: COHORT } },
+    params: { path: PROJECT_PATH, query: { cohort: COHORT, ...TOPIC } },
     response: visibilityMarketsSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       return selectionErrors(() =>
         getMarketVisibility(
           db,
-          { workspaceId: workspace.workspaceId, projectId: path.project_id },
+          { workspaceId: workspace.workspaceId, projectId: path.project_id, topicId: query.topic },
           query.cohort,
         ),
       );

@@ -4,10 +4,12 @@
  * topic later never moves past answers, and every topic-filtered read serves
  * those frozen groups inside the reader's workspace.
  */
+import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { loadComparisonCells } from '../src/visibility/comparison.ts';
+import { runSetComparisonStatus } from '../src/visibility/run-sets.ts';
 import { finalizedRuns } from './finalized-runs.ts';
 import { prompt, topic } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -149,6 +151,36 @@ describe('topic dimension', () => {
     expect([await cellCounts(null), await cellCounts(security)]).toEqual([
       [6, 6],
       [0, 3],
+    ]);
+
+    // A failure outside the topic leaves the topic's own run sets comparable.
+    await db
+      .updateTable('metric_snapshots')
+      .set({ metrics: sql`jsonb_set(metrics, '{coverage,requested}', '7')` })
+      .where('audit_id', '=', second)
+      .execute();
+    const status = (topicId: string | null) =>
+      runSetComparisonStatus(
+        db,
+        { workspaceId: t.workspaceId, projectId: t.projectId, topicId },
+        { currentIds: [second], baselineIds: [first], responses: 1, engine: null, cohort: 'core' },
+      );
+    expect([await status(null), await status(pricing), await status(security)]).toEqual([
+      'partial_coverage',
+      'comparable',
+      'comparable',
+    ]);
+
+    // By market reads each market's latest run in the topic: the latest asked no Security prompt.
+    const marketStates = async (topicId: string) =>
+      (
+        (await read(t, t.projectId, `/markets?topic=${topicId}`)).json as unknown as {
+          markets: { state: string }[];
+        }
+      ).markets.map((row) => row.state);
+    expect([await marketStates(pricing), await marketStates(security)]).toEqual([
+      ['measured'],
+      ['no_run'],
     ]);
   });
 

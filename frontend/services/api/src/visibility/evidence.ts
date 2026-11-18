@@ -122,6 +122,22 @@ function cursorPosition(
   }
 }
 
+/** The filter offers the prompts of the runs the evidence reads: brand runs only. */
+function promptOptions(db: Database, selection: RunSelection, asOf: string) {
+  let query = selectedRuns(db, selection)
+    .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
+    .where('snapshot.cohort', 'in', [...selectedCohorts(selection.cohort)])
+    .where('snapshot.created_at', '<=', sql<Date>`${asOf}::timestamptz`);
+  if (selection.topicId) query = query.where('snapshot.topic_id', '=', selection.topicId);
+  return query
+    .select([
+      sql<string>`coalesce(snapshot.prompt_id, snapshot.id)`.as('identity'),
+      'snapshot.text',
+    ])
+    .distinct()
+    .execute();
+}
+
 export async function getVisibilityEvidence(
   db: Database,
   requested: RunSelection,
@@ -137,20 +153,7 @@ export async function getVisibilityEvidence(
     '<=',
     sql<Date>`${asOf}::timestamptz`,
   );
-  // The filter offers the prompts of the runs the evidence reads: brand runs only.
-  const promptChoices = await selectedRuns(db, selection)
-    .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
-    .where('snapshot.cohort', 'in', [...selectedCohorts(selection.cohort)])
-    .$call((query) =>
-      selection.topicId ? query.where('snapshot.topic_id', '=', selection.topicId) : query,
-    )
-    .where('snapshot.created_at', '<=', sql<Date>`${asOf}::timestamptz`)
-    .select([
-      sql<string>`coalesce(snapshot.prompt_id, snapshot.id)`.as('identity'),
-      'snapshot.text',
-    ])
-    .distinct()
-    .execute();
+  const promptChoices = await promptOptions(db, selection, asOf);
   const statement = applyFilters(base, options);
   const fingerprint = {
     workspace: selection.workspaceId,

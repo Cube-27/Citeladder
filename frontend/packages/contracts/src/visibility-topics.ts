@@ -13,7 +13,7 @@ const topicIdentity = {
   renamed_from: z.array(z.string()),
 };
 
-export const visibilityTopicRowSchema = z.discriminatedUnion('kind', [
+const visibilityTopicRowSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('not_run'), ...topicIdentity }),
   z.object({
     kind: z.literal('measured'),

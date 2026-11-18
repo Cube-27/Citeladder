@@ -269,7 +269,12 @@ export function useVisibilityQueries(
     requestScope,
     filters.market,
   );
-  const { markets, marketRowsQuery } = useMarketVisibility(requestScope, filters.cohort, insights);
+  const topic = filters.topic ?? undefined;
+  const { markets, marketRowsQuery } = useMarketVisibility(
+    requestScope,
+    { cohort: filters.cohort, topic },
+    insights,
+  );
 
   const engine = filters.engine === 'all' ? undefined : filters.engine;
   const from = useMemo(
@@ -284,7 +289,6 @@ export function useVisibilityQueries(
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
-  const topic = filters.topic ?? undefined;
   const trendParams = {
     market: filters.market ?? undefined,
     engine,

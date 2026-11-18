@@ -346,7 +346,7 @@ export const visibilityApi = {
   /** Each market's latest run side by side (Visibility → By market). */
   getMarketVisibility: async (
     projectId: string,
-    params: { cohort?: string },
+    params: { cohort?: string; topic?: string },
     options?: ApiRequestOptions,
   ) => {
     const result = await apiClient.get(
