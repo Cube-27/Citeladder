@@ -146,7 +146,7 @@ export function FilterBar({ view, search, filters = [], status, actions }: Filte
         // it never wraps the strip onto a second line.
         <div
           data-strip-meta=""
-          className="rail:min-w-24 rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden"
+          className="rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden"
         >
           {windowLabel ? (
             // Outside the live region: the window is on the chip's name already.
