@@ -37,7 +37,6 @@ import {
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
   workspaceEntitlementSchema,
-  type CredentialMode,
   type SelfServePlanKey,
 } from '@citeladder/contracts/billing';
 import type {
@@ -58,7 +57,8 @@ export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
 export type BillingInvoice = z.infer<typeof billingInvoiceSchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 export type UsageItem = BillingUsage['items'][number];
-export type { CredentialMode, SelfServePlanKey };
+export type { SelfServePlanKey };
+export type { CredentialMode } from '@citeladder/contracts/billing';
 
 export type BillingCustomerDetails = z.infer<typeof billingCustomerDetailsSchema>;
 

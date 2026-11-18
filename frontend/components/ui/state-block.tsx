@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const;
 
-type HeadingLevel = keyof typeof HEADING_TAG;
+export type HeadingLevel = keyof typeof HEADING_TAG;
 
 /** Why the block's action is disabled: visible caption text the control names in `aria-describedby`. */
 type ActionNote = Readonly<{ id: string; text: string }>;
