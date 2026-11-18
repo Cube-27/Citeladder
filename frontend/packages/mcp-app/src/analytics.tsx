@@ -18,10 +18,12 @@ import {
 import { StepChart } from '@/components/ui/step-chart';
 import { Label, Metric, textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { toTrendEvents, trendAxis } from '@/lib/visibility/trends';
 import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { notYetMeasuredMessage, SourcesView, SiteHealthView } from './evidence-views';
 import { day, moment, rate } from './format';
+import { isRate, isTrendMetric, trendGap, trendValue, type TrendMetric } from './trend-metrics';
 
 const views = [
   { value: 'overview', label: 'Overview' },
@@ -134,7 +136,7 @@ function Trends({
   select: Controller['select'];
   selectCompetitor: Controller['selectCompetitor'];
 }>) {
-  const [metric, setMetric] = useState<string>('brand_mention_rate');
+  const [metric, setMetric] = useState<TrendMetric>('brand_mention_rate');
   const parsed = visibilityTrendListSchema.safeParse(data.points);
   if (!parsed.success)
     return (
@@ -150,13 +152,17 @@ function Trends({
       ),
     ),
   ];
-  const value = (point: (typeof points)[number]) => {
-    if (selection.competitor) {
-      const field = metric === 'brand_mention_rate' ? 'mention_rate' : 'citation_rate';
-      return point.rankings.find((row) => row.name === selection.competitor)?.[field] ?? null;
-    }
-    return metric === 'brand_mention_rate' ? point.brand_mention_rate : point.owned_citation_rate;
+  const competitor = selection.competitor ?? null;
+  const value = (point: (typeof points)[number]) => trendValue(point, metric, competitor);
+  // Position plots negated as in the app's trends: #1 at the top, up is better.
+  const position = isRate(metric) ? null : trendAxis('avg_position', [points.map(value)]);
+  const shown = (measured: number | null) =>
+    position ? (measured?.toFixed(1) ?? 'Unavailable') : rate(measured);
+  const cell = (point: (typeof points)[number]) => {
+    const measured = value(point);
+    return measured === null ? trendGap(point, metric, competitor) : shown(measured);
   };
+  const events = toTrendEvents(points, { timeZone: 'UTC', engineLabel: (key) => key });
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -164,7 +170,9 @@ function Trends({
           ariaLabel="Trend metric"
           value={metric}
           options={appPolicy.metrics}
-          onValueChange={setMetric}
+          onValueChange={(next) => {
+            if (isTrendMetric(next)) setMetric(next);
+          }}
         />
         <Select
           ariaLabel="Competitor"
@@ -178,13 +186,19 @@ function Trends({
       </div>
       <StepChart
         label="Observed visibility history"
-        yMax={1}
-        yFormat={rate}
+        yMin={position?.yMin}
+        yMax={position ? position.yMax : 1}
+        yFormat={position ? position.tick : rate}
+        format={position ? (plotted) => shown(position.unplot(plotted)) : undefined}
+        events={events}
+        eventsLabel="What changed"
+        eventLegend
         data={points.map((point, index) => {
           const previous = points[index - 1];
           return {
             label: day(point.completed_at),
-            value: value(point),
+            value: position ? position.plot(value(point)) : value(point),
+            timestamp: Date.parse(point.completed_at),
             breakBefore:
               previous !== undefined &&
               (!point.comparison_key ||
@@ -200,7 +214,7 @@ function Trends({
         <TableHeader>
           <TableRow>
             <TableHead>Completed</TableHead>
-            <TableHead>Rate</TableHead>
+            <TableHead>{position ? 'Position' : 'Rate'}</TableHead>
             <TableHead>Coverage / model</TableHead>
             <TableHead>Evidence</TableHead>
           </TableRow>
@@ -209,7 +223,7 @@ function Trends({
           {points.map((point) => (
             <TableRow key={point.source_snapshot_ids.join(',')}>
               <TableCell>{moment(point.completed_at)}</TableCell>
-              <TableCell>{rate(value(point))}</TableCell>
+              <TableCell>{cell(point)}</TableCell>
               <TableCell>
                 {point.counts?.state ?? 'unknown'} · {point.transport_model ?? 'mixed / unknown'} ·
                 retrieval {String(point.retrieval_enabled)}

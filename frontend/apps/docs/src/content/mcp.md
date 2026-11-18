@@ -3,7 +3,7 @@ title: 'Connect with MCP'
 description: "Use CiteLadder's saved evidence in an external AI assistant, and let it make changes you confirm."
 group: 'Connect with MCP'
 order: 300
-updated: '2026-11-11'
+updated: '2026-11-18'
 ---
 
 The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use. If you allow it, the assistant can also make changes: it asks you before each one, and larger changes run only after you confirm a preview CiteLadder has checked.
@@ -20,7 +20,7 @@ The hosted endpoint is `https://api.citeladder.com/mcp`. One address works for e
 
 ## What you can read
 
-The server exposes project discovery, business context, prompts, visibility results and sources, Actions, product metrics from Commerce, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Keyword Research datasets.
+The server exposes project discovery, business context, prompts and their metrics, visibility results by topic, sources, query fanouts, competitors and their suggestions, answer perception, fact checks, ads in AI answers, Actions, content comparisons, product metrics from Commerce, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Keyword Research datasets.
 
 `read_ai_shelf` returns each product's visibility, appearances, win rate, position, mentioned and catalog price and merchants over a window of days, the same numbers as the [Products table](/commerce/#read-the-products-table); given one product, it returns that product's page.
 

@@ -3,10 +3,10 @@ title: 'MCP tool reference'
 description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
-updated: '2026-11-11'
+updated: '2026-11-18'
 ---
 
-Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete.
+Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete. Visibility reads take a `topic_id` from `read_prompt_portfolio` to read one topic.
 
 ## Choose a reading path
 
@@ -16,9 +16,13 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | What is known about this business?              | `get_project_business_context`                                 |
 | Which project, Action or prompt mentions this?  | `search`, then `fetch`                                         |
 | What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
+| How does each topic perform?                    | `read_visibility_overview` with `view` `topics` or `matrix`    |
+| Which prompts do we win or lose?                | `read_prompt_metrics`, then `view` `history` or `answers`      |
+| What did engines search for while answering?    | `read_query_fanouts`                                           |
+| Who competes with us, and who should we track?  | `read_competitors` with `view` `focus` or `suggestions`        |
 | Which sources were used?                        | `read_visibility_sources`                                      |
 | How do answers portray us and competitors?      | `read_perception`                                              |
-| Do answers state our facts correctly? (pilot)   | `read_fact_checks`                                             |
+| Do answers state our facts correctly? (pilot)   | `read_fact_checks`, with `view` `facts` for each fact          |
 | Which ads appear in ChatGPT answers?            | `read_ai_ads`                                                  |
 | Who cites one specific URL?                     | `read_source_url`                                              |
 | What should I work on next?                     | `read_actions`                                                 |
@@ -37,11 +41,11 @@ Start with project discovery, inspect available evidence, then ask for the concr
 
 In clients that support MCP Apps, such as Claude and ChatGPT, three tools open an interactive CiteLadder view inside the conversation:
 
-| Tool                 | Shows                                                                  |
-| -------------------- | ---------------------------------------------------------------------- |
-| `render_visibility`  | An overview or sources for one audit, or trends over a window you name |
-| `render_site_health` | The Site Health results of one crawl                                   |
-| `open_analytics`     | The CiteLadder project picker                                          |
+| Tool                 | Shows                                                                                                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render_visibility`  | An overview or sources for one audit, or trends over a window you name, with mention rate, citation rate, share of voice, position or win rate and what changed at each run |
+| `render_site_health` | The Site Health results of one crawl                                                                                                                                        |
+| `open_analytics`     | The CiteLadder project picker                                                                                                                                               |
 
 Clients without MCP Apps ignore the view and use the read tools instead.
 

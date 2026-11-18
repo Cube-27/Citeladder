@@ -40,6 +40,8 @@ import {
   visibilitySources,
   visibilityTrends,
 } from './evidence-analytics.ts';
+import { competitorsRead } from './evidence-competitors.ts';
+import { promptMetricsRead, queryFanoutsRead } from './evidence-prompts.ts';
 import { crawlability, pageText, siteLinks, sitePages, siteSnapshot } from './evidence-site.ts';
 import {
   aiTrafficInsights,
@@ -86,6 +88,14 @@ const market_id = optional(
   uuid.describe(
     'A market id from get_project_business_context; omit for the default market. Markets are never pooled.',
   ),
+);
+const topic_id = optional(
+  uuid.describe(
+    'A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it.',
+  ),
+);
+const prompt_id = optional(
+  uuid.describe('A prompt id from read_prompt_portfolio or read_prompt_metrics.'),
 );
 const analyticsRange = optional(
   z
@@ -234,26 +244,34 @@ export const definitions = {
   read_visibility_overview: projectTool({
     title: 'Read AI visibility',
     description:
-      "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position), a breakdown per engine, and the run's status and answer counts. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; unavailable metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured. Use read_visibility_trends for change over time, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited.",
+      "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position among the brands an answer named, win rate and net sentiment), a breakdown per engine with its win rate, and the run's status and answer counts. Win rate is how often a brand was named first among the answers naming any tracked brand; null win_rate or sentiment means unavailable or not applicable, never zero, and sentiment always comes with its classified count. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. view topics returns visibility, share of voice, position, rank and win rate per project topic; view matrix pairs engines, topics, markets and brands from each market's latest run, where not_run and not_recorded cells are unmeasured, never zero. Pass topic_id to read one topic. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured; topic_not_measured means the run asked no prompt in that topic. Use read_visibility_trends for change over time, read_prompt_metrics for which prompts are won or lost, read_competitors for one competitor in depth, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited.",
     schema: z.strictObject({
       ...project,
       market_id,
       audit_id: latestRun,
       baseline_id: optional(
-        uuid.describe('An earlier run id (audit_id) to compare audit_id against.'),
+        uuid.describe('With view summary: an earlier run id (audit_id) to compare against.'),
       ),
       engine,
       cohort,
+      topic_id,
+      view: z
+        .enum(['summary', 'topics', 'matrix'])
+        .default('summary')
+        .describe(
+          'summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids.',
+        ),
     }),
     read: visibilityOverview,
   }),
   read_visibility_trends: projectTool({
     title: 'Read visibility trends',
     description:
-      'Read how visibility changed over an explicit window of at most 366 days, as points per run or per day, week or month. Each point has the visibility score, brand mention and citation rates, share of voice, competitor rankings, the model and whether web search was on, and a comparison_key. Points with different comparison keys were measured differently and are not comparable; gaps are missing runs, not zero. At most the newest 100 points are returned. unavailable no_measured_runs means no run fell in the window. Use read_visibility_overview for one run in depth, or with baseline_id to compare exactly two runs.',
+      "Read how visibility changed over an explicit window of at most 366 days, as points per run or per day, week or month. Each point has the visibility score, brand mention and citation rates, share of voice, average position, rankings of every brand (with position and win rate), the model and whether web search was on, a comparison_key and events: what changed at that point (prompt_panel: prompts added, archived or removed; model_change: an engine's model changed; action_live: an Action went live). Points with different comparison keys were measured differently and are not comparable; name the events when you explain a change, and compare like with like. Gaps are missing runs, not zero. At most the newest 100 points are returned. Pass topic_id to follow one topic. unavailable no_measured_runs means no run fell in the window. Use read_visibility_overview for one run in depth, or with baseline_id to compare exactly two runs.",
     schema: z.strictObject({
       ...project,
       market_id,
+      topic_id,
       from_at: z.iso
         .datetime({ offset: true })
         .describe('Start of the window, with a UTC offset, such as 2026-09-01T00:00:00Z.'),
@@ -284,7 +302,7 @@ export const definitions = {
   read_perception: projectTool({
     title: 'Read answer perception',
     description:
-      'Read how AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) per brand, engine, topic and prompt, each with its coverage; praise and criticism by theme; how often answers recommend or advise against the brand; and the sources cited alongside criticism. The summary view returns all of that; the quotes view lists the verified quotes behind it, paged (50 by default, pass next_cursor). The response is always available: read perception_state, where pending, unavailable or no_mentions means there is no value, never zero. Always state the coverage. Sources are cited alongside criticism, never its cause. Use read_fact_checks for whether answers are factually right, and read_visibility_overview for how often the brand is mentioned at all.',
+      "Read how AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) per brand, engine, topic and prompt, each with its coverage; praise and criticism by theme; per brand, competitors included, how many classified mentions raised each theme (theme_mentions, counts only: quotes are the brand's own); how often answers recommend or advise against the brand; and the sources cited alongside criticism. The summary view returns all of that; the quotes view lists the verified quotes behind it, paged (50 by default, pass next_cursor). The response is always available: read perception_state, where pending, unavailable or no_mentions means there is no value, never zero. Always state the coverage. Sources are cited alongside criticism, never its cause. Use read_fact_checks for whether answers are factually right, and read_visibility_overview for how often the brand is mentioned at all.",
     schema: z.strictObject({
       ...project,
       market_id,
@@ -322,7 +340,7 @@ export const definitions = {
   read_fact_checks: projectTool({
     title: 'Read fact checks',
     description:
-      "Read whether AI answers state the brand's facts correctly. Factual claims answers made about the brand in the latest or a chosen run are checked against the brand's confirmed facts. The summary view gives accuracy (supported out of supported plus contradicted) with its coverage, by topic and engine, the contradicted claims with the fact they contradict, and sources cited alongside them. The claims view lists every checked claim with its quote, verdict and the facts used, paged (50 by default, pass next_cursor). Use read_perception for tone rather than accuracy. Always state the coverage and quote the fact. accuracy_state not_enabled, no_facts, no_claims, pending or unavailable means there is no value, never zero; inconclusive and not_covered are not errors in the answer. Sources are cited alongside a contradiction, never its cause.",
+      "Read whether AI answers state the brand's facts correctly. Factual claims answers made about the brand in the latest or a chosen run are checked against the brand's confirmed facts. The summary view gives accuracy (supported out of supported plus contradicted) with its coverage, by topic and engine, the contradicted claims with the fact they contradict, and sources cited alongside them. The claims view lists every checked claim with its quote, verdict and the facts used, paged (50 by default, pass next_cursor); edited true means a person replaced the model's verdict, so report the person's. The facts view lists each confirmed fact with how many claims supported or contradicted it (counts kind not_raised or pending means no claim to count yet, never zero), to find the facts answers get wrong most. Use read_perception for tone rather than accuracy. Always state the coverage and quote the fact. accuracy_state not_enabled, no_facts, no_claims, pending or unavailable means there is no value, never zero; inconclusive and not_covered are not errors in the answer. Sources are cited alongside a contradiction, never its cause.",
     schema: z.strictObject({
       ...project,
       market_id,
@@ -330,9 +348,11 @@ export const definitions = {
       engine,
       cohort,
       view: z
-        .enum(['summary', 'claims'])
+        .enum(['summary', 'claims', 'facts'])
         .default('summary')
-        .describe('summary is accuracy and its coverage; claims lists the checked claims, paged.'),
+        .describe(
+          'summary is accuracy and its coverage; claims lists the checked claims, paged; facts lists each fact with its verdict counts.',
+        ),
       topic: optional(
         z
           .enum(policy.perception.fact_check.topics)
@@ -364,13 +384,14 @@ export const definitions = {
   read_visibility_results: projectTool({
     title: 'Read AI answers',
     description:
-      "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. It defaults to the latest completed run in the default market; unavailable no_completed_run means none has finished. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, domain, url, engine) combine. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
+      "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. It defaults to the latest completed run in the default market; unavailable no_completed_run means none has finished. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, topic_id, domain, url, engine) combine. For one prompt's answers across every run use read_prompt_metrics view answers. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
     schema: z.strictObject({
       ...project,
       market_id,
       audit_id: latestRun,
       engine,
       cohort,
+      topic_id,
       prompt_id: optional(
         uuid.describe('A prompt id from read_prompt_portfolio; keep only its answers.'),
       ),
@@ -383,13 +404,14 @@ export const definitions = {
   read_visibility_sources: projectTool({
     title: 'Read cited sources',
     description:
-      "Rank the domains or pages AI answers cited in one run, to find the sources worth earning a place on. Each row has how many answers and prompts cited it, its citation share and rate, ownership (yours, a competitor's or third party) and category; page rows also list up to 3 brands named on the page and whether there is an Action for it. It defaults to the latest run; unavailable no_completed_run means none has finished. Rows come in pages; pass next_cursor for more. level domain lists publishers; level url, or passing domain, lists pages. Use read_source_url for one page in depth, and read_visibility_results for the answers that cite it.",
+      "Rank the domains or pages AI answers cited in one run, to find the sources worth earning a place on. Each row has how many answers and prompts cited it, its citation share and rate, ownership (yours, a competitor's or third party) and category; page rows also list up to 3 brands named on the page and whether there is an Action for it. It defaults to the latest run; unavailable no_completed_run means none has finished. Rows come in pages; pass next_cursor for more. level domain lists publishers; level url, or passing domain, lists pages. Pass topic_id for the sources of one topic's answers. Use read_source_url for one page in depth, and read_visibility_results for the answers that cite it.",
     schema: z.strictObject({
       ...project,
       market_id,
       audit_id: latestRun,
       engine,
       cohort,
+      topic_id,
       level: z
         .enum(['domain', 'url'])
         .default('domain')
@@ -451,6 +473,79 @@ export const definitions = {
       ...page,
     }),
     read: promptPortfolio,
+  }),
+  read_prompt_metrics: projectTool({
+    title: 'Read prompt metrics',
+    description:
+      "Find which prompts the brand wins or loses. view list ranks one run's prompts by score, each with its visibility and citation rates, share of voice, average position, win rate, net sentiment, web search share, the brands its answers named and its change against the previous run, paged (pass next_cursor). view history is one prompt's score per run with the Actions implemented along the way; view answers lists that prompt's answers across runs, newest first, with the brands named, your position, whether you were cited and whether the engine searched, each with a citeladder:// id for fetch. Null rates, win rate or sentiment are unavailable or not applicable, never zero. list defaults to the latest completed run; unavailable no_completed_run means none has finished. Use read_prompt_portfolio for the wording and topic of every tracked prompt, and read_visibility_results for every answer of one run.",
+    schema: z.strictObject({
+      ...project,
+      market_id,
+      view: z
+        .enum(['list', 'history', 'answers'])
+        .default('list')
+        .describe(
+          "list is one run's prompts (the default); history and answers are one prompt across runs and need prompt_id.",
+        ),
+      prompt_id,
+      audit_id: optional(run.describe('With view list: a run id (audit_id); omit for the latest.')),
+      baseline_id: optional(
+        uuid.describe('With view list: an earlier run id to measure change against.'),
+      ),
+      engine,
+      cohort,
+      ...page,
+    }),
+    read: promptMetricsRead,
+  }),
+  read_query_fanouts: projectTool({
+    title: 'Read query fanouts',
+    description:
+      "Read the web searches engines ran while answering one run's prompts: each query with how often it ran, its share of every search, its change against the previous comparable run (null when not compared), the engines and prompts behind it, how many of its answers named the brand, and the tracked brands the query itself names (null for runs finalized before that was counted). event_count, distinct_queries and coverage describe the whole run, unaffected by paging. order top ranks by share; rising and falling by change. Pass search to match query text, prompt_id or topic_id to narrow. It defaults to the latest completed run; unavailable no_completed_run means none has finished. Use read_prompt_metrics for the prompts themselves.",
+    schema: z.strictObject({
+      ...project,
+      market_id,
+      audit_id: latestRun,
+      engine,
+      cohort,
+      topic_id,
+      prompt_id,
+      search: optional(z.string().trim().min(1).max(512).describe('Words a query must contain.')),
+      order: z
+        .enum(['top', 'rising', 'falling'])
+        .default('top')
+        .describe('top by share (the default); rising or falling by change since the last run.'),
+      ...page,
+    }),
+    read: queryFanoutsRead,
+  }),
+  read_competitors: projectTool({
+    title: 'Read competitors',
+    description:
+      "Read the competitors. view list is the tracked roster (names, aliases, domains) and the brand's own domains. view focus is one tracked competitor against the brand over a run: how many answers named it, the sources cited where it was named, and the prompts where it was named instead of the brand; it defaults to the latest completed run and takes topic_id. view suggestions lists pending competitor suggestions from audits (a cited domain or a name answers used), with how many prompts and engines raised them; a suggestion is a signal for the person to accept or reject in CiteLadder, not a tracked competitor. Use read_visibility_overview for every brand's rates side by side.",
+    schema: z.strictObject({
+      ...project,
+      view: z
+        .enum(['list', 'focus', 'suggestions'])
+        .default('list')
+        .describe('list is the roster (the default); focus needs name; suggestions are pending.'),
+      name: optional(
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(255)
+          .describe('With view focus: a tracked competitor exactly as view list names it.'),
+      ),
+      market_id,
+      audit_id: optional(
+        run.describe('With view focus: a run id (audit_id); omit for the latest.'),
+      ),
+      engine,
+      cohort,
+      topic_id,
+    }),
+    read: competitorsRead,
   }),
   read_seed_queries: projectTool({
     title: 'Read seed queries',
