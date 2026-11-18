@@ -431,13 +431,12 @@ describe('DemandProjection', () => {
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(pagerSummary()).toBe('26–28 of 28 signals');
     expect(signalRows().map(rankOf)).toEqual(['26', '27', '28']);
-    // The short last page keeps a full page's height: blank rows, hidden from
-    // assistive technology, hold the pager where it was.
+    // The short last page draws no blank rows after its own (owner, 2026-11-18).
     expect(
       within(signalTable())
         .getAllByRole('row', { hidden: true })
         .filter((row) => row.getAttribute('aria-hidden') === 'true'),
-    ).toHaveLength(22);
+    ).toHaveLength(0);
 
     // A different filter is a different list: it opens on its first page.
     await user.click(screen.getByRole('radio', { name: /^Striking distance/i }));

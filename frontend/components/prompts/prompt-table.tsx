@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { useShownSpan } from '@/components/ui/data-table-fit';
 import {
   TableActionsCell,
   TableCell,
@@ -327,28 +328,12 @@ const VISIBILITY_COLUMN: DataTableColumn = {
 const SHELF_HINT =
   'Shopping prompts are measured with the shopping shelf on Shopping, not one prompt at a time, so their figures here are not applicable.';
 
+/**
+ * Each mark column sits beside the figure it explains (the brands named after
+ * Visibility, the cited sites after Citations); the low-priority
+ * figures come last and hide, the last first, where the frame is too narrow.
+ */
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
-  {
-    key: 'sov',
-    label: 'Share of voice',
-    width: 'short',
-    kind: 'number',
-    hint: SHARE_OF_VOICE_HINT,
-  },
-  {
-    key: 'sentiment',
-    label: 'Sentiment',
-    width: 'figure',
-    kind: 'number',
-    hint: "Net sentiment toward your brand in this prompt's answers: positive minus negative mentions, as a share of the classified ones.",
-  },
-  {
-    key: 'web_search',
-    label: 'Web search',
-    width: 'figure',
-    kind: 'number',
-    hint: "The share of this prompt's answers that searched the web, counting only engines that report it.",
-  },
   {
     key: 'mentions',
     label: 'Mentions',
@@ -373,10 +358,36 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     label: 'Position',
     width: 'figure',
     kind: 'number',
+    priority: 'low',
     hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
+  },
+  {
+    key: 'sov',
+    label: 'Share of voice',
+    width: 'short',
+    kind: 'number',
+    priority: 'low',
+    hint: SHARE_OF_VOICE_HINT,
+  },
+  {
+    key: 'sentiment',
+    label: 'Sentiment',
+    width: 'figure',
+    kind: 'number',
+    priority: 'low',
+    hint: "Net sentiment toward your brand in this prompt's answers: positive minus negative mentions, as a share of the classified ones.",
+  },
+  {
+    key: 'web_search',
+    label: 'Web search',
+    width: 'figure',
+    kind: 'number',
+    priority: 'low',
+    hint: "The share of this prompt's answers that searched the web, counting only engines that report it.",
   },
 ];
 
+/** The visibility's movement since the last run, beside the visibility. */
 const CHANGE_COLUMN: DataTableColumn = {
   key: 'change',
   label: 'Change',
@@ -389,7 +400,7 @@ function measuredColumnsFor({
   shelf,
 }: Readonly<{ compared: boolean; shelf: boolean }>): readonly DataTableColumn[] {
   const visibility = shelf ? { ...VISIBILITY_COLUMN, hint: SHELF_HINT } : VISIBILITY_COLUMN;
-  return [visibility, ...MEASURED_COLUMNS, ...(compared ? [CHANGE_COLUMN] : [])];
+  return [visibility, ...(compared ? [CHANGE_COLUMN] : []), ...MEASURED_COLUMNS];
 }
 
 /** A prompt's measured visibility, and its movement since the last run. */
@@ -402,21 +413,11 @@ function MeasuredCells({
       <TableCell numeric>
         {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
       </TableCell>
-      <TableCell numeric>
-        {measurement ? (
-          (measured(formatRate(measurement.shareOfVoice)) ?? (
-            <Absence state="none" reason="No tracked brand was named in these answers." />
-          ))
-        ) : (
-          <Absence state="not_measured" />
-        )}
-      </TableCell>
-      <TableCell numeric>
-        <SentimentValue sentiment={measurement?.sentiment} tooFew="Too few" showCount={false} />
-      </TableCell>
-      <TableCell numeric>
-        <WebSearchValue value={measurement?.webSearch} />
-      </TableCell>
+      {compared ? (
+        <TableCell numeric>
+          <ChangeValue change={measurement?.change} />
+        </TableCell>
+      ) : null}
       <TableCell>
         {measurement ? (
           <NamedBrandMarks
@@ -451,11 +452,21 @@ function MeasuredCells({
           </span>
         )}
       </TableCell>
-      {compared ? (
-        <TableCell numeric>
-          <ChangeValue change={measurement?.change} />
-        </TableCell>
-      ) : null}
+      <TableCell numeric>
+        {measurement ? (
+          (measured(formatRate(measurement.shareOfVoice)) ?? (
+            <Absence state="none" reason="No tracked brand was named in these answers." />
+          ))
+        ) : (
+          <Absence state="not_measured" />
+        )}
+      </TableCell>
+      <TableCell numeric>
+        <SentimentValue sentiment={measurement?.sentiment} tooFew="Too few" showCount={false} />
+      </TableCell>
+      <TableCell numeric>
+        <WebSearchValue value={measurement?.webSearch} />
+      </TableCell>
     </>
   );
 }
@@ -466,8 +477,9 @@ function MeasuredCells({
  * cell spans the figures; the Visibility head's hint says why, once.
  */
 function ShelfMeasuredCells({ columns }: Readonly<{ columns: readonly DataTableColumn[] }>) {
+  const span = useShownSpan(columns.map((column) => column.key));
   return (
-    <TableCell colSpan={columns.length}>
+    <TableCell colSpan={span}>
       {/* The column map would end-align the span as the Visibility figure. */}
       <div className="text-start">
         <Absence state="not_applicable" label="Measured with Shopping" />

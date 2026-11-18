@@ -158,28 +158,6 @@ export function TableRow({
 }
 
 /**
- * Blank rows that hold a paged table at a full page's height, so a short last
- * page does not pull the pager up. Hidden from assistive technology. When
- * real rows are taller than the row floor, pass `spacer`: blank content laid
- * out like a real row's tallest cell, so a filler row matches its height.
- */
-export function TableFillerRows({
-  count,
-  colSpan,
-  spacer,
-}: Readonly<{ count: number; colSpan: number; spacer?: ReactNode }>) {
-  return Array.from({ length: Math.max(0, count) }, (_, index) => (
-    <tr // NOSONAR -- a blank filler row with no tabIndex or controls; nothing in it is focusable
-      key={index}
-      aria-hidden="true"
-      className="h-[var(--table-row-height)]"
-    >
-      <TableCell colSpan={colSpan}>{spacer}</TableCell>
-    </tr>
-  ));
-}
-
-/**
  * A column the narrow layout drops: secondary figures a phone has no width
  * for. The header and every cell of the column carry it, so the column
  * disappears whole.

@@ -1,4 +1,11 @@
-import { useContext, useId, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
+import {
+  useContext,
+  useId,
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
@@ -9,6 +16,7 @@ import {
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
+import { ShownColumnsContext, useFittedColumns } from '@/components/ui/data-table-fit';
 import {
   DataTableBody,
   usePinnedPadding,
@@ -49,16 +57,16 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *
  *   columns — each column declares its kind, which sets the head's and every
  *            cell's alignment, face, minimum width and truncation together
- *            (`columnLayout`). Priority columns come first and fit at 982;
- *            `priority: 'low'` columns come last and are what scrolls.
+ *            (`columnLayout`). When the floors do not fit the frame,
+ *            `priority: 'low'` columns hide, the last first (`useFittedColumns`).
  *   pinned — the identity column (with the selection checkbox in the same
  *            pinned block) stays in view while the table scrolls sideways,
  *            and the scroller's scroll padding equals the pinned width, so a
  *            focused cell is never under it.
  *   rows   — every cell is one line, cut with an ellipsis and the full value
  *            in a tooltip; `rowLines={2}` stacks a value over a caption
- *            (`TableCellLines`). A paged table pads a short last page with
- *            blank rows, so the pager never moves between pages.
+ *            (`TableCellLines`). A short page draws no blank rows; a view
+ *            under `reserveRows` holds its page as plain space.
  *   states — loading keeps the head and draws a page of block rows; a filter
  *            that empties a table keeps the head; an empty, not-measured or
  *            failed read replaces the whole table, head included (inside
@@ -97,7 +105,7 @@ export function DataTable({
   columns: readonly DataTableColumn[];
   /** The page's `TableRow`s. Ignored while `state` is set. */
   children?: ReactNode;
-  /** Rows on this page; with `pageSize`, the short last page is padded. */
+  /** Rows on this page; under `reserveRows`, the rest of the page is held as plain space. */
   rowCount?: number;
   /** Rows per page: the footprint reserved for rows and for every state. */
   pageSize?: number;
@@ -116,15 +124,19 @@ export function DataTable({
   label?: string;
   /**
    * One of several views of the same table (its tabs or filters): keep the
-   * pager and a full page of rows even when this view fits on one page, and
-   * hold that footprint under an empty or failed view, so switching views
-   * never moves what follows.
+   * pager and a full page's height (blank space, not blank rows) even when
+   * this view fits on one page, and hold that footprint under an empty or
+   * failed view, so switching views never moves what follows.
    */
   reserveRows?: boolean;
 }>) {
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
   const parts = dataTableParts({ title, label, headingId, columns, selection });
+  const { frameRef, probe, hiddenCols, shown, shownKeys } = useFittedColumns({
+    columns,
+    selection: Boolean(selection),
+  });
   const paging = pagingLayout(pager, pageSize, reserveRows);
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   useFlexibleColumnCheck({ columns, title, label });
@@ -154,21 +166,28 @@ export function DataTable({
         <DataTableFrame
           hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
-          minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
+          minWidth={tableMinWidth({ columns: shown, selection: Boolean(selection), minWidth })}
           layout={columnLayout(columns, Boolean(selection))}
           naming={parts.naming}
           pinned={parts.pinned}
+          frameRef={frameRef}
+          hiddenCols={hiddenCols}
+          probe={probe}
         >
-          <DataTableColumns columns={columns} selection={selection} />
+          <DataTableColumns columns={columns} shown={shown} selection={selection} />
           <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
             <DataTableBody
-              colSpan={parts.colSpan}
+              cells={parts.colSpan}
+              colSpan={shown.length + (selection ? 1 : 0)}
               state={replacing ? undefined : state}
               pageSize={paging.pageSize}
               rowCount={rowCount}
               rowLines={rowLines}
+              reserve={reserveRows}
             >
-              {state === undefined ? children : null}
+              <ShownColumnsContext value={shownKeys}>
+                {state === undefined ? children : null}
+              </ShownColumnsContext>
             </DataTableBody>
           </TableTitleLinesContext>
         </DataTableFrame>
@@ -334,6 +353,9 @@ function DataTableFrame({
   layout,
   naming,
   pinned,
+  frameRef,
+  hiddenCols,
+  probe,
   children,
 }: Readonly<{
   hidden: boolean;
@@ -342,18 +364,26 @@ function DataTableFrame({
   layout: ReturnType<typeof columnLayout>;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
+  frameRef: RefObject<HTMLDivElement | null>;
+  /** 1-based positions of the low-priority columns hidden for room. */
+  hiddenCols: string;
+  /** The hidden boxes that measure the column floors. */
+  probe: ReactNode;
   children: ReactNode;
 }>) {
   usePinnedPadding(scroll.ref, pinned);
   return (
     <div
+      ref={frameRef}
       data-data-table-frame=""
       {...layout}
+      data-hidden-cols={hiddenCols || undefined}
       data-pinned={pinned}
       hidden={hidden}
-      className="isolate min-w-0"
+      className="relative isolate min-w-0"
       style={minWidth}
     >
+      {probe}
       <div {...scroll.frame} className="relative min-w-0">
         <Table
           fixed

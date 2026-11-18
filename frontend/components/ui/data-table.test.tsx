@@ -126,28 +126,34 @@ describe('DataTable', () => {
     ).toBeVisible();
   });
 
-  it('pads a short page of two-line rows with hidden blank rows of the same anatomy', () => {
-    const { container } = render(
+  it('draws no blank rows after a short page; a reserved view holds the rest as one blank space', () => {
+    const table = (reserveRows: boolean) => (
       <DataTable
         label="Signals"
         columns={[{ key: 'query', label: 'Query' }]}
         pageSize={3}
         rowCount={1}
         rowLines={2}
+        reserveRows={reserveRows}
       >
         <TableRow>
           <TableCell>
             <TableCellLines title primary="crm software" secondary="/pricing" />
           </TableCell>
         </TableRow>
-      </DataTable>,
+      </DataTable>
     );
-    const blanks = [...container.querySelectorAll('tbody tr[aria-hidden="true"]')];
-    expect(blanks).toHaveLength(2);
-    expect(blanks.map((row) => row.textContent)).toEqual(['  ', '  ']);
+    const { container, rerender } = render(table(false));
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+
+    rerender(table(true));
+    const rows = [...container.querySelectorAll<HTMLElement>('tbody tr')];
+    expect(rows.map((row) => row.dataset.tableSpacer ?? 'row')).toEqual(['row', '']);
+    expect(rows[1]?.style.getPropertyValue('--data-table-rows')).toBe('2');
+    expect(rows[1]?.textContent).toBe('');
   });
 
-  it('draws the pager and blank rows only once the rows run past one page', () => {
+  it('draws the pager only once the rows run past one page, and never blank rows', () => {
     const table = (total: number) => (
       <DataTable
         label="Runs"
@@ -174,7 +180,7 @@ describe('DataTable', () => {
 
     rerender(table(11));
     expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
   });
 
   it('keeps the pager for a reader who picked a bigger page, even when no total is known', () => {
@@ -382,8 +388,7 @@ describe('DataTable', () => {
         desktop: px(frame.style.getPropertyValue('--data-table-min-desktop')),
         cols: [...container.querySelectorAll<HTMLElement>('col')].map((col) => {
           const width = col.style.getPropertyValue('--col-width');
-          if (!width) return 'rest';
-          return width.endsWith('%') ? width : px(width);
+          return width ? px(width) : 'rest';
         }),
       };
       unmount();
@@ -422,16 +427,16 @@ describe('DataTable', () => {
         ],
       }),
     ).toEqual({ narrow: '849.6', desktop: '849.6', cols: ['rest', '184.0', '192.0', 'rest'] });
-    // A quarter-width lead holds the minimum too, over the page's own floor.
+    // The page's own floor holds over a smaller column sum.
     expect(
       layout({
         columns: [
-          { key: 'dimension', label: 'Query', width: 'lead' },
+          { key: 'dimension', label: 'Query' },
           { key: 'clicks', label: 'Clicks', kind: 'number' },
         ],
         minWidth: 'sm',
       }).narrow,
-    ).toBe('800.0');
+    ).toBe('576.0');
   });
 
   it('warns in development when no column can absorb the width', () => {
@@ -455,7 +460,7 @@ describe('DataTable', () => {
       />,
     );
     expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'DataTable "Fixed figures" has no flexible column (width "flex" or "lead"): its text truncates while its fixed columns leave space unused.',
+      'DataTable "Fixed figures" has no flexible column (width "flex"): its text truncates while its fixed columns leave space unused.',
     ]);
     warn.mockRestore();
   });

@@ -100,9 +100,8 @@ function domainColumns(
   return [
     // Every figure takes the `figure` role and the source is the one flexible
     // column; the hint sits on the header button, so a figure's width holds
-    // its label. Below the `xl` width the table scrolls behind the pinned
-    // source rather than squeezing it: at `lg` the source kept too little
-    // room for a domain on one line.
+    // its label. Where the frame is too narrow the low-priority figures hide,
+    // then the table scrolls behind the pinned source rather than squeezing it.
     { key: 'source', label: 'Source', sort: sortProps(sort, onSort, 'key') },
     {
       key: 'type',
@@ -139,6 +138,7 @@ function domainColumns(
       width: 'figure',
       kind: 'number',
       desktopOnly: true,
+      priority: 'low',
       sort: sortProps(sort, onSort, 'retrieval_rate'),
       hint: 'Unique pages cited from this domain per answer in the selection.',
     },
@@ -156,6 +156,7 @@ function domainColumns(
       width: 'figure',
       kind: 'number',
       desktopOnly: true,
+      priority: 'low',
       sort: sortProps(sort, onSort, 'citation_share'),
       hint: "This domain's citations as a share of every citation in the current filtered view.",
     },
@@ -165,6 +166,7 @@ function domainColumns(
       width: 'figure',
       kind: 'number',
       desktopOnly: true,
+      priority: 'low',
       sort: sortProps(sort, onSort, 'citation_rate'),
       hint: 'Citations per answer that cited this domain — not per answer in the selection.',
     },
@@ -269,7 +271,7 @@ function urlColumns(
 ): DataTableColumn[] {
   // The URL is the one flexible column; every other column holds a role's
   // width. Nine columns cannot fit beside a readable URL at the owner's 982px,
-  // so the table keeps a minimum width and scrolls behind the pinned URL.
+  // so the last low-priority columns hide until the rest fit.
   return [
     { key: 'url', label: 'URL', sort: sortProps(sort, onSort, 'key') },
     {
@@ -313,6 +315,7 @@ function urlColumns(
       label: 'Citation rate',
       width: 'figure',
       kind: 'number',
+      priority: 'low',
       sort: sortProps(sort, onSort, 'citation_rate'),
       hint: 'Citations of this URL per answer that cited it.',
     },
@@ -322,6 +325,7 @@ function urlColumns(
       width: 'figure',
       kind: 'number',
       desktopOnly: true,
+      priority: 'low',
       sort: sortProps(sort, onSort, 'mentions'),
       hint: 'Distinct brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page.',
     },
@@ -330,6 +334,7 @@ function urlColumns(
       label: 'Mentioned',
       width: 'status',
       desktopOnly: true,
+      priority: 'low',
       hint: 'The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page.',
     },
     {
@@ -338,6 +343,7 @@ function urlColumns(
       width: 'figure',
       kind: 'number',
       desktopOnly: true,
+      priority: 'low',
       sort: sortProps(sort, onSort, 'last_cited_at'),
       hint: 'The most recent run in this selection whose answer used this URL as a source.',
     },

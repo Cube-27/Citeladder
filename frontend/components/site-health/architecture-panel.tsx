@@ -8,6 +8,7 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { useShownSpan } from '@/components/ui/data-table-fit';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
@@ -248,15 +249,17 @@ const PAGE_KIND_COLUMNS: readonly DataTableColumn[] = [
   { key: 'duplicates', label: 'Duplicate metadata', kind: 'number', priority: 'low' },
   { key: 'orphaned', label: 'Orphaned', kind: 'number', priority: 'low' },
 ];
+const PAGE_KIND_KEYS = PAGE_KIND_COLUMNS.map((column) => column.key);
 
 function PageKindPages({
   id,
   pages,
   crawlId,
 }: Readonly<{ id: string; pages: ArchitectureNode[]; crawlId: string | null }>) {
+  const span = useShownSpan(PAGE_KIND_KEYS);
   return (
     <TableRow id={id} className="bg-well hover:bg-well">
-      <TableCell colSpan={6}>
+      <TableCell colSpan={span}>
         {pages.length === 0 ? (
           <StateBlock kind="empty" inline message="No pages of this kind to list." />
         ) : (

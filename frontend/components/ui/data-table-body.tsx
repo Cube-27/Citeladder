@@ -2,7 +2,7 @@ import { useLayoutEffect, type CSSProperties, type ReactNode, type RefObject } f
 
 import { LiveVerb, SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateBlock, type StateBlockProps } from '@/components/ui/state-block';
-import { TableBody, TableCell, TableCellLines, TableFillerRows } from '@/components/ui/table';
+import { TableBody, TableCell } from '@/components/ui/table';
 
 /** A table read's state when it has no rows to show: loading, error, empty or filtered. */
 export type DataTableState = Exclude<StateBlockProps, { inline: true }>;
@@ -13,29 +13,36 @@ export type DataTableInlineEmpty = Extract<StateBlockProps, { inline: true }>;
 export type RowLines = 1 | 2 | 3;
 
 /**
- * The rows, padded to a full page; or, while loading, a page of block rows
- * under the real head; or a filter's empty state under the head.
+ * The rows, with no blank rows after a short page (a reserved page keeps its
+ * height as plain space); or, while loading, a page of block rows under the
+ * real head; or a filter's empty state under the head.
  */
 export function DataTableBody({
+  cells,
   colSpan,
   state,
   pageSize,
   rowCount,
   rowLines,
+  reserve,
   children,
 }: Readonly<{
-  /** Cells per row, the selection box counted. */
+  /** Cells per row, the selection box and hidden columns counted. */
+  cells: number;
+  /** Shown columns, the selection box counted: what a full-row cell spans. */
   colSpan: number;
   state?: DataTableState | DataTableInlineEmpty;
   pageSize?: number;
   rowCount?: number;
   rowLines: RowLines;
+  /** Hold the rest of the page as blank space. */
+  reserve: boolean;
   children?: ReactNode;
 }>) {
   if (state?.kind === 'loading') {
     return (
       <LoadingBody
-        columns={colSpan}
+        columns={cells}
         label={state.label ?? 'Loading…'}
         rows={pageSize ?? LOADING_ROWS}
         rowLines={rowLines}
@@ -59,11 +66,23 @@ export function DataTableBody({
       </TableBody>
     );
   }
-  const filler = pageSize === undefined || rowCount === undefined ? 0 : pageSize - rowCount;
+  const rest =
+    reserve && pageSize !== undefined && rowCount !== undefined ? pageSize - rowCount : 0;
   return (
     <TableBody>
       {children}
-      <TableFillerRows count={filler} colSpan={colSpan} spacer={blankLines(rowLines)} />
+      {rest > 0 ? (
+        <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
+          aria-hidden="true"
+          data-table-spacer=""
+          style={stateFootprint(rest, rowLines)}
+        >
+          <TableCell
+            colSpan={colSpan}
+            className="h-[calc(var(--data-table-rows)*var(--data-table-row))]"
+          />
+        </tr>
+      ) : null}
     </TableBody>
   );
 }
@@ -100,11 +119,6 @@ function LoadingBody({
   );
 }
 
-/** A blank row's lines: none for a one-line table, else a title over a caption. */
-function blankLines(rowLines: RowLines) {
-  return rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />;
-}
-
 /**
  * A state spans the visible frame, not the scroll width of a wide table, and
  * stays in view while the frame scrolls, so its text is never cut.
@@ -124,7 +138,7 @@ const ROW_HEIGHT = {
   3: 'calc(var(--table-row-height-2) + var(--text-body--line-height))',
 } as const satisfies Record<RowLines, string>;
 
-/** The custom properties a state cell's height reads: `rows` rows of `rowLines`. */
+/** The custom properties a state or spacer cell's height reads: `rows` rows of `rowLines`. */
 function stateFootprint(rows: number, rowLines: RowLines) {
   return {
     '--data-table-rows': rows,
@@ -134,9 +148,6 @@ function stateFootprint(rows: number, rowLines: RowLines) {
 
 /** Rows a loading table without a page size draws. */
 const LOADING_ROWS = 5;
-
-/** A non-breaking space: a blank line that still takes a line's height. */
-const BLANK = ' ';
 
 /**
  * The scroller's leading scroll padding equals the pinned columns' width, so

@@ -61,8 +61,9 @@ export type FilterBarProps = Readonly<{
  * share All filters (with the count of active ones) in a full row, one that
  * also holds a view, a search and actions (Products), or beside a search when
  * there are more than `FILTERS_BESIDE_SEARCH`, so the row stays one line and
- * the search keeps its width. From 900px it is one row and the search (200 at least) takes the
- * spare width; when the row cannot hold everything, controls wrap as whole
+ * the search keeps its width. From 900px it is one row and the search grows
+ * from 200 to at most 320, so it never runs up to a view or tabs beside the
+ * row (owner, 2026-11-18); when the row cannot hold everything, controls wrap as whole
  * units, the actions at the line's right end, and nothing shrinks below its
  * label. Below 900px the bar stacks into one full-width column in the same
  * order.
@@ -70,7 +71,6 @@ export type FilterBarProps = Readonly<{
  * `status` is a polite live region, so a filtered result count is announced.
  */
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
-  // A search takes every spare pixel of its line, so the count needs no push.
   const searched = Boolean(search);
   const full = searched && Boolean(view) && Boolean(actions);
   return (
@@ -81,7 +81,9 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {search ? (
-        <div className="rail:flex-[1_1_200px] rail:min-w-[200px] min-w-0">{search}</div>
+        <div className="rail:flex-[1_1_200px] rail:min-w-[200px] rail:max-w-80 min-w-0">
+          {search}
+        </div>
       ) : null}
       {filters ? (
         <RowFilters filters={filters} grouped={grouped(filters.length, searched, full)} />
@@ -91,7 +93,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
           aria-live="polite"
           className={cn(
             'type-caption flex min-w-0 items-center gap-2 truncate empty:hidden',
-            searched ? 'rail:shrink-0 whitespace-nowrap' : 'rail:ms-auto rail:shrink',
+            'rail:ms-auto rail:shrink',
           )}
         >
           {status}
@@ -102,7 +104,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
         <div
           className={cn(
             'ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2',
-            !searched && '[output:not(:empty)+&]:ms-0',
+            '[output:not(:empty)+&]:ms-0',
           )}
         >
           {actions}

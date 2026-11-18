@@ -8,19 +8,13 @@ import { textRole } from '@/components/ui/typography';
 
 /**
  * A column's width, by what the column holds — never a number a page picks:
- * spacing steps, a share of the table (`lead`), or what is left (`flex`).
- * The table is laid out fixed from these, so paging, filtering or a long
- * value never moves a column. `flex` takes what the others leave; give it to
- * the one text column that should absorb the width.
+ * spacing steps, or what is left (`flex`). The table is laid out fixed from
+ * these, so paging, filtering or a long value never moves a column. `flex`
+ * takes what the others leave; give it to the one text column that should
+ * absorb the width, so no figure column grows past its role.
  */
 const COLUMN_WIDTH = {
   flex: { kind: 'rest' },
-  /**
-   * The record's identity (a source, a page) in a table whose other columns
-   * are flexible figures: a quarter of the table, so the figures share the
-   * rest evenly whatever the viewport.
-   */
-  lead: { kind: 'share', share: 0.25 },
   /** A row's ordinal on the page (#, rank). */
   index: { kind: 'steps', steps: 12 },
   /** A count, a rate or a short figure. */
@@ -54,18 +48,12 @@ const COLUMN_WIDTH = {
   control: { kind: 'steps', steps: 20 },
   /** A row's trailing buttons, up to two (`TableActionsCell`). */
   rowActions: { kind: 'steps', steps: 64 },
-} as const satisfies Record<
-  string,
-  { kind: 'rest' } | { kind: 'share'; share: number } | { kind: 'steps'; steps: number }
->;
+} as const satisfies Record<string, { kind: 'rest' } | { kind: 'steps'; steps: number }>;
 
 /** The select-all checkbox column, in spacing steps. */
 const SELECT_STEPS = 10;
 
 type DataTableColumnWidth = keyof typeof COLUMN_WIDTH;
-
-/** The widths that grow with the table: the flexible text column and the lead. */
-const FLEXIBLE_WIDTHS: ReadonlySet<DataTableColumnWidth> = new Set(['flex', 'lead']);
 
 /**
  * What a column holds. The kind sets the head and every cell of the column
@@ -96,8 +84,8 @@ export type DataTableColumn = Readonly<{
   /** Keep the header for assistive technology only. An `actions` column always does. */
   hideLabel?: boolean;
   /**
-   * `low`: a column the table can lose to scrolling. Priority columns come
-   * first and fit at 982 in the host template; low ones come last.
+   * `low`: a column the table hides, last one first, while the column
+   * floors do not fit the frame, so the table fits instead of scrolling.
    */
   priority?: 'low';
   /** A sortable column: the header becomes the sort button. */
@@ -135,6 +123,11 @@ function widthOf(column: DataTableColumn): DataTableColumnWidth {
   return column.width ?? KIND[columnKind(column)].width;
 }
 
+/** Whether the column takes what the fixed columns leave. */
+export function isFlexible(column: DataTableColumn): boolean {
+  return COLUMN_WIDTH[widthOf(column)].kind === 'rest';
+}
+
 /**
  * The table's column map for the cell rules in globals.css ("r3 data"): the
  * 1-based positions of the end-aligned, start-aligned and tabular columns,
@@ -163,7 +156,7 @@ const warnedColumnSets = new Set<string>();
 /**
  * Development only: a table whose every column is a fixed role cuts its text
  * while the fixed columns leave width unused. Give the text column `flex`
- * (the default) or `lead`.
+ * (the default).
  */
 export function useFlexibleColumnCheck({
   columns,
@@ -172,20 +165,14 @@ export function useFlexibleColumnCheck({
 }: Readonly<{ columns: readonly DataTableColumn[]; title?: string; label?: string }>) {
   useEffect(() => {
     if (!import.meta.env?.DEV) return;
-    const firstLow = columns.findIndex((column) => column.priority === 'low');
-    if (firstLow !== -1 && columns.slice(firstLow).some((column) => column.priority !== 'low')) {
-      console.warn(
-        `DataTable "${title ?? label ?? 'Table'}" puts a priority column after a low-priority one: low-priority columns come last.`,
-      );
-    }
-    if (columns.some((column) => FLEXIBLE_WIDTHS.has(widthOf(column)))) return;
+    if (columns.some(isFlexible)) return;
     const name = title ?? label ?? columns.map((column) => column.label).join(', ');
     const widths = columns.map((column) => `${column.key}:${column.width}`).join(',');
     const signature = `${name}|${widths}`;
     if (warnedColumnSets.has(signature)) return;
     warnedColumnSets.add(signature);
     console.warn(
-      `DataTable "${name}" has no flexible column (width "flex" or "lead"): its text truncates while its fixed columns leave space unused.`,
+      `DataTable "${name}" has no flexible column (width "flex"): its text truncates while its fixed columns leave space unused.`,
     );
   }, [columns, title, label]);
 }
@@ -219,7 +206,7 @@ function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
  * The narrowest a column may be: its role's steps (a flexible column the
  * identity minimum), a date's full width, and never less than its head label.
  */
-function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
+export function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
   const role = COLUMN_WIDTH[widthOf(column)];
   const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
@@ -229,28 +216,16 @@ function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
 }
 
 /** Each shown column with its edge: the select column, when present, is the first edge. */
-function withEdges(columns: readonly DataTableColumn[], selection: boolean) {
+export function withEdges(columns: readonly DataTableColumn[], selection: boolean) {
   return columns.map((column, index) => ({
     column,
     edge: { first: !selection && index === 0, last: index === columns.length - 1 },
   }));
 }
 
-/** A column's `col` width: a fixed role at its floor, a share of the table, or what is left. */
+/** A column's `col` width: a fixed role at its floor, or what is left. */
 function columnWidth(column: DataTableColumn, edge: ColumnEdge): string | undefined {
-  const role = COLUMN_WIDTH[widthOf(column)];
-  switch (role.kind) {
-    case 'rest':
-      return undefined;
-    case 'share':
-      return `${role.share * 100}%`;
-    case 'steps':
-      return columnFloor(column, edge);
-    default: {
-      const unknownRole: never = role;
-      return unknownRole;
-    }
-  }
+  return isFlexible(column) ? undefined : columnFloor(column, edge);
 }
 
 /**
@@ -273,20 +248,12 @@ export function columnsMinWidth({
   const shown = columns.filter((column) => desktop || !column.desktopOnly);
   const fixed = selection ? [steps(SELECT_STEPS)] : [];
   const rest: string[] = [];
-  const shares: { share: number; min: string }[] = [];
   for (const { column, edge } of withEdges(shown, selection)) {
-    const role = COLUMN_WIDTH[widthOf(column)];
-    const min = columnFloor(column, edge);
-    if (role.kind === 'steps') fixed.push(min);
-    else if (role.kind === 'share') shares.push({ share: role.share, min });
-    else rest.push(min);
+    (isFlexible(column) ? rest : fixed).push(columnFloor(column, edge));
   }
-  const share = shares.reduce((sum, part) => sum + part.share, 0);
   // A fixed layout splits what is left evenly, so each flexible column needs the widest floor.
   const restMin = rest.length > 0 ? `${rest.length} * max(${rest.join(', ')})` : '0px';
-  const parts = [`calc((${fixed.join(' + ') || '0px'} + ${restMin}) / ${1 - share})`];
-  // A share column is a share of the table: the table is wide enough that the share holds its floor.
-  for (const part of shares) parts.push(`calc(${part.min} / ${part.share})`);
+  const parts = [`calc(${fixed.join(' + ') || '0px'} + ${restMin})`];
   if (floor) parts.push(floor);
   return `max(${parts.join(', ')})`;
 }
@@ -294,17 +261,24 @@ export function columnsMinWidth({
 /**
  * The column widths and the header row, with the select-all column first.
  * The width is a custom property so the narrow layout (globals.css) can give
- * the identity column the rest and collapse a `desktopOnly` column.
+ * the identity column the rest and collapse a `desktopOnly` column. A hidden
+ * low-priority column has no `col`; its head and cells hide by position
+ * (`data-hidden-cols`), so the shown cells meet the shown `col`s in order.
  */
 export function DataTableColumns({
   columns,
+  shown,
   selection,
-}: Readonly<{ columns: readonly DataTableColumn[]; selection?: DataTableSelection }>) {
+}: Readonly<{
+  columns: readonly DataTableColumn[];
+  shown: readonly DataTableColumn[];
+  selection?: DataTableSelection;
+}>) {
   return (
     <>
       <colgroup>
         {selection ? <col style={colWidth(steps(SELECT_STEPS), steps(SELECT_STEPS))} /> : null}
-        {withEdges(columns, Boolean(selection)).map(({ column, edge }, index) => (
+        {withEdges(shown, Boolean(selection)).map(({ column, edge }, index) => (
           <col
             key={column.key}
             style={colWidth(columnWidth(column, edge), columnFloor(column, edge))}
@@ -324,6 +298,9 @@ export function DataTableColumns({
     </>
   );
 }
+
+/** The select-all column's width. */
+export const SELECT_WIDTH = steps(SELECT_STEPS);
 
 const colWidth = (width: string | undefined, floor: string) =>
   ({ '--col-width': width, '--col-floor': floor }) as CSSProperties;

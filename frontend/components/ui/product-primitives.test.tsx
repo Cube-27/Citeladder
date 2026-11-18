@@ -170,7 +170,7 @@ describe('DataTable', () => {
     { key: 'count', label: 'Count', kind: 'number' },
   ] as const;
 
-  it('pads a short page to the full page of rows and gives way to one empty state, head included', () => {
+  it('draws only the rows a short page has and gives way to one empty state, head included', () => {
     const { container, rerender } = render(
       <DataTable title="Runs" columns={columns} pageSize={5} rowCount={2}>
         <TableRow>
@@ -185,7 +185,7 @@ describe('DataTable', () => {
     );
     expect(screen.getByRole('heading', { level: 2, name: 'Runs' })).toBeVisible();
     expect(screen.getByRole('columnheader', { name: 'Count' })).toBeVisible();
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
 
     rerender(
       <DataTable

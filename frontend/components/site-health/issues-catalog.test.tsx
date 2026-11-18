@@ -302,9 +302,14 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-    // Tallest tab (Technical, 24) under a 25-row page, plus four blank rows.
+    // Tallest tab (Technical, 24) under a 25-row page, plus four rows, held
+    // as one blank space after the rows rather than as blank rows.
     const issuesTable = screen.getByRole('region', { name: 'Issues' });
-    await waitFor(() => expect(issuesTable.querySelectorAll('tbody tr')).toHaveLength(28));
+    await waitFor(() => {
+      const rows = issuesTable.querySelectorAll('tbody tr:not([data-table-spacer])').length;
+      const spacer = issuesTable.querySelector<HTMLElement>('tbody tr[data-table-spacer]');
+      expect(rows + Number(spacer?.style.getPropertyValue('--data-table-rows'))).toBe(28);
+    });
   });
 
   it('switches tabs and ordering as server params, from the first page', async () => {
