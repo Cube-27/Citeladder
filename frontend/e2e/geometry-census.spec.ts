@@ -119,13 +119,13 @@ const MASTHEAD_HEIGHT = 52;
  */
 const NAV_ROW_HEIGHT = 32;
 /**
- * Masthead, tab strip and filter strip stack flush, each the same height on
- * every page (owner, 2026-11-18): the tab strip is 4 above 32 tabs, the
- * filter strip 8 around its 32 controls. The main column is padded 24 left
+ * Masthead, filter strip and tab strip stack flush, each the same height on
+ * every page (owner, 2026-11-18): the filter strip is 8 around its 32
+ * controls, the tab strip 4 above 32 tabs. The main column is padded 32 left
  * and right (`--page-pad-inline`); the body starts 16 below the last strip.
  */
 const BAND_GAP = 0;
-const PAGE_PAD_INLINE = 24;
+const PAGE_PAD_INLINE = 32;
 const TABS_STRIP_TOP = 4;
 const TABS_STRIP_HEIGHT = 36;
 const FILTER_STRIP_PADDING_Y = 8;
@@ -159,6 +159,8 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
+/** A wide table's pair of sideways steppers are 24 (`min-h-6`, components/ui/scroll-edges.tsx); /billing at 982 shows them. */
+const SCROLL_STEP_HEIGHT = 24;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
@@ -216,6 +218,13 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
+    // A wide table's pair of sideways steppers are 24px glyph buttons
+    // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
+    // `scroll-step.height`; a tab row's one row-end stepper is a 32 control.
+    if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {
+      add('scroll-step.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
     // A work tree's level rows and a pressable figure's cell are whole-row
     // targets (components/ui/work-tree.tsx, figure-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
@@ -726,6 +735,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
+  expectOneValue(records, 'scroll-step.height', SCROLL_STEP_HEIGHT);
   expectOneValue(records, 'figure-target.gap', 0);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);

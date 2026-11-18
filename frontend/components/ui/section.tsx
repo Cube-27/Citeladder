@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
  * What a section draws:
  *   `surface` — the default: no box. Its head (title, a one-line description,
  *               actions at the right) and its body sit straight on the page
- *               surface; space and the heading separate it from its neighbours.
+ *               surface; on the page a `rule` separates it from its neighbours,
+ *               32 on each side (globals.css, "Section dividers").
  *   `framed`  — opt-in, for the few blocks that earn a box: a light `rule`
  *               frame at the card radius, padded 16, with no fill or shadow.
  * Tables and charts draw their own frame; a section never boxes them again.

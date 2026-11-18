@@ -51,8 +51,8 @@ export function SidebarFrame({
         >
           {ident}
         </div>
-        {/* `page-pad-block` above the switch, level with the first row; 12 below it. */}
-        <div className="labelled:pt-[var(--page-pad-block)] labelled:pb-3 shrink-0 px-2 pt-1">
+        {/* Labelled, the row lines up with the page's first strip (globals.css). */}
+        <div data-sidebar-mode-row="" className="shrink-0 px-2 pt-1">
           {mode}
         </div>
         {nav}

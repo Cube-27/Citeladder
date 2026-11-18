@@ -36,13 +36,13 @@
 
 /* Grids in the app's main column switch on the column, not the viewport,
    so a wider sidebar stacks them. `column-split:` is `desktop:`
-   (981 less the 200px labelled sidebar, two 24px gutters and a scrollbar),
-   `column-wide:` is `shell:` (1280 less a dragged-wider sidebar, two 24px
+   (981 less the 200px labelled sidebar, two 32px gutters and a scrollbar),
+   `column-wide:` is `shell:` (1280 less a dragged-wider sidebar, two 32px
    gutters and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
    keep the viewport breakpoints. */
 @custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
-  @container main (min-width: 704px) {
+  @container main (min-width: 688px) {
     @slot;
   }
   @media (min-width: 981px) {
@@ -52,7 +52,7 @@
   }
 }
 @custom-variant column-wide {
-  @container main (min-width: 970px) {
+  @container main (min-width: 954px) {
     @slot;
   }
   @media (min-width: 1280px) {
@@ -734,14 +734,19 @@
 
   /* Anatomy (2.3): the top strips, each closed by a rule across the main
      column and the same height on every page (`PageFrame`, owner 2026-11-18):
-     masthead 52; tabs 4 above 32 tabs; filters 8 around 32 controls. Then
+     masthead 52; filters 8 around 32 controls; tabs 4 above 32 tabs. Then
      `page-pad-block` to the first content. Sidebar 224 from 1280, 200 from
      900, a 56 rail of 40px buttons when collapsed. Content fills the main
-     column inside a 24 gutter (16 below 900), a reading page centred in
+     column inside a 32 gutter (24 on flow, setup and auth pages; 16 below
+     900), a reading page centred in
      `thread`. The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 52px;
   --page-tabs-height: 32px;
   --filter-bar-height: 48px;
+  /* The page's first strip under the masthead; the sidebar's Dashboard |
+     Agent row takes its height so their rules meet on one line (owner,
+     2026-11-18). Rebound below when the first strip is the tab strip. */
+  --first-strip-height: var(--filter-bar-height);
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
@@ -775,11 +780,7 @@
      position. `svh`, so a phone's collapsing toolbar never resizes it. */
   --page-end-space: 33svh;
   /* The page's padding. Inline: the main column's left and right (the
-     gutter). Block, one step tighter: masthead to the first row (its tabs or
-     filters), the first row to what follows, and the space above and below
-     the sidebar's Dashboard | Agent switch. The switch, the tabs and a filter
-     row are all one control high, so the first row and the switch share a
-     centre line: 16 + 32 / 2 = 32. */
+     gutter). Block: the last strip to the first content. */
   --page-pad-inline: var(--content-gutter);
   --page-pad-block: 16px;
 }
@@ -788,6 +789,32 @@
   :root:not([data-public-surface]) {
     --content-gutter: 16px;
     --page-pad-block: 12px;
+  }
+}
+/* Main pages sit 8 further in than flow, setup and auth pages (owner, 2026-11-18). */
+@media (min-width: 900px) {
+  [data-main-column] {
+    --content-gutter: 32px;
+    --page-pad-inline: 32px;
+  }
+}
+:root:has([data-page-band='tabs']):not(:has([data-page-band='filters'])) {
+  --first-strip-height: calc(var(--page-tabs-height) + 4px);
+}
+/* The labelled sidebar's Dashboard | Agent row: the first strip's height, the
+   switch centred, its rule on the strip's line (owner, 2026-11-18). */
+[data-sidebar-mode-row]:where([data-sidebar-state='expanded'] *, [data-nav-drawer] *) {
+  position: relative;
+  display: grid;
+  align-content: center;
+  height: var(--first-strip-height);
+  padding-top: 0;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-bottom: 1px solid var(--color-rule);
+    pointer-events: none;
   }
 }
 
@@ -1620,10 +1647,52 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] .surface-section [data-form-field] {
     max-width: var(--container-form);
   }
-  /* Settings groups read as rows of one list: a faint divider between them. */
-  [data-settings-sections] [data-page-content] > .surface-section + .surface-section {
-    border-top: 1px solid var(--color-rule);
+  /* Section dividers (owner, 2026-11-18): on the page a `rule` separates
+     sections, 32 either side. Stacked, it spans the main column like the
+     strips; between a halves or main-aside grid's two columns it runs down
+     the row. A block after one ending on a figure strip keeps that strip's
+     rule. Zero specificity, so the column rule below wins. */
+  :where(
+    [data-page-body]
+      :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
+      + :is(section, [data-app-grid]:has(> section)):not(
+        [data-app-grid] > *,
+        .surface-card *,
+        .surface-slip *
+      ),
+    [data-page-body] [data-app-grid]:has(> section) > * + *
+  ) {
+    position: relative;
     padding-top: var(--page-section-gap);
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      inset-inline: calc(50% - 50cqw - var(--content-gutter));
+      height: 1px;
+      background: var(--color-rule);
+    }
+  }
+  [data-page-body] [data-app-grid]:has(> section) {
+    --grid-gap-y: var(--page-section-gap);
+    & > * {
+      --grid-gap-x: initial;
+      --grid-gap-y: initial;
+    }
+  }
+  /* `column-wide` (the page body is always in the main column). */
+  @container main (min-width: 954px) {
+    [data-page-body] :is([data-app-grid='halves'], [data-app-grid='main-aside']):has(> section) {
+      --grid-gap-x: calc(2 * var(--page-section-gap));
+      & > :nth-child(2) {
+        padding-top: 0;
+      }
+      & > :nth-child(even)::before {
+        inset: 0 auto 0 calc(-1 * var(--page-section-gap));
+        width: 1px;
+        height: auto;
+      }
+    }
   }
   .surface-section {
     --section-above: var(--page-section-gap);

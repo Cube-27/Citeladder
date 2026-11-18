@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
  * AppGrid — the app's only grids, so a page picks a layout instead of
  * setting columns or gaps. Cards are 16 apart in both directions and the
  * cards in one row share a height (they stretch); side by side they are
- * separated by the gap and their own edges, never a rule.
+ * separated by the gap and their own edges, never a rule. Sections on the
+ * page are 32 either side of a rule instead.
  *
  * In the main column the breakpoints are the column's width, so a wider
  * sidebar stacks a grid (`column-split:`/`column-wide:` in globals.css); the
@@ -56,7 +57,8 @@ export function AppGrid({
       ...props,
       'data-app-grid': layout,
       className: cn(
-        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0',
+        // A grid of page sections widens its gaps for its rules (globals.css, "Section dividers").
+        'grid min-w-0 grid-cols-1 gap-x-[var(--grid-gap-x,var(--workspace-gap))] gap-y-[var(--grid-gap-y,var(--workspace-gap))] *:min-w-0',
         LAYOUT[layout],
         className,
       ),

@@ -44,8 +44,8 @@ const STRIP_RULE =
 
 /**
  * The anatomy every shell page shares (owner, 2026-11-18): the masthead
- * strip, then the optional tab strip (4 above 32 tabs) and filter strip (8
- * around 32 controls, one line), each closed by a hairline across the main
+ * strip, then the optional filter strip (8 around 32 controls, one line) and
+ * tab strip (4 above 32 tabs), each closed by a hairline across the main
  * column, then the body `--page-pad-block` below. A page passes content into
  * the slots and sets no strip geometry of its own. The masthead's
  * menu button, search and "Ask agent" come from the shell. A narrow route (its manifest `width`) centres the whole frame, title and
@@ -98,15 +98,15 @@ export function PageFrame({
           actions={actions}
           end={shell?.agentTrigger}
         />
+        {filters ? (
+          <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
+            {filters}
+          </div>
+        ) : null}
         {tabs ? (
           // The current tab's underline sits on the strip's rule.
           <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end pt-1')}>
             {tabs}
-          </div>
-        ) : null}
-        {filters ? (
-          <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
-            {filters}
           </div>
         ) : null}
         <div data-page-body="" className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]">
