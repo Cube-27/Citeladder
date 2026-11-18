@@ -439,13 +439,14 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   });
   await page.goto(fixtureProjectPath('/visibility'));
 
-  // Sources leads — the cited domains, with the URLs half one switch away.
-  await expect(page.getByRole('tab', { name: 'Sources', exact: true })).toHaveAttribute(
+  // Domains leads; the cited pages are the next tab.
+  await expect(page.getByRole('tab', { name: 'Domains', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('radio', { name: 'Domains' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
+  await page.getByRole('tab', { name: 'URLs', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]tab=urls/);
+  await expect(page.getByRole('searchbox', { name: 'Search URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Ads — paid placements in ChatGPT Search answers; other engines are not applicable.
@@ -493,7 +494,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(3);
+  await expect(tablist.getByRole('tab')).toHaveCount(5);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);

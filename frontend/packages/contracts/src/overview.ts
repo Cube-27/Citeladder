@@ -40,7 +40,7 @@ export const overviewWidgetTitles: Record<OverviewWidgetKey, string> = {
   top_movers: 'Top movers',
   retrieval: 'Retrieved versus cited',
   perception: 'Perception',
-  ai_traffic: 'AI Traffic',
+  ai_traffic: 'AI traffic',
   search_console: 'Search Console',
 };
 

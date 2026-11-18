@@ -50,13 +50,13 @@ export const RECORD_KINDS = {
   site_issue: { label: 'Site Health issue', screen: '/site' },
   site_link: { label: 'Internal link', screen: '/site' },
   traffic_snapshot: { label: 'Traffic snapshot', screen: '/performance' },
-  demand_snapshot: { label: 'Search Demand snapshot', screen: '/search-intelligence' },
+  demand_snapshot: { label: 'Demand snapshot', screen: '/search-intelligence' },
   query_snapshot: { label: 'Search Console snapshot', screen: '/performance' },
   query_row: { label: 'Search Console query', screen: '/performance' },
-  // The Keywords page opens on Demand; Keyword Research records open its Overview.
-  search_run: { label: 'Keyword Research run', screen: KEYWORD_RESEARCH },
-  search_dataset: { label: 'Keyword Research dataset', screen: KEYWORD_RESEARCH },
-  search_row: { label: 'Keyword Research row', screen: KEYWORD_RESEARCH },
+  // The Keywords page opens on Demand; keyword records open its Overview.
+  search_run: { label: 'Keywords run', screen: KEYWORD_RESEARCH },
+  search_dataset: { label: 'Keywords dataset', screen: KEYWORD_RESEARCH },
+  search_row: { label: 'Keywords row', screen: KEYWORD_RESEARCH },
 } as const satisfies Record<string, RecordKind>;
 
 export type RecordKindName = keyof typeof RECORD_KINDS;

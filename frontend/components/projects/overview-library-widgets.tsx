@@ -185,7 +185,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
   const status = comparison?.status ?? 'no_baseline';
   if (visibility.isError || (visibility.data !== undefined && status !== 'comparable'))
     return (
-      <WidgetCard id="top_movers" href="/visibility?tab=sources">
+      <WidgetCard id="top_movers" href="/visibility?tab=domains">
         <Loaded
           widget="top_movers"
           query={visibility}
@@ -197,7 +197,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
       </WidgetCard>
     );
   return (
-    <WidgetCard id="top_movers" href="/visibility?tab=sources">
+    <WidgetCard id="top_movers" href="/visibility?tab=domains">
       <Loaded
         widget="top_movers"
         query={movers}
@@ -227,7 +227,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
 export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
   const { visibility, misses } = useLatestNearMisses(project);
   return (
-    <WidgetCard id="retrieval" href="/visibility?tab=sources&source_standing=near_miss">
+    <WidgetCard id="retrieval" href="/visibility?tab=read-not-cited">
       {visibility.data === null ? (
         noMeasuredRun
       ) : (
@@ -313,8 +313,8 @@ export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
       <Loaded
         widget="ai_traffic"
         query={query}
-        subject="AI Traffic"
-        fallback="AI Traffic could not be loaded."
+        subject="AI traffic"
+        fallback="AI traffic could not be loaded."
       >
         {({ crawl, referrals }) => {
           const visits = referrals.referral_volume.at(-1)?.value ?? null;

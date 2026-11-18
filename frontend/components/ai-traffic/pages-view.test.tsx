@@ -139,7 +139,7 @@ it('leaves out a column no row measures, and gives way to one state when none is
   mswServer.use(http.get(PAGES, () => HttpResponse.json(pagesBody(rows))));
   const view = renderPages();
   const table = await screen.findByRole('table', {
-    name: 'Path-level AI Traffic with separate signal units',
+    name: 'Path-level AI traffic with separate signal units',
   });
   await within(table).findByRole('row', { name: /\/a\b/ });
   // Referrals, citations, findings and last crawl are absent on every row.
@@ -175,7 +175,7 @@ it('keeps the rows and the pager on screen while the next page loads', async () 
   const user = userEvent.setup();
   renderPages();
   const table = await screen.findByRole('table', {
-    name: 'Path-level AI Traffic with separate signal units',
+    name: 'Path-level AI traffic with separate signal units',
   });
   expect(await within(table).findByRole('row', { name: /first-1\b/ })).toBeVisible();
   expect(screen.getByText(pagerRange('1–10 paths'))).toBeVisible();
@@ -212,7 +212,7 @@ it('never shows one workspace’s rows while another workspace’s page loads', 
   );
   const view = renderPages();
   const table = await screen.findByRole('table', {
-    name: 'Path-level AI Traffic with separate signal units',
+    name: 'Path-level AI traffic with separate signal units',
   });
   expect(await within(table).findByRole('row', { name: /first-workspace/ })).toBeVisible();
 
@@ -249,7 +249,7 @@ it('lists each count with its qualifiers when the drawer opens from outside the 
   renderWithProviders(<TrafficUrlButton urlHash={row.url_hash} />, {
     projectSelection: { activeProject: project },
   });
-  await user.click(screen.getByRole('button', { name: 'View AI Traffic' }));
+  await user.click(screen.getByRole('button', { name: 'View AI traffic' }));
   const panel = await screen.findByRole('dialog', { name: '/guide' });
   const record = async (name: string) =>
     (await within(panel).findByText(name, { selector: 'dt' })).nextElementSibling?.textContent;
@@ -286,7 +286,7 @@ it('keeps the drawer’s crawler when a path is opened from it', async () => {
     { projectSelection: { activeProject: project } },
   );
   await user.click(
-    await screen.findByRole('button', { name: 'View AI Traffic for https://example.test/guide' }),
+    await screen.findByRole('button', { name: 'View AI traffic for https://example.test/guide' }),
   );
   await waitFor(() => expect(detailParams).not.toBeNull());
   expect(Object.fromEntries(detailParams!)).toEqual({

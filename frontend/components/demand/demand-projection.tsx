@@ -306,8 +306,8 @@ function SearchDemandView({
           <Notice
             kind="read"
             error={refreshError}
-            fallback="Search demand could not be refreshed."
-            title="Search demand could not be refreshed"
+            fallback="Demand could not be refreshed."
+            title="Demand could not be refreshed"
             onRetry={onRetry ?? (() => undefined)}
             pending={Boolean(retrying)}
           />
@@ -385,8 +385,8 @@ function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
       <StateBlock
         kind="error"
         {...readErrorProps(latest)}
-        fallback="Search demand could not be loaded. Check your connection and try again."
-        title="Search demand could not be loaded"
+        fallback="Demand could not be loaded. Check your connection and try again."
+        title="Demand could not be loaded"
       />
     );
   if (latest.data === undefined) return null;
@@ -403,14 +403,14 @@ function SearchConsoleSetup() {
         icon: Search,
         heading: 'Connect Search Console to see search demand',
         description:
-          'Search Demand shows the queries people search around your offerings, with clicks and impressions, once Search Console is connected.',
+          'Demand shows the queries people search around your offerings, with clicks and impressions, once Search Console is connected.',
       }}
       whenReady={
         <DemandEmpty>
           <StateBlock
             kind="empty"
             icon={Search}
-            heading="Search Demand appears after the next Search Console import"
+            heading="Demand appears after the next Search Console import"
             description="Queries and pages where search demand outruns your clicks are listed here once Search Console has imported a window."
             headingLevel={2}
           />

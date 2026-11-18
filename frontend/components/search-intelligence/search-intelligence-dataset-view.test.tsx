@@ -259,7 +259,7 @@ it('opens Sources on the run a citation match came from', async () => {
   const href = screen.getByRole('link', { name: 'View in Sources' }).getAttribute('href')!;
   const url = new URL(href, 'http://x');
   expect(url.pathname).toBe('/visibility');
-  expect(url.searchParams.get('tab')).toBe('sources');
+  expect(url.searchParams.get('tab')).toBe('domains');
   expect(url.searchParams.get('run')).toBe(runId);
 });
 

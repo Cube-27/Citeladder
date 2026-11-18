@@ -200,8 +200,8 @@ function KeywordResearch({
         <StateBlock
           kind="error"
           {...readErrorProps(readiness)}
-          fallback="Keyword Research could not be loaded."
-          title="Keyword Research could not be loaded"
+          fallback="Keywords could not be loaded."
+          title="Keywords could not be loaded"
         />
       </KeywordResearchFrame>
     );
@@ -219,7 +219,7 @@ function KeywordResearch({
           kind="empty"
           icon={Settings2}
           heading="Add your website address"
-          description="Keyword Research needs the project’s homepage address."
+          description="Keywords needs the project’s homepage address."
           action={<TextLink href="/projects">Edit the project</TextLink>}
         />
       </KeywordResearchFrame>
@@ -389,11 +389,10 @@ function useRoleActions({
 
 /** The first load's shape of the tab's first card: Overview's figures, or a table. */
 function ResearchLoading({ tab }: Readonly<{ tab: Tab }>) {
-  if (tab === 'overview')
-    return <Skeleton variant="stat" count={5} label="Loading Keyword Research…" />;
+  if (tab === 'overview') return <Skeleton variant="stat" count={5} label="Loading keywords…" />;
   return (
     <Section>
-      <Skeleton variant="table" columns={6} label="Loading Keyword Research…" />
+      <Skeleton variant="table" columns={6} label="Loading keywords…" />
     </Section>
   );
 }

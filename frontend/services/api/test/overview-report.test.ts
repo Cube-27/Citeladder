@@ -337,7 +337,7 @@ describe('Overview PDF', () => {
       'Top movers',
       'Retrieved versus cited',
       'Perception',
-      'AI Traffic',
+      'AI traffic',
       'Search Console',
     ])
       expect(text).toContain(heading);

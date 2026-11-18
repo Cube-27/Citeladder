@@ -83,7 +83,7 @@ export function OverviewFigures({
       <SectionContent>
         <Stack gap="compact">
           <FigureStrip
-            label="AI Traffic key figures"
+            label="AI traffic key figures"
             segments={[
               referralFigure(data.referrals, ga4),
               ...crawlFigures(data.crawl, crawlAvailable),

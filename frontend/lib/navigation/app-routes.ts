@@ -442,9 +442,9 @@ export const APP_ROUTES = [
     path: '/visibility',
     title: 'Sources',
     screen: screens.visibility,
-    // Sources, the default tab, opens on its charts over the cited-domain table.
-    loading: cards([chart, table(6)], {
-      tabs: ['Sources', 'Ads', 'Query fanouts'],
+    // Domains, the default tab, opens on its cited-domain table and charts.
+    loading: cards([table(6), chart], {
+      tabs: ['Domains', 'URLs', 'Read, not cited', 'Query fanouts', 'Ads'],
       filters: true,
     }),
     nav: [listed('Sources', 'visibility', 'tracking')],

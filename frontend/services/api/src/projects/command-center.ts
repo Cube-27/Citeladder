@@ -452,7 +452,7 @@ export async function commandCenter(
       analyzed: state(
         analyzedAt,
         [...(crawl ? ['site_health'] : []), ...(demand ? ['search_demand'] : [])],
-        crawl && !demand ? ['Search Demand is not connected or has not refreshed yet.'] : [],
+        crawl && !demand ? ['Demand is not connected or has not refreshed yet.'] : [],
         Boolean(crawl) !== Boolean(demand),
       ),
       acted: state(

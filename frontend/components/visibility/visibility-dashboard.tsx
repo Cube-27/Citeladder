@@ -16,7 +16,7 @@ import { VisibilityActions } from '@/components/visibility/visibility-toolbar';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
-import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
+import { VISIBILITY_TABS, type SourceTab, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
   EVIDENCE_LIMIT,
   useVisibilityFilters,
@@ -86,8 +86,12 @@ function DashboardPanel({
   const gated = (panel: (selected: Visibility) => ReactNode) => (
     <SelectionGate query={queries.visibilityQuery}>{panel}</SelectionGate>
   );
+  const sources = (tab: SourceTab) =>
+    gated(() => <VisibilitySources tab={tab} filters={filters} queries={queries} />);
   const panels: Record<VisibilityTab, ReactNode> = {
-    sources: gated(() => <VisibilitySources filters={filters} queries={queries} />),
+    domains: sources('domains'),
+    urls: sources('urls'),
+    'read-not-cited': sources('read-not-cited'),
     ads: gated(() => <VisibilityAds filters={filters} queries={queries} />),
     'query-fanout': gated(() => (
       <FanoutEvidence

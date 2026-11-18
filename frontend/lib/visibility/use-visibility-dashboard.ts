@@ -44,8 +44,20 @@ const pageKeys = [
 ];
 const tabCodec = stringUrlCodec(
   VISIBILITY_TABS.map(({ id }) => id),
-  'sources' as VisibilityTab,
+  'domains' as VisibilityTab,
 );
+/** A Sources tab is its own result set: a page, filter or drill-down never carries over. */
+const sourceKeys = [
+  'source_cursor',
+  'source_offset',
+  'source_as_of',
+  'source_type',
+  'source_standing',
+  'source_pick',
+  'source_domain',
+  'source_url',
+  'source_view',
+];
 // The URL accepts any engine the wire contract names; the toolbar offers the catalogue's.
 const engineCodec = stringUrlCodec(['all', ...logicalEngineSchema.options], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
@@ -71,7 +83,7 @@ function setRange(value: TrendRange) {
 
 /** A link to Visibility Sources for one run, in the URL keys `useVisibilityFilters` reads. */
 export function visibilityRunSourcesHref(runId: string) {
-  return `/visibility?${new URLSearchParams({ tab: 'sources', run: runId }).toString()}`;
+  return `/visibility?${new URLSearchParams({ tab: 'domains', run: runId }).toString()}`;
 }
 
 /** The evidence filters an answers slice replaces; the shared selection keys stay. */
@@ -96,7 +108,7 @@ export function visibilityEvidenceHref(
 }
 
 export function useVisibilityFilters() {
-  const [activeTab, selectTab] = useUrlState('tab', tabCodec);
+  const [activeTab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: sourceKeys });
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });

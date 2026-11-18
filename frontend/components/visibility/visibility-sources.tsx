@@ -1,16 +1,12 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Globe } from 'lucide-react';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import type { DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
 import { Stack } from '@/components/ui/layout';
-import { SegmentedControl } from '@/components/ui/tabs';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
-import {
-  sourceTableFilters,
-  type PageStandingFilter,
-} from '@/components/visibility/source-filters';
+import { sourceTableFilters } from '@/components/visibility/source-filters';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
 import { NearMissTable, useSourceNearMisses } from '@/components/visibility/source-near-misses';
 import { sourceTableToolbar } from '@/components/visibility/source-toolbar';
@@ -24,6 +20,7 @@ import {
   type SourceTableFrame,
 } from '@/components/visibility/source-rows';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
+import type { SourceTab } from '@/lib/visibility/dashboard';
 import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';
 import {
   availableTypes,
@@ -39,14 +36,8 @@ import {
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
-/** Which half of Sources is showing. Persisted so a link reopens the same one. */
-const DIMENSIONS = [
-  { value: 'domain', label: 'Domains' },
-  { value: 'url', label: 'URLs' },
-] as const;
-
 /**
- * Sources: the domains and URLs the engines retrieved, and how much.
+ * A Sources tab: the domains, the URLs, or your pages read but not cited.
  *
  * Three levels, all driven by URL state so every one of them is linkable and
  * survives a reload: the inventory, one domain's pages, and one URL's own
@@ -56,9 +47,10 @@ const DIMENSIONS = [
  * answering a different question from the table it was opened from.
  */
 export function VisibilitySources({
+  tab,
   filters,
   queries,
-}: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
+}: Readonly<{ tab: SourceTab; filters: SourceFilters; queries: SourceQueries }>) {
   const [openUrl, setOpenUrl] = useUrlState('source_url', optionalStringUrlCodec);
   // `source_view` goes with the domain: opening a second domain while its
   // Prompts tab was selected would otherwise land on that domain's Prompts,
@@ -94,64 +86,17 @@ export function VisibilitySources({
     );
   }
   return (
-    <SourcesInventory
+    // Deliberately NOT keyed on the tab. Remounting threw away the React Query
+    // observer along with the panel, so `retainPreviousDataForScope` had no
+    // previous data to hold and the table emptied to a skeleton on every
+    // switch. The panel resets its own local state instead.
+    <SourcesPanel
+      dimension={tab === 'domains' ? 'domain' : 'url'}
+      readNotCited={tab === 'read-not-cited'}
       filters={filters}
       queries={queries}
       onOpenUrl={setOpenUrl}
       onOpenDomain={setDomain}
-    />
-  );
-}
-
-/**
- * A different dimension is a different result set, so the offset cursor and
- * the type filter cannot carry over: page three of domains is not page three
- * of URLs, and `editorial` is not a page format.
- */
-function useSourceDimension() {
-  const [rawDimension, setDimension] = useUrlState('source_dim', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_type', 'source_standing'],
-  });
-  const dimension: 'domain' | 'url' = rawDimension === 'url' ? 'url' : 'domain';
-  return [dimension, (value: string) => setDimension(value === 'url' ? value : null)] as const;
-}
-
-/**
- * The Domains / URLs inventory: the table, then the usage chart and type
- * ring. Only the inventory has the two halves, so only it carries the switch,
- * at the start of the table's toolbar before the search.
- */
-function SourcesInventory({
-  filters,
-  queries,
-  onOpenUrl,
-  onOpenDomain,
-}: Readonly<{
-  filters: SourceFilters;
-  queries: SourceQueries;
-  onOpenUrl: (url: string) => void;
-  onOpenDomain: (domain: string) => void;
-}>) {
-  const [dimension, setDimension] = useSourceDimension();
-  return (
-    // Deliberately NOT keyed on `dimension`. Remounting threw away the React
-    // Query observer along with the panel, so `retainPreviousDataForScope` had
-    // no previous data to hold and the table emptied to a skeleton on every
-    // switch. The panel resets its own local state instead -- see `SourcesPanel`.
-    <SourcesPanel
-      dimension={dimension}
-      filters={filters}
-      queries={queries}
-      onOpenUrl={onOpenUrl}
-      onOpenDomain={onOpenDomain}
-      view={
-        <SegmentedControl
-          value={dimension}
-          onChange={setDimension}
-          options={DIMENSIONS}
-          ariaLabel="Source dimension"
-        />
-      }
     />
   );
 }
@@ -196,7 +141,7 @@ export function SourcesPanel({
   domain = null,
   onOpenUrl,
   onOpenDomain,
-  view,
+  readNotCited = false,
 }: Readonly<{
   dimension: 'domain' | 'url';
   filters: SourceFilters;
@@ -206,8 +151,8 @@ export function SourcesPanel({
   onOpenUrl: (url: string) => void;
   /** Required whenever the domain dimension can be shown. */
   onOpenDomain?: (domain: string) => void;
-  /** The Domains | URLs switch, leading the table's toolbar (the inventory only). */
-  view?: ReactNode;
+  /** The Read, not cited tab: your read pages lead in the table's place. */
+  readNotCited?: boolean;
 }>) {
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [cursor] = useUrlState('source_cursor', optionalStringUrlCodec);
@@ -215,9 +160,7 @@ export function SourcesPanel({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
-  const { standingFilter, setStanding } = useStanding(dimension);
-  const gapOnly = standingFilter === 'gap';
-  const nearMiss = standingFilter === 'near_miss';
+  const { gapOnly, setStanding } = useStanding(dimension, readNotCited);
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
@@ -252,7 +195,7 @@ export function SourcesPanel({
     sourceType,
   });
   const nearMissQuery = useSourceNearMisses(filters, queries, {
-    enabled: nearMiss,
+    enabled: readNotCited,
     limit: pageSize,
   });
   // Movement is an inventory question; a domain's own page has no peers to rank.
@@ -294,7 +237,7 @@ export function SourcesPanel({
   const tableFilters = sourceTableFilters({
     dimension,
     type: { value: sourceType, options: types, onChange: setSourceType },
-    standing: { value: standingFilter, onChange: setStanding },
+    standing: readNotCited ? null : { gapOnly, onChange: setStanding },
     domain: domain
       ? null
       : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain },
@@ -302,7 +245,6 @@ export function SourcesPanel({
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
-    view,
     search,
     onSearch: setSearch,
     rows,
@@ -312,7 +254,7 @@ export function SourcesPanel({
 
   return (
     <Stack gap="workspace">
-      {nearMiss ? (
+      {readNotCited ? (
         <NearMissTable
           query={nearMissQuery}
           pageSize={pageSize}
@@ -370,15 +312,12 @@ function pageOffset(raw: string | null): number {
   return Math.max(0, Number.parseInt(raw ?? '0', 10) || 0);
 }
 
-/** Only pages have a standing, so the standing filter applies to the URL table. */
-function useStanding(dimension: 'domain' | 'url') {
+/** Only pages have a standing, so the gaps filter applies to the URL table alone. */
+function useStanding(dimension: 'domain' | 'url', readNotCited: boolean) {
   const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
-  let standingFilter: PageStandingFilter = null;
-  if (dimension === 'url' && (standing === 'gap' || standing === 'near_miss'))
-    standingFilter = standing;
-  return { standingFilter, setStanding };
+  return { gapOnly: dimension === 'url' && !readNotCited && standing === 'gap', setStanding };
 }
 
 /**

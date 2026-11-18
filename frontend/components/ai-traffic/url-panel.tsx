@@ -91,7 +91,7 @@ export function UrlPanel({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={page ? <UrlText url={page.display_path} /> : 'Path-level AI Traffic'}
+      title={page ? <UrlText url={page.display_path} /> : 'Path-level AI traffic'}
       description="Requests, sessions and citations are counted separately."
     >
       {query.isLoading ? (
@@ -105,7 +105,7 @@ export function UrlPanel({
         <StateBlock
           kind="error"
           error={query.error}
-          title="Couldn't load this page's AI Traffic"
+          title="Couldn't load this page's AI traffic"
           fallback={READ_FAILED}
           onRetry={() => query.refetch()}
         />
@@ -283,7 +283,7 @@ export function TrafficUrlButton({
   urlHash,
   filters = {},
   label,
-  children = 'View AI Traffic',
+  children = 'View AI traffic',
 }: Readonly<{
   urlHash: string;
   filters?: TrafficFilters;
