@@ -10,6 +10,7 @@ import { domainMatches, normalizeDomain } from './domains.ts';
 import type { ScoringConfig } from './scoring.ts';
 
 const CITED = 'cited_domain';
+export const NAMED = 'named_in_answers';
 
 /** The project's suggestion rows, of every audit and status. */
 export function suggestionRows(db: Database, scope: ProjectScope) {
@@ -29,7 +30,7 @@ export function lockSuggestions(db: Database, scope: ProjectScope) {
 }
 
 /** The engines the audit asked, the "of M" beside a candidate's engine count. */
-export async function auditEngineTotal(
+async function auditEngineTotal(
   db: Database,
   scope: ProjectScope & { auditId: string },
 ): Promise<number> {
@@ -77,16 +78,7 @@ export async function persistObservedCompetitors(
     .orderBy('domain')
     .orderBy('ordinal')
     .execute();
-  const domains = new Map<
-    string,
-    {
-      citations: number;
-      prompts: Set<number>;
-      engines: Set<string>;
-      analyses: Set<string>;
-      artifacts: Set<string>;
-    }
-  >();
+  const domains = new Map<string, Evidence & { citations: number }>();
   for (const citation of citations) {
     const domain = normalizeDomain(citation.domain),
       analysis = byId.get(citation.analysis_id);
@@ -151,6 +143,65 @@ export async function persistObservedCompetitors(
         source_analysis_ids: JSON.stringify([...value.analyses].sort(compareText)),
         source_artifact_ids: JSON.stringify([...value.artifacts].sort(compareText)),
         created_at: at,
+      })),
+    )
+    .execute();
+}
+
+/** The answers a candidate was seen in. */
+export type Evidence = {
+  prompts: Set<number>;
+  engines: Set<string>;
+  analyses: Set<string>;
+  artifacts: Set<string>;
+};
+
+/**
+ * Write an audit's name candidates (AV-11), recounted as perception settles:
+ * an existing row takes the new counts and keeps its status.
+ */
+export async function upsertNamedCandidates(
+  db: Database,
+  scope: ProjectScope & { auditId: string },
+  candidates: readonly { key: string; name: string; seen: Evidence }[],
+) {
+  const rules = policy.audits.observed_competitors;
+  const engineTotal = await auditEngineTotal(db, scope);
+  const at = new Date();
+  await db
+    .insertInto('observed_entity_candidates')
+    .values(
+      candidates.map(({ key, name, seen }) => ({
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        audit_id: scope.auditId,
+        kind: NAMED,
+        domain: null,
+        name_key: key,
+        name,
+        qualification_reason:
+          'Named without being tracked across market-specific prompts and answer engines. Product overlap and geographic relevance require human verification.',
+        prompt_count: seen.prompts.size,
+        engine_count: seen.engines.size,
+        engine_total: engineTotal,
+        citation_count: null,
+        market_relevant: false,
+        status: rules.status_pending,
+        analyzer_version: rules.named.analyzer_version,
+        source_analysis_ids: JSON.stringify([...seen.analyses].sort(compareText)),
+        source_artifact_ids: JSON.stringify([...seen.artifacts].sort(compareText)),
+        created_at: at,
+      })),
+    )
+    .onConflict((conflict) =>
+      conflict.columns(['audit_id', 'name_key']).doUpdateSet((eb) => ({
+        name: eb.ref('excluded.name'),
+        prompt_count: eb.ref('excluded.prompt_count'),
+        engine_count: eb.ref('excluded.engine_count'),
+        engine_total: eb.ref('excluded.engine_total'),
+        source_analysis_ids: eb.ref('excluded.source_analysis_ids'),
+        source_artifact_ids: eb.ref('excluded.source_artifact_ids'),
       })),
     )
     .execute();

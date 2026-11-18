@@ -5,26 +5,23 @@
  * answer after finalization, so each settled answer refreshes its audit's
  * candidates; the suggestions lock makes every refresh see the ones before it.
  */
-import { randomUUID } from 'node:crypto';
-
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isTracked } from '../perception/untracked-names.ts';
 import { compareText } from '../text-order.ts';
-import { auditEngineTotal, lockSuggestions, suggestionRows } from './observed-competitors.ts';
+import {
+  lockSuggestions,
+  NAMED,
+  suggestionRows,
+  upsertNamedCandidates,
+  type Evidence,
+} from './observed-competitors.ts';
 
-const NAMED = 'named_in_answers';
 const aliasList = z.array(z.string());
 
-type Seen = {
-  spellings: Map<string, number>;
-  prompts: Set<number>;
-  engines: Set<string>;
-  analyses: Set<string>;
-  artifacts: Set<string>;
-};
+type Seen = Evidence & { spellings: Map<string, number> };
 
 /** The spelling the answers used most, ties broken by text order. */
 function displayName(spellings: Map<string, number>): string {
@@ -92,7 +89,7 @@ export async function refreshNamedCandidates(
       .where('project_id', '=', scope.projectId)
       .execute(),
   ]);
-  const { status_rejected: REJECTED, status_pending: PENDING } = policy.audits.observed_competitors;
+  const { status_rejected: REJECTED } = policy.audits.observed_competitors;
   const rejected = new Set(candidates.filter((c) => c.status === REJECTED).map((c) => c.name_key));
   const existing = new Set(
     candidates.filter((c) => c.audit_id === scope.auditId).map((c) => c.name_key),
@@ -107,43 +104,9 @@ export async function refreshNamedCandidates(
     )
     .filter(([key]) => existing.has(key) || room-- > 0);
   if (!kept.length) return;
-  const engineTotal = await auditEngineTotal(db, scope);
-  const at = new Date();
-  await db
-    .insertInto('observed_entity_candidates')
-    .values(
-      kept.map(([key, value]) => ({
-        id: randomUUID(),
-        workspace_id: scope.workspaceId,
-        project_id: scope.projectId,
-        audit_id: scope.auditId,
-        kind: NAMED,
-        domain: null,
-        name_key: key,
-        name: displayName(value.spellings),
-        qualification_reason:
-          'Named without being tracked across market-specific prompts and answer engines. Product overlap and geographic relevance require human verification.',
-        prompt_count: value.prompts.size,
-        engine_count: value.engines.size,
-        engine_total: engineTotal,
-        citation_count: null,
-        market_relevant: false,
-        status: PENDING,
-        analyzer_version: rules.analyzer_version,
-        source_analysis_ids: JSON.stringify([...value.analyses].sort(compareText)),
-        source_artifact_ids: JSON.stringify([...value.artifacts].sort(compareText)),
-        created_at: at,
-      })),
-    )
-    .onConflict((conflict) =>
-      conflict.columns(['audit_id', 'name_key']).doUpdateSet((eb) => ({
-        name: eb.ref('excluded.name'),
-        prompt_count: eb.ref('excluded.prompt_count'),
-        engine_count: eb.ref('excluded.engine_count'),
-        engine_total: eb.ref('excluded.engine_total'),
-        source_analysis_ids: eb.ref('excluded.source_analysis_ids'),
-        source_artifact_ids: eb.ref('excluded.source_artifact_ids'),
-      })),
-    )
-    .execute();
+  await upsertNamedCandidates(
+    db,
+    scope,
+    kept.map(([key, seen]) => ({ key, name: displayName(seen.spellings), seen })),
+  );
 }
