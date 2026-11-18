@@ -6,6 +6,28 @@ export const VISIBILITY_METRICS = [
   { value: 'owned_citation_rate', label: 'Owned citation rate' },
 ] as const;
 
+/** The Insights performance matrix's metrics and axes. */
+export const MATRIX_METRICS = [
+  { value: 'mention_rate', label: 'Mention rate' },
+  { value: 'share_of_voice', label: 'Share of voice' },
+  { value: 'avg_position', label: 'Avg position' },
+  { value: 'win_rate', label: 'Win rate' },
+  { value: 'sentiment', label: 'Net sentiment' },
+] as const;
+
+export const MATRIX_DIMENSIONS = [
+  { value: 'engine', label: 'Engine' },
+  { value: 'topic', label: 'Topic' },
+  { value: 'market', label: 'Market' },
+  { value: 'brand', label: 'Brand' },
+] as const;
+
+export const RANKING_DIMENSIONS = [
+  { value: 'topic', label: 'By topic' },
+  { value: 'engine', label: 'By engine' },
+  { value: 'market', label: 'By market' },
+] as const;
+
 /** What share of voice counts, behind the header that names it. */
 export const SHARE_OF_VOICE_HINT =
   'Share of voice: your share of every brand mention across the brands you track.';

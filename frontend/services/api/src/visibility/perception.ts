@@ -175,6 +175,7 @@ async function selectionAnswers(
       'audit.configuration',
       'snapshot.text as prompt',
       'snapshot.theme as topic',
+      'snapshot.topic_id',
       utcTextOf(observedAt).as('observed_at'),
     ])
     .execute();
@@ -193,7 +194,7 @@ async function selectionAnswers(
       ? citationsByAnalysis(db, scoped.workspaceId, ids)
       : new Map<string, { domain: string; url: string }[]>(),
   ]);
-  const answers = rows.map((row): PerceptionAnswer => {
+  const answers = rows.map((row): PerceptionAnswer & { topicId: string | null } => {
     const assessments = assessmentsSchema.parse(row.entity_assessments);
     return {
       auditId: row.audit_id,
@@ -210,6 +211,7 @@ async function selectionAnswers(
       },
       mentions: mentionsOf(assessments, perceived.get(row.id)).map(({ mention }) => mention),
       brandRecommendation: assessments.find((row) => row.entity_kind === 'brand')?.state ?? null,
+      topicId: row.topic_id,
       citations: (citations.get(row.id) ?? []).map(({ domain, url }) => ({ domain, url })),
     };
   });
@@ -234,8 +236,17 @@ export async function getPerception(
  * so a pool never reads as the sentiment of only its perceived runs.
  */
 export async function entitySentiments(db: Database, selection: RunSelection) {
+  return sentimentsOf((await perceivedAnswers(db, selection)) ?? []);
+}
+
+/** The selection's answers with their frozen topic; null when any was admitted without perception. */
+export async function perceivedAnswers(db: Database, selection: RunSelection) {
   const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
-  if (partial) return [];
+  return partial ? null : answers;
+}
+
+/** Each named business's net sentiment over these answers, the brand first. */
+export function sentimentsOf(answers: readonly PerceptionAnswer[]) {
   return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
     name,
     is_brand,

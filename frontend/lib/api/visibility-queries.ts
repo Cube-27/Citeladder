@@ -71,6 +71,13 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getVisibilityTopics(scope.projectId, params, scoped(scope, signal)),
     }),
+  /** The selection's performance matrix and top rankings. */
+  matrix: (scope: ProjectScope, params: ParamsOf<'getVisibilityMatrix'>) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.matrix(scope, params),
+      queryFn: ({ signal }) =>
+        visibilityApi.getVisibilityMatrix(scope.projectId, params, scoped(scope, signal)),
+    }),
   sources: (scope: ProjectScope, params: ParamsOf<'getSources'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.sources(scope, params),
