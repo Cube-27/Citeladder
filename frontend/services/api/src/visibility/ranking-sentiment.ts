@@ -5,6 +5,7 @@
  */
 import type { NetSentiment } from '@citeladder/contracts/visibility';
 
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getVisibility, type DashboardQuery, type VisibilityResponse } from './dashboard.ts';
 import { entitySentiments, groupedSentiments } from './perception.ts';
@@ -63,7 +64,25 @@ export async function getRankedVisibility(
   return { ...view, rankings: withSentiment(view.rankings, entities) };
 }
 
-/** Each trend point's rankings with sentiment over exactly the runs the point folds. */
+/**
+ * The newest points whose runs fit one selection (`selection_max_runs`), as
+ * the index of the oldest one covered; older points stay unmeasured.
+ */
+function coveredFrom(groups: readonly (readonly string[])[]): number {
+  const runs = new Set<string>();
+  for (let index = groups.length - 1; index >= 0; index--) {
+    const next = new Set([...runs, ...(groups[index] ?? [])]);
+    if (next.size > policy.visibility.selection_max_runs) return index + 1;
+    for (const id of next) runs.add(id);
+  }
+  return 0;
+}
+
+/**
+ * Each trend point's rankings with sentiment over exactly the runs the point
+ * folds. Only the newest points within one selection's run bound are read;
+ * an older point's sentiment is null (not measured), never a partial pool.
+ */
 export async function withPointSentiments(
   db: Database,
   scope: RunScope,
@@ -71,15 +90,14 @@ export async function withPointSentiments(
   points: TrendPoint[],
 ): Promise<TrendPoint[]> {
   const groups = points.map((point) => point.source_audit_ids ?? []);
-  const auditIds = [...new Set(groups.flat())];
-  if (auditIds.length === 0) return points;
-  const sentiments = await groupedSentiments(
-    db,
-    selectionOf(scope, query, { auditId: null, auditIds }),
-    groups,
-  );
+  const first = coveredFrom(groups);
+  const covered = groups.slice(first);
+  const auditIds = [...new Set(covered.flat())];
+  const sentiments = auditIds.length
+    ? await groupedSentiments(db, selectionOf(scope, query, { auditId: null, auditIds }), covered)
+    : [];
   return points.map((point, index) => ({
     ...point,
-    rankings: withSentiment(point.rankings, sentiments[index] ?? null),
+    rankings: withSentiment(point.rankings, sentiments[index - first] ?? null),
   }));
 }
