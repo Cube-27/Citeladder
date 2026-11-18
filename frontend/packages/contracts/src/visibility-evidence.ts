@@ -304,18 +304,27 @@ export const visibilitySourceUrlSchema = responseObject({
 });
 
 export const visibilityFanoutSummarySchema = responseObject({
-  // Totals over the WHOLE selected run set: unaffected by paging or search.
-  event_count: z.number().int(),
-  distinct_queries: z.number().int(),
-  // Query rows matching the current `search` (equal to `distinct_queries`
-  // when no search is applied). What the table pages through.
-  matched_queries: z.number().int(),
-  coverage: z.record(z.string(), z.number().int()),
+  event_count: z
+    .number()
+    .int()
+    .describe('Searches the answers ran, over the whole selection; paging and `search` ignored.'),
+  distinct_queries: z.number().int().describe('Distinct queries over the whole selection.'),
+  matched_queries: z
+    .number()
+    .int()
+    .describe('Queries matching `search`: what the rows page through.'),
+  coverage: z
+    .record(z.string(), z.number().int())
+    .describe(
+      'Answers per fanout state, such as `queries_available`, `count_only`, `no_search` or `unavailable`.',
+    ),
   next_cursor: z.string().nullable(),
-  // Whether `change` compares with a previous run: only a one-run selection
-  // whose run has a previous comparable run that reported searches.
-  compared: z.boolean(),
-  total_answers: z.number().int(),
+  compared: z
+    .boolean()
+    .describe(
+      'Whether `change` is filled: a one-run selection with a previous comparable run that reported searches.',
+    ),
+  total_answers: z.number().int().describe('With `query`: answers that searched it.'),
   answers: z.array(
     responseObject({
       audit_id: uuid(),
@@ -329,18 +338,22 @@ export const visibilityFanoutSummarySchema = responseObject({
   items: z.array(
     responseObject({
       query: z.string(),
-      event_count: z.number().int(),
-      prompt_count: z.number().int(),
+      event_count: z.number().int().describe('Times the answers searched this query.'),
+      prompt_count: z.number().int().describe('Prompts whose answers searched it.'),
       engines: z.array(z.string()),
-      response_count: z.number().int(),
-      brand_response_count: z.number().int(),
-      // Of every query occurrence the filters keep (AV-8); `change` is the move
-      // since the previous comparable run under the same filters, null when
-      // not compared. `brands` are the tracked brands the query names, null
-      // when its runs finalized before fanout queries were counted.
-      share: z.number(),
-      change: z.number().nullable(),
-      brands: z.array(namedBrandSchema.omit({ responses: true })).nullable(),
+      response_count: z.number().int().describe('Answers that searched it.'),
+      brand_response_count: z.number().int().describe('Of those, answers that named the brand.'),
+      share: z.number().describe('Its share of every search the filters keep, 0–1 (AV-8).'),
+      change: z
+        .number()
+        .nullable()
+        .describe('`share` minus its share in the previous comparable run. Null: not compared.'),
+      brands: z
+        .array(namedBrandSchema.omit({ responses: true }))
+        .nullable()
+        .describe(
+          'Tracked businesses the query text names. Null: measured before fanout queries were counted.',
+        ),
     }),
   ),
 });

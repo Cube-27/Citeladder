@@ -13,29 +13,82 @@ import {
   type RunSelection,
 } from '../visibility/selection.ts';
 
-export const PROJECT_PATH = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
+export const PROJECT_PATH = {
+  project_id: { scalar: { kind: 'uuid' }, required: true, description: 'The project ID.' },
+} as const;
+const COHORT_TEXT =
+  'Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).';
 export const COHORT = {
   scalar: { kind: 'literal', values: ['core', 'comparison', 'all'] },
   default: 'core',
+  description: COHORT_TEXT,
 } as const;
-/** The measurement market; omitted is the project default. Named runs imply their own. */
-export const MARKET = { market: { scalar: { kind: 'uuid' } } } as const satisfies ParamSpecs;
+/** The cohort filter with no default, for reads where omitted means something else. */
+export const cohortFilter = (omitted: string) =>
+  ({ scalar: COHORT.scalar, description: `${COHORT_TEXT} ${omitted}` }) as const;
+export const ENGINE = {
+  scalar: { kind: 'str' },
+  description: 'Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.',
+} as const;
+export const MARKET = {
+  market: {
+    scalar: { kind: 'uuid' },
+    description:
+      "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
+  },
+} as const satisfies ParamSpecs;
 export const RUNS = {
-  audit_id: { scalar: { kind: 'uuid' } },
-  audit_ids: { scalar: { kind: 'uuid' }, list: true },
+  audit_id: {
+    scalar: { kind: 'uuid' },
+    description: 'One measurement run (audit) to read. It must belong to the project.',
+  },
+  audit_ids: {
+    scalar: { kind: 'uuid' },
+    list: true,
+    description:
+      'Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.',
+  },
   ...MARKET,
 } as const satisfies ParamSpecs;
 export const WINDOW = {
-  from_at: { scalar: { kind: 'datetime' }, alias: 'from' },
-  to_at: { scalar: { kind: 'datetime' }, alias: 'to' },
+  from_at: {
+    scalar: { kind: 'datetime' },
+    alias: 'from',
+    description: 'Only runs completed at or after this time (ISO 8601).',
+  },
+  to_at: {
+    scalar: { kind: 'datetime' },
+    alias: 'to',
+    description: 'Only runs completed at or before this time (ISO 8601).',
+  },
 } as const satisfies ParamSpecs;
-/** Answers to prompts filed under this project topic when their run froze them. */
-export const TOPIC = { topic: { scalar: { kind: 'uuid' } } } as const satisfies ParamSpecs;
+export const TOPIC = {
+  topic: {
+    scalar: { kind: 'uuid' },
+    description:
+      "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
+  },
+} as const satisfies ParamSpecs;
 export const LIMIT = {
   scalar: { kind: 'int', ge: 1, le: policy.visibility.evidence_max_limit },
   default: policy.visibility.evidence_default_limit,
+  description: 'The most rows to return on this page.',
 } as const;
-export const BASELINE_RUNS = { scalar: { kind: 'uuid' }, list: true } as const;
+export const CURSOR = {
+  scalar: { kind: 'str', maxLength: 2048 },
+  description: "The previous page's `next_cursor`. Omitted: the first page.",
+} as const;
+export const BASELINE_ID = {
+  scalar: { kind: 'uuid' },
+  description:
+    'An earlier run to compare against. Omitted: the previous run with the same measurement context.',
+} as const;
+export const BASELINE_RUNS = {
+  scalar: { kind: 'uuid' },
+  list: true,
+  description:
+    'Runs to compare the selection against; repeat the parameter. Omitted: no comparison, or the previous comparable run where the read picks one.',
+} as const;
 // `citations.url` is unbounded text, so this cap decides which pages have a
 // detail view at all: the practical ceiling a query string survives.
 export const MAX_URL_LENGTH = 8192;
@@ -43,11 +96,22 @@ export const MAX_URL_LENGTH = 8192;
 export const EVIDENCE_FILTERS = {
   outcome: {
     scalar: { kind: 'literal', values: ['brand_absent', 'uncited', 'competitor_gap'] },
+    description:
+      '`brand_absent`: answers that did not name the brand. `uncited`: named it without citing its site. `competitor_gap`: named `competitor` but not the brand (needs `competitor`).',
   },
-  competitor: { scalar: { kind: 'str', maxLength: 255 } },
-  domain: { scalar: { kind: 'str', maxLength: 255 } },
-  url: { scalar: { kind: 'str', maxLength: MAX_URL_LENGTH } },
-  prompt_id: { scalar: { kind: 'uuid' } },
+  competitor: {
+    scalar: { kind: 'str', maxLength: 255 },
+    description: 'Only answers that named this tracked competitor, by its name.',
+  },
+  domain: {
+    scalar: { kind: 'str', maxLength: 255 },
+    description: 'Only answers that cited this domain.',
+  },
+  url: {
+    scalar: { kind: 'str', maxLength: MAX_URL_LENGTH },
+    description: 'Only answers that cited this exact URL.',
+  },
+  prompt_id: { scalar: { kind: 'uuid' }, description: 'Only answers to this prompt.' },
 } as const satisfies ParamSpecs;
 
 /** Every route here reads the path project inside the active workspace. */
@@ -124,7 +188,7 @@ export function runSelection(
 
 export const PERCEPTION_SELECTION = {
   ...RUNS,
-  engine: { scalar: { kind: 'str' } },
+  engine: ENGINE,
   cohort: COHORT,
   ...WINDOW,
 } as const satisfies ParamSpecs;

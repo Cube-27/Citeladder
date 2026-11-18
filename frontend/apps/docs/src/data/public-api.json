@@ -2715,10 +2715,12 @@
           "citations": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Citations of this domain across these answers."
           },
           "owned": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether it is one of the project's own domains."
           }
         },
         "required": ["domain", "citations", "owned"],
@@ -4043,12 +4045,14 @@
         "type": "object",
         "properties": {
           "state": {
-            "type": "string"
+            "type": "string",
+            "description": "`measured`, or `no_observations` when no answer completed."
           },
           "responses": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Answers that completed."
           },
           "brand_responses": {
             "anyOf": [
@@ -4060,7 +4064,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers that named the brand. Null when the run did not record it: unknown, not zero."
           },
           "owned_citation_responses": {
             "anyOf": [
@@ -4072,7 +4077,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers that cited the project's own site. Null when the run did not record it: unknown, not zero."
           },
           "entity_presences": {
             "anyOf": [
@@ -4084,7 +4090,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Brand and competitor namings, one per business per answer. Null when the run did not record it: unknown, not zero."
           },
           "expected": {
             "anyOf": [
@@ -4096,7 +4103,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers the run asked for. Null when the run did not record it: unknown, not zero."
           },
           "failed": {
             "anyOf": [
@@ -4108,7 +4116,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers that failed. Null when the run did not record it: unknown, not zero."
           },
           "not_run": {
             "anyOf": [
@@ -4120,7 +4129,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers never attempted. Null when the run did not record it: unknown, not zero."
           }
         },
         "required": [
@@ -4230,7 +4240,8 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["brand", "competitor"]
+            "enum": ["brand", "competitor"],
+            "description": "The tracked brand, or a roster competitor."
           },
           "name": {
             "type": "string"
@@ -4238,7 +4249,8 @@
           "responses": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "How many of these answers named it."
           },
           "logo_url": {
             "type": ["string", "null"]
@@ -4256,12 +4268,14 @@
           "mentions": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Answers that named the business."
           },
           "classified": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Of those, the ones whose tone was classified."
           },
           "positive": {
             "type": "integer",
@@ -4274,6 +4288,7 @@
             "maximum": 9007199254740991
           },
           "net_sentiment": {
+            "description": "(positive − negative) / classified × 100, −100 to 100. Null: nothing classified.",
             "type": ["number", "null"]
           }
         },
@@ -4293,7 +4308,8 @@
               "audit_id": {
                 "type": "string",
                 "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "description": "The run whose answers suggested it."
               },
               "name": {
                 "type": "string"
@@ -4304,12 +4320,14 @@
               "prompt_count": {
                 "type": "integer",
                 "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "maximum": 9007199254740991,
+                "description": "Prompts whose answers named or cited it."
               },
               "engine_count": {
                 "type": "integer",
                 "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "maximum": 9007199254740991,
+                "description": "Engines whose answers named or cited it."
               },
               "engine_total": {
                 "anyOf": [
@@ -4321,7 +4339,8 @@
                   {
                     "type": "null"
                   }
-                ]
+                ],
+                "description": "Engines the run asked. Null: recorded before the total was."
               },
               "market_relevant": {
                 "type": "boolean"
@@ -4333,7 +4352,8 @@
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "Provenance: the answers it came from."
               },
               "source_artifact_ids": {
                 "type": "array",
@@ -4342,7 +4362,8 @@
                 }
               },
               "status": {
-                "type": "string"
+                "type": "string",
+                "description": "`pending`, `accepted` or `rejected`."
               },
               "created_at": {
                 "type": "string"
@@ -4364,7 +4385,8 @@
                   {
                     "type": "null"
                   }
-                ]
+                ],
+                "description": "Citations of the domain. Null: recorded before citations were counted."
               }
             },
             "required": [
@@ -4398,7 +4420,8 @@
               "audit_id": {
                 "type": "string",
                 "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "description": "The run whose answers suggested it."
               },
               "name": {
                 "type": "string"
@@ -4409,12 +4432,14 @@
               "prompt_count": {
                 "type": "integer",
                 "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "maximum": 9007199254740991,
+                "description": "Prompts whose answers named or cited it."
               },
               "engine_count": {
                 "type": "integer",
                 "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "maximum": 9007199254740991,
+                "description": "Engines whose answers named or cited it."
               },
               "engine_total": {
                 "anyOf": [
@@ -4426,7 +4451,8 @@
                   {
                     "type": "null"
                   }
-                ]
+                ],
+                "description": "Engines the run asked. Null: recorded before the total was."
               },
               "market_relevant": {
                 "type": "boolean"
@@ -4438,7 +4464,8 @@
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "Provenance: the answers it came from."
               },
               "source_artifact_ids": {
                 "type": "array",
@@ -4447,7 +4474,8 @@
                 }
               },
               "status": {
-                "type": "string"
+                "type": "string",
+                "description": "`pending`, `accepted` or `rejected`."
               },
               "created_at": {
                 "type": "string"
@@ -4808,7 +4836,8 @@
         "type": "object",
         "properties": {
           "key": {
-            "type": "string"
+            "type": "string",
+            "description": "The engine, topic or prompt this row covers."
           },
           "label": {
             "type": "string"
@@ -4829,27 +4858,32 @@
           "mentions": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Mentions in the selection; each lands in one bucket below."
           },
           "classified": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Labelled with enough confidence to count."
           },
           "pending": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Waiting for classification."
           },
           "not_assessable": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Read, but carrying no tone to judge."
           },
           "low_confidence": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Labelled below the confidence floor: not counted."
           },
           "unavailable": {
             "type": "array",
@@ -4878,7 +4912,8 @@
               },
               "required": ["reason", "count"],
               "additionalProperties": false
-            }
+            },
+            "description": "Mentions that could not be classified, by reason."
           }
         },
         "required": [
@@ -4922,7 +4957,8 @@
               },
               "required": ["theme", "mentions"],
               "additionalProperties": false
-            }
+            },
+            "description": "Per theme, the classified mentions raising it at least once."
           }
         },
         "required": ["name", "is_brand", "score", "coverage", "theme_mentions"],
@@ -4994,7 +5030,8 @@
         "properties": {
           "state": {
             "type": "string",
-            "enum": ["value", "pending", "unavailable", "no_mentions"]
+            "enum": ["value", "pending", "unavailable", "no_mentions"],
+            "description": "`value`: at least one confident label. `pending`: waiting for classification. `unavailable`: nothing classifiable (see `reason`). `no_mentions`: no answer named the brand."
           },
           "reason": {
             "anyOf": [
@@ -5023,7 +5060,8 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
+            },
+            "description": "The runs this read counts."
           },
           "brand": {
             "anyOf": [
@@ -5042,25 +5080,29 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PerceptionEntity"
-            }
+            },
+            "description": "The brand and each competitor named."
           },
           "engines": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PerceptionBreakdown"
-            }
+            },
+            "description": "The brand's tone per engine."
           },
           "topics": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PerceptionBreakdown"
-            }
+            },
+            "description": "The brand's tone per topic."
           },
           "prompts": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PerceptionBreakdown"
-            }
+            },
+            "description": "The brand's tone per prompt."
           },
           "themes": {
             "type": "array",
@@ -5108,7 +5150,8 @@
                 "answers": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Answers with a negative aspect of the brand that cited it: alongside, not a cause."
                 },
                 "example_url": {
                   "type": ["string", "null"]
@@ -5116,7 +5159,8 @@
               },
               "required": ["domain", "answers", "example_url"],
               "additionalProperties": false
-            }
+            },
+            "description": "Sources cited alongside negative aspects of the brand."
           },
           "recommended": {
             "type": "object",
@@ -5124,7 +5168,8 @@
               "mentioned": {
                 "type": "integer",
                 "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "maximum": 9007199254740991,
+                "description": "Answers that named the brand."
               },
               "recommended": {
                 "type": "integer",
@@ -5137,6 +5182,7 @@
                 "maximum": 9007199254740991
               },
               "rate": {
+                "description": "`recommended` / `mentioned`, 0–1. Null: no mention.",
                 "type": ["number", "null"]
               },
               "limitation": {
@@ -5177,7 +5223,8 @@
                   "type": "string"
                 },
                 "comparable": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "False when this point's versions differ from the previous."
                 }
               },
               "required": [
@@ -5238,15 +5285,19 @@
           "classified": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "All four labels together: the denominator."
           },
           "positive_share": {
+            "description": "`positive` over `classified`, 0–1. Null: nothing classified.",
             "type": ["number", "null"]
           },
           "negative_share": {
+            "description": "`negative` over `classified`, 0–1. Null: nothing classified.",
             "type": ["number", "null"]
           },
           "net_sentiment": {
+            "description": "(positive − negative) / classified × 100, −100 to 100. Null: nothing classified.",
             "type": ["number", "null"]
           }
         },
@@ -5787,7 +5838,8 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["brand", "competitor"]
+            "enum": ["brand", "competitor"],
+            "description": "The tracked brand, or a roster competitor."
           },
           "name": {
             "type": "string"
@@ -6117,7 +6169,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PromptHistoryImplementation"
-            }
+            },
+            "description": "Actions that went live for this prompt: markers, never attribution."
           },
           "latest": {
             "anyOf": [
@@ -6127,7 +6180,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The newest run that measured the prompt, with per-engine outcomes."
           }
         },
         "required": [
@@ -6185,9 +6239,11 @@
             "$ref": "#/components/schemas/MeasurementCounts"
           },
           "mention_rate": {
+            "description": "Answers that named the brand. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "owned_citation_rate": {
+            "description": "Answers that cited the project's own site. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "answer_states": {
@@ -6206,7 +6262,8 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
+            },
+            "description": "Provenance: the answers these rates count."
           },
           "comparison_key": {
             "type": ["string", "null"]
@@ -6218,12 +6275,14 @@
             "type": "string"
           },
           "comparable_with_previous": {
+            "description": "False when the measurement context, prompt text or analyzer/scoring versions changed since the previous point; null on the first.",
             "type": ["boolean", "null"]
           },
           "source_snapshot_id": {
             "type": "string",
             "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Provenance: the persisted prompt score this point reads."
           }
         },
         "required": [
@@ -6300,6 +6359,7 @@
             "type": "string"
           },
           "composite_score": {
+            "description": "Prompt score, 0–100: mention rate, own-citation rate and (with competitors) competitive position, weighted.",
             "type": ["number", "null"]
           },
           "source_audit_ids": {
@@ -6311,16 +6371,19 @@
             }
           },
           "previous_score": {
+            "description": "The previous run's prompt score.",
             "type": ["number", "null"]
           },
           "immediate_delta": {
+            "description": "Score change in points since the previous run.",
             "type": ["number", "null"]
           },
           "rolling_four": {
             "type": "array",
             "items": {
               "type": "number"
-            }
+            },
+            "description": "This score and up to three before it, newest first."
           },
           "per_engine_scores": {
             "type": "object",
@@ -6329,7 +6392,8 @@
             },
             "additionalProperties": {
               "type": "number"
-            }
+            },
+            "description": "Prompt score per logical engine."
           },
           "components": {
             "type": "object",
@@ -6338,22 +6402,28 @@
             },
             "additionalProperties": {
               "type": ["number", "null"]
-            }
+            },
+            "description": "The score inputs, 0–1: `visibility`, `owned_citations` and, with competitors, `competitive_position`."
           },
           "engine_agreement": {
-            "type": "number"
+            "type": "number",
+            "description": "Share of engines, 0–1, whose score fell materially since the previous run."
           },
           "repetition_agreement": {
-            "type": "number"
+            "type": "number",
+            "description": "How consistently repeated asks agreed on the brand's mention, 0–1."
           },
           "evidence_coverage": {
-            "type": "number"
+            "type": "number",
+            "description": "Answers received over answers expected, 0–1."
           },
           "trend_confidence": {
-            "type": "number"
+            "type": "number",
+            "description": "The mean of the three agreement and coverage values."
           },
           "decline_confirmed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "A material drop repeated across runs and engines, not one noisy run."
           },
           "analyzer_version": {
             "type": "string"
@@ -6371,15 +6441,19 @@
             "type": "string"
           },
           "visibility_rate": {
+            "description": "Answers that named the brand. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "owned_citation_rate": {
+            "description": "Answers that cited the project's own site. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "avg_position": {
+            "description": "Mean rank among the businesses an answer named, 1 being first. Null: never named.",
             "type": ["number", "null"]
           },
           "win_count": {
+            "description": "Answers that named this business first among the tracked businesses.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6392,6 +6466,7 @@
             ]
           },
           "win_answers": {
+            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6404,12 +6479,15 @@
             ]
           },
           "win_rate": {
+            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
             "type": ["number", "null"]
           },
           "share_of_voice": {
+            "description": "The brand's share of every tracked-business naming in these answers, 0–1.",
             "type": ["number", "null"]
           },
           "sentiment": {
+            "description": "The brand's tone here. Null: measured without perception.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NetSentiment"
@@ -6423,9 +6501,11 @@
             "$ref": "#/components/schemas/WebSearchShare"
           },
           "visibility_delta": {
+            "description": "Change in percentage points against the baseline run; absent when not comparable.",
             "type": ["number", "null"]
           },
           "comparison_status": {
+            "description": "As `comparison.status`.",
             "type": "string"
           },
           "comparison": {
@@ -6452,6 +6532,7 @@
             ]
           },
           "action_id": {
+            "description": "The Action targeting this prompt, if any.",
             "anyOf": [
               {
                 "type": "string",
@@ -6466,22 +6547,26 @@
           "mentions": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Distinct businesses named in these answers."
           },
           "brands": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NamedBrand"
-            }
+            },
+            "description": "The leading few named, most answers first."
           },
           "named": {
+            "description": "With `latest=prompt` only: every business named.",
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
                 "kind": {
                   "type": "string",
-                  "enum": ["brand", "competitor"]
+                  "enum": ["brand", "competitor"],
+                  "description": "The tracked brand, or a roster competitor."
                 },
                 "name": {
                   "type": "string"
@@ -6492,6 +6577,7 @@
             }
           },
           "sources": {
+            "description": "With `latest=prompt` only: every domain cited, most citations first.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CitedDomain"
@@ -6512,9 +6598,11 @@
                   "$ref": "#/components/schemas/MeasurementCounts"
                 },
                 "visibility_rate": {
+                  "description": "Answers that named the brand. Share of answers, 0–1; null when no answer completed.",
                   "type": ["number", "null"]
                 },
                 "owned_citation_rate": {
+                  "description": "Answers that cited the project's own site. Share of answers, 0–1; null when no answer completed.",
                   "type": ["number", "null"]
                 },
                 "answer_states": {
@@ -6536,7 +6624,8 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
-                  }
+                  },
+                  "description": "Per competitor: answers that named it but not the brand."
                 }
               },
               "required": [
@@ -6632,7 +6721,8 @@
             "type": "string"
           },
           "is_brand": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "The tracked brand, not a competitor."
           },
           "logo_url": {
             "type": ["string", "null"]
@@ -6641,12 +6731,15 @@
             "type": ["string", "null"]
           },
           "mention_rate": {
+            "description": "Answers that named this business. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "citation_rate": {
+            "description": "Answers that cited its site. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "share_of_voice": {
+            "description": "Its share of every tracked-business naming in the answers, 0–1.",
             "type": ["number", "null"]
           },
           "mention_count": {
@@ -6655,9 +6748,11 @@
             "maximum": 9007199254740991
           },
           "visibility_delta": {
+            "description": "Change in percentage points against the baseline run; absent when not comparable.",
             "type": ["number", "null"]
           },
           "gap_count": {
+            "description": "Answers that named this competitor but not the brand. Null on the brand row.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6670,9 +6765,11 @@
             ]
           },
           "matched_visibility_rate": {
+            "description": "`mention_rate` over only the prompt and engine cells both runs measured.",
             "type": ["number", "null"]
           },
           "matched_visibility_delta": {
+            "description": "Change in percentage points against the baseline run; absent when not comparable.",
             "type": ["number", "null"]
           },
           "matched_response_count": {
@@ -6688,9 +6785,11 @@
             ]
           },
           "avg_position": {
+            "description": "Mean rank among the businesses an answer named, 1 being first. Null: never named.",
             "type": ["number", "null"]
           },
           "win_count": {
+            "description": "Answers that named this business first among the tracked businesses.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6703,6 +6802,7 @@
             ]
           },
           "win_answers": {
+            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6715,9 +6815,11 @@
             ]
           },
           "win_rate": {
+            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
             "type": ["number", "null"]
           },
           "sentiment": {
+            "description": "Tone where it was named. Null: no classified answer, or measured without perception.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NetSentiment"
@@ -8285,15 +8387,19 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Answers that failed. Null when the run did not record it: unknown, not zero."
           },
           "visibility_score": {
+            "description": "Visibility score, 0–100: the mean prompt score, weighting mention, own citation and competitive position.",
             "type": ["number", "null"]
           },
           "visibility_rate": {
+            "description": "Answers that named the brand. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "owned_citation_rate": {
+            "description": "Answers that cited the project's own site. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "prompt_performance_score": {
@@ -8329,10 +8435,12 @@
             "additionalProperties": false
           },
           "selection_mode": {
+            "description": "How the selection resolved, not what was asked: an omitted `audit_id` is `latest`.",
             "type": "string",
             "enum": ["latest", "run", "range"]
           },
           "source_audit_ids": {
+            "description": "The runs this projection counts.",
             "type": "array",
             "items": {
               "type": "string",
@@ -8377,6 +8485,7 @@
             }
           },
           "avg_position": {
+            "description": "Mean rank among the businesses an answer named, 1 being first. Null: never named.",
             "type": ["number", "null"]
           },
           "created_at": {
@@ -8827,7 +8936,8 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. Deltas only when comparable."
           },
           "baseline_audit_id": {
             "anyOf": [
@@ -8963,21 +9073,26 @@
             "maximum": 9007199254740991
           },
           "brand_mention_rate": {
+            "description": "Answers that named the brand. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "owned_citation_rate": {
+            "description": "Answers that cited the project's own site. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "search_use_rate": {
+            "description": "Answers that searched the web. Share of answers, 0–1; null when no answer completed.",
             "type": ["number", "null"]
           },
           "visibility_score": {
+            "description": "Visibility score, 0–100: the mean prompt score, weighting mention, own citation and competitive position.",
             "type": ["number", "null"]
           },
           "counts": {
             "$ref": "#/components/schemas/MeasurementCounts"
           },
           "win_count": {
+            "description": "Answers that named this business first among the tracked businesses.",
             "anyOf": [
               {
                 "type": "integer",
@@ -8990,6 +9105,7 @@
             ]
           },
           "win_answers": {
+            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -9002,6 +9118,7 @@
             ]
           },
           "win_rate": {
+            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
             "type": ["number", "null"]
           }
         },
@@ -9275,17 +9392,20 @@
           "event_count": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Searches the answers ran, over the whole selection; paging and `search` ignored."
           },
           "distinct_queries": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Distinct queries over the whole selection."
           },
           "matched_queries": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Queries matching `search`: what the rows page through."
           },
           "coverage": {
             "type": "object",
@@ -9296,18 +9416,21 @@
               "type": "integer",
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
-            }
+            },
+            "description": "Answers per fanout state, such as `queries_available`, `count_only`, `no_search` or `unavailable`."
           },
           "next_cursor": {
             "type": ["string", "null"]
           },
           "compared": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether `change` is filled: a one-run selection with a previous comparable run that reported searches."
           },
           "total_answers": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "With `query`: answers that searched it."
           },
           "answers": {
             "type": "array",
@@ -9359,12 +9482,14 @@
                 "event_count": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Times the answers searched this query."
                 },
                 "prompt_count": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Prompts whose answers searched it."
                 },
                 "engines": {
                   "type": "array",
@@ -9375,17 +9500,21 @@
                 "response_count": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Answers that searched it."
                 },
                 "brand_response_count": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Of those, answers that named the brand."
                 },
                 "share": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Its share of every search the filters keep, 0–1 (AV-8)."
                 },
                 "change": {
+                  "description": "`share` minus its share in the previous comparable run. Null: not compared.",
                   "type": ["number", "null"]
                 },
                 "brands": {
@@ -9397,7 +9526,8 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "enum": ["brand", "competitor"]
+                            "enum": ["brand", "competitor"],
+                            "description": "The tracked brand, or a roster competitor."
                           },
                           "name": {
                             "type": "string"
@@ -9416,7 +9546,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "Tracked businesses the query text names. Null: measured before fanout queries were counted."
                 }
               },
               "required": [
@@ -10044,14 +10175,17 @@
           "searched": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Answers that searched the web."
           },
           "reported": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Answers whose engine reports whether it searched."
           },
           "share": {
+            "description": "`searched` / `reported`, 0–1. Null: no engine reported it (not available, not 0%).",
             "type": ["number", "null"]
           }
         },
@@ -10844,6 +10978,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -10861,6 +10996,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -10869,6 +11005,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -10886,6 +11023,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -10903,6 +11041,7 @@
             "name": "brand",
             "in": "query",
             "required": false,
+            "description": "Only answers that named this tracked brand or competitor.",
             "schema": {
               "anyOf": [
                 {
@@ -10919,6 +11058,7 @@
             "name": "cited",
             "in": "query",
             "required": false,
+            "description": "Only answers that cited your site (`true`) or didn't (`false`).",
             "schema": {
               "type": ["boolean", "null"]
             }
@@ -10927,6 +11067,7 @@
             "name": "search",
             "in": "query",
             "required": false,
+            "description": "Web search use: `used`, `not_used`, or `not_reported` by an engine that doesn't expose it.",
             "schema": {
               "anyOf": [
                 {
@@ -10943,6 +11084,7 @@
             "name": "cursor",
             "in": "query",
             "required": false,
+            "description": "The previous page's `next_cursor`. Omitted: the first page.",
             "schema": {
               "anyOf": [
                 {
@@ -10959,6 +11101,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
+            "description": "The most rows to return on this page.",
             "schema": {
               "default": 25,
               "type": "integer",
@@ -11846,6 +11989,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -11856,6 +12000,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -11873,6 +12018,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -11893,6 +12039,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -11910,6 +12057,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -11918,6 +12066,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -11928,6 +12077,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -11945,6 +12095,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -11962,6 +12113,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -11979,6 +12131,7 @@
             "name": "cursor",
             "in": "query",
             "required": false,
+            "description": "The previous page's `next_cursor`. Omitted: the first page.",
             "schema": {
               "anyOf": [
                 {
@@ -12223,6 +12376,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -12233,6 +12387,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -12250,6 +12405,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -12270,6 +12426,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -12287,6 +12444,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -12295,6 +12453,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -12305,6 +12464,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -12322,6 +12482,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -12512,6 +12673,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -12522,6 +12684,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -12539,6 +12702,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -12556,6 +12720,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -12573,6 +12738,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -12581,6 +12747,7 @@
             "name": "selection_mode",
             "in": "query",
             "required": false,
+            "description": "`latest`: the market's newest finished run. `run`: the run named by `audit_id`. `range`: the runs of one configuration between `from` and `to`.",
             "schema": {
               "default": "latest",
               "type": "string",
@@ -12591,6 +12758,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -12608,6 +12776,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -12625,6 +12794,7 @@
             "name": "configuration_key",
             "in": "query",
             "required": false,
+            "description": "With `range`: which measurement configuration to read when the period mixes several. Omitted: the one measured most recently, preferring whole prompt sets.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -12633,6 +12803,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -12643,6 +12814,7 @@
             "name": "baseline_id",
             "in": "query",
             "required": false,
+            "description": "An earlier run to compare against. Omitted: the previous run with the same measurement context.",
             "schema": {
               "anyOf": [
                 {
@@ -12790,6 +12962,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -12800,6 +12973,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -12817,6 +12991,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -12837,6 +13012,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -12854,6 +13030,7 @@
             "name": "baseline_audit_ids",
             "in": "query",
             "required": false,
+            "description": "Runs to compare the selection against; repeat the parameter. Omitted: no comparison, or the previous comparable run where the read picks one.",
             "schema": {
               "anyOf": [
                 {
@@ -12874,6 +13051,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -12882,6 +13060,7 @@
             "name": "baseline_id",
             "in": "query",
             "required": false,
+            "description": "An earlier run to compare against. Omitted: the previous run with the same measurement context.",
             "schema": {
               "anyOf": [
                 {
@@ -12899,6 +13078,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share). Omitted: `core`. `latest=prompt` takes no cohort.",
             "schema": {
               "anyOf": [
                 {
@@ -12915,6 +13095,7 @@
             "name": "latest",
             "in": "query",
             "required": false,
+            "description": "`run`: every prompt of the selected run. `prompt`: each tracked prompt's own latest run, taking no other selection.",
             "schema": {
               "default": "run",
               "type": "string",
@@ -12994,6 +13175,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -13014,6 +13196,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -13031,6 +13214,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -13039,6 +13223,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share). Omitted: the prompt's own.",
             "schema": {
               "anyOf": [
                 {
@@ -13136,6 +13321,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -13146,6 +13332,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -13163,6 +13350,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -13180,6 +13368,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -13188,6 +13377,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -13205,6 +13395,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -13222,6 +13413,7 @@
             "name": "granularity",
             "in": "query",
             "required": false,
+            "description": "One point per day, month, run, week; `run` plots each run.",
             "schema": {
               "default": "run",
               "type": "string"
@@ -13231,6 +13423,7 @@
             "name": "transport_model",
             "in": "query",
             "required": false,
+            "description": "Only runs answered by this exact provider model.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -13239,6 +13432,7 @@
             "name": "retrieval_enabled",
             "in": "query",
             "required": false,
+            "description": "Only runs with web retrieval on (`true`) or off (`false`).",
             "schema": {
               "type": ["boolean", "null"]
             }
@@ -13247,6 +13441,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13313,6 +13508,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -13323,6 +13519,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -13340,6 +13537,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -13360,6 +13558,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -13377,6 +13576,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -13394,6 +13594,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -13402,6 +13603,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13412,6 +13614,7 @@
             "name": "outcome",
             "in": "query",
             "required": false,
+            "description": "`brand_absent`: answers that did not name the brand. `uncited`: named it without citing its site. `competitor_gap`: named `competitor` but not the brand (needs `competitor`).",
             "schema": {
               "anyOf": [
                 {
@@ -13428,6 +13631,7 @@
             "name": "competitor",
             "in": "query",
             "required": false,
+            "description": "Only answers that named this tracked competitor, by its name.",
             "schema": {
               "anyOf": [
                 {
@@ -13444,6 +13648,7 @@
             "name": "domain",
             "in": "query",
             "required": false,
+            "description": "Only answers that cited this domain.",
             "schema": {
               "anyOf": [
                 {
@@ -13460,6 +13665,7 @@
             "name": "url",
             "in": "query",
             "required": false,
+            "description": "Only answers that cited this exact URL.",
             "schema": {
               "anyOf": [
                 {
@@ -13476,6 +13682,7 @@
             "name": "prompt_id",
             "in": "query",
             "required": false,
+            "description": "Only answers to this prompt.",
             "schema": {
               "anyOf": [
                 {
@@ -13493,6 +13700,7 @@
             "name": "query",
             "in": "query",
             "required": false,
+            "description": "One fanout query, exactly: pages the answers that searched it instead.",
             "schema": {
               "anyOf": [
                 {
@@ -13509,6 +13717,7 @@
             "name": "search",
             "in": "query",
             "required": false,
+            "description": "Only queries containing this text, ignoring case.",
             "schema": {
               "anyOf": [
                 {
@@ -13525,6 +13734,7 @@
             "name": "order",
             "in": "query",
             "required": false,
+            "description": "`top`: most answers first, paged. `rising` and `falling`: one page by share change against the previous comparable run.",
             "schema": {
               "default": "top",
               "type": "string",
@@ -13535,6 +13745,7 @@
             "name": "cursor",
             "in": "query",
             "required": false,
+            "description": "The previous page's `next_cursor`. Omitted: the first page.",
             "schema": {
               "anyOf": [
                 {
@@ -13551,6 +13762,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
+            "description": "The most rows to return on this page.",
             "schema": {
               "default": 100,
               "type": "integer",
@@ -13640,6 +13852,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -13650,6 +13863,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -13667,6 +13881,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -13687,6 +13902,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -13704,6 +13920,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -13721,6 +13938,7 @@
             "name": "baseline_audit_ids",
             "in": "query",
             "required": false,
+            "description": "Runs to compare the selection against; repeat the parameter. Omitted: no comparison, or the previous comparable run where the read picks one.",
             "schema": {
               "anyOf": [
                 {
@@ -13741,6 +13959,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -13749,6 +13968,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13759,6 +13979,7 @@
             "name": "domain",
             "in": "query",
             "required": false,
+            "description": "One publisher domain: its pages, as with `dimension=url`.",
             "schema": {
               "anyOf": [
                 {
@@ -13791,6 +14012,7 @@
             "name": "standing",
             "in": "query",
             "required": false,
+            "description": "`gap`: only pages that list a tracked competitor and not the business. Page rows only (`dimension=url` or a `domain`).",
             "schema": {
               "anyOf": [
                 {
@@ -13807,6 +14029,7 @@
             "name": "dimension",
             "in": "query",
             "required": false,
+            "description": "Rows per publisher domain, or per cited page URL.",
             "schema": {
               "default": "domain",
               "type": "string",
@@ -13817,6 +14040,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -13834,6 +14058,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -13851,6 +14076,7 @@
             "name": "as_of",
             "in": "query",
             "required": false,
+            "description": "Read runs finished by this time, with a timezone, so paging is stable. Omitted: now; later pages carry it in the cursor.",
             "schema": {
               "anyOf": [
                 {
@@ -13868,6 +14094,7 @@
             "name": "cursor",
             "in": "query",
             "required": false,
+            "description": "The previous page's `next_cursor`. Omitted: the first page.",
             "schema": {
               "anyOf": [
                 {
@@ -13884,6 +14111,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
+            "description": "The most rows to return on this page.",
             "schema": {
               "default": 100,
               "type": "integer",
@@ -13971,6 +14199,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -13981,6 +14210,7 @@
             "name": "audit_id",
             "in": "query",
             "required": false,
+            "description": "One measurement run (audit) to read. It must belong to the project.",
             "schema": {
               "anyOf": [
                 {
@@ -13998,6 +14228,7 @@
             "name": "audit_ids",
             "in": "query",
             "required": false,
+            "description": "Several runs read together; repeat the parameter. Each must belong to the project and have finished measuring.",
             "schema": {
               "anyOf": [
                 {
@@ -14018,6 +14249,7 @@
             "name": "market",
             "in": "query",
             "required": false,
+            "description": "The measurement market's ID. Omitted: the project's default market. A named run implies its own market.",
             "schema": {
               "anyOf": [
                 {
@@ -14035,6 +14267,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
@@ -14052,6 +14285,7 @@
             "name": "cursor",
             "in": "query",
             "required": false,
+            "description": "The previous page's `next_cursor`. Omitted: the first page.",
             "schema": {
               "anyOf": [
                 {
@@ -14085,6 +14319,7 @@
             "name": "outcome",
             "in": "query",
             "required": false,
+            "description": "`brand_absent`: answers that did not name the brand. `uncited`: named it without citing its site. `competitor_gap`: named `competitor` but not the brand (needs `competitor`).",
             "schema": {
               "anyOf": [
                 {
@@ -14101,6 +14336,7 @@
             "name": "competitor",
             "in": "query",
             "required": false,
+            "description": "Only answers that named this tracked competitor, by its name.",
             "schema": {
               "anyOf": [
                 {
@@ -14117,6 +14353,7 @@
             "name": "domain",
             "in": "query",
             "required": false,
+            "description": "Only answers that cited this domain.",
             "schema": {
               "anyOf": [
                 {
@@ -14133,6 +14370,7 @@
             "name": "url",
             "in": "query",
             "required": false,
+            "description": "Only answers that cited this exact URL.",
             "schema": {
               "anyOf": [
                 {
@@ -14149,6 +14387,7 @@
             "name": "prompt_id",
             "in": "query",
             "required": false,
+            "description": "Only answers to this prompt.",
             "schema": {
               "anyOf": [
                 {
@@ -14166,6 +14405,7 @@
             "name": "engine",
             "in": "query",
             "required": false,
+            "description": "Only answers from this logical engine, such as `chatgpt`. Omitted: every engine.",
             "schema": {
               "type": ["string", "null"]
             }
@@ -14174,6 +14414,7 @@
             "name": "from",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or after this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -14191,6 +14432,7 @@
             "name": "to",
             "in": "query",
             "required": false,
+            "description": "Only runs completed at or before this time (ISO 8601).",
             "schema": {
               "anyOf": [
                 {
@@ -14208,6 +14450,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
+            "description": "The most rows to return on this page.",
             "schema": {
               "default": 100,
               "type": "integer",
@@ -14219,6 +14462,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -14275,6 +14519,7 @@
             "name": "project_id",
             "in": "path",
             "required": true,
+            "description": "The project ID.",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -14285,6 +14530,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -14295,6 +14541,7 @@
             "name": "topic",
             "in": "query",
             "required": false,
+            "description": "Only answers to prompts filed under this topic when their run froze them. Moving a prompt later doesn't change past runs.",
             "schema": {
               "anyOf": [
                 {
