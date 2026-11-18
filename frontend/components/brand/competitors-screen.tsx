@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
@@ -47,7 +47,7 @@ export function CompetitorsScreen() {
           <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
         </Button>
       }
-      filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}
+      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (

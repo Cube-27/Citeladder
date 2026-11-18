@@ -1,19 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { act, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { VisibilityEvidenceResponse } from '@citeladder/contracts';
-import { ApiError } from '@/lib/api/errors';
 import { visibilityApi } from '@/lib/api/visibility';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
+import { AllFilters } from '@/components/ui/all-filters';
+import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
-import { FanoutEvidence } from './fanout-evidence';
+import { FanoutEvidence, useFanoutGroupFilter } from './fanout-evidence';
 
 const A = '11111111-1111-4111-8111-111111111111';
-const B = '22222222-2222-4222-8222-222222222222';
 const evidence: VisibilityEvidenceResponse = {
   truncated: false,
   items: [
@@ -87,6 +87,11 @@ function Panel({
   );
 }
 
+/** The grouping as the page lists it: in All filters, outside the table. */
+function PageGroupFilter() {
+  return <AllFilters filters={[useFanoutGroupFilter()]} />;
+}
+
 function EmptyPanel({ onClearFilters }: Readonly<{ onClearFilters?: () => void }>) {
   const empty: VisibilityEvidenceResponse = { truncated: false, items: [] };
   const query = useQuery({
@@ -127,43 +132,6 @@ describe('Fanout empty states', () => {
     expect(screen.queryByRole('link', { name: 'View Runs' })).toBeNull();
     await userEvent.setup().click(screen.getByRole('button', { name: /Clear filters/ }));
     expect(onClear).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('Fanout evidence scope', () => {
-  it('drops another project’s totals during a switch and after the new summary fails', async () => {
-    let rejectNext!: (error: unknown) => void;
-    vi.spyOn(visibilityApi, 'getFanoutSummary').mockImplementation((projectId) =>
-      projectId === A
-        ? Promise.resolve({
-            event_count: 50,
-            distinct_queries: 20,
-            matched_queries: 20,
-            coverage: {},
-            next_cursor: null,
-            total_answers: 50,
-            answers: [],
-            items: [],
-            compared: false,
-          })
-        : new Promise((_, reject) => {
-            rejectNext = reject;
-          }),
-    );
-    const view = renderWithProviders(<Panel projectId={A} />);
-    expect(
-      await screen.findByLabelText(
-        '20 distinct searches and 50 total occurrences across the selected run set',
-      ),
-    ).toBeInTheDocument();
-    view.rerender(<Panel projectId={B} />);
-    expect(screen.queryByLabelText(/20 distinct searches/)).not.toBeInTheDocument();
-    await act(async () => rejectNext(new ApiError('Access denied', 403, '')));
-    expect(
-      await screen.findByLabelText(
-        '1 distinct searches and 1 total occurrences in the searches shown below',
-      ),
-    ).toBeInTheDocument();
   });
 });
 
@@ -227,16 +195,20 @@ describe('Fanout paging', () => {
 });
 
 describe('Fanout grouping', () => {
-  it('groups the table by prompt from its own filters, naming each surface', async () => {
+  it('groups the table by prompt from the page’s All filters, through the URL', async () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
-    renderWithProviders(<Panel projectId={A} />);
+    renderWithProviders(
+      <>
+        <PageGroupFilter />
+        <Panel projectId={A} />
+      </>,
+    );
     expect(screen.getByRole('columnheader', { name: 'Surface' })).toBeVisible();
     expect(screen.queryByText('Best CRM?')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Group by: None' }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Prompt' }));
+    await chooseFilterOption(user, 'Group by', 'Prompt');
     expect(await screen.findByText('Best CRM?')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Group by: Prompt' })).toBeVisible();
+    expect(new URLSearchParams(window.location.search).get('group')).toBe('prompt');
   });
 
   it('keeps a cut surface list on one line, its whole list in a tooltip and a tab stop', async () => {

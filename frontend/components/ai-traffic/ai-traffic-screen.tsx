@@ -8,7 +8,7 @@ import {
   type TrafficDataTab,
 } from '@/lib/ai-traffic/use-traffic-data';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { TabsRoot, TabPanel, TabRow, type TabRowProps } from '@/components/ui/tabs';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { AiReferralsScreen } from './referrals-screen';
@@ -114,7 +114,7 @@ function TrafficDataView({
     tabs: <TabRow {...tabs} />,
     filters: idle ? undefined : (
       <FilterBar
-        filters={trafficFilters({ model, crawlAvailable })}
+        {...pageStripFilters(trafficFilters({ model, crawlAvailable }))}
         actions={tab === 'overview' ? undefined : <TrafficExport model={model} />}
       />
     ),

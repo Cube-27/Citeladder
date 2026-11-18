@@ -33,11 +33,9 @@ import { textRole } from '@/components/ui/typography';
 import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import { useDebounced } from '@/lib/use-debounced';
 import {
-  isSelectionWide,
   selectionMatchedQueries,
   noSearchMatchState,
   SearchScopeNote,
-  FanoutCounts,
 } from '@/components/visibility/fanout-totals';
 import {
   FANOUT_VIEWS,
@@ -82,11 +80,11 @@ const groupCodec = stringUrlCodec(
 );
 
 /**
- * How the searches are grouped, in the table's own All filters. It reads and
+ * How the searches are grouped, in the page's All filters. It reads and
  * writes the same `group` URL state the table reads, so the menu and the
  * table never disagree.
  */
-function useFanoutGroupFilter(): FilterDefinition {
+export function useFanoutGroupFilter(): FilterDefinition {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
   return choiceFilter({
     id: 'fanout-group',
@@ -171,7 +169,6 @@ export function FanoutEvidence({
     scope: FanoutScope;
     scopeReady: boolean;
   }>) {
-  const groupFilter = useFanoutGroupFilter();
   const [view, setView] = useState<FanoutView>('top');
   const queries = useFanoutQueries(scope, scopeReady, view);
   const {
@@ -182,7 +179,6 @@ export function FanoutEvidence({
     items,
     visible,
     paged,
-    totals,
     unit,
     page,
     setPage,
@@ -193,8 +189,6 @@ export function FanoutEvidence({
   const serverNeedle = useDebounced(needle, TABLE_SEARCH_DEBOUNCE_MS);
   const summary = useFanoutSummary(scope, scopeReady, serverNeedle);
   const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
-  // False until the server's counts land; the headline shows what the reader can see.
-  const selectionWide = isSelectionWide(summary);
   const matched = summaryMatchesInput ? selectionMatchedQueries(summary) : null;
 
   // Pending, not merely loading: a read still waiting on its scope fetches
@@ -245,17 +239,8 @@ export function FanoutEvidence({
             maxLength={SEARCH_MAX_LENGTH}
           />
         ),
-        // How the table groups is its own filter, after the search.
-        filters: [groupFilter],
-        // What the table holds closes the row: the counts, and what a search kept.
-        status: (
-          <>
-            <SearchScopeNote search={needle} matched={matched} />
-            <span aria-busy={!summaryMatchesInput}>
-              <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
-            </span>
-          </>
-        ),
+        // What a search kept closes the row; the footer counts the rows.
+        status: <SearchScopeNote search={needle} matched={matched} />,
       }}
       columns={COLUMNS}
       state={tableState({ view, rows: visible.length, needle, matched, queries })}
@@ -360,19 +345,6 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
       }))
       .filter((group) => group.rows.length);
   }, [groups, needle]);
-  // Totalled over what the reader can SEE. Counting `groups` reported every
-  // search in the window while the table showed only the ones matching a
-  // filter, so the two disagreed the moment anything was typed.
-  const totals = useMemo(
-    () => ({
-      distinct: new Set(visible.flatMap((group) => group.rows.map((row) => row.query))).size,
-      occurrences: visible.reduce(
-        (sum, group) => sum + group.rows.reduce((rows, row) => rows + row.occurrences, 0),
-        0,
-      ),
-    }),
-    [visible],
-  );
   // Grouped views page by group so a prompt's searches are never split across
   // two pages; the ungrouped view pages by row.
   const grouped = grouping !== 'none';
@@ -397,7 +369,6 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
     items,
     visible,
     paged,
-    totals,
     unit,
     page,
     setPage,
@@ -500,15 +471,11 @@ function QueryRow({
 }
 
 /**
- * Selection-wide fanout totals, straight from the server.
+ * Selection-wide fanout counts, straight from the server: the table below is
+ * one loaded evidence window, so it cannot say how many searches match across
+ * the whole selection.
  *
- * The table below is one loaded evidence window, and deriving "Distinct
- * searches" and "Total occurrences" from it meant both figures changed as the
- * reader paged — they were page totals wearing selection labels. This asks the
- * projection that already aggregates the COMPLETE selection
- * (`services/api/src/analysis/fanout.ts`), which it does with `limit=None`.
- *
- * The normalized search is sent too, so the count of matching queries covers
+ * The normalized search is sent, so the count of matching queries covers
  * the whole run set rather than whatever happens to be loaded: a query stored
  * past the first page was previously unfindable. It is the SAME value the
  * table filters by, so the two can never disagree about what matched.

@@ -41,7 +41,13 @@ const LOOKUP_LIMIT = 500;
 const MOVED_LIMIT = 10;
 
 export const METRIC_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'share', label: 'Share', width: 'figure', kind: 'number' },
+  {
+    key: 'share',
+    label: 'Share',
+    width: 'figure',
+    kind: 'number',
+    hint: 'Share of all times engines ran a search',
+  },
   { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
   { key: 'brands', label: 'Brands matched', width: 'name' },
 ];

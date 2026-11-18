@@ -6,7 +6,6 @@ import type { DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
 import { Stack } from '@/components/ui/layout';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
-import { sourceTableFilters } from '@/components/visibility/source-filters';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
 import { NearMissTable, useSourceNearMisses } from '@/components/visibility/source-near-misses';
 import { sourceTableToolbar } from '@/components/visibility/source-toolbar';
@@ -22,16 +21,9 @@ import {
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import type { SourceTab } from '@/lib/visibility/dashboard';
 import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';
-import {
-  availableTypes,
-  matchesSearch,
-  sortItems,
-  typeSlices,
-  type SortState,
-} from '@/lib/visibility/sources';
+import { matchesSearch, sortItems, typeSlices, type SortState } from '@/lib/visibility/sources';
 import {
   useSourceAnalysis,
-  useSourceDomains,
   useSourceSeries,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
@@ -101,39 +93,6 @@ export function VisibilitySources({
   );
 }
 
-/**
- * Every type in the selection, including while one of them is filtering.
- *
- * `category_totals` follows the type filter on purpose: the ring beside the
- * table prints the same `total_citations` its segments are shares of. The
- * filter's OPTIONS cannot follow it -- picking "Editorial" left exactly one
- * option, the control fell below its own minimum and unmounted, and there was
- * no way back to "All URL types". So the last unfiltered list is remembered,
- * exactly as `useSourceDomains` reads its own list unfiltered.
- */
-function useTypeOptions({
-  measured,
-  filtered,
-  loaded,
-}: Readonly<{
-  measured: ReturnType<typeof availableTypes>;
-  filtered: boolean;
-  loaded: boolean;
-}>) {
-  const [known, setKnown] = useState(measured);
-  // Compared by token, not by identity: `availableTypes` builds a fresh array
-  // every render, so an identity check would set state on every pass.
-  const tokens = (list: ReturnType<typeof availableTypes>) =>
-    list.map((type) => type.token).join('|');
-  if (!filtered && loaded && tokens(known) !== tokens(measured)) setKnown(measured);
-  // Nothing remembered means nothing was ever seen unfiltered -- which is what
-  // a shared link that already carries `source_type` looks like on its first
-  // render. Returning the empty list there left the control offering only
-  // "All URL types" and no way to reach any other one.
-  if (!filtered) return measured;
-  return known.length ? known : measured;
-}
-
 export function SourcesPanel({
   dimension,
   filters,
@@ -157,10 +116,9 @@ export function SourcesPanel({
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [cursor] = useUrlState('source_cursor', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
-  const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
-  });
-  const { gapOnly, setStanding } = useStanding(dimension, readNotCited);
+  // The table's filters are the page's (`useTableFilters`); the panel reads them.
+  const [sourceType] = useUrlState('source_type', optionalStringUrlCodec);
+  const gapOnly = useGapOnly(dimension, readNotCited);
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
@@ -177,13 +135,9 @@ export function SourcesPanel({
     setSort(null);
   }
 
-  // On a domain's own page the publisher is fixed by the route above, so the
-  // control is not offered there — it would let a reader contradict the
-  // breadcrumb they arrived through.
-  const [pickedDomain, setPickedDomain] = useUrlState('source_pick', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
-  });
-  const domainOptions = useSourceDomains(filters, queries);
+  // On a domain's own page the publisher is fixed by the route above, so a
+  // pick never applies there.
+  const [pickedDomain] = useUrlState('source_pick', optionalStringUrlCodec);
   // The publisher filter is a URL-table filter: the Domains view neither
   // offers it nor reads a pick left over from the URLs view.
   const activeDomain = domain ?? (dimension === 'url' ? pickedDomain : null);
@@ -207,11 +161,6 @@ export function SourcesPanel({
   };
 
   const data = sourceQuery.data;
-  const types = useTypeOptions({
-    measured: availableTypes(data?.category_totals, dimension),
-    filtered: Boolean(sourceType),
-    loaded: Boolean(data),
-  });
   const slices = typeSlices(data?.category_totals, dimension);
   // Search and sort narrow what is LOADED. The footer reports the loaded count
   // against the server's total, so a reader can see the difference.
@@ -231,17 +180,6 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
-  // The table's own filters, in its toolbar's All filters after the search:
-  // they narrow this table alone. On a domain's own page the publisher
-  // is fixed.
-  const tableFilters = sourceTableFilters({
-    dimension,
-    type: { value: sourceType, options: types, onChange: setSourceType },
-    standing: readNotCited ? null : { gapOnly, onChange: setStanding },
-    domain: domain
-      ? null
-      : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain },
-  });
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
@@ -249,7 +187,6 @@ export function SourcesPanel({
     onSearch: setSearch,
     rows,
     domain: activeDomain,
-    filters: tableFilters,
   });
 
   return (
@@ -316,11 +253,9 @@ function pageOffset(raw: string | null): number {
 }
 
 /** Only pages have a standing, so the gaps filter applies to the URL table alone. */
-function useStanding(dimension: 'domain' | 'url', readNotCited: boolean) {
-  const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
-  });
-  return { gapOnly: dimension === 'url' && !readNotCited && standing === 'gap', setStanding };
+function useGapOnly(dimension: 'domain' | 'url', readNotCited: boolean) {
+  const [standing] = useUrlState('source_standing', optionalStringUrlCodec);
+  return dimension === 'url' && !readNotCited && standing === 'gap';
 }
 
 /**

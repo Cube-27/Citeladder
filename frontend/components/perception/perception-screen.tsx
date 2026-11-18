@@ -3,7 +3,7 @@ import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 import { PerceptionView } from '@/components/perception/perception-brand';
 import { PerceptionFactChecking } from '@/components/perception/perception-factcheck';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -58,7 +58,7 @@ export function PerceptionScreen() {
             ariaLabel="Perception views"
           />
         }
-        filters={ready ? <FilterBar filters={pageFilters} /> : undefined}
+        filters={ready ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
       >
         {queries.activeRun && queries.hasRuns ? <ActiveRunBanner run={queries.activeRun} /> : null}
         <TabPanel value={tab} className="focus-ring">

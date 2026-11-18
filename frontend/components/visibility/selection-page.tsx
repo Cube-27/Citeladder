@@ -55,7 +55,8 @@ export function SelectionPageStateBlock({
 
 /**
  * The page's filters: the ones every view shares (market, measurement,
- * prompts, surface, period). A tab's table keeps its own in its toolbar.
+ * prompts, surface, period). Sources and Query fanouts add their table's
+ * own (`useTableFilters`) to the same strip.
  */
 export function useSelectionPageFilters({
   view,

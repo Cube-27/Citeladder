@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { mswServer } from '@/test/msw-server';
-import { openFilterRow } from '@/test/all-filters';
+import { chooseFilterOption, openFilterOptions, openFilterRow } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen } from './ai-traffic-screen';
@@ -664,16 +664,18 @@ describe('AI Traffic state and navigation', () => {
     expect(
       await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    const statusTrigger = screen.getByRole('button', { name: /^Status code:/ });
-    await user.click(statusTrigger);
+    // Past two filters the window stays its own trigger; the rest share All filters.
+    expect(screen.getByRole('button', { name: /^Period:/ })).toBeVisible();
+    await openFilterOptions(user, 'Status code');
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
-    // A partly typed code narrows nothing, so the trigger does not report it.
+    const statusRow = () => screen.getByRole('menuitem', { name: /^Status code:/ });
+    // A partly typed code narrows nothing, so the filter does not report it.
     fireEvent.change(statusField, { target: { value: '40' } });
-    expect(statusTrigger).toHaveAccessibleName('Status code: Any status');
+    expect(statusRow()).toHaveAccessibleName('Status code: Any status');
     fireEvent.change(statusField, { target: { value: '404' } });
-    expect(statusTrigger).toHaveTextContent('404');
+    expect(statusRow()).toHaveAccessibleName('Status code: 404');
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'Status code: 404' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toHaveAttribute(
       'data-active',
     );
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -688,22 +690,16 @@ describe('AI Traffic state and navigation', () => {
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
     await screen.findByRole('table', { name: 'Path-level AI traffic with separate signal units' });
-    await user.click(screen.getByRole('button', { name: /^Resource class:/ }));
-    const pageOption = await screen.findByRole('menuitemradio', { name: 'Page' });
-    pageOption.focus();
-    await user.keyboard('{Enter}');
+    await chooseFilterOption(user, 'Resource class', 'Page');
     await waitFor(() =>
       expect(new URLSearchParams(window.location.search).get('resource')).toBe('page'),
     );
-    await user.click(await screen.findByRole('button', { name: /^Folder:/ }));
+    await openFilterOptions(user, 'Folder');
     fireEvent.change(await screen.findByRole('textbox', { name: 'Folder' }), {
       target: { value: '/page' },
     });
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'Folder: /page' })).toHaveAttribute(
-      'data-active',
-    );
-    expect(screen.getByRole('button', { name: 'Resource class: Page' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'All filters (2)' })).toHaveAttribute(
       'data-active',
     );
     // Pages sort from their column headers, like every other table.

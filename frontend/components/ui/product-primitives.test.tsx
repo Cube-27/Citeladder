@@ -8,7 +8,7 @@ import { Avatar } from './avatar';
 import { Button } from './button';
 import { Delta } from './delta';
 import { choiceFilter, rangeFilter, singleFilter } from './all-filters';
-import { FilterBar, FilterTrigger } from './filter-bar';
+import { FilterBar, FilterTrigger, pageStripFilters } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
 import { Pager, pageNumberControls } from './pager';
@@ -409,8 +409,20 @@ describe('FilterBar and FilterTrigger', () => {
     expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
 
-    // AI Traffic: filters and an action without a search keep their own triggers.
+    // Filters and an action without a search keep their own triggers.
     rerender(<FilterBar filters={four} actions={actions} />);
+    expect(screen.getByRole('button', { name: 'Kind: One' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+
+    // A page strip past two filters keeps its window in sight and groups the rest.
+    const measurement = { ...filter('measurement'), label: 'Measurement' };
+    const period = { ...filter('range'), label: 'Period' };
+    rerender(<FilterBar {...pageStripFilters([measurement, ...four, period])} />);
+    expect(screen.getByRole('button', { name: 'Measurement: All' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Period: All' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
+    rerender(<FilterBar {...pageStripFilters([measurement, filter('Kind', 'one')])} />);
     expect(screen.getByRole('button', { name: 'Kind: One' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });

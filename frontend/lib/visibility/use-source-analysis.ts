@@ -4,6 +4,7 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { useVisibilityQueries } from '@/lib/visibility/use-visibility-dashboard';
+import { availableTypes } from '@/lib/visibility/sources';
 
 export type SourceQueries = ReturnType<typeof useVisibilityQueries>;
 
@@ -170,7 +171,7 @@ export function useSourceUrl(filters: SourceFilters, queries: SourceQueries, url
  * domains on page one would hide the publisher a reader is looking for, which
  * is the exact moment they reach for it.
  */
-export function useSourceDomains(filters: SourceFilters, queries: SourceQueries) {
+export function useSourceDomains(filters: SourceFilters, queries: SourceQueries, enabled: boolean) {
   const params = {
     ...topicSelectionParams(filters, queries),
     dimension: 'domain' as const,
@@ -181,7 +182,35 @@ export function useSourceDomains(filters: SourceFilters, queries: SourceQueries)
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
       params,
     ),
-    enabled: Boolean(queries.activeRunId),
+    enabled: enabled && Boolean(queries.activeRunId),
   });
   return (query.data?.items ?? []).map((item) => item.key).filter(Boolean);
+}
+
+/**
+ * The types in this selection, for the "filter by type" control: read without
+ * the type and standing filters, as `useSourceDomains` reads its list, so
+ * picking one type never shrinks the options to that type.
+ */
+export function useSourceTypes(
+  filters: SourceFilters,
+  queries: SourceQueries,
+  scope: Pick<SourceScope, 'dimension' | 'domain'> & { enabled: boolean },
+) {
+  const params = {
+    ...topicSelectionParams(filters, queries),
+    dimension: scope.dimension,
+    domain: set(scope.domain),
+    limit: SOURCE_DOMAIN_OPTIONS,
+  };
+  const query = useQuery({
+    ...visibilityQueries.sources(
+      { workspaceId: queries.workspaceId, projectId: queries.projectId },
+      params,
+    ),
+    enabled: scope.enabled && Boolean(queries.activeRunId),
+    placeholderData: (data, previous) =>
+      retainPreviousDataForScope(queries.projectId, data, previous),
+  });
+  return availableTypes(query.data?.category_totals, scope.dimension);
 }

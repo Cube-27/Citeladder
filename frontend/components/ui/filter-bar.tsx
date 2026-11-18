@@ -42,6 +42,12 @@ export type FilterBarProps = Readonly<{
    */
   filters?: readonly FilterDefinition[];
   /**
+   * The window the page reads (Measurement, Period), each its own trigger
+   * before `filters`, which then always share All filters. Build it with
+   * `pageStripFilters`.
+   */
+  lead?: readonly FilterDefinition[];
+  /**
    * What the row shows, in caption at its end: the count describing the list
    * ("12 issues · 40 pages") or a live note ("Updating data… Previous data
    * shown."). A row that reports status passes `null` while idle, so its live
@@ -70,9 +76,10 @@ export type FilterBarProps = Readonly<{
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
-export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
+export function FilterBar({ view, search, filters, lead, status, actions }: FilterBarProps) {
   const searched = Boolean(search);
   const full = searched && Boolean(view) && Boolean(actions);
+  const leads = lead ?? [];
   return (
     <fieldset
       data-filter-bar=""
@@ -81,8 +88,12 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
+      {leads.length > 0 ? <RowFilters filters={leads} grouped={false} /> : null}
       {filters ? (
-        <RowFilters filters={filters} grouped={grouped(filters.length, searched, full)} />
+        <RowFilters
+          filters={filters}
+          grouped={lead !== undefined || grouped(filters.length, searched, full)}
+        />
       ) : null}
       {status === undefined ? null : (
         <output
@@ -116,6 +127,27 @@ const FILTERS_BESIDE_SEARCH = 4;
 /** Whether the row's filters share All filters: two or more in a full row, or more than four beside a search. */
 function grouped(count: number, searched: boolean, full: boolean): boolean {
   return (full && count > 1) || (searched && count > FILTERS_BESIDE_SEARCH);
+}
+
+/** The window a page reads: it stays in sight, never behind All filters. */
+const LEAD_FILTER_IDS: ReadonlySet<string> = new Set(['measurement', 'range']);
+
+/** A page strip shows at most this many filters as their own triggers. */
+const STRIP_LOOSE_FILTERS = 2;
+
+/**
+ * A page strip's filters (owner, 2026-11-18: "use all filters logic"): up to
+ * two each keep their own trigger; past that the measurement and period stay
+ * in sight and every other filter shares All filters.
+ */
+export function pageStripFilters(
+  filters: readonly FilterDefinition[],
+): Pick<FilterBarProps, 'filters' | 'lead'> {
+  if (filters.length <= STRIP_LOOSE_FILTERS) return { filters };
+  return {
+    lead: filters.filter((filter) => LEAD_FILTER_IDS.has(filter.id)),
+    filters: filters.filter((filter) => !LEAD_FILTER_IDS.has(filter.id)),
+  };
 }
 
 /** The row's filters: each its own trigger, or one All filters menu. */
