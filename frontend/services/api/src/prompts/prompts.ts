@@ -27,7 +27,7 @@ import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
-import { overLimitPromptIds } from '../entitlements/occupancy.ts';
+import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupancy.ts';
 import {
   BINDING_FAILURES,
   bindingError,
@@ -76,7 +76,9 @@ export const promptUpdate = promptUpdateRequestSchema.extend({
   intent: intent.nullish(),
   persona: persona.nullish(),
 });
-export const promptBulkStatus = promptBulkStatusRequestSchema;
+export const promptBulkStatus = promptBulkStatusRequestSchema.extend({
+  prompt_ids: promptBulkStatusRequestSchema.shape.prompt_ids.max(P.bulk_prompts_max),
+});
 const importRow = promptImportRowRequestSchema.extend({
   text: z.string().trim().max(P.text_max_chars),
   theme: theme.default(''),
@@ -130,7 +132,13 @@ export async function scopedPrompts(
     ? await db
         .selectFrom('prompts')
         .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-        .select(['prompts.id', 'prompts.text', 'prompts.status', 'prompts.prompt_set_id'])
+        .select([
+          'prompts.id',
+          'prompts.text',
+          'prompts.status',
+          'prompts.prompt_set_id',
+          'prompts.topic_id',
+        ])
         .where('prompts.id', 'in', ids)
         .where('prompts.workspace_id', '=', scope.workspaceId)
         .where('prompt_sets.project_id', '=', scope.projectId)
@@ -142,7 +150,11 @@ export async function scopedPrompts(
 }
 
 /** The topic's persisted name and description, or 404 outside the project. */
-async function topicText(db: Kysely<DB>, scope: ProjectScope, topicId: string): Promise<string> {
+export async function topicText(
+  db: Kysely<DB>,
+  scope: ProjectScope,
+  topicId: string,
+): Promise<string> {
   const topic = await db
     .selectFrom('topics')
     .select(['name', 'description'])
@@ -361,13 +373,31 @@ async function applyPromptUpdate(
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
   if (topicGiven && topicId !== null) await topicText(db, projectScope, topicId);
   const activates = input.status === P.status_active && prompt.status !== P.status_active;
+  // Slots go by creation order, so this edit cannot move a prompt across the limit.
+  const overLimit = await overLimitPromptIds(db, entitlements);
+  if (activates && overLimit.has(prompt.id)) throw overLimitSelection(1);
   // Re-filing an active prompt under another topic changes what it must bind to.
   const refiled =
     topicId !== prompt.topic_id && (input.status ?? prompt.status) === P.status_active;
   if (input.text != null || activates || refiled) {
     await requireBinding(db, projectScope, input.text ?? prompt.text, topicId);
   }
-  const changes: Partial<PromptRow> = {
+  const row = await db
+    .updateTable('prompts')
+    .set({
+      ...editedColumns(input),
+      ...(topicGiven ? { topic_id: topicId } : {}),
+      updated_at: new Date(),
+    })
+    .where('id', '=', prompt.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return promptView(row, overLimit);
+}
+
+/** The columns an edit sets, apart from its topic. */
+function editedColumns(input: z.infer<typeof promptUpdate>): Partial<PromptRow> {
+  return {
     ...(input.text == null
       ? {}
       : { text: input.text, normalized_text_hash: promptTextHash(input.text) }),
@@ -378,15 +408,7 @@ async function applyPromptUpdate(
     ...(input.cohort == null ? {} : cohortColumns(input.cohort)),
     ...(input.enabled == null ? {} : { enabled: input.enabled }),
     ...(input.status == null ? {} : { status: input.status }),
-    ...(topicGiven ? { topic_id: topicId } : {}),
   };
-  const row = await db
-    .updateTable('prompts')
-    .set({ ...changes, updated_at: new Date() })
-    .where('id', '=', prompt.id)
-    .returningAll()
-    .executeTakeFirstOrThrow();
-  return promptView(row, await overLimitPromptIds(db, entitlements));
 }
 
 export async function deletePrompt(
@@ -398,17 +420,51 @@ export async function deletePrompt(
   await db.deleteFrom('prompts').where('id', '=', prompt.id).execute();
 }
 
+/** File prompts already scoped to the project under `topicId` (null: none). */
+export async function refilePrompts(
+  db: Kysely<DB>,
+  scope: ProjectScope,
+  change: Readonly<{ promptIds: readonly string[]; topicId: string | null }>,
+): Promise<void> {
+  await db
+    .updateTable('prompts')
+    .set({ topic_id: change.topicId, updated_at: new Date() })
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', 'in', change.promptIds)
+    .execute();
+}
+
+/** Delete prompts already scoped to the project; how many rows went. */
+export async function deleteScopedPrompts(
+  db: Kysely<DB>,
+  scope: ProjectScope,
+  promptIds: readonly string[],
+): Promise<number> {
+  const result = await db
+    .deleteFrom('prompts')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', 'in', promptIds)
+    .executeTakeFirst();
+  return Number(result.numDeletedRows);
+}
+
 type Failed<T> = { item: T; failure: BindingFailure; code: string; message: string };
 
 /** Each failing item; the whole request is rejected if any fail. */
-function failures<T>(items: readonly T[], check: (item: T) => BindingFailure | null): Failed<T>[] {
+export function failures<T>(
+  items: readonly T[],
+  check: (item: T) => BindingFailure | null,
+): Failed<T>[] {
   return items.flatMap((item) => {
     const failure = check(item);
     return failure === null ? [] : [{ item, failure, ...BINDING_FAILURES[failure] }];
   });
 }
 
-/** Archive or activate prompts of one set; all of them, or none (404). */
+/**
+ * Archive or activate prompts of one set; all of them, or none (404). A prompt
+ * beyond the plan's prompt slots is never measured, so it cannot be activated.
+ */
 export async function bulkSetStatus(
   db: Database,
   scope: RecordScope,
@@ -422,6 +478,9 @@ export async function bulkSetStatus(
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     if (input.status === P.status_active) {
+      const overLimit = await overLimitPromptIds(trx, entitlements);
+      const excluded = ids.filter((id) => overLimit.has(id)).length;
+      if (excluded > 0) throw overLimitSelection(excluded);
       const rows = await trx
         .selectFrom('prompts')
         .leftJoin('topics', 'topics.id', 'prompts.topic_id')

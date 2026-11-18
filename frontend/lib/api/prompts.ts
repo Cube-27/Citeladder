@@ -15,6 +15,7 @@ import { mainPromptSet } from '@/lib/prompts/prompt-sets';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
+  promptBulkResultSchema,
   promptCandidateReviewResponseSchema,
   promptCandidateSchema,
   promptGenerateResponseSchema,
@@ -23,6 +24,9 @@ import {
   promptSetSchema,
 } from '@citeladder/contracts/project';
 import type {
+  PromptBulkDeleteRequest,
+  PromptBulkStatusRequest,
+  PromptBulkTopicRequest,
   PromptCandidateReviewRequest,
   PromptCreateRequest,
   PromptGenerateRequest,
@@ -38,6 +42,7 @@ import type {
   PromptGenerateResponse,
   PromptSet,
   PromptSetList,
+  PromptStatus,
 } from '@citeladder/contracts';
 
 const promptCandidateListSchema = z.array(promptCandidateSchema);
@@ -73,6 +78,45 @@ export const promptsApi = {
   },
   deletePrompt: (promptId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/prompts/${promptId}`, options),
+  /** Archive or activate prompts of one set: all of them, or none. */
+  bulkStatus: async (
+    promptSetId: string,
+    input: PromptBulkStatusRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<PromptSet>(
+      `/prompt-sets/${promptSetId}/prompts/bulk-status`,
+      input,
+      options,
+    );
+    return strictValidate(promptSetSchema, res, 'prompts.bulkStatus');
+  },
+  /** File prompts of the project under one topic (null: none); all of them, or none. */
+  bulkTopic: async (
+    projectId: string,
+    input: PromptBulkTopicRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<unknown>(
+      `/projects/${projectId}/prompts/bulk-topic`,
+      input,
+      options,
+    );
+    return strictValidate(promptBulkResultSchema, res, 'prompts.bulkTopic');
+  },
+  /** Delete prompts of the project at once; past runs keep their answers. */
+  bulkDelete: async (
+    projectId: string,
+    input: PromptBulkDeleteRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<unknown>(
+      `/projects/${projectId}/prompts/bulk-delete`,
+      input,
+      options,
+    );
+    return strictValidate(promptBulkResultSchema, res, 'prompts.bulkDelete');
+  },
   /**
    * Persist browser-parsed rows through `/import`: a JSON body of
    * `{ prompts: [...] }` (rows already parsed and previewed in the browser),
@@ -170,6 +214,12 @@ export async function refreshPromptLibrary(client: QueryClient, projectId: strin
   ]);
 }
 
+/** What a bulk action does to the selected prompts. */
+export type PromptBulkChange =
+  | { kind: 'status'; status: PromptStatus }
+  | { kind: 'topic'; topicId: string | null }
+  | { kind: 'delete' };
+
 /** Resolves the set a write lands in, creating the project's default set when it has none. */
 type SetResolver = () => Promise<PromptSet>;
 const refreshed = (scope: ProjectScope) => ({
@@ -263,6 +313,63 @@ export const promptsMutations = {
     mutationOptions({
       mutationFn: (promptId: string) => promptsApi.deletePrompt(promptId, scoped(scope)),
       ...refreshed(scope),
+    }),
+  /**
+   * One change to a selection of prompts; resolves to how many changed. Status
+   * goes through each set's own endpoint, so a selection across sets is one
+   * request per set; topic and delete are one request for the project.
+   */
+  bulk: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: async ({
+        change,
+        prompts,
+      }: {
+        change: PromptBulkChange;
+        prompts: readonly Pick<Prompt, 'id' | 'prompt_set_id'>[];
+      }): Promise<number> => {
+        const prompt_ids = prompts.map((prompt) => prompt.id);
+        switch (change.kind) {
+          case 'status': {
+            const bySet = new Map<string, string[]>();
+            for (const prompt of prompts)
+              bySet.set(prompt.prompt_set_id, [
+                ...(bySet.get(prompt.prompt_set_id) ?? []),
+                prompt.id,
+              ]);
+            // Every request settles before the refresh, so a failure never reads a stale set.
+            const settled = await Promise.allSettled(
+              [...bySet].map(([setId, ids]) =>
+                promptsApi.bulkStatus(
+                  setId,
+                  { prompt_ids: ids, status: change.status },
+                  scoped(scope),
+                ),
+              ),
+            );
+            const failed = settled.find((result) => result.status === 'rejected');
+            if (failed) throw failed.reason;
+            return prompt_ids.length;
+          }
+          case 'topic':
+            return (
+              await promptsApi.bulkTopic(
+                scope.projectId,
+                { prompt_ids, topic_id: change.topicId },
+                scoped(scope),
+              )
+            ).count;
+          case 'delete':
+            return (await promptsApi.bulkDelete(scope.projectId, { prompt_ids }, scoped(scope)))
+              .count;
+          default: {
+            const unhandled: never = change;
+            return unhandled;
+          }
+        }
+      },
+      onSettled: (_data, _error, _vars, _result, { client }) =>
+        refreshPromptLibrary(client, scope.projectId),
     }),
   import: (scope: ProjectScope, resolveSet: SetResolver) =>
     mutationOptions({

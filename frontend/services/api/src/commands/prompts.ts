@@ -14,6 +14,7 @@ import type { RecordScope } from '../db/workspace-scope.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { ApiError } from '../errors.ts';
 import { isNonEmpty } from '../lists.ts';
+import * as bulk from '../prompts/bulk.ts';
 import * as candidates from '../prompts/candidates.ts';
 import type { GenerationInput } from '../prompts/generation-input.ts';
 import { generatePrompts } from '../prompts/generation.ts';
@@ -87,6 +88,24 @@ export function setPromptStatuses(
   entitlements = new WorkspaceEntitlements(db, actor.workspaceId),
 ) {
   return prompts.bulkSetStatus(db, scopeOf(actor, projectId), promptSetId, input, entitlements);
+}
+
+export function assignPromptTopic(
+  db: Database,
+  actor: Writer,
+  projectId: string,
+  input: z.infer<typeof bulk.promptBulkTopic>,
+) {
+  return bulk.assignPromptTopic(db, { workspaceId: actor.workspaceId, projectId }, input);
+}
+
+export function deletePrompts(
+  db: Database,
+  actor: Writer,
+  projectId: string,
+  input: z.infer<typeof bulk.promptBulkDelete>,
+) {
+  return bulk.deletePrompts(db, { workspaceId: actor.workspaceId, projectId }, input);
 }
 
 /**

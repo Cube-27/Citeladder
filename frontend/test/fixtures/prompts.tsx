@@ -53,6 +53,7 @@ export function makeFormLimits(overrides: Partial<PromptFormLimits> = {}): Promp
   return {
     generation_count_max: 50,
     import_rows_max: 500,
+    bulk_prompts_max: 500,
     persona_max_chars: 120,
     run_context_max_chars: 280,
     distribution_personas_max: 8,

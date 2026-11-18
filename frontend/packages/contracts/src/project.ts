@@ -342,6 +342,7 @@ export const promptSetSchema = responseObject({
 export const promptFormLimitsSchema = responseObject({
   generation_count_max: z.number().int(),
   import_rows_max: z.number().int(),
+  bulk_prompts_max: z.number().int(),
   persona_max_chars: z.number().int(),
   run_context_max_chars: z.number().int(),
   distribution_personas_max: z.number().int(),
@@ -350,6 +351,9 @@ export const promptFormLimitsSchema = responseObject({
   audit_repetitions_min: z.number().int(),
   audit_repetitions_max: z.number().int(),
 });
+
+/** How many prompts a bulk change changed: all of the selection, or it was refused. */
+export const promptBulkResultSchema = responseObject({ count: z.number().int() });
 
 /** The browser's prompt-set list: a project's sets and the bounds of the forms they open. */
 export const promptSetListSchema = responseObject({
