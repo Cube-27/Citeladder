@@ -58,6 +58,19 @@ export const promptBulkStatusRequestSchema = z.strictObject({
   prompt_ids: z.array(uuid()).min(1),
   status: promptStatusSchema,
 });
+export type PromptBulkStatusRequest = z.input<typeof promptBulkStatusRequestSchema>;
+
+/** Prompts of one project, by id: every one must be in it, or nothing changes. */
+export const promptBulkDeleteRequestSchema = z.strictObject({
+  prompt_ids: z.array(uuid()).min(1),
+});
+export type PromptBulkDeleteRequest = z.input<typeof promptBulkDeleteRequestSchema>;
+
+/** File prompts under one topic of their project; null takes them out of every topic. */
+export const promptBulkTopicRequestSchema = promptBulkDeleteRequestSchema.extend({
+  topic_id: uuid().nullable(),
+});
+export type PromptBulkTopicRequest = z.input<typeof promptBulkTopicRequestSchema>;
 
 /** One browser-parsed CSV row: the user's topic NAME (created when new, '' = none). */
 export const promptImportRowRequestSchema = z.strictObject({

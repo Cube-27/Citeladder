@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { POP_FACE } from '@/components/ui/slip';
+import { formatCount } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +30,45 @@ export function SelectionDock({
         </DockBar>
       )}
     </DockLayer>
+  );
+}
+
+/**
+ * A table's top bar: what it shows when nothing is ticked, or, while rows
+ * are, a box that clears them, the count, a hint and the actions. One
+ * height either way, so ticking a row moves nothing.
+ */
+export function SelectionBar({
+  label,
+  selected,
+  idle,
+  hint,
+  onClear,
+  children,
+}: Readonly<{
+  label: string;
+  selected: number;
+  idle: ReactNode;
+  hint?: string;
+  onClear: () => void;
+  children: ReactNode;
+}>) {
+  if (selected === 0) return <div className="flex h-[var(--control-md)] items-center">{idle}</div>;
+  return (
+    <div
+      role="toolbar"
+      aria-label={label}
+      className="flex h-[var(--control-md)] min-w-0 items-center gap-2"
+    >
+      <Checkbox aria-label="Clear selection" checked onCheckedChange={onClear} />
+      <span className={textRole('label', 'whitespace-nowrap tabular-nums')}>
+        {formatCount(selected)} selected
+      </span>
+      {hint ? (
+        <span className={textRole('caption', 'rail:inline hidden truncate')}>{hint}</span>
+      ) : null}
+      <span className="ms-auto flex items-center gap-2">{children}</span>
+    </div>
   );
 }
 

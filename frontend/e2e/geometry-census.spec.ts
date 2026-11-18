@@ -35,6 +35,7 @@ const PROMPT_SETS = {
   limits: {
     generation_count_max: 50,
     import_rows_max: 500,
+    bulk_prompts_max: 500,
     persona_max_chars: 200,
     run_context_max_chars: 2000,
     distribution_personas_max: 5,

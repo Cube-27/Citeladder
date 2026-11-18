@@ -344,17 +344,25 @@ export function TableSelectCell({
   /** The id of a fact the row shows (its status) that describes the box. */
   describedBy?: string;
   checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  /** `range` is true for a shift-click (or shift-Space): select from the last row clicked. */
+  onCheckedChange: (checked: boolean, range: boolean) => void;
   disabled?: boolean;
 }>) {
+  // The box's click toggles it; the cell sees that click first, with its shift key.
+  const range = useRef(false);
   return (
-    <td className={cellClasses({})}>
+    <td
+      className={cellClasses({})}
+      onClickCapture={(event) => {
+        range.current = event.shiftKey;
+      }}
+    >
       <Checkbox
         aria-label={label}
         aria-describedby={describedBy}
         checked={checked}
         disabled={disabled}
-        onCheckedChange={(next) => onCheckedChange(next === true)}
+        onCheckedChange={(next) => onCheckedChange(next === true, range.current)}
       />
     </td>
   );

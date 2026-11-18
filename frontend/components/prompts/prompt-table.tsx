@@ -7,7 +7,13 @@ import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import {
+  TableActionsCell,
+  TableCell,
+  TableCellLines,
+  TableRow,
+  TableSelectCell,
+} from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Switch } from '@/components/ui/switch';
 import { Absence } from '@/components/ui/absence';
@@ -24,6 +30,7 @@ import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { ICONS } from '@/lib/icons';
 import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';
+import type { RowSelectionState } from '@/lib/prompts/selection';
 
 import { CitedDomainMarks } from './cited-domain-marks';
 import {
@@ -94,8 +101,11 @@ export function PromptTable({
   measurements,
   setNames,
   commerceSetIds,
+  selection,
 }: Readonly<{
   prompts: Prompt[];
+  /** Row checkboxes for bulk actions, for a role that may edit prompts. */
+  selection?: RowSelectionState;
   /** Sets whose prompts Commerce measures as a shelf: they have no per-prompt figures. */
   commerceSetIds?: ReadonlySet<string>;
   /** Each prompt set's name by id: the library lists every set's prompts. */
@@ -122,6 +132,7 @@ export function PromptTable({
     pageSize: PAGE_SIZE,
   });
   const pagedPrompts = prompts.slice(from - 1, to);
+  const pageIds = pagedPrompts.map((prompt) => prompt.id);
 
   return (
     <DataTable
@@ -133,6 +144,15 @@ export function PromptTable({
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
       rowLines={2}
+      selection={
+        selection
+          ? {
+              all: pageTicked(pageIds, selection.ids),
+              onAllChange: (checked) => selection.togglePage(pageIds, checked),
+              noun: 'prompts on this page',
+            }
+          : undefined
+      }
       state={
         prompts.length === 0
           ? {
@@ -150,6 +170,13 @@ export function PromptTable({
     >
       {pagedPrompts.map((prompt) => (
         <TableRow key={prompt.id}>
+          {selection ? (
+            <TableSelectCell
+              label={`Select “${prompt.text}”`}
+              checked={selection.ids.has(prompt.id)}
+              onCheckedChange={(checked, range) => selection.toggle(prompt.id, checked, range)}
+            />
+          ) : null}
           <TableCell>
             {/* The question opens its history: one line, its whole text in a
                 tooltip. Topic and classification are filters, not row tags
@@ -184,6 +211,16 @@ export function PromptTable({
       ))}
     </DataTable>
   );
+}
+
+/** The page's header box: every row on it ticked, some, or none. */
+function pageTicked(
+  pageIds: readonly string[],
+  ids: ReadonlySet<string>,
+): boolean | 'indeterminate' {
+  const ticked = pageIds.filter((id) => ids.has(id)).length;
+  if (ticked === 0) return false;
+  return ticked === pageIds.length ? true : 'indeterminate';
 }
 
 /** The prompt's set, and whether audits skip it for the plan limit. */

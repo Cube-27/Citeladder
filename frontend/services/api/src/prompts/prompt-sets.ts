@@ -124,6 +124,7 @@ export function promptFormLimits(): PromptFormLimits {
   return {
     generation_count_max: generationSetting('max_count'),
     import_rows_max: policy.prompts.import_max_rows,
+    bulk_prompts_max: policy.prompts.bulk_prompts_max,
     persona_max_chars: policy.prompts.persona_max_chars,
     run_context_max_chars: generation.run_context_max_chars,
     distribution_personas_max: generation.distribution_personas_max,

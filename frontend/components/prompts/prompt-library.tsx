@@ -23,6 +23,7 @@ import {
   type PromptFormValues,
 } from '@/lib/prompts/forms';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
+import { useRowSelection } from '@/lib/prompts/selection';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 
 import { PendingReviewNotice } from './candidate-review';
@@ -30,6 +31,7 @@ import { PromptEmptyState } from './prompt-empty-state';
 import type { PendingDelete } from './confirm-delete-dialog';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
+import { PromptBulkBar, usePromptBulk } from './prompt-bulk-bar';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
@@ -222,10 +224,6 @@ export function PromptLibrary() {
   };
 
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
-  const confirmDelete = (pending: PendingDelete) => {
-    if (pending.kind === 'topic') return topicMutations.remove.mutate(pending.topic);
-    deleteMutation.mutate(pending.prompt.id);
-  };
 
   // Status -> topic -> search/filters, preserving order.
   const byStatus = useMemo(
@@ -243,6 +241,29 @@ export function PromptLibrary() {
     () => filterPrompts({ prompts: byTopic, search, filters, mentions: measurements }),
     [byTopic, search, filters, measurements],
   );
+  // A filter change shows other rows, so it starts a new selection.
+  const selection = useRowSelection(visible);
+  const bulk = usePromptBulk(scope, { topics, onDone: selection.clear });
+  const refilter =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      selection.clear();
+      set(value);
+    };
+  const confirmDelete = (pending: PendingDelete) => {
+    switch (pending.kind) {
+      case 'topic':
+        return topicMutations.remove.mutate(pending.topic);
+      case 'prompt':
+        return deleteMutation.mutate(pending.prompt.id);
+      case 'prompts':
+        return bulk.run({ kind: 'delete' }, pending.prompts);
+      default: {
+        const unhandled: never = pending;
+        return unhandled;
+      }
+    }
+  };
   const personas = useMemo(() => personaOptions(prompts), [prompts]);
   const measuredChoices = useMemo(
     () => measuredChoicesFor({ measurements, project, filters }),
@@ -307,13 +328,26 @@ export function PromptLibrary() {
     read: { error, retry, retrying },
     add: edits?.add,
     table: (
-      <PromptTable
-        prompts={visible}
-        actions={edits?.rows}
-        measurements={measurements}
-        setNames={setNames}
-        commerceSetIds={commerceSetIds}
-      />
+      <>
+        <PromptBulkBar
+          shown={visible.length}
+          selected={selection.selected}
+          topics={topics}
+          max={limits?.bulk_prompts_max ?? 0}
+          pending={bulk.pending}
+          onClear={selection.clear}
+          onChange={(change) => bulk.run(change, selection.selected)}
+          onDelete={() => setPendingDelete({ kind: 'prompts', prompts: selection.selected })}
+        />
+        <PromptTable
+          prompts={visible}
+          actions={edits?.rows}
+          selection={edits ? selection : undefined}
+          measurements={measurements}
+          setNames={setNames}
+          commerceSetIds={commerceSetIds}
+        />
+      </>
     ),
   });
 
@@ -334,17 +368,21 @@ export function PromptLibrary() {
       filters={libraryFilterBar(
         hasPrompts,
         promptFilterControls({
-          status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
+          status: {
+            value: statusFilter,
+            counts: statusCounts,
+            onChange: refilter(setStatusFilter),
+          },
           search,
-          onSearchChange: setSearch,
+          onSearchChange: refilter(setSearch),
           filters,
-          onFiltersChange: setFilters,
+          onFiltersChange: refilter(setFilters),
           personas,
           measured: measuredChoices,
           topic: topicFilter({
             topics,
             selectedTopicId,
-            onSelect: setSelectedTopicId,
+            onSelect: refilter(setSelectedTopicId),
             manage: edits?.topics,
           }),
         }),

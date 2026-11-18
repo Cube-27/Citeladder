@@ -259,6 +259,8 @@ describe('routes that authorize the path project or chat', () => {
     ['POST', '/api/v1/projects/{project}/topics'],
     ['POST', '/api/v1/projects/{project}/topics/preview'],
     ['POST', '/api/v1/projects/{project}/topics/confirm'],
+    ['POST', '/api/v1/projects/{project}/prompts/bulk-topic'],
+    ['POST', '/api/v1/projects/{project}/prompts/bulk-delete'],
   ];
   const CHAT_READS = [
     '/api/v1/agent/chats/{chat}',

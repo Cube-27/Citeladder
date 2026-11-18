@@ -1,4 +1,5 @@
 import {
+  promptBulkResultSchema,
   promptCandidateReviewResponseSchema,
   promptGenerateResponseSchema,
   promptCandidateSchema,
@@ -17,6 +18,7 @@ import * as commands from '../commands/prompts.ts';
 import { generationInput } from '../prompts/generation-input.ts';
 import { policy } from '../config.ts';
 import { readBody } from '../http/body.ts';
+import { promptBulkDelete, promptBulkTopic } from '../prompts/bulk.ts';
 import { candidateReview, listCandidates } from '../prompts/candidates.ts';
 import {
   createPromptSet,
@@ -262,6 +264,42 @@ export const promptRoutes = [
         requestProjectOf(c),
         path.prompt_id,
       ),
+  }),
+  definePostRoute({
+    family,
+    ...inProject,
+    ...write,
+    path: `${api}/projects/{project_id}/prompts/bulk-topic`,
+    params: { path: { project_id: uuid }, query: noQuery },
+    body: promptBulkTopic,
+    response: promptBulkResultSchema,
+    async handle({ c, db }, { path }) {
+      const input = await readBody(c, promptBulkTopic);
+      return commands.assignPromptTopic(
+        db,
+        routeActor(c, commands.PROMPTS_WRITE),
+        path.project_id,
+        input,
+      );
+    },
+  }),
+  definePostRoute({
+    family,
+    ...inProject,
+    ...write,
+    path: `${api}/projects/{project_id}/prompts/bulk-delete`,
+    params: { path: { project_id: uuid }, query: noQuery },
+    body: promptBulkDelete,
+    response: promptBulkResultSchema,
+    async handle({ c, db }, { path }) {
+      const input = await readBody(c, promptBulkDelete);
+      return commands.deletePrompts(
+        db,
+        routeActor(c, commands.PROMPTS_WRITE),
+        path.project_id,
+        input,
+      );
+    },
   }),
   defineGetRoute({
     family,

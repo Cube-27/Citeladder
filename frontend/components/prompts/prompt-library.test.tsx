@@ -107,6 +107,7 @@ describe('PromptLibrary first load', () => {
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
     ).toEqual([
+      '',
       'Prompt',
       'Visibility',
       expect.stringMatching(/^Share of voice/),
@@ -177,7 +178,7 @@ describe('PromptLibrary first load', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
-    ).toEqual(['Prompt', 'Enabled', 'Actions']);
+    ).toEqual(['', 'Prompt', 'Enabled', 'Actions']);
   });
 });
 
@@ -228,7 +229,7 @@ describe('PromptLibrary failed read', () => {
 
 describe('PromptLibrary by role', () => {
   it.each([
-    ['member', ['Add prompts', 'Launch run'], ['Prompt', 'Enabled', 'Actions']],
+    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Enabled', 'Actions']],
     ['viewer', [], ['Prompt', 'Enabled']],
   ] as const)(
     'offers a %s exactly the controls its role may use',
@@ -256,6 +257,87 @@ describe('PromptLibrary by role', () => {
       expect(offered).toEqual(pageActions);
     },
   );
+});
+
+describe('PromptLibrary bulk actions', () => {
+  const rows = ['Best trail shoes?', 'Best road shoes?', 'Best gym shoes?'].map((text, index) =>
+    makePrompt({ id: `66666666-6666-4666-8666-66666666667${index}`, text }),
+  );
+  const beyond = makePrompt({
+    id: '66666666-6666-4666-8666-666666666680',
+    text: 'Best hiking boots?',
+    status: 'archived',
+    over_plan_limit: true,
+  });
+  const bulkSet = makeSet([...rows, beyond]);
+  const bulkProject = makeProject({ prompt_sets: [bulkSet] });
+
+  function renderBulk() {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([bulkSet]))),
+      http.get(`/api/v1/prompt-sets/${bulkSet.id}/candidates`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${bulkProject.id}/topics`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${bulkProject.id}/visibility/prompts`, () =>
+        HttpResponse.json([]),
+      ),
+      http.post(`/api/v1/prompt-sets/${bulkSet.id}/prompts/bulk-status`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(bulkSet);
+      }),
+    );
+    renderWithProviders(<PromptLibrary />, {
+      projectSelection: {
+        projects: [bulkProject],
+        activeProject: bulkProject,
+        activeProjectId: bulkProject.id,
+        status: 'ready',
+      },
+    });
+    return { bodies, user: userEvent.setup() };
+  }
+
+  const box = (text: string) => screen.getByRole('checkbox', { name: `Select “${text}”` });
+
+  it('archives a shift-clicked range in one request, then clears the selection', async () => {
+    const { bodies, user } = renderBulk();
+    await screen.findByRole('table', { name: 'Prompts' });
+    await user.click(box('Best trail shoes?'));
+    await user.keyboard('{Shift>}');
+    await user.click(box('Best gym shoes?'));
+    await user.keyboard('{/Shift}');
+    const bar = screen.getByRole('toolbar', { name: 'Selected prompts' });
+    expect(within(bar).getByText('3 selected')).toBeVisible();
+
+    await user.click(within(bar).getByRole('button', { name: 'Archive' }));
+    await waitFor(() =>
+      expect(bodies).toEqual([{ prompt_ids: rows.map((row) => row.id), status: 'archived' }]),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('toolbar', { name: 'Selected prompts' })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('clears the selection when the filters change and holds Activate beyond the plan limit', async () => {
+    window.history.replaceState(null, '', `/projects/${bulkProject.id}/prompts?status=archived`);
+    const { bodies, user } = renderBulk();
+    await screen.findByRole('table', { name: 'Prompts' });
+    await user.click(box('Best hiking boots?'));
+    const activate = within(screen.getByRole('toolbar', { name: 'Selected prompts' })).getByRole(
+      'button',
+      { name: 'Activate' },
+    );
+    expect(activate).toHaveAttribute('aria-disabled', 'true');
+    expect(activate).toHaveAccessibleDescription(
+      /1 selected prompt is beyond your plan's prompt limit/,
+    );
+    await user.click(activate);
+    expect(bodies).toEqual([]);
+
+    await user.type(screen.getByRole('searchbox'), 'boots');
+    expect(screen.queryByRole('toolbar', { name: 'Selected prompts' })).not.toBeInTheDocument();
+    window.history.replaceState(null, '', '/');
+  });
 });
 
 describe('PromptLibrary enable switch', () => {
