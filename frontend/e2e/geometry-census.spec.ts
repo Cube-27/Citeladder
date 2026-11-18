@@ -211,6 +211,12 @@ function measure({ route }: { route: string }) {
   // measured as their own roles below; a hint's enlarged hit area (negative
   // margin around a glyph) is a target, not a drawn control.
   for (const element of all('button, a[role="button"]')) {
+    // A switch is its own 32×20 track (components/ui/switch.tsx), measured as
+    // `switch.height` wherever it sits, a dialog included.
+    if (element.getAttribute('role') === 'switch') {
+      add('switch.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
     if (element.closest('[role="tablist"], [role="radiogroup"], [role="menu"], [role="dialog"]'))
       continue;
     if (element.closest(':has(> input)')) continue;
@@ -220,11 +226,6 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
-    // A switch is its own 32×20 track (components/ui/switch.tsx), measured as `switch.height`.
-    if (element.getAttribute('role') === 'switch') {
-      add('switch.height', element, element.getBoundingClientRect().height);
-      continue;
-    }
     // A work tree's level rows and a count strip's cells are whole-row targets
     // (components/ui/work-tree.tsx, count-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
