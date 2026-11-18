@@ -43,6 +43,8 @@ export const executionRoutes = [
   defineGetRoute({
     family: 'executions',
     authorize: 'active-project',
+    exposure: 'both',
+    publicPath: '/v1/projects/{project_id}/prompts/{prompt_id}/answers',
     path: '/api/v1/projects/{project_id}/prompts/{prompt_id}/executions',
     params: {
       path: { project_id: uuid, prompt_id: uuid },

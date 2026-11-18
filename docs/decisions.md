@@ -291,7 +291,16 @@ key holding the matching scope is therefore an explicit user decision under
 the same command layer as the browser. Creating or spending POSTs require an
 `Idempotency-Key`; an audit launch carries the caller's `max_attempts` ceiling.
 
-Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4).
+Of the AI visibility Phase 1 reads, only answers are public: one prompt's
+answers across runs and the answers of a run selection, under the `read` scope.
+The other Phase 1 reads (topics, matrix, competitor focus, fact-checking and the
+rest) stay in the app. v1 keeps its conventions: no RFC 9457 problem details and
+no switch to offset paging. Each endpoint documents its own paging honestly,
+and responses carry the draft IETF RateLimit headers.
+
+Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4);
+owner, 18 November 2026 (AI visibility gaps plan): public API reads "Answers"
+only, and v1 conventions "Keep v1 as is".
 [Public API](public-api.md) owns the shipped behavior.
 
 ## MCP writes are confirmed user decisions

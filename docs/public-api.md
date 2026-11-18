@@ -70,7 +70,9 @@ Public contracts carry the `public-api` route family.
 `Authorization: Bearer cl_live_…`; cookies and `X-Workspace-Id` are ignored and
 no CORS is offered. In order, a request needs a live key (401
 `invalid_api_key`), its per-key 600/min and per-workspace 1,200/min windows
-(429 with `Retry-After`), its creator's membership, workspace access and the
+(429 with `Retry-After`; [`rate-limit.ts`](../frontend/services/api/src/public-api/rate-limit.ts)
+reports both on every authenticated response as the draft IETF
+`RateLimit-Policy` and `RateLimit` fields), its creator's membership, workspace access and the
 `api_access` grant (403), the operation's capability and scope (403), and then
 the path project inside the workspace and the key's allowlist (404). Every ID
 in the path must belong to that project, so a key restricted to one project
@@ -99,8 +101,12 @@ committed, and records the outcome as unknown, so a retry gets a non-retryable
 running after `idempotency.in_progress_max_seconds` (300; the process died
 before recording an outcome) answers the same. Records are kept
 24 hours and purged by the runner. Errors use the
-[error contract](api-error-contract.md). Lists that can grow page with
-`cursor` and `limit` (at most 100) and return `{items, next_cursor}`.
+[error contract](api-error-contract.md). Lists that can grow page with a
+keyset `cursor`, but v1 kept each owner read's own bounds and envelope rather
+than one convention: most take `limit` and return `{items, next_cursor}`, the
+limit and the bad-cursor status (400 `invalid_cursor` or 422) vary, and a few
+lists use `page_size`, `offset` or `rows`. The docs site's pagination page
+lists them per endpoint; keep it in step when a public list changes.
 
 ## Operations
 

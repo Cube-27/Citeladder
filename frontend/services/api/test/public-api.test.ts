@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Hono, type Context } from 'hono';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
 
@@ -20,6 +20,7 @@ import { actionRow } from './opportunity-fixtures.ts';
 import { billingAccount, grant, prompt, promptSet, topic } from './prompt-fixtures.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
+import { frozen } from './visibility-read-support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -426,7 +427,36 @@ describe('public API requests', () => {
     await spendBudget(db, perKey, key.id, { amount: perKey.limit });
     const throttled = await api(secret, '/projects');
     expect(throttled.status).toBe(429);
-    expect(Number(throttled.headers.get('retry-after'))).toBeGreaterThanOrEqual(1);
+    const retryAfter = throttled.headers.get('retry-after');
+    expect(Number(retryAfter)).toBeGreaterThanOrEqual(1);
+    expect([throttled.headers.get('ratelimit-policy'), throttled.headers.get('ratelimit')]).toEqual(
+      ['"key";q=600;w=60, "workspace";q=1200;w=60', `"key";r=0;t=${retryAfter}`],
+    );
+  });
+
+  it('reports what is left of the key’s and the workspace’s windows on every response', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const { key, secret } = await createKey(tenant);
+    // 18 seconds into a fixed minute window, so 42 seconds remain.
+    vi.useFakeTimers({ toFake: ['Date'], now: Math.ceil(Date.now() / 60_000) * 60_000 + 18_000 });
+    try {
+      await spendBudget(db, budget('public_api_key'), key.id, { amount: 10 });
+      const listed = await api(secret, '/projects');
+      const missing = await api(secret, `/projects/${randomUUID()}/topics`);
+
+      for (const [response, status, remaining] of [
+        [listed, 200, '"key";r=589;t=42, "workspace";r=1199;t=42'],
+        [missing, 404, '"key";r=588;t=42, "workspace";r=1198;t=42'],
+      ] as const) {
+        expect([
+          response.status,
+          response.headers.get('ratelimit-policy'),
+          response.headers.get('ratelimit'),
+        ]).toEqual([status, '"key";q=600;w=60, "workspace";q=1200;w=60', remaining]);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps a key inside its project allowlist and its workspace', async () => {
@@ -791,5 +821,83 @@ describe('public API requests', () => {
       ...JSON.stringify(document).matchAll(/"\$ref":"#\/components\/schemas\/([^"]+)"/g),
     ];
     expect(refs.filter(([, name]) => !(name! in document.components.schemas))).toEqual([]);
+  });
+});
+
+describe('public answers', () => {
+  /** A key held to one project, two runs of one of its prompts, and another project's run. */
+  async function answeredPrompt() {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const other = { ...tenant, projectId: await fixtures.project(tenant.workspaceId) };
+    await validProjects(tenant.workspaceId);
+    const promptId = await prompt(db, await promptSet(db, tenant.projectId), 'best crm');
+    const otherPrompt = await prompt(db, await promptSet(db, other.projectId), 'best crm');
+    const run = (owner: Tenant, day: string) =>
+      fixtures.audit(owner, { completedAt: new Date(`${day}T00:00:00Z`), configuration: frozen() });
+    const answer = async (owner: Tenant, auditId: string, id: string) =>
+      (
+        await fixtures.execution(owner, {
+          auditId,
+          promptId: id,
+          promptIndex: 0,
+          promptText: 'best crm',
+        })
+      ).taskId;
+    const early = await run(tenant, '2026-03-02');
+    const late = await run(tenant, '2026-03-09');
+    const otherRun = await run(other, '2026-03-09');
+    const answers = {
+      early: await answer(tenant, early, promptId),
+      late: await answer(tenant, late, promptId),
+      other: await answer(other, otherRun, otherPrompt),
+    };
+    const { secret } = await createKey(tenant, { project_ids: [tenant.projectId] });
+    return { tenant, other, promptId, otherPrompt, late, otherRun, answers, secret };
+  }
+
+  const taskIds = async (response: Response, field: 'execution_id' | 'task_id') => {
+    const body = (await response.json()) as {
+      items: Record<string, unknown>[];
+      next_cursor: unknown;
+    };
+    return { ids: body.items.map((item) => item[field]), next: body.next_cursor };
+  };
+
+  it('pages one prompt’s answers by keyset and refuses a prompt outside the key’s project', async () => {
+    const { tenant, other, promptId, otherPrompt, answers, secret } = await answeredPrompt();
+    const path = `/projects/${tenant.projectId}/prompts/${promptId}/answers`;
+
+    const first = await taskIds(await api(secret, `${path}?limit=1`), 'execution_id');
+    const second = await taskIds(
+      await api(secret, `${path}?limit=1&cursor=${encodeURIComponent(String(first.next))}`),
+      'execution_id',
+    );
+    const crossed = await api(
+      secret,
+      `/projects/${tenant.projectId}/prompts/${otherPrompt}/answers`,
+    );
+    const outside = await api(
+      secret,
+      `/projects/${other.projectId}/prompts/${otherPrompt}/answers`,
+    );
+
+    expect([first.ids, typeof first.next, second.ids, second.next]).toEqual([
+      [answers.late],
+      'string',
+      [answers.early],
+      null,
+    ]);
+    expect([crossed.status, outside.status]).toEqual([404, 404]);
+  });
+
+  it('lists one run’s answers and refuses a run from another project', async () => {
+    const { tenant, late, otherRun, answers, secret } = await answeredPrompt();
+    const path = `/projects/${tenant.projectId}/visibility/answers`;
+
+    const run = await taskIds(await api(secret, `${path}?audit_id=${late}`), 'task_id');
+    const crossed = await api(secret, `${path}?audit_id=${otherRun}`);
+
+    expect(run.ids).toEqual([answers.late]);
+    expect(crossed.status).toBe(404);
   });
 });

@@ -12,7 +12,6 @@
 import { apiKeyScopeSchema, type ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { MiddlewareHandler } from 'hono';
 
-import { budget, spendBudget } from '../abuse/usage.ts';
 import { resolveCaller, touchApiKey } from '../api-keys/keys.ts';
 import { requireCapability, type Actor } from '../auth/actor.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
@@ -29,6 +28,7 @@ import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { requirePathOwnership } from './ownership.ts';
+import { spendRateLimits } from './rate-limit.ts';
 
 export function apiKeyAuth(
   db: Database,
@@ -37,8 +37,10 @@ export function apiKeyAuth(
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const key = await resolveCaller(db, config.auth.apiKeyPepper, c.req.header('authorization'));
-    await spendBudget(db, budget('public_api_key'), key.id);
-    await spendBudget(db, budget('public_api_workspace'), key.workspace_id);
+    const rateLimit = await spendRateLimits(db, key);
+    // Prepared headers reach this middleware's own refusals and JSON replies;
+    // the second pass below covers replays and raw responses.
+    for (const [name, value] of Object.entries(rateLimit)) c.header(name, value);
     const [member, creator] = await Promise.all([
       findWorkspaceMember(db, key.created_by_user_id, key.workspace_id),
       // A key acts as its creator, so it stops when an operator disables them,
@@ -89,6 +91,7 @@ export function apiKeyAuth(
     c.set('entitlements', entitlements);
     await touchApiKey(db, key);
     await next();
+    for (const [name, value] of Object.entries(rateLimit)) c.res.headers.set(name, value);
   };
 }
 

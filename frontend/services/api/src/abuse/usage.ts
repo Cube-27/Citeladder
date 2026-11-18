@@ -69,13 +69,26 @@ export function budget(name: BudgetName, settings?: SettingSource): Budget {
   };
 }
 
+/** What an admitted spend left: units remaining in the window and whole seconds until it resets. */
+export type BudgetState = { remaining: number; resetSeconds: number };
+
 /** Spend `amount` units of `budget` for `subject`, or throw 429 with `Retry-After`. */
 export async function spendBudget(
+  db: Database,
+  budgetToSpend: Budget,
+  subject: string,
+  options: { amount?: number; at?: Date } = {},
+): Promise<void> {
+  await spendBudgetState(db, budgetToSpend, subject, options);
+}
+
+/** `spendBudget`, reporting what the admitted spend left in the window. */
+export async function spendBudgetState(
   db: Database,
   { subject: kind, ...limit }: Budget,
   subject: string,
   { amount = 1, at = new Date() }: { amount?: number; at?: Date } = {},
-): Promise<void> {
+): Promise<BudgetState> {
   return enforceSubjectRequest(db, kind, subject, { ...limit, amount }, at);
 }
 
@@ -140,9 +153,13 @@ function windowOf(windowSeconds: number, now: Date) {
   };
 }
 
+function secondsUntil(expires: Date, now: Date): number {
+  return Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
+}
+
 function throttled(subjectKind: BudgetSubject, operation: string, expires: Date, now: Date) {
   getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
-  const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
+  const retryAfter = secondsUntil(expires, now);
   return new ApiError(
     429,
     subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
@@ -157,25 +174,27 @@ async function enforceSubjectRequest(
   subjectValue: string,
   { operation, limit, windowSeconds, amount }: Omit<Budget, 'subject'> & { amount: number },
   now: Date,
-): Promise<void> {
+): Promise<BudgetState> {
   if (![limit, windowSeconds, amount].every((value) => Number.isInteger(value) && value > 0)) {
     throw new Error('Usage limit, window and amount must be positive integers');
   }
   const { expires } = windowOf(windowSeconds, now);
   if (amount > limit) throw throttled(subjectKind, operation, expires, now);
-  const admitted = await addToWindow(
+  const count = await addToWindow(
     db,
     subjectKind,
     subjectValue,
     { operation, windowSeconds, amount, limit },
     now,
   );
-  if (!admitted) throw throttled(subjectKind, operation, expires, now);
+  if (count === null) throw throttled(subjectKind, operation, expires, now);
+  return { remaining: limit - count, resetSeconds: secondsUntil(expires, now) };
 }
 
 /**
- * Add `amount` to the subject's current window in one atomic upsert. With a
- * `limit`, an addition that would pass it changes nothing and returns false.
+ * Add `amount` to the subject's current window in one atomic upsert and return
+ * the window's count. With a `limit`, an addition that would pass it changes
+ * nothing and returns null.
  */
 async function addToWindow(
   db: Database,
@@ -188,7 +207,7 @@ async function addToWindow(
     limit,
   }: Pick<Budget, 'operation' | 'windowSeconds'> & { amount: number; limit?: number },
   now: Date,
-): Promise<boolean> {
+): Promise<number | null> {
   const { started, expires } = windowOf(windowSeconds, now);
   const added = await db
     .insertInto('usage_windows')
@@ -213,7 +232,7 @@ async function addToWindow(
     })
     .returning('count')
     .executeTakeFirst();
-  return added !== undefined;
+  return added === undefined ? null : added.count;
 }
 
 /** Delete a bounded batch of security events older than the retention cutoff. */
