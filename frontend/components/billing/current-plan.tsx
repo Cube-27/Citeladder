@@ -195,14 +195,14 @@ function PlanNotices({
 }: Readonly<{ entitlement: BillingEntitlement | null; planName: (key: string) => string }>) {
   const subscription = entitlement?.subscription ?? null;
   const notice = subscription ? STATUS_NOTICE[subscription.status] : undefined;
-  const override = entitlement?.grants.some(
-    (grant) => grant.source_kind === 'override' && grant.revoked_at === null,
-  );
+  const active = (kind: string) =>
+    entitlement?.grants.some((grant) => grant.source_kind === kind && grant.revoked_at === null);
+  const override = active('override');
   return (
     <>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
-      {override ? <OverrideNotice besidePlan={subscription !== null} /> : null}
+      {override ? <OverrideNotice besidePlan={active('plan') === true} /> : null}
       {entitlement?.trial_grant ? (
         <Notice tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
