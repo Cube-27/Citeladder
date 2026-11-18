@@ -88,10 +88,11 @@ export function EntityTable({ entities }: Readonly<{ entities: PerceptionRespons
 
 const ENTITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'business', label: 'Business' },
-  { key: 'classified', label: 'Classified', width: 'figure', kind: 'number' },
+  { key: 'classified', label: 'Classified', width: 'figure', kind: 'number', priority: 'low' },
   { key: 'positive', label: 'Positive', width: 'figure', kind: 'number' },
   { key: 'negative', label: 'Negative', width: 'figure', kind: 'number' },
-  { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number' },
+  // Derived from the two counts beside it, so it hides first and they never part.
+  { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number', priority: 'low' },
 ];
 
 export function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {

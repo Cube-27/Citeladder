@@ -61,7 +61,6 @@ export function RankingRowsTable({
       <DataTable
         label={TITLE}
         columns={rankingColumns({ anyPosition, anySentiment })}
-        minWidth="md"
         state={
           ordered.length
             ? undefined
@@ -174,7 +173,6 @@ export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
       <DataTable
         label={TITLE}
         columns={rankingColumns({ anyPosition: true, anySentiment: true })}
-        minWidth="md"
         pageSize={brands}
         state={{ kind: 'loading', label: 'Loading the rankings…' }}
         footer={FOOTER}

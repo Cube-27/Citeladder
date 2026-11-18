@@ -130,9 +130,6 @@ export function PromptTable({
   return (
     <DataTable
       label="Prompts"
-      // The measured columns take their full width; narrower than that the
-      // table scrolls in its frame with the prompt pinned and readable.
-      minWidth={measured ? 'lg' : 'sm'}
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
@@ -348,6 +345,7 @@ const CHANGE_COLUMN: DataTableColumn = {
   label: 'Change',
   width: 'figure',
   kind: 'number',
+  priority: 'low',
 };
 
 /**

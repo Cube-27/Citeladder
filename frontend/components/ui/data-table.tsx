@@ -34,7 +34,7 @@ import {
   useScrollFrame,
   type ScrollFrameState,
 } from '@/components/ui/scroll-edges';
-import { Table, TableTitleLinesContext, type TableMinWidth } from '@/components/ui/table';
+import { Table, TableTitleLinesContext } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import {
@@ -91,7 +91,6 @@ export function DataTable({
   state,
   pager,
   busy,
-  minWidth,
   selection,
   footer,
   label,
@@ -118,7 +117,6 @@ export function DataTable({
   pager?: DataTablePager;
   /** A background refetch while the current rows stay on screen. */
   busy?: Readonly<{ active: boolean; label: string }>;
-  minWidth?: TableMinWidth;
   selection?: DataTableSelection;
   /** A note in the footer bar (a source, a period, the time zone). */
   footer?: ReactNode;
@@ -168,7 +166,7 @@ export function DataTable({
         <DataTableFrame
           hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
-          minWidth={tableMinWidth({ columns: shown, selection: Boolean(selection), minWidth })}
+          minWidth={tableMinWidth({ columns: shown, selection: Boolean(selection) })}
           layout={columnLayout(columns, Boolean(selection))}
           naming={parts.naming}
           pinned={parts.pinned}
@@ -325,23 +323,18 @@ function ReplacingState({
 }
 
 /**
- * The table's minimum width at the narrow and desktop layouts: the page's
- * `minWidth` floor, raised until no column (the identity column above all)
- * is squeezed below its role.
+ * The table's minimum width at the narrow and desktop layouts: the shown
+ * columns' floors, so no column (the identity column above all) is squeezed
+ * below its role. A page sets no floor of its own: one the low-priority fit
+ * cannot see would scroll a table whose columns fit.
  */
 function tableMinWidth({
   columns,
   selection,
-  minWidth,
-}: Readonly<{
-  columns: readonly DataTableColumn[];
-  selection: boolean;
-  minWidth: TableMinWidth | undefined;
-}>): CSSProperties {
-  const floor = minWidth ? `var(--table-min-width-${minWidth})` : undefined;
+}: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean }>): CSSProperties {
   return {
-    '--data-table-min': columnsMinWidth({ columns, selection, floor, desktop: false }),
-    '--data-table-min-desktop': columnsMinWidth({ columns, selection, floor, desktop: true }),
+    '--data-table-min': columnsMinWidth({ columns, selection, desktop: false }),
+    '--data-table-min-desktop': columnsMinWidth({ columns, selection, desktop: true }),
   } as CSSProperties;
 }
 
@@ -424,7 +417,12 @@ function DataTableFoot({
       ) : null}
       <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
         {steppers}
-        {pager ? <Pager {...pager} /> : null}
+        {/* A rule after the steppers, so the two arrow pairs never read as one pager. */}
+        {pager ? (
+          <div className="[[data-scroll-steppers]+&]:border-rule flex items-center [[data-scroll-steppers]+&]:border-s [[data-scroll-steppers]+&]:ps-4">
+            <Pager {...pager} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

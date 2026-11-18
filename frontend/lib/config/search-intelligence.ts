@@ -15,6 +15,8 @@ export type SearchColumn = {
   numeric?: boolean;
   detail?: boolean;
   precision?: number;
+  /** Hides, the last first, where the table's frame has no room for it. */
+  low?: boolean;
 };
 /** Columns per row kind; the footprint's columns are the fallback for an unknown kind. */
 export const SEARCH_COLUMNS_BY_KIND: {
@@ -34,9 +36,9 @@ export const SEARCH_COLUMNS_BY_KIND: {
     { field: 'search_volume', label: 'Volume', numeric: true },
     { field: 'url', label: 'Ranking page' },
     { field: 'etv', label: 'Est. traffic', numeric: true },
-    { field: 'cpc', label: 'CPC (USD)', numeric: true, precision: 2 },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-    { field: 'intent', label: 'Intent' },
+    { field: 'cpc', label: 'CPC (USD)', numeric: true, precision: 2, low: true },
+    { field: 'difficulty', label: 'Difficulty', numeric: true, low: true },
+    { field: 'intent', label: 'Intent', low: true },
   ],
   keyword_suggestions: [
     { field: 'keyword', label: 'Keyword' },
@@ -82,9 +84,9 @@ export const SEARCH_COLUMNS_BY_KIND: {
     { field: 'url_from', label: 'Source URL', detail: true },
     { field: 'url', label: 'Destination' },
     { field: 'anchor', label: 'Anchor', detail: true },
-    { field: 'dofollow', label: 'Follow', detail: true },
+    { field: 'dofollow', label: 'Follow', detail: true, low: true },
     { field: 'dataforseo_rank', label: 'Link rank (0–100)', numeric: true },
-    { field: 'backlinks_spam_score', label: 'Spam', numeric: true },
+    { field: 'backlinks_spam_score', label: 'Spam', numeric: true, low: true },
   ],
 };
 

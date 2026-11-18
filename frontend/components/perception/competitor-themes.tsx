@@ -68,7 +68,6 @@ export function CompetitorThemes({
           <DataTable
             label={TITLE}
             columns={columns}
-            minWidth="md"
             state={
               map.themes.length
                 ? undefined

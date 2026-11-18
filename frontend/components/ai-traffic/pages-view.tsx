@@ -163,7 +163,6 @@ export function TrafficPages({
       <DataTable
         label="Path-level AI traffic with separate signal units"
         columns={columns}
-        minWidth="lg"
         {...table}
         state={nothingMeasured ? NOTHING_MEASURED : table.state}
       >

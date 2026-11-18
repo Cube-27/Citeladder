@@ -69,7 +69,6 @@ export function ExecutionsTable({
         // The filters need rows to choose from: none while the read stands in.
         toolbar={state ? undefined : { filters: filters.definitions }}
         columns={COLUMNS}
-        minWidth="md"
         state={state ?? unmatched}
         rowLines={2}
         rowCount={pageRows.length}

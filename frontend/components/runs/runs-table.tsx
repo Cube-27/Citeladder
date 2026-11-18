@@ -112,7 +112,6 @@ export function RunsTable({
       <DataTable
         label="All runs"
         columns={runsColumns(sort, onSort)}
-        minWidth="md"
         pageSize={PAGE_SIZE}
         rowCount={pagedAudits.length}
         rowLines={3}

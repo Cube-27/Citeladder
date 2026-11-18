@@ -40,7 +40,6 @@ export function EngineComparison({
         label="By model"
         columns={COLUMNS}
         rowLines={2}
-        minWidth="sm"
         state={
           engines.length
             ? undefined

@@ -368,7 +368,6 @@ describe('DataTable', () => {
       '--spacing': 4,
       '--data-table-identity-min': 200,
       '--text-caption': 12,
-      '--table-min-width-sm': 576,
     };
     const px = (css: string) =>
       Number(
@@ -380,7 +379,7 @@ describe('DataTable', () => {
             .replaceAll('calc(', '(')}`,
         )(),
       ).toFixed(1);
-    const layout = (props: Pick<DataTableProps, 'columns' | 'minWidth'>) => {
+    const layout = (props: Pick<DataTableProps, 'columns'>) => {
       const { container, unmount } = render(<DataTable label="Keys" {...props} />);
       const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
       const result = {
@@ -427,16 +426,6 @@ describe('DataTable', () => {
         ],
       }),
     ).toEqual({ narrow: '849.6', desktop: '849.6', cols: ['rest', '184.0', '192.0', 'rest'] });
-    // The page's own floor holds over a smaller column sum.
-    expect(
-      layout({
-        columns: [
-          { key: 'dimension', label: 'Query' },
-          { key: 'clicks', label: 'Clicks', kind: 'number' },
-        ],
-        minWidth: 'sm',
-      }).narrow,
-    ).toBe('576.0');
   });
 
   it('warns in development when no column can absorb the width', () => {

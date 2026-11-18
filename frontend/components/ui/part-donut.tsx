@@ -107,7 +107,8 @@ export function PartDonut({
     ...rows.map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`),
   ].join(', ');
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
+    // The legend's floor keeps its names whole: a card too narrow for it puts the legend under the ring.
+    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
       <div
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the ring and its total are one generated image; <img> cannot hold them
         role="img" // NOSONAR -- the ring and its total are one generated image
@@ -129,7 +130,7 @@ export function PartDonut({
           </span>
         ) : null}
       </div>
-      <ul aria-hidden className="flex min-w-0 flex-1 flex-col gap-2">
+      <ul aria-hidden className="flex min-w-44 flex-1 flex-col gap-2">
         {rows.map((row) => (
           <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
             <span className={cn('rounded-mark size-2 shrink-0', row.ink?.fill ?? 'bg-well')} />

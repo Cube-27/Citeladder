@@ -214,7 +214,7 @@ const LINK_COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Add link to', kind: 'text' },
   { key: 'anchor', label: 'Anchor text', kind: 'text', width: 'name' },
   { key: 'action', label: 'Action', kind: 'status' },
-  { key: 'review', label: 'Review', kind: 'actions', width: 'action', hideLabel: true },
+  { key: 'review', label: 'Review', kind: 'actions', width: 'button', hideLabel: true },
 ];
 
 /** Distinguish "nothing to compare" from "compared and nothing qualified". */

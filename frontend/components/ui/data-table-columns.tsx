@@ -44,6 +44,8 @@ const COLUMN_WIDTH = {
   name: { kind: 'steps', steps: 56 },
   /** A row's trailing link or icon control. */
   action: { kind: 'steps', steps: 24 },
+  /** A row's one labelled button, an icon and a word ("Review"). */
+  button: { kind: 'steps', steps: 32 },
   /** One compact control under a one-word header ("Enabled", "Actions"). */
   control: { kind: 'steps', steps: 20 },
   /** A row's trailing buttons, up to two (`TableActionsCell`). */
@@ -231,18 +233,16 @@ function columnWidth(column: DataTableColumn, edge: ColumnEdge): string | undefi
 /**
  * The narrowest the table may be so that no column is squeezed: the sum of
  * the column floors (`columnFloor`) and the select column; below it the frame
- * scrolls sideways with the identity column pinned. `floor` is the page's own
- * minimum (`minWidth`). The narrow layout leaves out `desktopOnly` columns.
+ * scrolls sideways with the identity column pinned. The narrow layout leaves
+ * out `desktopOnly` columns.
  */
 export function columnsMinWidth({
   columns,
   selection,
-  floor,
   desktop,
 }: Readonly<{
   columns: readonly DataTableColumn[];
   selection: boolean;
-  floor: string | undefined;
   desktop: boolean;
 }>): string {
   const shown = columns.filter((column) => desktop || !column.desktopOnly);
@@ -253,9 +253,7 @@ export function columnsMinWidth({
   }
   // A fixed layout splits what is left evenly, so each flexible column needs the widest floor.
   const restMin = rest.length > 0 ? `${rest.length} * max(${rest.join(', ')})` : '0px';
-  const parts = [`calc(${fixed.join(' + ') || '0px'} + ${restMin})`];
-  if (floor) parts.push(floor);
-  return `max(${parts.join(', ')})`;
+  return `calc(${fixed.join(' + ') || '0px'} + ${restMin})`;
 }
 
 /**

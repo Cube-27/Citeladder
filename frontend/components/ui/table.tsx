@@ -39,19 +39,9 @@ import { cn } from '@/lib/utils';
  * own in the app it is a card; inside a container or a DataTable it is plain.
  */
 const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
-const TABLE_MIN_WIDTH = {
-  sm: 'min-w-[var(--table-min-width-sm)]',
-  md: 'min-w-[var(--table-min-width-md)]',
-  lg: 'min-w-[var(--table-min-width-lg)]',
-  xl: 'min-w-[var(--table-min-width-xl)]',
-} as const;
-
-export type TableMinWidth = keyof typeof TABLE_MIN_WIDTH;
-
 export function Table({
   children,
   className,
-  minWidth,
   fixed = false,
   wrapperClassName,
   wrapperRef,
@@ -65,8 +55,6 @@ export function Table({
   ariaLabel?: string;
   /** The visible heading that names the table. */
   ariaLabelledBy?: string;
-  /** Below this width the table scrolls in its frame instead of squeezing. */
-  minWidth?: TableMinWidth;
   /**
    * Column widths come from the header cells' widths, never from the rows
    * shown, so paging or filtering cannot shift the columns. Give every
@@ -93,7 +81,6 @@ export function Table({
         className={cn(
           'text-body-sm text-ink w-full border-separate border-spacing-0',
           fixed && 'table-fixed',
-          minWidth && TABLE_MIN_WIDTH[minWidth],
           className,
         )}
       >
