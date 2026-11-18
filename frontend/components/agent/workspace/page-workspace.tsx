@@ -48,6 +48,8 @@ import { WorkspaceChat } from './workspace-chat';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
+import './page-workspace.css';
+
 const ASK_REQUEST = 'Suggest how to improve this passage.';
 
 function highlightLabel(suggestion: AgentSuggestion): string {

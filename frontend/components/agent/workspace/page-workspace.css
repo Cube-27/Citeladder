@@ -1,0 +1,70 @@
+/* The page workspace's editor (CodeMirror with live preview, E2): the page
+   reads as an article in the prose ladder; headings, bold, italics and links
+   render styled while their Markdown marks hide off the cursor's line. A
+   suggestion's text is underlined in the info tint when it is ready to apply
+   and the warning tint when it needs a fact. Unlayered and scoped under
+   `.page-editor .cm-editor`, because CodeMirror injects its base theme
+   (monospace, its own padding, a dotted focus outline) as unlayered rules at
+   run time. Imported by the page workspace, so it loads with the chat route,
+   not on boot; its colours and the text field's inset ring stay in globals.css. */
+.page-editor {
+  min-height: 100%;
+}
+.page-editor .cm-editor {
+  min-height: 100%;
+  background: transparent;
+  color: var(--color-ink);
+}
+.page-editor .cm-editor .cm-scroller {
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+.page-editor .cm-editor .cm-content {
+  padding: var(--card-padding) 0;
+  caret-color: var(--color-ink);
+}
+.page-editor .cm-editor .cm-line {
+  padding: 0 var(--card-padding);
+}
+.page-editor .cm-editor .page-editor-h1 {
+  /* Nothing else reads this role, so the theme may not emit it: its values stand behind it. */
+  font-size: var(--text-display-sm, 1.5rem);
+  line-height: var(--text-display-sm--line-height, 2rem);
+}
+.page-editor .cm-editor .page-editor-h2 {
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+}
+.page-editor .cm-editor .page-editor-h3 {
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+}
+.page-editor .cm-editor :is(.page-editor-h1, .page-editor-h2, .page-editor-h3) {
+  padding-top: 0.5rem;
+}
+.page-editor
+  .cm-editor
+  :is(
+    .page-editor-h1,
+    .page-editor-h2,
+    .page-editor-h3,
+    .page-editor-h4,
+    .page-editor-h5,
+    .page-editor-h6
+  ),
+.page-editor .cm-editor .page-editor-strong {
+  font-weight: var(--weight-medium);
+}
+.page-editor .cm-editor .page-editor-em {
+  font-style: italic;
+}
+.page-editor .cm-editor .page-editor-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.page-editor .cm-editor .page-editor-suggestion {
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+  cursor: pointer;
+}

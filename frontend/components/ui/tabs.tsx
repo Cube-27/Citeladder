@@ -103,7 +103,13 @@ function followTabMark(list: HTMLElement): (() => void) | undefined {
 
 /** The strip's sliding underline; a direct child of the strip. */
 function TabMark() {
-  return <span aria-hidden data-tab-mark="" />;
+  return (
+    <span
+      aria-hidden
+      data-tab-mark=""
+      className="bg-accent pointer-events-none absolute bottom-0 left-0 hidden"
+    />
+  );
 }
 
 /**

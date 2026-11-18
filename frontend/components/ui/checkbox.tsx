@@ -27,15 +27,18 @@ export type CheckboxProps = AccessibleCheckbox & {
  * The 16px box: `surface` with the control line,
  * radius 2; checked and indeterminate are an `ink` fill with an `on-ink`
  * check or dash. The fill scales in and the check draws itself; a held
- * press scales the box to 92% (globals.css "Checkbox"). It is drawn centred
- * in a 24×24 target (`CHECK_TARGET`), so the target is never under 24.
- * Shared with the table's row checkbox.
+ * press scales the box to 92% (the fill is in globals.css). It is drawn
+ * centred in a 24×24 target (`CHECK_TARGET`), so the target is never under
+ * 24. Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'check-box press [--press-scale:0.92] focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[border-color] duration-[var(--motion-fast)] before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] disabled:cursor-not-allowed';
+  'check-box press [--press:0.92] isolate focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[border-color] duration-[var(--motion-fast)] before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] disabled:cursor-not-allowed';
 
-/** Lucide's check, with a unit path length so its stroke can draw on. */
-function CheckMark() {
+/** Draws the check over 150ms, 15ms after the fill starts (HeroUI v3). */
+const CHECK_DRAW = 'stroke-dashoffset 150ms linear 15ms';
+
+/** Lucide's check on a unit path length, so its stroke draws on and off. */
+function CheckMark({ on }: Readonly<{ on: boolean }>) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -47,7 +50,12 @@ function CheckMark() {
       className="size-3"
       aria-hidden
     >
-      <path data-check-path="" pathLength={1} d="M20 6 9 17l-5-5" />
+      <path
+        pathLength={1}
+        strokeDasharray={1}
+        style={{ strokeDashoffset: on ? 0 : 1, transition: CHECK_DRAW }}
+        d="M20 6 9 17l-5-5"
+      />
     </svg>
   );
 }
@@ -91,7 +99,7 @@ function Box({
         {checked === 'indeterminate' ? (
           <Minus className="size-3 [stroke-width:3]" aria-hidden />
         ) : (
-          <CheckMark />
+          <CheckMark on={checked === true} />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

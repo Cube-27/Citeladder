@@ -17,7 +17,7 @@ export type RadioOption<T extends string> = {
  * darkens an empty circle's edge; a held press scales it to 95%.
  */
 const RADIO =
-  'radio-dot press [--press-scale:0.95] focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'radio-dot press [--press:0.95]focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 const LIST_LAYOUT = {
   list: 'flex flex-col gap-3',

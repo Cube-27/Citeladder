@@ -52,8 +52,7 @@ const SORT_ALIGN = {
  *
  * The active column takes primary ink (the header row's own `aria-sort` rule).
  * The one arrow holds its slot but shows only at half on hover or focus and
- * whole on the sorted column, turned up for ascending (globals.css
- * `sort-glyph`). The button's name is the visible label (plus the sublabel
+ * whole on the sorted column, turned up for ascending. The button's name is the visible label (plus the sublabel
  * when present), so it is pressed with Enter or Space like any other button.
  */
 export function SortableTableHead({
@@ -105,7 +104,15 @@ export function SortableTableHead({
         )}
       >
         <span className="truncate">{label}</span>
-        <ArrowDown className="sort-glyph size-3 shrink-0" aria-hidden />
+        <ArrowDown
+          className={cn(
+            'size-3 shrink-0 transition',
+            active
+              ? !descending && 'rotate-180'
+              : 'opacity-0 group-hover:opacity-50 group-focus-within:opacity-50',
+          )}
+          aria-hidden
+        />
       </span>
       {sublabel ? (
         <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>
@@ -119,7 +126,7 @@ export function SortableTableHead({
       numeric={numeric}
       desktopOnly={desktopOnly}
       aria-sort={ariaSort}
-      className={className}
+      className={cn('group', className)}
     >
       {hint ? <Tooltip content={hint}>{button}</Tooltip> : button}
     </TableHead>

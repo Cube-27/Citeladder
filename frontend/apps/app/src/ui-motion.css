@@ -1,84 +1,63 @@
 /* Authenticated interaction motion. Timing lives in globals.css; feature files
    consume semantic component classes rather than defining local animation. */
 
-/* Popups and toasts open and close with keyframes: Radix Presence keeps
-   content mounted only while an animation runs. Tooltips and toasts move
-   from the trigger's side (a tooltip 2px, a toast 4px; toasts sit at the
-   top); menus and selects grow from their anchor instead (below). */
+/* Popups (menus, selects, popovers, tooltips, info hints), toasts and the
+   selection dock open and close with one keyframe pair: Radix Presence keeps
+   content mounted only while an animation runs. Each moves from
+   `--popup-from` (4px from its side, a tooltip a 2px rise, the dock 8px up)
+   and grows from `--popup-scale` (a menu or select list from 96% at its
+   anchor). Menus and tooltips enter in --motion-tint. */
+.menu-panel,
 .tooltip-panel,
 .toast-panel {
-  --popup-distance: 4px;
-  --popup-from: 0 calc(-1 * var(--popup-distance));
-}
-.tooltip-panel {
-  --popup-distance: 2px;
+  --popup-from: 0 -4px;
 }
 [data-side='top'] {
-  --popup-from: 0 var(--popup-distance);
+  --popup-from: 0 4px;
 }
 [data-side='left'] {
-  --popup-from: var(--popup-distance) 0;
+  --popup-from: 4px 0;
 }
 [data-side='right'] {
-  --popup-from: calc(-1 * var(--popup-distance)) 0;
+  --popup-from: -4px 0;
+}
+.tooltip-panel[data-side] {
+  --popup-from: 0 2px;
+}
+.menu-panel[class] {
+  --popup-from: 0;
+  --popup-scale: 0.96;
+  transform-origin: var(--radix-popper-transform-origin);
 }
 @keyframes popup-in {
   from {
     opacity: 0;
     translate: var(--popup-from);
+    scale: var(--popup-scale, 1);
   }
 }
 @keyframes popup-out {
   to {
     opacity: 0;
     translate: var(--popup-from);
+    scale: var(--popup-scale, 1);
   }
 }
-.toast-panel[data-state$='open'] {
+:is(.menu-panel, .tooltip-panel, .toast-panel)[data-state$='open'],
+.menu-panel[data-open] {
   animation: popup-in var(--motion-open) var(--ease-standard);
 }
-.tooltip-panel[data-state$='open'] {
-  animation: popup-in var(--motion-tint) var(--ease-standard);
+:is(.menu-panel, .tooltip-panel)[data-state$='open'],
+.menu-panel[data-open] {
+  animation-duration: var(--motion-tint);
 }
-:is(.tooltip-panel, .toast-panel)[data-state='closed'] {
+:is(.menu-panel, .tooltip-panel, .toast-panel)[data-state='closed'] {
   animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
-
-/* A menu or select list grows from 96% at its anchor's corner. The exit has
-   its own name: Presence waits only for an animation unlike the entrance. */
-@keyframes popup-grow {
-  from {
-    opacity: 0;
-    scale: 0.96;
-  }
-}
-@keyframes popup-shrink {
-  to {
-    opacity: 0;
-    scale: 0.96;
-  }
-}
-.menu-panel {
-  transform-origin: var(--radix-popper-transform-origin);
-}
-.menu-panel:is([data-state='open'], [data-open]) {
-  animation: popup-grow var(--motion-tint) var(--ease-fluid);
-}
-.menu-panel[data-state='closed'] {
-  animation: popup-shrink var(--motion-snap) var(--ease-exit) both;
-}
-
-/* The selection dock slides up into place as a selection starts. */
-@keyframes dock-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  [data-selection-dock] {
-    animation: dock-in var(--motion-tint) var(--ease-fluid);
-  }
+/* The dock is centred by its own translate, so it rises from there. */
+[data-selection-dock] {
+  --popup-from: -50% 8px;
+  animation: popup-in var(--motion-tint) var(--ease-standard);
 }
 
 /* A swipe moves the toast 1:1, eases back on cancel (Radix clears both

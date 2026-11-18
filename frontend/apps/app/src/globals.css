@@ -323,17 +323,11 @@
   /* Resizing what is already on screen (the sidebar) is no open or close:
      --motion-open both ways, on one symmetric curve. */
   --ease-resize: ease-in-out;
-  /* The app's control states (HeroUI v3 timings): a press scales back over
-     --motion-press, a pressed fill and a mark answer in --motion-snap, a tint
-     and a popup's entrance in --motion-tint, the switch thumb slides over
-     --motion-slide; slides (the thumb, the tab underline) ease on the fluid curve. */
-  --motion-snap: 100ms;
+  /* HeroUI v3's control timings: a menu, select list or tooltip enters
+     faster than a sheet; the switch thumb slides on the fluid ease. */
   --motion-tint: 150ms;
-  --motion-press: 250ms;
   --motion-slide: 300ms;
-  --motion-check-delay: 15ms;
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-smooth: ease;
   /* The website's steps (and the app's draft edge); app open/close never uses them. */
   --motion-normal: 150ms;
   --motion-slow: 200ms;
@@ -1372,82 +1366,30 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-/* The page workspace's editor (CodeMirror with live preview, E2): the page
-   reads as an article in the prose ladder; headings, bold, italics and links
-   render styled while their Markdown marks hide off the cursor's line. A
-   suggestion's text is underlined in the info tint when it is ready to apply
-   and the warning tint when it needs a fact. Unlayered and scoped under
-   `.page-editor .cm-editor`, because CodeMirror injects its base theme
-   (monospace, its own padding, a dotted focus outline) as unlayered rules at
-   run time. Its text field keeps the shared ring, drawn inside the pane so
-   the scroller never clips it. */
-.page-editor {
-  min-height: 100%;
-}
-.page-editor .cm-editor {
-  min-height: 100%;
-  background: transparent;
-  color: var(--color-ink);
-}
+/* The page workspace editor's colours and its text field's ring, drawn inside
+   the pane so the scroller never clips it; the rest of the editor's look
+   loads with its route (components/agent/workspace/page-workspace.css). A
+   suggestion is underlined in the info tint when ready to apply and the
+   warning tint when it needs a fact; a pressed suggestion's card takes the
+   focus ink over its own border utility. */
 .page-editor .cm-editor.cm-focused {
   outline: none;
-}
-.page-editor .cm-editor .cm-scroller {
-  font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
-}
-.page-editor .cm-editor .cm-content {
-  padding: var(--card-padding) 0;
-  caret-color: var(--color-ink);
 }
 .page-editor .cm-editor .cm-content:focus-visible {
   outline-offset: -2px;
 }
-.page-editor .cm-editor .cm-line {
-  padding: 0 var(--card-padding);
-}
-.page-editor .cm-editor .page-editor-h1 {
-  font-size: var(--text-display-sm);
-  line-height: var(--text-display-sm--line-height);
-}
-.page-editor .cm-editor .page-editor-h2 {
-  font-size: var(--text-title);
-  line-height: var(--text-title--line-height);
-}
-.page-editor .cm-editor .page-editor-h3 {
-  font-size: var(--text-heading);
-  line-height: var(--text-heading--line-height);
-}
-.page-editor .cm-editor :is(.page-editor-h1, .page-editor-h2, .page-editor-h3) {
-  padding-top: 0.5rem;
-}
-.page-editor
-  .cm-editor
-  :is(.page-editor-h1, .page-editor-h2, .page-editor-h3, .page-editor-h4, .page-editor-h5, .page-editor-h6),
-.page-editor .cm-editor .page-editor-strong {
-  font-weight: var(--weight-medium);
-}
-.page-editor .cm-editor .page-editor-em {
-  font-style: italic;
-}
-.page-editor .cm-editor .page-editor-link {
+.page-editor .page-editor-link {
   color: var(--color-accent-ink);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
-.page-editor .cm-editor .page-editor-suggestion {
+.page-editor .page-editor-suggestion {
   background: var(--color-info-soft);
   color: var(--color-ink);
-  border-bottom: 2px solid var(--color-info);
-  cursor: pointer;
+  border-color: var(--color-info);
 }
-.page-editor .cm-editor .page-editor-suggestion-needs_input {
+.page-editor .page-editor-suggestion-needs_input {
   background: var(--color-warning-soft);
-  border-bottom-color: var(--color-warning);
+  border-color: var(--color-warning);
 }
-/* The card of the highlight the reader pressed: its edge in the focus ink,
-   over the panel's own border utility. */
 .suggestion-card[aria-current='true'] {
   border-color: var(--color-focus);
 }
@@ -2416,199 +2358,91 @@ label {
   box-shadow: none;
 }
 
-/* Control states, on HeroUI v3's proportions and timings (owner 2026-11-18).
-   App only; the website keeps its still controls. Under reduced motion
-   nothing scales (the press below) and transitions are instant (above). */
-
-/* A pressed control scales back while held and its fill answers at once:
-   buttons and triggers .97, menu rows .98, radios .95, checkboxes .92. */
+/* Control states on HeroUI v3's timings (owner 2026-11-18). A held press
+   scales a control (`--press`: buttons and triggers .97, menu rows .98,
+   radios .95, checkboxes .92), never on the website or under reduced motion. */
 :root:not([data-public-surface]) .press {
-  transition-property: scale, background-color, color, border-color, box-shadow;
-  transition-duration:
-    var(--motion-press), var(--motion-snap), var(--motion-snap), var(--motion-snap),
-    var(--motion-snap);
-  transition-timing-function: var(--ease-smooth);
+  transition:
+    scale 250ms,
+    background-color 100ms,
+    color 100ms,
+    border-color 100ms,
+    box-shadow 100ms;
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-public-surface])
-    .press:active:not(:disabled, [aria-disabled='true'], [data-disabled], [aria-busy='true']) {
-    scale: var(--press-scale, 0.97);
+  :root:not([data-public-surface]) .press:active:not(:disabled, [data-disabled], [aria-busy='true']) {
+    scale: var(--press, 0.97);
   }
 }
 
-/* A dropdown's chevron turns over while its list is open. */
-:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox']) svg.lucide-chevron-down {
-  transition: rotate var(--motion-tint) var(--ease-smooth);
+/* A dropdown's chevron turns over while its list is open (not a disclosure's,
+   which points by itself). */
+:is([aria-haspopup], [role='combobox']) .lucide-chevron-down {
+  transition: rotate 150ms;
 }
-:root:not([data-public-surface])
-  :is([aria-haspopup], [role='combobox'])[aria-expanded='true']
-  svg.lucide-chevron-down {
+:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .lucide-chevron-down {
   rotate: 180deg;
 }
 
-/* Input and search: hover tints the fill 4% ink over 150ms; a focused or
-   disabled field keeps its fill. `--field-fill` is the field's own fill. */
-:root:not([data-public-surface]) .field-hover {
-  transition-property: background-color, border-color, box-shadow;
-  transition-duration: var(--motion-tint), var(--motion-fast), var(--motion-tint);
-  transition-timing-function: var(--ease-smooth);
+/* Input and search: hover tints the field's own fill (`--field-fill`) 4% ink. */
+.field-hover {
+  transition:
+    background-color 150ms,
+    border-color 120ms,
+    box-shadow 150ms;
 }
-:root:not([data-public-surface])
-  .field-hover:hover:not(
-    :focus-visible,
-    :focus-within,
-    :disabled,
-    [aria-disabled='true'],
-    [data-disabled]
-  ) {
-  background-color: color-mix(
-    in srgb,
-    var(--color-ink) 4%,
-    var(--field-fill, var(--color-surface))
-  );
+:root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
+  background-color: color-mix(in srgb, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
 }
 
-/* Switch: a 40×20 round track (`control-line` off, `ink` on) and a 22×16
-   pill thumb that slides on the fluid ease, lifted by a shadow when on.
-   Hover lightens the track. */
-.switch-track {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  width: 40px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-control-line);
-  transition:
-    background-color var(--motion-press) var(--ease-smooth),
-    box-shadow var(--motion-tint) var(--ease-standard);
-}
-.switch-track:hover:not(:disabled) {
-  background-color: color-mix(in oklab, var(--color-control-line), transparent 20%);
-}
-.switch-track[aria-checked='true'] {
-  background-color: var(--color-ink);
-}
-.switch-track[aria-checked='true']:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--color-ink) 85%, transparent);
-}
-.switch-track:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-.switch-thumb {
-  position: relative;
-  inset-inline-start: 0;
-  width: 22px;
-  height: 16px;
-  margin-inline-start: 2px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-surface);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
-  transition:
-    inset-inline-start var(--motion-slide) var(--ease-fluid),
-    background-color var(--motion-open) var(--ease-standard);
-}
-:root[data-theme='dark'] .switch-thumb {
-  background-color: var(--color-ink-2);
-}
-.switch-track[aria-checked='true'] .switch-thumb {
-  inset-inline-start: calc(100% - 26px);
-  background-color: var(--color-on-ink);
+/* The switch's thumb, lifted when on (HeroUI's checked shadow). */
+[role='switch'][aria-checked='true'] > span {
   box-shadow:
-    0 0 5px 0 rgb(0 0 0 / 2%),
-    0 2px 10px 0 rgb(0 0 0 / 6%),
-    0 0 1px 0 rgb(0 0 0 / 30%);
+    0 0 5px rgb(0 0 0 / 2%),
+    0 2px 10px rgb(0 0 0 / 6%),
+    0 0 1px rgb(0 0 0 / 30%);
 }
 
-/* Checkbox: the ink fill scales in from 70% and the check draws itself;
-   hover darkens an empty box's edge. Radio: the same edge on hover. */
+/* Checkbox: the ink fill grows from 70% under the check (checkbox.tsx draws
+   the check). Checkbox and radio: hover darkens an empty edge. */
 .check-box::after {
   content: '';
   position: absolute;
   inset: -1px;
+  z-index: -1;
   border-radius: inherit;
-  background-color: var(--color-ink);
+  background: var(--color-ink);
   opacity: 0;
   scale: 0.7;
   transition:
-    scale var(--motion-snap) linear,
-    opacity var(--motion-open) var(--ease-standard);
+    scale 100ms linear,
+    opacity 200ms;
 }
-.check-box:is([data-state='checked'], [data-state='indeterminate'])::after {
+.check-box:not([data-state='unchecked'])::after {
   opacity: 1;
-  scale: 1;
+  scale: none;
 }
-.check-box > * {
-  position: relative;
-  z-index: 1;
-}
-.check-box [data-check-path] {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--motion-tint) linear var(--motion-check-delay);
-}
-.check-box[data-state='checked'] [data-check-path] {
-  stroke-dashoffset: 0;
-}
-:root:not([data-public-surface])
-  :is(.check-box[data-state='unchecked'], .radio-dot[data-state='unchecked']):not(:disabled):is(
-    :hover,
-    label:hover *
-  ) {
+:is(.check-box, .radio-dot)[data-state='unchecked']:enabled:hover {
   border-color: color-mix(in oklab, var(--color-control-line), var(--color-ink-2));
 }
 
 /* Tabs and segments: one accent underline slides to the current item
    (tabs.tsx places it); until it is placed each item draws its own. */
 [data-tab-mark] {
-  display: none;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 1;
   width: var(--tab-mark-w);
   height: var(--mark-width);
-  translate: var(--tab-mark-x) 0;
-  background-color: var(--color-accent);
-  pointer-events: none;
-  transition:
-    translate var(--motion-press) var(--ease-fluid),
-    width var(--motion-press) var(--ease-fluid);
+  translate: var(--tab-mark-x);
+  transition: 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition-property: translate, width;
 }
 [data-tab-mark-ready] > [data-tab-mark] {
   display: block;
 }
 [data-tab-mark-ready] .tab-face::after {
-  background-color: transparent;
-}
-
-/* A sortable head's arrow: hidden at rest, half on hover or focus, whole on
-   the sorted column, turned up for ascending. Its slot is always held. */
-.sort-glyph {
-  opacity: 0;
-  transition:
-    opacity var(--motion-snap) var(--ease-standard),
-    rotate var(--motion-snap) var(--ease-standard);
-}
-th:hover .sort-glyph,
-:focus-visible > * > .sort-glyph {
-  opacity: 0.5;
-}
-th[aria-sort] .sort-glyph {
-  opacity: 1;
-}
-th[aria-sort='ascending'] .sort-glyph {
-  rotate: 180deg;
-}
-
-/* A selected row keeps its tint under the pointer, a step darker. */
-:root:not([data-public-surface]) .table-frame tbody > tr[aria-selected='true']:hover > * {
-  background-image: linear-gradient(var(--color-state-pressed), var(--color-state-pressed));
+  background: none;
 }
 
 /* A focused row rings inside itself, so the frame never clips it. */
-:root:not([data-public-surface]) .table-frame tbody > tr:focus-visible {
+.table-frame tr:focus-visible {
   outline-offset: -2px;
 }
