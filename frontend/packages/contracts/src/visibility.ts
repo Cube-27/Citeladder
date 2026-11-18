@@ -73,6 +73,25 @@ export const visibilityEngineSchema = responseObject({
 // `mention_rate` is the Visibility% and `share_of_voice` the SOV%.
 // `avg_position` is the entity's mean rank among the brands named in an answer,
 // derived from mention offsets. Tone is the Perception read, never a ranking column.
+// One brand's sentiment over its mentions: `net_sentiment` is (positive −
+// negative) / classified × 100, null when nothing was classified. The counts
+// travel with it so a reader can pool them or apply a minimum.
+export const netSentimentSchema = responseObject({
+  mentions: z.number().int(),
+  classified: z.number().int(),
+  positive: z.number().int(),
+  negative: z.number().int(),
+  net_sentiment: z.number().nullable(),
+});
+
+// Answers that searched the web, over the answers whose engine reports search
+// use; `share` is null when no engine reported it ("not available", not 0%).
+export const webSearchShareSchema = responseObject({
+  searched: z.number().int(),
+  reported: z.number().int(),
+  share: z.number().nullable(),
+});
+
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
@@ -89,6 +108,9 @@ export const rankingRowSchema = responseObject({
   matched_response_count: z.number().int().nullable().optional(),
   avg_position: z.number().nullable(),
   ...winCountsSchema.shape,
+  // Only on the dashboard read; null when the selection classified no answer
+  // naming this brand's roster entry (or ran without perception).
+  sentiment: netSentimentSchema.nullable().optional(),
 });
 
 // Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
@@ -204,6 +226,12 @@ export const promptMetricItemSchema = responseObject({
   // Mean rank among the brands named in this prompt's answers.
   avg_position: z.number().nullable().optional(),
   ...winCountsSchema.shape,
+  // The brand's share of every tracked-brand naming in this prompt's answers.
+  share_of_voice: z.number().nullable().optional(),
+  // The brand's sentiment in this prompt's answers; null when the runs were
+  // admitted without perception.
+  sentiment: netSentimentSchema.nullable().optional(),
+  web_search: webSearchShareSchema.optional(),
   visibility_delta: z.number().nullable().optional(),
   comparison_status: z.string().optional(),
   comparison: visibilityComparisonSchema.nullable().optional(),
@@ -413,4 +441,6 @@ export type PromptHistory = z.infer<typeof promptHistorySchema>;
 export type ObservedCompetitor = z.infer<typeof observedCompetitorSchema>;
 export type VisibilityEngine = z.infer<typeof visibilityEngineSchema>;
 export type RankingRow = z.infer<typeof rankingRowSchema>;
+export type NetSentiment = z.infer<typeof netSentimentSchema>;
+export type WebSearchShare = z.infer<typeof webSearchShareSchema>;
 export type Visibility = z.infer<typeof visibilitySchema>;

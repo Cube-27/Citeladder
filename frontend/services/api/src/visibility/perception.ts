@@ -26,6 +26,7 @@ import { chunked, groupBy } from '../lists.ts';
 import { frozenPerceptionVersions } from '../perception/admission.ts';
 import {
   classifiedQuotes,
+  entityScores,
   mentionStatus,
   perceptionSummary,
   persistedOutcomeSchema,
@@ -222,6 +223,51 @@ export async function getPerception(
 ): Promise<PerceptionResponse> {
   const { answers, auditIds } = await selectionAnswers(db, selection, { citations: true });
   return { ...perceptionSummary(answers, policy.perception), source_audit_ids: auditIds };
+}
+
+/** Each named business's net sentiment over the selection, the brand first. */
+export async function entitySentiments(db: Database, selection: RunSelection) {
+  const { answers } = await selectionAnswers(db, selection, { citations: false });
+  return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
+    name,
+    is_brand,
+    sentiment: {
+      mentions: coverage.mentions,
+      classified: score.classified,
+      positive: score.positive,
+      negative: score.negative,
+      net_sentiment: score.net_sentiment,
+    },
+  }));
+}
+
+/**
+ * The brand's mentions in each of one audit's analyses, or null when the
+ * audit was admitted without perception. The analyses are already scoped.
+ */
+export async function brandMentionsByAnalysis(
+  db: Database,
+  input: {
+    workspaceId: string;
+    configuration: unknown;
+    analyses: readonly { id: string; entity_assessments: unknown }[];
+  },
+): Promise<Map<string, Mention[]> | null> {
+  const versions = frozenPerceptionVersions(input.configuration);
+  if (!versions) return null;
+  const perceived = await perceptionsOf(
+    db,
+    input.workspaceId,
+    new Map(input.analyses.map((row) => [row.id, versions.extractor_version])),
+  );
+  return new Map(
+    input.analyses.map((row) => [
+      row.id,
+      mentionsOf(assessmentsSchema.parse(row.entity_assessments), perceived.get(row.id))
+        .map(({ mention }) => mention)
+        .filter((mention) => mention.isBrand),
+    ]),
+  );
 }
 
 /** The decoded cursor position; a malformed one is refused, never read as the start. */

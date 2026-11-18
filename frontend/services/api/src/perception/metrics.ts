@@ -11,6 +11,7 @@ import type {
   PerceptionScore,
 } from '@citeladder/contracts/visibility-perception';
 
+import type { netSentimentSchema } from '@citeladder/contracts/visibility';
 import { z } from 'zod';
 import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
@@ -18,6 +19,7 @@ import { compareText } from '../text-order.ts';
 import { isNamed } from './passages.ts';
 import type { VerifiedAspect } from './validate.ts';
 
+type NetSentiment = z.infer<typeof netSentimentSchema>;
 type UnavailableReason = PerceptionCoverage['unavailable'][number]['reason'];
 type ClassifiedLabel = 'positive' | 'neutral' | 'negative' | 'mixed';
 
@@ -114,6 +116,29 @@ export function score(mentions: readonly Mention[]): PerceptionScore {
     positive_share: share(counts.positive),
     negative_share: share(counts.negative),
     net_sentiment: classified ? ((counts.positive - counts.negative) / classified) * 100 : null,
+  };
+}
+
+/** The mentions' net sentiment with the counts it was computed over. */
+export function netSentiment(mentions: readonly Mention[]): NetSentiment {
+  const { positive, negative, classified } = score(mentions);
+  return pooledSentiment([{ mentions: mentions.length, classified, positive, negative }]);
+}
+
+/** Summed counts, and the net sentiment of the sum (never a mean of means). */
+export function pooledSentiment(
+  parts: readonly Omit<NetSentiment, 'net_sentiment'>[],
+): NetSentiment {
+  const total = (key: 'mentions' | 'classified' | 'positive' | 'negative') =>
+    parts.reduce((sum, part) => sum + part[key], 0);
+  const classified = total('classified');
+  const [positive, negative] = [total('positive'), total('negative')];
+  return {
+    mentions: total('mentions'),
+    classified,
+    positive,
+    negative,
+    net_sentiment: classified ? ((positive - negative) / classified) * 100 : null,
   };
 }
 
@@ -351,19 +376,15 @@ function trend(answers: readonly PerceptionAnswer[]) {
   });
 }
 
-export function perceptionSummary(
-  answers: readonly PerceptionAnswer[],
-  limits: { max_quotes_per_theme: number; max_negative_quotes: number; max_drivers: number },
-): Omit<PerceptionResponse, 'source_audit_ids'> {
-  const all = answers.flatMap((answer) => answer.mentions);
-  const brandMentions = all.filter((mention) => mention.isBrand);
+/** Every named business's score and coverage: the brand first, then most mentioned. */
+export function entityScores(answers: readonly PerceptionAnswer[]) {
   const byEntity = new Map<string, { isBrand: boolean; mentions: Mention[] }>();
-  for (const mention of all) {
+  for (const mention of answers.flatMap((answer) => answer.mentions)) {
     const entity = byEntity.get(mention.entity);
     if (entity) entity.mentions.push(mention);
     else byEntity.set(mention.entity, { isBrand: mention.isBrand, mentions: [mention] });
   }
-  const entities = [...byEntity]
+  return [...byEntity]
     .map(([name, { isBrand, mentions }]) => ({
       name,
       is_brand: isBrand,
@@ -376,6 +397,16 @@ export function perceptionSummary(
         b.coverage.mentions - a.coverage.mentions ||
         compareText(a.name, b.name),
     );
+}
+
+export function perceptionSummary(
+  answers: readonly PerceptionAnswer[],
+  limits: { max_quotes_per_theme: number; max_negative_quotes: number; max_drivers: number },
+): Omit<PerceptionResponse, 'source_audit_ids'> {
+  const brandMentions = answers.flatMap((answer) =>
+    answer.mentions.filter((mention) => mention.isBrand),
+  );
+  const entities = entityScores(answers);
   const brandCoverage = coverage(brandMentions);
   const quotes = classifiedQuotes(answers, (mention) => mention.isBrand).map(
     ({ ordinal: _ordinal, ...quote }) => quote,

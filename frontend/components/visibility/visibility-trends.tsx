@@ -8,19 +8,30 @@ import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
 import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
-import type { RankingRow, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
-import {
-  formatPosition,
-  formatPositionExact,
-  formatRate,
-  formatWholePercent,
-} from '@/lib/visibility/dashboard';
+import type {
+  NetSentiment,
+  RankingRow,
+  Visibility,
+  VisibilityTrendPoint,
+} from '@citeladder/contracts';
+import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import { sentimentReading } from '@/lib/visibility/perception';
 import { brandStanding, orderByVisibility, standingHeadline } from '@/lib/visibility/ranking';
-import { toChartPoints, toCompetitorSeries, toNamedChartPoints } from '@/lib/visibility/trends';
+import {
+  toChartPoints,
+  toCompetitorSeries,
+  toNamedChartPoints,
+  trendAxis,
+} from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
 import { availabilityLabel, formatCount, formatDisplayDate, pluralCount } from '@/lib/format';
-import { SHARE_OF_VOICE_HINT, VISIBILITY_METRICS, WIN_RATE_HINT } from '@/lib/config/visibility';
+import {
+  PERCEPTION_MIN_CLASSIFIED,
+  SHARE_OF_VOICE_HINT,
+  VISIBILITY_METRICS,
+  WIN_RATE_HINT,
+} from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -104,6 +115,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
       marker: <InfoHint label="Visibility">The share of answers that name your brand.</InfoHint>,
       ...rate('visibility', selected.visibility_rate),
     },
+    ...(brand?.sentiment == null ? [] : [sentimentFigure(brand.sentiment)]),
     ...(position == null
       ? []
       : [
@@ -127,6 +139,23 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
     },
   ];
   return <FigureStrip segments={segments} />;
+}
+
+/** Net sentiment with the classified count beneath; below the minimum it is too few, never zero. */
+function sentimentFigure(sentiment: NetSentiment): FigureSegment {
+  const reading = sentimentReading(sentiment);
+  return {
+    key: 'sentiment',
+    label: 'Sentiment',
+    marker: (
+      <InfoHint label="Sentiment">
+        {`Positive minus negative mentions of your brand, as a share of the classified ones, from −100 to +100. Shows from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
+      </InfoHint>
+    ),
+    value: reading.kind === 'value' ? reading.net : null,
+    missingLabel: reading.kind === 'too_few' ? 'Too few classified' : 'No mentions',
+    delta: `${sentiment.classified} of ${sentiment.mentions} classified`,
+  };
 }
 
 /**
@@ -247,23 +276,29 @@ function HistoryLineChart({
     focused === null || focusedIsBrand
       ? toChartPoints(points, metric, timeZone)
       : toNamedChartPoints(points, metric, focused, timeZone);
-  const chartPoints = base.map((point) => ({
-    ...point,
-    // The values are already whole percent; `formatRate` would scale them again.
-    label: `${point.dateLabel} · ${formatWholePercent(point.value)}`,
-    axisLabel: point.label,
-  }));
   // One focused brand means one line.
   const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
+  const axis = trendAxis(metric, [
+    base.map((point) => point.value),
+    ...competitors.map((line) => line.values),
+  ]);
+  const chartPoints = base.map((point) => ({
+    ...point,
+    value: axis.plot(point.value),
+    label: `${point.dateLabel} · ${axis.format(point.value)}`,
+    axisLabel: point.label,
+  }));
   return (
     <Stack aria-busy={busy}>
       <StepChart
         label={`${metricLabel} over time`}
         name={focused ?? 'You'}
         data={chartPoints}
-        series={competitors}
-        yMax={100}
-        yFormat={(value) => `${Math.round(value)}%`}
+        series={competitors.map((line) => ({ ...line, values: line.values.map(axis.plot) }))}
+        yMin={axis.yMin}
+        yMax={axis.yMax}
+        yFormat={axis.tick}
+        format={(plotted) => axis.format(axis.unplot(plotted))}
       />
       <p className={textRole('caption')}>
         {focused === null && competitors.length

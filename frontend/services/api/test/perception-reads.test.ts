@@ -230,6 +230,39 @@ describe('GET /visibility/perception', () => {
     ]);
   });
 
+  it('serves each ranking row and prompt its net sentiment over the same counts', async () => {
+    await fixtures.metricSnapshot(tenant, auditId, {
+      metrics: {
+        total_completed: 6,
+        share_of_voice: { mention_counts: { Acme: 5, Rival: 1 } },
+        competitor_mention_rate: { Rival: 1 / 6 },
+      },
+    });
+    // Each answer above is its own prompt; index 0 holds the first (Acme negative).
+    await fixtures.promptScore(tenant, auditId, {
+      promptIndex: 0,
+      promptText: 'best tools?',
+      composite: 50,
+    });
+    const base = `/api/v1/projects/${tenant.projectId}/visibility`;
+    const ranking = await get(tenant, base, { audit_id: auditId });
+    const prompts = await get(tenant, `${base}/prompts`, { audit_id: auditId });
+    expect(ranking.status).toBe(200);
+    expect((ranking.body.rankings as Body[]).map((row) => [row.name, row.sentiment])).toEqual([
+      // Five mentions, two confidently classified: one each way nets to zero.
+      ['Acme', { mentions: 5, classified: 2, positive: 1, negative: 1, net_sentiment: 0 }],
+      ['Rival', { mentions: 1, classified: 1, positive: 1, negative: 0, net_sentiment: 100 }],
+    ]);
+    // The brand's mentions only: Rival's positive label in that answer is not counted.
+    expect((prompts.body as unknown as Body[])[0]!.sentiment).toEqual({
+      mentions: 1,
+      classified: 1,
+      positive: 0,
+      negative: 1,
+      net_sentiment: -100,
+    });
+  });
+
   it('reads pending before any classification lands, then unavailable with its reason', async () => {
     const pendingRun = await fixtures.audit(tenant, { configuration: CONFIGURATION });
     await answer(tenant, pendingRun, { entities: [{ name: 'Acme', kind: 'brand' }] });
@@ -329,6 +362,12 @@ describe('GET /visibility/perception', () => {
       },
     );
     const evidence = await get(outsider, `/api/v1/executions/${classifiedTask}`);
-    expect([summary.status, quotes.status, evidence.status]).toEqual([404, 404, 404]);
+    // The ranking read that now carries sentiment, asked from the outsider's own project.
+    const ranking = await get(outsider, `/api/v1/projects/${outsider.projectId}/visibility`, {
+      audit_id: auditId,
+    });
+    expect([summary.status, quotes.status, evidence.status, ranking.status]).toEqual([
+      404, 404, 404, 404,
+    ]);
   });
 });

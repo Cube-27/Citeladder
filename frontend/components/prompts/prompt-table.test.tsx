@@ -59,6 +59,9 @@ describe('PromptTable pagination', () => {
                     ownedCitationRate: 0.25,
                     change: { kind: 'first' },
                     position: 2,
+                    shareOfVoice: null,
+                    sentiment: null,
+                    webSearch: undefined,
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
@@ -78,10 +81,10 @@ describe('PromptTable pagination', () => {
     // Not "not measured": no run will ever measure it one prompt at a time.
     // One cell spans the figures and says it once; the reason is in the head.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
-    expect(shelfCells[1]!.getAttribute('colspan')).toBe('5');
+    expect(shelfCells[1]!.getAttribute('colspan')).toBe('8');
     expect(shelfCells[1]!.textContent).toBe('Measured with Shopping');
     expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(1);
-    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 4);
+    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 7);
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
   });
 
@@ -140,6 +143,15 @@ describe('PromptTable pagination', () => {
                     ownedCitationRate: 0.25,
                     change: { kind: 'first' },
                     position: 2,
+                    shareOfVoice: 0.4,
+                    sentiment: {
+                      mentions: 31,
+                      classified: 30,
+                      positive: 20,
+                      negative: 5,
+                      net_sentiment: 50,
+                    },
+                    webSearch: { searched: 3, reported: 4, share: 0.75 },
                     answer: ANSWER,
                     mentions: 4,
                     brands: [
@@ -158,6 +170,16 @@ describe('PromptTable pagination', () => {
                     ownedCitationRate: 0,
                     change: { kind: 'not_compared', reason: 'changed_context' },
                     position: null,
+                    shareOfVoice: 0,
+                    // Classified, but fewer than the minimum: too few, not a zero.
+                    sentiment: {
+                      mentions: 6,
+                      classified: 4,
+                      positive: 2,
+                      negative: 2,
+                      net_sentiment: 0,
+                    },
+                    webSearch: { searched: 0, reported: 0, share: null },
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
@@ -180,9 +202,12 @@ describe('PromptTable pagination', () => {
     const columns = within(header!)
       .getAllByRole('columnheader')
       .map((cell) => cell.textContent);
-    expect(columns.slice(0, 7)).toEqual([
+    expect(columns.slice(0, 10)).toEqual([
       'Prompt',
       'Visibility',
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
+      expect.stringMatching(/^Web search/),
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
@@ -190,22 +215,36 @@ describe('PromptTable pagination', () => {
       'Change',
     ]);
     const cells = within(row!).getAllByRole('cell');
-    expect(cells[1]!.textContent).toBe('50.0%');
+    const unnamedCells = within(unnamedRow!).getAllByRole('cell');
+    expect(cells.slice(1, 5).map((cell) => cell.textContent)).toEqual([
+      '50.0%',
+      '40.0%',
+      '+50',
+      '75.0%',
+    ]);
+    // Measured zero share, too few classified, and no engine reporting search
+    // are three different readings, none of them a zero sentiment or 0% search.
+    expect(unnamedCells.slice(2, 5).map((cell) => cell.textContent)).toEqual([
+      '0.0%',
+      'Too few',
+      'Not available',
+    ]);
     // Three marks, each named for a screen reader, then the fourth as overflow.
-    expect(cells[2]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
-    expect(cells[3]!.textContent).toBe('25.0%');
-    expect(cells[5]!.textContent).toBe('#2');
+    expect(cells[5]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
+    expect(cells[6]!.textContent).toBe('25.0%');
+    expect(cells[8]!.textContent).toBe('#2');
     // Measured, and no brand named: zero, not the "not measured" mark.
-    expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');
+    expect(unnamedCells[5]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
-    expect(cells[6]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(cells[9]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_applicable',
     );
-    expect(
-      within(unnamedRow!).getAllByRole('cell')[6]!.querySelector('[data-absence]'),
-    ).toHaveAttribute('data-absence', 'unavailable');
+    expect(unnamedCells[9]!.querySelector('[data-absence]')).toHaveAttribute(
+      'data-absence',
+      'unavailable',
+    );
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

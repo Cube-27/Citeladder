@@ -36,6 +36,8 @@ import {
   type BrandCount,
 } from './brand-identities.ts';
 import { round2 } from './metrics.ts';
+import { brandMentionsByAnalysis } from './perception.ts';
+import { pooledSignals, promptSignals } from './prompt-signals.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import {
@@ -391,10 +393,14 @@ async function loadOutcomes(
   let answers = db
     .selectFrom('response_analyses')
     .select([
+      'id',
       'audit_id',
       'prompt_index',
       'logical_engine',
       'transport_model',
+      'search_used',
+      'fanout_state',
+      'entity_assessments',
       'brand_mentioned',
       'owned_domain_cited',
       'avg_position',
@@ -457,7 +463,14 @@ async function enrichOutcomes(
     data.mentions.filter((row) => row.audit_id === audit.id),
     (row) => row.prompt_index,
   );
-  const previous = await baselineRun(db, scope, audit, query.baselineId);
+  const [previous, brandMentions] = await Promise.all([
+    baselineRun(db, scope, audit, query.baselineId),
+    brandMentionsByAnalysis(db, {
+      workspaceId: scope.workspaceId,
+      configuration: audit.configuration,
+      analyses: data.answers.filter((row) => row.audit_id === audit.id),
+    }),
+  ]);
   const runs = previous && {
     current: {
       auditId: audit.id,
@@ -492,6 +505,7 @@ async function enrichOutcomes(
     Object.assign(item, countRates(item.counts));
     item.answer_states = answerStates(answered);
     Object.assign(item, brandWinCounts(answered));
+    Object.assign(item, promptSignals({ answered, named: row.named, brandMentions }));
     // Over the answers that named the brand: an unnamed answer has no rank.
     const ranked = answered.flatMap((row) => (row.avg_position === null ? [] : [row.avg_position]));
     item.avg_position = ranked.length
@@ -600,6 +614,10 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
       counts,
       ...countRates(counts),
       answer_states: poolStates(rows.map((row) => row.item.answer_states)),
+      ...pooledSignals(
+        rows.map((row) => row.item),
+        [...named.values()],
+      ),
       // A single run's score and movement mean nothing across a pool.
       composite_score: null,
       previous_score: null,

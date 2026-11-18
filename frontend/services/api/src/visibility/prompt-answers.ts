@@ -67,7 +67,7 @@ const SEARCH_FILTER = {
   not_reported: sql<boolean>`not ra.search_used and ra.fanout_state = 'unavailable'`,
 } as const satisfies Record<Search, unknown>;
 
-function searchOf(row: { search_used: boolean; fanout_state: string }): Search {
+export function searchOf(row: { search_used: boolean; fanout_state: string }): Search {
   if (row.search_used) return 'used';
   return row.fanout_state === 'unavailable' ? 'not_reported' : 'not_used';
 }

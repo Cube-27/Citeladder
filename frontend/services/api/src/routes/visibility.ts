@@ -49,7 +49,7 @@ import {
   getAccuracyFacts,
 } from '../visibility/accuracy.ts';
 import { getAds } from '../visibility/ads.ts';
-import { getVisibility } from '../visibility/dashboard.ts';
+import { getRankedVisibility } from '../visibility/ranking-sentiment.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
 import { getMarketVisibility } from '../visibility/markets.ts';
@@ -257,7 +257,7 @@ export const visibilityRoutes = [
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       return selectionErrors(() =>
-        getVisibility(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+        getRankedVisibility(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
           auditId: query.audit_id,
           logicalEngine: query.engine,
           baselineId: query.baseline_id,

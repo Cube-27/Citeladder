@@ -6,6 +6,7 @@ import {
   negativeHeadline,
   negativeThemesLine,
   rankThemes,
+  sentimentReading,
   sentimentTrend,
   stateCopy,
   themeLabel,
@@ -104,6 +105,25 @@ describe('perception derivations', () => {
       needed: 20,
     });
     expect(breakdownRow(row(score(0, 0, 0), 4), 0).kind).toBe('too_few');
+  });
+
+  it('reads a net sentiment from the minimum classified count, keeping too few apart from zero', () => {
+    const net = (classified: number, positive: number, negative: number) => ({
+      mentions: 30,
+      classified,
+      positive,
+      negative,
+      net_sentiment: classified ? ((positive - negative) * 100) / classified : null,
+    });
+    expect(
+      [net(20, 5, 5), net(19, 10, 1), net(0, 0, 0)].map((value) => sentimentReading(value, 20)),
+    ).toEqual([
+      { kind: 'value', net: '0', classified: 20, mentions: 30 },
+      { kind: 'too_few', classified: 19, mentions: 30, minimum: 20 },
+      { kind: 'too_few', classified: 0, mentions: 30, minimum: 20 },
+    ]);
+    expect(sentimentReading({ ...net(0, 0, 0), mentions: 0 }).kind).toBe('none');
+    expect(sentimentReading(null).kind).toBe('none');
   });
 
   it('breaks the sentiment line at a point not comparable with the one before', () => {

@@ -2,6 +2,7 @@
 export const VISIBILITY_METRICS = [
   { value: 'brand_mention_rate', label: 'Visibility' },
   { value: 'sov', label: 'Share of voice' },
+  { value: 'avg_position', label: 'Position' },
   { value: 'owned_citation_rate', label: 'Owned citation rate' },
 ] as const;
 
