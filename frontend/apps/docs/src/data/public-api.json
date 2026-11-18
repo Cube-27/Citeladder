@@ -9172,6 +9172,78 @@
         ],
         "additionalProperties": false
       },
+      "VisibilityTrendEvent": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "prompt_panel"
+              },
+              "added": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "archived": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "removed": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "added", "archived", "removed"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "model_change"
+              },
+              "logical_engine": {
+                "type": "string"
+              },
+              "from_model": {
+                "type": "string"
+              },
+              "to_model": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "logical_engine", "from_model", "to_model"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "action_live"
+              },
+              "action_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "title": {
+                "type": "string"
+              },
+              "implemented_at": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "action_id", "title", "implemented_at"],
+            "additionalProperties": false
+          }
+        ]
+      },
       "VisibilityTrendList": {
         "type": "array",
         "items": {
@@ -9289,6 +9361,13 @@
           },
           "spans_version_boundary": {
             "type": "boolean"
+          },
+          "events": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityTrendEvent"
+            }
           }
         },
         "required": [
@@ -9307,7 +9386,8 @@
           "source_snapshot_ids",
           "analyzer_versions",
           "scoring_rule_versions",
-          "spans_version_boundary"
+          "spans_version_boundary",
+          "events"
         ],
         "additionalProperties": false
       },
@@ -12165,7 +12245,8 @@
                     "source_snapshot_ids": ["00000000-0000-4000-8000-000000000002"],
                     "analyzer_versions": ["Example analyzer versions"],
                     "scoring_rule_versions": ["Example scoring rule versions"],
-                    "spans_version_boundary": true
+                    "spans_version_boundary": true,
+                    "events": []
                   }
                 ]
               }

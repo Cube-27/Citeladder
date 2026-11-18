@@ -5,6 +5,7 @@ import { ChartFrame, ChartKey, ChartTable, ChartTipSheet } from '@/components/ui
 import {
   AXIS_TEXT,
   EndLabels,
+  EventLegend,
   EventTicks,
   GapBands,
   LABEL_CHAR_WIDTH,
@@ -16,6 +17,7 @@ import {
   gapBands,
   placeEndLabels,
   useSeriesTones,
+  type EventKind,
   type MarkerShape,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
@@ -56,7 +58,7 @@ export type TrendSeries = {
 };
 
 /** Something that happened at a moment: an ink tick on the time axis with its flag. */
-export type TrendEvent = { key: string; timestamp: number; label: string };
+export type TrendEvent = { key: string; timestamp: number; label: string; kind?: EventKind };
 
 type Line = {
   name: string;
@@ -120,6 +122,7 @@ export function StepChart({
   format = yFormat,
   legend = true,
   eventsLabel,
+  eventLegend = false,
   you = true,
 }: Readonly<{
   /** The first line, one entry per point; its labels and timestamps place every line. */
@@ -142,6 +145,8 @@ export function StepChart({
   legend?: boolean;
   /** The key's name for the event ticks, e.g. "Marked implemented". */
   eventsLabel?: string;
+  /** List the events in words under the plot rather than label them on it. */
+  eventLegend?: boolean;
   /** The first line is your brand (the accent); false draws it as the first rival. */
   you?: boolean;
 }>) {
@@ -264,6 +269,7 @@ export function StepChart({
             fillId={fillId}
             endLabels={endLabels}
             events={placed}
+            eventLegend={eventLegend}
           />
           <StepChartTip
             data={data}
@@ -275,6 +281,7 @@ export function StepChart({
             shown={shown}
           />
         </div>
+        <EventLegend events={placed} shown={eventLegend} />
       </div>
       <StepChartTable
         label={label}
@@ -477,6 +484,7 @@ function StepPlot({
   fillId,
   endLabels,
   events,
+  eventLegend,
 }: Readonly<{
   data: readonly TrendPoint[];
   lines: readonly Line[];
@@ -488,6 +496,7 @@ function StepPlot({
   fillId: string;
   endLabels: ReturnType<typeof placeEndLabels>;
   events: ReturnType<typeof placedEvents>;
+  eventLegend: boolean;
 }>) {
   const breaks = data.map((point) => point.breakBefore === true);
   const bottom = scale.padTop + scale.plotHeight;
@@ -559,7 +568,7 @@ function StepPlot({
           />
         ) : null,
       )}
-      <EventTicks events={events} bottom={bottom} labelled={events.length <= 3} />
+      <EventTicks events={events} top={scale.padTop} bottom={bottom} legend={eventLegend} />
       {active === null ? null : (
         <line
           x1={Math.round(scale.x(active)) + 0.5}
@@ -607,7 +616,7 @@ function placedEvents(
   return events.flatMap((event) => {
     const offset = event.timestamp - first;
     if (!Number.isFinite(offset) || offset < 0 || offset > span) return [];
-    return [{ key: event.key, label: event.label, x: scale.xAt(offset / span) }];
+    return [{ key: event.key, label: event.label, kind: event.kind, x: scale.xAt(offset / span) }];
   });
 }
 

@@ -14,6 +14,7 @@ import {
   modelProvenanceFor,
   type ModelProvenance,
 } from '../analysis/provenance.ts';
+import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { storedInstant, timestamptz, utcTextOf } from '../db/timestamps.ts';
@@ -196,6 +197,7 @@ export type TrendSource = {
   transportModel: string | null;
   retrievalEnabled: boolean | null;
   modelProvenance: ModelProvenance[];
+  panelHash: string | null;
   analyzerVersion: string;
   scoringRuleVersion: string;
   totalCompleted: number;
@@ -234,6 +236,7 @@ export function trendSource(
     transportModel: sourceModel(run.provenance, engine),
     retrievalEnabled: auditFrozenRetrievalEnabled(run.configuration),
     modelProvenance: run.provenance,
+    panelHash: readFrozenConfiguration(run.configuration).panel_hash ?? null,
     analyzerVersion: run.analyzerVersion,
     scoringRuleVersion: run.scoringRuleVersion,
     totalCompleted: metricCount(metrics.total_completed),

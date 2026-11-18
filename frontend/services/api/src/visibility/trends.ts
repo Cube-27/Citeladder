@@ -17,6 +17,7 @@ import {
   type TrendSource,
 } from './runs.ts';
 import { TrendQueryError, validateEngineAndRange, validateCohort } from './selection.ts';
+import { withTrendEvents } from './trend-events.ts';
 import { bucketPoints, bucketStart, rawPoint, type TrendPoint } from './trend-folding.ts';
 
 const visibility = policy.visibility;
@@ -103,5 +104,5 @@ export async function getVisibilityTrends(
   ).slice(-visibility.trend_max_points);
   const marks = await rankingMarks(db, scope);
   for (const point of points) applyMarks(point.rankings, marks);
-  return points;
+  return withTrendEvents(db, scope, sources, points);
 }

@@ -209,7 +209,7 @@ describe('StepChart', () => {
     expect(container.querySelector('[data-trend-line="rival-1"]')).not.toBeNull();
   });
 
-  it('ticks only the events inside the plotted span and lists them with method changes', () => {
+  it('ticks the events inside the plotted span, one counted marker per moment, and lists them', () => {
     const day = (date: string) => new Date(`${date}T00:00:00Z`).getTime();
     const { container } = render(
       <StepChart
@@ -225,11 +225,15 @@ describe('StepChart', () => {
         ]}
         events={[
           { key: 'inside', timestamp: day('2026-03-05'), label: 'Implemented: reviews page' },
+          { key: 'model', timestamp: day('2026-03-05'), label: 'Model changed', kind: 'model' },
           { key: 'before', timestamp: day('2026-02-01'), label: 'Implemented: old page' },
         ]}
+        eventLegend
       />,
     );
-    expect(container.querySelectorAll('[data-event-marker]')).toHaveLength(1);
+    expect(
+      [...container.querySelectorAll('[data-event-marker]')].map((marker) => marker.textContent),
+    ).toEqual(['2']);
     expect(
       within(screen.getByRole('list', { name: 'Mention rate: marked' }))
         .getAllByRole('listitem')
@@ -237,6 +241,7 @@ describe('StepChart', () => {
     ).toEqual([
       'Method changed at 15 Mar: Scoring rule scoring-v2 applied',
       'Implemented: reviews page',
+      'Model changed',
     ]);
   });
 

@@ -18,6 +18,7 @@ function source(metrics: Record<string, unknown>, completed: number): TrendSourc
     transportModel: 'model-a',
     retrievalEnabled: true,
     modelProvenance: [],
+    panelHash: null,
     analyzerVersion: 'v1',
     scoringRuleVersion: 'v1',
     totalCompleted: completed,

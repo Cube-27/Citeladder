@@ -17,10 +17,12 @@ import type {
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { sentimentReading } from '@/lib/visibility/perception';
 import { brandStanding, orderByVisibility, standingHeadline } from '@/lib/visibility/ranking';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   toChartPoints,
   toCompetitorSeries,
   toNamedChartPoints,
+  toTrendEvents,
   trendAxis,
 } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
@@ -267,6 +269,7 @@ function HistoryLineChart({
 }: Omit<TrendBodyProps, 'query'> &
   Readonly<{ points: readonly VisibilityTrendPoint[]; busy: boolean }>) {
   const timeZone = useDisplayTimeZone();
+  const { label: engineLabel } = useEngineCatalog();
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
   // Focusing the tracked brand is its OWN series, which the projection
@@ -288,6 +291,7 @@ function HistoryLineChart({
     label: `${point.dateLabel} · ${axis.format(point.value)}`,
     axisLabel: point.label,
   }));
+  const events = toTrendEvents(points, { timeZone, engineLabel });
   return (
     <Stack aria-busy={busy}>
       <StepChart
@@ -295,6 +299,8 @@ function HistoryLineChart({
         name={focused ?? 'You'}
         data={chartPoints}
         series={competitors.map((line) => ({ ...line, values: line.values.map(axis.plot) }))}
+        events={events}
+        eventLegend
         yMin={axis.yMin}
         yMax={axis.yMax}
         yFormat={axis.tick}
@@ -306,6 +312,9 @@ function HistoryLineChart({
           : ''}
         A line breaks where two runs are not comparable, so a run with no comparable run beside it
         shows as a lone mark.
+        {events.some((event) => event.kind === 'action')
+          ? ' A marker shows when work went live, not that it changed these rates.'
+          : ''}
       </p>
     </Stack>
   );

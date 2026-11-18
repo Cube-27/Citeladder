@@ -111,7 +111,9 @@ export function ChartKey({
       ))}
       {eventsLabel ? (
         <li className={item}>
-          <span aria-hidden className="bg-ink inline-block h-3 w-px shrink-0" />
+          <svg aria-hidden viewBox="0 0 10 10" className="size-2.5 shrink-0">
+            <path d="M5 0l5 5-5 5-5-5z" className="fill-positive" />
+          </svg>
           {eventsLabel}
         </li>
       ) : null}

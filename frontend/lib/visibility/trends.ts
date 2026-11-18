@@ -8,13 +8,14 @@
  * projects persisted values for display (invariant 7). Average position stays
  * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
-import type { TrendPoint, TrendSeries } from '@/components/ui/step-chart';
-import type { VisibilityTrendPoint } from '@citeladder/contracts';
+import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
+import type { VisibilityTrendEvent, VisibilityTrendPoint } from '@citeladder/contracts';
 import {
   formatDisplayDate,
   formatDisplayShortDate,
   formatShortDate,
   formatWindowDate,
+  pluralCount,
 } from '@/lib/format';
 import { formatPositionExact, formatWholePercent } from '@/lib/visibility/dashboard';
 
@@ -245,4 +246,55 @@ export function toCompetitorSeries(
       return row ? rankingMetricValue(row, metric) : null;
     }),
   }));
+}
+
+const EVENT_KIND = {
+  prompt_panel: 'panel',
+  model_change: 'model',
+  action_live: 'action',
+} as const satisfies Record<VisibilityTrendEvent['kind'], TrendEvent['kind']>;
+
+/** "Prompt panel: 12 prompts added, 2 archived": the noun once, on the first count. */
+function panelText(event: Extract<VisibilityTrendEvent, { kind: 'prompt_panel' }>): string {
+  const counts = (
+    [
+      ['added', event.added],
+      ['archived', event.archived],
+      ['removed', event.removed],
+    ] as const
+  ).filter(([, count]) => count > 0);
+  const parts = counts.map(([verb, count], index) =>
+    index === 0 ? `${pluralCount(count, 'prompt')} ${verb}` : `${count} ${verb}`,
+  );
+  return `Prompt panel: ${parts.join(', ')}`;
+}
+
+function eventText(event: VisibilityTrendEvent, engineLabel: (key: string) => string): string {
+  switch (event.kind) {
+    case 'prompt_panel':
+      return panelText(event);
+    case 'model_change':
+      return `${engineLabel(event.logical_engine)} model changed: ${event.from_model} → ${event.to_model}`;
+    case 'action_live':
+      return `Action live: ${event.title}`;
+    default: {
+      const unhandled: never = event;
+      return unhandled;
+    }
+  }
+}
+
+/** Each point's events as chart markers at that point, labelled "<run date> · <what changed>". */
+export function toTrendEvents(
+  points: readonly VisibilityTrendPoint[],
+  { timeZone, engineLabel }: Readonly<{ timeZone: string; engineLabel: (key: string) => string }>,
+): TrendEvent[] {
+  return points.flatMap((point) =>
+    point.events.map((event, index) => ({
+      key: `${point.completed_at}:${index}`,
+      timestamp: new Date(point.completed_at).getTime(),
+      kind: EVENT_KIND[event.kind],
+      label: `${pointDates(point, timeZone).label} · ${eventText(event, engineLabel)}`,
+    })),
+  );
 }

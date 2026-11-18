@@ -200,32 +200,81 @@ export function GapBands({
   );
 }
 
-/** An event: a solid ink tick on the time axis with its flag and, when room allows, its label. */
+/** What an event marks: the prompt panel, an engine's model, or work that went live. */
+export type EventKind = 'panel' | 'model' | 'action';
+
+const EVENT_FILL: Record<EventKind, string> = {
+  panel: 'fill-ink-2',
+  model: 'fill-warning',
+  action: 'fill-positive',
+};
+
+type PlacedEvent = Readonly<{ key: string; label: string; x: number; kind?: EventKind }>;
+
+/** Events at one place on the axis share one marker; mixed kinds mark in ink. */
+function groupedEvents(events: readonly PlacedEvent[]) {
+  const groups = new Map<number, PlacedEvent[]>();
+  for (const event of events) groups.set(event.x, [...(groups.get(event.x) ?? []), event]);
+  return [...groups].map(([x, members]) => {
+    const kinds = new Set(members.map((event) => event.kind ?? 'action'));
+    const [only] = kinds;
+    return {
+      x,
+      key: members.map((event) => event.key).join('|'),
+      label: members.map((event) => event.label).join('; '),
+      count: members.length,
+      fill: kinds.size === 1 && only ? EVENT_FILL[only] : 'fill-ink',
+    };
+  });
+}
+
+/** A diamond centred on (x, y), half `r` across. */
+const diamond = (x: number, y: number, r: number) =>
+  `M${x} ${y - r}l${r} ${r}-${r} ${r}-${r}-${r}z`;
+
+/**
+ * An event: a dashed tick across the plot with a diamond at its top in its
+ * kind's colour, a count where several share a run and, when room allows and
+ * no legend lists them, its label.
+ */
 export function EventTicks({
   events,
+  top,
   bottom,
-  labelled,
+  legend,
 }: Readonly<{
-  events: readonly Readonly<{ key: string; label: string; x: number }>[];
+  events: readonly PlacedEvent[];
+  top: number;
   bottom: number;
-  labelled: boolean;
+  legend: boolean;
 }>) {
+  const labelled = !legend && events.length <= 3;
   return (
     <g data-event-ticks="">
-      {events.map((event) => (
+      {groupedEvents(events).map((event) => (
         <g key={event.key} data-event-marker="">
           <line
             x1={event.x}
             x2={event.x}
-            y1={bottom - 16}
+            y1={top}
             y2={bottom}
-            strokeWidth={1.5}
-            className="stroke-ink"
+            strokeDasharray="2 3"
+            className="stroke-control-line"
           />
-          <rect x={event.x} y={bottom - 16} width={8} height={5} className="fill-ink" />
+          <path d={diamond(event.x, top - 6, 5)} className={event.fill} />
+          {event.count > 1 ? (
+            <text
+              x={event.x + 8}
+              y={top - 6}
+              dominantBaseline="middle"
+              className="fill-ink type-caption tabular-nums"
+            >
+              {event.count}
+            </text>
+          ) : null}
           {labelled ? (
             <text
-              x={event.x + 12}
+              x={event.x + 8}
               y={bottom - 12}
               dominantBaseline="middle"
               className="fill-ink type-caption"
@@ -236,6 +285,26 @@ export function EventTicks({
         </g>
       ))}
     </g>
+  );
+}
+
+/** A chart's events in words under the plot, one "date · label" each with its diamond. */
+export function EventLegend({
+  events,
+  shown,
+}: Readonly<{ events: readonly PlacedEvent[]; shown: boolean }>) {
+  if (!shown || !events.length) return null;
+  return (
+    <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
+      {events.map((event) => (
+        <li key={event.key} className="type-caption inline-flex min-w-0 items-center gap-2">
+          <svg aria-hidden viewBox="0 0 10 10" className="size-2.5 shrink-0">
+            <path d={diamond(5, 5, 5)} className={EVENT_FILL[event.kind ?? 'action']} />
+          </svg>
+          <span className="min-w-0">{event.label}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
