@@ -15,7 +15,7 @@ GET /prompt-sets/{prompt_set_id}/generation-runs | List prompt generation runs |
 GET /prompts | List prompts | Lists the project’s prompts, one page at a time. Filter by prompt set, topic or status. Each prompt carries its latest measurement, which is measured, not measured or unavailable.
 GET /topics | List topics | Lists the topics that organise the project’s prompts, including nested topics.
 GET /competitors | List competitors | Lists the competitors the project tracks, with the names, aliases and domains used to recognise them in answers.
-GET /competitor-suggestions | List competitor suggestions | Lists companies that AI answers mentioned alongside the brand and that are not tracked competitors yet. Accept one to start tracking it.
+GET /competitor-suggestions | List competitor suggestions | Lists companies that are not tracked competitors yet, found by a domain AI answers cited (kind cited_domain) or a name they used (kind named_in_answers), one per domain or name. Accept one to start tracking it, or reject it so it is never suggested again.
 GET /audits | List audits | Lists the project’s audits, newest first, one page at a time.
 GET /audits/{audit_id} | Get an audit | Returns one audit with its status and progress. A launched audit is queued and runs on its own, so poll this to see it finish.
 POST /audits/estimate | Estimate an audit | Returns the number of answers an audit would ask for and its maximum attempt count, without creating anything. Pass the maximum as max_attempts when launching to cap the cost. It needs only the read scope.
@@ -58,7 +58,8 @@ DELETE /topics/{topic_id} | Delete a topic | Deletes a topic. Its prompts are ke
 POST /competitors | Add a competitor | Starts tracking a competitor by name, aliases and domains, and returns it.{key}
 PATCH /competitors/{competitor_id} | Update a competitor | Changes a competitor’s name, aliases or domains. Send only the fields to change.
 DELETE /competitors/{competitor_id} | Remove a competitor | Stops tracking a competitor. Answers already recorded keep what they found.
-POST /competitor-suggestions/{candidate_id}/accept | Accept a competitor suggestion | Turns a suggested company into a tracked competitor and returns the competitor.{key}
+POST /competitor-suggestions/{candidate_id}/accept | Accept a competitor suggestion | Turns a suggested company into a tracked competitor and returns the competitor. A suggestion already rejected answers 409.{key}
+POST /competitor-suggestions/{candidate_id}/reject | Reject a competitor suggestion | Dismisses a suggested company and returns the suggestion as rejected. Later audits never suggest that domain or name again. A suggestion already accepted answers 409.{key}
 POST /audits | Launch an audit | Queues an audit of a prompt set, or of chosen prompts, on the engines you name, and returns the created audits. Each recorded answer spends one prompt run; set max_attempts to cap the spend, and estimate first with the estimate operation.{key}
 POST /audits/{audit_id}/cancel | Cancel an audit | Stops an audit that has not finished and returns it. Answers already recorded are kept.{key}
 POST /audit-schedules | Create an audit schedule | Creates a schedule that launches audits of a prompt set on a cadence and returns it.{key}

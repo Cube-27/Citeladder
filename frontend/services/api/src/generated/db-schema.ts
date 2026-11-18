@@ -511,6 +511,18 @@ export interface AnswerPerceptions {
   workspace_id: string;
 }
 
+export interface AnswerUntrackedNames {
+  analysis_id: string;
+  audit_id: string;
+  created_at: Timestamp;
+  id: string;
+  name: string;
+  name_key: string;
+  perception_id: string;
+  project_id: string;
+  workspace_id: string;
+}
+
 export interface ApiIdempotency {
   api_key_id: string;
   created_at: Timestamp;
@@ -2092,12 +2104,18 @@ export interface MonitoredSiteUrls {
 export interface ObservedEntityCandidates {
   analyzer_version: string;
   audit_id: string;
+  citation_count: number | null;
   created_at: Timestamp;
-  domain: string;
+  decided_at: Timestamp | null;
+  decided_by_user_id: string | null;
+  domain: string | null;
   engine_count: number;
+  engine_total: number | null;
   id: string;
+  kind: string;
   market_relevant: boolean;
   name: string;
+  name_key: string | null;
   project_id: string;
   prompt_count: number;
   qualification_reason: string;
@@ -3683,6 +3701,7 @@ export interface DB {
   answer_ad_observations: AnswerAdObservations;
   answer_claims: AnswerClaims;
   answer_perceptions: AnswerPerceptions;
+  answer_untracked_names: AnswerUntrackedNames;
   api_idempotency: ApiIdempotency;
   api_keys: ApiKeys;
   audit_answer_aggregates: AuditAnswerAggregates;

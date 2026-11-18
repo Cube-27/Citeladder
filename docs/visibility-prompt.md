@@ -933,6 +933,9 @@ A URL's brand list is co-occurrence in the answers that cited it: mentions are
 persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions stay
 on Competitors until accepted rather than becoming measurement evidence automatically.
+A suggestion is a repeatedly cited domain or an untracked name the perception call
+labelled (AV-11), suggested past the `observed_competitors.named` thresholds in
+`config/audits.json`; a rejected domain or name is never suggested again.
 
 Evidence-backed Opportunity sorting and a Trends summary are not planned
 ([decision BL10](decisions.md#backlog-closure)).

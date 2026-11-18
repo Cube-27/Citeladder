@@ -3,7 +3,7 @@ import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
 import type { ProjectScope } from '../projects/brand-profile.ts';
-import { acceptSuggestion as acceptOwnedSuggestion } from '../projects/competitor-suggestions.ts';
+import * as suggestions from '../projects/competitor-suggestions.ts';
 import * as competitors from '../projects/competitors.ts';
 import { permission, type Authorized } from './permission.ts';
 
@@ -13,6 +13,10 @@ export type CompetitorWriter = Authorized<typeof COMPETITORS_WRITE>;
 const scopeOf = (actor: CompetitorWriter, projectId: string): ProjectScope => ({
   workspaceId: actor.workspaceId,
   projectId,
+});
+const decisionOf = (actor: CompetitorWriter, projectId: string) => ({
+  ...scopeOf(actor, projectId),
+  userId: actor.userId,
 });
 
 export function addCompetitor(
@@ -59,5 +63,14 @@ export function acceptSuggestion(
   projectId: string,
   candidateId: string,
 ) {
-  return acceptOwnedSuggestion(db, scopeOf(actor, projectId), candidateId);
+  return suggestions.acceptSuggestion(db, decisionOf(actor, projectId), candidateId);
+}
+
+export function rejectSuggestion(
+  db: Database,
+  actor: CompetitorWriter,
+  projectId: string,
+  candidateId: string,
+) {
+  return suggestions.rejectSuggestion(db, decisionOf(actor, projectId), candidateId);
 }

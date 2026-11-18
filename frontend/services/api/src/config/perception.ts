@@ -78,6 +78,8 @@ const schema = z.strictObject({
   }),
   system_template: z.string().trim().min(1),
   user_template: z.string().trim().min(1),
+  max_untracked_names_per_answer: positive,
+  max_untracked_name_chars: positive,
   fact_check: factCheck,
 });
 

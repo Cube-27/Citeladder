@@ -306,21 +306,34 @@ export const promptHistorySchema = responseObject({
   latest: promptMetricItemSchema.nullable(),
 });
 
-export const observedCompetitorSchema = responseObject({
+const observedCompetitorFields = {
   id: uuid(),
   audit_id: uuid(),
   name: z.string(),
-  domain: z.string(),
   qualification_reason: z.string(),
   prompt_count: z.number().int(),
   engine_count: z.number().int(),
+  /** The engines the run asked; null on a suggestion recorded before the total was. */
+  engine_total: z.number().int().nullable(),
   market_relevant: z.boolean(),
   analyzer_version: z.string(),
   source_analysis_ids: z.array(z.string()),
   source_artifact_ids: z.array(z.string()),
   status: z.string(),
   created_at: z.string(),
-});
+};
+
+/** A suggestion is a domain the answers cited, or a business name they mentioned. */
+export const observedCompetitorSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    ...observedCompetitorFields,
+    kind: z.literal('cited_domain'),
+    domain: z.string(),
+    /** Null on a suggestion recorded before citations were counted. */
+    citation_count: z.number().int().nullable(),
+  }),
+  responseObject({ ...observedCompetitorFields, kind: z.literal('named_in_answers') }),
+]);
 
 const discoveryProfileSchema = responseObject({
   description: z.string(),

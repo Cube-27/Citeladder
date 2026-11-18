@@ -12,6 +12,7 @@ import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { answerPerception } from '../src/perception/executor.ts';
+import { rejectSuggestion } from '../src/projects/competitor-suggestions.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -46,12 +47,20 @@ afterAll(async () => {
 });
 
 /** A succeeded execution analysed the way the result transaction analyses it. */
-async function analysed(owner: Tenant, auditId: string, answerText: string) {
+async function analysed(
+  owner: Tenant,
+  auditId: string,
+  answerText: string,
+  at: { engine?: string; promptIndex?: number } = {},
+) {
+  const engine = at.engine ?? 'chatgpt';
   const { taskId } = await fixtures.execution(owner, {
     auditId,
     answerText,
     promptText: 'best tools?',
     analysis: null,
+    engine,
+    ...(at.promptIndex === undefined ? {} : { promptIndex: at.promptIndex }),
   });
   const artifactId = randomUUID();
   await db
@@ -61,7 +70,7 @@ async function analysed(owner: Tenant, auditId: string, answerText: string) {
       workspace_id: owner.workspaceId,
       audit_id: auditId,
       task_id: taskId,
-      logical_engine: 'chatgpt',
+      logical_engine: engine,
       transport_provider: 'test',
       transport_model: 'test-model',
       answer_text: answerText,
@@ -138,6 +147,7 @@ const goodOutput = JSON.stringify({
       aspects: [{ theme: 'support', polarity: 'negative', quote: 'Rival support is slow' }],
     },
   ],
+  untracked_businesses: [],
 });
 
 async function drain(
@@ -371,5 +381,119 @@ describe('perception executor', () => {
     expect(gateway.fetch).not.toHaveBeenCalled();
     expect(await perceptions(tenant.workspaceId)).toEqual([]);
     expect((await queued(attacker.workspaceId)).map((row) => row.status)).toEqual(['failed']);
+  });
+});
+
+describe('untracked business names', () => {
+  const NAMING = 'Acme is the best value pick. Ledgerly and Rival Co are cheaper.';
+  const naming = (names: unknown) =>
+    JSON.stringify({
+      entities: [
+        { entity_id: 'brand:acme', label: 'positive', confidence: 0.9, aspects: [] },
+        { entity_id: 'competitor:rival', label: 'neutral', confidence: 0.9, aspects: [] },
+      ],
+      untracked_businesses: names,
+    });
+  const labelled = naming(['Ledgerly', ' ledgerly ', 'Rival Co', 'Invented Corp', 'x'.repeat(81)]);
+
+  const candidates = (auditId: string) =>
+    db
+      .selectFrom('observed_entity_candidates')
+      .select(['id', 'kind', 'name', 'name_key', 'domain', 'prompt_count', 'engine_count'])
+      .select(['engine_total', 'source_analysis_ids', 'status'])
+      .where('audit_id', '=', auditId)
+      .execute();
+
+  /** One answer at (engine, prompt), perceived with the labelled names. */
+  async function perceive(auditId: string, engine: string, promptIndex: number) {
+    const { analysisId } = await analysed(tenant, auditId, NAMING, { engine, promptIndex });
+    await drain(tenant, fakeGateway([labelled]).factory);
+    return analysisId;
+  }
+
+  it('keeps verified untracked names per answer and suggests one past the prompt and engine counts', async () => {
+    const auditId = await fixtures.audit(tenant, { configuration });
+    const first = await perceive(auditId, 'chatgpt', 0);
+    const second = await perceive(auditId, 'perplexity', 1);
+    const [perception] = await perceptions(tenant.workspaceId);
+    // Dedupe is by normalised name; tracked names and aliases, names absent
+    // from the passages and overlong names are dropped and counted.
+    expect(perception?.drop_counts).toEqual({
+      name_duplicate: 1,
+      name_tracked: 1,
+      name_not_found: 1,
+      name_too_long: 1,
+    });
+    const observed = await db
+      .selectFrom('answer_untracked_names')
+      .select(['analysis_id', 'name', 'name_key'])
+      .where('audit_id', '=', auditId)
+      .orderBy('created_at')
+      .execute();
+    expect(observed).toEqual([
+      { analysis_id: first, name: 'Ledgerly', name_key: 'ledgerly' },
+      { analysis_id: second, name: 'Ledgerly', name_key: 'ledgerly' },
+    ]);
+    // Two prompts are below the configured three.
+    expect(await candidates(auditId)).toEqual([]);
+
+    const third = await perceive(auditId, 'chatgpt', 2);
+    const [candidate] = await candidates(auditId);
+    expect(candidate).toEqual({
+      id: expect.any(String),
+      kind: 'named_in_answers',
+      name: 'Ledgerly',
+      name_key: 'ledgerly',
+      domain: null,
+      prompt_count: 3,
+      engine_count: 2,
+      engine_total: 2,
+      source_analysis_ids: [first, second, third].sort(),
+      status: 'pending',
+    });
+
+    // A rejected name is never suggested again, whatever a later audit sees.
+    await rejectSuggestion(
+      db,
+      { workspaceId: tenant.workspaceId, projectId: tenant.projectId, userId: tenant.userId },
+      candidate!.id,
+    );
+    const later = await fixtures.audit(tenant, { configuration });
+    for (const [engine, prompt] of [
+      ['chatgpt', 0],
+      ['perplexity', 1],
+      ['gemini', 2],
+    ] as const)
+      await perceive(later, engine, prompt);
+    expect(
+      await db
+        .selectFrom('answer_untracked_names')
+        .select('id')
+        .where('audit_id', '=', later)
+        .execute(),
+    ).toHaveLength(3);
+    expect(await candidates(later)).toEqual([]);
+  });
+
+  it('reads a missing name list as unknown and a malformed one as unusable output', async () => {
+    const auditId = await fixtures.audit(tenant, { configuration });
+    await analysed(tenant, auditId, NAMING);
+    await drain(tenant, fakeGateway([naming(undefined)]).factory);
+    expect(await perceptions(tenant.workspaceId)).toEqual([
+      expect.objectContaining({ outcome: 'classified', drop_counts: { names_missing: 1 } }),
+    ]);
+
+    await analysed(tenant, auditId, `${NAMING} Again.`);
+    await drain(tenant, fakeGateway([naming('Ledgerly'), naming([7])]).factory);
+    expect((await perceptions(tenant.workspaceId)).map((row) => row.outcome).toSorted()).toEqual([
+      'classified',
+      'invalid_output',
+    ]);
+    const names = await db
+      .selectFrom('answer_untracked_names')
+      .select('id')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .execute();
+    expect(names).toEqual([]);
   });
 });

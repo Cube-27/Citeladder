@@ -76,6 +76,12 @@
       "x.com",
       "youtube.com"
     ],
+    "named": {
+      "analyzer_version": "observed-name-v1",
+      "min_distinct_prompts": 3,
+      "min_distinct_engines": 2,
+      "max_candidates_per_audit": 20
+    },
     "status_pending": "pending",
     "status_accepted": "accepted",
     "status_rejected": "rejected",

@@ -38,6 +38,9 @@ import {
   type ModelCall,
 } from './model-call.ts';
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
+import { untrackedNames, type UntrackedName } from './untracked-names.ts';
+import { trackedEntities } from '../analysis/entity-assessment.ts';
+import { refreshNamedCandidates } from '../analysis/observed-names.ts';
 import {
   validateClaims,
   validateOutput,
@@ -53,6 +56,7 @@ type Outcome =
       outcome: 'classified';
       entities: EntitySentiment[];
       claims: VerifiedClaim[];
+      names: UntrackedName[];
       drops: Record<string, number>;
     }
   | { outcome: 'no_mentions' }
@@ -155,6 +159,29 @@ function persist(
           })),
         )
         .execute();
+    if (outcome.names.length) {
+      await db
+        .insertInto('answer_untracked_names')
+        .values(
+          outcome.names.map((name) => ({
+            id: randomUUID(),
+            workspace_id: task.workspace_id,
+            project_id: projectId,
+            audit_id: subject.audit_id,
+            perception_id: id,
+            analysis_id: subject.analysis_id,
+            name: name.name,
+            name_key: name.name_key,
+            created_at: new Date(),
+          })),
+        )
+        .execute();
+      await refreshNamedCandidates(db, {
+        workspaceId: task.workspace_id,
+        projectId,
+        auditId: subject.audit_id,
+      });
+    }
     if (!outcome.claims.length) return;
     await db
       .insertInto('answer_claims')
@@ -187,13 +214,20 @@ function persist(
   };
 }
 
-/** One classification; claims ride the same call only for a fact-checked audit. */
+/**
+ * One classification; claims ride the same call only for a fact-checked audit.
+ * Untracked names ride every call and are checked against `tracked`.
+ */
 function classify(
   gateway: ModelGateway,
-  pkg: PerceptionPackage,
-  settings: PerceptionPolicy,
-  claimsRequest: FactCheckPolicy | null,
+  input: {
+    pkg: PerceptionPackage;
+    settings: PerceptionPolicy;
+    claimsRequest: FactCheckPolicy | null;
+    tracked: Parameters<typeof untrackedNames>[0]['tracked'];
+  },
 ) {
+  const { pkg, settings, claimsRequest, tracked } = input;
   const { system, user } = perceptionPrompt(pkg, settings, claimsRequest);
   const request = { system, user, inputHash: packageHash(pkg), maxAttempts: settings.max_attempts };
   const classified = (
@@ -201,11 +235,18 @@ function classify(
     claims: ReturnType<typeof validateClaims>,
   ): Outcome => {
     const validated = validateOutput(pkg, value, settings);
+    const names = untrackedNames({
+      pkg,
+      names: value.untracked_businesses,
+      tracked,
+      policy: settings,
+    });
     return {
       outcome: 'classified',
       entities: validated.entities,
       claims: claims.claims,
-      drops: { ...validated.drops, ...claims.drops },
+      names: names.names ?? [],
+      drops: { ...validated.drops, ...claims.drops, ...names.drops },
     };
   };
   // Without claims the plain schema is used, so plain perception is unchanged.
@@ -264,12 +305,12 @@ export function answerPerception(
     };
     if (!pkg.entities.length) return settle({ outcome: 'no_mentions' });
     await checkCancelled('perception_model_call');
-    const { call, outcome } = await classify(
-      gateway,
+    const { call, outcome } = await classify(gateway, {
       pkg,
       settings,
-      factCheck ? settings.fact_check : null,
-    );
+      claimsRequest: factCheck ? settings.fact_check : null,
+      tracked: trackedEntities(config),
+    });
     return settle(outcome, call);
   };
 }

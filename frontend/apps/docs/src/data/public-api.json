@@ -4148,78 +4148,201 @@
         "additionalProperties": false
       },
       "ObservedCompetitor": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "audit_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "qualification_reason": {
+                "type": "string"
+              },
+              "prompt_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "engine_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "engine_total": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "market_relevant": {
+                "type": "boolean"
+              },
+              "analyzer_version": {
+                "type": "string"
+              },
+              "source_analysis_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source_artifact_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "status": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "const": "cited_domain"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "citation_count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "audit_id",
+              "name",
+              "qualification_reason",
+              "prompt_count",
+              "engine_count",
+              "engine_total",
+              "market_relevant",
+              "analyzer_version",
+              "source_analysis_ids",
+              "source_artifact_ids",
+              "status",
+              "created_at",
+              "kind",
+              "domain",
+              "citation_count"
+            ],
+            "additionalProperties": false
           },
-          "audit_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "name": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "qualification_reason": {
-            "type": "string"
-          },
-          "prompt_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "engine_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "market_relevant": {
-            "type": "boolean"
-          },
-          "analyzer_version": {
-            "type": "string"
-          },
-          "source_analysis_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "source_artifact_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "status": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string"
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "audit_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "qualification_reason": {
+                "type": "string"
+              },
+              "prompt_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "engine_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "engine_total": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "market_relevant": {
+                "type": "boolean"
+              },
+              "analyzer_version": {
+                "type": "string"
+              },
+              "source_analysis_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source_artifact_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "status": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "const": "named_in_answers"
+              }
+            },
+            "required": [
+              "id",
+              "audit_id",
+              "name",
+              "qualification_reason",
+              "prompt_count",
+              "engine_count",
+              "engine_total",
+              "market_relevant",
+              "analyzer_version",
+              "source_analysis_ids",
+              "source_artifact_ids",
+              "status",
+              "created_at",
+              "kind"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "id",
-          "audit_id",
-          "name",
-          "domain",
-          "qualification_reason",
-          "prompt_count",
-          "engine_count",
-          "market_relevant",
-          "analyzer_version",
-          "source_analysis_ids",
-          "source_artifact_ids",
-          "status",
-          "created_at"
-        ],
-        "additionalProperties": false
+        ]
       },
       "OfferingMap": {
         "type": "object",
@@ -14844,16 +14967,19 @@
                     "id": "00000000-0000-4000-8000-000000000001",
                     "audit_id": "00000000-0000-4000-8000-000000000002",
                     "name": "Example name",
-                    "domain": "example.com",
                     "qualification_reason": "Example qualification reason",
                     "prompt_count": 1,
                     "engine_count": 1,
+                    "engine_total": null,
                     "market_relevant": true,
                     "analyzer_version": "Example analyzer version",
                     "source_analysis_ids": ["Example source analysis ids"],
                     "source_artifact_ids": ["Example source artifact ids"],
                     "status": "Example status",
-                    "created_at": "2026-01-15T09:30:00.000Z"
+                    "created_at": "2026-01-15T09:30:00.000Z",
+                    "kind": "cited_domain",
+                    "domain": "example.com",
+                    "citation_count": null
                   }
                 ]
               }
@@ -14873,7 +14999,7 @@
           }
         ],
         "summary": "List competitor suggestions",
-        "description": "Lists companies that AI answers mentioned alongside the brand and that are not tracked competitors yet. Accept one to start tracking it.",
+        "description": "Lists companies that are not tracked competitors yet, found by a domain AI answers cited (kind cited_domain) or a name they used (kind named_in_answers), one per domain or name. Accept one to start tracking it, or reject it so it is never suggested again.",
         "x-citeladder-scope": "read"
       }
     },
@@ -14938,7 +15064,77 @@
           }
         ],
         "summary": "Accept a competitor suggestion",
-        "description": "Turns a suggested company into a tracked competitor and returns the competitor. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
+        "description": "Turns a suggested company into a tracked competitor and returns the competitor. A suggestion already rejected answers 409. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
+        "x-citeladder-scope": "competitors:write"
+      }
+    },
+    "/v1/projects/{project_id}/competitor-suggestions/{candidate_id}/reject": {
+      "post": {
+        "tags": ["competitor-suggestions"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedCompetitor"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000001",
+                  "audit_id": "00000000-0000-4000-8000-000000000002",
+                  "name": "Example name",
+                  "qualification_reason": "Example qualification reason",
+                  "prompt_count": 1,
+                  "engine_count": 1,
+                  "engine_total": null,
+                  "market_relevant": true,
+                  "analyzer_version": "Example analyzer version",
+                  "source_analysis_ids": ["Example source analysis ids"],
+                  "source_artifact_ids": ["Example source artifact ids"],
+                  "status": "Example status",
+                  "created_at": "2026-01-15T09:30:00.000Z",
+                  "kind": "cited_domain",
+                  "domain": "example.com",
+                  "citation_count": null
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "summary": "Reject a competitor suggestion",
+        "description": "Dismisses a suggested company and returns the suggestion as rejected. Later audits never suggest that domain or name again. A suggestion already accepted answers 409. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "competitors:write"
       }
     },

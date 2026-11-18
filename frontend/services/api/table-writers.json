@@ -41,6 +41,7 @@
     "answer_ad_observations": ["src/analysis/ads.ts"],
     "answer_claims": ["src/perception/executor.ts"],
     "answer_perceptions": ["src/perception/executor.ts"],
+    "answer_untracked_names": ["src/perception/executor.ts"],
     "api_idempotency": ["src/public-api/idempotency.ts"],
     "api_keys": ["src/api-keys/keys.ts", "src/api-keys/revocation.ts"],
     "audit_answer_aggregates": ["src/visibility/source-aggregates.ts"],
