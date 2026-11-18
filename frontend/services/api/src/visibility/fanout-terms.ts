@@ -42,14 +42,18 @@ export async function queryBrands(
         .where('audit_id', 'in', auditIds)
         .execute()
     : [];
-  if (!rows.length) return () => null;
+  // Rows written before queries were counted whole (word terms) read as not counted.
+  const counted = rows.flatMap((row) => {
+    const parsed = storedQueriesSchema.safeParse(row.terms);
+    return parsed.success ? [parsed.data] : [];
+  });
+  if (!counted.length) return () => null;
   const named = new Map<string, Map<string, { kind: 'brand' | 'competitor'; name: string }>>();
-  for (const row of rows)
-    for (const entry of storedQueriesSchema.parse(row.terms)) {
-      const brands = named.get(entry.query) ?? new Map();
-      for (const brand of entry.brands) brands.set(`${brand.kind}\u0000${brand.name}`, brand);
-      named.set(entry.query, brands);
-    }
+  for (const entry of counted.flat()) {
+    const brands = named.get(entry.query) ?? new Map();
+    for (const brand of entry.brands) brands.set(`${brand.kind}\u0000${brand.name}`, brand);
+    named.set(entry.query, brands);
+  }
   const identities = await brandIdentities(db, selection);
   return (query) =>
     [...(named.get(query)?.values() ?? [])]

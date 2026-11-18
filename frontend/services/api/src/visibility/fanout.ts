@@ -1,6 +1,6 @@
 /** Selection-wide SQL tallies over fanout settled on each derived answer. */
 import type { visibilityFanoutSummarySchema } from '@citeladder/contracts/visibility-evidence';
-import { sql } from 'kysely';
+import { type RawBuilder, sql } from 'kysely';
 import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { storedInstant, utcTextOf } from '../db/timestamps.ts';
@@ -71,11 +71,7 @@ export async function getVisibilityFanout(
   };
   const { asOf, queryAfter, answerAfter } = fanoutPosition(options, filters);
   const previousId = await comparedRunId(db, selection);
-  // The previous comparable run under the same engine, topic, cohort and answer filters.
-  const previousScope = applyFilters(
-    evidenceScope(db, { ...selection, auditId: previousId ?? selection.auditId, auditIds: null }),
-    options.filters,
-  ).$if(previousId === null, (query) => query.where(sql<boolean>`false`));
+  const previousScope = previousAnswers(db, selection, previousId, options.filters);
   const base = db
     .with(
       (cte) => cte('answers').materialized(),
@@ -156,19 +152,8 @@ export async function getVisibilityFanout(
     .$if(Boolean(filters.search), (query) =>
       query.where(sql<boolean>`position(${filters.search} in lower(query)) > 0`),
     );
-  const top = options.order === 'top';
-  const queryPage = top
-    ? matched
-        .where('event_count', '>', 0)
-        .where(queryAfter)
-        .orderBy('event_count', 'desc')
-        .orderBy(sql`query collate "C"`)
-        .limit(options.limit + 1)
-    : matched
-        .where('change', options.order === 'rising' ? '>' : '<', 0)
-        .orderBy('change', options.order === 'rising' ? 'desc' : 'asc')
-        .orderBy(sql`query collate "C"`)
-        .limit(options.limit);
+  const page = pageOrder(options, queryAfter);
+  const queryPage = matched.where(page.keep).orderBy(page.order).limit(page.limit);
   const drillDown = options.query !== null;
   const answerPage = base
     .selectFrom('answers')
@@ -221,28 +206,81 @@ export async function getVisibilityFanout(
     ])
     .executeTakeFirstOrThrow();
   const { audit_ids: auditIds, ...totals } = summary;
-  const hasMore = drillDown
-    ? totals.answers.length > options.limit
-    : top && totals.items.length > options.limit;
   const items = totals.items.slice(0, options.limit);
   const answers = totals.answers.slice(0, options.limit);
-  const lastQuery = items.at(-1);
-  const lastAnswer = answers.at(-1);
-  let keys: string[] | null = null;
-  if (!drillDown && lastQuery) keys = [asOf, String(lastQuery.event_count), lastQuery.query];
-  else if (lastAnswer) keys = [asOf, lastAnswer.created_at, lastAnswer.id];
   // A falling query may live only in the previous run; its brands are that run's.
-  const brands = await queryBrands(
-    db,
-    selection,
-    previousId ? [...auditIds, previousId] : auditIds,
-  );
+  const brands = await queryBrands(db, selection, [
+    ...auditIds,
+    ...(previousId ? [previousId] : []),
+  ]);
   return {
     ...totals,
     compared: previousId !== null,
     items: items.map((item) => ({ ...item, brands: brands(item.query) })),
     // `id` and `created_at` only key the cursor; the contract does not carry them.
     answers: answers.map(({ id: _id, created_at: _createdAt, ...answer }) => answer),
-    next_cursor: hasMore && keys ? encodeKeysetCursor('fanout', filters, keys) : null,
+    next_cursor: nextCursor({ options, filters, asOf, totals, items, answers }),
   };
+}
+
+/** The previous comparable run's answers under the same engine, topic, cohort and answer filters. */
+function previousAnswers(
+  db: Database,
+  selection: RunSelection,
+  previousId: string | null,
+  filters: EvidenceFilters,
+) {
+  const scope = applyFilters(
+    evidenceScope(db, { ...selection, auditId: previousId ?? selection.auditId, auditIds: null }),
+    filters,
+  );
+  return previousId === null ? scope.where(sql<boolean>`false`) : scope;
+}
+
+/** Top pages by occurrences after the cursor; rising and falling are one page by share change. */
+function pageOrder(options: FanoutOptions, queryAfter: RawBuilder<boolean>) {
+  switch (options.order) {
+    case 'top':
+      return {
+        keep: sql<boolean>`event_count > 0 and ${queryAfter}`,
+        order: sql`event_count desc, query collate "C"`,
+        limit: options.limit + 1,
+      };
+    case 'rising':
+      return {
+        keep: sql<boolean>`change > 0`,
+        order: sql`change desc, query collate "C"`,
+        limit: options.limit,
+      };
+    case 'falling':
+      return {
+        keep: sql<boolean>`change < 0`,
+        order: sql`change asc, query collate "C"`,
+        limit: options.limit,
+      };
+    default: {
+      const unreachable: never = options.order;
+      return unreachable;
+    }
+  }
+}
+
+/** The cursor to the next page of queries (Top only) or of a query's answers, or null. */
+function nextCursor(input: {
+  options: FanoutOptions;
+  filters: Record<string, unknown>;
+  asOf: string;
+  totals: { items: unknown[]; answers: unknown[] };
+  items: readonly { event_count: number; query: string }[];
+  answers: readonly { created_at: string; id: string }[];
+}): string | null {
+  const { options, asOf } = input;
+  if (options.query !== null) {
+    const last = input.answers.at(-1);
+    if (input.totals.answers.length <= options.limit || !last) return null;
+    return encodeKeysetCursor('fanout', input.filters, [asOf, last.created_at, last.id]);
+  }
+  const last = input.items.at(-1);
+  if (options.order !== 'top' || input.totals.items.length <= options.limit || !last) return null;
+  return encodeKeysetCursor('fanout', input.filters, [asOf, String(last.event_count), last.query]);
 }

@@ -196,7 +196,6 @@ export function FanoutEvidence({
   // False until the server's counts land; the headline shows what the reader can see.
   const selectionWide = isSelectionWide(summary);
   const matched = summaryMatchesInput ? selectionMatchedQueries(summary) : null;
-  const top = view === 'top';
 
   // Pending, not merely loading: a read still waiting on its scope fetches
   // nothing and has no items, which is not "no searches recorded".
@@ -251,9 +250,7 @@ export function FanoutEvidence({
         // What the table holds closes the row: the counts, and what a search kept.
         status: (
           <>
-            {needle && matched != null ? (
-              <SearchScopeNote search={needle} matched={matched} />
-            ) : null}
+            <SearchScopeNote search={needle} matched={matched} />
             <span aria-busy={!summaryMatchesInput}>
               <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
             </span>
@@ -261,49 +258,75 @@ export function FanoutEvidence({
         ),
       }}
       columns={COLUMNS}
-      state={
-        top
-          ? visible.length === 0
-            ? noSearchMatchState(needle, matched)
-            : undefined
-          : movedState(view, queries)
-      }
-      pager={
-        top && unit > PAGE_SIZE
-          ? {
-              range: { from, to, total: unit, noun: GROUP_NOUNS[grouping] },
-              ...pageNumberControls(page, pageCount, setPage),
-            }
-          : undefined
-      }
+      state={tableState({ view, rows: visible.length, needle, matched, queries })}
+      pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
       footer={
         query.data?.truncated
           ? `Showing the newest ${limit} executions; narrow the filters to see the rest.`
           : null
       }
     >
-      {top
-        ? paged.map((group) => (
-            <SearchGroupRows
-              key={group.key}
-              group={group}
-              metrics={queries.byQuery}
-              failed={queries.isError}
-            />
-          ))
-        : queries.rows.map((row) => (
-            <QueryRow
-              key={row.query}
-              query={row.query}
-              engines={row.engines}
-              occurrences={row.event_count}
-              nested={false}
-            >
-              <QueryMetricCells row={row} failed={false} />
-            </QueryRow>
-          ))}
+      <FanoutRows view={view} groups={paged} queries={queries} />
     </DataTable>
   );
+}
+
+/** Top: the evidence rows with each query's server figures; Rising and Falling: the server's rows. */
+function FanoutRows({
+  view,
+  groups,
+  queries,
+}: Readonly<{
+  view: FanoutView;
+  groups: readonly SearchGroup[];
+  queries: ReturnType<typeof useFanoutQueries>;
+}>) {
+  if (view === 'top')
+    return groups.map((group) => (
+      <SearchGroupRows
+        key={group.key}
+        group={group}
+        metrics={queries.byQuery}
+        failed={queries.isError}
+      />
+    ));
+  return queries.rows.map((row) => (
+    <QueryRow
+      key={row.query}
+      query={row.query}
+      engines={row.engines}
+      occurrences={row.event_count}
+      nested={false}
+    >
+      <QueryMetricCells row={row} failed={false} />
+    </QueryRow>
+  ));
+}
+
+/** Top pages by row or group; Rising and Falling are one page. */
+function tablePager(
+  input: Pick<
+    ReturnType<typeof useSearchTable>,
+    'unit' | 'from' | 'to' | 'grouping' | 'page' | 'pageCount' | 'setPage'
+  > & { view: FanoutView },
+) {
+  if (input.view !== 'top' || input.unit <= PAGE_SIZE) return undefined;
+  return {
+    range: { from: input.from, to: input.to, total: input.unit, noun: GROUP_NOUNS[input.grouping] },
+    ...pageNumberControls(input.page, input.pageCount, input.setPage),
+  };
+}
+
+/** The table's state: Top's search-match empty state, or Rising and Falling's own. */
+function tableState(input: {
+  view: FanoutView;
+  rows: number;
+  needle: string;
+  matched: number | null;
+  queries: ReturnType<typeof useFanoutQueries>;
+}) {
+  if (input.view !== 'top') return movedState(input.view, input.queries);
+  return input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined;
 }
 
 /**

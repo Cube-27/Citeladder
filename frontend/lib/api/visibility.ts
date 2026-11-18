@@ -263,7 +263,7 @@ export const visibilityApi = {
       topic?: string;
       cohort?: string;
       prompt_id?: string;
-      outcome?: 'brand_absent' | 'uncited' | 'competitor_gap';
+      outcome?: string;
       competitor?: string;
       domain?: string;
       url?: string;

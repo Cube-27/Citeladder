@@ -22,7 +22,7 @@ export type FanoutScope = Readonly<{
   topic?: string;
   cohort?: string;
   prompt_id?: string;
-  outcome?: 'brand_absent' | 'uncited' | 'competitor_gap';
+  outcome?: string;
   competitor?: string;
   domain?: string;
   url?: string;
@@ -38,7 +38,7 @@ export type FanoutView = (typeof FANOUT_VIEWS)[number]['value'];
 /** The endpoint's largest page: the most searched queries a Top lookup covers. */
 const LOOKUP_LIMIT = 500;
 /** Rising and Falling each list this many queries, one page. */
-export const MOVED_LIMIT = 10;
+const MOVED_LIMIT = 10;
 
 export const METRIC_COLUMNS: readonly DataTableColumn[] = [
   { key: 'share', label: 'Share', width: 'figure', kind: 'number' },
