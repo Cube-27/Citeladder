@@ -20,12 +20,6 @@ supplied history is bounded working context. Facts the person gives in a chat
 count as confirmed for that chat; they never become reviewed company facts.
 Accepting something the Agent offered is a request to do it.
 
-## Model destination
-
-The Agent always uses the platform model gateway; there is no customer Agent
-model route ([B19](billing-decisions.md)). The serving providers are listed on
-the subprocessor page ([legal decisions](operations/legal-decisions.md), R15).
-
 ## Chats, runs and outputs
 
 The runtime lives in [`frontend/services/api/src/agent`](../frontend/services/api/src/agent/)
@@ -41,16 +35,12 @@ messages are append-only and a chat has at most one active run. A page chat
 first message and a `page_fetch` task instead of a run, refuses messages while
 the fetch is live, and the fetch queues the first turn only once the page is
 read, so a failed fetch is never charged; see
-[content optimization](content-optimization.md#what-ships-phase-2-page-documents).
+[content optimization](content-optimization.md#page-documents).
 The create response's `run` is then null and the chat read's `page_fetch`
 reports the fetch. Reads return
 persisted state and never execute a turn. The chat list pages by keyset cursor,
 can be narrowed to one Action's chats and searches titles and message content
 within the project.
-
-Idempotency keys are workspace-scoped and bound to the requester and the full
-request; a changed request or requester conflicts with
-`agent_idempotency_conflict`. An unavailable explicit context identifier returns 404; an incompatible target, 409.
 
 Admission checks workspace role, the Agent capability and a funding route, then
 freezes on the run the runtime/protocol versions, the skill catalog and tool
@@ -61,7 +51,7 @@ with `skills_changed` ("the agent was updated; send it again") before any model
 call.
 
 A chat holds any number of documents
-([decision](decisions.md#agent-chats-search-the-web-and-hold-several-documents)),
+([decision](decisions.md#agent-mcp-and-public-api)),
 numbered in creation order (`agent_outputs.number`, unique per chat) and named
 "Document N" to the model and the reader, never by ID. Each has its own kind
 and format, and any methodology may write in any chat. Agent saves and user
@@ -102,7 +92,7 @@ diagnosis (for an issue-group Action also its rule, URL count, first 50 URLs
 and reference snippet; with `action_url_ids`, at most 50 of its own URLs the
 user ticked), the diagnoses of up to five @-mentioned Actions, with
 `url_actions_reference` every Action on one URL, any Opportunity,
-Site Health, Demand or Keyword Research evidence the request named, an exact
+Site Health, Demand or Keyword research evidence the request named, an exact
 upstream output revision, and the project's versioned Agent instructions. The
 [context builder](../frontend/services/api/src/agent/context-adapter.ts) authorizes
 each identifier; missing optional evidence is recorded as an omission. Crawl
@@ -115,7 +105,7 @@ is the target page; the target carries a longer body excerpt
 reads its whole crawled copy.
 
 The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a native
-tool-calling loop ([decision](decisions.md#the-agent-uses-native-tool-calling)):
+tool-calling loop ([decision](decisions.md#agent-mcp-and-public-api)):
 the model answers in text or calls tools, and the turn ends when a response
 calls none. Its final text is the reply.
 
@@ -228,13 +218,9 @@ document's title and body, fenced blocks included: no deliverable carries a
 machine-readable submission, so Copy and Export never carry a CiteLadder ID.
 A UUID the person wrote, in a message of the chat, a paste attached to one,
 or typed into a document, is theirs (a form id in pasted HTML) and stays, so
-code they supplied is never corrupted. The UI
-groups sources in plain
-words (for example "Search Console query · 3") with links to the screen that
-shows them. The model names an Action by its exact title, never a link; the chat
-read projects each Action a message mentions or cites (title and current
-status, one query scoped to the chat's project) and the reply shows an exact
-title match of a cited Action as a chip that links to it with its status.
+code they supplied is never corrupted. The model names an Action by its exact
+title, never a link; the chat read projects each Action a message mentions or
+cites and the reply shows an exact title match as a chip with its status.
 
 ### Web search
 
@@ -260,7 +246,7 @@ revision's `web_sources` (`{url, title}`, deduplicated, carried forward like
 sources) are kept apart from its CiteLadder records, and each search is a
 `search` step with its query. Each model attempt records
 `web_search_requests` (null when unknown), and funding holds and settles them
-([B59](billing-decisions.md#agent-chat-behaviour-2026-11-04)). The
+([B53](billing-decisions.md#prompt-runs-and-ai-credits)). The
 OpenAI-compatible route offers no hosted search, so a turn there answers from
 CiteLadder data alone. Web fetch is not offered.
 
@@ -279,13 +265,10 @@ refunds and ends, without a reply. A turn the browser closes after it staged
 a document (its `save_document` call already streamed and was accepted) does
 not fail: it saves the document with the fixed reply "The chat was closed
 before I wrote a summary." and ends succeeded, charged
-([B69](billing-decisions.md#internal-cost-2026-11-07)), unless that would
+([B58](billing-decisions.md#agent-charging)), unless that would
 leave its transcript ending on unanswered tool or search calls. Stop on a turn
 whose lease already lapsed (its instance died) ends it the way lane recovery
-does, `interrupted` and refunded (B69), instead of `cancelled`. Failure codes keep their meaning: `trial_expired`,
-`subscription_lapsed` and `access_unresolved` survive from entitlement checks,
-provider failures are
-`provider_error`, and validation and storage defects are `internal_error`. At admission a
+does, `interrupted` and refunded (B58), instead of `cancelled`. At admission a
 changed platform model is HTTP 409 `agent_model_unavailable`, distinct from
 402 `agent_funding_unavailable` (no AI credits to hold).
 
@@ -307,10 +290,7 @@ from another project. `list_projects` and the MCP App views (`render_visibility`
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
 (trial and plan) is rechecked before every model call. The Agent and MCP read
-the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception`, `read_fact_checks`, `read_ai_ads`,
-`read_prompt_metrics`, `read_query_fanouts`, `read_competitors`
-and `read_page_text` (a crawled page's copy by URL, from persisted crawl
-artifacts only, sized to fit one tool result); there are no Agent-only reads. A caller's mistake (a bad cursor, window or
+the same catalogue; there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 A paged read whose `limit` takes any size returns the Agent `read_default_limit`
 (20) rows when the model names none and accepts at most `read_max_limit` (50),
@@ -319,11 +299,7 @@ clients keep the catalogue's own page sizes, and fixed-size or self-defaulting
 limits are unchanged. No tool writes: the MCP write catalogue and `confirm_change` are not Agent
 tools, and the Agent stays read-only.
 
-Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records the model call
-and call ID, tool, arguments, status, returned record references, omissions,
-output hash and latency. Tool descriptions say when to use each read and what it
-returns, and the model is offered each tool's compact MCP input schema.
-`unavailable` is distinct from a successful empty or zero read and from failure
+Each tool attempt is recorded in `agent_tool_attempts`. `unavailable` is distinct from a successful empty or zero read and from failure
 or refusal. Oversized results keep whole JSON fields in an incomplete envelope
 with named omissions, never a mid-JSON slice presented as complete; paged tools
 ask their owner for a smaller page and its exact cursor.
@@ -351,14 +327,8 @@ the `content_optimize` methodology applies from its turn's `content_rules`
 context section.
 
 The contract and skills are lean
-([decision](decisions.md#the-agent-works-proportionately-with-simple-skills)).
-The contract holds the hard rules once (no invented facts, real dates and
-units, unavailable is not zero, no record references in user text) and how to
-work proportionately: supplied evidence first, a 3–5 page sample for an issue
-across many pages, web search only when asked or needed. Each skill gives its
-goal, where the data is, a few points of domain judgement and the
-deliverable's shape, with no numbered methods or exhaustive verification. They
-do not require evidence manifests or per-claim labels. Where a public plugin skill
+([decision](decisions.md#agent-mcp-and-public-api)): the contract holds the hard
+rules once, and a skill never restates it. Where a public plugin skill
 mirrors an in-app methodology (`ai-visibility-review` ↔ `ai_visibility`,
 `ai-search-change-review` ↔ `measure`, `technical-seo-triage` ↔
 `technical_health`, `prompt-discovery` ↔ `prompt_discovery`), a methodology
@@ -378,13 +348,7 @@ parsed by [`workflows.ts`](../frontend/services/api/src/agent/workflows.ts), def
 the jobs a chat can start with pinned. Users never pick a workflow directly:
 Action handoffs, the page workflow and next steps name one.
 
-- `workflows`: each with a label, `skill_id` and optional `format_id`;
-- `kinds`: per output kind, the label, the refinements offered after a fresh
-  deliverable and the `next` workflows that take the work forward.
-
-The loader rejects unknown skills, output kinds and next-step
-workflows, duplicates, and a format that does not exist or whose skill's kind
-takes no formats. Admission accepts `workflow_id`: the workflow's skill becomes
+Admission accepts `workflow_id`: the workflow's skill becomes
 the explicit choice and its format is frozen in the run manifest, so the
 methodology and format guidance are present from the first step. A follow-up
 inherits the workflow while it still runs that skill.
@@ -417,46 +381,21 @@ switching provider or model is configuration (`DEFAULT_AGENT_BASE_URL`,
 consumer, not only the Agent:
 
 - `api.anthropic.com` uses the native Messages API through the official SDK
-  ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)). The
-  Agent's `converse` streams with adaptive thinking (summarized), the configured
-  effort, server-side compaction, and `save_document`'s input streamed as it is
-  written. Every cache breakpoint lives one hour, so a person who pauses
-  between turns still reads the chat from cache: one on the system text,
-  automatic caching of the conversation, one where the previous call's
-  automatic breakpoint wrote (so a step with many parallel reads still reads
-  the whole history) and one on the newest compaction block. Each call names
-  the chat's previous response (`diagnostics.previous_message_id`, kept on the
-  model attempt), and the provider's cache-miss reason and missed tokens are
-  logged on the `default agent call ok` line and saved on the attempt with its
-  response id, one-hour cache writes and per-step usage (compaction steps
-  flagged). Usage counts cache reads and writes as input and reports cache
-  writes, one-hour writes and thinking tokens separately.
+  ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)), with
+  adaptive thinking, server-side compaction and one-hour cache breakpoints, so a
+  person who pauses between turns still reads the chat from cache; cache-miss
+  diagnostics are saved on the model attempt.
 - Any other endpoint is OpenAI-compatible chat completions
   ([`openai-conversation.ts`](../frontend/services/api/src/models/openai-conversation.ts)).
-  The gateway translates the same blocks to messages with `tool_calls`, sends
-  `reasoning_effort` and a shared `prompt_cache_key`, and folds the streamed
-  text and tool-call deltas into one result; a provider that answers with JSON
-  is read as usual.
 
 Both produce one conversation result, so settlement and the loop never depend
 on the provider. Other model consumers keep `complete` and `structured`
 unchanged.
 
 The runtime emits display-only events
-([`stream.ts`](../frontend/services/api/src/agent/stream.ts)):
-
-- `step`: a model call started;
-- `reply_delta`: the next piece of that call's text;
-- `thinking`: the next piece of its thinking summary;
-- `document_delta`: the document being saved, throttled: the text added since
-  the last event at offset `from`, or the whole body from `0` when it no longer
-  extends what was sent;
-- `tool`: one call's state (`started`, then `completed`, `unavailable`,
-  `refused` or `failed`), keyed by call ID, with the same `target` its saved
-  step keeps; a hosted web search is the tool `web_search`.
-
-The settlement transaction saves the validated message and revision; partial
-text is never persisted.
+([`stream.ts`](../frontend/services/api/src/agent/stream.ts)); the settlement
+transaction saves the validated message and revision, and partial text is never
+persisted.
 
 After accepting a new chat or message, the browser
 ([`live-turns.ts`](../frontend/lib/agent/live-turns.ts)) opens
@@ -497,50 +436,22 @@ chat is read again the moment it closes, and another tab or a reload polls with
 a backoff.
 
 The full chat and the Dashboard panel share one thread and composer
-([`chat-thread.tsx`](../frontend/components/agent/chat-thread.tsx)):
-
-- the user's message appears at once and stays until the chat read holds it,
-  then a collapsed **Thinking** summary, the reply and the document appear as
-  they are written, replaced by the saved versions;
-- Stop replaces Send while a turn runs;
-- the last turn offers **Try again** (after a failure or stop) or
-  **Regenerate**, each a new turn, and **Edit last request**; nothing earlier is
-  rewritten;
-- a live turn opens with one status line of fixed height that names the current
-  call in plain words (or how many reads run together) with elapsed time, so
-  nothing below the streaming text moves;
-- a turn's activity, live or saved, is one collapsed line above its reply
-  text, so the text stays put when the saved reply replaces the live one,
-  grouped by verb
-  ("Read Actions and AI visibility · searched the web · saved Document 1")
-  that opens to a row per call: verb, the reader's noun and a muted detail.
-  Both views build rows with one function
-  ([`activity.ts`](../frontend/lib/agent/activity.ts)); model calls are not
-  rows, refused calls are hidden and failed ones say "Couldn't …". A read's
-  detail is its `target`: the first free-text argument (`url`, `query`,
-  `domain`, `entity`, `folder`) on one line, scrubbed of record references and
-  UUIDs and bounded by config, never an ID, enum or budget. A document step
-  keeps its action (created, replaced, edited), number and title;
-- a saved reply's web sources are listed under it as links apart from its
-  cited CiteLadder records;
-- a link in a reply or document opens directly only to the project's site or
-  owned domains, the turn's or revision's web sources, or CiteLadder itself
-  (subdomains included); any other link, and every `mailto:`, first opens a
-  "You're leaving CiteLadder" confirm showing its full address, because a
-  prompt-injected page can make the model put project data in a link (AR-4);
-- **Context used** lists the included context in plain words, without record
-  identities, budgets or omission codes.
-
-The [conversation](../frontend/components/agent/conversation.tsx) places each
-document after the reply that last wrote it, labelled "Document N"; with more
-than one, a **Documents** list above the thread jumps to each. Each section
-can be edited or sent back with a scoped instruction naming its document, a
-document's Sources tab lists its CiteLadder records and web sources
-separately, and History compares that document's revisions. **Retry send**
-replays a failed submission with its original idempotency key.
+([`chat-thread.tsx`](../frontend/components/agent/chat-thread.tsx)). A turn's
+activity, live or saved, is one collapsed line above its reply text, built by
+one function ([`activity.ts`](../frontend/lib/agent/activity.ts)) so the text
+stays put when the saved reply replaces the live one; a read's detail is its
+`target`, scrubbed of record references and UUIDs, never an ID, enum or budget.
+A saved reply's web sources are listed apart from its cited CiteLadder records.
+A link in a reply or document opens directly only to the project's site or
+owned domains, the turn's or revision's web sources, or CiteLadder itself; any
+other link, and every `mailto:`, first opens a "You're leaving CiteLadder"
+confirm showing its full address, because a prompt-injected page can make the
+model put project data in a link (AR-4). **Retry send** replays a failed
+submission with its original idempotency key. Each document is placed after the
+reply that last wrote it, labelled "Document N".
 
 A chat with a `page` document (an `optimize_page` chat once its page is read)
-opens as the [page workspace](content-optimization.md#the-page-workspace-co7)
+opens as the [page workspace](content-optimization.md#the-page-workspace)
 instead: the page in an editor beside Suggestions, Outline and SEO, with the
 same thread and composer docked under them. Ask AI and Add to context only
 write a quoted reference into the composer; nothing is sent until the person
@@ -549,53 +460,32 @@ sends it. The workspace loads as its own chunk, only for a page chat.
 ## Workspace and handoffs
 
 Agent mode holds New chat, Skills, Context and the chat history under
-`/agent`. Actions (`/actions`) is a Dashboard page: the one list of the
-project's work, [content gaps](content-optimization.md) and Site Health
-issue groups included (AS1), by status, goal and grouping (AS2; the tree and
-its filters are in [Opportunities](opportunities.md)); a row opens the
-Action's page, `/actions/{id}`. Every composer has a + menu: **Skills** sets the
-next turn's skill, shown as a removable chip, and **Actions** lists the
-project's top open Actions, each starting a chat on it, and the whole list.
-Typing `/` opens the menu on the skills and `@` mentions up to five of the
-project's Actions; `@` searches their titles in every status, and a pasted link
-to an Action's page in the same project becomes a mention (another project's
-link stays text). A long paste becomes a "Pasted
-text" attachment on the message (bounds in `agent-runtime.json`, listed in the
-skill catalog's `limits`); the model receives each one as its own block
-labelled as data, not instructions. New chat centres the composer with
-**What should I work on?** open beneath it: **Brief me** starts a
-`growth_plan` chat mentioning the top open Actions.
+`/agent`; Actions (`/actions`, `/actions/{id}`) is the one list of the
+project's work ([Opportunities](opportunities.md)). A long paste becomes a
+"Pasted text" attachment (bounds in `agent-runtime.json`, listed in the skill
+catalog's `limits`); the model receives each as its own block labelled as data,
+not instructions. A pasted link to an Action in the same project becomes a
+mention; another project's link stays text.
 
-An Action's page also hands work to a developer outside CiteLadder (BL4).
+An Action's page also hands work to a developer outside CiteLadder:
 **Prepare developer ticket** (in the
 [handoff codec](../frontend/lib/agent/handoff.ts)) writes the Action as
-copyable Markdown from its persisted read: the issue, the affected page, the
-dated evidence, the minimal patch (the findings' remediation and what to
-avoid) and how it will be verified (each finding's measuring reading, or a
-declared Action's deployment and check states). Nothing is sent anywhere. The
-page's **Evidence** chips
-([evidence](../frontend/lib/agent/evidence.ts)) list each record behind the
-Action with its date and whether it was observed (a crawl, visibility run or
-Search Console window, from the family's crawl and each declared check's
-reading) or inferred (a finding a rule derived). Dates are the read's persisted
-timestamps; with none stored the chip says so, and a read never resolves a
-record to find one. A chat reply's and a revision's cited-record chips still
-carry references only.
+copyable Markdown from its persisted read, and nothing is sent anywhere. Evidence
+chips ([evidence](../frontend/lib/agent/evidence.ts)) carry the read's
+persisted dates, never resolving a record to find one.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). Every Action entry point
-(**Work with the agent** on its page, the composer's + menu Actions, a cited
-URL's **Draft the request**, a prompt's **Work on this**) attaches the Action
-by id; New chat reads it and writes its `handoff.message` into the composer,
-editable, so Send works without typing (AS3). The message never travels in the
-URL, so browser history and request logs keep ids, not evidence; an explicit
-`prompt` parameter from another entry point still wins. The server fills that
-message from the evidence of the finding the handoff attaches, with that
-finding's approach branch template (`messages` in
+attaches the Action by id; New chat reads it and writes its `handoff.message`
+into the composer, editable, so Send works without typing. The message never
+travels in the URL, so browser history and request logs keep ids, not evidence;
+an explicit `prompt` parameter from another entry point still wins. The server
+fills that message from the evidence of the finding the handoff attaches, with
+that finding's approach branch template (`messages` in
 [`APPROACH_TREE`](../frontend/services/api/src/config/actions.ts)), or from the
 Action's own branch when no finding names a workflow, and falls back to the
 Action's label. **Ask agent** carries typed references only (an
-Opportunity, a Demand signal, a page or URL, up to 100 Keyword Research rows of
+Opportunity, a Demand signal, a page or URL, up to 100 Keyword research rows of
 one dataset, an issue group, a Site Facts crawl, or an exact output revision)
 plus an optional question, skill or workflow. The browser never embeds evidence
 content beyond that message, and the context builder authorizes every
@@ -610,18 +500,13 @@ the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in
 `/agent/chats/:chatId`.
 
-Prompts steers generation in its Prompt Builder and has no Agent entry point.
-Prompt discovery ([decision C](decisions.md#generated-prompts-are-short-buyer-questions-under-user-control))
-follows the builder's four steps and never writes prompt text: in the Agent it
-reads business context, `read_prompt_portfolio` and `read_seed_queries` and
-saves a short `prompt_plan` (facts to fix, topics, mix and search data), whose
-**Open Prompt Builder** link (`/prompts/build`) is where a person applies
-it; the Agent gains no write tool. Its public plugin twin, `prompt-discovery`,
-runs the same steps for MCP clients through the builder's owners
-(`preview_topics`, `confirm_topics`, `read_seed_queries`, `generate_prompts`;
-see [MCP](mcp.md#changes)) and ends at the review link. In both, candidates stay
-staged and only a person's Track in the Prompt Builder activates them; every wording rule
-lives in the generation configuration.
+Prompt discovery ([decision](decisions.md#prompts-and-visibility)) follows the
+Prompt builder's steps and never writes prompt text: in the Agent it saves a
+short `prompt_plan` whose **Open Prompt builder** link (`/prompts/build`) is
+where a person applies it; the Agent gains no write tool. Its public plugin
+twin, `prompt-discovery`, runs the steps for MCP clients through the builder's
+owners ([MCP](mcp.md#changes)). In both, candidates stay staged and only a
+person's Track activates them.
 
 ## Worker and funding
 
@@ -647,30 +532,20 @@ Settlement survives cancellation and lease loss while replies and revisions
 stay fenced, and recovery runs accounting in the same transaction as its
 terminal write.
 
-Every model call is funded independently. Platform funding reserves a finite
-AI-credit hold per call
-([B60](billing-decisions.md#agent-chat-behaviour-2026-11-04)): an input bound
-at the dearest of the base and cache-write rates (the one-hour write rate,
-twice the base), plus the output cap, plus the searches the call may run. The
-input bound of a turn's first call is every byte the provider reads (from the
-last compaction on); a later call's is the previous call's reported input and
-output tokens plus the bytes added since and `hold_input_margin_tokens`
-(2 048), never above the byte bound. Each attempt records `input_bytes` for the
-next call. When the ledger's available balance (read under the hold's capacity
-lock) is below the full hold but covers a `hold_min_reply_tokens` (4 096)
-reply, the call is sent with `max_output_tokens` lowered to what the balance
-covers, recorded on the attempt; below that floor it is refused with
-`funding_unavailable`. A turn refused for funding after it staged a document
+Every model call is funded by its own finite AI-credit hold
+([B58](billing-decisions.md#agent-charging)); a balance below
+the full hold but above the minimum reply lowers `max_output_tokens`, below it
+the call is refused with `funding_unavailable`. A turn refused for funding after it staged a document
 saves the document with a fixed reply and is charged. It settles against
 returned usage, with cache reads, five-minute and one-hour cache writes and
 output (thinking included) at their own rates
-([B53](billing-decisions.md#agent-native-runtime-2026-10-12)); a lost result
+([B53](billing-decisions.md#prompt-runs-and-ai-credits)); a lost result
 settles once as bounded unknown usage. When a turn ends failed, whether in the
 runtime or by lane recovery, its settled debits are refunded once by
 append-only ledger refunds while every attempt keeps its tokens and debit
-([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)); a cancelled turn
+([B58](billing-decisions.md#agent-charging)); a cancelled turn
 stays charged, and so does a turn the browser closed after it staged a
-document, which saves it (B69). The full output cap is the gateway's
+document, which saves it. The full output cap is the gateway's
 `DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000, about 42 credits at Haiku 5.5
 prices; each web search adds 13). In local development, the configured
 development login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
@@ -679,16 +554,7 @@ keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
 
 ## Live evaluation
 
-Agent tests use scripted models and real PostgreSQL, never live providers.
 Live quality and speed are measured outside CI by the operator-only eval,
-`pnpm --filter @citeladder/api agent:eval --live --label <name>`:
-
-- It drives the chats in
-  [`eval-cases.json`](../frontend/services/api/test/fixtures/agent/eval-cases.json)
-  through the local Agent API as the development login, against a local
-  development database.
-- Per turn, it records the time to first visible text, the total time, model
-  and tool calls, and tokens (cache reads and writes included), with the saved
-  reply and document.
-- `--report <a>,<b>` compares two runs and writes a side-by-side review to the
-  Git directory.
+`pnpm --filter @citeladder/api agent:eval --live --label <name>` (cases in
+[`eval-cases.json`](../frontend/services/api/test/fixtures/agent/eval-cases.json),
+local development database only; `--report <a>,<b>` compares two runs).

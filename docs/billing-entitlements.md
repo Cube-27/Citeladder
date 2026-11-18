@@ -11,11 +11,9 @@ default; implemented adapters are not evidence of provider acceptance.
 ## Commercial authority and access
 
 [Workspace billing lookup](../frontend/services/api/src/billing/purchases.ts) resolves
-the one persisted account for a workspace. TypeScript
-[account provisioning](../frontend/services/api/src/entitlements/bootstrap.ts)
-owns runtime workspace bootstrap. Native operators, login, seed tooling and
-[deployment bootstrap](../frontend/services/api/src/auth/deployment-bootstrap.ts)
-use the same account/grant owners. Owner-user metadata is not a payer-selection rule.
+the one persisted account for a workspace; operators, login, seed tooling and
+deployment bootstrap use the same account/grant owners. Owner-user metadata is
+not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
 private billing records.
@@ -43,16 +41,12 @@ locked current counts; reads expose persisted/current projections without
 repairing provisioning or acquiring admission locks. Missing authority is not
 unlimited access. The TypeScript prompt writers resolve the same grants and
 admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitlements/),
-under the [account capacity lock](../frontend/services/api/src/entitlements/occupancy.ts)
-(a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id).
-Commerce, project and prompt writers serialize on that same TypeScript boundary.
+under the account capacity lock (`capacityLock` in
+[`ledger.ts`](../frontend/services/api/src/entitlements/ledger.ts)).
+Commerce, project and prompt writers serialize on that same boundary.
 The [registry](../frontend/services/api/src/config/entitlements.json) (`entitlements-v1`)
-holds what plans grant. Every paid plan bundle grants `workspace_access`,
-`team_members`, `project_deletion`, `crawl_logs`, `api_access` with ten
-`api_keys`, `commerce`, `search_intelligence`, its occupancy counters,
-`prompt_runs_per_period` and `ai_credits`; Growth and Scale add `agent` and
-`market_slots`. Audit cadence, exports and fan-out are not gated
-([B5](billing-decisions.md)). Work behind a flag passes one plan gate,
+holds what plans grant. Audit cadence, exports and fan-out are not gated
+([B5](billing-decisions.md#principles)). Work behind a flag passes one plan gate,
 `WorkspaceEntitlements.requireFlag`, which reads the grants under the capacity
 lock, so grant changes serialize with the action, and refuses with the flag's
 entry in the registry's `flag_refusals` (its code from the `codes` block):
@@ -83,8 +77,7 @@ issues `public-trial-v1` once, starting at the original registration cohort and
 ending after `BILLING_TRIAL_DAYS` (release value 7). Login and operator repair
 cannot add a permanent baseline to that account. Public provenance also consumes
 eligibility for the separate no-card campaign. Existing non-public grants remain.
-The trial allows one project, 20 prompts, 20 monitored URLs and ChatGPT only,
-with 20 prompt runs and 500 AI credits for its whole length (B61); the Agent and
+The trial's allowances are `public_trial` in the registry (B61); the Agent and
 top-ups remain unavailable.
 
 `entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired`,
@@ -128,32 +121,24 @@ captured payment and one credit note per processed refund, each series
 consecutive per financial year. A full refund revokes the purchase's remaining
 grants; consumed units are not clawed back. A full refund of the payment for
 the base subscription's current period, or of an upgrade bought in that period
-(B70), also cancels that subscription at once (B52): the period's plan grants,
+also cancels that subscription at once (B52): the period's plan grants,
 an upgrade's included, are revoked when the refund settles, a scheduled plan
 change ends with the subscription, and the row reads `cancelled` but stays
 current, like a halted one, until the subscription sweep's immediate provider
 cancellation is confirmed; the base period's unrefunded payment does not keep
 it running. A partial refund changes nothing (refunds are issued manually by an
-operator; there is no partial-refund product case, B70). Refunds arrive as provider refund
+operator; there is no partial-refund product case). Refunds arrive as provider refund
 events and settle against the original payment receipt.
 
-Receipt list/download reads and PDF rendering are TypeScript-owned in
-[`src/billing/`](../frontend/services/api/src/billing/). The `billing-documents`
-route family contains the existing invoice paths; the `billing` family owns
-the commercial mutations. Reads require the active workspace's billing
+Receipt reads require the active workspace's billing
 permission and select its account, independently of owner-user metadata. A
 workspace without an account reads as having no receipts; reads never
 provision one.
-Documents validate stored amounts and are set in Inter, an OFL npm package
-with static weights, independent of the web's brand faces (owner, 2026-11-03),
-with the digits of right-aligned amounts,
-headline figures and ranks in the figure face, and Noto Sans behind them for other scripts,
-with measured wrapping and pagination; ligatures are off so copied and
-searched text stays intact. The [renderer](../frontend/services/api/src/documents/pdf.ts)
-draws the logo from the app's shared outline data and paints with the light
+Documents validate stored amounts and are set in Inter, independent of the
+web's brand faces (owner, 2026-11-03); the
+[renderer](../frontend/services/api/src/documents/pdf.ts) paints with the light
 values of the app's design tokens, read from `globals.css` (the API image
-packages a copy). Unsupported glyphs are
-printed as explicit Unicode code points instead of blank characters. The
+packages a copy). The
 Overview PDF consumes the existing
 [command-center projection](../frontend/services/api/src/projects/command-center.ts)
 and its widgets' persisted reads, including the non-causal action disclaimer.
@@ -172,7 +157,7 @@ customer paid meanwhile activates instead of being abandoned; one the provider
 already reports ended but paid is granted the paid period's bundle until the
 paid end and leaves `pending` (B71). A paid period whose evidence is terminal
 likewise keeps its bundle until its paid end. A renewal the provider charges
-after a full refund cancelled the subscription (B52, B70) leaves it cancelled:
+after a full refund cancelled the subscription (B52) leaves it cancelled:
 the receipt is recorded, nothing is granted, and it is logged
 (`billing.renewal_paid_after_cancellation`) for an operator refund (B71).
 Orders cannot be cancelled at the provider, so a capture after abandonment still
@@ -275,11 +260,11 @@ it was priced for, and outlives a deleted project, like the other two. A null
 cost is unknown, never zero. An uncharged call's cost row is written on the
 caller's connection, inside its transaction when it has one, and a row
 that cannot be written fails the call; an Agent call's cost is written in the
-transaction that settles its debit (B65). A platform-wide daily breaker in the
+transaction that settles its debit. A platform-wide daily breaker in the
 metering owner refuses included and uncharged calls with 503
 `platform_spend_paused`, before any network I/O, once their cost since 00:00
 UTC reaches `platform.daily_uncharged_ceiling_microusd`; credit-funded calls
-are not affected (B66).
+are not affected (B68).
 
 **Managed plans.** A workspace on a live managed plan measures every engine,
 DataForSEO surfaces included, on the platform's keys; the request never chooses
@@ -295,7 +280,7 @@ same transaction, and the ended analysis is charged the cost of the requests
 that succeeded, never above the hold ([charges](../frontend/services/api/src/search-intelligence/charges.ts)).
 Settlement waits twice the provider timeout for a request still awaiting its
 answer, including one recovery marked uncertain after a lost lease, so a late
-receipt is billed (B41).
+receipt is billed (B40).
 A BYOK workspace researches on its own key and is not charged.
 [Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
@@ -313,10 +298,6 @@ result in `billing_catalog_imports`, and publication its key on the revision.
 Grants/revocations use their existing evidence keys, and every override an
 operator issues stores its reason.
 Preview executes the real mutation and rolls back its transaction.
-
-Native [execution config](../frontend/services/api/src/config/billing.ts) owns
-checkout, reconciliation, webhook settings and commercial runtime vocabularies;
-catalog authoring owns exact rational currency/GST rounding.
 
 The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction
@@ -337,25 +318,16 @@ payment consent or execution bounds.
 
 ## Read and UI surfaces
 
-Public pricing reads the published catalog without a hardcoded fallback.
-While all self-serve checkout is unavailable, the marketing pricing page shows
-only its hero and coming-soon notice; paid plans, prices, comparisons, extras
-and the closing pricing CTA are hidden. The notice links to registration when
-public signup is open, otherwise to early-access contact. The catalog remains
-the authority for pricing and availability when checkout opens.
+Public pricing reads the published catalog without a hardcoded fallback; the
+catalog stays the authority for pricing and availability.
 
-Checkout opens per workspace before it opens to everyone
-([checkout access](../frontend/services/api/src/billing/checkout-access.ts)):
-`BILLING_CHECKOUT_AUDIENCE=allow_list` (the default) sells only to workspaces
-holding the non-public `billing_checkout` grant, issued with `billing:admin
-grant`; `everyone` opens it to all. Razorpay test keys work in production, but
-a test-mode checkout there serves allow-listed workspaces only. The public
-catalog never reads a workspace, so it shows checkout unavailable until the
-audience is everyone; the app reads `/billing/workspace-catalog`, which applies
-the same rules to the active workspace, so in-app billing and marketing agree.
-While no self-serve plan is open, in-app billing lists no prices either.
-Every purchase reviews the full server quote with
-payment consent and the policy links before the provider opens. The checkout controller polls persisted
+Checkout opens per workspace before it opens to everyone (the audience switch
+and allow-list grant are in [provider readiness](billing-provider-readiness.md)).
+The public catalog never reads a workspace, so it shows checkout unavailable
+until the audience is everyone; the app reads `/billing/workspace-catalog`,
+which applies the same rules to the active workspace, so in-app billing and
+marketing agree. While no self-serve plan is open, in-app billing lists no
+prices either. The checkout controller polls persisted
 activation; only confirmed activation refreshes access caches. Unavailable
 checkout is shown honestly. Pricing remains usable before project creation.
 In-app plan choice offers your own keys or managed. A workspace whose trial or
@@ -370,24 +342,12 @@ after sign-in it resolves the selected workspace and fresh catalog, requires
 billing permission and explicit confirmation, and uses the existing
 workspace-scoped checkout controller. Every purchase (plan, add-on, top-up or
 upgrade) shows the backend-resolved quote before the separate payment
-confirmation. No purchase
-starts from a GET, login or reload. The prepared marketing Worker renders the
-validated public catalog in initial HTML (from a short-lived edge-cached copy)
-and links bounded selections to app
-`/pricing`. It sends no visitor credentials on the catalog read and performs no
-billing mutation. The captured old apex runtime remains available for
-first-cutover recovery.
+confirmation and the policy links. No purchase
+starts from a GET, login or reload. The marketing Worker sends no visitor
+credentials on the catalog read and performs no billing mutation.
 
 The no-card introductory offer is separate from checkout: explicit consent,
 once-per-account eligibility and idempotent activation are catalog-controlled.
 Its seeded campaign is disabled/draft.
 Provider keys are write-only; neither UI nor logs receive their plaintext. A
 managed workspace has no provider settings, and its runs offer every engine.
-
-## Acceptance limits
-
-Razorpay activation follows its
-[payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout).
-Provider selection, sandbox captures, recurring methods, tax parity and live
-payment enablement are not established by local tests. The
-[release checklist](release-checklist.md) retains external acceptance gates.

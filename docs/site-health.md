@@ -68,9 +68,9 @@ is the project's newest usable crawl (`completed`, `partially_completed` or
 `cancelled`, by creation) that is not a page rerun. `currentSiteCrawl` in
 `reads/crawl.ts` owns it, and `currentSiteSnapshotQuery` reads its snapshot.
 Every read that names no crawl uses it: the project `/pages` and `/issues`
-reads, Overview, AEO readiness and Architecture, Opportunities, the Command
-Center, the Agent's content context, MCP, AI Traffic pages, internal links, a
-backdated declaration's evidence and the declaration's crawl leg. A rerun is
+reads, Overview, AEO readiness and Architecture, Opportunities, the Agent's
+content context, MCP, AI Traffic pages, internal links and declaration
+evidence. A rerun is
 never the current crawl; it updates only its own page's evidence.
 
 **Each page's latest audit** ([SH-B9](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
@@ -87,13 +87,8 @@ earlier audit. Site-level findings (architecture rules, sitewide links) are
 the site crawl's own, so a rerun of the root never drops them from the Issues
 list, Pages counts, page detail, issue history, MCP or AI Traffic
 (`shownIssueFilter` in `reads/page-rows.ts`). A page rerun read by id shows
-only its own page. Pages,
-page detail, issue history, the Issues catalog and detail, the snapshot and
-score summary, the Agent's content context, MCP, AI Traffic findings,
-internal-link suggestion pages and verification's page readings all read
-through it; the analyze task and link metrics stay the crawl's own. A
-verification reading triggered by a page rerun reads a declared page through
-the rerun. The read stays bounded by the tracked set:
+only its own page. Every page-level reader goes through it; the analyze task
+and link metrics stay the crawl's own. The read stays bounded by the tracked set:
 it takes the crawl's own analyses and those of audits that began after it, and
 looks further back one page at a time only for a tracked page the crawl never
 analyzed. The Opportunity refresh keys the crawl source on the crawl and the
@@ -116,14 +111,9 @@ crawl is usable, the newest site crawl, so a failure still shows.
 off by default, weekly or monthly, on every plan. The `crawl-scheduler`
 periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
 admits the crawl through `createCrawl` with no robots choice, so it keeps the
-shown crawl's as every crawl action does, and the fetch budget, grants
-and the one-active-crawl rule apply unchanged. An
-occurrence refused with `crawl_already_active` or
-`site_health_fetches_exhausted` is skipped: `next_run_at` advances to the next
-occurrence and `last_outcome` records why. Any other refusal counts a failure,
-retries after `failure_retry_seconds` and turns the schedule off after
-`max_consecutive_failures` (`config/crawl-schedules.ts`, overrides
-`CRAWL_SCHEDULE_<SETTING>`).
+shown crawl's as every crawl action does, and the fetch budget, grants and the
+one-active-crawl rule apply unchanged. Skip, retry and turn-off rules are in
+[state machines](state-machines.md) and `config/crawl-schedules.ts`.
 
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
@@ -157,7 +147,6 @@ the fetch (`site_setup` re-reads them for its first commit's pointers).
 Crawls, tasks and the evidence written per page (attempts, artifacts, analyses,
 evaluations, issues, events, observations, frontier rows) take time-ordered
 UUIDv7 ids (`db/ids.ts`), so inserts land at the right edge of each key index.
-An id reveals when its row was created and never authorizes anything.
 
 ### Evidence partitions
 
@@ -227,10 +216,9 @@ finishes anything left. Reads never start work.
 - A granted access check is reused for `access_check_ttl_seconds`, never past
   the grant's own expiry; a denial is never cached.
 
-**Crawl status.** A crawl is `queued` or `running` (active), then `completed`,
-`partially_completed`, `failed` or `cancelled` (terminal). Every reader takes
-the active, terminal and usable (terminal with readable analyses: all but
-`failed`) sets from `packages/contracts/src/site-health/crawl.ts`.
+Every reader takes the active, terminal and usable (all terminal but `failed`)
+crawl status sets from `packages/contracts/src/site-health/crawl.ts`
+([state machines](state-machines.md)).
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
@@ -332,9 +320,7 @@ and are never analyzed. The lists live in `analysis.json`
 segment that names a tier, matching whole tokens, decides it; synonyms come
 from `value_fallback_tokens`. So `/blog/product-review` is `article`.
 
-| root | product | comparison | service, local | category, pricing | about | article, guide, faq, docs | contact | trust | other |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 100 | 90 | 85 | 80 | 70 | 65 | 60 | 45 | 40 | 20 |
+Tier weights are `value_tiers` in `acquisition.json`.
 
 Within a tier, candidates sort by `url_hash`, the SHA-256 of the canonical
 URL. The order is the project's, the same in every crawl, and not biased toward
@@ -355,15 +341,10 @@ index depth), an index entry on another domain or an unread document cut the
 walk short ("at least N"); `limit_reached` and
 `unread_count` say which (coverage reasons `sitemap_limit_reached` and
 `sitemap_documents_unread`). A document is unread when no answer settled it
-(no response, a timeout, a 408, 429 or 5xx, or a body over
-`max_sitemap_decoded_bytes`, the 50 MB standard). For a seed, a 4xx, a response
-refused as no sitemap type, or a body that does not parse is the server's answer
-that it serves none; a child its index names that answers so is unread, since a
-CDN can serve a cached index naming children the site has since replaced. When
-none of an index's children was read, the walk fetches that index once more
-(once per walk, through the same robots, pacing and document ceiling) with the
-`sitemap_index_refetch` cache-busting query, walks the children the fresh copy
-names and stops counting the stale ones it dropped as unread.
+(timeout, 408, 429, 5xx, oversize). A seed's 4xx or unparseable body means the
+server serves none, but a child its index names that answers so is unread (a
+CDN can serve a cached index naming replaced children), and then the walk
+refetches that index once with a cache-busting query.
 Discovery is free, has no plan cap and no manual trigger, and fetches no page.
 A walk with an unread document runs again from its seeds after
 `sitemap_walk_retry_delay_seconds`, doubling, up to `sitemap_walk_retries`
@@ -400,13 +381,7 @@ stays tracked; a failed fetch releases only a sample's membership.
 `sample_url_limit` (`free_sample`). It ends `sample_completed` and never walks
 sitemaps or requests llms.txt.
 
-**Sitemaps.** The walk starts from the declared sitemaps or `/sitemap.xml` and
-reads the tree breadth-first in `sitemap_fetch_concurrency` waves, consumed in
-queue order so response timing cannot change what fits. It has no product
-limit, only safety ceilings, and follows index entries only on the crawl's
-registrable domain
-([SH-B5](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
-`site_facts.sitemap` keeps counts (`file_count`, `discovered_count`), never
+**Sitemap inventory.** `site_facts.sitemap` keeps counts (`file_count`, `discovered_count`), never
 URL lists. Every admissible listed URL, tracked or not, is saved as a
 `site_urls` identity, an observation and a `site_sitemap_entries` row, so the
 crawl's inventory shows them all. The entry is the only authority for sitemap
@@ -426,7 +401,7 @@ is full. The admitting page is also stored as the observation's and task's
 `parent_site_url_id`. A non-root `discover` that fails for good is observed
 with its status code, unless its failure is `excluded` (`task-outcome.ts`).
 Without an analysis task, the page row and the crawl counters read that failed
-`discover`. A broken link therefore appears in Errors & Blocked, and in the
+`discover`. A broken link therefore appears in Errors, and in the
 HTTP 4XX/5XX counts, with the pages that link it (`linked_from`), even when no
 selected page links it.
 
@@ -464,9 +439,7 @@ shown crawl's. Its menu offers ignoring robots.txt after the person confirms
 they are authorized to crawl the site, or, after a crawl that ignored it,
 respecting it again. The crawl freezes
 `robots: 'ignore'` and `robots_decision` (user id, email, time) in its
-configuration; a crawl request naming no robots choice, as Run new crawl, a
-scheduled crawl and a page re-audit do, copies both from the crawl the
-dashboard shows.
+configuration.
 Only the crawl's own `discover` and `analyze` fetches pass the choice to
 `SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
 registrable domain and its subdomains, so a redirect to another host respects
@@ -478,26 +451,15 @@ respects robots.txt. A page fetched despite an exclusion carries
 `acquisition_options.robots_excluded` on its artifact and reads as
 `robots_excluded: true`.
 
-**Operator stop.** Run
-`pnpm --filter @citeladder/api acquisition:control --actor <admin-email> --domain <domain-or-*> --reason <reason> [--resume] [--apply]`.
-
-- It dry-runs unless `--apply` is given.
-- A domain rule also covers its subdomains. Unblocking a domain cannot override
-  a global `*`.
-- `--resume` keeps the row but replaces its actor and reason.
-- It sends no HTTP requests. Never put credentials or customer content in the
-  reason.
+**Operator stop** (`pnpm --filter @citeladder/api acquisition:control`, see
+[Development](DEVELOPMENT.md)): it dry-runs unless `--apply` is given, a domain
+rule also covers its subdomains, unblocking a domain cannot override a global
+`*`, and the reason must never hold credentials or customer content.
 
 Attempts and artifacts are append-only. `site_fetch_artifacts.normalized_facts`
 is the bounded evidence store, and no raw HTML is kept beyond one redacted
 reference snippet per page: the page's first unnamed form control within its
-label context (the wrapping label, else its parent element). The snippet keeps
-tags and attribute names only; text becomes `[text]`, and every attribute value
-outside `reference_snippet_kept_attributes`, or that looks like an email or
-token, becomes `[redacted]`. Comments, event handlers, scripts, styles and
-embedded documents are dropped, and drawing content (`svg`, `math`) is kept as
-an empty element. A context longer than `reference_snippet_chars` falls back to
-the control alone, which is cut at that cap and marked `truncated`.
+label context, redacted to tags and attribute names (`analysis/reference-snippet.ts`).
 
 The Issues catalog (`site_issue_catalogs.reference_snippets`) keeps at most one
 snippet per issue family per crawl: the first affected page in URL order (then
@@ -506,7 +468,7 @@ IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
 that rule, and an issue group's Action context carries it. Each defect and
 advisory Issues group is also one Action; the Issues page is unchanged
-([IA1](decisions.md#actions-group-issues)).
+([IA1](decisions.md#actions-and-content)).
 
 Facts distinguish an available extraction from parse failure, unsupported
 media, client rendering and truncation. Declared canonicals are observations,
@@ -519,41 +481,23 @@ label without `for` names only its first labelable descendant.
 
 `config/crawlers.json` lists 13 bots. Each has an identity, operator, purpose
 (`search_engine`, `ai_search`, `ai_training`, `ai_user_fetch`), robots tokens
-and its check membership. For each bot, `site_facts.robots.bots` stores:
-
-- the matched group: `specific_group`, `wildcard_group`, or `no_rules` (shown
-  as "Not specified");
-- `root_access`;
-- the sample `policy`: `all_allowed`, `restricted`, `all_disallowed` or
-  `unknown`.
-
-The sample is the root, then same-origin sitemap URLs, then observed URLs, up
-to `robots_policy_sample_size`. An unreadable or truncated body leaves the
-policy `unknown`. These fields describe directives, not indexing or actual
-visits.
+and its check membership. `site_facts.robots.bots` stores per bot the matched
+group, root access and a sampled policy (`all_allowed`, `restricted`,
+`all_disallowed` or `unknown`; an unreadable or truncated body is `unknown`).
+These fields describe directives, not indexing or actual visits.
 
 `robots_snapshots` keeps one append-only row per distinct 2xx body, keyed by
 workspace, project, origin and the full-body SHA-256. The stored body is cut at
 `robots_snapshot_max_bytes`. Each crawl keeps `robots_snapshot_id` and
 `robots_observed_at`.
 
-`GET /api/v1/projects/{project_id}/site-health/robots-history` keyset-pages the
-observations (default 5, maximum 20). The screen asks for
-`ROBOTS_HISTORY_PAGE_SIZE` (5, `lib/config/site-health.ts`) and keeps the
-current observations and pager on screen while the next page loads. MCP
-`read_ai_crawlability` takes an optional `crawl_id`.
 
 ## Page analysis
 
-Interpretation runs on a persistent pool of `interpretation_worker_threads`
-Node threads (`analysis/off-thread.ts`). Idle threads don't hold the process
-open, and a crashed thread fails only the job it was running; the jobs queued
-behind it move to another thread. A job running longer than
-`interpretation_job_timeout_seconds` fails; its thread is replaced and the jobs
-queued behind it move to another thread. The same pool parses sitemap XML for
-the sitemap walk (a sitemap parse that overruns the limit counts as an unread
-document) and the logo refresh's homepage HTML, so neither blocks the event
-loop.
+Interpretation runs on a worker-thread pool (`analysis/off-thread.ts`); a crash
+or timeout fails only that job. The same pool parses sitemap XML (an overrun
+counts as an unread document) and the logo refresh's homepage HTML, so neither
+blocks the event loop.
 
 Relative links, assets, canonical declarations, hreflang alternates and
 meta-refresh targets resolve against the document base (the first `<base href>`, else the final URL), as a
@@ -579,29 +523,19 @@ an initial `site_page_analyses` row (`finalized_at` null).
 `analysis/page-kinds.ts` classifies by evidence tier, not by summed weights,
 into `classification.page_kinds` (18 kinds plus `other`).
 
-| Tier (confidence) | Signals |
-|---|---|
-| structural (high) | Root path. Product buy box, or own price under a product heading. A collection of at least `listing_min_card_items` items with a bound sort, filter, facet, result count or empty state. A single address entity on a local route. |
-| route (medium) | `slug_patterns` (vs, alternatives, how-to, best) first, then `route_patterns`, where the segment nearest the root wins |
-| semantic (low) | Docs-host context, service proposition, FAQ pairs or byline plus date, title keywords, structured data |
+Tiers, by descending confidence: structural (high: root path, product buy box,
+a collection with bound sort or filter controls, a local address entity), route
+(medium: slug and route patterns, nearest segment to the root wins) and
+semantic (low: docs host, FAQ pairs, byline plus date, title keywords,
+structured data); signals live in `page-kinds.ts` and `analysis.json`.
 
 The highest tier with evidence decides. If kinds tie in that tier, the result
 is `other` (`conflicting_top_tier_evidence`). Structured data never decides
 alone (`schema_only`). Evidence keeps every signal, alternative and conflict. A
 structural winner that has any dissenting signal gets medium confidence.
 
-- **Homepage:** the bare root, `homepage_paths`, or a region-qualified locale
-  root (`homepage_locale_root_pattern`: `/en-in`, `/es-419`, `/zh-hant`; not
-  `/en-shop`).
-- **Paths** are lower-cased and drop the trailing slash and any
-  `route_document_extensions` suffix (`/pricing.html` → `/pricing`). The
-  `routes.ts` normalizer is shared with source-page assessment.
-- **One-word title keywords** (`contact`, `policy`) match only a whole page
-  name: the slug, the H1, or the title before its site suffix. Phrases match
-  anywhere, and the longest wins.
-- **Editorial archives:** blog, news, article, insights, resources and press
-  roots, with their page/category/tag paths, are `editorial_index` even with a
-  collection.
+- **Paths** are normalized by `site-health/routes.ts`, which
+  `analysis/page-kinds.ts` and source-page assessment share.
 - **Unobserved content:** a client-rendered shell has no extraction. Its winner
   drops to low confidence, and the page records `content_unobserved`.
 
@@ -667,12 +601,9 @@ as allowed; a fetched but
 unreadable one with no observed block is `unknown` (`robots_unreadable`). Check membership is
 each bot's `checks` array:
 
-- `search.crawler_access` (scored) covers Googlebot, Bingbot, Applebot,
-  OAI-SearchBot, PerplexityBot and Claude-SearchBot.
-- `technical.ai_crawler_access` (unscored defect) covers those six plus
-  GPTBot, ClaudeBot, Google-Extended, Applebot-Extended, ChatGPT-User,
-  Perplexity-User and Claude-User. Blocking only training or user-fetch bots is
-  visible but does not move a score.
+- `search.crawler_access` (scored) covers the search bots;
+  `technical.ai_crawler_access` (unscored defect) adds the training and
+  user-fetch bots. Blocking only those is visible but does not move a score.
 
 **Sitemap and redirect page checks** (`analysis/indexing.ts`, unscored).
 `technical.sitemap_redirect` fails when the URL the sitemap lists and
@@ -683,14 +614,7 @@ fails a listed page that carries noindex. The noindex itself stays the site's
 choice: sitemap membership is not indexing intent (Shopify lists every
 collection), so `technical.indexable` is not applicable there, and the snapshot
 gate counts that page, like a 404 or 410, as excluded. The listing is sitemap
-hygiene that hides nothing from search, so it is advice, not an issue. `technical.sitemap_lastmod` fails a
-`<lastmod>` that does not parse, is more than `sitemap_lastmod_tolerance_days`
-past the audit time, or is older than the page's newest declared publication
-or modification date by more than that tolerance; without a readable page date
-it is `unknown`. `technical.client_side_redirect` fails a meta refresh to
-another URL, or inline script that assigns `location` or calls
-`location.replace`/`assign` on a page with fewer than `server_rendered_min_words`
-visible words; on a page with content that script is a handler, not a redirect.
+hygiene that hides nothing from search, so it is advice, not an issue.
 
 **Crawl-finalize checks** (`lifecycle-finalize.ts`) evaluate canonical
 integrity, internal-link targets, internal links to redirects, duplicate
@@ -706,18 +630,10 @@ targets, inbound links and depth, never for anchor text or main content. A
 401/403 link target is sign-in-gated, not broken; a 401/403 sitemap
 URL is still unreachable.
 
-| Canonical integrity outcome | When |
-|---|---|
-| `not_applicable` | no declaration |
-| `missing` | several, invalid or cross-origin declarations; a target that returned 400 or above, redirected or hit the redirect limit; an analyzed target that is noindex or names a different canonical (`canonical_chain`) |
-| `unknown` | the target is unresolved |
-| `satisfied` | the target answered directly below 400; a target fetched but not analyzed is judged on that response alone (`target_analyzed: false`) |
-
-**Redirects.** Each attempt's artifact keeps its `redirect_chain`, and a fetch
-abandoned at `max_redirects` ends with `redirect_limit`. A link to a target that
-redirected or hit the limit fails `technical.internal_link_redirect`.
-`technical.redirect_chain` lists every URL the crawl requested that took more
-than `redirect_max_hops` hops or hit the limit (a loop or an overlong chain).
+Canonical integrity is `not_applicable` with no declaration, `unknown` while the
+target is unresolved, `missing` for a bad, redirected, noindex or chained
+canonical target, and a fetched but unanalyzed target is judged on its response
+alone (`target_analyzed: false`).
 
 **Sitewide links.** A link target is sitewide when at least
 `sitewide_link.min_linking_pages` analyzed pages, and `min_page_share` of all
@@ -740,23 +656,15 @@ judging its sitewide links itself.
 **Architecture rules** (`architecture-rules.ts`) run on the observed link graph
 after terminalization and file one finding against the homepage, naming the
 pages they found. `architecture.orphan_pages` names pages no analyzed page
-links. `architecture.unreachable_from_home` names pages that do have internal
-inbound links but that no followed link path from the homepage reaches (a
-section linked only from itself), grouped into sections by their first two path
-segments; true orphans never repeat there. It is an unscored defect like the
-orphan rule: crawlers that discover by following links never reach those pages,
-and they receive no link authority from the rest of the site, so they rely on
-the sitemap alone. Both need complete coverage, and without an observed
-homepage the unreachable rule is `unknown` (`homepage_not_observed`).
+links. `architecture.unreachable_from_home` names pages that have inbound links
+but no followed path from the homepage (a section linked only from itself);
+true orphans never repeat there. Both are unscored defects, need complete
+coverage, and without an observed homepage the unreachable rule is `unknown`
+(`homepage_not_observed`).
 
-**Duplicate content** (`analysis/duplicate-content.ts`). A page joins the
-comparison when it is a 2xx HTML page, not noindex, whose one canonical (if
-any) names itself, with at least `duplicate_content.min_words` words of
-`primary_content_text`; otherwise the check is `not_applicable` with the
-reason. Exact copies share a SHA-256 of the lower-cased word sequence; near
-copies have 64-bit SimHashes over `shingle_words`-word shingles within
-`max_hamming_distance` bits. Pages are compared pairwise, without transitive
-clustering, and the evidence lists each page's matches.
+**Duplicate content** (`analysis/duplicate-content.ts`) compares pages
+pairwise (exact SHA-256 and near SimHash), without transitive clustering; a page
+outside the comparison is `not_applicable` with the reason.
 
 ```text
 role / pillar score = 100 * satisfied / (satisfied + missing), over applicable checks
@@ -767,14 +675,8 @@ crawl score         = mean of page scores; crawl pillar = mean of page pillar sc
 
 These formulas are in `analysis/scoring.ts`.
 
-- **No determinate check:** the score is null and coverage is 0.
-- **No applicable check:** coverage is null.
 - **Duplicate rows:** they count once, and disagreeing duplicates count as
   `unknown`.
-- **No AEO check applies:** the reason is `page_purpose_unresolved` for
-  `other` and `no_applicable_checks` otherwise.
-- **Unresolved checks:** the result reads `unresolved_checks` /
-  `limited_evidence`.
 - **Page-kind rollups** use the same arithmetic, with crawl-wide site checks.
 
 ## Coverage and measurement states
@@ -800,19 +702,9 @@ analyzed per admission tier. Tiers listed in `coverage_expected_value_kinds`
 (about, contact, pricing) appear as zero when never found. A crawl without a
 frontier, such as a sample, reports no tiers.
 
-**Overview.** Crawl Coverage (`overview-metrics.tsx`) is analyzed ÷ found
-(`observation_count`), not ÷ selected. Its caption looks like "20 of 100 found
-pages analyzed · plan limit 20 per crawl · 2 failed to load", followed by any
-reason the counts do not explain. Below the metrics (`coverage-by-kind.tsx`), one line lists
-pages analyzed by type and the expected types "not found in this crawl", which
-is absence from the crawl, not proof of absence from the site.
-
-- An `unknown` state prefixes "Coverage unknown".
-- Zero found shows "No pages found" with no percentage.
-- Older snapshots without the counts show their state and reason.
-
-`coverage-by-kind.tsx` shows "Pages analyzed by type" separately from "Not
-found on the site", and omits `root` and `other`.
+The Overview's crawl coverage is analyzed ÷ found (`observation_count`), not ÷
+selected; an expected type never found is absence from the crawl, not proof of
+absence from the site.
 
 **Scored cohort composition.** The Change summary compares against the
 newest earlier comparable snapshot (`snapshot.ts`): one under the same versions
@@ -837,12 +729,10 @@ frozen `expected_checkpoint_profile`. A snapshot stores its analysis set as
 rows (`site_health_snapshot_analyses`) and no list of evaluation ids (owner
 decision CO-6): evaluations carry their `analysis_id`, each analysis names its
 own, and architecture evaluations are reached through their crawl. Score
-summaries and change snapshots keep their provenance id lists, but browser responses (dashboard,
-crawl score summary, Overview, AEO Readiness, change summary) do not carry them,
-and each read selects only the columns it renders
-([decision](decisions.md#site-health-responses-do-not-carry-provenance-id-lists)).
-Single references a reader acts on, such as an evidence page's
-`source_analysis_id`, stay. Any classification edit changes the
+summaries and change snapshots keep their provenance id lists, but browser
+responses do not carry them
+([decision](decisions.md#site-health-and-data)); single references a reader
+acts on, such as an evidence page's `source_analysis_id`, stay. Any classification edit changes the
 classifier digest. Versions stay at 1 until customers exist; after that, other
 semantic changes bump their version under
 [invariant 5](invariants.md#5-derived-artifacts-record-provenance).
@@ -857,10 +747,7 @@ JEV judges pairs through the analytics queue. Limits are in
 
 | Stage | Behavior |
 |---|---|
-| Pages | Excludes `trust_policy` and `about_contact`. Applies eligibility (available, untruncated extraction) before the cap. Above the cap, indexable pages come first, then a stable URL-hash order. Only main-content-indexable pages are destinations. |
-| Passages | Sentence spans with exact offsets into the source artifact; headings are kept separate; missing or truncated text is recorded as unavailable. A span with a word repeated back to back is a flattened widget, not prose. |
-| Retrieval | TF-IDF over destination title, H1 and path. In larger crawls, very common terms carry no weight, and a placement must share destination vocabulary. An anchor needs `min_anchor_content_words` non-stop words unless it is the destination's whole one-word name. |
-| Suppression | An existing main-content link suppresses a pair; a navigation-only link does not. A source with truncated anchor capture gets no suggestions. Product pages whose titles differ by at most `variant_max_word_difference` words never suggest each other. |
+| Candidates | Eligible pages are selected before the cap, and passages are exact spans into the source artifact; retrieval, anchor and suppression rules live in `internal-link-pages.ts`, `-candidates.ts` and `-placements.ts`. An existing main-content link suppresses a pair; a navigation-only link does not. |
 | Judgment | One JEV request per source: per target, a Noul usefulness question and a placement Choice (including `none`). Publication re-validates the anchor against frozen evidence, never falls back, keeps the higher-ranked suggestion when anchors overlap, and keeps at most `max_links_per_target` suggestions per destination. A source's Action ranks by how far its strongest link clears `accept_threshold`. |
 | Execution | Dispatch events commit before sending. At the deadline, dispatched pairs close as uncertain and are never resent. A missing permission or provider yields unavailable judgments. Cancel stops dispatch; the project's slot stays busy until the judgment task ends. A publication task that fails terminally ends its run `failed` (its compensator), freeing the slot; the task row keeps the error code. |
 | Verification | After the user marks a link implemented, a later complete, compatible crawl confirms a main-content link to the exact destination, with no model call and no CMS publishing. |
@@ -946,22 +833,16 @@ rule to `marked_fixed` on every page where it is `open` or `regressed`
 resolves it, one that finds it reopens it, except an audit fetched before the
 mark, which cannot judge the fix and leaves the mark standing. A mark keeps the
 issue open, so the trend does not move.
-`GET /site-crawls/{crawl_id}/issue-fixes` reports, per group, "N of M pages
-fixed": M pages whose latest audit found it plus those an audit since the crawl
-began verified fixed (a verified page leaves the Issues list but stays among
-M), N of them `marked_fixed` or `resolved`, how many of those an audit verified, and how many pages Re-run all
-would re-audit (null, not zero, for a site-level finding). The issue dialog
-shows it with both actions, and the Issues summary's fix-first rows show it
-once a page is fixed.
+`GET /site-crawls/{crawl_id}/issue-fixes` reports per group "N of M pages
+fixed" (a verified page leaves the Issues list but stays among M; the Re-run
+all page count is null, not zero, for a site-level finding).
 `POST /site-crawls/{crawl_id}/issues/{group_id}/rerun` re-audits every tracked
 page the group is still unresolved on as one page-rerun crawl
 (`createPageRerunCrawl`, which also runs the single-page re-audit). It holds one
 page fetch per page and is refused with `site_health_fetches_exhausted` when
 fewer remain, with `crawl_already_active` while a crawl runs (SH-B4), and with
-`rerun_not_allowed` when no such page exists. The screen watches the re-audit
-crawl until it ends (`ISSUE_RERUN_MAX_POLLS`, `lib/config/site-health.ts`), then
-refreshes the crawl's issues, fix progress, pages and the Overview trend; the
-dashboard never shows a page rerun. A site-level finding
+`rerun_not_allowed` when no such page exists. The dashboard never shows a page
+rerun. A site-level finding
 (architecture, sitewide links) is judged only by a full crawl, so Re-run all
 never names its page.
 
@@ -977,18 +858,13 @@ not written yet (nothing is final before the terminal publication). The
 monitored affected count is read per request in both: the monitored selection
 is live configuration.
 
-Every rule lists under one Issues tab (`section`: technical, content or aeo).
-The API owns the mapping (`config/site-health/reads.json`
-`issue_section_by_category`): the content and metadata categories list under
-Content, every other rule under its dimension. A tab (`section`) and an order
-(`sort`: `severity`, the default, ranks severity then pages affected; `pages`
-ranks pages affected then severity) are applied to the listed groups, so the
-persisted catalog still answers a tab with no other filter. The summary's
-`section_counts` count the listed groups before the tab is applied: every tab's
-label holds its count, and a search shows which tab holds its matches. Cursors
-are bound to the tab and the order, as to the filters. Overview top issues name
-their tab (`section`, from today's catalog; null for a retired rule), so their
-links open the tab that lists the rule.
+Every rule lists under one Issues tab (`section`: technical, content or aeo);
+the API owns the mapping (`issue_section_by_category` in
+`config/site-health/reads.json`). A tab and a sort are applied to the listed
+groups, so the persisted catalog still answers a tab with no other filter, and
+`section_counts` count the groups before the tab is applied. Cursors are bound
+to the tab and order, as to the filters. Overview top issues carry their tab
+(null for a retired rule).
 
 The dashboard counters of an active crawl are the ones its post-settle
 reconcile last persisted (`site_crawls.live_counters`), recounted at most every
@@ -1000,9 +876,7 @@ by Stop in the cancelling transaction, again when a task Stop skipped settles,
 when the cancelled crawl is published and when an analysis is appended over a
 finalized one. Only the monitored selection count is read live. A crawl
 without persisted counters (none of its tasks settled yet, or terminal before
-counters were persisted) is counted from its tasks. While a crawl runs, the
-screen refreshes its page, inventory and issue lists at most every 30 s, and
-always on its terminal transition.
+counters were persisted) is counted from its tasks.
 
 The Issues page-kind filter (`page_kind`) files a per-page finding under its own
 page's current, finalized analysis kind; every analysis names the crawl's site
@@ -1013,37 +887,18 @@ page rather than the sample, and its group and rail count only that kind's
 pages.
 
 `GET /projects/{id}/site-health/pages` and `/issues` answer the crawl-scoped
-pages and issues reads for the project's current crawl and name it (`crawl_id`,
-and the pages read's `crawl_status`); a project without one is a 404. The Website and Issues
-route prefetchers use them on a cold load, beside the dashboard rather than
-after it, and file the answer under that crawl's key; a cached dashboard warms
-the crawl-scoped reads directly.
+reads for the project's current crawl and name it (`crawl_id`); the route
+prefetchers use them on a cold load beside the dashboard, not after it.
 
-The Website screen (`site-health-screen.tsx`) always opens on its Pages tab,
-the loading frame included, and never changes tab by itself: not while the
-crawl resolves, starts, runs or finishes. A tab the reader picks, or a
-`?tab=` link, stays selected ([decision](decisions.md#site-health-always-opens-on-pages)).
-Only the Overview tab draws the score cards; the Pages tab leads with one status
-line (crawl state, the three headline scores as numbers, pages discovered and
-analyzed). Its Monitored / All Discovered / Errors & Blocked switch, page-kind
-filter and URL search sit in the page's control band and live in the address
-(`pages_view`, `page_kind`, `pages_query`), cleared when the reader changes tab.
-The search is the pages read's `query`: a case-insensitive substring of the
-normalized or display URL, matched on the server and bound into the cursor.
+The Site health screen always opens on its Pages tab, the loading frame
+included, and never changes tab by itself: not while the crawl resolves,
+starts, runs or finishes. A tab the reader picks, or a `?tab=` link, stays
+selected ([decision](decisions.md#site-health-and-data)). The pages search is
+matched on the server and bound into the cursor.
 
-The Issues screen leads with a summary: the outstanding issue types, the
-severity split and the crawl's three worst defects across every tab (a separate
-unfiltered read, so the persisted catalog answers it). Below it the issue table
-lists one tab (Technical, Content, AEO) with severity, page-kind and
-issue/advisory filters and severity or pages ordering. A row opens the issue in
-a dialog (`?issue=`) with how to fix it, Ask agent, a copyable fix prompt and
-the affected pages.
-
-Page detail lists the page's issues worst first, then one card per issue with
-its fix, evidence and the scores its rule counts toward (`score_roles`). Each
-issue names its catalog group (`group_id`), so a card's Ask agent carries the
-issue-group reference for that page; the page's own Ask agent carries the page.
-Neither shows a per-issue score gain: reads never score.
+Each issue names its catalog group (`group_id`), so a page-detail card's Ask
+agent carries the issue-group reference for that page; the page's own Ask agent
+carries the page.
 
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its

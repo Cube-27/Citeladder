@@ -3,13 +3,13 @@
 Commerce measures how AI answers recommend a business's products and
 categories, and turns that measurement into Actions. `/products/overview` is
 the Shopping overview and `/products` the Products table (below); every product
-holder opens its own page, `/products/:id` (the product detail page, below),
+holder opens its own page, `/products/:targetId` (the product detail page, below),
 and a category's id opens its competitors and shopping prompts. Commerce reuses
 Site Health acquisition and the shared audit system;
 it does not own a crawler, response store, prompt store or opportunity store.
 Present runtime is not evidence that credentialed manual gates passed. The
-owner decisions cited as CM1–CM9 are in
-[decisions](decisions.md#commerce-product-tracking).
+owner decisions cited as CM numbers are in
+[decisions](decisions.md#actions-and-content).
 
 ## Catalog
 
@@ -66,9 +66,8 @@ sources into one admission path (CM3):
   its variants and price range (variants priced in two currencies are
   rejected); `product_type` is the category path; prices such as `59.00 EUR`
   are parsed, and ambiguous ones (`$59`, `1,299.00`) are rejected, not guessed.
-- **CSV template** (downloadable in the dialog): `title` and `brand` required;
-  `description`, `price`, `currency`, `link`, `image_link`, `category` (a path
-  `A > B`, several separated by `|`), `sku` and `gtin` optional.
+- **CSV template** (downloadable in the dialog): `title` and `brand` required,
+  the rest optional.
 
 `POST /commerce/catalog/imports` stages the source: it keeps the raw content
 (the fetched pages for a store) and returns the proposed category tree, the
@@ -125,10 +124,7 @@ foreign-key inserts (audits, crawls, queue writes) while a large import runs.
 Permanent projection failures (missing source analysis, unreadable facts, no
 usable URL) end the task at once with a specific code instead of retrying.
 
-The header shows projections in flight, then failed or cancelled projections of
-the latest projected crawl only. While work is in flight it polls only the
-projection state, then re-reads the catalog once when that reports nothing in
-flight. The catalog read is navigation: product and category names, memberships
+The catalog read is navigation: product and category names, memberships
 and counts, never a row's evidence; products are listed first by name up to the
 configured `catalog_product_limit`, beside the full product count. Categories
 are ordered by descending product count, then name, each with its `parent_id`;
@@ -179,18 +175,11 @@ wins over a text-list rank). Per holder (formula version 1):
 Sorts are visibility, win rate, position (each best first) or name; the cursor
 is bound to the filters and a cursor from other filters is refused (422).
 
-The screen puts the My catalog / All products / Archived switch, search, window, engine,
-prompt set and column settings in the top control strip; the catalog's
-categories with their product counts sit beside the table, and the chosen
-category's own page opens from there. Hidden columns are a per-browser
-preference and leave the read unchanged. Export writes the rows on screen in
-the shown columns, a missing value as an empty field and a count of quotes in
-other currencies in brackets after the price, as the table shows it beside the
-price (even when none was quoted in the row's own currency). Checked catalog products
-start competitor discovery (at most `COMMERCE_TARGETS_MAX`); competitor rows
-cannot be checked. Every row links to its holder's page with the table's
-window, engine and prompt set, and the page's Back link returns them.
-Unavailable, unknown, none and zero render as different values.
+Checked catalog products start competitor discovery (at most
+`COMMERCE_TARGETS_MAX`); competitor rows cannot be checked. Every row links to
+its holder's page with the table's window, engine and prompt set, and the
+page's Back link returns them. Unavailable, unknown, none and zero render as
+different values.
 
 ## Product detail page
 
@@ -204,25 +193,12 @@ merged competitor opens its one page. Beside the row it
 returns, from the same scoped slots and bounded by `products.detail` in
 `config/commerce.ts`:
 
-- the catalog description, and the image an edit set, else that of the
-  holder's latest shopping card (null when neither has one);
-- for a catalog product, its editable record (lifecycle state, price,
-  currency, identifiers, edited image and category names); null for a
-  competitor;
-- competing products: holders with a slot in the same executions, by shared
-  executions, with how often each ranked above this one and its mean rank;
-  only holders the table lists, so a competitor rejected after the answers
-  drops out and every row opens a page;
-- where it was seen: the buyer-prompt targets (categories and owned products)
-  whose answers it appeared in, by executions;
-- merchants, the citations of the executions it appeared in (by URL) and their
-  fan-out queries (from each answer's settled analysis), each by executions;
-- per prompt (it appeared for, or targets it): executions, appearances,
-  visibility, win rate and position over that prompt's executions;
-- the executions it appeared in, newest first, with best rank and `won`,
-  `lost` or `unranked`, and their total;
-- for an owned product, the Actions not done or dismissed whose live commerce
-  Opportunities target it.
+- competing products: only holders the table lists, so a competitor rejected
+  after the answers drops out and every row opens a page;
+- its editable record for a catalog product (null for a competitor), its
+  description and image, merchants, citations, fan-out queries, per-prompt
+  metrics, the executions it appeared in and, for an owned product, the open
+  Actions whose live commerce Opportunities target it.
 
 Commerce Actions come from measured answers, so the page has no Generate
 action of its own.
@@ -233,8 +209,7 @@ action of its own.
 ([overview read](../frontend/services/api/src/commerce/overview.ts)) reads the
 same scope, answers and slots as the Products table and the product detail
 page (their shared `scopedSlots` CTEs) over the catalog and its approved and AI-observed competitors, in one
-SQL read. `/products/overview` draws it; the sidebar's Commerce group holds
-Overview and Products. Per window (the table's windows):
+SQL read. `/products/overview` draws it (the sidebar's Shopping and Products). Per window (the table's windows):
 
 - Ranking: brands, then products, by appearances, up to `ranking_limit`
   (`overview` in `config/commerce.ts`), with visibility, win rate and position
@@ -243,15 +218,9 @@ Overview and Products. Per window (the table's windows):
   product slots ÷ every product slot in scope, null when no answer held a
   product. A holder with no brand is unknown, not a brand: it stays out of the
   brand ranking and its slots stay in the denominator.
-- Most and least visible: catalog products by appearances, up to
-  `extremes_limit` each; the two lists never share a product.
-- Top merchants: merchant domains by answers naming them, with the number of
-  holders sent there, up to `merchant_limit`.
-- Top fan-out queries: of the answers that held a product, the search queries
-  their latest response analysis captured, by answers, up to
-  `fanout_query_limit`, beside how many of those answers exposed their
-  queries and how many ran no search; the rest (searched without exposing
-  queries, or not analyzed yet) are unknown.
+- Most and least visible products, top merchants and top fan-out queries
+  (limits in `overview`, `config/commerce.ts`); fan-out answers that searched
+  without exposing queries, or were not analyzed yet, are unknown.
 
 A category narrows every list to its holders (as the table's category filter
 does) and reads its latest Commerce audit snapshot: the category-target metrics
@@ -267,10 +236,7 @@ Discovery runs as a queued, versioned attempt whose status is exposed until it
 terminalizes. After admission the browser starts a separate authorized POST for
 the returned task IDs, using the analytics worker with bounded search and page
 acquisition. A request names at most `COMMERCE_TARGETS_MAX` (10) targets, the
-limit the shared contract owns; the bulk bar refuses a larger selection and
-says why, and a failed request is shown. The screen tracks every discovery it
-launched, so a second run does not drop the first one's progress, and refreshes
-candidates as each run finishes.
+limit the shared contract owns.
 
 Tavily is optional; an unavailable provider produces an explicit unavailable
 state. Product queries include bounded product type, attribute and price-band
@@ -328,15 +294,12 @@ each call the model, but only the first to commit stores prompts; the other
 replays them under the project lock. A refusal shows the server's reason, not
 a generic retry message.
 
-For one target, the prompts section opens the shared audit launcher over only
-its approved prompt IDs and explains why launch is disabled until one is
-approved; provider selection, repetitions, estimate, capacity and execution stay
-with the audit owner. Audit creation freezes approved prompts, the current
-catalog identity of each distinct target once, approved competitors and the
-parser, matcher, formula and template versions. Scheduled Commerce runs enter
-the same freeze, execution, observation and snapshot path. After a launch the
-section follows the run's event stream and refreshes the product metrics and
-Actions when it finishes. Typed text belongs to one page and resets on leaving it.
+A target launches the shared audit launcher over only its approved prompt IDs;
+provider selection, repetitions, estimate, capacity and execution stay with the
+audit owner. Audit creation freezes approved prompts, the current catalog
+identity of each distinct target once, approved competitors and the parser,
+matcher, formula and template versions. Scheduled Commerce runs enter the same
+freeze, execution, observation and snapshot path.
 
 ## Catalog matching in every answer
 
@@ -358,9 +321,8 @@ any scope, records one when the catalog changed since the last and freezes it
 as `configuration.commerce_catalog`.
 
 A **match pass** (`commerce_match_passes`) is one derivation of observations
-from one stored answer under one revision and one parser/matcher version pair,
-unique on those four, so a repeated derivation is a no-op. Every observation
-references its pass. `live` passes are written with the answer; a buyer
+from one stored answer under one revision and one parser/matcher version pair
+([state machines](state-machines.md)). `live` passes are written with the answer; a buyer
 prompt's answer is matched against its target's frozen products and approved
 competitors (the AI Shelf below, resolver included), and any other answer
 against the whole frozen revision. An answer no buyer prompt targets has no
@@ -419,10 +381,8 @@ ChatGPT shopping carousels are read from the stored provider response
 text spans: each organic `chat_gpt_products` card becomes one ordered slot with
 `surface_kind = 'shopping_result'`, ranked by its one-based position among the
 organic cards of its carousel; text spans stay `recommendation`. A card records
-its title, tag, price and currency, merchant name, link and host, ChatGPT's
-product key and first image URL; every field but the title is optional and an
-absent one is stored as absent, not zero. The card's rating is never read.
-Sponsored items stay with Ads and never hold a slot or a position. Cards are
+its fields as parsed; every field but the title is optional and an absent one
+is stored as absent, not zero. Sponsored items stay with Ads and never hold a slot or a position. Cards are
 matched deterministically and never sent to the resolver: first by link
 (canonical page, tracking parameters ignored) to a frozen product or approved
 competitor, then by the product key a card in the project was matched to before
@@ -462,16 +422,9 @@ Opportunities read the Products read instead, over the configured window
 (`PRODUCT_METRICS` in the [opportunity config](../frontend/services/api/src/config/opportunity.ts))
 for every active owned product, ending when the refresh resolved its sources:
 
-- `product_not_mentioned`: no appearance in the window's answers;
-- `price_mismatch`: the median quoted price in the catalog currency is
-  outside the catalog price (or variant range) by more than the configured
-  share; quotes in other currencies are not converted;
-- `losing_position`: the win rate over ordered appearances is below the
-  configured rate;
-- `merchant_absent`: the answers name merchants for the product and none is an
-  owned host (the project website or an owned domain).
-
-Each rule needs a configured number of samples (executions, quotes in the
+`product_not_mentioned`, `price_mismatch`, `losing_position` and
+`merchant_absent` (rules and thresholds in `PRODUCT_METRICS`; quotes in other
+currencies are not converted). Each rule needs a configured number of samples (executions, quotes in the
 catalog currency, ordered appearances, merchant answers); below it the product
 has too little data and raises nothing, and a product without a catalog price
 raises no price finding. A finding stores the window, the reading, the
@@ -487,20 +440,14 @@ read.
 
 ## Entry points and lifecycle
 
-The [TypeScript Commerce API](../frontend/services/api/src/routes/commerce.ts)
-authorizes persisted reads, catalog imports and explicit decisions using active
-workspace membership and run/write capabilities. The
-[discovery executor](../frontend/services/api/src/commerce/discovery.ts) uses the
-shared Site Health safe fetcher, acquisition controls, robots policy, parser and
-classifier. Provider calls and candidate verification finish before the worker
-locks the live claim and appends the attempt, pending candidates and queue
-outcome; no transaction spans network I/O. A target removed before execution or
-publication terminalizes with `commerce_target_unavailable`.
+The [discovery executor](../frontend/services/api/src/commerce/discovery.ts) uses
+the shared Site Health safe fetcher, acquisition controls, robots policy, parser
+and classifier. A target removed before execution or publication terminalizes
+with `commerce_target_unavailable`.
 [Catalog projection](../frontend/services/api/src/commerce/projection.ts) consumes
 persisted Site Health analyses through analytics tasks the Site Health
 [analyze executor](../frontend/services/api/src/site-health/analyze-task.ts)
-enqueues for catalog page kinds. Project and target IDs are re-authorized; an
-object ID alone is never a catalog boundary.
+enqueues for catalog page kinds.
 
 Audit context freezes target identity and the catalog revision before shared
 audit execution. No browser aggregate or current-catalog lookup may
@@ -515,9 +462,8 @@ gates remain unverified; applicable acceptance remains in
 
 Not part of the shipped feature:
 
-- previous-period deltas and metric charts over time (later, CM8); the
-  windows are read without a comparison;
-- product ratings and attribute extraction (CM4): card ratings are never read;
+- previous-period deltas and metric charts over time (CM8);
+- product ratings and attribute extraction (CM4);
 - shopping carousels from engines other than ChatGPT, whose products come only
   from answer text;
 - Merchant Center API sync, Shopify OAuth or an app install: the catalog comes

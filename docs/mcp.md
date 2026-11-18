@@ -31,11 +31,9 @@ Consent HTML has a script-free CSP and its form posts only to its own origin.
 Browsers apply `form-action` to every redirect after a form post, so a decision
 returns a page that refreshes to the client's redirect, with a link as fallback,
 rather than a 303. The app Worker preserves this response policy.
-The MCP issuer, resource, discovery and token endpoints remain on the configured
-protocol origin. Browser consent and login use `FRONTEND_URL`, including when
-the browser moves to the app hostname. A stale consent submission on the old
-host receives an explicit restart response; no cross-host POST redirect is
-permitted. The consent page labels the client name as an unverified
+Browser consent and login use `FRONTEND_URL`, including when the browser moves
+to the app hostname. A stale consent submission on the old host receives an
+explicit restart response; no cross-host POST redirect is permitted. The consent page labels the client name as an unverified
 self-declaration and names the redirect host the flow enforces.
 
 The [consent page](../frontend/services/api/src/mcp/consent-page.ts) carries the
@@ -55,10 +53,7 @@ unticked, listing what changes are possible and that each is shown and
 confirmed first. Ticking it adds `citeladder:write` to the code only for a
 selection including such a workspace; otherwise the grant is read-only.
 A workspace without a project links to onboarding, whose `return_to` brings the
-person back to consent, so a visitor can register, verify, set up a project and
-approve in one pass. A refused selection re-renders the form with the reason
-and leaves the transaction unconsumed; an expired transaction or changed session
-explains how to continue.
+person back to consent.
 
 ## Client registration and authorization
 
@@ -67,13 +62,10 @@ clients register before any CiteLadder login exists. There is deliberately no
 redirect-host allowlist; the protections are bounds and binding:
 
 - The [registration guard](../frontend/services/api/src/mcp/registration.ts)
-  reads the bounded body and validates the metadata first, so a malformed or
-  invalid registration spends nothing. It then charges the registering
-  network's burst and window budgets and, last, the global ceiling through the
-  shared [usage limiter](../frontend/services/api/src/abuse/usage.ts), inside
-  the transaction that stores the client. The network is the trusted visitor's
-  IPv4 address or IPv6 /56. Refusals are 429 with `Retry-After`; a network over
-  its own budget does not spend the global one.
+  validates first, so an invalid registration spends nothing, then charges the
+  registering network's budgets and last the global ceiling, inside the
+  transaction that stores the client; a network over its own budget does not
+  spend the global one.
 - `/authorize` charges the client, its source network (IPv6 /64) and then a
   third pool. A client a person has already approved (it holds a grant) spends
   the global authorization budget. A client no person has approved yet, such as
@@ -102,9 +94,9 @@ redirect-host allowlist; the protections are bounds and binding:
   the token exchange rechecks it and the verifier. Unknown extra scopes (such as
   `offline_access`) are dropped; a request without `citeladder:read` is refused,
   scopes never exceed what the client registered, and a request only offers
-  write, never grants it. Queries over 8 KiB and states over 1,024 bytes
-  are refused before writes; usage windows admit 10/client, 40/trusted source and
-  120/global per minute, and the client row lock caps live requests at five.
+  write, never grants it. Oversized queries and states are refused
+  before writes, and usage windows and the client row lock cap live requests
+  (`config/mcp.ts`).
 - Once the redirect is proven, every later `/authorize` error returns to the
   client's redirect with `error`, `state` and `iss` (RFC 6749 §4.1.2.1, RFC 9207),
   so the client is never stranded. Successful consent also carries `iss`.
@@ -140,13 +132,9 @@ use encrypted custody.
   transaction ([workspace access](workspace-access.md)). Consent holds the
   account row and refuses a session whose version has changed, so a code minted
   while a reset commits is either refused or ended with the rest.
-- Refresh slides 30 days but never past 180 days from consent; a connection
-  then consents again.
-- Each grant records when it was last used, at five-minute resolution.
-- The periodic cleanup removes expired unconsumed requests, codes and change
-  confirmations at once,
-  and consumed ones and ended grants after 180 days (a consumed code outlives the grant it minted), in bounded batches. The
-  usage-window table is pruned by its own owner's lane.
+- Refresh slides but never past a hard cap from consent, then the connection
+  consents again; a periodic cleanup prunes expired and consumed rows in bounded
+  batches (`config/mcp.ts`).
 
 ## Authorization on each read
 
@@ -180,20 +168,16 @@ Each market is measured apart: market-scoped reads take `market_id` (omitted
 is the default market). Visibility overview, trends, results, sources, query
 fanouts and competitor focus take `topic_id`, the topic each run froze (AV-5),
 and refuse a topic of another project. New reads are views on an existing tool
-before they are new tools (owner, 2026-11-18), because every tool also sits in
-the Agent's cached prefix. Ads never count as citations. `read_page_text` reads
+before they are new tools ([decision](decisions.md#agent-mcp-and-public-api)). Ads never count as citations. `read_page_text` reads
 the crawled page, never the live one. Page URLs the Site tools return drop
 their query string and fragment (they can carry tokens or emails); pages that
 differ only by query stay apart by `site_url_id`, and their cursors carry no URL.
 
 Each tool is a thin adapter over its owner (Visibility, Actions, Site Health,
-AI Traffic, Commerce, Keyword Research, brand memory), so a correction in the
+AI Traffic, Commerce, Keyword research, brand memory), so a correction in the
 owner reaches the app, the Agent and MCP together. Enumerated arguments are enums
 (the engine set comes from the visibility configuration); paged tools take
 `cursor` and `limit`, and a cursor continues only the selection that produced it.
-Published input schemas omit `$schema`, patterns a `uuid`, `date` or
-`date-time` format already names, safe-integer bounds and null branches, to
-keep `tools/list` small.
 
 Results carry IDs because the model needs them for its next call. The server
 instructions tell clients never to show IDs or `citeladder://` references to
@@ -203,11 +187,8 @@ to the app screen that shows the record. One
 allowlisted kinds, their labels and screens; MCP links and the browser's
 evidence links both read it.
 
-`fetch` resolves an allowlisted `citeladder://` record (project, action,
-opportunity, prompt, audit, visibility result, site snapshot/crawl/page/issue/link,
-demand, query and traffic snapshots, search run/dataset/row) after reauthorizing
-its workspace. A document is `id`/`title`/`text`/`url`/`metadata`, with the record
-once as JSON text; a large one returns bounded parts with continuation IDs. Every
+`fetch` resolves an allowlisted `citeladder://` record after reauthorizing its
+workspace; a large one returns bounded parts with continuation IDs. Every
 URL in a site record (a page's address, fetch artifact, crawl facts and rule
 evidence; an issue's evidence; a link record's neighbours) drops its query
 string and fragment, as the Site tools' do.
@@ -225,15 +206,15 @@ the command checks (a Viewer is refused; a demotion applies to the next call).
 A record named by ID must belong to that project.
 
 Write tools come in three kinds: direct (one call, one transaction with its
-security event), Prompt Builder runs (metered, with no dry run) and prepared
+security event), Prompt builder runs (metered, with no dry run) and prepared
 changes that only `confirm_change` executes.
 
-The Prompt Builder tools call the same command owners as the builder's routes
+The Prompt builder tools call the same command owners as the builder's routes
 (`commands/prompts.ts`), with the same `run` capability, metering, AI-credit
 holds and owner errors. A model call cannot be rehearsed inside a rolled-back
 transaction, so they are not prepared: the server instructions and the
 `prompt-discovery` plugin skill require the user's yes before each, and
-`generate_prompts` activates nothing (only Track in the Prompt Builder does).
+`generate_prompts` activates nothing (only Track in the Prompt builder does).
 Its required `run_key` is the generation owner's idempotency key: a retry with the same key
 and request replays the persisted run instead of spending a second one, and the
 same key for a different request is refused.
@@ -258,13 +239,10 @@ now full, a larger estimate) returns the command's normal error. Prompts added
 this way are active immediately. Each executed change records an
 `mcp.write.<kind>` security event targeting the project.
 
-Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
-carry their own annotations: reads `readOnlyHint: true`; writes
-`readOnlyHint: false`, `destructiveHint` on `prepare_update_prompts`, cancel,
-`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames, status updates, suggestion reviews and `generate_prompts` (by `run_key`).
-Only `confirm_change` carries `openWorldHint: true`: a confirmed audit launch
-asks external AI engines. The server
-instructions require the user's yes before any change tool, and for a prepare
+Write calls spend the normal tool budgets plus a per-grant write budget. Tool
+annotations live in `write-tools.ts`; only `confirm_change` carries
+`openWorldHint: true`, because a confirmed audit launch asks external AI
+engines. The server instructions require the user's yes before any change tool, and for a prepare
 tool its preview shown and `confirm_change` only after the user agrees to it. MCP elicitation is not offered: the transport is
 stateless HTTP and cannot hold a server-to-client request, so every client uses
 the token path.
@@ -279,7 +257,7 @@ owner's message, so the model can correct the call. Any other failure returns
 malformed request is a JSON-RPC error. A write that fails for any other reason
 returns "The change was not made."; its transaction rolled back.
 
-Tool calls are budgeted at 120 a minute per connection and 600 per account; a
+Tool calls are budgeted per connection and account (`config/mcp.ts`); a
 refusal is a tool error naming the retry time.
 
 The TypeScript transport supports the `2025-11-25` initialize lifecycle and the
@@ -310,10 +288,10 @@ MCP Apps bridge. Build it with `pnpm --filter @citeladder/mcp-app build`.
 
 ## Plugin and client acceptance
 
-[The plugin](../plugins/citeladder/) packages AI Visibility Review, AI Search
-Change Review and Technical SEO Triage over public read tools. Each mirrors its
-in-app methodology (`ai_visibility`, `measure`, `technical_health`), and the
-Agent owner-adapter test fails if a plugin skill names a tool the catalogue does
+[The plugin](../plugins/citeladder/) packages four skills (AI Visibility
+Review, AI Search Change Review, Technical SEO Triage and prompt discovery)
+over public tools. Each mirrors its in-app methodology (`ai_visibility`,
+`measure`, `technical_health`, `prompt_discovery`), and the Agent owner-adapter test fails if a plugin skill names a tool the catalogue does
 not have. `plugin.json` also carries the OpenAI directory listing; its category
 is `Data & Analytics` because `Productivity` failed the listing check. The
 submitted ZIP is this folder without its README.
@@ -322,9 +300,7 @@ This repository proves the wire contract, not acceptance in a particular client
 build or the deployed origin. Before public directory submission the release
 owner verifies publisher identity, support/privacy/terms URLs, a reviewer
 account, a recorded walkthrough and portal scans; the plugin's review cases
-(five positive, three negative: publish, acquire, mutate) describe the expected
-behaviour.
-
-The public tool reference is generated from the catalogue with
-`pnpm --filter @citeladder/api mcp:reference`; the repository check detects
+(six positive, three negative: publish, acquire, mutate) describe the expected
+behaviour. The public tool reference is generated from the catalogue
+(`pnpm --filter @citeladder/api mcp:reference`); the repository check detects
 drift.

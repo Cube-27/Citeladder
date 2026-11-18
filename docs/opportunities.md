@@ -54,7 +54,7 @@ the latest succeeded run (a failed run never blocks a retry), reusing the earlie
 window's citations are Visibility's evidence statement (`evidenceScope`: the
 default market's dashboard-ready brand runs, successful answers, both brand
 cohorts), limited to answers to tracked prompts: an answer whose snapshot
-names no prompt still in the library is not read (AS5). The clustering sees
+names no prompt still in the library is not read. The clustering sees
 each page's title, domain and URL path and groups only content pages, never
 product, category, collection, home, search or tag pages. A
 `succeeded` run requests an `opportunity_refresh` with trigger `content_angles`
@@ -72,14 +72,12 @@ records "Content-gap evidence is out of date". With no succeeded run the
 snapshot records "Content gaps not computed yet", which is distinct from a
 succeeded run with no gaps. Each finding's evidence stores
 the angle's prompts with their text at refresh (`prompts: {id, text}`, `text`
-null for a prompt no longer in the project's prompt sets). An angle cited at least `min_citations` times across
-at least `min_domains` domains (both in the
-[content optimization config](../frontend/services/api/src/config/content-optimization.ts))
-is `content_gap_improve_page` on its matched owned content page unless that page
-is already cited for the angle's prompts, and `content_gap_new_page` on a
-planned page when nothing matched. Priority grows with prompts, citations and
-the competitor share of cited domains (`CONTENT_GAP` in the opportunity
-config); the model never scores. Findings key on the angle's lineage, not its
+null for a prompt no longer in the project's prompt sets). An angle over the
+[content optimization config](../frontend/services/api/src/config/content-optimization.ts)
+thresholds is `content_gap_improve_page` on its matched owned content page
+unless that page is already cited for the angle's prompts, and
+`content_gap_new_page` on a planned page when nothing matched; the model never
+scores. Findings key on the angle's lineage, not its
 label: a new-page gap targets the lineage's `planned_page_key`, which the
 content-angle run that creates the lineage stores (`plannedPageKey` of its
 first label) and nothing rewrites, so a relabelled angle keeps its Action and an Agent-planned
@@ -115,7 +113,7 @@ Site Health owns acquisition and deterministic findings, and its
 [Issues](site-health.md) catalog, Mark fixed, Re-run all and fix progress. The
 crawl family promotes one `site_issue_family` finding per Issues group of every
 defect and advisory rule, never a diagnostic and never per page
-([IA1](decisions.md#actions-group-issues)), plus contextual links and page
+([IA1](decisions.md#actions-and-content)), plus contextual links and page
 changes. A site-level rule's group holds the URLs its evidence names; a
 site-level check reads that rule's evaluation and finding in the next
 comparable crawl, and a crawl that never evaluated the rule reads nothing.
@@ -137,21 +135,17 @@ and only with complete, extractor-compatible text coverage. Query relevance may 
 gap action over the same scope; it never creates a duplicate action or asserts
 causation. Anchor diagnostics do not promote.
 
-Keyword gaps come from the [Keyword Research](integrations-traffic-analytics.md#keyword-research-acquisition)
+Keyword gaps come from the [Keyword research](integrations-traffic-analytics.md#keyword-research-acquisition)
 datasets a user reviewed and paid for, read by
 [`search-gap-hits.ts`](../frontend/services/api/src/opportunities/search-gap-hits.ts)
 as rule `search_keyword_gap` (family `search_intelligence`). Per saved
 competitor, the latest published missing-keywords dataset for an owned website
-in the project's Keyword Research market, at most 90 days old, qualifies;
+in the project's Keyword research market, at most 90 days old, qualifies;
 failed or unknown coverage never does, an empty dataset supersedes older gaps,
-and partial data adds a limitation. A row promotes only with search volume ≥ 50
-and the competitor ranking in the top 10; unknown volume or rank abstains and is
-counted, never read as zero. Navigational searches, searches branded for the
-project or naming a competitor, searches the project already ranks for in the
-same market, and searches Search Console already shows (a promoted Demand query
-signal or any query with impressions in the Demand window) are left out. One
-search across competitors and word orders is one finding, ranked by competitor
-count then volume, at most 25 per refresh. A crawled page whose title and H1
+and partial data adds a limitation. Unknown volume or rank abstains and is
+counted, never read as zero; branded, navigational and already-ranked searches
+and those Search Console already shows are left out (thresholds in `SEARCH_GAP`).
+One search across competitors and word orders is one finding. A crawled page whose title and H1
 hold every term is the target; otherwise the finding is a planned page keyed
 like an Agent-planned page, so both converge on one Action. Publishing a
 missing, ranking or shared-keyword dataset enqueues a refresh and verification;
@@ -165,13 +159,9 @@ source mix. The [content handoff](../frontend/services/api/src/opportunities/pro
 projects target IDs, citations, limitations, coverage and a suggested content
 format for the Agent's context.
 
-The earned action is keyed on one read page, not on a publisher domain.
-`earned_page_acquire_listing` fires only when a successful reading shows a
-tracked competitor on the page and the brand absent. Its priority reads
-verified on-page competitor presence; answer-level co-occurrence is
-descriptive and never scores. [Earned sources](earned-sources.md) is the
-authority for the inspection and the rule; a declaration against it targets
-the publisher page and never an owned `SiteUrl`.
+The earned action is keyed on one read page, not on a publisher domain;
+[Earned sources](earned-sources.md) owns the inspection, the rule and its
+declaration target (the publisher page, never an owned `SiteUrl`).
 
 The [Actions screens](../frontend/components/agent/actions-list-screen.tsx)
 render that contract; they never reclassify domains or fabricate task prose.
@@ -212,7 +202,7 @@ Action with no current evidence reads a message about its label. A
 `content_gap_improve_page` branch hands off the page URL with the
 `optimize_page` workflow, whose chat fetches that page into a page document
 before its first turn
-([content optimization](content-optimization.md#what-ships-phase-2-page-documents)).
+([content optimization](content-optimization.md#page-documents)).
 
 `actions` has two TypeScript writers. The refresh derives
 evidence Actions and restamps every row's members; the Agent only inserts
@@ -225,7 +215,7 @@ the same Action owner, and so does **Analyze a page** on the Actions screen
 (`POST /projects/{id}/actions/analyze`): it inserts or reuses the `agent`-origin
 Action for one of the latest crawl's content pages inside the transaction that
 starts its `optimize_page` chat, so a repeat for the page reuses the Action
-([content optimization](content-optimization.md#what-ships-phase-2-page-documents)).
+([content optimization](content-optimization.md#page-documents)).
 MCP and command-center reads use the shared, persisted
 [effective status](../frontend/services/api/src/opportunities/action-status.ts).
 
@@ -277,11 +267,11 @@ last non-empty member set in place. Each promoted
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
-There is one Actions list ([AS1](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)):
+There is one Actions list ([decision](decisions.md#actions-and-content)):
 content-gap findings are ordinary Actions on it, and a content page's content
 gaps, search demand and link findings share its one Action; its Site Health
 issues are their Issues groups' own `issue_family` Actions
-([IA1](decisions.md#actions-group-issues)). Action sync persists each Action's
+([IA1](decisions.md#actions-and-content)). Action sync persists each Action's
 `goal` and `goal_grouping` from `config/actions.ts` (the strongest finding
 files it) and rewrites its `action_urls` (an issue group's cohort, a page
 Action's one URL) in the refresh transaction, so the Actions tree, a grouping's
@@ -309,14 +299,10 @@ verified. The Action row is locked and one Action carries at most one
 declaration; a same-key replay returns it, and same-key conflicting input is
 rejected. The user must restore or accept a declined Action first.
 
-The declaration is the Action's recorded deployment step (BL4). Its go-live
-time is when the fix shipped, so the deployment and the baseline share one
-clock. Who recorded it is the authenticated user (`actor_user_id`), never a
-request field. The caller may add `deployment_reference`, the release, pull
-request or commit that shipped it: one line of at most 500 characters, blank
-recording none. It is part of the replay identity. The declaration read returns
-the reference and `deployed_by`, the recorder's email while they are still a
-member of the workspace, else null.
+The declaration is the Action's recorded deployment step. Its go-live time is
+when the fix shipped, so the deployment and the baseline share one clock. Who
+recorded it is the authenticated user (`actor_user_id`), never a request field;
+the optional `deployment_reference` is part of the replay identity.
 
 The baseline is the newest Opportunity snapshot at or before the go-live
 time, never one a later refresh wrote; when none existed the declaration
@@ -395,13 +381,8 @@ prompt deleted since) or answered none reads `unavailable`, never `unmet`, and
 no run yet reads `waiting`. The check says only whether a URL was cited, never
 which version of the page the engine read.
 
-An earned declaration is measured on prompts, not on the page: whether the
-listing went live shows on the cited URL's page from the next reading, and the
-outcome that matters is visibility on the prompts that cite it. Neither claims
-the listing caused a movement.
-
 The owner that commits a later crawl, audit (after its source-page
-inspection), traffic window or Keyword Research keyword dataset calls
+inspection), traffic window or Keyword research keyword dataset calls
 [`announceEvidence`](../frontend/services/api/src/opportunities/evidence-announcement.ts)
 in that transaction. It enqueues the Opportunity refresh (unless Demand
 re-interprets first and carries it, as for traffic and for a crawl in a project
@@ -452,46 +433,27 @@ next crawl (the leg reads no [crawl schedule](site-health.md), so it names no
 due date), each with the row it read. Nothing is triggered by a read.
 
 **Mark implemented** in the Agent output pane declares the revision on screen;
-the Action detail declares work done outside CiteLadder. The dialog asks when
-the change went live and, optionally, what shipped it, and lists what each
-finding will be measured by. The Implementation section then shows the
-go-live day, who recorded the deployment and the reference, linked when it is
-a web address. After
-declaring, focus moves to the measurement checklist: each check with its state
-and the reason it could not be read, and **Run crawl now** while a page check
-lacks a met reading. Observation state stays separate from workflow status, and
-the causality notice is shown: a met check shows the change is live and
-measured; it does not prove this Action caused any movement, and other changes
-can overlap.
+the Action detail declares work done outside CiteLadder. Observation state
+stays separate from workflow status, and the causality notice is shown: a met
+check shows the change is live and measured; it does not prove this Action
+caused any movement, and other changes can overlap.
 
 Each Action's goal and grouping are persisted at sync (`ACTION_GOALS` in the
 [Actions config](../frontend/services/api/src/config/actions.ts)).
-`GET /projects/{id}/actions` filters by `status`, `target_kind`, `approach`,
-`priority` (the band: high from 30, medium from 20, low below, unscored
-included), `family` (Source), `grouping`, `ownership` and `topic`; an unknown
-value is a 422, and `status_counts` stay project-wide and unfiltered (the
-sidebar badge). `GET /projects/{id}/actions/tree` reads the whole page under
+`status_counts` on `GET /projects/{id}/actions` stay project-wide and
+unfiltered (the sidebar badge). `GET /projects/{id}/actions/tree` reads the whole page under
 one status in a fixed number of statements: the status counts, the goal
 strip's open counts (New and In progress under the other filters, whatever the
 status filter), and each grouping's count, first ten rows and this list's
 cursor for its next rows. A bulk change's filter takes the same fields.
 
-The Actions screen (`/actions`, a Dashboard page) is the home for every
-actionable item in the app ([IA1](decisions.md#actions-group-issues)): status,
-then goal (or what the page groups by), then grouping, then the Actions, each
-open status from its own tree read and never from the Issues reads. Statuses,
-group-by, Impact and Source are URL state. Ticked rows or groupings are
-accepted or declined in bulk, moving out of their status at once and settled
-by the refetch. Overview's ranked actions
-link to the owning Action at `/actions/{action_id}`, or to the Actions list
-when an Opportunity has no Action yet; an Action's findings are listed on that
-detail with no drawer.
+The Actions screen (`/actions`) is the home for every actionable item in the
+app ([IA1](decisions.md#actions-and-content)): status, then goal, then
+grouping, then the Actions, each open status from its own tree read and never
+from the Issues reads. Overview's ranked actions link to the owning Action at
+`/actions/{action_id}`, or to the Actions list when an Opportunity has no Action
+yet; an Action's findings are listed on that detail with no drawer.
 
 Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references
 survive source retention through SET NULL.
-
-[Configuration](../frontend/services/api/src/config/opportunity.ts) owns tunable
-ranking and verification policy.
-[Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
-[Visibility](visibility-prompt.md) remain the source authorities.

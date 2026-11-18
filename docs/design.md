@@ -136,9 +136,7 @@ colors:
   checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
   (and the primary button's fill, labelled `on-ink`), `ink-2` for what
   supports it; there is no third grey. Dark is designed, not inverted:
-  Linear's near-blacks (ground #121213, chrome #161617, surface #1a1a1b,
-  raised #1f1f21, well and `control-fill` #232325, rule #252526,
-  `control-edge` #2f3033, `control-line` #3a3b40), each layer a step lighter than the one beneath.
+  Linear's near-blacks (values in `globals.css`), each layer a step lighter than the one beneath.
   The shell keeps our structure: the chrome is lighter than the ground,
   never a darker frame around an inset page.
 - **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
@@ -246,7 +244,7 @@ The block lists the system's values. The app binds its own: controls 32
 (`control-md`) and 44 (`control-lg`, flow pages); below 900px or under a
 coarse pointer every primary target is 44 and table rows grow from 36 to 44.
 Tags are 24 and live in running content (cells, facts, sheets), never in a
-row of controls. Navigation rows are 28: links, not controls.
+row of controls. Navigation rows are 32 (44 in the drawer): links, not controls.
 
 The app's spacing is one scale (2, 4, 8, 12, 16, 24, 32, 48, 64) used as
 roles, so a page passes a role and never a number:
@@ -267,10 +265,10 @@ vertical gap.
 
 **Page anatomy**, identical on every shell page:
 
-1. **Masthead** (48, sticky, a hairline under it): the menu button below
+1. **Masthead** (56, sticky, a hairline under it): the menu button below
    900px, the back link on a record, the page title, then search, secondary
    actions, at most one primary action and Ask agent.
-2. **Page tabs** (40, optional).
+2. **Page tabs** (32, optional).
 3. **Filter bar** (48, optional): view, search, **All filters**, then at the
    row's end the count or a live note and one action (Export, Columns).
 4. **Sections**, 24 below the chrome and 32 apart.
@@ -284,8 +282,7 @@ table, a section's head when it changes how that section draws.
 sidebar grows it, except on reading pages: the Agent chat, Settings and
 Billing, Issues, Actions, Skills and Context sit whole, masthead included, in
 the centred `container-thread` column the Agent thread uses, so their side
-space matches the chat's. The owner decided this on 2026-11-16: "the padding
-will be same as agent chats padding to maintain consistency". A route opts in
+space matches the chat's (owner, 2026-11-16). A route opts in
 with `width: 'narrow'` in
 [`app-routes.ts`](../frontend/lib/navigation/app-routes.ts) and `PageFrame`
 applies it; a workbench (a chat's page document) still fills the column.
@@ -294,9 +291,8 @@ Reading columns, forms and flows take `container-prose`, `container-form` and
 No page scrolls sideways down to 320px: a wide table scrolls inside its own
 frame with its first column pinned.
 
-**Breakpoints.** From `rail:` (900px) the sidebar is a labelled column, 200
-wide below `shell:` (1280px) and 224 from it. The reader may drag its edge
-or collapse it to the 48px rail; both choices persist per browser
+**Breakpoints.** From `rail:` (900px) the sidebar is a labelled column the
+reader may drag or collapse to a rail
 ([`lib/sidebar-width.ts`](../frontend/lib/sidebar-width.ts)). Below 900px
 the sidebar is a left drawer behind the masthead's menu button. A
 component's internals stop stacking at `desktop:` (981px). In the main column
@@ -305,8 +301,9 @@ grids measure the column instead of the viewport (`column-split`,
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint: a table with views (`reserveRows`) keeps
-its tallest view's rows (up to a page, plus a few blank rows) and its pager in
-every view and state, a filter trigger and
+its tallest view's height (plain space, never blank rows) and its pager in
+every view and state, a section that appears after a read or a condition
+reserves its settled height from the first frame, a filter trigger and
 a count hold their widest value's width, and a pending button keeps its
 label's box. A page the window scrolls ends in `--page-end-space` (a third of
 the viewport), so content shrinking near the bottom never pulls the scroll.
@@ -420,8 +417,8 @@ its own spacing, size or radius on them.
   (owner 2026-11-18): hairlines above and below, thin dividers between equal
   cells, columns from the count, each cell a muted label with its hint over
   the value and its inline delta, values on one baseline.
-- **Progress is rungs:** RungMark for your citation standing, RungMeter for a
-  0 to 100 score or a quota, RungTrail for steps. No rings, donuts, smooth
+- **Progress is rungs:** RungMeter for a 0 to 100 score or a quota, RungTrail
+  for steps. No rings, donuts, smooth
   curves or generic progress bars.
 - **The live rung** (Spinner) is the only "working" mark: one rung pulsing
   its opacity, shown only after 300ms and held still under reduced motion.
@@ -471,14 +468,8 @@ tone. A state shared by a section or column is said once, on its header.
 
 ## Do's and Don'ts
 
-- **Do** order controls from the most likely action to the least likely.
 - **Do** add what a page lacks to the system first (one component, both
   themes), then use it.
-- **Do** keep every state distinct: unknown, unavailable, zero and not
-  applicable are different findings.
-- **Don't** use the accent for actions, links, focus, status or emphasis.
-- **Don't** put a shadow on anything at rest in the app, or nest boxes more
-  than two deep.
 - **Don't** set a size, weight, colour or radius the tokens don't have, or
   use a website role name in app code.
 - **Don't** change factual copy, data, feature claims or confirmation steps as

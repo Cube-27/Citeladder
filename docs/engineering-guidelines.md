@@ -102,9 +102,7 @@ navigation mechanic.
 
 ### New sections reserve their settled footprint
 
-**Rule:** A section that appears after a read or a condition reserves its
-settled height from the first frame. See
-[design](design.md) ("Nothing moves on interaction").
+**Rule:** [design](design.md) ("Nothing moves on interaction") owns it.
 **Why:** "Keep … still" fixes shipped seven times (#405, #504, #522, #532,
 #541, #546, #834). Then new sections shifted on load again: the
 Insights performance matrix (#982) and Competitors suggestions (#971) put
@@ -194,12 +192,12 @@ a `queryFn` param or a prefetcher.
 and adds no read that waits on another it doesn't need.
 **Why:** #523, #525, #541 and #549 brought page loads to one round and
 removed duplicate reads. Later changes (#727's slim project list, #551's
-selection clear, and prefetchers that `await import()` first) pushed screen
-reads back to rounds 3 to 6.
-**Check:** An `await` before an independent request, a read enabled only
-after an unrelated one answers, or a prefetcher that loads code before
-starting its request. Count the request rounds on a production build when
-these files change.
+selection clear) pushed screen reads back to rounds 3 to 6. A prefetcher's
+dynamic `import()` of its API module is required, not a regression
+(`route-prefetch.ts` says why).
+**Check:** An `await` before an independent request, or a read enabled only
+after an unrelated one answers. Count the request rounds on a production
+build when these files change.
 
 ### Work that grows with the data stays off shared locks and lanes
 

@@ -4,8 +4,7 @@ Status: **architecture reviewed with the owner, 2026-11-10**. The owner
 assigned the catalog part on 2026-11-11 ("Build the catalog"): the rule
 catalog, evidence eligibility and the L4 model pass over it shipped (see
 [content optimization](../content-optimization.md#suggestions)). The L1–L3
-linters and L5 remain unassigned and not authorized for execution. Requested by the owner (CO9 in
-[decisions](../decisions.md#content-optimization)) as a separate document: this
+linters and L5 remain unassigned and not authorized for execution. Requested by the owner (2026-11-10) as a separate document: this
 one owns *how a page's copy is audited and what a suggestion is*; content
 optimization owns the gap evidence, the screen, the editor and measurement, and
 consumes this engine.
