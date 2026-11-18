@@ -30,7 +30,7 @@ const CRUMBS = [{ label: 'Prompts', href: PROMPTS_HREF }, { label: 'Prompt build
 export function PromptBuilderPage() {
   const canWrite = useWorkspaceCapability('write');
   return (
-    <PageFrame crumb={<Breadcrumb parts={CRUMBS} />}>
+    <PageFrame crumb={<Breadcrumb parts={CRUMBS} />} fitted>
       {canWrite ? (
         <BuilderForProject />
       ) : (

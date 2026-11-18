@@ -9,13 +9,13 @@ import { cn } from '@/lib/utils';
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
 /**
- * Steps: a task worked through in order, inside a shell page's body. The
+ * Steps: a task worked through in order, in a `fitted` shell page's body. The
  * steps run down a 224 column on the left (numbered, the current one on the
  * nav's current tile, completed ones ticked and clickable to go back to),
- * the current step's content beside them, and a raised action bar pinned to
- * the window's foot: `footerStart` at its left, `footerEnd` at its right. The
- * body is at least the window under the masthead, so the bar never moves
- * with a step's height.
+ * the current step's content beside them, and a raised action bar at the
+ * window's foot: `footerStart` at its left, `footerEnd` at its right. The body
+ * fills the window and scrolls inside itself, so the bar never moves with a
+ * step's height.
  */
 export function StepsLayout<T extends string>({
   label,
@@ -40,8 +40,8 @@ export function StepsLayout<T extends string>({
 }>) {
   const index = steps.findIndex((step) => step.value === current);
   return (
-    <div className="flex min-h-[calc(100dvh-var(--route-chrome-height))] min-w-0 flex-1 flex-col">
-      <div className="desktop:flex-row flex min-w-0 flex-1 flex-col gap-[var(--content-gutter)]">
+    <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 min-w-0 flex-col">
+      <div className="desktop:flex-row flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
         <nav aria-label={label} className="flex w-56 shrink-0 flex-col">
           <ol className="flex min-w-0 flex-col gap-1">
             {steps.map((step, position) => (
@@ -63,7 +63,7 @@ export function StepsLayout<T extends string>({
       </div>
       <div
         data-page-band="action-bar"
-        className="bg-raised border-rule rounded-card shadow-pop z-sticky sticky bottom-[var(--content-gutter)] mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 flex-wrap items-center gap-2 border px-[var(--card-padding)] py-2"
+        className="bg-raised border-rule rounded-card shadow-pop mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 shrink-0 flex-wrap items-center gap-2 border px-[var(--card-padding)] py-2"
       >
         {footerStart}
         <span className="flex-1" />
