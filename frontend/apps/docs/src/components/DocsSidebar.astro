@@ -7,11 +7,15 @@
  */
 import { ChevronDown } from 'lucide-react';
 import { articles, groups } from '../lib/content';
+import ApiSidebar from './ApiSidebar.astro';
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const current = (href: string) => (href.replace(/\/$/, '') || '/') === path;
+const inApi = path === '/api' || path.startsWith('/api/');
 ---
 
+{inApi && <ApiSidebar />}
+{!inApi && (
 <nav aria-label="Documentation" class="cl-docs-side">
   {
     groups.map((group) => (
@@ -39,6 +43,7 @@ const current = (href: string) => (href.replace(/\/$/, '') || '/') === path;
     ))
   }
 </nav>
+)}
 
 <style>
   .cl-docs-side {

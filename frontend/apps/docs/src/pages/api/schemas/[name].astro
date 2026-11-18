@@ -1,0 +1,94 @@
+---
+import ParamTable from '../../../components/ParamTable.astro';
+import TypeLabel from '../../../components/TypeLabel.astro';
+import ApiPage from '../../../layouts/ApiPage.astro';
+import { API_OPERATIONS, API_SCHEMAS } from '../../../lib/api-reference';
+
+export function getStaticPaths() {
+  return API_SCHEMAS.map((schema) => ({ params: { name: schema.name }, props: { schema } }));
+}
+
+const { schema } = Astro.props;
+// The endpoints whose request or response names this schema.
+const users = API_OPERATIONS.filter((operation) =>
+  [operation.request, operation.response.body].some((body) =>
+    [...(body?.type ?? []), ...(body?.rows.flatMap((row) => row.type) ?? [])].some(
+      (part) => part.schema === schema.name,
+    ),
+  ),
+);
+---
+
+<ApiPage
+  title={schema.name}
+  eyebrow="Schema"
+  description={`The ${schema.name} schema shared by API endpoints.`}
+>
+  <div class="cl-docs-schema">
+    {
+      schema.rows.length > 0 ? (
+        <ParamTable title="Fields" rows={schema.rows} />
+      ) : (
+        <p class="cl-docs-schema-type">
+          Type: <TypeLabel parts={schema.type} />
+        </p>
+      )
+    }
+    {
+      users.length > 0 && (
+        <div>
+          <h2 class="cl-docs-schema-sub">Used by</h2>
+          <ul class="cl-docs-schema-users">
+            {users.map((operation) => (
+              <li>
+                <a href={operation.href}>{operation.summary}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+  </div>
+</ApiPage>
+
+<style>
+  .cl-docs-schema {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    max-width: var(--container-prose);
+  }
+  .cl-docs-schema-type {
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-schema-type :global(code) {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+  }
+  .cl-docs-schema-sub {
+    margin: 0 0 8px;
+    color: var(--color-ink);
+    font-size: var(--text-label-lg);
+    line-height: var(--text-label-lg--line-height);
+    font-weight: 500;
+  }
+  .cl-docs-schema-users {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-schema-users a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-control);
+    text-underline-offset: 2px;
+  }
+</style>

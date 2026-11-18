@@ -7,7 +7,7 @@
  * describes a row, with the allowed values and the default under it. Named
  * API schemas link to their entry. Columns are fixed, so rows never reflow.
  */
-import { schemaAnchor, type ReferenceRow } from '../lib/json-schema';
+import { schemaHref, type ReferenceRow } from '../lib/json-schema';
 
 interface Props {
   title: string;
@@ -38,7 +38,7 @@ const described = rows.some((row) => row.description || row.values.length || row
                   <span class="cl-docs-param-meta">
                     <span>
                       {row.type.map((part) =>
-                        part.schema ? <a href={`#${schemaAnchor(part.schema)}`}>{part.text}</a> : part.text,
+                        part.schema ? <a href={schemaHref(part.schema)}>{part.text}</a> : part.text,
                       )}
                     </span>
                     <span class:list={{ 'cl-docs-param-req': row.required }}>

@@ -1,0 +1,26 @@
+---
+/**
+ * ApiPage — a generated API page (an endpoint, the endpoint list or a schema)
+ * in DocsShell: the resource or kind as the eyebrow over the title and a
+ * one-line subtitle. Reference pages take the full column, with no Toc.
+ */
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import DocsShell from './DocsShell.astro';
+
+type Link = { title: string; href: string };
+interface Props {
+  title: string;
+  eyebrow: string;
+  description: string;
+  /** The subtitle, when shorter than the description the page declares to search engines. */
+  subtitle?: string;
+  previous?: Link;
+  next?: Link;
+}
+const { title, eyebrow, description, subtitle = description, previous, next } = Astro.props;
+---
+
+<DocsShell title={title} description={description} wide previous={previous} next={next}>
+  <ArticleHeader title={title} eyebrow={eyebrow}>{subtitle}</ArticleHeader>
+  <slot />
+</DocsShell>

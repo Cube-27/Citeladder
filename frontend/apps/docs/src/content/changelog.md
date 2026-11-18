@@ -3,10 +3,16 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-16'
+updated: '2026-11-18'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 18, 2026: An API section with a page for every endpoint
+
+The docs now have an **API** section beside the guides and MCP. Its overview covers authentication and scopes, pagination, idempotency, rate limits and errors, and every endpoint has its own page with a description, its parameters, the response fields and copyable cURL, JavaScript and Python examples. Each shared schema has a page too. The old single-page reference now redirects to the endpoint list.
+
+**For your team:** start from the [API introduction](/api/) or browse the [endpoints](/api/endpoints/). Additions to the API are listed in the [API changelog](/api/changelog/).
 
 ## November 16, 2026: One Actions list, with Site Health issues kept in Issues
 

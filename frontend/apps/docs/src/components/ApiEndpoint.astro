@@ -1,0 +1,146 @@
+---
+/**
+ * ApiEndpoint — one operation's page body: its description, the scope it
+ * needs, its parameters and request body, then the response fields with the
+ * success status. Below 1280px the examples follow the text; from 1280px
+ * they are a sticky right column under the top bar.
+ */
+import { LockKeyhole } from 'lucide-react';
+import type { ApiOperation } from '../lib/api-reference';
+import ApiExamples from './ApiExamples.astro';
+import ApiMethod from './ApiMethod.astro';
+import ParamTable from './ParamTable.astro';
+import Prose from '@/components/content/Prose.astro';
+import TypeLabel from './TypeLabel.astro';
+
+interface Props {
+  operation: ApiOperation;
+}
+const { operation } = Astro.props;
+const { request, response } = operation;
+const segments = operation.path.split(/(\{[^}]+\})/).filter(Boolean);
+const responseTitle = response.status ? `Response ${response.status}` : 'Response';
+---
+
+<div class="cl-docs-endpoint">
+  <div class="cl-docs-endpoint-text">
+    <p class="cl-docs-endpoint-line">
+      <ApiMethod method={operation.method} />
+      <code class="cl-docs-endpoint-path">
+        {
+          segments.map((segment) =>
+            segment.startsWith('{') ? <span class="cl-docs-endpoint-param">{segment}</span> : segment,
+          )
+        }
+      </code>
+    </p>
+    {
+      operation.scope && (
+        <p class="cl-docs-endpoint-scope">
+          <LockKeyhole className="my-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            Needs the <code>{operation.scope}</code> scope
+          </span>
+        </p>
+      )
+    }
+    <Prose variant="docs"><p>{operation.description}</p></Prose>
+    {operation.parameters.map((group) => <ParamTable title={group.title} rows={group.rows} />)}
+    {
+      request &&
+        (request.rows.length > 0 ? (
+          <ParamTable title="Request body" rows={request.rows} />
+        ) : (
+          <p class="cl-docs-endpoint-body">
+            Request body: <TypeLabel parts={request.type} />
+          </p>
+        ))
+    }
+    {
+      response.body && response.body.rows.length > 0 ? (
+        <ParamTable title={responseTitle} rows={response.body.rows} />
+      ) : (
+        <p class="cl-docs-endpoint-body">
+          {responseTitle}: {response.body ? <TypeLabel parts={response.body.type} /> : 'no body'}
+        </p>
+      )
+    }
+  </div>
+  <aside class="cl-docs-endpoint-examples" aria-label="Examples">
+    <ApiExamples operation={operation} />
+  </aside>
+</div>
+
+<style>
+  .cl-docs-endpoint {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    min-width: 0;
+  }
+  .cl-docs-endpoint-text {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    max-width: var(--container-prose);
+  }
+  .cl-docs-endpoint-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 0;
+  }
+  .cl-docs-endpoint-path {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    overflow-wrap: anywhere;
+  }
+  .cl-docs-endpoint-param {
+    color: var(--color-ink-muted);
+  }
+  .cl-docs-endpoint-scope {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-endpoint-body {
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-endpoint-body :global(code),
+  .cl-docs-endpoint-scope :global(code) {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-docs-endpoint-body :global(a) {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-control);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  @media (min-width: 1280px) {
+    .cl-docs-endpoint {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+      align-items: start;
+      gap: 48px;
+    }
+    .cl-docs-endpoint-examples {
+      position: sticky;
+      top: calc(var(--nav-height) + 32px);
+      max-height: calc(100dvh - var(--nav-height) - 64px);
+      overflow-y: auto;
+    }
+  }
+</style>

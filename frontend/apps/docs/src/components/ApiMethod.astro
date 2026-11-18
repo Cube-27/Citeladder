@@ -1,0 +1,21 @@
+---
+/**
+ * ApiMethod — an HTTP method as a neutral mono Badge, DELETE `negative`,
+ * never coloured otherwise. `compact` is the sidebar's smaller pill.
+ */
+import { Badge } from '@/components/ui/badge';
+
+interface Props {
+  method: string;
+  compact?: boolean;
+}
+const { method, compact = false } = Astro.props;
+const destructive = method === 'DELETE';
+---
+
+<Badge
+  tone={destructive ? 'negative' : 'neutral'}
+  className={`justify-center font-mono text-eyebrow ${compact ? 'min-w-10' : 'min-w-12'} ${destructive ? '' : 'text-ink'}`}
+>
+  {method}
+</Badge>
