@@ -44,6 +44,7 @@ export type PromptAnswerParams = Readonly<{
   cited?: boolean;
   search?: PromptAnswerSearch;
   cursor?: string;
+  limit?: number;
 }>;
 
 const auditListSchema = z.array(auditSchema);

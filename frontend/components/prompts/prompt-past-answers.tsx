@@ -59,7 +59,11 @@ export function PromptPastAnswers({
   const [cursors, setCursors] = useState<readonly string[]>([]);
   const [opened, setOpened] = useState<string | null>(null);
   const read = useQuery({
-    ...runsQueries.promptExecutions(scope, promptId, { ...params, cursor: cursors.at(-1) }),
+    ...runsQueries.promptExecutions(scope, promptId, {
+      ...params,
+      cursor: cursors.at(-1),
+      limit: PAGE_SIZE,
+    }),
     placeholderData: keepPreviousData,
   });
   const page = read.data;

@@ -297,7 +297,7 @@ export class VisibilityFixtures extends Fixtures {
           id: snapshotId,
           workspace_id: tenant.workspaceId,
           audit_id: input.auditId,
-          prompt_id: input.promptId ?? null,
+          prompt_id: input.promptId,
           prompt_index: promptIndex,
           text: input.promptText ?? `prompt ${promptIndex}`,
           theme: input.theme ?? '',
@@ -434,15 +434,12 @@ export class VisibilityFixtures extends Fixtures {
       analysis_id: id,
       created_at: now(),
     };
+    // An offset left undefined is omitted from the insert, so it stays NULL.
+    const offsets = spec.mentionOffsets;
     for (const name of spec.brandMentions ?? []) {
       await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('brand_mentions')
-        .values({
-          ...mention,
-          id: randomUUID(),
-          brand_name: name,
-          first_offset: spec.mentionOffsets?.[name] ?? null,
-        })
+        .values({ ...mention, id: randomUUID(), brand_name: name, first_offset: offsets?.[name] })
         .execute();
     }
     for (const name of spec.competitorMentions ?? []) {
@@ -452,7 +449,7 @@ export class VisibilityFixtures extends Fixtures {
           ...mention,
           id: randomUUID(),
           competitor_name: name,
-          first_offset: spec.mentionOffsets?.[name] ?? null,
+          first_offset: offsets?.[name],
         })
         .execute();
     }

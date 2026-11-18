@@ -215,7 +215,7 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),
     PROMPT,
-    { engine: 'claude', brand: 'Globex', cited: true, search: 'used' },
+    { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
     expect.anything(),
   );
   // The engine is the page's: the chart reads it too.
