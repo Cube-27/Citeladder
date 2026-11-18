@@ -9,8 +9,10 @@
  * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
 import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
-import type { VisibilityTrendEvent, VisibilityTrendPoint } from '@citeladder/contracts';
+import type { RankingRow, VisibilityTrendEvent, VisibilityTrendPoint } from '@citeladder/contracts';
+import type { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import {
+  availabilityLabel,
   formatDisplayDate,
   formatDisplayShortDate,
   formatShortDate,
@@ -18,6 +20,7 @@ import {
   pluralCount,
 } from '@/lib/format';
 import { formatPositionExact, formatWholePercent } from '@/lib/visibility/dashboard';
+import { formatNet, sentimentReading } from '@/lib/visibility/perception';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -53,15 +56,25 @@ export function rangeToFrom(range: TrendRange, now: Date = new Date()): string |
 }
 
 /** Which headline metric a chart plots. */
-export type TrendMetric = 'sov' | 'brand_mention_rate' | 'owned_citation_rate' | 'avg_position';
+export type TrendMetric = (typeof VISIBILITY_METRICS)[number]['value'];
 
 type Plotted = number | null;
 
 /**
- * How a metric sits on the y axis. Rates run 0–100%. A position is better when
- * lower, so it plots negated with its ticks unsigned: #1 at the top, up is better.
+ * How a metric sits on the y axis. Rates run 0–100%; net sentiment −100 to
+ * +100. A position is better when lower, so it plots negated with its ticks
+ * unsigned: 1 at the top, up is better.
  */
 export function trendAxis(metric: TrendMetric, lines: readonly (readonly Plotted[])[]) {
+  if (metric === 'sentiment')
+    return {
+      plot: (value: Plotted) => value,
+      unplot: (value: number) => value,
+      yMin: -100,
+      yMax: 100,
+      tick: (value: number) => formatNet(value) ?? '',
+      format: (value: Plotted) => formatNet(value) ?? availabilityLabel('not_measured'),
+    };
   if (metric !== 'avg_position')
     return {
       plot: (value: Plotted) => value,
@@ -109,6 +122,16 @@ function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number |
       return point.brand_mention_rate === null ? null : point.brand_mention_rate * 100;
     case 'owned_citation_rate':
       return point.owned_citation_rate === null ? null : point.owned_citation_rate * 100;
+    case 'win_rate':
+    case 'sentiment': {
+      // Neither is a point-level field: the brand's own ranking row carries both.
+      const brand = point.rankings.find((row) => row.is_brand);
+      return brand ? rankingMetricValue(brand, metric) : null;
+    }
+    default: {
+      const unhandled: never = metric;
+      return unhandled;
+    }
   }
 }
 
@@ -173,31 +196,39 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
  */
 const TREND_SERIES_LIMIT = 3;
 
-/** Each metric reads its OWN column; the table is what keeps them paired. */
-const RANKING_METRIC_COLUMN: Record<TrendMetric, (row: RankingMetricRow) => number | null> = {
-  owned_citation_rate: (row) => row.citation_rate,
-  sov: (row) => row.share_of_voice,
-  brand_mention_rate: (row) => row.mention_rate,
-  avg_position: (row) => row.avg_position,
-};
-
-type RankingMetricRow = {
-  mention_rate: number | null;
-  citation_rate: number | null;
-  share_of_voice: number | null;
-  avg_position: number | null;
-};
+type RankingMetricRow = Pick<
+  RankingRow,
+  'mention_rate' | 'citation_rate' | 'share_of_voice' | 'avg_position' | 'win_rate' | 'sentiment'
+>;
 
 /**
- * One ranking row's value for a metric, as whole percent; a position as is.
- *
- * Each metric reads its OWN column — plotting mention rate under a Share of
- * voice heading drew a line that was not the metric selected.
+ * One ranking row's value for a metric: a rate as whole percent, a position
+ * and a net sentiment as they are. Sentiment under the classified minimum is
+ * a gap, never a value. Each metric reads its OWN column — plotting mention
+ * rate under a Share of voice heading drew a line that was not the metric selected.
  */
 function rankingMetricValue(row: RankingMetricRow, metric: TrendMetric): number | null {
-  const value = RANKING_METRIC_COLUMN[metric](row);
-  if (value === null || value === undefined) return null;
-  return metric === 'avg_position' ? value : value * 100;
+  const percent = (value: number | null | undefined) => (value == null ? null : value * 100);
+  switch (metric) {
+    case 'owned_citation_rate':
+      return percent(row.citation_rate);
+    case 'sov':
+      return percent(row.share_of_voice);
+    case 'brand_mention_rate':
+      return percent(row.mention_rate);
+    case 'win_rate':
+      return percent(row.win_rate);
+    case 'avg_position':
+      return row.avg_position;
+    case 'sentiment':
+      return sentimentReading(row.sentiment).kind === 'value'
+        ? (row.sentiment?.net_sentiment ?? null)
+        : null;
+    default: {
+      const unhandled: never = metric;
+      return unhandled;
+    }
+  }
 }
 
 /**

@@ -34,12 +34,7 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import type { RowSelectionState } from '@/lib/prompts/selection';
 
 import { CitedDomainMarks } from './cited-domain-marks';
-import {
-  formatPosition,
-  formatPositionExact,
-  formatRate,
-  measured,
-} from '@/lib/visibility/dashboard';
+import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
 
 /**
  * The change since the run that measured the same prompt before (owner,
@@ -448,7 +443,7 @@ function MeasuredCells({
           <span
             title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
           >
-            {formatPosition(measurement.position)}
+            {formatPositionExact(measurement.position)}
           </span>
         )}
       </TableCell>

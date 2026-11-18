@@ -11,7 +11,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
-import { formatPosition, formatRate, measured } from '@/lib/visibility/dashboard';
+import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
 import { READING_LABELS } from '@/lib/visibility/matrix';
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -95,7 +95,7 @@ export function VisibilityByTopic({
                   {measured(formatRate(row.share_of_voice)) ?? <Absence />}
                 </TableCell>
                 <TableCell numeric>
-                  {measured(formatPosition(row.avg_position)) ?? <Absence />}
+                  {measured(formatPositionExact(row.avg_position)) ?? <Absence />}
                 </TableCell>
                 <TableCell numeric>
                   {row.rank === null ? (

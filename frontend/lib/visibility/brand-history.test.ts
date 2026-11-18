@@ -59,6 +59,33 @@ describe('measurement history', () => {
     expect(toChartPoints([point(0.5), changed], 'sov')[1]?.breakBefore).toBe(true);
   });
 
+  it("plots win rate and sentiment from the brand's own row, gapping sentiment under the classified minimum", () => {
+    const withBrand = (classified: number, winRate: number | null) => ({
+      ...point(0.5),
+      rankings: [
+        { name: 'Globex', is_brand: false, win_rate: 0.9, sentiment: null },
+        {
+          name: 'Acme',
+          is_brand: true,
+          win_rate: winRate,
+          sentiment: { mentions: 30, classified, positive: 15, negative: 5, net_sentiment: 50 },
+        },
+      ],
+    });
+    const points = [
+      withBrand(20, 0.25),
+      withBrand(19, null),
+      { ...point(0.5), rankings: [] },
+    ] as VisibilityTrendPoint[];
+    expect([
+      toChartPoints(points, 'win_rate').map((item) => item.value),
+      toChartPoints(points, 'sentiment').map((item) => item.value),
+    ]).toEqual([
+      [25, null, null],
+      [50, null, null],
+    ]);
+  });
+
   it('returns no fabricated points for empty history', () => {
     expect(toChartPoints([], 'sov')).toEqual([]);
   });

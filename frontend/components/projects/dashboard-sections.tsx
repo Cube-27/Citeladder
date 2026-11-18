@@ -20,13 +20,8 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
 import { ProjectControls } from './dashboard-controls';
-import {
-  actionItem,
-  MovementChart,
-  percentFigure,
-  rankFigure,
-  VS_PREVIOUS_RUN,
-} from './dashboard-primitives';
+import { formatRank } from '@/lib/visibility/dashboard';
+import { actionItem, MovementChart, percentFigure, VS_PREVIOUS_RUN } from './dashboard-primitives';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
@@ -179,7 +174,7 @@ type StateMetric = Readonly<{ value: number | null; delta: number | null }>;
  */
 const STATE_FIGURE = {
   rate: { format: percentFigure, unit: ' pp', precision: 1, policy: 'higher-is-better' },
-  rank: { format: rankFigure, unit: '', precision: 0, policy: 'lower-is-better' },
+  rank: { format: formatRank, unit: '', precision: 0, policy: 'lower-is-better' },
 } as const;
 
 /**

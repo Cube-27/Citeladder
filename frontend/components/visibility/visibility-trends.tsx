@@ -14,9 +14,14 @@ import type {
   Visibility,
   VisibilityTrendPoint,
 } from '@citeladder/contracts';
-import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
-import { sentimentReading } from '@/lib/visibility/perception';
-import { brandStanding, orderByVisibility, standingHeadline } from '@/lib/visibility/ranking';
+import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import { sentimentFigureValue } from '@/lib/visibility/perception';
+import {
+  brandStanding,
+  orderByVisibility,
+  standingHeadline,
+  winRateAbsence,
+} from '@/lib/visibility/ranking';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   toChartPoints,
@@ -107,7 +112,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
       delta: change == null ? null : <Delta value={change} unit=" pp" />,
     };
   };
-  // A rank, not a rate: the mean place an answer names you in. Runs measured
+  // An average, not a rank: the mean place an answer names you in. Runs measured
   // before mention offsets were persisted have none, and the figure is omitted.
   const position = brand?.avg_position ?? selected.avg_position ?? null;
   const segments: FigureSegment[] = [
@@ -126,10 +131,11 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
             label: 'Position',
             marker: (
               <InfoHint label="Position">
-                {`Where your brand tends to appear among the brands you track, within the answers that name you, averaged to ${formatPositionExact(position)}. A brand an answer names that you do not track is not counted.`}
+                Where your brand tends to appear among the brands you track, averaged over the
+                answers that name you. A brand an answer names that you do not track is not counted.
               </InfoHint>
             ),
-            value: formatPosition(position),
+            value: formatPositionExact(position),
           },
         ]),
     winRateSegment(brand, unmeasured),
@@ -145,7 +151,6 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
 
 /** Net sentiment with the classified count beneath; below the minimum it is too few, never zero. */
 function sentimentFigure(sentiment: NetSentiment): FigureSegment {
-  const reading = sentimentReading(sentiment);
   return {
     key: 'sentiment',
     label: 'Sentiment',
@@ -154,17 +159,12 @@ function sentimentFigure(sentiment: NetSentiment): FigureSegment {
         {`Positive minus negative mentions of your brand, as a share of the classified ones, from −100 to +100. Shows from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
       </InfoHint>
     ),
-    value: reading.kind === 'value' ? reading.net : null,
-    missingLabel: reading.kind === 'too_few' ? 'Too few classified' : 'No mentions',
+    ...sentimentFigureValue(sentiment),
     delta: `${sentiment.classified} of ${sentiment.mentions} classified`,
   };
 }
 
-/**
- * Win rate (AV-7): of the answers naming a brand you track, the share naming
- * yours first. No such answer is not applicable; a run finalized before the
- * derivation is unavailable.
- */
+/** Win rate (AV-7): of the answers naming a brand you track, the share naming yours first. */
 function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null): FigureSegment {
   const answers = brand?.win_answers ?? null;
   const rate = brand?.win_rate ?? null;
@@ -173,7 +173,7 @@ function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null
     label: 'Win rate',
     marker: <InfoHint label="Win rate">{WIN_RATE_HINT}</InfoHint>,
     value: unmeasured ?? (rate === null ? null : formatRate(rate)),
-    missingLabel: availabilityLabel(answers === null ? 'unavailable' : 'not_applicable'),
+    missingLabel: availabilityLabel(winRateAbsence(brand)),
     delta: answers ? (
       <span className={textRole('caption')}>
         {`Named first in ${formatCount(brand?.win_count ?? 0)} of ${formatCount(answers)}`}

@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { promptSet, prompt as trackedPrompt } from './prompt-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
@@ -98,6 +99,7 @@ describe('GET /visibility/competitors/{name}', () => {
         // Cited beside Globex once; your perplexity answer cites it too.
         { domain: 'review.example', answers: 1, answers_naming_you: 1 },
       ],
+      sources_total: 2,
       // Prompt 2 never names Globex; ties on engines run in prompt order.
       named_instead: [
         {
@@ -115,7 +117,34 @@ describe('GET /visibility/competitors/{name}', () => {
           engines_answered: 2,
         },
       ],
+      named_instead_total: 2,
     });
+  });
+
+  it('caps each list and counts every row the cap hides', async () => {
+    const limits = policy.visibility;
+    const { competitor_sources_limit: sources, competitor_named_instead_limit: prompts } = limits;
+    limits.competitor_sources_limit = 1;
+    limits.competitor_named_instead_limit = 1;
+    try {
+      const { body } = await get(tenant, route(tenant, '/competitors/Globex'), {
+        audit_id: auditId,
+      });
+      expect([
+        body.sources,
+        body.sources_total,
+        body.named_instead,
+        body.named_instead_total,
+      ]).toEqual([
+        [expect.objectContaining({ domain: 'g2.example' })],
+        2,
+        [expect.objectContaining({ prompt: 'best crm' })],
+        2,
+      ]);
+    } finally {
+      limits.competitor_sources_limit = sources;
+      limits.competitor_named_instead_limit = prompts;
+    }
   });
 
   it('reads only the answers in the selected frozen topic', async () => {

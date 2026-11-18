@@ -59,8 +59,6 @@ const missing = (state: MissingState, note?: string): ProductCell => ({
 
 /** A rate (visibility, win rate, share) as a percentage to one decimal. */
 export const formatRate = (value: number) => formatPercent(value);
-/** A mean rank to one decimal. */
-export const formatPosition = formatMean;
 
 /** A rate or mean, unavailable when nothing in scope measured it. */
 const measured = (value: number | null, format: (value: number) => string): ProductCell =>
@@ -106,7 +104,7 @@ export function productCell(row: CommerceProductRow, key: ProductColumnKey): Pro
     case 'win_rate':
       return measured(row.win_rate, formatRate);
     case 'position':
-      return measured(row.position, formatPosition);
+      return measured(row.position, formatMean);
     case 'mentioned_price':
       return mentionedPrice(row);
     case 'catalog_price':

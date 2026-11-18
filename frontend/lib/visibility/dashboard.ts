@@ -193,22 +193,13 @@ export function formatWholePercent(value: number | null): string {
 /** Format a 0–100 score as a whole number, or the placeholder. */
 export { formatScore } from '@/lib/format';
 
-/**
- * A rank, rendered as a rank.
- *
- * The underlying value is a mean over the answers that named the brand, so it
- * genuinely carries a fraction — but `#1.2` reads as a broken ordinal, not as
- * an average, and a reader cannot be anywhere other than a whole place in a
- * list. The whole number is what the cell shows; `formatPositionExact` keeps
- * the fraction for the tooltip, so the ordering that separates two brands
- * rounding to the same place is still there to read.
- */
-export function formatPosition(position: number | null): string {
-  if (position === null || Number.isNaN(position)) return PLACEHOLDER;
-  return `#${Math.max(1, Math.round(position))}`;
+/** A whole place in an ordered list ("#3"); never an average, which is `formatPositionExact`. */
+export function formatRank(rank: number | null): string {
+  if (rank === null || Number.isNaN(rank)) return PLACEHOLDER;
+  return `#${Math.max(1, Math.round(rank))}`;
 }
 
-/** The unrounded mean, for the title/description that explains the rank. */
+/** An average position as a decimal ("2.5"): a mean over answers, not a rank. */
 export function formatPositionExact(position: number | null): string {
   if (position === null || Number.isNaN(position)) return PLACEHOLDER;
   return formatMean(position);

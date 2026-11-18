@@ -28,11 +28,10 @@ export const VS_PREVIOUS_RUN = {
  * The Command Center's rates arrive already in percent (0–100). They print
  * with AI Visibility's one decimal (`formatRate`), so one run never reads
  * 31.3% here and 31% there; a rank prints as AI Visibility prints it
- * (`formatPosition`, "#3").
+ * (`formatRank`, "#3").
  */
 export const percentFigure = (value: number | null) =>
   formatRate(value === null ? null : value / 100);
-export { formatPosition as rankFigure } from '@/lib/visibility/dashboard';
 
 /**
  * Each engine's brand mention rate in the previous and the current comparable

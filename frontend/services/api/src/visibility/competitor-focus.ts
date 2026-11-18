@@ -60,6 +60,8 @@ export async function getCompetitorFocus(
         sql<number>`count(distinct ra.id) filter (where ra.brand_mentioned)::int`.as(
           'answers_naming_you',
         ),
+        // Windowed after HAVING and before LIMIT: every row the cap hides.
+        sql<number>`(count(*) over ())::int`.as('total'),
       ])
       .groupBy('cited.domain')
       .having(sql<boolean>`bool_or(${named})`)
@@ -79,6 +81,7 @@ export async function getCompetitorFocus(
         ),
         sql<number>`count(distinct ra.logical_engine) filter (where ${instead})::int`.as('engines'),
         sql<number>`count(distinct ra.logical_engine)::int`.as('engines_answered'),
+        sql<number>`(count(*) over ())::int`.as('total'),
       ])
       .groupBy(sql`snapshot.prompt_id, case when snapshot.prompt_id is null then snapshot.text end`)
       .having(sql<boolean>`bool_or(${instead})`)
@@ -90,7 +93,12 @@ export async function getCompetitorFocus(
   return {
     competitor,
     answers: totals.answers,
-    sources,
-    named_instead: prompts.map((row) => ({ ...row, topic: row.topic || 'Untagged' })),
+    sources: sources.map(({ total: _total, ...row }) => row),
+    sources_total: sources[0]?.total ?? 0,
+    named_instead: prompts.map(({ total: _total, ...row }) => ({
+      ...row,
+      topic: row.topic || 'Untagged',
+    })),
+    named_instead_total: prompts[0]?.total ?? 0,
   };
 }

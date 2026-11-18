@@ -30,8 +30,11 @@ export const competitorFocusSchema = z.object({
   competitor: z.object({ id: z.uuid(), name: z.string() }),
   /** Answers in the selection that name the competitor. */
   answers: z.number().int(),
+  /** Each list is capped; its total counts every row before the cap. */
   sources: z.array(competitorSourceSchema),
+  sources_total: z.number().int(),
   named_instead: z.array(namedInsteadSchema),
+  named_instead_total: z.number().int(),
 });
 
 export type CompetitorFocus = z.infer<typeof competitorFocusSchema>;

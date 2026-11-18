@@ -3,7 +3,7 @@ import type { NetSentiment, WebSearchShare } from '@citeladder/contracts';
 import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
 import { formatRate } from '@/lib/visibility/dashboard';
-import { sentimentReading } from '@/lib/visibility/perception';
+import { NOT_NAMED, sentimentReading } from '@/lib/visibility/perception';
 
 /**
  * A net sentiment cell: the signed value with a faint classified count, or
@@ -19,7 +19,7 @@ export function SentimentValue({
     case 'not_measured':
       return <Absence />;
     case 'no_mentions':
-      return <Absence state="none" reason="No answer named this brand." />;
+      return <Absence state="none" label={NOT_NAMED} reason="No answer named this brand." />;
     case 'too_few':
       return (
         <Absence

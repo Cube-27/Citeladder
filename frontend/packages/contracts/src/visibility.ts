@@ -108,7 +108,7 @@ export const rankingRowSchema = responseObject({
   matched_response_count: z.number().int().nullable().optional(),
   avg_position: z.number().nullable(),
   ...winCountsSchema.shape,
-  // Only on the dashboard read; null when the selection classified no answer
+  // On the dashboard and trend reads; null when the selection classified no answer
   // naming this brand's roster entry (or ran without perception).
   sentiment: netSentimentSchema.nullable().optional(),
 });

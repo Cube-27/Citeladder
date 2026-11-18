@@ -1,5 +1,4 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useState } from 'react';
 
 import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Absence } from '@/components/ui/absence';
@@ -8,11 +7,15 @@ import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { READING_LABELS } from '@/lib/visibility/matrix';
 import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
 
-type RankingDimension = (typeof RANKING_DIMENSIONS)[number]['value'];
+const byCodec = stringUrlCodec(
+  RANKING_DIMENSIONS.map((option) => option.value),
+  'topic',
+);
 
 /**
  * Insights → Top rankings (W6): in each segment, the five tracked brands
@@ -21,7 +24,7 @@ type RankingDimension = (typeof RANKING_DIMENSIONS)[number]['value'];
  * your brand's chip takes the accent wash.
  */
 export function TopRankings({ query }: Readonly<{ query: UseQueryResult<VisibilityMatrix> }>) {
-  const [by, setBy] = useState<RankingDimension>('topic');
+  const [by, setBy] = useUrlState('rankings_by', byCodec);
   const axisText = useAxisText();
   const data = query.data;
   const segments = data ? axisText(data.axes, by) : [];

@@ -223,6 +223,9 @@ async function selectionAnswers(
     answers,
     auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
     partial: rows.length < selected.length,
+    unperceived: new Set(
+      selected.filter((row) => !frozenPerceptionVersions(row.configuration)).map((r) => r.audit_id),
+    ),
   };
 }
 
@@ -256,6 +259,24 @@ export async function entitySentiments(db: Database, selection: RunSelection) {
 export async function perceivedAnswers(db: Database, selection: RunSelection) {
   const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
   return partial ? null : answers;
+}
+
+/**
+ * Each group of runs' business sentiments, from one read of the selection's
+ * answers; a group holding a run admitted without perception reads null.
+ */
+export async function groupedSentiments(
+  db: Database,
+  selection: RunSelection,
+  groups: readonly (readonly string[])[],
+) {
+  const { answers, unperceived } = await selectionAnswers(db, selection, { citations: false });
+  const byAudit = groupBy(answers, (answer) => answer.auditId);
+  return groups.map((auditIds) =>
+    auditIds.some((id) => unperceived.has(id))
+      ? null
+      : sentimentsOf(auditIds.flatMap((id) => byAudit.get(id) ?? [])),
+  );
 }
 
 /** Each named business's net sentiment over these answers, the brand first. */

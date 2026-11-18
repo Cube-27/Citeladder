@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MatrixCell, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
-import { cellAt, cellReading, matrixCsvRows } from './matrix';
+import { cellAt, cellReading, matrixCsvRows, type MatrixMetric } from './matrix';
 
 const measured = (over: Partial<Extract<MatrixCell, { kind: 'measured' }>>): MatrixCell => ({
   kind: 'measured',
@@ -64,19 +64,27 @@ describe('performance matrix cells', () => {
     ]);
   });
 
-  it('exports each cell as row, column, value and answers', () => {
-    const readings = [
-      [cellReading(measured({}), 'mention_rate'), cellReading({ kind: 'not_run' }, 'mention_rate')],
-      [
-        cellReading(measured({ answers: 3 }), 'avg_position'),
-        cellReading({ kind: 'not_recorded' }, 'avg_position'),
-      ],
-    ];
-    expect(matrixCsvRows(readings, ['ChatGPT', 'Gemini'], ['Acme', 'Globex'])).toEqual([
-      ['ChatGPT', 'Acme', '25.0%', 12],
+  it('exports each cell as row, column, a number and answers', () => {
+    const csv = (metric: MatrixMetric, cells: MatrixCell[][]) =>
+      matrixCsvRows({
+        metric,
+        readings: cells.map((row) => row.map((cell) => cellReading(cell, metric))),
+        rowLabels: ['ChatGPT', 'Gemini'],
+        columnLabels: ['Acme', 'Globex'],
+      });
+    expect(
+      csv('mention_rate', [
+        [measured({ mention_rate: 0.1234 }), { kind: 'not_run' }],
+        [measured({ answers: 3, mention_rate: null }), { kind: 'not_recorded' }],
+      ]),
+    ).toEqual([
+      ['ChatGPT', 'Acme', 12.3, 12],
       ['ChatGPT', 'Globex', 'Not run', ''],
       ['Gemini', 'Acme', 'Not measured', 3],
       ['Gemini', 'Globex', 'Topic not recorded for this run', ''],
+    ]);
+    expect(csv('avg_position', [[measured({ avg_position: 2.345 })]])).toEqual([
+      ['ChatGPT', 'Acme', 2.35, 12],
     ]);
   });
 });

@@ -82,17 +82,35 @@ export function heatScale(values: readonly number[], metric: MatrixMetric) {
   };
 }
 
-/** The matrix on screen as CSV rows: row label, column label, value, answers. */
-export function matrixCsvRows(
-  readings: readonly (readonly CellReading[])[],
-  rowLabels: readonly string[],
-  columnLabels: readonly string[],
-): (string | number)[][] {
+/** A measured value as a CSV number: rates in percent to one decimal, the rest to two. */
+function csvNumber(value: number, metric: MatrixMetric): number {
+  return metric === 'avg_position' || metric === 'sentiment'
+    ? Math.round(value * 100) / 100
+    : Math.round(value * 1000) / 10;
+}
+
+/** The CSV header for a metric, naming the unit a rate is exported in. */
+export function matrixCsvMetricHeader(metric: MatrixMetric, label: string): string {
+  return metric === 'avg_position' || metric === 'sentiment' ? label : `${label} (%)`;
+}
+
+/** The matrix on screen as CSV rows: row label, column label, value as a number, answers. */
+export function matrixCsvRows({
+  readings,
+  rowLabels,
+  columnLabels,
+  metric,
+}: Readonly<{
+  readings: readonly (readonly CellReading[])[];
+  rowLabels: readonly string[];
+  columnLabels: readonly string[];
+  metric: MatrixMetric;
+}>): (string | number)[][] {
   return readings.flatMap((row, i) =>
     row.map((reading, j) => [
       rowLabels[i] ?? '',
       columnLabels[j] ?? '',
-      reading.kind === 'value' ? reading.text : READING_LABELS[reading.kind],
+      reading.kind === 'value' ? csvNumber(reading.value, metric) : READING_LABELS[reading.kind],
       'answers' in reading ? reading.answers : '',
     ]),
   );

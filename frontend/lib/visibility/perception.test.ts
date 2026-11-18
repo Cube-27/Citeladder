@@ -6,6 +6,7 @@ import {
   negativeHeadline,
   negativeThemesLine,
   rankThemes,
+  sentimentFigureValue,
   sentimentReading,
   sentimentTrend,
   stateCopy,
@@ -127,6 +128,17 @@ describe('perception derivations', () => {
     expect([sentimentReading({ ...net(0, 0, 0), mentions: 0 }), sentimentReading(null)]).toEqual([
       { kind: 'no_mentions' },
       { kind: 'not_measured' },
+    ]);
+    // A figure keeps "not named" apart from too few and from a read that carried none.
+    expect(
+      [{ ...net(0, 0, 0), mentions: 0 }, net(19, 10, 1), null, net(20, 15, 5)].map((value) =>
+        sentimentFigureValue(value),
+      ),
+    ).toEqual([
+      { value: null, missingLabel: 'Not named' },
+      { value: null, missingLabel: 'Too few classified' },
+      { value: null, missingLabel: 'Not measured' },
+      { value: '+50', missingLabel: 'Not measured' },
     ]);
   });
 
