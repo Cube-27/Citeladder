@@ -8,6 +8,8 @@ const id = (value: number) => `33333333-3333-4333-8333-${String(value).padStart(
 async function chooseSaved(page: Page, label: string, option: string) {
   const name = new RegExp(`^${label}:`);
   const all = page.getByRole('button', { name: /^Filters/ });
+  // Wait for the row to draw one or the other before choosing.
+  await expect(all.or(page.getByRole('button', { name })).first()).toBeVisible();
   if (await all.isVisible()) {
     await all.click();
     await page.getByRole('menuitem', { name }).click();

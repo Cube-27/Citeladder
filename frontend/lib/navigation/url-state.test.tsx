@@ -206,12 +206,29 @@ describe('router registration', () => {
       setUrlParams({ kind: null });
     });
 
-    await waitFor(() => expect(screen.getByTestId('search')).toHaveTextContent(/^project=p1$/));
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('project=p1'));
     expect(navigate).toHaveBeenCalledOnce();
     // One entry: Back returns to every filter as it was.
     await act(() => router.navigate(-1));
-    expect(screen.getByTestId('search')).toHaveTextContent(/^project=p1&severity=low&kind=faq$/);
+    expect(screen.getByTestId('search').textContent).toBe('project=p1&severity=low&kind=faq');
     router.dispose();
+  });
+
+  it('replaces the entry for a batch whose every write replaces', () => {
+    window.history.replaceState(null, '', '/actions?impact=high&source=seo');
+    const push = vi.spyOn(window.history, 'pushState');
+    batchUrlWrites(() => {
+      setUrlParams({ impact: null }, 'replace');
+      setUrlParams({ source: null }, 'replace');
+    });
+    expect(window.location.search).toBe('');
+    expect(push).not.toHaveBeenCalled();
+    batchUrlWrites(() => {
+      setUrlParams({ impact: 'low' }, 'replace');
+      setUrlParams({ source: 'aeo' });
+    });
+    expect(push).toHaveBeenCalledOnce();
+    push.mockRestore();
   });
 
   it('falls back to history when nothing has registered a router', () => {

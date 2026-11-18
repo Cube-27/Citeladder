@@ -65,12 +65,17 @@ export function FilterTrigger({
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'transition-[transform,border-color,outline-color] active:scale-[0.97] data-[state=open]:overlay-selected',
           'disabled:cursor-not-allowed disabled:opacity-45',
-          iconOnly ? 'gap-1 ps-2 pe-2' : 'gap-2 ps-3 pe-2',
+          // Icon only, it is an icon control: no padding, its glyphs inset like IconButton's.
+          iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',
           className,
         )}
         {...props}
       >
-        {lead ? <span className="text-ink-2 flex shrink-0 items-center">{lead}</span> : null}
+        {lead ? (
+          <span className={cn('text-ink-2 flex shrink-0 items-center', iconOnly && 'ps-2')}>
+            {lead}
+          </span>
+        ) : null}
         {iconOnly || value === undefined ? null : (
           <span data-filter-value="" className="text-ink min-w-0 truncate">
             {value}

@@ -56,7 +56,7 @@ const ROW_ICON_CHIPS = 4;
  * icon filters in the page's order, then the rest behind Filters, or as a
  * value chip of its own when only one without an icon is left.
  */
-export function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
+function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
   chips: readonly FilterDefinition[];
   menu: readonly FilterDefinition[];
 }> {

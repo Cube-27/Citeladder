@@ -481,7 +481,7 @@ describe('FilterBar and FilterTrigger', () => {
       });
     const { rerender } = render(<FilterBar filters={[period('30d'), status(null)]} />);
     // The name keeps the value the chip does not print; the window shows at the row's end.
-    expect(screen.getByRole('button', { name: 'Period: Last 30 days' })).toHaveTextContent(/^$/);
+    expect(screen.getByRole('button', { name: 'Period: Last 30 days' }).textContent).toBe('');
     expect(screen.getByText('Last 30 days')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Status: All statuses' })).toHaveTextContent(
       'All statuses',

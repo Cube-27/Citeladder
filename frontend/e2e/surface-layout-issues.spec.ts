@@ -109,8 +109,8 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
     tabs: page.getByRole('radiogroup', { name: 'Issue type' }),
     filters: table.locator('[data-filter-bar]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
-    // Severity and Page kind live in Filters; a set one's chip follows the button.
-    filtersButton: table.locator('[data-filter-bar]').getByRole('button', { name: /^Filters/ }),
+    // Severity and Page kind live in Filters, whose count (like a chip's value)
+    // widens it once set: only what follows it moves (owner, 2026-11-18).
     summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').first(),

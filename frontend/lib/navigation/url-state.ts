@@ -149,36 +149,41 @@ function commitUrl(href: string, history: UrlHistory): void {
   refresh();
 }
 
-/** The address a `batchUrlWrites` run is composing; null outside one. */
-let pendingUrl: URL | null = null;
+/** The address a `batchUrlWrites` run is composing, and whether a write in it pushes; null outside one. */
+let pending: { url: URL; push: boolean } | null = null;
 
 /**
  * Runs several URL writes (a row's Clear resetting each filter) as one: each
- * write edits the composed address and it commits once, with one history
- * entry. A router commits a beat after it is asked, so separate writes in one
- * tick would each start from the address before the others. `run` is
- * synchronous (typed to refuse a promise): a write after an await would land
- * after the commit.
+ * write edits the composed address and it commits once. It pushes one history
+ * entry if any write would have, and replaces when all of them replace. A
+ * router commits a beat after it is asked, so separate writes in one tick
+ * would each start from the address before the others. `run` is synchronous
+ * (typed to refuse a promise): a write after an await would land after the
+ * commit.
  */
-export function batchUrlWrites(run: () => undefined, history: UrlHistory = 'push'): void {
-  if (pendingUrl) {
+export function batchUrlWrites(run: () => undefined): void {
+  if (pending) {
     run();
     return;
   }
-  const composed = new URL(window.location.href);
-  pendingUrl = composed;
+  const batch = { url: new URL(window.location.href), push: false };
+  pending = batch;
   try {
     run();
   } finally {
-    pendingUrl = null;
+    pending = null;
   }
-  commitUrl(hrefWithQuery(composed, composed.searchParams.toString()), history);
+  commitUrl(
+    hrefWithQuery(batch.url, batch.url.searchParams.toString()),
+    batch.push ? 'push' : 'replace',
+  );
 }
 
 /** Edits the address a write starts from: the batch's, or the live one, committed at once. */
 function writeUrl(edit: (params: URLSearchParams) => void, history: UrlHistory): void {
-  if (pendingUrl) {
-    edit(pendingUrl.searchParams);
+  if (pending) {
+    edit(pending.url.searchParams);
+    if (history === 'push') pending.push = true;
     return;
   }
   const current = new URL(window.location.href);

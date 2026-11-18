@@ -20,7 +20,7 @@ import { ControlCount } from '@/components/ui/tabs';
 import { useMediaQuery } from '@/lib/use-media-query';
 
 /** How many filters are off their default value. */
-export function activeFilterCount(filters: readonly FilterDefinition[]): number {
+function activeFilterCount(filters: readonly FilterDefinition[]): number {
   return filters.filter((filter) => !filter.isDefault).length;
 }
 
