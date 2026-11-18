@@ -3,6 +3,7 @@
  * it is named with the "cited too" count, the prompts naming it instead of
  * the brand, an unknown roster name, and workspace isolation.
  */
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { record } from '../src/db/json.ts';
@@ -115,6 +116,26 @@ describe('GET /visibility/competitors/{name}', () => {
         },
       ],
     });
+  });
+
+  it('reads only the answers in the selected frozen topic', async () => {
+    const topic = randomUUID();
+    await db
+      .updateTable('audit_prompt_snapshots')
+      .set({ topic_id: topic, topic_name: 'Pricing' })
+      .where('audit_id', '=', auditId)
+      .where('text', '=', 'cheap crm')
+      .execute();
+    const { body } = await get(tenant, route(tenant, '/competitors/Globex'), {
+      audit_id: auditId,
+      topic,
+    });
+    // review.example is cited in the topic only beside you, never beside Globex.
+    expect([body.answers, body.sources, body.named_instead]).toEqual([
+      1,
+      [],
+      [{ prompt_id: null, prompt: 'cheap crm', topic: 'Pricing', engines: 1, engines_answered: 2 }],
+    ]);
   });
 
   it('flags a source that never appears beside you', async () => {

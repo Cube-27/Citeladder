@@ -150,6 +150,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
     },
     options?: ApiRequestOptions,

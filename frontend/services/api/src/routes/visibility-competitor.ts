@@ -9,6 +9,7 @@ import {
   PROJECT_PATH,
   runSelection,
   selectionErrors,
+  TOPIC,
 } from './visibility-selection.ts';
 
 export const competitorFocusRoute = defineGetRoute({
@@ -20,7 +21,7 @@ export const competitorFocusRoute = defineGetRoute({
       ...PROJECT_PATH,
       name: { scalar: { kind: 'str', minLength: 1, maxLength: 255 }, required: true },
     },
-    query: PERCEPTION_SELECTION,
+    query: { ...PERCEPTION_SELECTION, ...TOPIC },
   },
   response: competitorFocusSchema,
   async handle({ c, db }, { path, query }) {

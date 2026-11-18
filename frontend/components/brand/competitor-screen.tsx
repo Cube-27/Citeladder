@@ -24,7 +24,7 @@ import { ApiError } from '@/lib/api/errors';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
 import { formatNet } from '@/lib/visibility/perception';
-import { selectionEnabled, selectionParams } from '@/lib/visibility/use-source-analysis';
+import { selectionEnabled, topicSelectionParams } from '@/lib/visibility/use-source-analysis';
 import {
   useVisibilityFilters,
   useVisibilityQueries,
@@ -79,7 +79,7 @@ function CompetitorBody({
   const focus = useQuery({
     ...visibilityQueries.competitor(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
-      { name, ...selectionParams(filters, queries) },
+      { name, ...topicSelectionParams(filters, queries) },
     ),
     enabled,
   });
