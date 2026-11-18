@@ -11,8 +11,8 @@ the brand, and the next fix, from what the answers actually say.
 ## Where the data is
 
 - `list_projects` to resolve the project, then `read_visibility_overview` for
-  the latest run, with win rate, position and net sentiment per brand and
-  `view: topics` per topic; reuse its `audit_id` in every later read. No
+  the latest run, with win rate, position and net sentiment per brand (pooled
+  across engines), win rate per engine and `view: topics` per topic; reuse its `audit_id` in every later read. No
   completed run means no baseline yet; pending metrics are still being written.
   The visibility reads take `topic_id`.
 - `read_prompt_metrics` for which prompts are won or lost, one prompt's
@@ -39,8 +39,9 @@ the brand, and the next fix, from what the answers actually say.
   gap, fit gap or volatility.
 - Fanout queries are what engines searched, not what buyers typed; those that
   never surface the brand point to content or source gaps.
-- An untracked name answers keep recommending (a competitor suggestion) is a
-  missing-competitor signal for the user to accept or reject in CiteLadder.
+- A competitor suggestion (an untracked name or cited domain that answers keep
+  raising) is a possible missing competitor, not proof that answers recommend
+  it; the user accepts or rejects it in CiteLadder.
 - Report rates with their response counts, date and engine, as returned. Say
   "N edited" where a person replaced a fact check's verdict; accuracy counts
   theirs.
