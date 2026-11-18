@@ -122,6 +122,7 @@
     "branded_query_overrides": ["src/routes/demand.ts"],
     "brands": ["src/projects/logo-refresh.ts", "src/projects/service.ts"],
     "citations": ["src/analysis/execution.ts", "src/source-pages/sync.ts"],
+    "claim_verdict_overrides": ["src/perception/verdict-overrides.ts"],
     "claim_verdicts": ["src/perception/fact-verification.ts"],
     "commerce_catalog_revisions": ["src/commerce/catalog-revisions.ts"],
     "commerce_categories": ["src/commerce/catalog-store.ts", "src/commerce/projection.ts"],
