@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import type { PromptAnswer, PromptAnswerPage } from '@citeladder/contracts';
+import type { FirstNamed, PromptAnswer, PromptAnswerPage } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
 import { AnswerFormatTags } from '@/components/runs/answer-formats';
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
@@ -16,6 +16,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
+import { textRole } from '@/components/ui/typography';
 import { runsQueries, type PromptAnswerParams } from '@/lib/api/runs';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
@@ -76,7 +77,7 @@ export function PromptPastAnswers({
     <>
       <DataTable
         title="Past answers"
-        description="Every answer this prompt got, newest first"
+        description={`Every answer this prompt got, newest first${namesFirst(page) ? ' · bold brand was named first' : ''}`}
         columns={COLUMNS}
         minWidth="md"
         pageSize={PAGE_SIZE}
@@ -124,7 +125,7 @@ export function PromptPastAnswers({
             <TableCell>{engines.label(answer.logical_engine)}</TableCell>
             <TableCell>{marketCode ?? <Absence state="unavailable" narrow />}</TableCell>
             <TableCell>
-              <BrandsNamed brands={answer.brands} />
+              <BrandsNamed brands={answer.brands} first={answer.first_named} />
             </TableCell>
             <TableCell numeric>
               <YourPlace answer={answer} />
@@ -180,22 +181,53 @@ function tableState(
   return undefined;
 }
 
-/** Tracked brands as their marks, in the given order; none is "No tracked brand". */
-export function BrandsNamed({ brands }: Readonly<{ brands: PromptAnswer['brands'] }>) {
+type Brand = PromptAnswer['brands'][number];
+
+/** The page names a first brand somewhere: only then does the bold mean something. */
+function namesFirst(page: PromptAnswerPage | undefined): boolean {
+  return Boolean(page?.items.some((answer) => firstOf(answer.brands, answer.first_named)));
+}
+
+/** The shown brand the stored value says was named first; none when unavailable or none. */
+function firstOf(brands: readonly Brand[], first: FirstNamed): Brand | undefined {
+  if (first.kind !== 'brand' && first.kind !== 'competitor') return undefined;
+  const key = first.name.trim().toLowerCase();
+  return brands.find(
+    (brand) => brand.kind === first.kind && brand.name.trim().toLowerCase() === key,
+  );
+}
+
+/**
+ * Tracked brands as their marks, in the given order; none is "No tracked brand".
+ * The brand stored as named first also shows its name, bold.
+ */
+export function BrandsNamed({
+  brands,
+  first,
+}: Readonly<{ brands: readonly Brand[]; first?: FirstNamed }>) {
   // Measured, and no tracked brand was named: a finding, never "not measured".
   if (!brands.length) return <Absence state="none" label="No tracked brand" />;
+  const lead = first ? firstOf(brands, first) : undefined;
   return (
     <Inline as="span" gap="tight">
       {brands.map((brand) => (
         <Tooltip key={`${brand.kind}:${brand.name}`} content={brand.name}>
-          <span className="inline-flex">
-            <span className="sr-only">{brand.name}</span>
-            <BrandMark
-              name={brand.name}
-              logoUrl={brand.logo_url}
-              websiteUrl={brand.website}
-              placement="inline"
-            />
+          <span className="inline-flex min-w-0">
+            <Inline as="span" gap="tight">
+              {brand === lead ? null : <span className="sr-only">{brand.name}</span>}
+              <BrandMark
+                name={brand.name}
+                logoUrl={brand.logo_url}
+                websiteUrl={brand.website}
+                placement="inline"
+              />
+              {brand === lead ? (
+                <strong className={textRole('emphasis', 'text-ink truncate')}>
+                  {brand.name}
+                  <span className="sr-only">, named first</span>
+                </strong>
+              ) : null}
+            </Inline>
           </span>
         </Tooltip>
       ))}

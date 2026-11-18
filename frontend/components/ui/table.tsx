@@ -3,6 +3,7 @@ import {
   useContext,
   useRef,
   type HTMLAttributes,
+  type MouseEvent,
   type ReactNode,
   type Ref,
   type TdHTMLAttributes,
@@ -302,9 +303,25 @@ export function YouTag() {
 }
 
 /** A row's trailing buttons, end-aligned at the button gap (`rowActions` column). */
+/**
+ * Whether a click on a pressable row landed on the row itself rather than on
+ * one of its controls (a link, a button, the select or actions cell). React
+ * bubbles portal clicks (an open menu's items) through the row: those don't count.
+ */
+export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
+  const row = event.currentTarget;
+  if (!(event.target instanceof Element) || !row.contains(event.target)) return false;
+  for (let node: Element | null = event.target; node && node !== row; node = node.parentElement)
+    if (node.matches(ROW_CONTROL)) return false;
+  return true;
+}
+
+const ROW_CONTROL =
+  'a, button, input, label, [role="button"], [role="checkbox"], [role="switch"], [data-row-control]';
+
 export function TableActionsCell({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <td className={cn(cellClasses({}), 'whitespace-nowrap')}>
+    <td data-row-control="" className={cn(cellClasses({}), 'whitespace-nowrap')}>
       <span className="flex items-center justify-end gap-2">{children}</span>
     </td>
   );
@@ -330,6 +347,7 @@ export function TableSelectCell({
   const range = useRef(false);
   return (
     <td
+      data-row-control=""
       className={cellClasses({})}
       onClickCapture={(event) => {
         range.current = event.shiftKey;

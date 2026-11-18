@@ -184,7 +184,15 @@ const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => 
   audit_id: RUN(1),
   run_at: '2026-03-16T00:00:00Z',
   logical_engine: 'claude',
-  brands: [],
+  brands:
+    n === 1
+      ? [
+          { kind: 'competitor', name: 'Globex', logo_url: null, website: null },
+          { kind: 'brand', name: 'Acme', logo_url: null, website: null },
+        ]
+      : [],
+  // The stored value wins: Acme is listed second yet was stored as named first.
+  first_named: n === 1 ? { kind: 'brand', name: 'Acme' } : { kind: 'unavailable' },
   brand_mentioned: n === 1,
   position: n === 1 ? 2 : null,
   cited: n === 1,
@@ -219,6 +227,9 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     ['Not named', '–Not cited', 'No', 'None'],
     ['Not named', '–Not cited', 'Not reported', 'Not applicable'],
   ]);
+  const bold = [...table.querySelectorAll('tbody strong')].map((name) => name.textContent);
+  expect(bold).toEqual(['Acme, named first']);
+  expect(screen.getByText(/newest first · bold brand was named first$/)).toBeVisible();
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),
     PROMPT,

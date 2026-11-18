@@ -57,7 +57,7 @@ function mutationFailure(
 }
 
 /**
- * A prompt's enable switch. The new state shows at once, so a second press on a
+ * A prompt's Enable/Disable. The new state shows at once, so a second press on a
  * row whose save is still in flight is ignored; rows save independently.
  */
 function usePromptToggle(scope: ProjectScope) {
@@ -77,7 +77,12 @@ function usePromptToggle(scope: ProjectScope) {
   return { press, mutation };
 }
 
-/** A failed enable switch; the switch itself has already rolled back. */
+/** Each topic's name by id; none until the topic list is read. */
+function topicNamesOf(topics: readonly Topic[] | undefined) {
+  return topics && new Map(topics.map((topic) => [topic.id, topic.name]));
+}
+
+/** A failed Enable/Disable; the row's status has already rolled back. */
 function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error: unknown } }>) {
   if (!toggle.isError) return null;
   return (
@@ -342,6 +347,7 @@ export function PromptLibrary() {
           selection={edits ? selection : undefined}
           measurements={measurements}
           setNames={setNames}
+          topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
         />
       </>
