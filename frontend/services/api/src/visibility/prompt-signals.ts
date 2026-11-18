@@ -56,7 +56,10 @@ export function promptSignals(input: {
   };
 }
 
-/** A period's signals: pooled counts, and share of voice over the pooled namings. */
+/**
+ * A period's signals: pooled counts, and share of voice over the pooled
+ * namings. One run without perception leaves the period's sentiment unknown.
+ */
 export function pooledSignals(
   items: readonly { sentiment?: NetSentiment | null; web_search?: WebSearch }[],
   named: readonly BrandCount[],
@@ -64,7 +67,7 @@ export function pooledSignals(
   const sentiments = items.flatMap((item) => (item.sentiment ? [item.sentiment] : []));
   return {
     share_of_voice: shareOfVoice(named),
-    sentiment: sentiments.length ? pooledSentiment(sentiments) : null,
+    sentiment: sentiments.length === items.length ? pooledSentiment(sentiments) : null,
     web_search: pooledSearch(items.flatMap((item) => (item.web_search ? [item.web_search] : []))),
   };
 }

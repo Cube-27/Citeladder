@@ -366,7 +366,13 @@ function MeasuredCells({
         {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
       </TableCell>
       <TableCell numeric>
-        {measured(formatRate(measurement?.shareOfVoice ?? null)) ?? <Absence />}
+        {measurement ? (
+          (measured(formatRate(measurement.shareOfVoice)) ?? (
+            <Absence state="none" reason="No tracked brand was named in these answers." />
+          ))
+        ) : (
+          <Absence state="not_measured" />
+        )}
       </TableCell>
       <TableCell numeric>
         <SentimentValue sentiment={measurement?.sentiment} tooFew="Too few" showCount={false} />

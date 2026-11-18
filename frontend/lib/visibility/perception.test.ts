@@ -122,8 +122,10 @@ describe('perception derivations', () => {
       { kind: 'too_few', classified: 19, mentions: 30, minimum: 20 },
       { kind: 'too_few', classified: 0, mentions: 30, minimum: 20 },
     ]);
-    expect(sentimentReading({ ...net(0, 0, 0), mentions: 0 }).kind).toBe('none');
-    expect(sentimentReading(null).kind).toBe('none');
+    expect([sentimentReading({ ...net(0, 0, 0), mentions: 0 }), sentimentReading(null)]).toEqual([
+      { kind: 'no_mentions' },
+      { kind: 'not_measured' },
+    ]);
   });
 
   it('breaks the sentiment line at a point not comparable with the one before', () => {

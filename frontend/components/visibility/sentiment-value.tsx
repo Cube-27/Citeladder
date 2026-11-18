@@ -16,8 +16,10 @@ export function SentimentValue({
 }: Readonly<{ sentiment: NetSentiment | null | undefined; tooFew?: string; showCount?: boolean }>) {
   const reading = sentimentReading(sentiment);
   switch (reading.kind) {
-    case 'none':
-      return <Absence state={sentiment ? 'none' : 'not_measured'} />;
+    case 'not_measured':
+      return <Absence />;
+    case 'no_mentions':
+      return <Absence state="none" reason="No answer named this brand." />;
     case 'too_few':
       return (
         <Absence

@@ -19,18 +19,20 @@ export function formatNet(value: number | null): string | null {
 }
 
 /**
- * A net sentiment reading for a table cell or figure: none when nothing was
- * read, too few below the minimum classified count (never a zero), else the
- * signed value with its counts.
+ * A net sentiment reading for a table cell or figure: not measured when the
+ * read carried none, no mentions when nothing named the brand, too few below
+ * the minimum classified count (never a zero), else the signed value.
  */
 export function sentimentReading(
   sentiment: NetSentiment | null | undefined,
   minimum = PERCEPTION_MIN_CLASSIFIED,
 ):
-  | { kind: 'none' }
+  | { kind: 'not_measured' }
+  | { kind: 'no_mentions' }
   | { kind: 'too_few'; classified: number; mentions: number; minimum: number }
   | { kind: 'value'; net: string; classified: number; mentions: number } {
-  if (!sentiment || sentiment.mentions === 0) return { kind: 'none' };
+  if (!sentiment) return { kind: 'not_measured' };
+  if (sentiment.mentions === 0) return { kind: 'no_mentions' };
   const { classified, mentions } = sentiment;
   const net = formatNet(sentiment.net_sentiment);
   if (classified < minimum || net === null)
