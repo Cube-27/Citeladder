@@ -162,7 +162,7 @@ export async function getVisibilityEvidence(
     audit_ids: [...(selection.auditIds ?? [])].sort(compareText),
     prompt: options.promptId,
     engine: selection.logicalEngine,
-    topic: selection.topicId ?? null,
+    topic: selection.topicId,
     from: selection.fromAt && wireUtcOf(selection.fromAt),
     to: selection.toAt && wireUtcOf(selection.toAt),
     cohort: selection.cohort,
