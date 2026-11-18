@@ -747,9 +747,13 @@ customer credits. Policy, caps, the closed theme list and the templates live in
 - **Metrics.** Net sentiment is (positive − negative) / classified × 100, with
   `mixed` in the denominator only, always paired with "N of M mentions
   classified". Pending, unavailable (by reason), not assessable and low
-  confidence are counted separately and never read as zero. Themes, negative
-  quotes and the domains cited alongside criticism (never called a cause) are
-  brand-only; the recommended rate comes from the deterministic first-mention
+  confidence are counted separately and never read as zero. Theme counts are
+  served for every named business: per theme, the classified mentions raising
+  it, which Brand → Perception shows as each brand's share of its own classified
+  mentions, too few below the configured minimum (AV-6). The theme list,
+  negative quotes and the domains cited alongside criticism (never called a
+  cause) stay brand-only, and the app shows no competitor quote; the
+  recommended rate comes from the deterministic first-mention
   assessment (English phrasing only). Trend points carry their versions; a
   version or frozen-model change marks the point not comparable.
 - **Reads.** `GET /visibility/perception` (summary for a run, a run set or the

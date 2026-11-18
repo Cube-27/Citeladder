@@ -4649,9 +4649,27 @@
           },
           "coverage": {
             "$ref": "#/components/schemas/PerceptionCoverage"
+          },
+          "theme_mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "theme": {
+                  "type": "string"
+                },
+                "mentions": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["theme", "mentions"],
+              "additionalProperties": false
+            }
           }
         },
-        "required": ["name", "is_brand", "score", "coverage"],
+        "required": ["name", "is_brand", "score", "coverage", "theme_mentions"],
         "additionalProperties": false
       },
       "PerceptionQuote": {
@@ -11172,7 +11190,13 @@
                         "not_assessable": null,
                         "low_confidence": null,
                         "unavailable": null
-                      }
+                      },
+                      "theme_mentions": [
+                        {
+                          "theme": null,
+                          "mentions": null
+                        }
+                      ]
                     }
                   ],
                   "engines": [

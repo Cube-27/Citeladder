@@ -180,6 +180,7 @@ const screens = {
   insights: pick(() => import('@/components/brand/insights-screen'), 'InsightsScreen'),
   perception: pick(() => import('@/components/perception/perception-screen'), 'PerceptionScreen'),
   competitors: pick(() => import('@/components/brand/competitors-screen'), 'CompetitorsScreen'),
+  competitor: pick(() => import('@/components/brand/competitor-screen'), 'CompetitorScreen'),
   prompts: pick(() => import('@/components/prompts/prompt-library'), 'PromptLibrary'),
   promptBuilder: pick(
     () => import('@/components/prompts/prompt-builder-page'),
@@ -371,6 +372,14 @@ export const APP_ROUTES = [
     // The ranking, then the suggestions.
     loading: cards([table(5), table(5)], { filters: true }),
     nav: [listed('Competitors', 'competitors', 'brand')],
+  }),
+  page({
+    path: '/competitors/:name',
+    title: 'Competitor',
+    collection: '/competitors',
+    screen: screens.competitor,
+    // Its figures beside yours, the trend, then sources and prompts side by side.
+    loading: cards([figures(5), chart, table(3)], { filters: true }),
   }),
   page({
     path: '/agent',

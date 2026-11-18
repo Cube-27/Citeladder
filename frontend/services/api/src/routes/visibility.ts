@@ -53,6 +53,7 @@ import { surfaceRates } from '../visibility/surface.ts';
 import { getVisibilityTopics } from '../visibility/topics.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { defineGetRoute } from './define.ts';
+import { competitorFocusRoute } from './visibility-competitor.ts';
 import {
   BASELINE_RUNS,
   COHORT,
@@ -470,4 +471,5 @@ export const visibilityRoutes = [
       );
     },
   }),
+  competitorFocusRoute,
 ];

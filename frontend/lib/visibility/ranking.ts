@@ -1,6 +1,11 @@
 import type { RankingRow } from '@citeladder/contracts';
 import { formatPosition } from '@/lib/visibility/dashboard';
 
+/** Where one roster competitor's page lives: keyed by its roster name. */
+export function competitorHref(name: string): `/${string}` {
+  return `/competitors/${encodeURIComponent(name)}`;
+}
+
 /** Stable identity for one ranking row, matching the table's React key. */
 export function rankingRowKey(row: Pick<RankingRow, 'is_brand' | 'name'>): string {
   return `${row.is_brand}-${row.name}`;

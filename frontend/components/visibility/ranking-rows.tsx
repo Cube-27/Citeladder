@@ -15,6 +15,8 @@ import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
+import { TextLink } from '@/components/ui/text-link';
+import { competitorHref } from '@/lib/visibility/ranking';
 
 const TITLE = 'You and your competitors';
 
@@ -80,7 +82,13 @@ export function RankingRowsTable({
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                   <ClampText lines={1} className={textRole('emphasis')}>
-                    {row.name}
+                    {row.is_brand ? (
+                      row.name
+                    ) : (
+                      <TextLink href={competitorHref(row.name)} text="inherit" underline="hover">
+                        {row.name}
+                      </TextLink>
+                    )}
                   </ClampText>
                   {row.is_brand ? <YouTag /> : null}
                 </Inline>

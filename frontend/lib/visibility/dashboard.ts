@@ -42,9 +42,15 @@ export type SourceTab = Extract<VisibilityTab, 'domains' | 'urls' | 'read-not-ci
 
 /**
  * Which screen reads the shared selection: a Visibility tab, or a Brand page
- * (Insights draws the trend; Competitors and Perception read the selection).
+ * (Insights and one competitor's page draw the trend; Competitors and Perception
+ * read the selection).
  */
-export type VisibilityView = VisibilityTab | 'insights' | 'competitors' | 'perception';
+export type VisibilityView =
+  | VisibilityTab
+  | 'insights'
+  | 'competitors'
+  | 'competitor'
+  | 'perception';
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [

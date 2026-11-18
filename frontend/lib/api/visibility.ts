@@ -33,6 +33,7 @@ import {
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
+import { competitorFocusSchema } from '@citeladder/contracts/visibility-competitor';
 import {
   accuracyFactListSchema,
   accuracyResponseSchema,
@@ -140,6 +141,28 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(perceptionResponseSchema, result, 'visibility.getPerception');
+  },
+  /** One roster competitor against you: sources when it is named, prompts naming it instead. */
+  getCompetitorFocus: async (
+    projectId: string,
+    params: {
+      name: string;
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const { name, ...selection } = params;
+    const result = await apiClient.get(
+      withQuery(
+        `/projects/${projectId}/visibility/competitors/${encodeURIComponent(name)}`,
+        definedQuery(selection),
+      ),
+      options,
+    );
+    return strictValidate(competitorFocusSchema, result, 'visibility.getCompetitorFocus');
   },
   /** Fact-check accuracy for the selected runs: verdicts on the brand's claims with their coverage. */
   getAccuracy: async (

@@ -307,7 +307,7 @@ export function useVisibilityQueries(
   const trendOptions = visibilityQueries.trends(requestScope, trendParams);
   const trendQuery = useQuery({
     ...trendOptions,
-    enabled: insights,
+    enabled: insights || view === 'competitor',
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   const { surfaceEngine, surfaceRatesQuery } = useSurfaceRates({

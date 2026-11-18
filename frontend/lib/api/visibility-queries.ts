@@ -113,6 +113,12 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getPerception(scope.projectId, params, scoped(scope, signal)),
     }),
+  competitor: (scope: ProjectScope, params: ParamsOf<'getCompetitorFocus'>) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.competitor(scope, params.name, params),
+      queryFn: ({ signal }) =>
+        visibilityApi.getCompetitorFocus(scope.projectId, params, scoped(scope, signal)),
+    }),
   accuracy: (scope: ProjectScope, params: ParamsOf<'getAccuracy'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.accuracy(scope, params),

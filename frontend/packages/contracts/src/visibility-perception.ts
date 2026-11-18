@@ -70,6 +70,9 @@ export const perceptionEntitySchema = responseObject({
   is_brand: z.boolean(),
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
+  // Per theme, the classified mentions raising it at least once. Counts only:
+  // quotes stay the brand's own (AV-6).
+  theme_mentions: z.array(responseObject({ theme: z.string(), mentions: z.number().int() })),
 });
 
 export const perceptionBreakdownSchema = responseObject({
