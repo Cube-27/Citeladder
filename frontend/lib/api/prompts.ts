@@ -337,7 +337,8 @@ export const promptsMutations = {
                 ...(bySet.get(prompt.prompt_set_id) ?? []),
                 prompt.id,
               ]);
-            await Promise.all(
+            // Every request settles before the refresh, so a failure never reads a stale set.
+            const settled = await Promise.allSettled(
               [...bySet].map(([setId, ids]) =>
                 promptsApi.bulkStatus(
                   setId,
@@ -346,6 +347,8 @@ export const promptsMutations = {
                 ),
               ),
             );
+            const failed = settled.find((result) => result.status === 'rejected');
+            if (failed) throw failed.reason;
             return prompt_ids.length;
           }
           case 'topic':
