@@ -221,8 +221,9 @@ collection a project switch lands on and whether its URL carries a credential.
 The router, navigation, compact navigation, Command Palette, user menu, page
 titles, workspace-only routes and mode homes all derive from it; UI visibility
 never replaces backend authorization. The shell has two route-derived modes, Dashboard
-and Agent. Dashboard navigation follows the product loop: Overview, Analyze,
-Act (Actions with its open and in-progress count), Track, then Integrations. A
+and Agent. Dashboard navigation groups pages by the question they answer: Home
+(Overview, Actions with its open and in-progress count), Brand, Tracking, Website,
+Search and Commerce, then Integrations in the foot. A
 destination is current on its path and every path below it, whatever tab the
 screen shows; a destination that names a query parameter (a settings tab) also
 needs it. Every destination and mode link goes to its front door; the app

@@ -21,9 +21,12 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   measured triggers.
 - [AI visibility gaps](ai-visibility-gaps.md) (owner, 2026-11-17): reporting
   views, derivations and probes the product lacks against an AI-visibility
-  reference, in Phase 1 (W1–W11, W14, W15) and Phase 2 (W12, W13) with owner
-  decisions AV-1 to AV-12. Nothing is built until the owner approves an HTML
-  mockup of each phase.
+  reference, with owner decisions AV-1 to AV-20. Phase 1 fills the new Brand,
+  Tracking and Search pages (N1–N7) and adds W1–W11, W14 and W15; Phase 2 is the
+  W12 and W13 probes; Phase 3 updates the docs site and changelog; Phase 4 builds
+  the API reference on the docs site (R1–R4). The mockups
+  were approved on 2026-11-18, and the new sidebar with empty Brand pages has
+  shipped.
 
 Commerce product tracking and backlog tier 1 shipped on 11 November 2026, and
 the Agent chat UX round on 13 November 2026; their plans were deleted. The

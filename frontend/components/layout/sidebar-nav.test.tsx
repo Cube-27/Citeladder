@@ -108,7 +108,7 @@ describe('station navigation', () => {
 
   it('scopes project destinations to the project and setup to the workspace', () => {
     render(<SidebarNav />);
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Site health' })).toHaveAttribute(
       'href',
       '/site?project=11111111-1111-4111-8111-111111111111',
     );
@@ -131,7 +131,10 @@ describe('station navigation', () => {
     pathname = '/site';
     searchParams = new URLSearchParams('tab=internal-links');
     const { unmount } = render(<SidebarNav />);
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Site health' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     unmount();
 
     // A destination that names a tab is current only on that tab.
@@ -160,7 +163,7 @@ describe('station navigation', () => {
     const first = render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'true');
     expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Website' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Site health' })).toBeInTheDocument();
     first.unmount();
 
     pathname = '/agent/skills';
@@ -176,14 +179,17 @@ describe('station navigation', () => {
       'href',
       '/agent/chats/33333333-3333-4333-8333-333333333331?project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.queryByRole('link', { name: 'Website' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Site health' })).toBeNull();
     unmount();
 
     pathname = '/site';
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'true');
     expect(screen.getAllByRole('link', { name: /^Actions/ })).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Site health' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(screen.queryByRole('link', { name: 'Skills' })).toBeNull();
   });
 
@@ -207,7 +213,7 @@ describe('station navigation', () => {
       'href',
       '/actions?project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Site health' })).toHaveAttribute(
       'href',
       '/site?project=11111111-1111-4111-8111-111111111111',
     );
@@ -216,24 +222,27 @@ describe('station navigation', () => {
   it('folds a group to the current page alone, and keeps the fold', () => {
     pathname = '/site';
     const { unmount } = render(<SidebarNav />);
-    const analyze = screen.getByRole('button', { name: 'Analyze' });
+    const analyze = screen.getByRole('button', { name: 'Website' });
     expect(analyze).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(analyze);
     expect(analyze).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: 'Issues' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Site health' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     unmount();
 
     // Reloaded on another page, the group stays folded and shows nothing it holds.
     pathname = '/runs';
     render(<SidebarNav />);
-    expect(screen.getByRole('button', { name: 'Analyze' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Website' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
-    expect(screen.queryByRole('link', { name: 'Website' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Site health' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute('aria-current', 'page');
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Website' }));
     expect(screen.getByRole('link', { name: 'Issues' })).toBeInTheDocument();
   });
 
@@ -255,13 +264,13 @@ describe('station navigation', () => {
   });
 
   /**
-   * The same contract for AI Visibility: intent must warm the key the screen
+   * The same contract for Sources: intent must warm the key the screen
    * itself reads. A key spelled out in the prefetcher drifted from the
    * selection the dashboard builds and warmed an entry nothing consumed.
    */
   it('warms the Visibility landing selection the screen actually reads', async () => {
     render(<SidebarNav />);
-    fireEvent.mouseEnter(screen.getByRole('link', { name: 'AI Visibility' }));
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Sources' }));
     await waitFor(() => expect(mocks.prefetchQuery).toHaveBeenCalled());
     const keys = mocks.prefetchQuery.mock.calls.map((call) => call[0].queryKey);
     expect(keys).toContainEqual(

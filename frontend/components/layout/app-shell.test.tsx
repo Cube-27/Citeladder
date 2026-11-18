@@ -163,19 +163,19 @@ describe('AppShell resizable sidebar', () => {
       ...within(sidebar).getAllByRole('button'),
       ...within(sidebar).getAllByRole('link'),
     ];
-    // Project, Dashboard, Agent, Overview, Actions, Analyze, Commerce, Track,
-    // Integrations, account: 40px each, the first in the 56px cell, with 21px
+    // Project, Dashboard, Agent, Home, Brand, Tracking, Website, Search,
+    // Commerce, Integrations, account: 40px each, the first in the 56px cell, with 21px
     // between the rail's parts. The collapse toggle is in the masthead.
-    expect(buttons).toHaveLength(10);
+    expect(buttons).toHaveLength(11);
     expect(56 + (buttons.length - 1) * 40 + 21).toBeLessThanOrEqual(480);
 
     // A group opens its flyout with the right arrow, marking the current page.
-    const analyze = within(sidebar).getByRole('button', { name: 'Analyze' });
+    const analyze = within(sidebar).getByRole('button', { name: 'Website' });
     expect(analyze).toHaveAttribute('aria-current', 'true');
     analyze.focus();
     await user.keyboard('{ArrowRight}');
-    const flyout = await screen.findByRole('menu', { name: 'Analyze' });
-    expect(within(flyout).getByRole('menuitem', { name: 'Website' })).toHaveAttribute(
+    const flyout = await screen.findByRole('menu', { name: 'Website' });
+    expect(within(flyout).getByRole('menuitem', { name: 'Site health' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -213,8 +213,8 @@ describe('AppShell navigation drawer', () => {
     await user.click(menu);
 
     const drawer = screen.getByRole('dialog', { name: 'Navigation' });
-    expect(within(drawer).getByRole('link', { name: 'Keyword Research' })).toBeVisible();
-    expect(within(drawer).getByRole('link', { name: 'AI Visibility' })).toBeVisible();
+    expect(within(drawer).getByRole('link', { name: 'Keywords' })).toBeVisible();
+    expect(within(drawer).getByRole('link', { name: 'Sources' })).toBeVisible();
     // The page behind the modal drawer is hidden from assistive technology.
     expect(menu).toHaveAttribute('aria-expanded', 'true');
 

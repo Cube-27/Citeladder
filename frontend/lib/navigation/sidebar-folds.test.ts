@@ -4,28 +4,28 @@ import { isGroupFolded, setGroupFolded } from './sidebar-folds';
 
 afterEach(() => {
   vi.restoreAllMocks();
-  setGroupFolded('analyze', false);
-  setGroupFolded('track', false);
+  setGroupFolded('website', false);
+  setGroupFolded('tracking', false);
   window.localStorage.clear();
 });
 
 describe('sidebar group folds', () => {
   it('keeps each group fold in local storage, independently', () => {
-    setGroupFolded('analyze', true);
-    expect(isGroupFolded('analyze')).toBe(true);
-    expect(isGroupFolded('track')).toBe(false);
+    setGroupFolded('website', true);
+    expect(isGroupFolded('website')).toBe(true);
+    expect(isGroupFolded('tracking')).toBe(false);
     expect(JSON.parse(window.localStorage.getItem('citeladder:app:sidebar-folds') ?? '')).toEqual([
-      'analyze',
+      'website',
     ]);
-    setGroupFolded('analyze', false);
-    expect(isGroupFolded('analyze')).toBe(false);
+    setGroupFolded('website', false);
+    expect(isGroupFolded('website')).toBe(false);
   });
 
   it('reads a fold another load wrote and ignores a corrupt value', () => {
-    window.localStorage.setItem('citeladder:app:sidebar-folds', '["track"]');
-    expect(isGroupFolded('track')).toBe(true);
+    window.localStorage.setItem('citeladder:app:sidebar-folds', '["tracking"]');
+    expect(isGroupFolded('tracking')).toBe(true);
     window.localStorage.setItem('citeladder:app:sidebar-folds', '{not json');
-    expect(isGroupFolded('track')).toBe(false);
+    expect(isGroupFolded('tracking')).toBe(false);
   });
 
   it('keeps a fold for the session when storage is unavailable', () => {
@@ -35,8 +35,8 @@ describe('sidebar group folds', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-    setGroupFolded('track', true);
-    expect(isGroupFolded('track')).toBe(true);
-    expect(isGroupFolded('analyze')).toBe(false);
+    setGroupFolded('tracking', true);
+    expect(isGroupFolded('tracking')).toBe(true);
+    expect(isGroupFolded('website')).toBe(false);
   });
 });

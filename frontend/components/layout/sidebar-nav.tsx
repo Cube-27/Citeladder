@@ -58,45 +58,31 @@ function FoldingGroup({ group }: Readonly<{ group: NavGroup }>) {
   );
 }
 
-/** Dashboard mode's list: Overview and Actions, then Analyze, Commerce and Track. */
+/** Dashboard mode's list: one folding group per Dashboard group. */
 export function DashboardNav() {
   const { location } = useDestinations();
   return (
     <SidebarScrollList label="Dashboard" revealKey={location}>
-      {DASHBOARD_GROUPS.map((group) =>
-        group.title ? (
-          <FoldingGroup key={group.group} group={group} />
-        ) : (
-          <SidebarNavGroup key={group.group}>
-            <DestinationRows items={group.items} />
-          </SidebarNavGroup>
-        ),
-      )}
+      {DASHBOARD_GROUPS.map((group) => (
+        <FoldingGroup key={group.group} group={group} />
+      ))}
     </SidebarScrollList>
   );
 }
 
-/** Dashboard mode in the rail: a link per ungrouped destination, a flyout per group. */
+/** Dashboard mode in the rail: a flyout per group. */
 export function DashboardRail() {
   const { isActive, href } = useDestinations();
-  return DASHBOARD_GROUPS.flatMap((group) =>
-    group.title ? (
-      <li key={group.group}>
-        <RailGroupMenu
-          label={group.title}
-          icon={group.icon}
-          current={group.items.some(isActive)}
-          items={group.items.map((item) => ({ ...item, href: href(item), active: isActive(item) }))}
-        />
-      </li>
-    ) : (
-      group.items.map((item) => (
-        <li key={item.href}>
-          <RailLink item={{ ...item, href: href(item) }} active={isActive(item)} />
-        </li>
-      ))
-    ),
-  );
+  return DASHBOARD_GROUPS.map((group) => (
+    <li key={group.group}>
+      <RailGroupMenu
+        label={group.title}
+        icon={group.icon}
+        current={group.items.some(isActive)}
+        items={group.items.map((item) => ({ ...item, href: href(item), active: isActive(item) }))}
+      />
+    </li>
+  ));
 }
 
 /** The foot's destinations (Integrations), above the account button. */

@@ -21,19 +21,32 @@ import type { IconName } from '@/lib/icons';
 type RouteScope = 'public' | 'workspace' | 'project';
 
 /**
- * The sidebar's groups. Dashboard mode lists `overview` (ungrouped), then
- * `analyze`, `commerce` and `track`; Agent mode lists `agent`; `foot` sits
+ * The sidebar's groups. Dashboard mode lists `home`, `brand`, `tracking`,
+ * `website`, `search` and `commerce`; Agent mode lists `agent`; `foot` sits
  * above the account in both.
  */
-export type SidebarGroup = 'overview' | 'analyze' | 'commerce' | 'track' | 'agent' | 'foot';
+export type SidebarGroup =
+  | 'home'
+  | 'brand'
+  | 'tracking'
+  | 'website'
+  | 'search'
+  | 'commerce'
+  | 'agent'
+  | 'foot';
 
-/** Dashboard mode's groups in order, with their labels (null draws the rows ungrouped). */
+/**
+ * Dashboard mode's groups in order, with their labels. Each group answers one question: how AI sees the brand, what is
+ * measured and what AI reads, the brand's own site, classic search, products.
+ */
 export const DASHBOARD_SIDEBAR_GROUPS = [
-  { group: 'overview', title: null },
-  { group: 'analyze', title: 'Analyze' },
+  { group: 'home', title: 'Home' },
+  { group: 'brand', title: 'Brand' },
+  { group: 'tracking', title: 'Tracking' },
+  { group: 'website', title: 'Website' },
+  { group: 'search', title: 'Search' },
   { group: 'commerce', title: 'Commerce' },
-  { group: 'track', title: 'Track' },
-] as const satisfies readonly { group: SidebarGroup; title: string | null }[];
+] as const satisfies readonly { group: SidebarGroup; title: string }[];
 
 /**
  * Where a nav entry is listed: a sidebar group (the command palette lists the
@@ -165,6 +178,9 @@ const screens = {
   actionUrl: pick(() => import('@/components/agent/action-url-screen'), 'ActionUrlScreen'),
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
+  insights: pick(() => import('@/components/brand/brand-screens'), 'InsightsScreen'),
+  perception: pick(() => import('@/components/brand/brand-screens'), 'PerceptionScreen'),
+  competitors: pick(() => import('@/components/brand/brand-screens'), 'CompetitorsScreen'),
   prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
   prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
   visibility: pick(
@@ -223,16 +239,16 @@ export const APP_ROUTES = [
     title: 'Overview',
     screen: screens.projects,
     loading: { kind: 'overview' },
-    nav: [listed('Overview', 'overview', 'overview')],
+    nav: [listed('Overview', 'overview', 'home')],
   }),
   page({
     path: '/site',
-    title: 'Website',
+    title: 'Site health',
     screen: screens.site,
     loading: cards([figures(), table(6)], {
       tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
     }),
-    nav: [listed('Website', 'site', 'analyze')],
+    nav: [listed('Site health', 'site', 'website')],
   }),
   page({
     path: '/site/crawls/:crawlId/pages/:siteUrlId',
@@ -248,7 +264,7 @@ export const APP_ROUTES = [
     title: 'Issues',
     screen: screens.issues,
     loading: cards([table(4)], { filters: true }),
-    nav: [listed('Issues', 'issues', 'analyze')],
+    nav: [listed('Issues', 'issues', 'website')],
   }),
   page({
     path: '/performance',
@@ -256,23 +272,24 @@ export const APP_ROUTES = [
     screen: screens.performance,
     // No tab row: its range toolbar is the filter row.
     loading: cards([figures(4), chart], { filters: true }),
-    nav: [listed('Performance', 'performance', 'analyze')],
-  }),
-  page({
-    path: '/demand',
-    title: 'Search Demand',
-    screen: screens.demand,
-    loading: cards([table(8)], { filters: true }),
-    nav: [listed('Search Demand', 'demand', 'analyze')],
+    nav: [listed('Performance', 'performance', 'search')],
   }),
   page({
     path: '/search-intelligence',
-    title: 'Keyword Research',
+    title: 'Keywords',
     screen: screens.keywords,
     loading: cards([figures(5), table(6)], {
       tabs: ['Overview', 'Keywords', 'Competitors', 'Backlinks'],
     }),
-    nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
+    nav: [listed('Keywords', 'searchIntelligence', 'search')],
+  }),
+  // Listed until it becomes the Keywords page's Demand tab (AV-16).
+  page({
+    path: '/demand',
+    title: 'Search demand',
+    screen: screens.demand,
+    loading: cards([table(8)], { filters: true }),
+    nav: [listed('Search demand', 'demand', 'search')],
   }),
   // Commerce: Shopping, then the Products table. Shopping is declared before
   // `/products/:targetId`, which would otherwise match it.
@@ -311,7 +328,7 @@ export const APP_ROUTES = [
         label: 'Actions',
         icon: 'opportunities',
         badge: 'open-actions',
-        placements: ['sidebar:overview'],
+        placements: ['sidebar:home'],
       },
     ],
   }),
@@ -332,6 +349,28 @@ export const APP_ROUTES = [
     screen: screens.actionUrl,
     // The Details card: Page type, Last crawled, Open actions.
     loading: cards([facts(3)]),
+  }),
+  // Brand: how AI sees the brand. Built next by docs/plans/ai-visibility-gaps.md.
+  page({
+    path: '/insights',
+    title: 'Insights',
+    screen: screens.insights,
+    loading: cards([figures(), chart]),
+    nav: [listed('Insights', 'insights', 'brand')],
+  }),
+  page({
+    path: '/perception',
+    title: 'Perception',
+    screen: screens.perception,
+    loading: cards([figures(), chart], { tabs: ['Brand', 'Fact-checking'] }),
+    nav: [listed('Perception', 'perception', 'brand')],
+  }),
+  page({
+    path: '/competitors',
+    title: 'Competitors',
+    screen: screens.competitors,
+    loading: cards([table(6)]),
+    nav: [listed('Competitors', 'competitors', 'brand')],
   }),
   page({
     path: '/agent',
@@ -380,7 +419,7 @@ export const APP_ROUTES = [
     title: 'Prompts',
     screen: screens.prompts,
     loading: cards([table(8)], { filters: true }),
-    nav: [listed('Prompts', 'prompts', 'track')],
+    nav: [listed('Prompts', 'prompts', 'tracking')],
   }),
   page({
     path: '/prompts/:promptId',
@@ -392,21 +431,22 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/visibility',
-    title: 'AI Visibility',
+    title: 'Sources',
     screen: screens.visibility,
     // Accuracy, shown only to the fact-checking pilot, is last and arrives after.
+    // Trends and Perception move to Brand → Insights and Perception (AV-14).
     loading: cards([figures(), chart], {
       tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
       filters: true,
     }),
-    nav: [listed('AI Visibility', 'visibility', 'track')],
+    nav: [listed('Sources', 'visibility', 'tracking')],
   }),
   page({
     path: '/runs',
     title: 'Runs',
     screen: screens.runs,
     loading: cards([table(5)]),
-    nav: [listed('Runs', 'runs', 'track')],
+    nav: [listed('Runs', 'runs', 'tracking')],
   }),
   page({
     path: '/runs/:runId',
@@ -417,12 +457,12 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/ai-traffic',
-    title: 'AI Traffic',
+    title: 'AI traffic',
     screen: screens.aiTraffic,
     loading: cards([figures(3), chart], {
       tabs: ['Overview', 'Crawlers', 'Referrals', 'Pages', 'Activity'],
     }),
-    nav: [listed('AI Traffic', 'aiTraffic', 'track')],
+    nav: [listed('AI traffic', 'aiTraffic', 'website')],
   }),
 
   // The workspace's own pages, inside the shell.
