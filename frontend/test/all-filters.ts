@@ -8,18 +8,21 @@ const filterName = (label: string, value?: string) =>
 
 /**
  * Finds one filter as a reader does, named with its value ("Topic: All
- * topics"): its own trigger in the control row (a lone filter, or a page's
- * Measurement and Period), or its row inside All filters.
+ * topics"): its own chip in the control row, or its row inside Filters.
  */
 export async function openFilterRow(user: User, label: string, value?: string) {
-  const all = screen.queryByRole('button', { name: /^All filters/ });
+  // Whichever the row draws once it loads: the filter's own chip, or Filters.
+  await screen.findAllByRole('button', {
+    name: (name) => name.startsWith('Filters') || name.startsWith(`${label}:`),
+  });
   const own = screen.queryByRole('button', { name: filterName(label, value) });
+  const all = screen.queryByRole('button', { name: /^Filters/ });
   if (own || !all) return own ?? screen.findByRole('button', { name: filterName(label, value) });
   await user.click(all);
   return screen.findByRole('menuitem', { name: filterName(label, value) });
 }
 
-/** Opens one filter's options: its submenu in All filters, or a lone filter's own menu. */
+/** Opens one filter's options: its submenu in Filters, or its chip's own menu. */
 export async function openFilterOptions(user: User, label: string, value?: string) {
   const row = await openFilterRow(user, label, value);
   if (row.getAttribute('role') !== 'menuitem') {

@@ -1,13 +1,11 @@
-import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
-import { ChevronDown } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 
-import {
-  AllFilters,
-  ChoiceOptions,
-  focusFieldOnEntry,
-  type FilterDefinition,
-} from '@/components/ui/all-filters';
-import { SOFT_FIELD_BOX } from '@/components/ui/input';
+import type { FilterDefinition } from '@/components/ui/all-filters';
+import { Button } from '@/components/ui/button';
+import { FilterChip, FilterTrigger, ValueChip } from '@/components/ui/filter-chip';
+import { FiltersMenu } from '@/components/ui/filters-menu';
+import { Icon } from '@/components/ui/icon';
 import {
   Menu,
   MenuContent,
@@ -16,7 +14,7 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { isTextCut, Tooltip } from '@/components/ui/tooltip';
+import { batchUrlWrites } from '@/lib/navigation/url-state';
 import { cn } from '@/lib/utils';
 
 /**
@@ -34,19 +32,11 @@ export type FilterBarProps = Readonly<{
   /** A `SearchField`, after the view. */
   search?: ReactNode;
   /**
-   * Every filter of the list, after the search: period, market, engine, kind,
-   * status and typed values alike, each its own trigger ("Page kind ▾" until
-   * set, then "Page kind: Article"), in this order. In a full row (view,
-   * search and actions), or more than four beside a search, they share one
-   * All filters menu.
+   * Every filter of the list, after the search, in the page's order. The
+   * first four with an `icon` are chips in the row; the rest share Filters
+   * (a lone one is a chip of its own).
    */
   filters?: readonly FilterDefinition[];
-  /**
-   * The window the page reads (Measurement, Period), each its own trigger
-   * before `filters`, which then always share All filters. Build it with
-   * `pageStripFilters`.
-   */
-  lead?: readonly FilterDefinition[];
   /**
    * What the row shows, in caption at its end: the count describing the list
    * ("12 issues · 40 pages") or a live note ("Updating data… Previous data
@@ -58,28 +48,55 @@ export type FilterBarProps = Readonly<{
   actions?: ReactNode;
 }>;
 
+/** The most icon chips a row shows; any more go into Filters. */
+const ROW_ICON_CHIPS = 4;
+
+/**
+ * Which filters are chips in the row and which share Filters: up to four
+ * icon filters in the page's order, then the rest behind Filters, or as a
+ * value chip of its own when only one without an icon is left.
+ */
+export function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
+  chips: readonly FilterDefinition[];
+  menu: readonly FilterDefinition[];
+}> {
+  const icons = filters.filter((filter) => filter.icon).slice(0, ROW_ICON_CHIPS);
+  const rest = filters.filter((filter) => !icons.includes(filter));
+  const [only] = rest;
+  if (rest.length === 1 && only && !only.icon) return { chips: [...icons, only], menu: [] };
+  return { chips: icons, menu: rest };
+}
+
+/**
+ * The data window, at the row's end while its period chip shows only its
+ * icon (owner, 2026-11-18): the window stays in sight without its value
+ * printed on the chip.
+ */
+function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
+  const period = chips.find((filter) => filter.icon === 'period' && filter.isDefault);
+  return period ? (period.windowLabel ?? period.valueLabel) : undefined;
+}
+
 /**
  * FilterBar — the control row at the top of every list and report page, in
- * one order on every page: the view, the search, the filters, then the count
- * and the action at the row's end. Every control is 32px and 8 apart.
+ * one order on every page: the view, the search, the filter chips, Filters
+ * and the chips of the filters set in it, Clear once anything is set, then
+ * the data window, the count and the action at the row's end. Every control
+ * is 32px and 8 apart. The row is left-aligned, so a chip whose width follows
+ * its value moves only what comes after it.
  *
- * Each filter is its own trigger where the row has room for them. Two or more
- * share All filters (with the count of active ones) in a full row, one that
- * also holds a view, a search and actions (Products), or beside a search when
- * there are more than `FILTERS_BESIDE_SEARCH`, so the row stays one line and
- * the search keeps its width. From 900px it is one row and the search is 256
- * wide (200 at least), so it never runs up to a view or tabs beside the row
- * (owner, 2026-11-18); when the row cannot hold everything, controls wrap as whole
- * units, the actions at the line's right end, and nothing shrinks below its
- * label. Below 900px the bar stacks into one full-width column in the same
- * order.
+ * From 900px it is one row and the search is 256 wide (200 at least), so it
+ * never runs up to a view or tabs beside the row (owner, 2026-11-18); when the
+ * row cannot hold everything, controls wrap as whole units, the actions at
+ * the line's right end. Below 900px the bar stacks into one full-width column
+ * in the same order.
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
-export function FilterBar({ view, search, filters, lead, status, actions }: FilterBarProps) {
-  const searched = Boolean(search);
-  const full = searched && Boolean(view) && Boolean(actions);
-  const leads = lead ?? [];
+export function FilterBar({ view, search, filters = [], status, actions }: FilterBarProps) {
+  const { chips, menu } = placeFilters(filters);
+  const set = filters.filter((filter) => !filter.isDefault);
+  const windowLabel = dataWindow(chips);
   return (
     <fieldset
       data-filter-bar=""
@@ -88,19 +105,48 @@ export function FilterBar({ view, search, filters, lead, status, actions }: Filt
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
-      {leads.length > 0 ? <RowFilters filters={leads} grouped={false} /> : null}
-      {filters ? (
-        <RowFilters
-          filters={filters}
-          grouped={lead !== undefined || grouped(filters.length, searched, full)}
-        />
+      {chips.map((filter) => (
+        <div key={filter.id} className="flex min-w-0 shrink-0">
+          <FilterChip filter={filter} />
+        </div>
+      ))}
+      {menu.length > 0 ? (
+        <div className="flex min-w-0 shrink-0">
+          <FiltersMenu filters={menu} />
+        </div>
+      ) : null}
+      {menu
+        .filter((filter) => !filter.isDefault)
+        .map((filter) => (
+          <div key={filter.id} className="flex min-w-0 shrink-0">
+            <ValueChip filter={filter} />
+          </div>
+        ))}
+      {set.length > 0 ? (
+        <div className="flex shrink-0">
+          <Button
+            variant="quiet"
+            onClick={() => batchUrlWrites(() => set.forEach((filter) => filter.reset()))}
+          >
+            <Icon icon={X} />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+      {windowLabel ? (
+        // Outside the live region: the window is on the chip's name already.
+        <span className="type-caption rail:ms-auto rail:shrink min-w-0 truncate">
+          {windowLabel}
+          {status ? ' ·' : null}
+        </span>
       ) : null}
       {status === undefined ? null : (
         <output
           aria-live="polite"
           className={cn(
             'type-caption flex min-w-0 items-center gap-2 truncate empty:hidden',
-            'rail:ms-auto rail:shrink',
+            !windowLabel && 'rail:ms-auto',
+            'rail:shrink',
           )}
         >
           {status}
@@ -121,57 +167,10 @@ export function FilterBar({ view, search, filters, lead, status, actions }: Filt
   );
 }
 
-/** Beside a search, the most filters the row shows as their own triggers. */
-const FILTERS_BESIDE_SEARCH = 4;
-
-/** Whether the row's filters share All filters: two or more in a full row, or more than four beside a search. */
-function grouped(count: number, searched: boolean, full: boolean): boolean {
-  return (full && count > 1) || (searched && count > FILTERS_BESIDE_SEARCH);
-}
-
-/** The window a page reads: it stays in sight, never behind All filters. */
-const LEAD_FILTER_IDS: ReadonlySet<string> = new Set(['measurement', 'range']);
-
-/** A page strip shows at most this many filters as their own triggers. */
-const STRIP_LOOSE_FILTERS = 2;
-
-/**
- * A page strip's filters (owner, 2026-11-18: "use all filters logic"): up to
- * two each keep their own trigger; past that the measurement and period stay
- * in sight and every other filter shares All filters.
- */
-export function pageStripFilters(
-  filters: readonly FilterDefinition[],
-): Pick<FilterBarProps, 'filters' | 'lead'> {
-  if (filters.length <= STRIP_LOOSE_FILTERS) return { filters };
-  return {
-    lead: filters.filter((filter) => LEAD_FILTER_IDS.has(filter.id)),
-    filters: filters.filter((filter) => !LEAD_FILTER_IDS.has(filter.id)),
-  };
-}
-
-/** The row's filters: each its own trigger, or one All filters menu. */
-function RowFilters({
-  filters,
-  grouped,
-}: Readonly<{ filters: readonly FilterDefinition[]; grouped: boolean }>) {
-  if (grouped)
-    return (
-      <div className="flex min-w-0 shrink-0">
-        <AllFilters filters={filters} />
-      </div>
-    );
-  return filters.map((filter) => (
-    <div key={filter.id} className="flex min-w-0 shrink-0">
-      <FilterMenu filter={filter} />
-    </div>
-  ));
-}
-
 /**
  * FilterControls — filters outside a control row (a record header's): a lone
- * filter as its own trigger, two or more behind All filters. `align` is the
- * edge the menu lines up with (`end` at a row's far right).
+ * filter as its own chip, two or more behind Filters. `align` is the edge the
+ * menu lines up with (`end` at a row's far right).
  */
 export function FilterControls({
   filters,
@@ -179,187 +178,15 @@ export function FilterControls({
 }: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
   const [only, ...rest] = filters;
   if (!only) return null;
-  if (rest.length > 0) return <AllFilters filters={filters} align={align} />;
-  return <FilterMenu filter={only} align={align} />;
-}
-
-/** One filter as its own trigger ("Label" or "Label: Value") that opens its options. */
-function FilterMenu({
-  filter,
-  align = 'start',
-}: Readonly<{ filter: FilterDefinition; align?: 'start' | 'end' }>) {
-  return (
-    <Menu>
-      <MenuTrigger asChild>
-        <FilterTrigger
-          label={filter.label}
-          value={filter.valueLabel}
-          labelOnly={filter.isDefault && filter.defaultIsEvery === true}
-          active={!filter.isDefault}
-          disabled={filter.disabled}
-          sizeTo={filter.kind === 'choice' ? filter.printable : [filter.valueLabel]}
-        />
-      </MenuTrigger>
-      <MenuContent align={align} onFocus={focusFieldOnEntry}>
-        {filter.kind === 'choice' ? <ChoiceOptions filter={filter} /> : filter.content}
-      </MenuContent>
-    </Menu>
-  );
-}
-
-/**
- * FilterTrigger — the button that opens a single-choice menu (`FilterChoice`),
- * drawn on the Select trigger recipe at the one filter width.
- *
- * The accessible name always contains the label and the current value, so a
- * voice user can say what is on screen and a reader hears what is filtered.
- *
- *   - `label` names the filter ("Status"). With a `value` it prints as a
- *     muted prefix ("Status: Open"); `hideLabel` keeps it for assistive tech
- *     only, so the name still contains the visible value.
- *   - `labelOnly`: a filter at its every value ("All statuses") prints only
- *     its label ("Status ▾"), held as wide as its widest "Status: value"
- *     when `sizeTo` is set, so choosing one moves nothing; the value is spoken only.
- *     A real default (a period, a market, an engine) never sets it.
- *   - `active` marks a choice moved off its default (`data-active`); the
- *     value says how.
- *   - `sizeTo` lists every value the trigger can show. The value then takes
- *     the width of the longest of them, at most 128px, instead of the one
- *     filter width, so it never resizes between two values. A longer value
- *     ends in an ellipsis and shows whole in a tooltip.
- *
- * Use it as `<MenuTrigger asChild><FilterTrigger …/></MenuTrigger>`; it
- * forwards the ref and the trigger's props to the button.
- */
-export function FilterTrigger({
-  label,
-  value,
-  hideLabel = false,
-  labelOnly = false,
-  active = false,
-  sizeTo,
-  className,
-  ref,
-  ...props
-}: Readonly<
-  Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
-    label: string;
-    value?: string;
-    hideLabel?: boolean;
-    /** Print the label alone; the value stays in the accessible name. */
-    labelOnly?: boolean;
-    active?: boolean;
-    /** Every value the trigger can show; the value takes the longest one's width. */
-    sizeTo?: readonly string[];
-    ref?: Ref<HTMLButtonElement>;
-  }
->) {
-  const fit = sizeTo !== undefined && sizeTo.length > 0;
-  const shown = value !== undefined && !labelOnly;
-  const button = (
-    <button
-      ref={ref}
-      type="button"
-      data-active={active || undefined}
-      data-fit={fit || undefined}
-      // Spelled out, so the name holds the value even where only the label prints.
-      aria-label={value === undefined ? undefined : `${label}: ${value}`}
-      className={cn(
-        SOFT_FIELD_BOX,
-        'focus-input flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
-        fit ? 'w-auto max-w-full' : 'shell:w-[var(--filter-width)]',
-        className,
-      )}
-      {...props}
-    >
-      {shown ? (
-        <span data-filter-text="" className="min-w-0 truncate">
-          {hideLabel ? null : <span className="text-ink-2">{label}: </span>}
-          {fit ? <SizedValue value={value} sizeTo={sizeTo} /> : <TriggerValue value={value} />}
-        </span>
-      ) : (
-        <HeldLabel label={label} sizeTo={fit && labelOnly ? sizeTo : undefined} />
-      )}
-      <ChevronDown className="text-ink-2 ms-auto size-4 shrink-0" aria-hidden />
-    </button>
-  );
-  // Always wrapped, so moving off the default keeps the same button (and its focus).
-  return (
-    <Tooltip content={value} describe={false} shouldOpen={valueIsCut}>
-      {button}
-    </Tooltip>
-  );
-}
-
-function valueIsCut(trigger: HTMLElement): boolean {
-  return [...trigger.querySelectorAll('[data-filter-text], [data-filter-value]')].some(isTextCut);
-}
-
-function TriggerValue({ value, className }: Readonly<{ value: string; className?: string }>) {
-  return (
-    <span data-filter-value="" className={cn('text-ink min-w-0', className)}>
-      {value}
-    </span>
-  );
-}
-
-/**
- * Every option is laid in the same cell, unseen, so the value is as wide as
- * the longest (at most 128px) and never resizes between two values. The
- * sizers draw their text as generated content: no readable text, no name.
- */
-function SizedValue({ value, sizeTo }: Readonly<{ value: string; sizeTo: readonly string[] }>) {
-  return (
-    <span className="inline-grid max-w-32 min-w-0 align-top">
-      <ValueSizers sizeTo={sizeTo} />
-      <TriggerValue value={value} className="col-start-1 row-start-1 truncate" />
-    </span>
-  );
-}
-
-/**
- * Only the longest labels can set the width; a long option list (every tracked
- * prompt) must not become one node per option. One line each, or a long option
- * wraps and makes the trigger taller than a select.
- */
-function ValueSizers({ sizeTo }: Readonly<{ sizeTo: readonly string[] }>) {
-  return [...new Set(sizeTo)]
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 6)
-    .map((size) => (
-      <span
-        key={size}
-        aria-hidden
-        data-size={size}
-        className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden whitespace-nowrap after:content-[attr(data-size)]"
-      />
-    ));
-}
-
-/**
- * The label alone, held as wide as "Label: value" at its widest value, so
- * choosing a value (or clearing it) never resizes the trigger.
- */
-function HeldLabel({ label, sizeTo }: Readonly<{ label: string; sizeTo?: readonly string[] }>) {
-  if (!sizeTo) return <span className="truncate">{label}</span>;
-  return (
-    <span className="grid min-w-0">
-      <span className="col-start-1 row-start-1 truncate">{label}</span>
-      <span aria-hidden className="invisible col-start-1 row-start-1 flex min-w-0">
-        <span data-size={`${label}: `} className="whitespace-pre after:content-[attr(data-size)]" />
-        <span className="inline-grid max-w-32 min-w-0">
-          <ValueSizers sizeTo={sizeTo} />
-        </span>
-      </span>
-    </span>
-  );
+  if (rest.length > 0) return <FiltersMenu filters={filters} align={align} />;
+  return <FilterChip filter={only} align={align} />;
 }
 
 /**
  * FilterChoice — a single choice of how one card draws (a chart's plotted
- * metric), in that card's header actions: the trigger names the choice by
- * its visible value (`label` stays for assistive tech), the menu lists the
- * options. A list's filters are never this: they live in its control row.
+ * metric), in that card's header actions: a chip printing its value, the
+ * menu headed by `label`. A list's filters are never this: they live in its
+ * control row.
  */
 export function FilterChoice<T extends string>({
   label,
@@ -367,27 +194,22 @@ export function FilterChoice<T extends string>({
   defaultValue,
   options,
   onChange,
-  fit = false,
 }: Readonly<{
-  /** The trigger's accessible name prefix and the menu's heading, e.g. "Select date range". */
+  /** The chip's tooltip and accessible name prefix, and the menu's heading: "Focus". */
   label: string;
   value: T;
-  /** The unfiltered value; any other value marks the trigger active. */
+  /** The unfiltered value; any other value marks the chip active. */
   defaultValue?: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
-  /** Size the trigger to its longest option instead of the one filter width. */
-  fit?: boolean;
 }>) {
   return (
     <Menu>
       <MenuTrigger asChild>
         <FilterTrigger
           label={label}
-          hideLabel
           value={options.find((option) => option.value === value)?.label ?? label}
           active={defaultValue !== undefined && value !== defaultValue}
-          sizeTo={fit ? options.map((option) => option.label) : undefined}
         />
       </MenuTrigger>
       <MenuContent>

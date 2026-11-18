@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
-import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -33,7 +33,7 @@ export function selectionPageFilterBar(
   filters: readonly FilterDefinition[],
 ): ReactNode {
   if (state !== null && state !== 'loading') return undefined;
-  return <FilterBar {...pageStripFilters(filters)} />;
+  return <FilterBar filters={filters} />;
 }
 
 export function selectionPageState(queries: Queries): SelectionPageState {

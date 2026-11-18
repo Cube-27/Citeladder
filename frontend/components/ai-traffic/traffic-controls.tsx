@@ -8,12 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   choiceFilter,
-  menuFieldKeys,
   rangeFilter,
   singleFilter,
   type FilterDefinition,
 } from '@/components/ui/all-filters';
-import { MenuItem } from '@/components/ui/menu';
+import { menuFieldKeys } from '@/components/ui/filter-options';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
@@ -41,7 +40,7 @@ export function trafficNarrowed(filters: TrafficFilters): boolean {
   );
 }
 
-/** Clears every narrowing All filters offers; the window stays as chosen. */
+/** Clears every narrowing Filters offers; the window stays as chosen. */
 export function clearTrafficFilters({ selection }: ControlProps['model']) {
   // One history entry: the first write pushes, the rest replace it.
   selection.setVerification('default');
@@ -53,7 +52,7 @@ export function clearTrafficFilters({ selection }: ControlProps['model']) {
   selection.setPattern(null, 'replace');
 }
 
-/** One filter of All filters, or none where the tab does not offer it. */
+/** One filter of the row, or none where the tab does not offer it. */
 type FilterBuilder = (props: TrafficControlsProps) => FilterDefinition | null;
 
 /** In menu order. */
@@ -69,8 +68,8 @@ const FILTER_BUILDERS: readonly FilterBuilder[] = [
 ];
 
 /**
- * Every narrowing the tab offers, for its control row's All filters: the
- * reporting range, verification, resource class, crawler purpose, bot, the
+ * Every narrowing the tab offers, for its control row: the reporting range
+ * (the row's calendar chip), then in Filters verification, resource class, crawler purpose, bot, the
  * typed folder and status code, and an insight's filter.
  */
 export function trafficFilters(props: TrafficControlsProps): FilterDefinition[] {
@@ -146,7 +145,8 @@ function folderFilter({ model }: TrafficControlsProps): FilterDefinition | null 
     label: 'Folder',
     valueLabel: folder || 'Any folder',
     isDefault: !folder,
-    defaultIsEvery: true,
+    defaultLabel: 'Any folder',
+    reset: () => model.selection.setFolder(null),
     content: <FolderField model={model} />,
   };
 }
@@ -161,7 +161,8 @@ function statusFilter({ model }: TrafficControlsProps): FilterDefinition | null 
     label: 'Status code',
     valueLabel: code === undefined ? 'Any status' : String(code),
     isDefault: code === undefined,
-    defaultIsEvery: true,
+    defaultLabel: 'Any status',
+    reset: () => model.selection.setStatus(null),
     content: <StatusField model={model} />,
   };
 }
@@ -175,7 +176,10 @@ function insightFilter({ model }: TrafficControlsProps): FilterDefinition | null
     label: 'Insight',
     valueLabel: 'Filtered',
     isDefault: false,
-    content: <MenuItem onSelect={() => setPattern(null)}>Clear insight filter</MenuItem>,
+    defaultLabel: 'every page',
+    reset: () => setPattern(null),
+    // Its menu's "Reset to every page" clears it; there is nothing else to pick.
+    content: null,
   };
 }
 

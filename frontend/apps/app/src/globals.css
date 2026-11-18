@@ -412,8 +412,6 @@
   --compact-gap: 12px;
   --card-padding: 24px;
   --modal-padding: 24px;
-  /* A FilterBar filter trigger: one width whatever its value says. */
-  --filter-width: 224px;
   --chart-height-sm: 160px;
   --chart-height-md: 240px;
   --chart-height-lg: 320px;

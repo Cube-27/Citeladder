@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { engineOptionMark } from '@/components/ui/engine-mark';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { EXECUTION_STATES } from '@/lib/runs/status';
 import type { Execution, ExecutionStatus } from '@citeladder/contracts';
@@ -35,14 +36,18 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
       choiceFilter({
         id: 'engine',
         label: 'Engine',
+        icon: 'engines',
         value: engine,
         defaultValue: ALL,
-        defaultIsEvery: true,
         groups: [
           {
             options: [
               { value: ALL, label: 'All engines' },
-              ...engines.map((value) => ({ value, label: catalog.label(value) })),
+              ...engines.map((value) => ({
+                value,
+                label: catalog.label(value),
+                mark: engineOptionMark(value),
+              })),
             ],
           },
         ],
@@ -53,7 +58,6 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
         label: 'Status',
         value: status,
         defaultValue: ALL,
-        defaultIsEvery: true,
         groups: [
           {
             options: [

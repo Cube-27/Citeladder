@@ -3,6 +3,7 @@ import { CircleHelp } from 'lucide-react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { choiceFilter, rangeFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { IconButton } from '@/components/ui/button';
+import { engineOptionMark } from '@/components/ui/engine-mark';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@citeladder/contracts';
@@ -72,13 +73,13 @@ type ToolbarProps = Readonly<{
 }>;
 
 /**
- * The filters every AI visibility view shares, for its All filters menu. Every
+ * The filters every AI visibility view shares, for its control row. Every
  * one answers a question a customer would ask: which market, which
  * measurement, about which prompts and surfaces, over what period.
  *
  * A period and a grouping only mean something while the page pools every run
  * in a period; beside "Latest run" or one named run they read as a
- * contradiction, so they are listed only then, and last. The prompt and
+ * contradiction, so they are listed only then. The prompt and
  * answer-outcome filters apply where answers are rendered (Query fanouts).
  *
  * The analyst controls that named internal machinery (a comparison baseline,
@@ -88,24 +89,10 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
   const catalog = useEngineCatalog();
   const evidence = isEvidenceTab(props.view);
   const pooled = props.selectionMode === 'range';
-  const filters: (FilterDefinition | null)[] = [
-    marketFilter(props),
-    measurementFilter(props),
-    choiceFilter({
-      id: 'cohort',
-      label: 'Prompts',
-      value: props.cohort,
-      defaultValue: 'core',
-      groups: [
-        { options: PROMPT_COHORTS.map((value) => ({ value, label: COHORT_LABELS[value] })) },
-      ],
-      onChange: props.onChangeCohort,
-    }),
-    engineFilter(props, catalog),
-    topicFilter(props),
-    evidence ? promptFilter(props) : null,
-    evidence ? outcomeFilter(props) : null,
-    pooled
+  const filters: Record<FilterId, FilterDefinition | null> = {
+    market: marketFilter(props),
+    measurement: measurementFilter(props),
+    range: pooled
       ? rangeFilter({
           value: props.range,
           defaultValue: '90d',
@@ -113,18 +100,61 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
           onChange: props.onChangeRange,
         })
       : null,
-    pooled && (props.view === 'insights' || props.view === 'competitor')
-      ? choiceFilter({
-          id: 'granularity',
-          label: 'Group by',
-          value: props.granularity,
-          defaultValue: 'run',
-          groups: [{ options: GRANULARITY_OPTIONS }],
-          onChange: props.onChangeGranularity,
-        })
-      : null,
-  ];
-  return filters.filter((filter): filter is FilterDefinition => filter !== null);
+    cohort: choiceFilter({
+      id: 'cohort',
+      label: 'Prompts',
+      icon: 'prompts',
+      value: props.cohort,
+      defaultValue: 'core',
+      groups: [
+        { options: PROMPT_COHORTS.map((value) => ({ value, label: COHORT_LABELS[value] })) },
+      ],
+      onChange: props.onChangeCohort,
+    }),
+    engine: engineFilter(props, catalog),
+    topic: topicFilter(props),
+    prompt: evidence ? promptFilter(props) : null,
+    outcome: evidence ? outcomeFilter(props) : null,
+    granularity:
+      pooled && (props.view === 'insights' || props.view === 'competitor')
+        ? choiceFilter({
+            id: 'granularity',
+            label: 'Group by',
+            value: props.granularity,
+            defaultValue: 'run',
+            groups: [{ options: GRANULARITY_OPTIONS }],
+            onChange: props.onChangeGranularity,
+          })
+        : null,
+  };
+  return filterOrder(props.view)
+    .map((id) => filters[id])
+    .filter((filter): filter is FilterDefinition => filter !== null);
+}
+
+type FilterId =
+  | 'market'
+  | 'measurement'
+  | 'range'
+  | 'cohort'
+  | 'engine'
+  | 'topic'
+  | 'prompt'
+  | 'outcome'
+  | 'granularity';
+
+/**
+ * Each page's order, so the row's four icon chips are the ones it reads by
+ * most (the filter placement approved 2026-11-18): the window first, its
+ * period beside it while runs are pooled, then the page's own three.
+ */
+function filterOrder(view: VisibilityView): readonly FilterId[] {
+  const tail = ['prompt', 'outcome', 'granularity'] as const;
+  if (view === 'insights')
+    return ['measurement', 'range', 'engine', 'market', 'cohort', 'topic', ...tail];
+  if (view === 'competitors' || view === 'competitor' || view === 'perception')
+    return ['measurement', 'range', 'engine', 'market', 'topic', 'cohort', ...tail];
+  return ['measurement', 'range', 'engine', 'cohort', 'topic', 'market', ...tail];
 }
 
 const DEFAULT_MARKET = 'default';
@@ -139,6 +169,7 @@ export function marketFilter({
   return choiceFilter({
     id: 'market',
     label: 'Market',
+    icon: 'market',
     value: market ?? DEFAULT_MARKET,
     defaultValue: DEFAULT_MARKET,
     groups: [
@@ -173,9 +204,13 @@ function measurementFilter({
   // A selected run the list no longer carries is not the latest run: saying so
   // keeps a stale link from reading as a fresh measurement.
   const missingRunLabel = selectedRunId ? 'Run unavailable' : 'Latest run';
+  const [latest] = runs;
   return choiceFilter({
     id: 'measurement',
     label: 'Measurement',
+    icon: 'period',
+    // The run read, named at the row's end while the chip shows only its icon.
+    windowLabel: latest ? `Latest run · ${latest.label}` : undefined,
     value: pooled ? POOLED : (selectedRunId ?? LATEST),
     defaultValue: LATEST,
     valueLabel: pooled ? 'All runs in period' : (selected?.label ?? missingRunLabel),
@@ -211,15 +246,19 @@ function engineFilter(
   { engine, onChangeEngine }: ToolbarProps,
   catalog: ReturnType<typeof useEngineCatalog>,
 ): FilterDefinition {
-  const option = (key: LogicalEngine) => ({ value: key, label: catalog.label(key) });
+  const option = (key: LogicalEngine) => ({
+    value: key,
+    label: catalog.label(key),
+    mark: engineOptionMark(key),
+  });
   const asked = catalog.order.filter((key) => !catalog.isSearchSurface(key));
   const observed = catalog.order.filter((key) => catalog.isSearchSurface(key));
   return choiceFilter<EngineFilter>({
     id: 'engine',
     label: 'Surface',
+    icon: 'engines',
     value: engine,
     defaultValue: 'all',
-    defaultIsEvery: true,
     valueLabel: engine === 'all' ? 'All surfaces' : catalog.label(engine),
     groups: [
       { options: [{ value: 'all', label: 'All surfaces' }] },
@@ -245,17 +284,17 @@ function topicFilter({
   return choiceFilter({
     id: 'topic',
     label: 'Topic',
+    icon: 'topic',
     value: topic ?? EVERY_TOPIC,
     defaultValue: EVERY_TOPIC,
-    defaultIsEvery: true,
     valueLabel:
       topic === null
-        ? 'All'
+        ? 'All topics'
         : (topics.find((option) => option.id === topic)?.name ?? 'Deleted topic'),
     groups: [
       {
         options: [
-          { value: EVERY_TOPIC, label: 'All' },
+          { value: EVERY_TOPIC, label: 'All topics' },
           ...topics.map((option) => ({ value: option.id, label: option.name })),
         ],
       },
@@ -273,7 +312,6 @@ function promptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
     label: 'Prompt',
     value: promptId ?? EVERY_PROMPT,
     defaultValue: EVERY_PROMPT,
-    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -293,7 +331,6 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
     label: 'Answer outcome',
     value: outcome ?? 'all',
     defaultValue: 'all',
-    defaultIsEvery: true,
     groups: [{ options: ANSWER_OUTCOMES }],
     onChange: (value) => onChangeOutcome(value === 'all' ? null : value),
   });

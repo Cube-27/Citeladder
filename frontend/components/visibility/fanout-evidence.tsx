@@ -80,7 +80,7 @@ const groupCodec = stringUrlCodec(
 );
 
 /**
- * How the searches are grouped, in the page's All filters. It reads and
+ * How the searches are grouped, in the page's Filters. It reads and
  * writes the same `group` URL state the table reads, so the menu and the
  * table never disagree.
  */

@@ -1,36 +1,21 @@
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type FocusEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import { ChevronLeft, SlidersHorizontal } from 'lucide-react';
+import type { ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubContent,
-  MenuSubTrigger,
-  MenuTrigger,
-} from '@/components/ui/menu';
-import { SearchField } from '@/components/ui/search-field';
-import { ControlCount } from '@/components/ui/tabs';
-import { useMediaQuery } from '@/lib/use-media-query';
+import { MenuCheckboxItem } from '@/components/ui/menu';
 
-/** One choice in a filter's submenu. */
-type FilterOption<T extends string = string> = Readonly<{ value: T; label: string }>;
+/**
+ * The five frequent filters that draw as an icon in the control row: the
+ * period or measurement (calendar), engines (their marks), market (globe),
+ * branded prompts (tag) and topic (folder). Any other filter is a value chip
+ * or lives in Filters.
+ */
+export type FilterIcon = 'period' | 'engines' | 'market' | 'prompts' | 'topic';
+
+/** One choice in a filter's menu; `mark` is a 16px glyph before its label (an engine's mark). */
+type FilterOption<T extends string = string> = Readonly<{
+  value: T;
+  label: string;
+  mark?: ReactNode;
+}>;
 
 /** A run of options under an optional small label ("Answer engines"). */
 export type FilterOptionGroup<T extends string = string> = Readonly<{
@@ -39,50 +24,51 @@ export type FilterOptionGroup<T extends string = string> = Readonly<{
 }>;
 
 type FilterBase = Readonly<{
-  /** Stable key, unique in the menu. */
+  /** Stable key, unique in the row. */
   id: string;
-  /** The filter's name in the menu: "Surface". */
+  /** The filter's name: the chip's tooltip and the menu's heading, "Surface". */
   label: string;
-  /** What the filter is set to now, printed beside its name: "All surfaces". */
+  /** What the filter is set to now, the chip's text: "All surfaces". */
   valueLabel: string;
-  /** Whether the filter is at its unfiltered value; the others are counted on the button. */
+  /** Whether the filter is at its unfiltered value; the others are counted and cleared. */
   isDefault: boolean;
+  /** The unfiltered value's label, for "Reset to all surfaces". */
+  defaultLabel: string;
+  /** Puts the filter back to its unfiltered value. */
+  reset: () => void;
+  /** Draws the filter as an icon chip in the row (`FilterBar` keeps at most four). */
+  icon?: FilterIcon;
   /**
-   * Whether the unfiltered value is every option ("All statuses"), so the
-   * trigger shows only the label there. A real default (a period, a market)
-   * leaves it off: it always prints, since it is what the data is filtered by.
+   * The data window a period reads, at the row's end while its chip shows
+   * only its icon: "Latest run · 18 Nov 09:12". Defaults to `valueLabel`.
    */
-  defaultIsEvery?: boolean;
+  windowLabel?: string;
   /** Offered but not applicable to this view: drawn disabled, so the row keeps its place. */
   disabled?: boolean;
 }>;
 
 /**
- * One filter in All filters. `choice` lists its options in a submenu with a
- * check on the selected one (build it with `choiceFilter`); `custom` draws its
- * own submenu body (menu items from `components/ui/menu`).
+ * One filter of a control row. `choice` lists its options with a check on
+ * the selected one (build it with `choiceFilter`); `custom` draws its own
+ * menu body (menu items from `components/ui/menu`) under the filter's name.
  */
 export type FilterDefinition = FilterBase &
   (
     | Readonly<{
         kind: 'choice';
         value: string;
+        defaultValue: string;
         groups: readonly FilterOptionGroup[];
         onChange: (value: string) => void;
-        /** Every value the trigger can print: the options', less an every-default it never prints. */
-        printable: readonly string[];
-        /** A search box above the options; on by default past `SEARCH_FROM` options. */
+        /** A search box above the options; on by default past ten options. */
         searchable?: boolean;
       }>
     | Readonly<{ kind: 'custom'; content: ReactNode }>
   );
 
-/** A list this long gets a search box, so a reader never scrolls for a prompt. */
-const SEARCH_FROM = 10;
-
 /**
- * A single-choice filter for All filters, typed by its values: the submenu
- * hands back only a value it offered, so `onChange` receives a `T`.
+ * A single-choice filter, typed by its values: the menu hands back only a
+ * value it offered, so `onChange` receives a `T`.
  */
 export function choiceFilter<T extends string>({
   id,
@@ -93,7 +79,8 @@ export function choiceFilter<T extends string>({
   onChange,
   searchable,
   valueLabel,
-  defaultIsEvery = false,
+  icon,
+  windowLabel,
   disabled,
 }: Readonly<{
   id: string;
@@ -101,27 +88,30 @@ export function choiceFilter<T extends string>({
   value: T;
   /** The unfiltered value. */
   defaultValue: T;
-  /** The unfiltered value is every option ("All statuses"); see `FilterDefinition`. */
-  defaultIsEvery?: boolean;
   groups: readonly FilterOptionGroup<T>[];
   onChange: (value: T) => void;
   searchable?: boolean;
   /** Overrides the selected option's label (a value the list no longer carries). */
   valueLabel?: string;
+  icon?: FilterIcon;
+  windowLabel?: string;
   disabled?: boolean;
 }>): FilterDefinition {
   const options = groups.flatMap((group) => group.options);
-  const printed = options.filter((option) => !(defaultIsEvery && option.value === defaultValue));
+  const labelOf = (key: T) => options.find((option) => option.value === key)?.label ?? label;
   return {
     kind: 'choice',
     id,
     label,
     value,
-    valueLabel: valueLabel ?? options.find((option) => option.value === value)?.label ?? label,
+    defaultValue,
+    valueLabel: valueLabel ?? labelOf(value),
     isDefault: value === defaultValue,
-    defaultIsEvery,
+    defaultLabel: labelOf(defaultValue),
+    reset: () => onChange(defaultValue),
+    icon,
+    windowLabel,
     disabled,
-    printable: [...printed.map((option) => option.label), ...(valueLabel ? [valueLabel] : [])],
     groups,
     searchable,
     onChange: (raw) => {
@@ -149,6 +139,7 @@ export function rangeFilter<T extends string>({
   return choiceFilter({
     id: 'range',
     label: 'Period',
+    icon: 'period',
     value,
     defaultValue,
     groups: [{ options }],
@@ -166,6 +157,7 @@ export function singleFilter({
   value,
   options,
   onChange,
+  icon,
 }: Readonly<{
   id: string;
   label: string;
@@ -173,21 +165,22 @@ export function singleFilter({
   value: string | null;
   options: readonly FilterOption<string>[];
   onChange: (value: string | null) => void;
+  icon?: FilterIcon;
 }>): FilterDefinition {
   return choiceFilter({
     id,
     label,
+    icon,
     value: value ?? EVERY,
     defaultValue: EVERY,
-    defaultIsEvery: true,
     groups: [{ options: [{ value: EVERY, label: allLabel }, ...options] }],
     onChange: (next) => onChange(next === EVERY ? null : next),
   });
 }
 
 /**
- * A multi-select filter for All filters: a check per option, any number on,
- * none on meaning unfiltered. The submenu stays open while the reader picks.
+ * A multi-select filter: a check per option, any number on, none on meaning
+ * unfiltered. The menu stays open while the reader picks.
  */
 export function manyFilter<T extends string>({
   id,
@@ -196,6 +189,7 @@ export function manyFilter<T extends string>({
   values,
   options,
   onChange,
+  icon,
 }: Readonly<{
   id: string;
   label: string;
@@ -204,6 +198,7 @@ export function manyFilter<T extends string>({
   values: readonly T[];
   options: readonly FilterOption<T>[];
   onChange: (values: T[]) => void;
+  icon?: FilterIcon;
 }>): FilterDefinition {
   const chosen = new Set<string>(values);
   const picked = options.filter((option) => chosen.has(option.value));
@@ -212,280 +207,36 @@ export function manyFilter<T extends string>({
     kind: 'custom',
     id,
     label,
+    icon,
     valueLabel: picked.length > 1 ? `${picked.length} selected` : (only?.label ?? allLabel),
     isDefault: picked.length === 0,
-    defaultIsEvery: true,
-    content: (
-      <>
-        <MenuLabel>{label}</MenuLabel>
-        {options.map((option) => (
-          <MenuCheckboxItem
-            key={option.value || 'unspecified'}
-            checked={chosen.has(option.value)}
-            onSelect={(event) => {
-              event.preventDefault();
-              onChange(
-                chosen.has(option.value)
-                  ? values.filter((value) => value !== option.value)
-                  : [...values, option.value],
-              );
-            }}
-          >
-            {option.label}
-          </MenuCheckboxItem>
-        ))}
-      </>
-    ),
+    defaultLabel: allLabel,
+    reset: () => onChange([]),
+    content: options.map((option) => (
+      <MenuCheckboxItem
+        key={option.value || 'unspecified'}
+        checked={chosen.has(option.value)}
+        onSelect={(event) => {
+          event.preventDefault();
+          onChange(
+            chosen.has(option.value)
+              ? values.filter((value) => value !== option.value)
+              : [...values, option.value],
+          );
+        }}
+      >
+        {option.mark ? <OptionText mark={option.mark} label={option.label} /> : option.label}
+      </MenuCheckboxItem>
+    )),
   };
 }
 
-/** How many filters are off their default value. */
-function activeFilterCount(filters: readonly FilterDefinition[]): number {
-  return filters.filter((filter) => !filter.isDefault).length;
-}
-
-/**
- * AllFilters — every filter of a list behind one button, after the search in
- * its control row (`FilterBar` draws it when a search shares the row with more
- * than four filters; otherwise each filter is its own trigger). The menu
- * opens toward the content from the button's edge on that side (`align`):
- * `start` (the default), so the menu and its submenus open to the right and
- * never over the sidebar; `end` for a button at its row's far right. The
- * button counts the filters moved off their defaults
- * ("All filters (2)"); its menu lists each filter with its current value,
- * and each opens a submenu of its options with a check on the selected one.
- * Long lists get a search box. Radix's menu keyboard model throughout: arrows
- * move, Right or Enter opens a filter, Left comes back, Escape closes.
- *
- * On a phone a submenu has no room beside the menu, so there a filter opens
- * its options in the menu itself, under a Back row.
- *
- * The filters' state stays with their owners (URL state on every current
- * page); this only draws them.
- */
-export function AllFilters({
-  filters,
-  label = 'All filters',
-  align = 'start',
-}: Readonly<{
-  filters: readonly FilterDefinition[];
-  label?: string;
-  /** The button's edge the menu lines up with: `end` for a button at its row's far right. */
-  align?: 'start' | 'end';
-}>) {
-  const narrow = useMediaQuery(NARROW_QUERY);
-  if (filters.length === 0) return null;
-  const active = activeFilterCount(filters);
+/** An option's mark and label on one line. */
+export function OptionText({ mark, label }: Readonly<{ mark: ReactNode; label: string }>) {
   return (
-    <Menu>
-      <MenuTrigger asChild>
-        <Button
-          variant="secondary"
-          // Its own width in a FilterBar too: stretched across a narrow row,
-          // its menu opened at the far edge and every submenu flipped back
-          // over it, where a quick move to an option closed the submenu.
-          data-fit=""
-          data-active={active > 0 || undefined}
-          // The name is the visible text, its count included: "All filters (2)".
-          aria-label={active > 0 ? `${label} (${active})` : label}
-        >
-          <Icon icon={SlidersHorizontal} />
-          <span>
-            {label}
-            {active > 0 ? <ControlCount count={active} /> : null}
-          </span>
-        </Button>
-      </MenuTrigger>
-      <MenuContent align={align}>
-        {narrow ? (
-          <DrillInFilters filters={filters} />
-        ) : (
-          filters.map((filter) => (
-            <MenuSub key={filter.id}>
-              <MenuSubTrigger value={filter.valueLabel} disabled={filter.disabled}>
-                {filter.label}
-              </MenuSubTrigger>
-              {filter.kind === 'custom' ? (
-                <MenuSubContent onFocus={focusFieldOnEntry}>{filter.content}</MenuSubContent>
-              ) : (
-                <ChoiceSubmenu filter={filter} />
-              )}
-            </MenuSub>
-          ))
-        )}
-      </MenuContent>
-    </Menu>
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="text-ink flex size-4 shrink-0 items-center justify-center">{mark}</span>
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
   );
-}
-
-/** Below this width a submenu cannot stand beside the menu (two 224px panels). */
-const NARROW_QUERY = '(max-width: 639px)';
-
-/**
- * The phone form: the menu lists the filters; choosing one shows its options
- * in the same panel under a Back row, and Back returns to the list. The menu
- * unmounts on close, so it always reopens on the list.
- */
-function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [returnTo, setReturnTo] = useState<string | null>(null);
-  const panel = useRef<HTMLDivElement>(null);
-  const open = filters.find((filter) => filter.id === openId);
-  // Focus follows the step: the options (or their search box) going in, the
-  // filter's own row coming back.
-  useEffect(() => {
-    const root = panel.current;
-    if (!root) return;
-    const target = open
-      ? root.querySelector<HTMLElement>('input, [role="menuitemradio"]')
-      : root.querySelector<HTMLElement>(`[data-filter-id="${returnTo ?? ''}"]`);
-    target?.focus();
-  }, [open, returnTo]);
-  if (!open) {
-    return (
-      <div ref={panel} className="contents">
-        {filters.map((filter) => (
-          <MenuItem
-            key={filter.id}
-            data-filter-id={filter.id}
-            aria-label={`${filter.label}: ${filter.valueLabel}`}
-            value={filter.valueLabel}
-            disabled={filter.disabled}
-            onSelect={(event) => {
-              event.preventDefault();
-              setOpenId(filter.id);
-            }}
-          >
-            {filter.label}
-          </MenuItem>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div ref={panel} className="contents">
-      <MenuItem
-        icon={<ChevronLeft />}
-        onSelect={(event) => {
-          event.preventDefault();
-          setReturnTo(open.id);
-          setOpenId(null);
-        }}
-      >
-        All filters
-      </MenuItem>
-      <MenuSeparator />
-      {open.kind === 'custom' ? open.content : <ChoiceOptions filter={open} />}
-    </div>
-  );
-}
-
-/**
- * Opened from the keyboard, a submenu panel takes focus; a field in it (a
- * choice list's search box, a custom filter's typed value) takes it instead, so
- * typing edits the field rather than jumping by letter. After the menu has
- * moved focus to its first option in the same event.
- */
-export function focusFieldOnEntry(event: FocusEvent<HTMLDivElement>) {
-  if (event.target !== event.currentTarget) return;
-  const input = event.currentTarget.querySelector('input');
-  if (input) queueMicrotask(() => input.focus());
-}
-
-type ChoiceFilter = Extract<FilterDefinition, { kind: 'choice' }>;
-
-function isSearchable(filter: ChoiceFilter): boolean {
-  const total = filter.groups.reduce((sum, group) => sum + group.options.length, 0);
-  return filter.searchable ?? total > SEARCH_FROM;
-}
-
-function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
-  const searchable = isSearchable(filter);
-  return (
-    <MenuSubContent
-      onFocus={focusFieldOnEntry}
-      onKeyDown={(event) => {
-        // Up from the first option goes back to the search box.
-        if (!searchable || event.key !== 'ArrowUp') return;
-        const first = event.currentTarget.querySelector('[role="menuitemradio"]');
-        if (event.target !== first) return;
-        event.preventDefault();
-        event.currentTarget.querySelector('input')?.focus();
-      }}
-    >
-      <ChoiceOptions filter={filter} />
-    </MenuSubContent>
-  );
-}
-
-/** A choice filter's options: a search box on a long list, then the options by group. */
-export function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
-  const [query, setQuery] = useState('');
-  const needle = query.trim().toLowerCase();
-  const groups = needle
-    ? filter.groups
-        .map((group) => ({
-          ...group,
-          options: group.options.filter((option) => option.label.toLowerCase().includes(needle)),
-        }))
-        .filter((group) => group.options.length > 0)
-    : filter.groups;
-  return (
-    <>
-      {isSearchable(filter) ? (
-        <div className="bg-surface sticky top-0 z-10 pb-1">
-          <SearchField
-            value={query}
-            onValueChange={setQuery}
-            aria-label={`Search ${filter.label.toLowerCase()}`}
-            placeholder="Search"
-            onKeyDown={searchKeys}
-          />
-        </div>
-      ) : (
-        <MenuLabel>{filter.label}</MenuLabel>
-      )}
-      <MenuRadioGroup value={filter.value}>
-        {groups.map((group, index) => (
-          <Fragment key={group.label ?? `group-${index}`}>
-            {index > 0 ? <MenuSeparator /> : null}
-            {group.label ? <MenuLabel>{group.label}</MenuLabel> : null}
-            {group.options.map((option) => (
-              <MenuRadioItem
-                key={option.value}
-                value={option.value}
-                onSelect={() => filter.onChange(option.value)}
-              >
-                {option.label}
-              </MenuRadioItem>
-            ))}
-          </Fragment>
-        ))}
-      </MenuRadioGroup>
-      {groups.length === 0 ? <p className="text-body-sm text-ink-2 px-2 py-2">No matches</p> : null}
-    </>
-  );
-}
-
-/**
- * A typed field inside a filter menu (a custom filter's value, a choice list's
- * search box): its keys edit the text, so they stop before the menu, which
- * would otherwise jump to an item by letter or close the submenu on Left.
- * Escape and Tab pass through, and so does Left from an empty field, which
- * returns to the list. Returns whether the key stayed with the field.
- */
-export function menuFieldKeys(event: KeyboardEvent<HTMLInputElement>): boolean {
-  if (event.key === 'Escape' || event.key === 'Tab') return false;
-  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return false;
-  event.stopPropagation();
-  return true;
-}
-
-/** The search box's keys stay with it; Down moves to the first option. */
-function searchKeys(event: KeyboardEvent<HTMLInputElement>) {
-  if (!menuFieldKeys(event) || event.key !== 'ArrowDown') return;
-  event.preventDefault();
-  const menu = event.currentTarget.closest('[role="menu"]');
-  const first = menu?.querySelector<HTMLElement>('[role="menuitemradio"]');
-  first?.focus();
 }

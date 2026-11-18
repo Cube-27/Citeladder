@@ -149,18 +149,52 @@ function commitUrl(href: string, history: UrlHistory): void {
   refresh();
 }
 
+/** The address a `batchUrlWrites` run is composing; null outside one. */
+let pendingUrl: URL | null = null;
+
+/**
+ * Runs several URL writes (a row's Clear resetting each filter) as one: each
+ * write edits the composed address and it commits once, with one history
+ * entry. A router commits a beat after it is asked, so separate writes in one
+ * tick would each start from the address before the others.
+ */
+export function batchUrlWrites(run: () => void, history: UrlHistory = 'push'): void {
+  if (pendingUrl) {
+    run();
+    return;
+  }
+  const composed = new URL(window.location.href);
+  pendingUrl = composed;
+  try {
+    run();
+  } finally {
+    pendingUrl = null;
+  }
+  commitUrl(hrefWithQuery(composed, composed.searchParams.toString()), history);
+}
+
+/** Edits the address a write starts from: the batch's, or the live one, committed at once. */
+function writeUrl(edit: (params: URLSearchParams) => void, history: UrlHistory): void {
+  if (pendingUrl) {
+    edit(pendingUrl.searchParams);
+    return;
+  }
+  const current = new URL(window.location.href);
+  edit(current.searchParams);
+  commitUrl(hrefWithQuery(current, current.searchParams.toString()), history);
+}
+
 /** Atomically change related URL-owned filters with one history entry. */
 export function setUrlParams(
   values: Readonly<Record<string, string | null>>,
   history: UrlHistory = 'push',
 ) {
-  const current = new URL(window.location.href);
-  for (const [key, value] of Object.entries(values)) {
-    if (value === null) current.searchParams.delete(key);
-    else current.searchParams.set(key, value);
-  }
-  const href = `${current.pathname}${current.search}${current.hash}`;
-  commitUrl(href, history);
+  writeUrl((params) => {
+    for (const [key, value] of Object.entries(values)) {
+      if (value === null) params.delete(key);
+      else params.set(key, value);
+    }
+  }, history);
 }
 
 /**
@@ -194,14 +228,12 @@ export function useUrlState<T>(
       // have committed in the same tick, and a router navigation lands a beat
       // after it is asked for. Building on a remembered address would drop
       // whatever it did not know about.
-      const current = new URL(window.location.href);
-      const params = current.searchParams;
-      const encoded = codec.serialize(next);
-      if (encoded === null) params.delete(key);
-      else params.set(key, encoded);
-      for (const ownedKey of clearKeys ?? []) params.delete(ownedKey);
-      const href = hrefWithQuery(current, params.toString());
-      commitUrl(href, history);
+      writeUrl((params) => {
+        const encoded = codec.serialize(next);
+        if (encoded === null) params.delete(key);
+        else params.set(key, encoded);
+        for (const ownedKey of clearKeys ?? []) params.delete(ownedKey);
+      }, history);
     },
     [codec, key, clearKeys, historyOption],
   );

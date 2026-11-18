@@ -4,7 +4,12 @@ import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
-import { choiceFilter, manyFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import {
+  choiceFilter,
+  manyFilter,
+  type FilterDefinition,
+  type FilterIcon,
+} from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
@@ -27,39 +32,46 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
 
 /**
  * The prompt library's control row: the Active / Archived view, the
- * search, then every filter in All filters: Topic first, then Intent, Buyer
- * stage, Persona (when the library has any), Brands and Sources (once a run
- * has measured the prompts), Enabled and Branded.
- * Presentational; state lives in the page.
+ * search, the Topic and Branded chips, then Filters: Intent, Buyer stage,
+ * Persona (when the library has any), Brands and Sources (once a run has
+ * measured the prompts) and Enabled. Presentational; state lives in the page.
  */
 /** The two single choices share a vocabulary but not their wording. */
 const ENABLED_FILTER_LABEL: Record<EnabledFilter, string> = {
-  all: 'All',
+  all: 'All prompts',
   enabled: 'Enabled only',
   disabled: 'Disabled only',
 };
 
 const BRANDED_FILTER_LABEL: Record<EnabledFilter, string> = {
-  all: 'All',
+  all: 'All prompts',
   enabled: 'Branded only',
   disabled: 'Unbranded only',
 };
 
 const SINGLE_CHOICES = ['all', 'enabled', 'disabled'] as const;
 
-function singleChoice(
-  id: string,
-  label: string,
-  labels: Record<EnabledFilter, string>,
-  value: EnabledFilter,
-  onChange: (value: EnabledFilter) => void,
-): FilterDefinition {
+function singleChoice({
+  id,
+  label,
+  labels,
+  value,
+  onChange,
+  icon,
+}: Readonly<{
+  id: string;
+  label: string;
+  labels: Record<EnabledFilter, string>;
+  value: EnabledFilter;
+  onChange: (value: EnabledFilter) => void;
+  icon?: FilterIcon;
+}>): FilterDefinition {
   return choiceFilter({
     id,
     label,
+    icon,
     value,
     defaultValue: 'all',
-    defaultIsEvery: true,
     groups: [
       { options: SINGLE_CHOICES.map((choice) => ({ value: choice, label: labels[choice] })) },
     ],
@@ -68,6 +80,8 @@ function singleChoice(
 }
 
 type FilterChoice = Readonly<{ value: string; label: string }>;
+/** Sets some of the library's filters on top of the current ones. */
+type Patch = (part: Partial<PromptFilters>) => void;
 type MeasuredChoices = Readonly<{
   brands: readonly FilterChoice[];
   sources: readonly FilterChoice[];
@@ -77,11 +91,11 @@ type MeasuredChoices = Readonly<{
 function measuredFilters({
   choices: { brands, sources },
   filters,
-  onFiltersChange,
+  patch,
 }: Readonly<{
   choices: MeasuredChoices;
   filters: PromptFilters;
-  onFiltersChange: (filters: PromptFilters) => void;
+  patch: Patch;
 }>): FilterDefinition[] {
   return [
     manyFilter({
@@ -90,7 +104,7 @@ function measuredFilters({
       allLabel: 'All brands',
       values: filters.brands,
       options: brands,
-      onChange: (next) => onFiltersChange({ ...filters, brands: next }),
+      onChange: (next) => patch({ brands: next }),
     }),
     ...(sources.length
       ? [
@@ -100,7 +114,7 @@ function measuredFilters({
             allLabel: 'All sources',
             values: filters.sources,
             options: sources,
-            onChange: (next) => onFiltersChange({ ...filters, sources: next }),
+            onChange: (next) => patch({ sources: next }),
           }),
         ]
       : []),
@@ -126,14 +140,16 @@ export function promptFilterControls({
   search: string;
   onSearchChange: (value: string) => void;
   filters: PromptFilters;
-  onFiltersChange: (filters: PromptFilters) => void;
+  /** Takes an update of the current filters, so Clear's resets in one tick all land. */
+  onFiltersChange: (update: (current: PromptFilters) => PromptFilters) => void;
   /** The personas the library uses; the menu lists them when there are any. */
   personas?: readonly string[];
   /** The Brands and Sources choices, once a run has measured the prompts. */
   measured?: MeasuredChoices;
-  /** The Topic filter (`topicFilter`), first in All filters. */
+  /** The Topic filter (`topicFilter`), the row's first chip. */
   topic?: FilterDefinition;
 }>): FilterBarProps {
+  const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
   return {
     view: (
       <SegmentedControl
@@ -157,13 +173,21 @@ export function promptFilterControls({
     ),
     filters: [
       ...(topic ? [topic] : []),
+      singleChoice({
+        id: 'branded',
+        label: 'Branded',
+        icon: 'prompts',
+        labels: BRANDED_FILTER_LABEL,
+        value: filters.branded,
+        onChange: (branded) => patch({ branded }),
+      }),
       manyFilter({
         id: 'intent',
         label: 'Intent',
         allLabel: 'All intents',
         values: filters.intents,
         options: intentValues.map((value) => ({ value, label: intentLabels[value] })),
-        onChange: (intents) => onFiltersChange({ ...filters, intents }),
+        onChange: (intents) => patch({ intents }),
       }),
       manyFilter({
         id: 'stage',
@@ -171,7 +195,7 @@ export function promptFilterControls({
         allLabel: 'All stages',
         values: filters.stages,
         options: buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] })),
-        onChange: (stages) => onFiltersChange({ ...filters, stages }),
+        onChange: (stages) => patch({ stages }),
       }),
       ...(personas.length
         ? [
@@ -181,17 +205,18 @@ export function promptFilterControls({
               allLabel: 'All personas',
               values: filters.personas,
               options: personas.map((value) => ({ value, label: value })),
-              onChange: (next) => onFiltersChange({ ...filters, personas: next }),
+              onChange: (next) => patch({ personas: next }),
             }),
           ]
         : []),
-      ...(measured ? measuredFilters({ choices: measured, filters, onFiltersChange }) : []),
-      singleChoice('enabled', 'Enabled', ENABLED_FILTER_LABEL, filters.enabled, (enabled) =>
-        onFiltersChange({ ...filters, enabled }),
-      ),
-      singleChoice('branded', 'Branded', BRANDED_FILTER_LABEL, filters.branded, (branded) =>
-        onFiltersChange({ ...filters, branded }),
-      ),
+      ...(measured ? measuredFilters({ choices: measured, filters, patch }) : []),
+      singleChoice({
+        id: 'enabled',
+        label: 'Enabled',
+        labels: ENABLED_FILTER_LABEL,
+        value: filters.enabled,
+        onChange: (enabled) => patch({ enabled }),
+      }),
     ],
   };
 }

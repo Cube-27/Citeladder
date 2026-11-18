@@ -135,7 +135,7 @@ describe('PageFrame', () => {
     const order = [
       screen.getByRole('heading', { level: 1, name: 'Sources' }),
       screen.getByRole('tablist', { name: 'Views' }).closest('[data-page-band]'),
-      screen.getByRole('button', { name: 'Engine: All' }).closest('[data-page-band]'),
+      screen.getByRole('button', { name: 'Filters' }).closest('[data-page-band]'),
       screen.getByText('Table'),
     ];
     expect(order.map((node) => node?.getAttribute('data-page-band') ?? node?.tagName)).toEqual([

@@ -11,6 +11,7 @@ import {
 import { AppScrollRestoration } from '@/components/layout/app-scroll-restoration';
 
 import {
+  batchUrlWrites,
   optionalStringUrlCodec,
   readUrlState,
   setUrlParams,
@@ -187,6 +188,26 @@ describe('router registration', () => {
     expect(positions).toEqual([0, 0, 300, 600]);
     scrollTo.mockRestore();
     Reflect.deleteProperty(window, 'scrollY');
+    router.dispose();
+  });
+
+  it('lands every write of a batch through the router, as one history entry', async () => {
+    window.history.replaceState(null, '', '/issues?project=p1&severity=low&kind=faq');
+    const router = createMemoryRouter([{ path: '/issues', element: <Probe /> }], {
+      initialEntries: ['/issues?project=p1&severity=low&kind=faq'],
+    });
+    setUrlStateRouter(router);
+    const navigate = vi.spyOn(router, 'navigate');
+    render(<RouterProvider router={router} />);
+
+    // A row's Clear: each filter resets itself in the same tick.
+    batchUrlWrites(() => {
+      setUrlParams({ severity: null });
+      setUrlParams({ kind: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('search')).toHaveTextContent(/^project=p1$/));
+    expect(navigate).toHaveBeenCalledOnce();
     router.dispose();
   });
 

@@ -236,8 +236,9 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
     expect.anything(),
   );
-  // Only the period stays a chip; the four set above live in All filters.
-  expect(screen.getByRole('button', { name: 'All filters (4)' })).toBeVisible();
+  // The period and engine are the row's icon chips; the three others set above live in Filters.
+  expect(screen.getByRole('button', { name: 'Filters (3)' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Engine: / })).toBeVisible();
   expect(screen.getByRole('button', { name: /^Period/ })).toBeVisible();
   // The engine is the page's: the chart reads it too.
   expect(getPromptHistory).toHaveBeenCalledWith(

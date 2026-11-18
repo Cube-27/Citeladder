@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Inbox } from 'lucide-react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
@@ -7,8 +9,8 @@ import { ApiError } from '@/lib/api/errors';
 import { Avatar } from './avatar';
 import { Button } from './button';
 import { Delta } from './delta';
-import { choiceFilter, rangeFilter, singleFilter } from './all-filters';
-import { FilterBar, FilterTrigger, pageStripFilters } from './filter-bar';
+import { choiceFilter, rangeFilter, singleFilter, type FilterIcon } from './all-filters';
+import { FilterBar } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
 import { Pager, pageNumberControls } from './pager';
@@ -371,11 +373,12 @@ describe('FilterBar and FilterTrigger', () => {
       );
     expect(follows).toEqual([true, true, true, true]);
   });
-  it('draws each filter as its own trigger unless the row is full or a search shares it with more than four', () => {
-    const filter = (id: string, value = 'all') =>
+  it('keeps at most four icon filters in the row and the rest in Filters, a lone other one as its own chip', () => {
+    const filter = (id: string, value = 'all', icon?: FilterIcon) =>
       choiceFilter({
         id,
         label: id,
+        icon,
         value,
         defaultValue: 'all',
         groups: [
@@ -388,45 +391,75 @@ describe('FilterBar and FilterTrigger', () => {
         ],
         onChange: () => undefined,
       });
-    const search = <input type="search" aria-label="Search" />;
-    const four = [filter('Kind', 'one'), filter('Engine'), filter('Period'), filter('Market')];
-    const { rerender } = render(<FilterBar search={search} filters={four} />);
-    expect(screen.getByRole('button', { name: 'Kind: One' })).toHaveAttribute('data-active');
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+    const icons = [
+      filter('Period', 'all', 'period'),
+      filter('Engines', 'all', 'engines'),
+      filter('Market', 'all', 'market'),
+      filter('Topic', 'one', 'topic'),
+    ];
+    const { rerender } = render(
+      <FilterBar
+        filters={[filter('Kind', 'one'), ...icons, filter('Prompts', 'all', 'prompts')]}
+      />,
+    );
+    for (const name of ['Period: All', 'Engines: All', 'Market: All', 'Topic: One'])
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    // The fifth icon filter and the plain one share Filters; the set one follows it as a chip.
+    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Prompts: All' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove Kind filter' })).toBeInTheDocument();
 
-    rerender(<FilterBar search={search} filters={[...four, filter('Status')]} />);
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
-
-    rerender(<FilterBar filters={[...four, filter('Status')]} />);
+    rerender(<FilterBar filters={[...icons, filter('Status')]} />);
     expect(screen.getByRole('button', { name: 'Status: All' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
-
-    // Products: a view, a search and actions fill the row, so its filters group.
-    const view = <button type="button">My catalog</button>;
-    const actions = <button type="button">Export</button>;
-    rerender(<FilterBar view={view} search={search} filters={four} actions={actions} />);
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
-
-    // Filters and an action without a search keep their own triggers.
-    rerender(<FilterBar filters={four} actions={actions} />);
-    expect(screen.getByRole('button', { name: 'Kind: One' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
-
-    // A page strip past two filters keeps its window in sight and groups the rest.
-    const measurement = { ...filter('measurement'), label: 'Measurement' };
-    const period = { ...filter('range'), label: 'Period' };
-    rerender(<FilterBar {...pageStripFilters([measurement, ...four, period])} />);
-    expect(screen.getByRole('button', { name: 'Measurement: All' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Period: All' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
-    rerender(<FilterBar {...pageStripFilters([measurement, filter('Kind', 'one')])} />);
-    expect(screen.getByRole('button', { name: 'Kind: One' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
   });
-  it('prints only the label of a filter at its every value, and the value once set or for a real default', () => {
+  it('clears every set filter at once, and a value chip resets its own', async () => {
+    function Row() {
+      const [period, setPeriod] = useState('30d');
+      const [kind, setKind] = useState<string | null>('faq');
+      const [status, setStatus] = useState<string | null>('open');
+      const single = (id: string, value: string | null, set: (next: string | null) => void) =>
+        singleFilter({
+          id,
+          label: id,
+          allLabel: `All ${id}`,
+          value,
+          options: [
+            { value: 'faq', label: 'FAQ' },
+            { value: 'open', label: 'Open' },
+          ],
+          onChange: set,
+        });
+      return (
+        <>
+          <FilterBar
+            filters={[
+              rangeFilter({
+                value: period,
+                defaultValue: '90d',
+                options: [
+                  { value: '90d', label: 'Last 90 days' },
+                  { value: '30d', label: 'Last 30 days' },
+                ],
+                onChange: setPeriod,
+              }),
+              single('Kind', kind, setKind),
+              single('Status', status, setStatus),
+            ]}
+          />
+          <output data-testid="state">{`${period} ${kind} ${status}`}</output>
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Row />);
+    await user.click(screen.getByRole('button', { name: 'Remove Kind filter' }));
+    expect(screen.getByTestId('state')).toHaveTextContent('30d null open');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByTestId('state')).toHaveTextContent('90d null null');
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+  });
+  it('prints only the icon of an icon filter at its default, and the value once set or on a plain chip', () => {
     const status = (value: string | null) =>
       singleFilter({
         id: 'status',
@@ -436,44 +469,31 @@ describe('FilterBar and FilterTrigger', () => {
         options: [{ value: 'open', label: 'Open' }],
         onChange: () => undefined,
       });
-    const period = rangeFilter({
-      value: '30d',
-      defaultValue: '30d',
-      options: [
-        { value: '30d', label: 'Last 30 days' },
-        { value: '7d', label: 'Last 7 days' },
-      ],
-      onChange: () => undefined,
-    });
-    const { rerender } = render(<FilterBar filters={[status(null), period]} />);
-    // The name keeps the value the trigger no longer prints.
-    const idle = screen.getByRole('button', { name: 'Status: All statuses' });
-    expect(idle.querySelector('[data-filter-value]')).toBeNull();
-    const range = screen.getByRole('button', { name: 'Period: Last 30 days' });
-    expect(range.querySelector('[data-filter-value]')?.textContent).toBe('Last 30 days');
-
-    rerender(<FilterBar filters={[status('open'), period]} />);
-    const set = screen.getByRole('button', { name: 'Status: Open' });
-    expect(set).toHaveAttribute('data-active');
-    expect(set.querySelector('[data-filter-value]')?.textContent).toBe('Open');
-  });
-  it('names a trigger by its visible value', () => {
-    render(<FilterTrigger label="Surface" value="ChatGPT" hideLabel active />);
-    expect(screen.getByRole('button', { name: 'Surface: ChatGPT' })).toBeInTheDocument();
-  });
-  it('sizes a trigger to its options without adding them to its text', () => {
-    render(
-      <FilterTrigger
-        label="Surface"
-        value="ChatGPT"
-        hideLabel
-        sizeTo={['All surfaces', 'ChatGPT', 'Google AI Overviews']}
-      />,
+    const period = (value: string) =>
+      rangeFilter({
+        value,
+        defaultValue: '30d',
+        options: [
+          { value: '30d', label: 'Last 30 days' },
+          { value: '7d', label: 'Last 7 days' },
+        ],
+        onChange: () => undefined,
+      });
+    const { rerender } = render(<FilterBar filters={[period('30d'), status(null)]} />);
+    // The name keeps the value the chip does not print; the window shows at the row's end.
+    expect(screen.getByRole('button', { name: 'Period: Last 30 days' })).toHaveTextContent(/^$/);
+    expect(screen.getByText('Last 30 days')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Status: All statuses' })).toHaveTextContent(
+      'All statuses',
     );
-    const trigger = screen.getByRole('button', { name: 'Surface: ChatGPT' });
-    // The longest option is reserved as generated content, never readable text.
-    expect(trigger.textContent).toBe('ChatGPT');
-    expect(trigger.querySelector('[data-size="Google AI Overviews"]')).not.toBeNull();
+
+    rerender(<FilterBar filters={[period('7d'), status('open')]} />);
+    expect(screen.getByRole('button', { name: 'Period: Last 7 days' })).toHaveTextContent(
+      'Last 7 days',
+    );
+    // Set, the chip prints the window itself, so the row's end does not repeat it.
+    expect(screen.getAllByText(/Last 7 days/)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Status: Open' })).toHaveAttribute('data-active');
   });
 });
 

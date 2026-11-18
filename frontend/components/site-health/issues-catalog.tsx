@@ -334,7 +334,6 @@ function catalogFilters(
       label: 'Severity',
       value: issueSeverityChoice(filters),
       defaultValue: 'all',
-      defaultIsEvery: true,
       onChange: (value) => updateFilters(issueSeverityChange(value)),
       groups: [
         { options: ISSUE_SEVERITY_CHOICES.map(({ key, label }) => ({ value: key, label })) },
@@ -352,7 +351,6 @@ function catalogFilters(
             label: 'Issue',
             value: filters.rule_id,
             defaultValue: '',
-            defaultIsEvery: true,
             onChange: (rule_id) => updateFilters({ rule_id }),
             groups: [
               {

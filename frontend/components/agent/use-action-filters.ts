@@ -17,7 +17,7 @@ import { actionPriorityBandSchema, actionStatusSchema } from '@citeladder/contra
 /**
  * The Actions page's view, all URL state: which statuses show (every one by
  * default), what the tree groups by first (Goal), and the Impact and Source
- * filters behind All filters.
+ * filters behind Filters.
  */
 
 const ALL = 'all';
@@ -64,7 +64,6 @@ export function useActionFilters() {
       label: 'Impact',
       value: impact,
       defaultValue: ALL,
-      defaultIsEvery: true,
       groups: [
         {
           options: [
@@ -83,7 +82,6 @@ export function useActionFilters() {
       label: 'Source',
       value: source,
       defaultValue: ALL,
-      defaultIsEvery: true,
       groups: [
         {
           options: [

@@ -35,7 +35,7 @@ const URL_HEADERS = [
 
 /**
  * The table's toolbar, above whichever table is showing: search, then Export
- * at the end. Its filters (type, standing, domain) are in the page's All filters.
+ * at the end. Its filters (type, standing, domain) are in the page's Filters.
  *
  * Export writes the rows AS SHOWN — after the filters, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
