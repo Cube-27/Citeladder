@@ -6769,7 +6769,7 @@
             "type": ["number", "null"]
           },
           "matched_visibility_delta": {
-            "description": "Change in percentage points against the baseline run; absent when not comparable.",
+            "description": "`matched_visibility_rate` minus the baseline, in points; only on `matched_subset`.",
             "type": ["number", "null"]
           },
           "matched_response_count": {
@@ -8435,7 +8435,7 @@
             "additionalProperties": false
           },
           "selection_mode": {
-            "description": "How the selection resolved, not what was asked: an omitted `audit_id` is `latest`.",
+            "description": "How the selection resolved, not what was asked: without `audit_id` or a range it is `latest`.",
             "type": "string",
             "enum": ["latest", "run", "range"]
           },
@@ -8937,7 +8937,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "description": "`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. Deltas only when comparable."
+            "description": "`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. `deltas` fill only when comparable; `matched_*` rows only on `matched_subset`."
           },
           "baseline_audit_id": {
             "anyOf": [
@@ -12066,7 +12066,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -12453,7 +12453,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -12803,7 +12803,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13078,7 +13078,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share). Omitted: `core`. `latest=prompt` takes no cohort.",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set). Omitted: `core`. `latest=prompt` takes no cohort.",
             "schema": {
               "anyOf": [
                 {
@@ -13223,7 +13223,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share). Omitted: the prompt's own.",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set). Omitted: the prompt's own.",
             "schema": {
               "anyOf": [
                 {
@@ -13441,7 +13441,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13603,7 +13603,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -13968,7 +13968,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -14462,7 +14462,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",
@@ -14530,7 +14530,7 @@
             "name": "cohort",
             "in": "query",
             "required": false,
-            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).",
+            "description": "Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).",
             "schema": {
               "default": "core",
               "type": "string",

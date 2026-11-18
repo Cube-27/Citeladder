@@ -17,7 +17,7 @@ export const PROJECT_PATH = {
   project_id: { scalar: { kind: 'uuid' }, required: true, description: 'The project ID.' },
 } as const;
 const COHORT_TEXT =
-  'Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (both, counted together over the answers they share).';
+  'Which prompts to count: `core` (unbranded), `comparison` (the brand against competitors) or `all` (the answers of both, counted as one set).';
 export const COHORT = {
   scalar: { kind: 'literal', values: ['core', 'comparison', 'all'] },
   default: 'core',

@@ -10,7 +10,7 @@ Every number the visibility endpoints return is computed by CiteLadder from stor
 
 ## Rates and scores
 
-Rates are shares from 0 to 1, counted over completed answers. Scores run from 0 to 100. Changes (`*_delta`) are in percentage points.
+Rates are shares from 0 to 1, counted over completed answers. Scores run from 0 to 100. Rate changes (`visibility_delta`, `mention_rate_delta` and the other `*_delta` rates) are in percentage points; a score change such as `immediate_delta` is in score points; a fan-out `change` is the difference of two 0–1 shares.
 
 | Field                                                   | What it counts                                                                                                                                  |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -39,13 +39,13 @@ Like the app, the API keeps unknown, unavailable, not measured and zero apart. N
 
 ## Selections
 
-- **Cohort.** `core` counts unbranded prompts, `comparison` prompts that weigh the brand against competitors, and `all` both, counted together over the answers they share rather than blended from the other two.
+- **Cohort.** `core` counts unbranded prompts, `comparison` prompts that weigh the brand against competitors, and `all` both cohorts' answers counted as one set, rather than blended from the other two results.
 - **Runs.** `selection_mode` reports how a dashboard read resolved: `latest` (the market's newest finished run), `run` (the one `audit_id` names) or `range` (the runs of one configuration between `from` and `to`).
 - **Topic.** `topic` counts answers to prompts filed under that topic when their run froze them. Moving a prompt to another topic changes future runs only.
 
 ## Comparison status
 
-A comparison with a baseline run reports a `status`. Deltas are filled only when it is `comparable`.
+A comparison with a baseline run reports a `status`. Ordinary deltas (`deltas`, `visibility_delta`) are filled only when it is `comparable`; on `matched_subset` the `matched_*` fields carry the rate and change over the shared cells instead.
 
 | Status                 | Meaning                                                                                 |
 | ---------------------- | --------------------------------------------------------------------------------------- |

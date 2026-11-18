@@ -147,7 +147,11 @@ export const rankingRowSchema = responseObject({
     .nullable()
     .optional()
     .describe('`mention_rate` over only the prompt and engine cells both runs measured.'),
-  matched_visibility_delta: z.number().nullable().optional().describe(DELTA),
+  matched_visibility_delta: z
+    .number()
+    .nullable()
+    .optional()
+    .describe('`matched_visibility_rate` minus the baseline, in points; only on `matched_subset`.'),
   matched_response_count: z.number().int().nullable().optional(),
   avg_position: AVG_POSITION,
   ...winCountsSchema.shape,
@@ -167,7 +171,7 @@ export const visibilityComparisonSchema = responseObject({
   status: z
     .string()
     .describe(
-      '`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. Deltas only when comparable.',
+      '`comparable` (deltas filled), `matched_subset`, `partial_coverage`, `coverage_unavailable`, `no_observations`, `changed_context`, `identity_unavailable`, `no_baseline` or `baseline_pending`. `deltas` fill only when comparable; `matched_*` rows only on `matched_subset`.',
     ),
   baseline_audit_id: uuid().nullable(),
   baseline_audit_ids: z.array(uuid()),
@@ -216,7 +220,9 @@ export const visibilitySchema = responseObject({
   selection_mode: z
     .enum(['latest', 'run', 'range'])
     .optional()
-    .describe('How the selection resolved, not what was asked: an omitted `audit_id` is `latest`.'),
+    .describe(
+      'How the selection resolved, not what was asked: without `audit_id` or a range it is `latest`.',
+    ),
   source_audit_ids: z.array(uuid()).optional().describe('The runs this projection counts.'),
   configuration_groups: z.record(z.string(), z.number().int()).optional(),
   from_at: z.string().nullable().optional(),
