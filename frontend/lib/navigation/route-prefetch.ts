@@ -41,6 +41,10 @@ function routeReads<M>(load: () => Promise<M>, warm: Warm<M>): RouteReads {
   };
 }
 
+/** Whether the address opens the screen's default tab, named or left out. */
+const opensOn = (search: URLSearchParams, defaultTab: string) =>
+  (search.get('tab') ?? defaultTab) === defaultTab;
+
 const visibilitySelection = () =>
   Promise.all([
     import('@/lib/api/runs'),
@@ -95,10 +99,14 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
     ([{ performanceQueries }, { INITIAL_DASHBOARD_PARAMS }], client, scope) =>
       warmQuery(client, performanceQueries.dashboard(scope, INITIAL_DASHBOARD_PARAMS)),
   ),
-  // The page opens on Demand, which draws from the latest snapshot alone.
+  // The page opens on Demand, which draws from the latest snapshot alone;
+  // every other tab reads the saved analyses' readiness.
   '/search-intelligence': routeReads(
-    () => import('@/lib/api/demand'),
-    ({ demandQueries }, client, scope) => warmQuery(client, demandQueries.latest(scope)),
+    () => Promise.all([import('@/lib/api/demand'), import('@/lib/api/search-intelligence')]),
+    ([{ demandQueries }, { searchIntelligenceQueries }], client, scope, search) => {
+      if (opensOn(search, 'demand')) warmQuery(client, demandQueries.latest(scope));
+      else warmQuery(client, searchIntelligenceQueries.readiness(scope));
+    },
   ),
   '/products': routeReads(
     () => Promise.all([import('@/lib/api/commerce'), import('@/lib/products/product-filters')]),
@@ -169,9 +177,10 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
     () => Promise.all([import('@/lib/api/ai-traffic'), import('@/lib/config/crawl-logs')]),
     // The landing view's three reads, side by side: the sources that choose
     // the default tab, and the Overview tab's summary and insights.
-    ([{ aiTrafficQueries }, { TRAFFIC_RANGES }], client, scope) => {
+    ([{ aiTrafficQueries }, { TRAFFIC_RANGES }], client, scope, search) => {
       const range = TRAFFIC_RANGES[0].value;
       warmQuery(client, aiTrafficQueries.sources(scope));
+      if (!opensOn(search, 'overview')) return;
       warmQuery(client, aiTrafficQueries.overview(scope, { range }));
       warmQuery(client, aiTrafficQueries.insights(scope, range));
     },

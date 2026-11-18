@@ -106,10 +106,17 @@ navigation mechanic.
 **Why:** "Keep … still" fixes shipped seven times (#405, #504, #522, #532,
 #541, #546, #834). Then new sections shifted on load again: the
 Insights performance matrix (#982) and Competitors suggestions (#971) put
-CLS at 0.12 to 0.14.
+CLS at 0.12 to 0.14. The full-app review then measured 0.07 to 0.42 on cold
+loads from five more causes: a "blank line" of a plain space (it collapses),
+a width measured after paint (the figure strip rewrapped), a deferred turn
+painted at its `contain-intrinsic-size` estimate, sections drawn under a
+table whose row count was still unknown, and a cold-load warm skipped for any
+address with `?tab=`.
 **Check:** A section that renders `null` while pending or when empty, or a
 list whose row count is unknown until the read answers. The section needs a
-skeleton of its settled size or a reserved height.
+skeleton of its settled size or a reserved height, and what follows a list
+of unknown length mounts once it answers. A reserved line holds ` `;
+layout measured for rows runs in `useLayoutEffect`.
 
 ### Empty, zero and "none" only after a successful read
 

@@ -20,7 +20,7 @@ import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 type PageRow = z.infer<typeof aiTrafficPagesSchema>['items'][number];
 
 /** A non-breaking space: a blank line that still takes a line's height. */
-const BLANK_LINE = ' ';
+const BLANK_LINE = ' ';
 
 /** The sort a header button sets: the path ascending, a figure descending. */
 const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {

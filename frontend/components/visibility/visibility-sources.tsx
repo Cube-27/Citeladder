@@ -234,17 +234,30 @@ export function SourcesPanel({
 
       {/* The table leads; the usage over time and the type mix explain it below.
           Both chart citations, which near misses by definition are not. */}
-      {readNotCited ? null : (
-        <AppGrid layout="main-aside">
-          <UsageCard dimension={dimension} query={seriesQuery} />
-          <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
-        </AppGrid>
-      )}
-      {domain ? null : (
-        <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
-      )}
+      {answered(readNotCited ? nearMissQuery : sourceQuery) ? (
+        <>
+          {readNotCited ? null : (
+            <AppGrid layout="main-aside">
+              <UsageCard dimension={dimension} query={seriesQuery} />
+              <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
+            </AppGrid>
+          )}
+          {domain ? null : (
+            <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
+          )}
+        </>
+      ) : null}
     </Stack>
   );
+}
+
+/**
+ * Whether the table's read has answered. Its row count is unknown until then,
+ * so what follows the table is placed after: a page of loading rows
+ * collapsing to a few would pull it up.
+ */
+function answered(query: Readonly<{ data: unknown; isError: boolean }>): boolean {
+  return query.data !== undefined || query.isError;
 }
 
 /** The page's first row from the address: zero when absent or not a count. */

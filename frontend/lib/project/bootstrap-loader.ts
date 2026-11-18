@@ -109,6 +109,9 @@ type Guess = Readonly<{
   project: Readonly<{ id: string; issued: Promise<unknown> }> | null;
 }>;
 
+/** Address keys a screen's warm still predicts: its scope and its tab. */
+const WARM_KEYS = new Set(['project', 'workspace', 'tab']);
+
 /**
  * Start a project's reads: the landing screen's and the shell's own.
  *
@@ -116,16 +119,14 @@ type Guess = Readonly<{
  * session, access and Terms gates still decide whether anything mounts, the
  * access gate clears product queries for a workspace without access, and the
  * backend authorizes every read. The screen is warmed only for an address
- * naming nothing but its scope — the prefetchers warm each screen's default
- * view, and filters in the address ask for a different key.
+ * naming nothing but its scope and tab — the prefetchers warm each tab's
+ * default view, and filters in the address ask for a different key.
  */
 function warmProject(client: QueryClient, url: URL, scope: ProjectScope) {
-  const scopeOnly = [...url.searchParams.keys()].every(
-    (key) => key === 'project' || key === 'workspace',
-  );
+  const scopeOnly = [...url.searchParams.keys()].every((key) => WARM_KEYS.has(key));
   return Promise.all([
     prefetchProjectShell(client, scope),
-    scopeOnly ? prefetchRoute(client, url.pathname, scope) : null,
+    scopeOnly ? prefetchRoute(client, url.pathname + url.search, scope) : null,
   ]);
 }
 

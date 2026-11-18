@@ -68,10 +68,10 @@ export function Conversation({
   const output = latestOutput(detail);
   const { byMessage, unplaced } = outputPlacements(detail);
   const items = threadItems(detail, new Set(byMessage.keys()));
-  // The latest exchange is on screen when a chat opens; only older turns defer,
-  // and never one holding a document the Documents list scrolls to.
-  const older = (index: number, holdsDocument = false) =>
-    index < items.length - 2 && !holdsDocument ? 'render-when-visible' : undefined;
+  const deferred = useDeferredAtOpen(detail.chat.id, items.map(itemKey));
+  // Never a turn holding a document the Documents list scrolls to.
+  const older = (key: string, holdsDocument = false) =>
+    deferred.has(key) && !holdsDocument ? 'render-when-visible' : undefined;
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (
@@ -89,7 +89,7 @@ export function Conversation({
       {/* One `minmax(0, 1fr)` column at each level: an auto track would grow to
           a turn's widest unbreakable line (a long URL chip) and scroll the thread sideways. */}
       <Stack as="ol" gap="workspace" aria-label="Messages" className="grid-cols-1">
-        {items.map((item, index) =>
+        {items.map((item) =>
           item.kind === 'message' ? (
             <Stack
               as="li"
@@ -97,7 +97,7 @@ export function Conversation({
               key={item.message.id}
               className={cn(
                 TURN,
-                older(index, Boolean(renderOutput) && byMessage.has(item.message.id)),
+                older(item.message.id, Boolean(renderOutput) && byMessage.has(item.message.id)),
               )}
             >
               <MessageBubble
@@ -121,7 +121,7 @@ export function Conversation({
               as="li"
               gap="workspace"
               key={item.request?.id ?? item.failures[0].id}
-              className={cn(TURN, older(index))}
+              className={cn(TURN, older(itemKey(item)))}
             >
               {item.request ? (
                 <MessageBubble message={item.request} skill={null} actions={detail.actions} />
@@ -155,6 +155,25 @@ export function Conversation({
   );
 }
 const TURN = 'min-w-0 grid-cols-1';
+
+type ThreadItem = ReturnType<typeof threadItems>[number];
+const itemKey = (item: ThreadItem) =>
+  item.kind === 'message' ? item.message.id : (item.request?.id ?? item.failures[0].id);
+
+/**
+ * The turns that render only when scrolled near: those before the latest two
+ * exchanges when the chat opened, which open off screen. Fixed for the
+ * visit: a turn that started deferring later would have no remembered size
+ * and jump to the 320px estimate, moving the thread under the reader.
+ */
+function useDeferredAtOpen(chatId: string, keys: readonly string[]): ReadonlySet<string> {
+  const atOpen = () => ({ chatId, keys: new Set(keys.slice(0, -4)) });
+  const [opened, setOpened] = useState(atOpen);
+  if (opened.chatId === chatId) return opened.keys;
+  const next = atOpen();
+  setOpened(next);
+  return next.keys;
+}
 
 /**
  * Each reply saved while the chat is open, read once by screen readers: one
