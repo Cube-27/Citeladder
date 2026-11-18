@@ -247,15 +247,9 @@ export async function getPerception(
 }
 
 /**
- * Each named business's net sentiment over the selection, the brand first; an
- * empty list when any selected answer's run was admitted without perception,
- * so a pool never reads as the sentiment of only its perceived runs.
+ * The selection's answers with their frozen topic; null when any was admitted
+ * without perception, so a pool never reads as only its perceived runs.
  */
-export async function entitySentiments(db: Database, selection: RunSelection) {
-  return sentimentsOf((await perceivedAnswers(db, selection)) ?? []);
-}
-
-/** The selection's answers with their frozen topic; null when any was admitted without perception. */
 export async function perceivedAnswers(db: Database, selection: RunSelection) {
   const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
   return partial ? null : answers;

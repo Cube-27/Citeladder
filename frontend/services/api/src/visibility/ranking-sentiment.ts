@@ -8,25 +8,39 @@ import type { NetSentiment } from '@citeladder/contracts/visibility';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getVisibility, type DashboardQuery, type VisibilityResponse } from './dashboard.ts';
-import { entitySentiments, groupedSentiments } from './perception.ts';
+import { groupedSentiments, perceivedAnswers, sentimentsOf } from './perception.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import type { RunSelection } from './selection.ts';
 import type { TrendPoint } from './trend-folding.ts';
 
 type Entity = { name: string; is_brand: boolean; sentiment: NetSentiment };
 
-/** Each row's sentiment; the brand row's name is the snapshot's label, so it matches by role. */
+/** A perceived selection whose answers never named the business: zero mentions, not unknown. */
+const NOT_NAMED: NetSentiment = {
+  mentions: 0,
+  classified: 0,
+  positive: 0,
+  negative: 0,
+  net_sentiment: null,
+};
+
+/**
+ * Each row's sentiment; the brand row's name is the snapshot's label, so it
+ * matches by role. Null entities (a run admitted without perception) leave
+ * every row unknown.
+ */
 function withSentiment<Row extends { name: string; is_brand: boolean }>(
   rows: readonly Row[],
   entities: readonly Entity[] | null,
 ): (Row & { sentiment: NetSentiment | null })[] {
-  const brand = entities?.find((entity) => entity.is_brand);
+  if (entities === null) return rows.map((row) => ({ ...row, sentiment: null }));
+  const brand = entities.find((entity) => entity.is_brand);
   const competitors = new Map(
-    (entities ?? []).filter((entity) => !entity.is_brand).map((entity) => [entity.name, entity]),
+    entities.filter((entity) => !entity.is_brand).map((entity) => [entity.name, entity]),
   );
   return rows.map((row) => ({
     ...row,
-    sentiment: (row.is_brand ? brand : competitors.get(row.name))?.sentiment ?? null,
+    sentiment: (row.is_brand ? brand : competitors.get(row.name))?.sentiment ?? NOT_NAMED,
   }));
 }
 
@@ -57,11 +71,14 @@ export async function getRankedVisibility(
   const pooled = view.selection_mode === 'range' ? (view.source_audit_ids ?? []) : null;
   // An empty pool reads nothing; an empty list would select the latest run.
   if (pooled?.length === 0) return view;
-  const entities = await entitySentiments(
+  const answers = await perceivedAnswers(
     db,
     selectionOf(scope, query, { auditId: pooled ? null : view.audit_id, auditIds: pooled }),
   );
-  return { ...view, rankings: withSentiment(view.rankings, entities) };
+  return {
+    ...view,
+    rankings: withSentiment(view.rankings, answers === null ? null : sentimentsOf(answers)),
+  };
 }
 
 /**
