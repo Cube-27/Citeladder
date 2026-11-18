@@ -19,7 +19,6 @@ import { commerceQueries } from '@/lib/api/commerce';
 import { demandApi, demandQueries } from '@/lib/api/demand';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -80,12 +79,12 @@ describe('prefetchRoute', () => {
   });
 
   it('does nothing without an active project', () => {
-    prefetchRoute(client, '/demand', null);
+    prefetchRoute(client, '/search-intelligence', null);
     expect(demandApi.getLatest).not.toHaveBeenCalled();
   });
 
-  it('warms the Search Demand snapshot on intent', async () => {
-    prefetchRoute(client, '/demand', PROJECT);
+  it('warms the Search Demand snapshot the Keywords page opens on', async () => {
+    prefetchRoute(client, '/search-intelligence', PROJECT);
     await vi.waitFor(() => expect(demandApi.getLatest).toHaveBeenCalledTimes(1));
   });
 
@@ -199,7 +198,6 @@ describe('prefetchRoute', () => {
   });
 
   it.each([
-    ['/search-intelligence', [searchIntelligenceQueries.readiness(PROJECT).queryKey]],
     ['/agent', [actionsQueries.list(PROJECT).queryKey]],
     ['/actions', [actionsQueries.tree(PROJECT, DEFAULT_ACTION_TREE).queryKey]],
     ['/agent/skills', [agentQueries.skills(PROJECT.workspaceId).queryKey]],
@@ -354,7 +352,7 @@ describe('prefetchRoute', () => {
     expect(query?.state.status).toBe('error');
     const callsAfterFailure = vi.mocked(demandApi.getLatest).mock.calls.length;
 
-    prefetchRoute(client, '/demand', PROJECT);
+    prefetchRoute(client, '/search-intelligence', PROJECT);
     await Promise.resolve();
 
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(callsAfterFailure);

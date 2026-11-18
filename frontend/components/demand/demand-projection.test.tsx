@@ -17,7 +17,7 @@ import { roles } from '@/services/api/src/config/workspaces.json';
 import { DemandProjection } from './demand-projection';
 
 function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
-  return <MemoryRouter initialEntries={['/demand']}>{children}</MemoryRouter>;
+  return <MemoryRouter initialEntries={['/search-intelligence']}>{children}</MemoryRouter>;
 }
 
 /** The signal table's body rows, in display order. */
@@ -76,13 +76,13 @@ vi.mock('@/lib/project/project-context', () => {
   };
 });
 
-/** `/demand` as the project route's gate hands it the currently selected project. */
+/** The Demand tab as the project route's gate hands it the currently selected project. */
 function DemandRoute() {
   return (
     <ActiveProjectScopeProvider
       project={makeProject({ id: project.id, workspace_id: project.workspace_id })}
     >
-      <DemandProjection />
+      <DemandProjection tabs={null} />
     </ActiveProjectScopeProvider>
   );
 }
@@ -209,7 +209,7 @@ const findSignalCount = (text: string) =>
 describe('DemandProjection', () => {
   beforeEach(() => {
     // The filter and selection live in the address, which outlives a render.
-    window.history.replaceState(null, '', '/demand');
+    window.history.replaceState(null, '', '/search-intelligence');
     project.id = '11111111-1111-4111-8111-111111111111';
     project.capabilities = roles.member;
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);

@@ -49,7 +49,7 @@ export const RECORD_KINDS = {
   site_issue: { label: 'Site Health issue', screen: '/site' },
   site_link: { label: 'Internal link', screen: '/site' },
   traffic_snapshot: { label: 'Traffic snapshot', screen: '/performance' },
-  demand_snapshot: { label: 'Search Demand snapshot', screen: '/demand' },
+  demand_snapshot: { label: 'Search Demand snapshot', screen: '/search-intelligence' },
   query_snapshot: { label: 'Search Console snapshot', screen: '/performance' },
   query_row: { label: 'Search Console query', screen: '/performance' },
   search_run: { label: 'Keyword Research run', screen: '/search-intelligence' },

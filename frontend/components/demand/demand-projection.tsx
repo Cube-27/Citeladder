@@ -9,6 +9,7 @@ import {
 import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
@@ -136,11 +137,13 @@ function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }
 }
 
 function SearchDemandView({
+  tabs,
   snapshot,
   refreshError,
   onRetry,
   retrying,
 }: Readonly<{
+  tabs: ReactNode;
   snapshot: DemandSnapshot;
   refreshError?: Error | null;
   onRetry?: () => void;
@@ -256,16 +259,17 @@ function SearchDemandView({
           />
         ) : undefined
       }
-      // Which signals the table lists is the page's sub-view: its tabs band.
-      tabs={
-        <DemandSignalFilters
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          tabCounts={tabCounts}
-        />
-      }
+      tabs={tabs}
       filters={
         <FilterBar
+          // Which signals the table lists is the tab's view, leading its control strip.
+          view={
+            <DemandSignalFilters
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              tabCounts={tabCounts}
+            />
+          }
           search={
             <SearchField
               value={searchQuery}
@@ -325,7 +329,8 @@ function SearchDemandView({
   );
 }
 
-export function DemandProjection() {
+/** The Keywords page's Demand tab; `tabs` is the page's tab row, kept in every state. */
+export function DemandProjection({ tabs }: Readonly<{ tabs: ReactNode }>) {
   const { workspaceId, projectId } = useProjectScope();
   const latest = useQuery({
     ...demandQueries.latest({ workspaceId, projectId }),
@@ -347,6 +352,7 @@ export function DemandProjection() {
     // nothing would present a stale snapshot as current.
     return (
       <SearchDemandView
+        tabs={tabs}
         snapshot={snapshot}
         refreshError={latest.error}
         onRetry={() => void latest.refetch()}
@@ -354,10 +360,18 @@ export function DemandProjection() {
       />
     );
   }
-  return <ReportPage>{demandFallback(latest)}</ReportPage>;
+  // The first load holds the control strip, so the table starts where it lands.
+  return (
+    <ReportPage
+      tabs={tabs}
+      filters={latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
+    >
+      {demandFallback(latest)}
+    </ReportPage>
+  );
 }
 
-/** Every non-loaded state of `/demand`, in the order it is decided. */
+/** Every non-loaded state of the Demand tab, in the order it is decided. */
 function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
   if (latest.isLoading)
     return (

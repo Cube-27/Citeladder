@@ -2,7 +2,7 @@ import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
 
 import type {
   SearchIntelligenceDataset,
@@ -77,6 +77,8 @@ const readiness: SearchIntelligenceReadiness = {
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
+// The page opens on Demand; these cases read Keyword Research from its Overview.
+beforeEach(() => window.history.replaceState(null, '', '/search-intelligence?tab=overview'));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 

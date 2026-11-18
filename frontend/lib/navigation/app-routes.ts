@@ -155,7 +155,6 @@ const screens = {
   projects: pick(() => import('@/components/projects/projects-screen'), 'ProjectsScreen'),
   site: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
   pageDetail: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
-  demand: pick(() => import('@/components/demand/demand-projection'), 'DemandProjection'),
   issues: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
   keywords: pick(
     () => import('@/components/search-intelligence/search-intelligence-page'),
@@ -278,18 +277,12 @@ export const APP_ROUTES = [
     path: '/search-intelligence',
     title: 'Keywords',
     screen: screens.keywords,
-    loading: cards([figures(5), table(6)], {
-      tabs: ['Overview', 'Keywords', 'Competitors', 'Backlinks'],
+    // Opens on Demand: its signals table under a held control strip.
+    loading: cards([table(8)], {
+      tabs: ['Demand', 'Overview', 'Keywords', 'Organic competitors', 'Backlinks'],
+      filters: true,
     }),
     nav: [listed('Keywords', 'searchIntelligence', 'search')],
-  }),
-  // Listed until it becomes the Keywords page's Demand tab (AV-16).
-  page({
-    path: '/demand',
-    title: 'Search demand',
-    screen: screens.demand,
-    loading: cards([table(8)], { filters: true }),
-    nav: [listed('Search demand', 'demand', 'search')],
   }),
   // Commerce: Shopping, then the Products table. Shopping is declared before
   // `/products/:targetId`, which would otherwise match it.

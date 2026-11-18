@@ -69,7 +69,6 @@ const PROMPT_SETS = {
 const ROUTES = [
   '/projects',
   '/site',
-  '/demand',
   '/issues',
   '/search-intelligence',
   '/performance',
