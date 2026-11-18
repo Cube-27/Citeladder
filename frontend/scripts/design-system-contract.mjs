@@ -17,7 +17,7 @@ const readContract = (root) => JSON.parse(readFileSync(join(root, CONTRACT), 'ut
 
 /** A colour or shadow value as comparable text: lower case, spacing collapsed. */
 const normalColour = (value) => String(value).trim().toLowerCase().replaceAll(/\s+/g, ' ');
-const normalShadow = (value) => normalColour(value).replaceAll(/\s*,\s*/g, ', ');
+const normalShadow = (value) => normalColour(value).replaceAll(/ ?, ?/g, ', ');
 
 /** The system's `{name}` references, whole or inside a relative colour, as the repo's aliases. */
 const contractColour = (value) =>
