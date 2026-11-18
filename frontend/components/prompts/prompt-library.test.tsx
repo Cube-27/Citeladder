@@ -109,16 +109,17 @@ describe('PromptLibrary first load', () => {
     ).toEqual([
       '',
       'Prompt',
+      'Topic',
       'Visibility',
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
+      expect.stringMatching(/^Web search/),
+      expect.stringMatching(/^Position/),
       'Change',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
-      expect.stringMatching(/^Position/),
-      expect.stringMatching(/^Share of voice/),
-      expect.stringMatching(/^Sentiment/),
-      expect.stringMatching(/^Web search/),
-      'Enabled',
+      'Status',
       'Actions',
     ]);
     const row = within(table).getByRole('row', { name: new RegExp(prompt.text.slice(0, 20)) });
@@ -178,7 +179,7 @@ describe('PromptLibrary first load', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
-    ).toEqual(['', 'Prompt', 'Enabled', 'Actions']);
+    ).toEqual(['', 'Prompt', 'Topic', 'Status', 'Actions']);
   });
 });
 
@@ -229,8 +230,8 @@ describe('PromptLibrary failed read', () => {
 
 describe('PromptLibrary by role', () => {
   it.each([
-    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Enabled', 'Actions']],
-    ['viewer', [], ['Prompt', 'Enabled']],
+    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Topic', 'Status', 'Actions']],
+    ['viewer', [], ['Prompt', 'Topic', 'Status']],
   ] as const)(
     'offers a %s exactly the controls its role may use',
     async (role, pageActions, headers) => {
@@ -351,7 +352,7 @@ describe('PromptLibrary bulk actions', () => {
   });
 });
 
-describe('PromptLibrary enable switch', () => {
+describe('PromptLibrary Enable/Disable', () => {
   /** Holds the PATCH open until the test answers it; the sets read reports what was saved. */
   function holdToggle() {
     const held: { answer?: (response: Response) => void; setsReads: number; saves: number } = {
@@ -377,21 +378,21 @@ describe('PromptLibrary enable switch', () => {
     return held;
   }
 
-  async function pressSwitch() {
-    const user = userEvent.setup();
-    renderLibrary();
+  /** Picks the row menu's Enable or Disable; returns the row's status cell. */
+  async function press(user: ReturnType<typeof userEvent.setup>, item: 'Enable' | 'Disable') {
     const table = await screen.findByRole('table', { name: 'Prompts' });
-    const toggle = within(table).getByRole('switch', { name: 'Disable prompt' });
-    await user.click(toggle);
-    return { toggle, user };
+    await user.click(within(table).getByRole('button', { name: 'Prompt actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: item }));
+    return () => within(table).getAllByRole('row')[1]!.lastElementChild!.previousElementSibling;
   }
 
   it('flips at once and rolls back with the failure when the save fails', async () => {
     const held = holdToggle();
-    const { toggle } = await pressSwitch();
+    renderLibrary();
+    const status = await press(userEvent.setup(), 'Disable');
 
-    // The save is still held open: the switch shows the new state before it resolves.
-    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    // The save is still held open: the row shows the new state before it resolves.
+    await waitFor(() => expect(status()).toHaveTextContent('Disabled'));
     const answer = await vi.waitFor(() => {
       if (!held.answer) throw new Error('The save was not requested yet.');
       return held.answer;
@@ -399,26 +400,28 @@ describe('PromptLibrary enable switch', () => {
     answer(HttpResponse.json({ error: { message: 'down' } }, { status: 503 }));
 
     expect(await screen.findByText(/Could not turn the prompt on or off/)).toBeVisible();
-    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(status()).toHaveTextContent('Active');
   });
 
   it('ignores a second press while saving, keeps the new state once saved and re-reads the library', async () => {
     const held = holdToggle();
-    const { toggle, user } = await pressSwitch();
+    const user = userEvent.setup();
+    renderLibrary();
+    const status = await press(user, 'Disable');
     const readsBefore = held.setsReads;
 
-    // The save is still held open: the switch shows the new state before it resolves.
-    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    // The save is still held open: the row shows the new state before it resolves.
+    await waitFor(() => expect(status()).toHaveTextContent('Disabled'));
     const answer = await vi.waitFor(() => {
       if (!held.answer) throw new Error('The save was not requested yet.');
       return held.answer;
     });
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await press(user, 'Enable');
+    expect(status()).toHaveTextContent('Disabled');
     answer(HttpResponse.json({ ...prompt, enabled: false }));
 
     await waitFor(() => expect(held.setsReads).toBeGreaterThan(readsBefore));
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(status()).toHaveTextContent('Disabled');
     expect(held.saves).toBe(1);
     expect(screen.queryByText(/Could not turn the prompt on or off/)).toBeNull();
   });

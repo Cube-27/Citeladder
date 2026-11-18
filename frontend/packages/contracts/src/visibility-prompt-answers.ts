@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { answerFormatsSchema } from './audits.ts';
+import { answerFormatsSchema, firstNamedSchema } from './audits.ts';
 import { namedBrandSchema } from './visibility.ts';
 
 /**
@@ -19,6 +19,8 @@ export const promptAnswerSchema = z.object({
   run_at: z.string(),
   logical_engine: z.string(),
   brands: z.array(promptAnswerBrandSchema),
+  // The stored first-named tracked business (AV-7); offsets can tie, so never re-derived from `brands`.
+  first_named: firstNamedSchema,
   brand_mentioned: z.boolean(),
   // Your 1-based place among the brands the answer named; null when unnamed or unranked.
   position: z.number().int().nullable(),

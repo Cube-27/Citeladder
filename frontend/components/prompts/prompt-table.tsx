@@ -1,4 +1,5 @@
-import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
 import { TextLink } from '@/components/ui/text-link';
@@ -9,6 +10,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/compo
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
 import {
+  isRowSurfaceClick,
   TableActionsCell,
   TableCell,
   TableCellLines,
@@ -16,7 +18,7 @@ import {
   TableSelectCell,
 } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { Switch } from '@/components/ui/switch';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Absence } from '@/components/ui/absence';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import { SentimentValue, WebSearchValue } from '@/components/visibility/sentiment-value';
@@ -29,6 +31,7 @@ import type {
 } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { ICONS } from '@/lib/icons';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import type { RowSelectionState } from '@/lib/prompts/selection';
@@ -78,10 +81,10 @@ export type PromptRowActions = Readonly<{
 const PAGE_SIZE = 10;
 
 /**
- * Prompt table (F7). Questions, measured visibility and enabled state, with
- * per-row actions (edit, delete,
- * enable/disable toggle, and — when `onSetStatus` is wired — archive or restore
- * transitions).
+ * Prompt table (F7). Questions, their topic, measured visibility and status,
+ * with a per-row menu (edit, enable or disable, archive or restore when
+ * `onSetStatus` is wired, evidence, delete). A click anywhere on a row
+ * outside its controls opens the prompt.
  *
  * The measured columns arrive as a map rather than being fetched here: the
  * prompt IS the object a reader is looking at, so its result belongs on this
@@ -96,20 +99,20 @@ export function PromptTable({
   actions,
   measurements,
   setNames,
+  topicNames,
   commerceSetIds,
   selection,
 }: Readonly<{
   prompts: Prompt[];
+  /** Each topic's name by id; omitted until the topic list is read. */
+  topicNames?: ReadonlyMap<string, string>;
   /** Row checkboxes for bulk actions, for a role that may edit prompts. */
   selection?: RowSelectionState;
   /** Sets whose prompts Commerce measures as a shelf: they have no per-prompt figures. */
   commerceSetIds?: ReadonlySet<string>;
   /** Each prompt set's name by id: the library lists every set's prompts. */
   setNames?: ReadonlyMap<string, string>;
-  /**
-   * The row controls, for a role that may edit prompts. Without them the
-   * table states each prompt's enabled state and offers no control.
-   */
+  /** The row menu, for a role that may edit prompts. */
   actions?: PromptRowActions;
   /** Latest-run measurement per prompt id. Omitted before any run exists. */
   measurements?: ReadonlyMap<string, PromptMeasurement>;
@@ -129,6 +132,8 @@ export function PromptTable({
   });
   const pagedPrompts = prompts.slice(from - 1, to);
   const pageIds = pagedPrompts.map((prompt) => prompt.id);
+  const navigate = useNavigate();
+  const projectHref = useProjectHref();
 
   return (
     <DataTable
@@ -165,7 +170,13 @@ export function PromptTable({
       }}
     >
       {pagedPrompts.map((prompt) => (
-        <TableRow key={prompt.id}>
+        <TableRow
+          key={prompt.id}
+          className="cursor-pointer"
+          onClick={(event) => {
+            if (isRowSurfaceClick(event)) void navigate(projectHref(promptHistoryHref(prompt.id)));
+          }}
+        >
           {selection ? (
             <TableSelectCell
               label={`Select “${prompt.text}”`}
@@ -174,10 +185,9 @@ export function PromptTable({
             />
           ) : null}
           <TableCell>
-            {/* The question opens its history: one line, its whole text in a
-                tooltip. Topic and classification are filters, not row tags
-                (owner, 2026-11-06); the caption names the prompt's set when
-                there are several, and says when audits skip the prompt. */}
+            {/* The question links to its history for the keyboard: one line,
+                its whole text in a tooltip. The caption names the prompt's set
+                when there are several, and says when audits skip the prompt. */}
             <TableCellLines
               title
               primary={
@@ -188,21 +198,25 @@ export function PromptTable({
               secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
             />
           </TableCell>
+          <TableCell>
+            <TopicName topicId={prompt.topic_id} names={topicNames} />
+          </TableCell>
           {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
             <ShelfMeasuredCells columns={measuredColumns} />
           ) : null}
           {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
             <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
           ) : null}
+          <TableCell>
+            <PromptStatusMark prompt={prompt} />
+          </TableCell>
           {actions ? (
-            <PromptRowControls
+            <PromptRowMenu
               prompt={prompt}
               actions={actions}
               onEvidence={evidenceOpener(prompt, measurements?.get(prompt.id), actions)}
             />
-          ) : (
-            <TableCell>{prompt.enabled ? 'Yes' : 'No'}</TableCell>
-          )}
+          ) : null}
         </TableRow>
       ))}
     </DataTable>
@@ -235,8 +249,30 @@ function evidenceOpener(
   return () => onEvidence(prompt, measurement.answer);
 }
 
-/** The enabled switch and the actions menu of one editable row. */
-function PromptRowControls({
+/** The prompt's topic; a prompt filed under none says so, an unread topic list is unavailable. */
+function TopicName({
+  topicId,
+  names,
+}: Readonly<{ topicId: Prompt['topic_id']; names?: ReadonlyMap<string, string> }>) {
+  if (!topicId) return <Absence state="none" label="No topic" />;
+  const name = names?.get(topicId);
+  if (name === undefined) return <Absence state="unavailable" />;
+  return (
+    <span className="text-ink-2 block truncate" title={name}>
+      {name}
+    </span>
+  );
+}
+
+/** Archived, disabled (kept but skipped by audits) or active. */
+function PromptStatusMark({ prompt }: Readonly<{ prompt: Prompt }>) {
+  if (prompt.status === 'archived') return <StatusMark>Archived</StatusMark>;
+  if (!prompt.enabled) return <StatusMark>Disabled</StatusMark>;
+  return <StatusMark tone="positive">Active</StatusMark>;
+}
+
+/** The actions menu of one editable row. */
+function PromptRowMenu({
   prompt,
   actions: { onEdit, onDelete, onToggleEnabled, onSetStatus },
   onEvidence,
@@ -247,56 +283,49 @@ function PromptRowControls({
   onEvidence?: () => void;
 }>) {
   return (
-    <>
-      <TableCell>
-        <Switch
-          checked={prompt.enabled}
-          label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
-          onCheckedChange={() => onToggleEnabled(prompt)}
-        />
-      </TableCell>
-      <TableActionsCell>
-        <Menu>
-          <MenuTrigger asChild>
-            <IconButton icon={MoreHorizontal} label="Prompt actions" />
-          </MenuTrigger>
-          <MenuContent align="end">
-            {onSetStatus && prompt.status === 'archived' ? (
-              <MenuItem icon={<Icon icon={Check} />} onSelect={() => onSetStatus(prompt, 'active')}>
-                Restore
-              </MenuItem>
-            ) : null}
-            <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEdit(prompt)}>
-              Edit
+    <TableActionsCell>
+      <Menu>
+        <MenuTrigger asChild>
+          <IconButton icon={MoreHorizontal} label="Prompt actions" />
+        </MenuTrigger>
+        <MenuContent align="end">
+          {onSetStatus && prompt.status === 'archived' ? (
+            <MenuItem icon={<Icon icon={Check} />} onSelect={() => onSetStatus(prompt, 'active')}>
+              Restore
             </MenuItem>
-            {onSetStatus && prompt.status !== 'archived' ? (
-              <MenuItem
-                icon={<Icon icon={Archive} />}
-                onSelect={() => onSetStatus(prompt, 'archived')}
-              >
-                Archive
-              </MenuItem>
-            ) : null}
-            {onEvidence ? (
-              <MenuItem icon={<Icon icon={FileSearch} />} onSelect={onEvidence}>
-                Evidence
-              </MenuItem>
-            ) : null}
-            <MenuSeparator />
-            <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onDelete(prompt)}>
-              Delete
+          ) : null}
+          <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEdit(prompt)}>
+            Edit
+          </MenuItem>
+          <MenuItem icon={<Icon icon={Power} />} onSelect={() => onToggleEnabled(prompt)}>
+            {prompt.enabled ? 'Disable' : 'Enable'}
+          </MenuItem>
+          {onSetStatus && prompt.status !== 'archived' ? (
+            <MenuItem
+              icon={<Icon icon={Archive} />}
+              onSelect={() => onSetStatus(prompt, 'archived')}
+            >
+              Archive
             </MenuItem>
-          </MenuContent>
-        </Menu>
-      </TableActionsCell>
-    </>
+          ) : null}
+          {onEvidence ? (
+            <MenuItem icon={<Icon icon={FileSearch} />} onSelect={onEvidence}>
+              Evidence
+            </MenuItem>
+          ) : null}
+          <MenuSeparator />
+          <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onDelete(prompt)}>
+            Delete
+          </MenuItem>
+        </MenuContent>
+      </Menu>
+    </TableActionsCell>
   );
 }
 
 /**
- * The measured columns are drawn only once a run exists. The headers are one
- * word (owner, 2026-11-11); each hint says exactly what its figure measures.
- * A reader who may not edit reads the enabled state as text, with no actions.
+ * The measured columns are drawn only once a run exists; each hint says
+ * exactly what its figure measures. A reader who may not edit gets no menu.
  */
 function promptColumns(
   measuredColumns: readonly DataTableColumn[],
@@ -304,8 +333,9 @@ function promptColumns(
 ): DataTableColumn[] {
   const columns: DataTableColumn[] = [
     { key: 'prompt', label: 'Prompt', kind: 'identity' },
+    { key: 'topic', label: 'Topic', width: 'status' },
     ...measuredColumns,
-    { key: 'enabled', label: 'Enabled', width: 'control' },
+    { key: 'status', label: 'Status', kind: 'status' },
   ];
   if (editable)
     columns.push({ key: 'actions', label: 'Actions', width: 'control', kind: 'actions' });
@@ -323,45 +353,13 @@ const VISIBILITY_COLUMN: DataTableColumn = {
 const SHELF_HINT =
   'Shopping prompts are measured with the shopping shelf on Shopping, not one prompt at a time, so their figures here are not applicable.';
 
-/**
- * Each mark column sits beside the figure it explains (the brands named after
- * Visibility, the cited sites after Citations); the low-priority
- * figures come last and hide, the last first, where the frame is too narrow.
- */
-const MEASURED_COLUMNS: readonly DataTableColumn[] = [
-  {
-    key: 'mentions',
-    label: 'Mentions',
-    width: 'status',
-    hint: "The brands named in this prompt's answers: yours and your competitors'.",
-  },
-  {
-    key: 'citations',
-    label: 'Citations',
-    width: 'figure',
-    kind: 'number',
-    hint: "The share of this prompt's answers that cited one of your pages.",
-  },
-  {
-    key: 'sources',
-    label: 'Sources',
-    width: 'status',
-    hint: "The sites this prompt's answers cited, most citations first.",
-  },
-  {
-    key: 'position',
-    label: 'Position',
-    width: 'figure',
-    kind: 'number',
-    priority: 'low',
-    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
-  },
+/** The figures after Visibility, in the order mockup A draws them; the movement follows. */
+const FIGURE_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'sov',
     label: 'Share of voice',
     width: 'short',
     kind: 'number',
-    priority: 'low',
     hint: SHARE_OF_VOICE_HINT,
   },
   {
@@ -380,9 +378,16 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     priority: 'low',
     hint: "The share of this prompt's answers that searched the web, counting only engines that report it.",
   },
+  {
+    key: 'position',
+    label: 'Position',
+    width: 'figure',
+    kind: 'number',
+    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
+  },
 ];
 
-/** The visibility's movement since the last run, beside the visibility. */
+/** The visibility's movement since the last run. */
 const CHANGE_COLUMN: DataTableColumn = {
   key: 'change',
   label: 'Change',
@@ -390,15 +395,44 @@ const CHANGE_COLUMN: DataTableColumn = {
   kind: 'number',
 };
 
+/**
+ * The brands named, owned citations and cited sites come last and hide first
+ * (the last first) where the frame is too narrow, then Web search and Sentiment.
+ */
+const MARK_COLUMNS: readonly DataTableColumn[] = [
+  {
+    key: 'mentions',
+    label: 'Mentions',
+    width: 'status',
+    priority: 'low',
+    hint: "The brands named in this prompt's answers: yours and your competitors'.",
+  },
+  {
+    key: 'citations',
+    label: 'Citations',
+    width: 'figure',
+    kind: 'number',
+    priority: 'low',
+    hint: "The share of this prompt's answers that cited one of your pages.",
+  },
+  {
+    key: 'sources',
+    label: 'Sources',
+    width: 'status',
+    priority: 'low',
+    hint: "The sites this prompt's answers cited, most citations first.",
+  },
+];
+
 function measuredColumnsFor({
   compared,
   shelf,
 }: Readonly<{ compared: boolean; shelf: boolean }>): readonly DataTableColumn[] {
   const visibility = shelf ? { ...VISIBILITY_COLUMN, hint: SHELF_HINT } : VISIBILITY_COLUMN;
-  return [visibility, ...(compared ? [CHANGE_COLUMN] : []), ...MEASURED_COLUMNS];
+  return [visibility, ...FIGURE_COLUMNS, ...(compared ? [CHANGE_COLUMN] : []), ...MARK_COLUMNS];
 }
 
-/** A prompt's measured visibility, and its movement since the last run. */
+/** A prompt's measured figures, its movement since the last run, then its marks. */
 function MeasuredCells({
   measurement,
   compared,
@@ -408,6 +442,7 @@ function MeasuredCells({
       <TableCell numeric>
         {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
       </TableCell>
+      <FigureCells measurement={measurement} />
       {compared ? (
         <TableCell numeric>
           <ChangeValue change={measurement?.change} />
@@ -436,17 +471,14 @@ function MeasuredCells({
           <Absence state="not_measured" />
         )}
       </TableCell>
-      <TableCell numeric>
-        {measurement?.position == null ? (
-          <Absence state="not_measured" />
-        ) : (
-          <span
-            title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
-          >
-            {formatPositionExact(measurement.position)}
-          </span>
-        )}
-      </TableCell>
+    </>
+  );
+}
+
+/** Share of voice, sentiment, web search and average position. */
+function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
+  return (
+    <>
       <TableCell numeric>
         {measurement ? (
           (measured(formatRate(measurement.shareOfVoice)) ?? (
@@ -461,6 +493,17 @@ function MeasuredCells({
       </TableCell>
       <TableCell numeric>
         <WebSearchValue value={measurement?.webSearch} />
+      </TableCell>
+      <TableCell numeric>
+        {measurement?.position == null ? (
+          <Absence state="not_measured" />
+        ) : (
+          <span
+            title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
+          >
+            {formatPositionExact(measurement.position)}
+          </span>
+        )}
       </TableCell>
     </>
   );

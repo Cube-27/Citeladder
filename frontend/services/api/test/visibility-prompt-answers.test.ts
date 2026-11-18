@@ -64,7 +64,12 @@ async function measuredPrompt() {
     auditId: late,
     promptId,
     engine: 'claude',
-    analysis: { competitorMentions: ['Globex'] },
+    // Offsets tie; the stored first-named value is the answer, never re-derived.
+    analysis: {
+      competitorMentions: ['Globex', 'Initech'],
+      mentionOffsets: { Globex: 5, Initech: 5 },
+      firstNamed: { kind: 'competitor', name: 'Initech' },
+    },
   });
   const overview = await answer(tenant, {
     auditId: late,
@@ -108,11 +113,17 @@ describe('GET /projects/{project_id}/prompts/{prompt_id}/executions', () => {
       ],
       brand_mentioned: true,
       position: 2,
+      // Analysed before first-named was derived: unavailable, not "none".
+      first_named: { kind: 'unavailable' },
       cited: true,
       search: 'used',
     });
     expect(rows.get(unnamed)).toMatchObject({
-      brands: [{ kind: 'competitor', name: 'Globex' }],
+      brands: [
+        { kind: 'competitor', name: 'Globex' },
+        { kind: 'competitor', name: 'Initech' },
+      ],
+      first_named: { kind: 'competitor', name: 'Initech' },
       brand_mentioned: false,
       position: null,
       cited: false,

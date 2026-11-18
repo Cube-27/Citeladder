@@ -24,6 +24,7 @@ import {
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
 import { storedAnswerFormats } from '../analysis/answer-formats.ts';
+import { storedFirstNamed } from '../analysis/win-rate.ts';
 import { groupBy } from '../lists.ts';
 import { scopedPrompt } from '../prompts/prompts.ts';
 import { compareText } from '../text-order.ts';
@@ -104,6 +105,8 @@ export async function getPromptAnswers(
       'ra.answer_format_state',
       'ra.answer_formats',
       'ra.in_text_link_count',
+      'ra.first_named_kind',
+      'ra.first_named_name',
       utcTextOf(sql.ref('a.completed_at')).as('run_at'),
     ])
     .orderBy('a.completed_at', 'desc')
@@ -131,6 +134,7 @@ export async function getPromptAnswers(
       run_at: wireUtc(row.run_at),
       logical_engine: row.logical_engine,
       brands: brands.get(row.id) ?? [],
+      first_named: storedFirstNamed(row),
       brand_mentioned: row.brand_mentioned,
       position:
         row.brand_mentioned && row.avg_position !== null ? Math.round(row.avg_position) : null,
