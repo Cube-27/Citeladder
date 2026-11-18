@@ -29,12 +29,14 @@ export const TEXT_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
  * The shapes a read's loading state takes: the shape of the page part it
  * stands for, never a stack of text lines. A table's `desktopOnly` columns
  * (its last ones) leave below the `desktop` width, as the loaded table's do;
- * `tagRows` are the fact rows that show a tag.
+ * `tagRows` are the fact rows that show a tag; a `keyed` chart draws its key
+ * above the plot and its event key and caption under it, as a line chart over
+ * time does.
  */
 export type LoadingShape =
   | Readonly<{ kind: 'table'; columns?: number; desktopOnly?: number }>
   | Readonly<{ kind: 'figures'; count?: number }>
-  | Readonly<{ kind: 'chart'; height?: ChartHeight }>
+  | Readonly<{ kind: 'chart'; height?: ChartHeight; keyed?: boolean }>
   | Readonly<{ kind: 'facts'; rows?: number; tagRows?: readonly number[] }>
   | Readonly<{ kind: 'list'; rows?: number }>
   | Readonly<{ kind: 'thread' }>;
@@ -52,8 +54,10 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
       return <TableBlocks columns={shape.columns} desktopOnly={shape.desktopOnly} />;
     case 'figures':
       return <FigureBlocks count={shape.count} />;
-    case 'chart':
-      return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+    case 'chart': {
+      const plot = <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+      return shape.keyed ? <KeyedChartBlocks plot={plot} /> : plot;
+    }
     case 'facts':
       return <FactBlocks rows={shape.rows} tagRows={shape.tagRows} />;
     case 'list':
@@ -68,6 +72,29 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
 }
 
 const range = (count: number) => Array.from({ length: count }, (_, index) => index);
+
+/** One caption line: the caption's line height, a block inside. */
+function CaptionLine({ width }: Readonly<{ width: string }>) {
+  return (
+    <span className="type-caption flex h-lh items-center">
+      <SkeletonBlock className={width} />
+    </span>
+  );
+}
+
+/** A line chart over time: its key, the plot, its event key, then the caption under it. */
+function KeyedChartBlocks({ plot }: Readonly<{ plot: ReactNode }>) {
+  return (
+    <div className="grid gap-[var(--compact-gap)]">
+      <div className="flex min-w-0 flex-col gap-4">
+        <CaptionLine width="w-48" />
+        {plot}
+        <CaptionLine width="w-3/5" />
+      </div>
+      <CaptionLine width="w-2/5" />
+    </div>
+  );
+}
 
 /** A card's title: one 16×160 block. */
 function TitleBlock() {

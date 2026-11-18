@@ -6,7 +6,6 @@ import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
-import { LineChartSkeleton } from '@/components/ui/loading-parts';
 import { StepChart, type TrendEvent } from '@/components/ui/step-chart';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
@@ -258,7 +257,14 @@ type TrendBodyProps = Readonly<{
 /** The failed read, the loading chart, no runs in the window, or the line chart. */
 function TrendBody({ query, ...chart }: TrendBodyProps) {
   // No data yet is loading, never an empty chart; retained data stays while it refetches.
-  if (query.isPending) return <LineChartSkeleton label="Loading the history…" />;
+  if (query.isPending)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading the history…"
+        shape={{ kind: 'chart', keyed: true }}
+      />
+    );
   if (query.isError)
     return (
       <Notice
