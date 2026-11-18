@@ -47,13 +47,12 @@ function itemTypes(node: Record<string, unknown>, found: Set<string>, depth = 0)
   }
 }
 
-/** Distinct link targets written into the answer's own text, outside images and ads. */
+/** Distinct link targets written into the answer's prose, outside format cards and ads. */
 function inTextLinks(page: Record<string, unknown>): number {
   const urls = new Set<string>();
   for (const item of items(page)) {
     const type = typeof item.type === 'string' ? item.type : '';
-    if (ADS.has(type) || FORMAT_OF.get(type) === 'image' || typeof item.markdown !== 'string')
-      continue;
+    if (ADS.has(type) || FORMAT_OF.has(type) || typeof item.markdown !== 'string') continue;
     for (const [, target = ''] of item.markdown.matchAll(LINK)) {
       const url = citationIdentity(target).canonical_url;
       if (url) urls.add(url);

@@ -48,6 +48,7 @@
     "audit_comparison_baselines": ["src/visibility/baselines.ts"],
     "audit_engine_snapshots": ["src/audits/creation.ts", "src/audits/repair.ts"],
     "audit_events": ["src/audits/state.ts"],
+    "audit_fanout_terms": ["src/analysis/fanout-terms.ts"],
     "audit_prompt_snapshots": ["src/audits/creation.ts", "src/audits/repair.ts"],
     "audit_schedules": [
       "src/audits/schedules.ts",

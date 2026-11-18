@@ -87,7 +87,7 @@ describe('answer formats at analysis', () => {
         answer_format_state: 'observed',
         // The ad's nested product block is a paid placement, never a format.
         answer_formats: ['map', 'comparison', 'image'],
-        // acme.example/agencies (tracking stripped) and rival.example/pricing once; image links skipped.
+        // acme.example/agencies (tracking stripped) and rival.example/pricing once; card links skipped.
         in_text_link_count: 2,
         read: { kind: 'observed', formats: ['map', 'comparison', 'image'], in_text_links: 2 },
       },

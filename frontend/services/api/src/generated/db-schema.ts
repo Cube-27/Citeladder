@@ -602,6 +602,20 @@ export interface AuditEvents {
   workspace_id: string;
 }
 
+export interface AuditFanoutTerms {
+  analyzer_version: string;
+  audit_id: string;
+  created_at: Timestamp;
+  id: string;
+  previous_audit_id: string | null;
+  project_id: string;
+  source_analysis_ids: Json;
+  terms: Json;
+  total_searches: number;
+  unreported_engines: string[];
+  workspace_id: string;
+}
+
 export interface AuditPromptSnapshots {
   audit_id: string;
   buyer_stage: string;
@@ -2697,6 +2711,8 @@ export interface ReferralEvents {
 export interface ResponseAnalyses {
   ads_parser_version: string | null;
   analyzer_version: string;
+  answer_format_state: string | null;
+  answer_formats: string[] | null;
   artifact_id: string;
   audit_id: string;
   avg_position: number | null;
@@ -2714,6 +2730,7 @@ export interface ResponseAnalyses {
   first_named_kind: string | null;
   first_named_name: string | null;
   id: string;
+  in_text_link_count: number | null;
   logical_engine: string;
   owned_citation_count: number;
   owned_domain_cited: boolean;
@@ -3719,6 +3736,7 @@ export interface DB {
   audit_comparison_baselines: AuditComparisonBaselines;
   audit_engine_snapshots: AuditEngineSnapshots;
   audit_events: AuditEvents;
+  audit_fanout_terms: AuditFanoutTerms;
   audit_prompt_snapshots: AuditPromptSnapshots;
   audit_schedules: AuditSchedules;
   audit_source_aggregates: AuditSourceAggregates;
