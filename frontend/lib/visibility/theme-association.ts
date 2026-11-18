@@ -13,7 +13,7 @@ export type ThemeCell =
   | { kind: 'too_few'; classified: number }
   | { kind: 'share'; share: number; mentions: number };
 
-export type ThemeMapRow = { name: string; isBrand: boolean; cells: ThemeCell[] };
+type ThemeMapRow = { name: string; isBrand: boolean; cells: ThemeCell[] };
 
 export type ThemeMap = {
   themes: string[];
