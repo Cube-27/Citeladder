@@ -11,7 +11,7 @@ import {
 import { Absence } from '@/components/ui/absence';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { availabilityLabel } from '@/lib/format';
+import { absenceOf } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** A heat tint from 0 (low) to 1 (high): the accent washed in up to half strength, as `HeatValue`. */
@@ -60,11 +60,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     style={{ backgroundImage: HATCH }}
                   >
                     <i className={textRole('caption')}>
-                      {cell.label === availabilityLabel('not_measured') ? (
-                        <Absence state="not_measured" />
-                      ) : (
-                        cell.label
-                      )}
+                      <Absence state={absenceOf(cell.label) ?? 'not_measured'} label={cell.label} />
                     </i>
                   </div>
                 ) : (

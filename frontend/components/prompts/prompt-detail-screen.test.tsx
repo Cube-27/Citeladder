@@ -224,8 +224,8 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     );
   expect(rows).toEqual([
     ['#2', 'Cited', 'Yes', 'ShoppingComparison'],
-    ['Not named', '–Not cited', 'No', 'None'],
-    ['Not named', '–Not cited', 'Not reported', 'Not applicable'],
+    ['—Not named', '—Not cited', 'No', '—None'],
+    ['—Not named', '—Not cited', '—Not reported', '—Not applicable'],
   ]);
   const bold = [...table.querySelectorAll('tbody strong')].map((name) => name.textContent);
   expect(bold).toEqual(['Acme, named first']);
@@ -405,7 +405,7 @@ it('reads the market from the address and keeps a run without answers unavailabl
     [expect.stringMatching(/^Mar 16, 2026/), '100.0%', '50.0%'],
     [
       expect.stringMatching(/^Mar 9, 2026/),
-      'No successful answer',
+      '—No successful answer',
       // No answer to cite from: unavailable, not unmeasured like the run below.
       expect.stringMatching(/Unavailable$/),
     ],

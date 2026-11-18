@@ -309,7 +309,10 @@ describe('Internal links', () => {
     expect(await screen.findByText('Anchor 0')).toBeInTheDocument();
     // No Action yet reads as an absence, never a blank cell.
     const firstRow = screen.getByRole('row', { name: /Anchor 0/ });
-    expect(within(firstRow).getByText('No Action yet')).toHaveAttribute('data-absence', 'not_set');
+    expect(within(firstRow).getByText('No Action yet').closest('[data-absence]')).toHaveAttribute(
+      'data-absence',
+      'not_set',
+    );
     // The tab's own action and its one export sit in its filter bar, not the masthead.
     const header = screen.getByRole('banner');
     expect(within(header).queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();

@@ -73,10 +73,7 @@ function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
             </TableCell>
             <TableCell numeric>
               {point.owned_citation_rate === null ? (
-                <Absence
-                  state={point.counts.responses === 0 ? 'unavailable' : 'not_measured'}
-                  narrow
-                />
+                <Absence state={point.counts.responses === 0 ? 'unavailable' : 'not_measured'} />
               ) : (
                 formatPercent(point.owned_citation_rate)
               )}

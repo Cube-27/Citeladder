@@ -79,7 +79,7 @@ describe('performance matrix cells', () => {
       ]),
     ).toEqual([
       ['ChatGPT', 'Acme', 12.3, 12],
-      ['ChatGPT', 'Globex', 'Not run', ''],
+      ['ChatGPT', 'Globex', 'Not run yet', ''],
       ['Gemini', 'Acme', 'Not measured', 3],
       ['Gemini', 'Globex', 'Topic not recorded for this run', ''],
     ]);

@@ -20,8 +20,6 @@ export type ValueProps = Readonly<{
   absent?: DataAvailabilityState;
   /** The absence's word, when the state's own word is not the reader's. */
   absentLabel?: string;
-  /** A narrow cell: the absence is an en dash, its word in a tooltip. */
-  narrow?: boolean;
   loading?: boolean;
   text?: ValueText;
   className?: string;
@@ -38,7 +36,6 @@ export function Value({
   value,
   absent = 'not_measured',
   absentLabel,
-  narrow = false,
   loading = false,
   text = 'body',
   className,
@@ -53,7 +50,7 @@ export function Value({
   if (value === null)
     return (
       <span className={slot}>
-        <Absence state={absent} label={absentLabel} narrow={narrow} />
+        <Absence state={absent} label={absentLabel} />
       </span>
     );
   return (

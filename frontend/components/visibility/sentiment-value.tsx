@@ -2,6 +2,7 @@ import type { NetSentiment } from '@citeladder/contracts';
 
 import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
+import { availabilityLabel } from '@/lib/format';
 import { NOT_NAMED, sentimentReading } from '@/lib/visibility/perception';
 
 /**
@@ -10,7 +11,7 @@ import { NOT_NAMED, sentimentReading } from '@/lib/visibility/perception';
  */
 export function SentimentValue({
   sentiment,
-  tooFew = 'Too few classified',
+  tooFew = `${availabilityLabel('too_few')} classified`,
   showCount = true,
 }: Readonly<{ sentiment: NetSentiment | null | undefined; tooFew?: string; showCount?: boolean }>) {
   const reading = sentimentReading(sentiment);
@@ -22,7 +23,7 @@ export function SentimentValue({
     case 'too_few':
       return (
         <Absence
-          state="unavailable"
+          state="too_few"
           label={tooFew}
           reason={`Shows from ${reading.minimum} classified mentions; ${reading.classified} so far.`}
         />

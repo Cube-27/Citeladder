@@ -13,6 +13,7 @@ import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-gate';
 import { selectionPageState } from '@/components/visibility/selection-page';
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
+import { availabilityLabel } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
@@ -105,7 +106,7 @@ const ACCURACY_MISSING: Record<Exclude<AccuracyResponse['state'], 'value'>, stri
   no_facts: 'No confirmed facts',
   no_claims: 'No claims',
   pending: 'Checking',
-  unavailable: 'Unavailable',
+  unavailable: availabilityLabel('unavailable'),
 };
 
 /** The pilot's contradicted claims on the Brand tab, opening the Fact-checking tab. */

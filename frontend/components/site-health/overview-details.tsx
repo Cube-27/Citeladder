@@ -28,7 +28,7 @@ import {
 import { ICONS } from '@/lib/icons';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
-import { formatCount, formatPercent, pluralCount } from '@/lib/format';
+import { availabilityLabel, formatCount, formatPercent, pluralCount } from '@/lib/format';
 
 /**
  * A measurement state in sentence case ("Limited evidence"); the shared
@@ -39,7 +39,7 @@ const MEASUREMENT_LABELS: Record<string, string> = {
   limited_evidence: 'Limited evidence',
   not_measured: 'Not checked',
   excluded: 'Excluded',
-  not_applicable: 'Not applicable',
+  not_applicable: availabilityLabel('not_applicable'),
 };
 
 function measurementLabel(state: string): string {
@@ -47,23 +47,21 @@ function measurementLabel(state: string): string {
 }
 
 /**
- * Why a pillar has no score: no check applies to the site, or how far it was
- * measured; one never measured is the Absence dash.
+ * A pillar with no score is the Absence dash, named for why: no check applies
+ * to the site, or how far it was measured.
  */
 function Unscored({
   dimension,
 }: Readonly<{ dimension: SiteHealthOverview['aeo_dimensions'][number] }>) {
-  let label: string;
-  if (dimension.dimension_applicability === 'not_applicable') label = 'Not applicable';
-  else if (dimension.reason === 'measured_at_site_scope') label = 'Site-scoped evidence';
-  else if (dimension.dimension_measurement_state === 'not_measured')
+  if (dimension.dimension_applicability === 'not_applicable')
+    return <Absence state="not_applicable" />;
+  if (dimension.dimension_measurement_state === 'not_measured')
     return <Absence state="not_measured" />;
-  else label = measurementLabel(dimension.dimension_measurement_state);
-  return (
-    <ClampText lines={1} className="type-caption">
-      {label}
-    </ClampText>
-  );
+  const label =
+    dimension.reason === 'measured_at_site_scope'
+      ? 'Site-scoped evidence'
+      : measurementLabel(dimension.dimension_measurement_state);
+  return <Absence state="unavailable" label={label} />;
 }
 
 export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>) {
@@ -224,9 +222,7 @@ function WebFundamentalsCard({
             {data.areas.map((area) => (
               <Inline as="li" key={area.key} className={ledgerItemClasses('justify-between')}>
                 <span className={textRole('body', 'text-ink-2 capitalize')}>{area.key}</span>
-                <StatusMark variant="status" value={measurementTone(area.state)}>
-                  {measurementLabel(area.state)}
-                </StatusMark>
+                <MeasurementMark state={area.state} />
               </Inline>
             ))}
           </ul>
@@ -346,6 +342,17 @@ function measurementTone(state: string): 'success' | 'warning' | 'info' {
   return 'info';
 }
 
+/** An area's measurement badge; never checked or not applicable is the Absence dash. */
+function MeasurementMark({ state }: Readonly<{ state: string }>) {
+  if (state === 'not_measured' || state === 'not_applicable')
+    return <Absence state={state} label={measurementLabel(state)} />;
+  return (
+    <StatusMark variant="status" value={measurementTone(state)}>
+      {measurementLabel(state)}
+    </StatusMark>
+  );
+}
+
 function issueHref(issue: SiteHealthOverview['top_issues'][number]): string {
   const params = new URLSearchParams({ rule: issue.rule_id });
   // The tab the rule is listed under, so the filtered list is the one on screen.
@@ -385,11 +392,7 @@ function WebFundamentalsDrawer({
                   {formatCount(area.missing_count)} missing
                 </>
               }
-              actions={
-                <StatusMark variant="status" value={measurementTone(area.state)}>
-                  {measurementLabel(area.state)}
-                </StatusMark>
-              }
+              actions={<MeasurementMark state={area.state} />}
             />
             <Stack>
               {area.top_findings.length === 0 ? (

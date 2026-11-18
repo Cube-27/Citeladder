@@ -164,7 +164,7 @@ function answered({ counts }: Outcome): ReactNode {
     return (
       <>
         {formatCount(counts.responses)}/
-        <Absence state="unavailable" label="Asked count not recorded" narrow />
+        <Absence state="unavailable" label="Asked count not recorded" />
       </>
     );
   return `${formatCount(counts.responses)}/${formatCount(counts.expected)}`;
@@ -176,7 +176,7 @@ function StateSum({
   keys,
 }: Readonly<{ outcome: Outcome; keys: readonly (keyof AnswerStates)[] }>) {
   const states = outcome.answer_states;
-  if (!states) return <Absence state="unavailable" label="No answer" narrow />;
+  if (!states) return <Absence state="unavailable" label="No answer" />;
   return formatCount(keys.reduce((total, key) => total + states[key], 0));
 }
 

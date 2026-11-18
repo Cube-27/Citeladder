@@ -186,7 +186,7 @@ describe('PromptBuilder', () => {
     );
     const net = screen.getByRole('button', { name: (name) => name.startsWith(OFFERING) });
     const mats = screen.getByRole('button', { name: /^Hitting mats/ });
-    expect(net).toHaveTextContent(`${OFFERING}Not set`);
+    expect(net).toHaveTextContent(`${OFFERING}—Not set`);
     expect(screen.queryByRole('group', { name: 'Who buys it' })).not.toBeInTheDocument();
 
     net.focus();

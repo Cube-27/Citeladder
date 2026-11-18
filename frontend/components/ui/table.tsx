@@ -18,7 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { availabilityLabel, formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
+import { absenceOf, formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -222,9 +222,10 @@ const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
     desktopOnly && desktopOnlyClasses,
   );
 
-/** A formatter's not-measured word prints as the Absence mark, not the word. */
+/** A formatter's absence word prints as the Absence mark, not the word. */
 function CellContent({ children, numeric }: Readonly<{ children: ReactNode; numeric?: boolean }>) {
-  if (children === availabilityLabel('not_measured')) return <Absence state="not_measured" />;
+  const absent = absenceOf(children);
+  if (absent) return <Absence state={absent} />;
   return !numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children;
 }
 

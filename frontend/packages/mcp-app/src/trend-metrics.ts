@@ -1,4 +1,5 @@
 import type { VisibilityTrendPoint } from '@citeladder/contracts/visibility-trends';
+import { availabilityLabel } from '@/lib/format';
 import { appPolicy } from './config';
 
 export type TrendMetric = (typeof appPolicy.metrics)[number]['value'];
@@ -40,8 +41,8 @@ export const trendGap = (
   competitor: string | null,
 ) =>
   metric === 'win_rate' && rowOf(point, competitor)?.win_answers === 0
-    ? 'Not applicable'
-    : 'Unavailable';
+    ? availabilityLabel('not_applicable')
+    : availabilityLabel('unavailable');
 
 /**
  * One point's persisted value for the metric: the brand's own headline fields,

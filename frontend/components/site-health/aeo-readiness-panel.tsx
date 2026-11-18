@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/workspace';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatCount, formatPercent, pluralCount } from '@/lib/format';
+import { type DataAvailabilityState, formatCount, formatPercent, pluralCount } from '@/lib/format';
 
 function pageLabel(url: string) {
   try {
@@ -35,14 +35,12 @@ function pageLabel(url: string) {
   }
 }
 
+type DimensionBand = 'Critical' | 'Needs work' | 'Nearly there' | 'Passing' | 'Excluded';
+
+/** A band, or the absence a pillar without one prints as the Absence dash. */
 type DimensionState =
-  | 'Critical'
-  | 'Needs work'
-  | 'Nearly there'
-  | 'Passing'
-  | 'No score'
-  | 'Not applicable'
-  | 'Excluded';
+  | DimensionBand
+  | Extract<DataAvailabilityState, 'not_applicable' | 'not_measured'>;
 
 /**
  * Say how the pillar SCORED, not whether any single check failed.
@@ -54,9 +52,9 @@ type DimensionState =
  * number can never contradict each other.
  */
 function dimensionState(dimension: ReadinessDimension): DimensionState {
-  if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
+  if (dimension.dimension_applicability === 'not_applicable') return 'not_applicable';
   if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
-  if (dimension.score === null) return 'No score';
+  if (dimension.score === null) return 'not_measured';
   // Round prioritization bands for display. Passing below still requires an
   // actual perfect score over a complete measurement.
   const band = scoreBand(Math.round(dimension.score));
@@ -99,16 +97,13 @@ function bandReason(dimension: ReadinessDimension): string | null {
 }
 
 /**
- * Each band its own tone, so "Nearly there" never reads as "Needs work". A
- * pillar with no score has no band: it takes the neutral badge.
+ * Each band its own tone, so "Nearly there" never reads as "Needs work".
  */
-const DIMENSION_TONES: Record<DimensionState, StatusTone> = {
+const DIMENSION_TONES: Record<DimensionBand, StatusTone> = {
   Critical: 'negative',
   'Needs work': 'warning',
   'Nearly there': 'info',
   Passing: 'positive',
-  'No score': 'neutral',
-  'Not applicable': 'neutral',
   Excluded: 'neutral',
 };
 
@@ -220,7 +215,11 @@ function ReadinessLedger({
             <TableCell>
               {/* Reads "Nearly there: 1 check unresolved". */}
               <Inline>
-                <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
+                {state === 'not_applicable' || state === 'not_measured' ? (
+                  <Absence state={state} />
+                ) : (
+                  <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
+                )}
                 {reason ? <ClampText className="type-caption">{reason}</ClampText> : null}
               </Inline>
             </TableCell>

@@ -85,9 +85,9 @@ function namedFirst(first: ExecutionEvidence['first_named']) {
         </Inline>
       );
     case 'none':
-      return 'No tracked brand';
+      return <Absence state="none" label="No tracked brand" />;
     case 'unavailable':
-      return 'Unavailable';
+      return <Absence state="unavailable" />;
     default: {
       const unreachable: never = first;
       return unreachable;

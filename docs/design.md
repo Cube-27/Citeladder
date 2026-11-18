@@ -47,7 +47,7 @@ are contracts, never decoration:
 - **Dashed** (`edge-draft`, the `draft` Tag, DraftSheet) is drafted: written
   by a model and not yet accepted. Accepting it sets the ink: the dashed edge
   turns solid over 200ms.
-- **Absent** is the Absence word in `ink-2`; a chart's gap is a `well` band.
+- **Absent** is the Absence dash `—` in `ink-2`; a chart's gap is a `well` band.
 - **No line** is not applicable.
 - A real zero is a printed `0` in full ink: a measurement, never greyed.
 
@@ -430,28 +430,33 @@ its own spacing, size or radius on them.
   (`input-modality.ts`); inside a clipped row it is drawn 2px in.
 - **Targets** are at least 24×24 everywhere.
 
-**Data states.** Use the state actually known; never a fabricated zero, and
-punctuation alone only as Absence's not-measured mark below. An observed zero is a Value: `0` in full ink.
+**Data states.** Use the state actually known; never a fabricated zero. An
+observed zero is a Value: `0` in full ink. The kinds of absence and their
+words have one owner, `availabilityLabels` in `lib/format.ts`:
 
-| Label              | Meaning                                        |
+| Word               | Meaning                                        |
 | ------------------ | ---------------------------------------------- |
 | **Not measured**   | No measurement exists                          |
-| **Not run**        | The workflow has not started                   |
+| **Not run yet**    | The workflow has not started                   |
 | **Not set**        | A user-configurable fact is missing            |
 | **Not connected**  | The source that would supply it is not set up  |
 | **Unavailable**    | The evidence or provider cannot supply a value |
 | **Not applicable** | The field does not apply                       |
-| **Excluded**       | Deliberately left out (a de-duplicated alias)  |
-| **Unknown**        | The system cannot determine the state          |
+| **Too few**        | Below the minimum a reading needs              |
+| **None**           | Observed, and there is nothing to list         |
 
 **Value** prints every measured value, and **Absence** every missing one, in
-the same line box. An absence is its word in `ink-2`, printed by Absence
-and nowhere else; not measured is a muted em dash instead, the word kept in
-its tooltip and accessible name (owner 2026-11-18), and a sentence or heading
-says it in plain words without the phrase; not applicable is a plain `n/a` in `ink-2`;
-excluded is a tag with the word struck through. A stale value is `ink-2`
-with its "as of" date; a conflicting one carries a `≠` in the warning tone.
-A state shared by a section or column is said once, on its header.
+the same line box. Any absent value in a value position (table cell, figure,
+badge, meter, chart key) is one muted em dash `—` in `ink-2`, whatever its
+kind. The word, or a more specific reason, is its tooltip and accessible
+name, so the kinds stay distinct for anyone who asks (owner 2026-11-18). The
+reason: a word repeated at every missing figure crowds out the real figures
+and reads as noise (#112). Words stay only for states the reader can act on
+("Not connected" beside its Connect action, "Disabled", "Beyond the plan
+limit", "Not included") and for sentence-level empty states, which say it in
+plain words. Excluded is a tag with the word struck through. A stale value is
+`ink-2` with its "as of" date; a conflicting one carries a `≠` in the warning
+tone. A state shared by a section or column is said once, on its header.
 
 ## Do's and Don'ts
 

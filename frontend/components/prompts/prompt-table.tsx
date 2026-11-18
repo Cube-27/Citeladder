@@ -413,7 +413,7 @@ function measuredColumnsFor({
 const NOT_MEASURED = <Absence state="not_measured" />;
 
 /** Measured with no completed answer: unavailable, never "not measured" or zero. */
-const NO_ANSWERS = <Absence state="unavailable" label="No completed answers" narrow />;
+const NO_ANSWERS = <Absence state="unavailable" label="No completed answers" />;
 
 /** A rate: unmeasured without a measurement, unavailable when the measurement had no answers. */
 function RateValue({

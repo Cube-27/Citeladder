@@ -726,7 +726,7 @@ describe('AI Traffic state and navigation', () => {
       'Sources: Crawlers · Referrals · Visibility · Website',
     );
     expect(record('Crawler requests')).toBeUndefined();
-    expect(record('First and last observations')).toBe('None');
+    expect(record('First and last observations')).toBe('—None');
     mswServer.use(
       http.get(
         root + '/ai-traffic/pages/' + page.url_hash,

@@ -18,7 +18,7 @@ import {
 import { InfoHint } from '@/components/ui/info-hint';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { TextLink } from '@/components/ui/text-link';
-import { availabilityLabel } from '@/lib/format';
+import { absenceOf, availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type FigureValue =
@@ -287,9 +287,13 @@ function FigureValue({ segment }: FigurePart) {
     );
   }
   const { value } = segment;
-  // A formatter's not-measured word is an absence too, never printed as a value.
-  if (value == null || value === availabilityLabel('not_measured'))
-    return <Absence state="not_measured" label={segment.missingLabel} />;
+  // A formatter's absence word is an absence too, never printed as a value.
+  if (value == null) {
+    const state = absenceOf(segment.missingLabel) ?? 'not_measured';
+    return <Absence state={state} label={segment.missingLabel} />;
+  }
+  const absent = absenceOf(value);
+  if (absent) return <Absence state={absent} />;
   if (typeof value === 'string' || typeof value === 'number')
     return <span className={VALUE_TEXT}>{String(value)}</span>;
   return <div className={cn(VALUE_TEXT, 'flex min-w-0 items-center gap-2')}>{value}</div>;
@@ -324,7 +328,7 @@ function comparisonText(segment: FigureSegment): ReactNode {
     <span data-figure-comparison="">
       {comparison.label}:{' '}
       <span className="tabular-nums">
-        {comparison.value ?? segment.missingLabel ?? 'Not measured'}
+        {comparison.value ?? segment.missingLabel ?? availabilityLabel('not_measured')}
       </span>
     </span>
   );

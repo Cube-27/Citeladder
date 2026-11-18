@@ -49,22 +49,22 @@ const METERED_COLUMNS: readonly DataTableColumn[] = [
 type Figures = Readonly<{ used: ReactNode; allowance: ReactNode; remaining: ReactNode }>;
 
 const count = (value: number | null) =>
-  value === null ? <Absence state="not_measured" narrow /> : formatCount(value);
+  value === null ? <Absence state="not_measured" /> : formatCount(value);
 
 /** The row's three figures, by `limit_state`. */
 function figuresOf(item: UsageItem): Figures {
   switch (item.limit_state) {
     case 'unknown':
       return {
-        used: <Absence state="unavailable" narrow />,
+        used: <Absence state="unavailable" />,
         allowance: <Absence state="unavailable" label="Not available" />,
-        remaining: <Absence state="unavailable" narrow />,
+        remaining: <Absence state="unavailable" />,
       };
     case 'unlimited':
       return {
         used: count(item.consumed),
         allowance: 'Unlimited',
-        remaining: <Absence state="not_applicable" narrow />,
+        remaining: <Absence state="not_applicable" />,
       };
     case 'finite': {
       // `finite`: the backend guarantees every numeric aggregate is present.
@@ -74,8 +74,9 @@ function figuresOf(item: UsageItem): Figures {
       if (allowance === 0 && consumed === 0)
         return {
           used: formatCount(0),
-          allowance: <Absence state="not_applicable" label="Not included" />,
-          remaining: <Absence state="not_applicable" narrow />,
+          // A plan fact the reader can act on (upgrade), so it stays a word.
+          allowance: 'Not included',
+          remaining: <Absence state="not_applicable" />,
         };
       return {
         used: formatCount(consumed),
@@ -165,11 +166,11 @@ function UsageBar({
   label,
   unit,
 }: Readonly<{ item: UsageItem; label: string; unit: string }>) {
-  if (item.limit_state === 'unknown') return <Absence state="unavailable" narrow />;
+  if (item.limit_state === 'unknown') return <Absence state="unavailable" />;
   const allowance = item.allowance ?? 0;
   const consumed = item.consumed ?? 0;
   if (item.limit_state === 'unlimited' || (allowance === 0 && consumed === 0))
-    return <Absence state="not_applicable" narrow />;
+    return <Absence state="not_applicable" />;
   return (
     <CellMeter
       label={label}

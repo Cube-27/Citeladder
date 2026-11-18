@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import { formatPercent } from '@/lib/format';
+import { availabilityLabel, formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -59,7 +59,7 @@ function rateStat({
     key,
     label,
     value: rate.value === null ? null : formatPercent(rate.value),
-    missingLabel: 'Unavailable',
+    missingLabel: availabilityLabel('unavailable'),
     sub: (
       <>
         <span className="block">

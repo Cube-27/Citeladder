@@ -28,6 +28,7 @@ import {
   VERDICT_TONE,
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
+import { availabilityLabel } from '@/lib/format';
 import { formatShare } from '@/lib/visibility/perception';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
@@ -175,7 +176,7 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                 key: 'accuracy',
                 label: 'Accuracy',
                 value: formatShare(data.score.accuracy),
-                missingLabel: 'Unavailable',
+                missingLabel: availabilityLabel('unavailable'),
                 sub: (
                   <>
                     Supported of checked ·{' '}

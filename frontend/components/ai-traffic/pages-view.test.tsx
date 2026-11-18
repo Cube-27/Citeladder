@@ -115,15 +115,15 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   expect(partial.textContent).toBe('12');
   const coverageCell = (cells: HTMLElement[]) => cells[4]!.textContent;
   expect(coverageCell(within(row).getAllByRole('cell'))).toBe('Partial');
-  // A missing value is its absence's word, with why on focus.
+  // A missing value is the dash named by its absence's word, with why on focus.
   const missing = within(row).getByRole('button', { name: 'Not connected' });
-  expect(missing.textContent).toBe('Not connected');
+  expect(missing.textContent).toBe('—Not connected');
   focusByKeyboard(missing);
   expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: Not connected');
   await user.keyboard('{Escape}');
-  expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('Unavailable');
+  expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('—Unavailable');
   const second = screen.getByRole('row', { name: /\/second/ });
-  expect(within(second).getAllByRole('cell').at(-1)?.textContent).toBe('0 / Unavailable');
+  expect(within(second).getAllByRole('cell').at(-1)?.textContent).toBe('0 / —Unavailable');
   expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
 });
 
@@ -254,7 +254,7 @@ it('lists each count with its qualifiers when the drawer opens from outside the 
   const record = async (name: string) =>
     (await within(panel).findByText(name, { selector: 'dt' })).nextElementSibling?.textContent;
   expect(await record('Crawler requests')).toBe('3Partial coverageCrawlers');
-  expect(await record('Tracked citations')).toBe('Not connectedVisibility');
+  expect(await record('Tracked citations')).toBe('—Not connectedVisibility');
   expect(within(panel).queryByText(/^Sources:/)).not.toBeInTheDocument();
 });
 

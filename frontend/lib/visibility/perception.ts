@@ -52,7 +52,7 @@ export function sentimentFigureValue(sentiment: NetSentiment | null | undefined)
     reading.kind === 'no_mentions'
       ? NOT_NAMED
       : reading.kind === 'too_few'
-        ? 'Too few classified'
+        ? `${availabilityLabel('too_few')} classified`
         : availabilityLabel('not_measured');
   return { value: reading.kind === 'value' ? reading.net : null, missingLabel };
 }
@@ -104,7 +104,7 @@ export function gatedFigure(
 ): { value: string | null; missingLabel: string } {
   return {
     value: reading.kind === 'value' ? reading.text : null,
-    missingLabel: `Too few ${noun}`,
+    missingLabel: `${availabilityLabel('too_few')} ${noun}`,
   };
 }
 

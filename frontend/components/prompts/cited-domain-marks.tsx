@@ -16,7 +16,7 @@ import { leadingSources } from '@/lib/prompts/filter';
 export function CitedDomainMarks({
   sources,
 }: Readonly<{ sources: readonly CitedDomain[] | null }>) {
-  if (sources === null) return <Absence narrow state="unavailable" label="No completed answers" />;
+  if (sources === null) return <Absence state="unavailable" label="No completed answers" />;
   if (!sources.length) return <Absence state="none" />;
   const { shown, more } = leadingSources(sources);
   return (

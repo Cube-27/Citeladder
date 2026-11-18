@@ -216,11 +216,11 @@ function SignalRow({
 }
 
 function Count({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <Absence state="not_measured" narrow /> : formatCount(value);
+  return value === null ? <Absence state="not_measured" /> : formatCount(value);
 }
 
 function Position({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <Absence state="not_measured" narrow /> : formatMean(value);
+  return value === null ? <Absence state="not_measured" /> : formatMean(value);
 }
 
 /** The persisted CTR, else clicks over impressions; never a guessed zero. */
@@ -230,6 +230,6 @@ function Ctr({ signal }: Readonly<{ signal: DemandSignal }>) {
   const impressions = numericMetric(signal, 'impressions');
   const clicks = numericMetric(signal, 'clicks');
   if (impressions === null || clicks === null || impressions === 0)
-    return <Absence state="not_measured" narrow />;
+    return <Absence state="not_measured" />;
   return formatPercent(clicks / impressions);
 }

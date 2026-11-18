@@ -19,7 +19,7 @@ import {
   PerceptionState,
 } from '@/components/visibility/visibility-perception';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
+import { availabilityLabel, formatDisplayDate } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   coverageLine,
@@ -83,7 +83,7 @@ function Lede({
           ...gatedFigure(shareReading(score[`${key}_share`], score.classified)),
           sub: `${score[key]} of ${score.classified} classified mentions`,
         }
-      : { key, label, value: null, missingLabel: 'Unavailable' };
+      : { key, label, value: null, missingLabel: availabilityLabel('unavailable') };
   const segments: FigureSegment[] = [
     {
       key: 'describing',

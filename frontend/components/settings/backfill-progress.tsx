@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { Absence } from '@/components/ui/absence';
 import { Inline } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -46,7 +47,7 @@ export function BackfillHistory({
 }: Readonly<{ workspaceId: string; connectionId: string }>) {
   const progressQuery = useBackfillProgressQuery(workspaceId, connectionId);
   const progress = progressQuery.data;
-  if (progressQuery.isError) return <span className="text-ink-2">Unavailable</span>;
+  if (progressQuery.isError) return <Absence state="unavailable" />;
   if (!progress) return <Skeleton lines={1} label="Loading history…" />;
   if (progress.state === 'not_started') return <span className="text-ink-2">Not started</span>;
   return <span className="truncate">{progressLabel(progress)}</span>;

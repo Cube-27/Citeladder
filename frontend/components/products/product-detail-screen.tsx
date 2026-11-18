@@ -314,7 +314,7 @@ function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
         return {
           key,
           label,
-          value: cell.kind === 'value' ? cell.text : <MissingValue cell={cell} narrow={false} />,
+          value: cell.kind === 'value' ? cell.text : <MissingValue cell={cell} />,
           sub: cell.note,
           // The definition is a hint on the label, not a paragraph under every figure.
           marker: column ? <InfoHint label={`About ${label}`}>{column.hint}</InfoHint> : undefined,

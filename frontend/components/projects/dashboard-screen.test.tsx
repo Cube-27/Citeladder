@@ -495,7 +495,7 @@ describe('DashboardScreen', () => {
     const rows = section.getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
       'crm for agenciesOpen ActionChatGPT API, Gemini API named Globex, Initech',
-      'best crmNo Action yetChatGPT API named Globex',
+      'best crm—No Action yetChatGPT API named Globex',
     ]);
     expect(section.getByRole('link', { name: 'Open Action for crm for agencies' })).toHaveAttribute(
       'href',

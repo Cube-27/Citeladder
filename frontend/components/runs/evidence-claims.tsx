@@ -1,5 +1,6 @@
 import type { ExecutionClaim } from '@citeladder/contracts/fact-checking';
 
+import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -17,10 +18,9 @@ export function claimHighlights(claims: readonly ExecutionClaim[]): Highlight[] 
   });
 }
 
-const STATE_WORDS: Record<Exclude<ExecutionClaim['status'], 'verdict'>, string> = {
+const STATE_WORDS: Record<Exclude<ExecutionClaim['status'], 'verdict' | 'unavailable'>, string> = {
   low_confidence: 'Low confidence',
   pending: 'Checking…',
-  unavailable: 'Unavailable',
 };
 
 export function VerdictChip({
@@ -32,6 +32,7 @@ export function VerdictChip({
         {VERDICT_LABELS[claim.verdict]}
       </StatusMark>
     );
+  if (claim.status === 'unavailable') return <Absence state="unavailable" />;
   return <Tag>{claim.status === 'verdict' ? 'Unchecked' : STATE_WORDS[claim.status]}</Tag>;
 }
 

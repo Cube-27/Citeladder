@@ -478,7 +478,7 @@ describe('OverviewPanel', () => {
     const table = await screen.findByRole('region', { name: 'AEO readiness by pillar' });
     const scoreOf = (label: string) =>
       within(within(table).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
-    expect(scoreOf('Commerce')).toBe('Not applicable');
+    expect(scoreOf('Commerce')).toBe('—Not applicable');
     expect(scoreOf('Answerability')).toBe('—Not measured');
   });
 

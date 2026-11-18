@@ -918,6 +918,13 @@ owns the library's behavior; Commerce keeps filing its prompts in its own set.
 Source: owner, 15 November 2026, answering "You described the page as a
 library of all prompts", choosing "All sets in one library".
 
+## An absent value is one dash, named by its kind
+
+An absent value in a value position is the muted em dash whatever its kind,
+with the kind named in its tooltip and accessible name; words stay only for
+states a reader can act on and for sentences. [Design](design.md) owns the
+rendering rule (owner, 2026-11-18).
+
 ## The Actions tree's geometry raises the eager CSS budget
 
 The app's eager CSS gzip budget rises from 22,243 B to 22,339 B
