@@ -51,7 +51,7 @@ export function ExecutionsTable({
   const filters = useExecutionFilters(executions);
   const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
     filters.rows.length,
-    filters.key,
+    { resetKey: filters.key, urlKey: 'page' },
   );
   const pageRows = filters.rows.slice(from - 1, to);
   const unmatched: DataTableState | undefined =

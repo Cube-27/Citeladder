@@ -56,7 +56,10 @@ const statusCodec = stringUrlCodec<StatusFilter>(
 /** Active-project run list, status filtering (kept in the URL), launch, and schedule management. */
 export function RunsScreen() {
   const { workspaceId, projectId, project } = useProjectScope();
-  const [statusFilter, setStatusFilter] = useUrlState('status', statusCodec);
+  // Another status lists other runs: it opens on their first page (`RunsTable`).
+  const [statusFilter, setStatusFilter] = useUrlState('status', statusCodec, {
+    clearKeys: ['page'],
+  });
 
   const runsQuery = useQuery({
     ...runsQueries.list({ workspaceId, projectId }),

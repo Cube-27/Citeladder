@@ -111,7 +111,7 @@ export function DemandSignalTable({
 }>) {
   const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
     rows.length,
-    filterKey,
+    { resetKey: filterKey, urlKey: 'page' },
   );
 
   const pageRows = rows.slice(from - 1, to);

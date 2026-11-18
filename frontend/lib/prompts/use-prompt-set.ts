@@ -5,7 +5,7 @@ import { promptsMutations, promptsQueries } from '@/lib/api/prompts';
 import type { PromptSet } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
-import { mainPromptSet, oldestFirst } from './prompt-sets';
+import { libraryOrder, mainPromptSet, rowSetNames } from './prompt-sets';
 
 /**
  * The active project's prompt library (F7): every prompt of every set, with
@@ -25,13 +25,9 @@ export function usePromptSet() {
   const embedded = project.prompt_sets;
   const sets = listQuery.data?.prompt_sets ?? embedded;
   const promptSet: PromptSet | null = mainPromptSet(sets);
-  const ordered = useMemo(() => oldestFirst(sets), [sets]);
+  const ordered = useMemo(() => libraryOrder(sets), [sets]);
   const prompts = useMemo(() => ordered.flatMap((set) => set.prompts), [ordered]);
-  // A row names its set only when there is more than one to tell apart.
-  const setNames: ReadonlyMap<string, string> = useMemo(
-    () => new Map(ordered.length > 1 ? ordered.map((set) => [set.id, set.name]) : []),
-    [ordered],
-  );
+  const setNames = useMemo(() => rowSetNames(sets), [sets]);
   // Commerce measures its prompts as a shelf, never one prompt at a time.
   const commerceSetIds: ReadonlySet<string> = useMemo(
     () => new Set(sets.filter((set) => set.kind === 'commerce').map((set) => set.id)),

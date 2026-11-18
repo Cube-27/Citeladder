@@ -365,6 +365,7 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
   const rows = [...series].reverse();
   const { page, setPage, pageCount, from, to } = useTablePage(rows.length, {
     pageSize: PURPOSE_PAGE_SIZE,
+    urlKey: 'purpose_page',
   });
   return (
     <TitledSection title="Recognized requests by purpose">

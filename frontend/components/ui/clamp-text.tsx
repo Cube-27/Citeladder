@@ -52,7 +52,8 @@ export function useCut(
  * hover and on keyboard focus, and selecting the text copies all of it.
  * Wrapping is for prose and a record's own page, never a row, a fact or a stat.
  *
- * `lines={2}` survives only for a `TableCellLines` title in a three-line row.
+ * `lines={2}` survives only for a `TableCellLines` title in a three-line row,
+ * or a `wrap` title with no caption in a two-line row.
  * `tooltip` overrides the tooltip content, e.g. a full URL behind a path.
  * `rowTitle` marks a table row's title: in the identity column it takes two
  * lines on a phone, and its link is the whole cell (globals.css).

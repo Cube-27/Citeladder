@@ -237,7 +237,7 @@ function LinksTable({
   emptyReason: string;
   onSelect: (id: string) => void;
 }>) {
-  const pagination = useResizableTablePage(links.length);
+  const pagination = useResizableTablePage(links.length, { urlKey: 'links_page' });
   const { pageSize } = pagination;
   const paged = links.slice(pagination.from - 1, pagination.to);
   return (

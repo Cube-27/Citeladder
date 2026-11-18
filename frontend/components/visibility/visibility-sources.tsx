@@ -21,7 +21,13 @@ import {
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import type { SourceTab } from '@/lib/visibility/dashboard';
 import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';
-import { matchesSearch, sortItems, typeSlices, type SortState } from '@/lib/visibility/sources';
+import {
+  matchesSearch,
+  SOURCE_SORT_CODEC,
+  sortItems,
+  typeSlices,
+  type SortState,
+} from '@/lib/visibility/sources';
 import {
   useSourceAnalysis,
   useSourceSeries,
@@ -121,18 +127,18 @@ export function SourcesPanel({
   const gapOnly = useGapOnly(dimension, readNotCited);
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SortState>(null);
+  // The sort is in the address with its table, so another table's sort never applies.
+  const [storedSort, setStoredSort] = useUrlState('source_sort', SOURCE_SORT_CODEC);
+  const sort: SortState = storedSort?.dimension === dimension ? storedSort.sort : null;
   // What the panel was showing last render, so a dimension change can clear the
   // controls that do not carry over -- page three of domains is not page three
   // of URLs, and `editorial` is not a page format. Done during render rather
-  // than in an effect so the table never paints one frame of the old sort
-  // applied to the new dimension.
+  // than in an effect so the table never paints one frame of the old search.
   const [shownDimension, setShownDimension] = useState(dimension);
   if (shownDimension !== dimension) {
     setShownDimension(dimension);
     setPageSize(TABLE_DEFAULT_PAGE_SIZE);
     setSearch('');
-    setSort(null);
   }
 
   // On a domain's own page the publisher is fixed by the route above, so a
@@ -174,11 +180,13 @@ export function SourcesPanel({
   );
 
   const onSort = (column: string) =>
-    setSort((current) =>
-      current?.column === column
-        ? { column, direction: current.direction === 'desc' ? 'asc' : 'desc' }
-        : { column, direction: 'desc' },
-    );
+    setStoredSort({
+      dimension,
+      sort:
+        sort?.column === column
+          ? { column, direction: sort.direction === 'desc' ? 'asc' : 'desc' }
+          : { column, direction: 'desc' },
+    });
 
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({

@@ -116,10 +116,24 @@ it('reads every set as one library and adds to the main brand set, not the newes
     id: COMMERCE,
     name: 'Commerce Buyer Prompts',
     kind: 'commerce',
-    created_at: '2026-06-01T00:00:00Z',
+    // Older than the brand sets, yet listed after them.
+    created_at: '2025-06-01T00:00:00Z',
+  };
+  const HOLIDAY = '66666666-6666-4666-8666-666666666666';
+  const holiday: PromptSet = {
+    ...makeSet([
+      makePrompt({
+        id: '77777777-7777-4777-8777-777777777777',
+        prompt_set_id: HOLIDAY,
+        text: 'Gift running shoes?',
+      }),
+    ]),
+    id: HOLIDAY,
+    name: 'Holiday',
+    created_at: '2026-08-01T00:00:00Z',
   };
   // The API lists the newest set first.
-  vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(makeSetList([commerce, brand]));
+  vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(makeSetList([holiday, brand, commerce]));
   const create = vi.spyOn(promptsApi, 'createPromptSet');
   function Library() {
     const { prompts, setNames } = usePromptSet();
@@ -141,7 +155,7 @@ it('reads every set as one library and adds to the main brand set, not the newes
   );
   await waitFor(() =>
     expect(screen.getByRole('status', { name: 'Library' })).toHaveTextContent(
-      'Best running shoes? (Default prompt set) | Trail shoes under $100? (Commerce Buyer Prompts)',
+      'Best running shoes? (Default prompt set) | Gift running shoes? (Holiday) | Trail shoes under $100? (Commerce Buyer Prompts)',
     ),
   );
   await userEvent.setup().click(screen.getByRole('button', { name: 'Add' }));

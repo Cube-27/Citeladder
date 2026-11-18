@@ -72,7 +72,7 @@ export function DataTableBody({
   // row of its body and draws no line, like any table's last row.
   return (
     <>
-      <TableBody>{children}</TableBody>
+      <TableBody style={rowHeight(rowLines)}>{children}</TableBody>
       {rest > 0 ? (
         <TableBody>
           <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
@@ -141,6 +141,16 @@ const ROW_HEIGHT = {
   2: 'var(--table-row-height-2)',
   3: 'calc(var(--table-row-height-2) + var(--text-body--line-height))',
 } as const satisfies Record<RowLines, string>;
+
+/**
+ * Every row of a table of captioned rows is at least 56, a row without a
+ * caption included, so the rows of one table never differ; a two-line title
+ * grows only its own row.
+ */
+function rowHeight(rowLines: RowLines): CSSProperties | undefined {
+  if (rowLines === 1) return undefined;
+  return { '--table-row-height': ROW_HEIGHT[2] } as CSSProperties;
+}
 
 /** The custom properties a state or spacer cell's height reads: `rows` rows of `rowLines`. */
 function stateFootprint(rows: number, rowLines: RowLines) {

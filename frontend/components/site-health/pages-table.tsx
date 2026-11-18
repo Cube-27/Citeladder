@@ -121,6 +121,7 @@ export function PagesTable({
     <DataTable
       label="Pages"
       columns={pagesColumns(sort, onSortChange)}
+      rowLines={2}
       toolbar={toolbar}
       state={state}
       pager={pager}

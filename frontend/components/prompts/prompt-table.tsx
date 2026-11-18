@@ -120,6 +120,7 @@ export function PromptTable({
   const measuredColumns = measured ? measuredColumnsFor({ compared, shelf }) : [];
   const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, {
     pageSize: PAGE_SIZE,
+    urlKey: 'page',
   });
   const pagedPrompts = prompts.slice(from - 1, to);
   const pageIds = pagedPrompts.map((prompt) => prompt.id);
@@ -173,11 +174,13 @@ export function PromptTable({
             />
           ) : null}
           <TableCell>
-            {/* The question links to its history for the keyboard: one line,
-                its whole text in a tooltip. The caption names the prompt's set
-                when there are several, and says when audits skip the prompt. */}
+            {/* The question links to its history for the keyboard: two lines,
+                or one over a caption, its whole text in a tooltip. The caption
+                names the prompt's set when there are several brand sets, and
+                says when audits skip the prompt. */}
             <TableCellLines
               title
+              wrap
               primary={
                 <TextLink href={promptHistoryHref(prompt.id)} text="inherit" underline="hover">
                   {prompt.text}
@@ -318,7 +321,7 @@ function promptColumns(
   editable: boolean,
 ): DataTableColumn[] {
   const columns: DataTableColumn[] = [
-    { key: 'prompt', label: 'Prompt', kind: 'identity' },
+    { key: 'prompt', label: 'Prompt', kind: 'identity', width: 'reading' },
     { key: 'topic', label: 'Topic', width: 'status' },
     ...measuredColumns,
   ];
@@ -356,7 +359,8 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'mentions',
     label: 'Mentions',
-    width: 'status',
+    // Three marks and a count: a figure's width holds them.
+    width: 'figure',
     hint: "The brands named in this prompt's answers: yours and your competitors'.",
   },
   {
@@ -369,7 +373,7 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'sources',
     label: 'Sources',
-    width: 'status',
+    width: 'figure',
     hint: "The sites this prompt's answers cited, most citations first.",
   },
   {

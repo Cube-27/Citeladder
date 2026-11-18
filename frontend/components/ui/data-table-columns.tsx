@@ -15,6 +15,11 @@ import { textRole } from '@/components/ui/typography';
  */
 const COLUMN_WIDTH = {
   flex: { kind: 'rest' },
+  /**
+   * As `flex`, for text read whole (a prompt): low-priority columns hide
+   * before it narrows under these steps; the table scrolls only under `flex`'s floor.
+   */
+  reading: { kind: 'rest', steps: 86 },
   /** A row's ordinal on the page (#, rank). */
   index: { kind: 'steps', steps: 12 },
   /** A count, a rate or a short figure. */
@@ -50,7 +55,10 @@ const COLUMN_WIDTH = {
   control: { kind: 'steps', steps: 20 },
   /** A row's trailing buttons, up to two (`TableActionsCell`). */
   rowActions: { kind: 'steps', steps: 64 },
-} as const satisfies Record<string, { kind: 'rest' } | { kind: 'steps'; steps: number }>;
+} as const satisfies Record<
+  string,
+  { kind: 'rest'; steps?: number } | { kind: 'steps'; steps: number }
+>;
 
 /** The select-all checkbox column, in spacing steps. */
 const SELECT_STEPS = 10;
@@ -208,13 +216,20 @@ function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
  * The narrowest a column may be: its role's steps (a flexible column the
  * identity minimum), a date's full width, and never less than its head label.
  */
-export function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
+function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
   const role = COLUMN_WIDTH[widthOf(column)];
   const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
   const label = labelFloor(column, edge);
   if (label) parts.push(label);
   return `max(${parts.join(', ')})`;
+}
+
+/** The width the low-priority fit keeps for a column: a `reading` column's reading width, else its floor. */
+export function fitFloor(column: DataTableColumn, edge: ColumnEdge): string {
+  const role = COLUMN_WIDTH[widthOf(column)];
+  const floor = columnFloor(column, edge);
+  return role.kind === 'rest' && 'steps' in role ? `max(${floor}, ${steps(role.steps)})` : floor;
 }
 
 /** Each shown column with its edge: the select column, when present, is the first edge. */
