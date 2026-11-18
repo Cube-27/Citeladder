@@ -16,7 +16,8 @@ import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
-import { suggestionRows } from '../analysis/observed-competitors.ts';
+import { domainMatches } from '../analysis/domains.ts';
+import { lockSuggestions, suggestionRows } from '../analysis/observed-competitors.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -94,8 +95,9 @@ export async function listSuggestions(db: Database, scope: ProjectScope): Promis
     .map(view);
 }
 
-/** The candidate under the transaction's lock, or 404 outside the project. */
+/** The candidate under the transaction's locks, or 404 outside the project. */
 async function lockedCandidate(trx: Database, scope: ProjectScope, candidateId: string) {
+  await lockSuggestions(trx, scope);
   const candidate = await suggestionRows(trx, scope)
     .select(['id', 'name', 'kind', 'domain', 'name_key', 'status'])
     .where('id', '=', candidateId)
@@ -148,12 +150,11 @@ export function acceptSuggestion(
       .orderBy('created_at')
       .orderBy('id')
       .execute();
-    const domain = candidate.domain?.toLowerCase();
+    const { domain } = candidate;
     let competitor = competitors.find(
       (row) =>
         isTracked(candidate.name, [{ name: row.name, aliases: strings.parse(row.aliases) }]) ||
-        (domain !== undefined &&
-          strings.parse(row.domains).some((own) => own.toLowerCase() === domain)),
+        (domain !== null && strings.parse(row.domains).some((own) => domainMatches(domain, own))),
     );
     if (competitor === undefined) {
       if (competitors.length >= MAX_COMPETITORS)

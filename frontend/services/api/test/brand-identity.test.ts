@@ -619,6 +619,11 @@ describe('competitor suggestions', () => {
       method: 'POST',
     });
     expect(reused.body).toMatchObject({ id: existing, name: 'Globex' });
+    const bySubdomain = await suggestion({ name: 'Shop', domain: 'shop.globex.example', auditId });
+    const reusedHost = await call<Competitor>(`/competitor-suggestions/${bySubdomain}/accept`, {
+      method: 'POST',
+    });
+    expect(reusedHost.body).toMatchObject({ id: existing, name: 'Globex' });
 
     const fresh = await suggestion({ name: 'Initech', domain: 'initech.example', auditId });
     const added = await call<Competitor>(`/competitor-suggestions/${fresh}/accept`, {

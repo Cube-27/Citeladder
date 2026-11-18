@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import type { Audits, ResponseAnalyses } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
@@ -16,6 +17,15 @@ export function suggestionRows(db: Database, scope: ProjectScope) {
     .selectFrom('observed_entity_candidates')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId);
+}
+
+/**
+ * Serializes the project's suggestion writes with its decisions, so a write
+ * never misses a rejection committed while it ran. A decision takes it after
+ * the project lock and before any candidate row.
+ */
+export function lockSuggestions(db: Database, scope: ProjectScope) {
+  return subjectXactLock(db, `competitor-suggestions:${scope.projectId}`);
 }
 
 /** The engines the audit asked, the "of M" beside a candidate's engine count. */
@@ -43,6 +53,7 @@ export async function persistObservedCompetitors(
 ) {
   const rules = policy.audits.observed_competitors;
   const scope = { workspaceId: audit.workspace_id, projectId: audit.project_id };
+  await lockSuggestions(db, scope);
   // A rejected domain stays rejected: later audits never suggest it again.
   const rejected = await suggestionRows(db, scope)
     .select('domain')

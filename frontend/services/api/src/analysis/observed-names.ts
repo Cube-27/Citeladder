@@ -3,18 +3,17 @@
  * call labelled become a review candidate once seen in enough prompts across
  * enough engines, never a tracked competitor. Perception settles answer by
  * answer after finalization, so each settled answer refreshes its audit's
- * candidates; the audit lock makes every refresh see the ones before it.
+ * candidates; the suggestions lock makes every refresh see the ones before it.
  */
 import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { isTracked } from '../perception/untracked-names.ts';
 import { compareText } from '../text-order.ts';
-import { auditEngineTotal, suggestionRows } from './observed-competitors.ts';
+import { auditEngineTotal, lockSuggestions, suggestionRows } from './observed-competitors.ts';
 
 const NAMED = 'named_in_answers';
 const aliasList = z.array(z.string());
@@ -74,7 +73,7 @@ export async function refreshNamedCandidates(
   scope: { workspaceId: string; projectId: string; auditId: string },
 ) {
   const rules = policy.audits.observed_competitors.named;
-  await subjectXactLock(db, `observed-names:${scope.auditId}`);
+  await lockSuggestions(db, scope);
   const seen = await observations(db, scope.workspaceId, scope.auditId);
   const qualified = [...seen].filter(
     ([, v]) =>
