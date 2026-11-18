@@ -500,6 +500,7 @@ describe('public API requests', () => {
         id: candidateId,
         audit_id: auditId,
         name: 'Fleet Feet',
+        kind: 'cited_domain',
         domain: 'fleetfeet.example',
         qualification_reason: 'Cited across prompts and engines',
         prompt_count: 2,

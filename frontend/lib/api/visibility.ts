@@ -500,4 +500,16 @@ export const visibilityApi = {
     );
     return strictValidate(competitorSchema, res, 'visibility.acceptCompetitorSuggestion');
   },
+  rejectCompetitorSuggestion: async (
+    projectId: string,
+    candidateId: string,
+    options?: ApiRequestOptions,
+  ): Promise<ObservedCompetitor> => {
+    const res = await apiClient.post<ObservedCompetitor>(
+      `/projects/${projectId}/competitor-suggestions/${candidateId}/reject`,
+      undefined,
+      options,
+    );
+    return strictValidate(observedCompetitorSchema, res, 'visibility.rejectCompetitorSuggestion');
+  },
 };

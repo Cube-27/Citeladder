@@ -25,6 +25,9 @@ export const perceptionOutputSchema = z.object({
       ),
     }),
   ),
+  // Names only (AV-11); code verifies and dedupes them. Absent means the
+  // answer's untracked names are unknown, never that it named none.
+  untracked_businesses: z.array(z.string()).optional(),
 });
 export type PerceptionOutput = z.infer<typeof perceptionOutputSchema>;
 

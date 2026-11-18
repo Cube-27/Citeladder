@@ -217,6 +217,14 @@ export const visibilityMutations = {
           client.invalidateQueries({ queryKey: queryKeys.projects.all }),
         ]),
     }),
+  /** Rejecting a suggestion drops it from the list; no metric changes. */
+  rejectCompetitorSuggestion: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (candidateId: string) =>
+        visibilityApi.rejectCompetitorSuggestion(scope.projectId, candidateId, scoped(scope)),
+      onSuccess: (_suggestion, _candidateId, _result, { client }) =>
+        client.invalidateQueries({ queryKey: queryKeys.visibility.competitorSuggestions(scope) }),
+    }),
 };
 
 /**

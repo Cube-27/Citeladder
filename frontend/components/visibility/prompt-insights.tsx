@@ -15,10 +15,34 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 
 const TITLE = 'Suggested competitors';
 
+/** What found a suggestion, and how often: citations of its domain, or prompts naming it. */
+const FOUND_BY = {
+  cited_domain: 'Cited domain',
+  named_in_answers: 'Named in answers',
+} satisfies Record<ObservedCompetitor['kind'], string>;
+
+function seenIn(candidate: ObservedCompetitor): string {
+  switch (candidate.kind) {
+    case 'cited_domain':
+      return candidate.citation_count === null
+        ? pluralCount(candidate.prompt_count, 'prompt')
+        : pluralCount(candidate.citation_count, 'citation');
+    case 'named_in_answers':
+      return pluralCount(candidate.prompt_count, 'prompt');
+    default: {
+      const unknown: never = candidate;
+      return unknown;
+    }
+  }
+}
+
+const engines = ({ engine_count: count, engine_total: total }: ObservedCompetitor) =>
+  total === null ? formatCount(count) : `${formatCount(count)} of ${formatCount(total)}`;
+
 /**
- * Competitors the runs observed but the project does not yet track, with the
- * action that adds one to the roster. Every suggestion today is a domain the
- * answers cited repeatedly, so that is what "Found by" says.
+ * Competitors the runs observed but the project does not yet track: a domain
+ * the answers cited repeatedly or a name they used across prompts and engines.
+ * Accept adds one to the roster; Reject keeps it from being suggested again.
  */
 export function CompetitorSuggestions({
   projectId,
@@ -31,9 +55,13 @@ export function CompetitorSuggestions({
   const acceptMutation = useMutation(
     visibilityMutations.acceptCompetitorSuggestion({ workspaceId, projectId }),
   );
+  const rejectMutation = useMutation(
+    visibilityMutations.rejectCompetitorSuggestion({ workspaceId, projectId }),
+  );
   // Adding a competitor edits the project; a role without write reads the list.
   const canWrite = useWorkspaceCapability('write');
   const rows = suggestionsQuery.data ?? [];
+  const deciding = acceptMutation.isPending || rejectMutation.isPending;
   return (
     <TitledSection
       title={TITLE}
@@ -42,6 +70,9 @@ export function CompetitorSuggestions({
       <Stack>
         {acceptMutation.isError ? (
           <Notice tone="negative">Could not add that competitor. Try again.</Notice>
+        ) : null}
+        {rejectMutation.isError ? (
+          <Notice tone="negative">Could not reject that suggestion. Try again.</Notice>
         ) : null}
         <DataTable
           label={TITLE}
@@ -52,22 +83,34 @@ export function CompetitorSuggestions({
           {rows.map((candidate) => (
             <TableRow key={candidate.id}>
               <TableCell>
-                <TableCellLines title primary={candidate.name} secondary={candidate.domain} />
+                <TableCellLines
+                  title
+                  primary={candidate.name}
+                  secondary={candidate.kind === 'cited_domain' ? candidate.domain : undefined}
+                />
               </TableCell>
               <TableCell>
-                <Tag>Cited domain</Tag>
+                <Tag>{FOUND_BY[candidate.kind]}</Tag>
               </TableCell>
-              <TableCell numeric>{pluralCount(candidate.prompt_count, 'prompt')}</TableCell>
-              <TableCell numeric>{formatCount(candidate.engine_count)}</TableCell>
+              <TableCell numeric>{seenIn(candidate)}</TableCell>
+              <TableCell numeric>{engines(candidate)}</TableCell>
               {canWrite ? (
                 <TableActionsCell>
                   <Button
                     variant="secondary"
                     onClick={() => acceptMutation.mutate(candidate.id)}
-                    disabled={acceptMutation.isPending}
+                    disabled={deciding}
                     aria-label={`Accept ${candidate.name} as a competitor`}
                   >
                     Accept
+                  </Button>
+                  <Button
+                    variant="quiet"
+                    onClick={() => rejectMutation.mutate(candidate.id)}
+                    disabled={deciding}
+                    aria-label={`Reject ${candidate.name} as a competitor`}
+                  >
+                    Reject
                   </Button>
                 </TableActionsCell>
               ) : null}
@@ -106,7 +149,7 @@ function tableState(
       kind: 'empty',
       headingLevel: 3,
       icon: UserPlus,
-      heading: 'No repeated citation candidates yet.',
+      heading: 'No suggested competitors yet.',
     };
   return undefined;
 }

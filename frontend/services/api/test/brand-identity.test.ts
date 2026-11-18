@@ -9,6 +9,8 @@ import type { observedCompetitorSchema } from '@citeladder/contracts/visibility'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
+import { persistObservedCompetitors } from '../src/analysis/observed-competitors.ts';
+import { scoringConfig } from '../src/analysis/scoring.ts';
 import { createApp } from '../src/app.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -127,13 +129,15 @@ async function readyLogo(owner: 'brands' | 'competitors', ownerId: string, image
   await db.updateTable(owner).set({ logo_asset_id: id }).where('id', '=', ownerId).execute();
 }
 
+/** A cited-domain suggestion, or a name-based one when `domain` is null. */
 async function suggestion(input: {
   name: string;
-  domain: string;
+  domain: string | null;
   prompts?: number;
   engines?: number;
   status?: string;
   auditId: string;
+  createdAt?: Date;
 }): Promise<string> {
   const id = randomUUID();
   await db
@@ -144,7 +148,10 @@ async function suggestion(input: {
       project_id: t.projectId,
       audit_id: input.auditId,
       name: input.name,
+      kind: input.domain === null ? 'named_in_answers' : 'cited_domain',
       domain: input.domain,
+      name_key: input.domain === null ? input.name.toLowerCase() : null,
+      engine_total: 4,
       qualification_reason: 'Cited across prompts and engines',
       prompt_count: input.prompts ?? 2,
       engine_count: input.engines ?? 2,
@@ -153,7 +160,7 @@ async function suggestion(input: {
       source_analysis_ids: JSON.stringify([randomUUID()]),
       source_artifact_ids: JSON.stringify([]),
       status: input.status ?? 'pending',
-      created_at: new Date(),
+      created_at: input.createdAt ?? new Date(),
     })
     .execute();
   return id;
@@ -167,6 +174,7 @@ describe('brand identity workspace boundaries', () => {
     ['/business-map', 'PUT', { offerings: [] }],
     ['/competitor-suggestions', 'GET', undefined],
     [`/competitor-suggestions/${randomUUID()}/accept`, 'POST', undefined],
+    [`/competitor-suggestions/${randomUUID()}/reject`, 'POST', undefined],
   ] as const;
 
   it('requires a session, membership, the project workspace and write capability', async () => {
@@ -490,9 +498,113 @@ describe('competitor suggestions', () => {
       auditId,
     });
     await suggestion({ name: 'Done', domain: 'done.example', status: 'accepted', auditId });
+    // An earlier audit's pending row for the same domain is shown once, as the latest.
+    const earlier = await fixtures.audit(t);
+    await suggestion({
+      name: 'Strong',
+      domain: 'strong.example',
+      prompts: 9,
+      auditId: earlier,
+      createdAt: new Date(Date.now() - 60_000),
+    });
+    const named = await suggestion({ name: 'Ledgerly', domain: null, prompts: 3, auditId });
     const listed = await call<ObservedCompetitor[]>('/competitor-suggestions');
-    expect(listed.body.map((row) => row.id)).toEqual([strong, weak]);
-    expect(listed.body[0]).toMatchObject({ audit_id: auditId, source_artifact_ids: [] });
+    expect(listed.body.map((row) => row.id)).toEqual([strong, named, weak]);
+    expect(listed.body[0]).toMatchObject({
+      kind: 'cited_domain',
+      audit_id: auditId,
+      domain: 'strong.example',
+      source_artifact_ids: [],
+    });
+    expect(listed.body[1]).toEqual(
+      expect.objectContaining({ kind: 'named_in_answers', name: 'Ledgerly', engine_total: 4 }),
+    );
+    expect(listed.body[1]).not.toHaveProperty('domain');
+  });
+
+  it('records who rejected a suggestion and when, on every pending row of its domain', async () => {
+    const earlier = await fixtures.audit(t);
+    const auditId = await fixtures.audit(t);
+    const older = await suggestion({ name: 'Zen', domain: 'zen.example', auditId: earlier });
+    const latest = await suggestion({ name: 'Zen', domain: 'zen.example', auditId });
+    const other = await suggestion({ name: 'Kept', domain: 'kept.example', auditId });
+    const rejected = await call<ObservedCompetitor>(`/competitor-suggestions/${latest}/reject`, {
+      method: 'POST',
+    });
+    expect(rejected).toMatchObject({ status: 200, body: { id: latest, status: 'rejected' } });
+    const rows = await db
+      .selectFrom('observed_entity_candidates')
+      .select(['id', 'status', 'decided_by_user_id', 'decided_at'])
+      .where('id', 'in', [older, latest, other])
+      .execute();
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    for (const id of [older, latest])
+      expect(byId.get(id)).toMatchObject({
+        status: 'rejected',
+        decided_by_user_id: t.userId,
+        decided_at: expect.any(Date),
+      });
+    expect(byId.get(other)).toMatchObject({ status: 'pending', decided_at: null });
+    expect((await call<ObservedCompetitor[]>('/competitor-suggestions')).body).toEqual([
+      expect.objectContaining({ id: other }),
+    ]);
+    // Rejecting again keeps the decision; an accepted suggestion cannot be rejected.
+    expect((await call(`/competitor-suggestions/${older}/reject`, { method: 'POST' })).status).toBe(
+      200,
+    );
+    await call(`/competitor-suggestions/${other}/accept`, { method: 'POST' });
+    expect((await call(`/competitor-suggestions/${other}/reject`, { method: 'POST' })).status).toBe(
+      409,
+    );
+  });
+
+  it('never suggests a rejected domain again from a later audit', async () => {
+    const earlier = await fixtures.audit(t);
+    await suggestion({
+      name: 'Zen',
+      domain: 'zen.example',
+      status: 'rejected',
+      auditId: earlier,
+    });
+    const auditId = await fixtures.audit(t);
+    const cited = (url: string) => ({ url });
+    for (const [engine, promptIndex] of [
+      ['chatgpt', 0],
+      ['perplexity', 1],
+    ] as const)
+      await fixtures.execution(t, {
+        auditId,
+        engine,
+        promptIndex,
+        analysis: {
+          citations: [cited('https://zen.example/a'), cited('https://fresh.example/b')],
+        },
+      });
+    const audit = await db
+      .selectFrom('audits')
+      .selectAll()
+      .where('id', '=', auditId)
+      .executeTakeFirstOrThrow();
+    const analyses = await db
+      .selectFrom('response_analyses')
+      .selectAll()
+      .where('audit_id', '=', auditId)
+      .execute();
+    await persistObservedCompetitors(
+      db,
+      audit,
+      analyses,
+      scoringConfig(audit.configuration),
+      new Date(),
+    );
+    const rows = await db
+      .selectFrom('observed_entity_candidates')
+      .select(['domain', 'citation_count', 'engine_count', 'engine_total'])
+      .where('audit_id', '=', auditId)
+      .execute();
+    expect(rows).toEqual([
+      { domain: 'fresh.example', citation_count: 2, engine_count: 2, engine_total: 2 },
+    ]);
   });
 
   it('reuses a tracked competitor, adds new ones within the ceiling, and records the decision', async () => {

@@ -7,6 +7,32 @@ import { compareText } from '../text-order.ts';
 import { domainMatches, normalizeDomain } from './domains.ts';
 import type { ScoringConfig } from './scoring.ts';
 
+const CITED = 'cited_domain';
+
+type ProjectScope = { workspaceId: string; projectId: string };
+
+/** The project's suggestion rows, of every audit and status. */
+export function suggestionRows(db: Database, scope: ProjectScope) {
+  return db
+    .selectFrom('observed_entity_candidates')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId);
+}
+
+/** The engines the audit asked, the "of M" beside a candidate's engine count. */
+export async function auditEngineTotal(
+  db: Database,
+  scope: { workspaceId: string; auditId: string },
+): Promise<number> {
+  const row = await db
+    .selectFrom('audit_tasks')
+    .select((eb) => eb.fn.count<string>('logical_engine').distinct().as('engines'))
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('audit_id', '=', scope.auditId)
+    .executeTakeFirstOrThrow();
+  return Number(row.engines);
+}
+
 /** Repeated third-party citations create review candidates, never tracked competitors. */
 export async function persistObservedCompetitors(
   db: Database,
@@ -16,11 +42,19 @@ export async function persistObservedCompetitors(
   at: Date,
 ) {
   const rules = policy.audits.observed_competitors;
+  const scope = { workspaceId: audit.workspace_id, projectId: audit.project_id };
+  // A rejected domain stays rejected: later audits never suggest it again.
+  const rejected = await suggestionRows(db, scope)
+    .select('domain')
+    .where('kind', '=', CITED)
+    .where('status', '=', rules.status_rejected)
+    .execute();
   const excluded = [
     ...rules.excluded_research_domains,
     ...config.ownedDomains,
     ...config.unintendedDomains,
     ...config.competitors.flatMap((c) => c.domains),
+    ...rejected.flatMap((row) => (row.domain ? [row.domain] : [])),
   ].map(normalizeDomain);
   const byId = new Map(analyses.map((a) => [a.id, a]));
   const citations = await db
@@ -34,7 +68,13 @@ export async function persistObservedCompetitors(
     .execute();
   const domains = new Map<
     string,
-    { prompts: Set<number>; engines: Set<string>; analyses: Set<string>; artifacts: Set<string> }
+    {
+      citations: number;
+      prompts: Set<number>;
+      engines: Set<string>;
+      analyses: Set<string>;
+      artifacts: Set<string>;
+    }
   >();
   for (const citation of citations) {
     const domain = normalizeDomain(citation.domain),
@@ -47,11 +87,13 @@ export async function persistObservedCompetitors(
     )
       continue;
     const value = domains.get(domain) ?? {
+      citations: 0,
       prompts: new Set(),
       engines: new Set(),
       analyses: new Set(),
       artifacts: new Set(),
     };
+    value.citations += 1;
     value.prompts.add(analysis.prompt_index);
     value.engines.add(analysis.logical_engine);
     value.analyses.add(analysis.id);
@@ -70,6 +112,10 @@ export async function persistObservedCompetitors(
     )
     .slice(0, rules.max_candidates_per_audit);
   if (!qualified.length) return;
+  const engineTotal = await auditEngineTotal(db, {
+    workspaceId: audit.workspace_id,
+    auditId: audit.id,
+  });
   await db
     .insertInto('observed_entity_candidates')
     .values(
@@ -78,7 +124,11 @@ export async function persistObservedCompetitors(
         workspace_id: audit.workspace_id,
         project_id: audit.project_id,
         audit_id: audit.id,
+        kind: CITED,
         domain,
+        name_key: null,
+        citation_count: value.citations,
+        engine_total: engineTotal,
         name: domain
           .split('.')[0]!
           .replaceAll('-', ' ')
