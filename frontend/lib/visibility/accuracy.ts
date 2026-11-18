@@ -101,6 +101,24 @@ export function accuracyStateCopy(
   }
 }
 
+/** A claim's verdict, or why it has none, in words: each state stays distinct. */
+function claimStateWords(claim: Pick<AccuracyClaim, 'status' | 'verdict' | 'reason'>): string {
+  switch (claim.status) {
+    case 'verdict':
+      return claim.verdict ? VERDICT_LABELS[claim.verdict].toLowerCase() : 'not checked';
+    case 'low_confidence':
+      return 'low confidence';
+    case 'pending':
+      return 'still being checked';
+    case 'unavailable':
+      return claim.reason ? `unavailable (${REASON_SHORT[claim.reason]})` : 'unavailable';
+    default: {
+      const _exhaustive: never = claim.status;
+      return _exhaustive;
+    }
+  }
+}
+
 /**
  * The Agent hand-off question for one claim: the claim, the answer's words,
  * the facts it was checked against and its verdict, so the chat starts from
@@ -108,11 +126,11 @@ export function accuracyStateCopy(
  */
 export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
   const facts = claim.facts.map((fact) => fact.statement).join('; ');
-  const verdict = claim.verdict ? VERDICT_LABELS[claim.verdict].toLowerCase() : 'not checked';
+  const verdict = claimStateWords(claim);
   return [
     `Help me correct what ${engine} says about us.`,
     `Asked "${claim.prompt}", it said: "${claim.quote}" (claim: ${claim.claim}).`,
-    facts ? `Checked against our fact: ${facts}. Verdict: ${verdict}.` : `Verdict: ${verdict}.`,
+    facts ? `Checked against our fact: "${facts}". Verdict: ${verdict}.` : `Verdict: ${verdict}.`,
   ].join(' ');
 }
 
