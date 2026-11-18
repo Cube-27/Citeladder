@@ -264,6 +264,15 @@ function AccessEnded({
               <Link
                 to={workspaceDestination(HOME_PATH, null, workspace.id)}
                 onClick={(event) => {
+                  // A modified click opens the link's own URL in a new tab.
+                  if (
+                    event.button !== 0 ||
+                    event.metaKey ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.shiftKey
+                  )
+                    return;
                   event.preventDefault();
                   selectWorkspace(workspace.id, HOME_PATH);
                 }}
