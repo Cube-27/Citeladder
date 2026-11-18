@@ -83,17 +83,7 @@ const contact = websiteHref('/contact');
         <DocLayout toc={wide ? [] : toc}>
           <DocsSidebar slot="rail" />
           <div class:list={['cl-docs-page', { 'cl-docs-page--aside': hasAside }]}>
-            <div class="cl-docs-page-main">
-              <div class="cl-docs-page-body"><slot /></div>
-              <div class="cl-docs-page-end">
-                {(previous || next) && <ArticlePager previous={previous} next={next} />}
-                <footer class="cl-docs-footer">
-                  <span>© CiteLadder documentation</span>
-                  <a href={contact}>Get help</a>
-                  <a href={websiteHref('/privacy')}>Privacy</a>
-                </footer>
-              </div>
-            </div>
+            <div class="cl-docs-page-body"><slot /></div>
             {
               hasAside && (
                 <aside class="cl-docs-page-aside" aria-label="Examples">
@@ -101,6 +91,14 @@ const contact = websiteHref('/contact');
                 </aside>
               )
             }
+            <div class="cl-docs-page-end">
+              {(previous || next) && <ArticlePager previous={previous} next={next} />}
+              <footer class="cl-docs-footer">
+                <span>© CiteLadder documentation</span>
+                <a href={contact}>Get help</a>
+                <a href={websiteHref('/privacy')}>Privacy</a>
+              </footer>
+            </div>
           </div>
           <a slot="toc-end" class="cl-docs-help" href={contact}>
             Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden />
@@ -136,7 +134,6 @@ const contact = websiteHref('/contact');
     scroll-margin-top: calc(var(--docs-bar-height) + 32px);
   }
   .cl-docs-page,
-  .cl-docs-page-main,
   .cl-docs-page-body,
   .cl-docs-page-end {
     display: flex;
@@ -147,32 +144,26 @@ const contact = websiteHref('/contact');
   .cl-docs-page-end {
     padding-bottom: 96px;
   }
-  .cl-docs-page--aside .cl-docs-page-main {
-    display: contents;
-  }
-  .cl-docs-page-body {
-    order: 1;
-  }
   .cl-docs-page-aside {
-    order: 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
-  .cl-docs-page-end {
-    order: 3;
-  }
+  /* The aside spans both rows, so it is held from the title to the page end. */
   @media (min-width: 1280px) {
     .cl-docs-page--aside {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+      grid-template-rows: auto 1fr;
       align-items: start;
-      gap: 48px;
+      gap: 40px 48px;
     }
-    .cl-docs-page--aside .cl-docs-page-main {
-      display: flex;
+    .cl-docs-page--aside > :not(.cl-docs-page-aside) {
+      grid-column: 1;
     }
     .cl-docs-page-aside {
+      grid-column: 2;
+      grid-row: 1 / span 2;
       position: sticky;
       top: calc(var(--docs-bar-height) + 40px);
       max-height: calc(100dvh - var(--docs-bar-height) - 64px);

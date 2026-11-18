@@ -92,20 +92,21 @@ const responseExample =
   .cl-docs-examples :global(.cl-code-bar) {
     flex-shrink: 0;
   }
-  /* A long sample scrolls inside its card, on the narrow scrollbar, and
-     never hands the scroll on to the page. */
+  /* A long sample scrolls inside its card, on the narrow scrollbar. In the
+     page flow a vertical swipe on a short sample still scrolls the page. */
   .cl-docs-examples :global(.cl-code-pre) {
     min-height: 0;
     max-height: 420px;
     overflow: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-x: contain;
     scrollbar-width: thin;
   }
   /* In the held column the request keeps its height up to 40% of the
-     viewport and the response takes the rest. */
+     viewport and the response takes the rest; neither hands its scroll on. */
   @media (min-width: 1280px) {
     .cl-docs-examples :global(.cl-code-pre) {
       max-height: none;
+      overscroll-behavior: contain;
     }
     .cl-docs-examples [data-api-request] {
       flex-shrink: 0;

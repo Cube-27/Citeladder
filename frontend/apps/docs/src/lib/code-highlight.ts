@@ -18,25 +18,26 @@ const LITERALS = new Set(['true', 'false', 'null', 'undefined', 'True', 'False',
 
 const COMMENT: Record<CodeLanguage, string> = {
   json: '(?!)',
-  shell: '(?<=^|\\s)#[^\\n]*',
-  javascript: '\\/\\/[^\\n]*',
-  python: '#[^\\n]*',
+  shell: String.raw`(?<=^|\s)#[^\n]*`,
+  javascript: String.raw`\/\/[^\n]*`,
+  python: String.raw`#[^\n]*`,
 };
-// Shell single quotes have no escapes; the other languages escape with a backslash.
+// Shell single quotes have no escapes: an apostrophe is written '\'' and the
+// argument goes on. The other languages escape with a backslash.
 const SINGLE_QUOTED: Record<CodeLanguage, string> = {
   json: '(?!)',
-  shell: "'[^']*'",
-  javascript: "'(?:[^'\\\\\\n]|\\\\.)*'",
-  python: "'(?:[^'\\\\\\n]|\\\\.)*'",
+  shell: String.raw`'[^']*'(?:\\''[^']*')*`,
+  javascript: String.raw`'(?:[^'\\\n]|\\.)*'`,
+  python: String.raw`'(?:[^'\\\n]|\\.)*'`,
 };
 
 function pattern(language: CodeLanguage): RegExp {
   return new RegExp(
     [
       `(?<comment>${COMMENT[language]})`,
-      `(?<string>"(?:[^"\\\\\\n]|\\\\.)*"|${SINGLE_QUOTED[language]})`,
-      '(?<number>-?\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b)',
-      '(?<word>[A-Za-z_$][\\w$]*)',
+      String.raw`(?<string>"(?:[^"\\\n]|\\.)*"|${SINGLE_QUOTED[language]})`,
+      String.raw`(?<number>-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)`,
+      String.raw`(?<word>[A-Za-z_$][\w$]*)`,
     ].join('|'),
     'gu',
   );
@@ -44,6 +45,17 @@ function pattern(language: CodeLanguage): RegExp {
 
 /** A string or bare word directly followed by a colon is an object key. */
 const isKey = (code: string, end: number) => /^[ \t]*:/u.test(code.slice(end, end + 8));
+
+function kindOf(match: RegExpExecArray, code: string, language: CodeLanguage): CodeToken['kind'] {
+  const text = match[0];
+  const end = match.index + text.length;
+  if (match.groups?.comment) return 'comment';
+  if (match.groups?.string) return isKey(code, end) ? 'key' : 'string';
+  if (match.groups?.number) return 'number';
+  if (LITERALS.has(text)) return 'literal';
+  if (KEYWORDS[language].has(text)) return 'keyword';
+  return language === 'javascript' && isKey(code, end) ? 'key' : null;
+}
 
 export function highlightCode(code: string, language: CodeLanguage): CodeToken[] {
   const tokens: CodeToken[] = [];
@@ -54,17 +66,9 @@ export function highlightCode(code: string, language: CodeLanguage): CodeToken[]
   };
   let cursor = 0;
   for (const match of code.matchAll(pattern(language))) {
-    const groups = match.groups ?? {};
-    const end = match.index + match[0].length;
     if (match.index > cursor) push(null, code.slice(cursor, match.index));
-    cursor = end;
-    if (groups.comment) push('comment', match[0]);
-    else if (groups.string) push(isKey(code, end) ? 'key' : 'string', match[0]);
-    else if (groups.number) push('number', match[0]);
-    else if (LITERALS.has(match[0])) push('literal', match[0]);
-    else if (KEYWORDS[language].has(match[0])) push('keyword', match[0]);
-    else if (language === 'javascript' && isKey(code, end)) push('key', match[0]);
-    else push(null, match[0]);
+    push(kindOf(match, code, language), match[0]);
+    cursor = match.index + match[0].length;
   }
   if (cursor < code.length) push(null, code.slice(cursor));
   return tokens;

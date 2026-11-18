@@ -33,6 +33,9 @@ describe('API example highlighting', () => {
       `string:'{"a":1}'`,
       'comment:# note',
     ]);
+    expect(coloured(String.raw`-d '{"n":"O'\''Brien # x"}'`, 'shell')).toEqual([
+      String.raw`string:'{"n":"O'\''Brien # x"}'`,
+    ]);
     expect(
       coloured(`const r = await fetch('https://x.io', { method: 'GET' });`, 'javascript'),
     ).toEqual([
