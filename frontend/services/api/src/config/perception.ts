@@ -23,6 +23,8 @@ const factCheck = z.strictObject({
   statement_max_chars: positive,
   source_url_max_chars: positive,
   max_facts_per_project: positive,
+  facts_import_max_rows: positive,
+  override_note_max_chars: positive,
   max_frozen_facts: positive,
   max_claims_per_answer: positive,
   max_facts_per_verification: positive,

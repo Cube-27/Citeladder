@@ -263,6 +263,59 @@ describe('brand facts', () => {
     ]);
   });
 
+  it('imports CSV rows as drafts only, answering each row and skipping duplicates', async () => {
+    const outside = await call(tenant, 'POST', '/brand-facts/import', {
+      rows: [{ topic: 'pricing', statement: 'x', source_url: null }],
+    });
+    expect([outside.status, (outside.body.error as { code: string }).code]).toEqual([
+      409,
+      'fact_checking_not_in_plan',
+    ]);
+    await enroll(tenant);
+    await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    const imported = await call(tenant, 'POST', '/brand-facts/import', {
+      rows: [
+        { topic: 'Pricing', statement: 'Pro  costs $59 PER month.', source_url: null },
+        { topic: 'plans', statement: 'Starter includes 5 users.', source_url: '' },
+        { topic: 'weather', statement: 'Sunny.', source_url: null },
+        { topic: 'plans', statement: 'starter includes 5 users.', source_url: null },
+        { topic: 'company', statement: 'Founded in 2019.', source_url: 'ftp://acme.test' },
+      ],
+    });
+    expect(imported.status).toBe(200);
+    const rows = imported.body.rows as { index: number; kind: string; fact_id?: string }[];
+    expect(rows.map(({ index, kind }) => [index, kind])).toEqual([
+      [0, 'duplicate'],
+      [1, 'created'],
+      [2, 'invalid'],
+      [3, 'duplicate'],
+      [4, 'invalid'],
+    ]);
+    const facts = (await call(tenant, 'GET', '/brand-facts')).body.facts as {
+      id: string;
+      statement: string;
+      status: string;
+    }[];
+    expect(facts.map(({ statement, status }) => [statement, status])).toEqual([
+      ['Pro costs $59 per month.', 'confirmed'],
+      ['Starter includes 5 users.', 'draft'],
+    ]);
+    expect(facts[1]!.id).toBe(rows[1]!.fact_id);
+    const revisions = await db
+      .selectFrom('brand_fact_revisions')
+      .select(['status', 'created_by_user_id'])
+      .where('fact_id', '=', rows[1]!.fact_id!)
+      .execute();
+    expect(revisions).toEqual([{ status: 'draft', created_by_user_id: tenant.userId }]);
+    // A draft is never frozen into a run.
+    const frozen = await admittedFactCheck(db, {
+      workspaceId: tenant.workspaceId,
+      projectId: tenant.projectId,
+      auditScope: 'brand',
+    });
+    expect(frozen?.facts.map((fact) => fact.topic)).toEqual(['pricing']);
+  });
+
   it("never reads or edits another workspace's facts", async () => {
     await enroll(tenant);
     const id = await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
@@ -451,9 +504,9 @@ describe('claim extraction and verification', () => {
     );
     const market = 'United States · English';
     expect(await csv.text()).toBe(
-      'claim,facts,verdict,engine,market,run_date,prompt\r\n' +
-        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,chatgpt,${market},${observedAt},best tools?\r\n` +
-        `Acme integrates with Slack.,,not_covered,chatgpt,${market},${observedAt},best tools?\r\n`,
+      'claim,facts,verdict,model_verdict,engine,market,run_date,prompt\r\n' +
+        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,,chatgpt,${market},${observedAt},best tools?\r\n` +
+        `Acme integrates with Slack.,,not_covered,,chatgpt,${market},${observedAt},best tools?\r\n`,
     );
 
     // Another workspace, inside the pilot, cannot read this run's facts or claims.
@@ -595,6 +648,103 @@ describe('claim extraction and verification', () => {
         accuracy: null,
         coverage: { not_covered: 1, unavailable: [{ reason: 'model_not_configured', count: 1 }] },
       },
+    });
+  });
+
+  it('counts the newest verdict override, keeps the model verdict and refuses other workspaces', async () => {
+    await enroll(tenant);
+    await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    const auditId = await fixtures.audit(tenant, {
+      configuration: await pilotConfiguration(tenant),
+    });
+    await analysed(tenant, auditId);
+    await drain(
+      tenant,
+      'answer_perception',
+      answerPerception(fakeGateway([perceptionOutput]).factory),
+    );
+    const verdicts = [
+      { claim_id: 'c1', verdict: 'contradicted', fact_ids: ['f1'], confidence: 0.9 },
+    ];
+    await drain(
+      tenant,
+      'fact_verification',
+      factVerification(fakeGateway([JSON.stringify({ verdicts })]).factory),
+    );
+    type Item = { topic: string; verdict: string; verdict_id: string | null; edited: unknown };
+    const claims = async () =>
+      (await call(tenant, 'GET', `/visibility/accuracy/claims?audit_id=${auditId}`)).body
+        .items as Item[];
+    const before = await claims();
+    // Only a verified claim can be overridden; a claim no fact covers has no verdict row.
+    expect(before.map((item) => [item.topic, item.verdict_id === null, item.edited])).toEqual([
+      ['pricing', false, null],
+      ['integrations', true, null],
+    ]);
+    const verdictId = before[0]!.verdict_id!;
+    const path = `/claim-verdicts/${verdictId}/overrides`;
+    const override = (owner: Tenant, verdict: string, note?: string) =>
+      call(owner, 'POST', path, { verdict, note });
+
+    const outside = await fixtures.tenant();
+    const refused = await override(outside, 'supported');
+    expect([refused.status, (refused.body.error as { code: string }).code]).toEqual([
+      409,
+      'fact_checking_not_in_plan',
+    ]);
+    const attacker = await fixtures.tenant();
+    await enroll(attacker);
+    expect((await override(attacker, 'supported')).status).toBe(404);
+    expect((await override(tenant, 'contradicted')).status).toBe(409);
+
+    const first = await override(tenant, 'inconclusive', ' Checked the pricing page ');
+    expect(first.body).toMatchObject({
+      verdict_id: verdictId,
+      model_verdict: 'contradicted',
+      verdict: 'inconclusive',
+      note: 'Checked the pricing page',
+    });
+    expect((await override(tenant, 'supported')).status).toBe(200);
+    const summary = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
+    expect(summary.body).toMatchObject({
+      score: {
+        accuracy: 1,
+        coverage: { supported: 1, contradicted: 0, inconclusive: 0, not_covered: 1, edited: 1 },
+      },
+      contradicted: [],
+    });
+    expect((await claims())[0]).toMatchObject({
+      verdict: 'supported',
+      edited: { model_verdict: 'contradicted', note: null },
+    });
+
+    // The model's verdict stays as it was, and every change is kept in order.
+    const model = await db
+      .selectFrom('claim_verdicts')
+      .select('verdict')
+      .where('id', '=', verdictId)
+      .executeTakeFirstOrThrow();
+    expect(model.verdict).toBe('contradicted');
+    const history = await db
+      .selectFrom('claim_verdict_overrides')
+      .select(['from_verdict', 'to_verdict', 'created_by_user_id'])
+      .where('workspace_id', '=', tenant.workspaceId)
+      .orderBy('created_at')
+      .execute();
+    expect(history).toEqual([
+      {
+        from_verdict: 'contradicted',
+        to_verdict: 'inconclusive',
+        created_by_user_id: tenant.userId,
+      },
+      { from_verdict: 'contradicted', to_verdict: 'supported', created_by_user_id: tenant.userId },
+    ]);
+
+    // Changing back to the model's verdict clears the edit mark.
+    expect((await override(tenant, 'contradicted')).status).toBe(200);
+    const reverted = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
+    expect(reverted.body).toMatchObject({
+      score: { accuracy: 0, coverage: { contradicted: 1, edited: 0 } },
     });
   });
 

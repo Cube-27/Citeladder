@@ -4,6 +4,7 @@
  * shared missing mark rather than a zero.
  */
 import type {
+  AccuracyClaim,
   AccuracyCoverage,
   AccuracyResponse,
   ClaimVerdict,
@@ -98,6 +99,21 @@ export function accuracyStateCopy(
       return _exhaustive;
     }
   }
+}
+
+/**
+ * The Agent hand-off question for one claim: the claim, the answer's words,
+ * the facts it was checked against and its verdict, so the chat starts from
+ * them. The Agent only reads; a verdict changes on this screen alone.
+ */
+export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
+  const facts = claim.facts.map((fact) => fact.statement).join('; ');
+  const verdict = claim.verdict ? VERDICT_LABELS[claim.verdict].toLowerCase() : 'not checked';
+  return [
+    `Help me correct what ${engine} says about us.`,
+    `Asked "${claim.prompt}", it said: "${claim.quote}" (claim: ${claim.claim}).`,
+    facts ? `Checked against our fact: ${facts}. Verdict: ${verdict}.` : `Verdict: ${verdict}.`,
+  ].join(' ');
 }
 
 /** "N of M claims with a verdict", then every other non-empty bucket. */

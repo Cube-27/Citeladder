@@ -8,6 +8,7 @@ import { ShieldCheck } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { Tooltip } from '@/components/ui/tooltip';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -29,10 +30,11 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-type ClaimView = 'contradicted' | 'by-fact';
+type ClaimView = 'contradicted' | 'all-claims' | 'by-fact';
 
 const CLAIM_VIEWS = [
   { value: 'contradicted', label: 'Contradicted' },
+  { value: 'all-claims', label: 'All claims' },
   { value: 'by-fact', label: 'By fact' },
 ] as const satisfies readonly { value: ClaimView; label: string }[];
 
@@ -40,14 +42,21 @@ const CLAIM_VIEWS = [
  * What answers claimed about the brand, checked against its confirmed facts.
  * Accuracy always travels with its coverage, and a claim without a verdict is
  * a named state, never a zero. `lede` heads the key figures' card, `trend`
- * follows it, and `byFact` is the claims card's second view.
+ * follows it, and `allClaims` and `byFact` are the claims card's other views.
  */
 export function AccuracyView({
   data,
   lede,
   trend,
+  allClaims,
   byFact,
-}: Readonly<{ data: AccuracyResponse; lede?: ReactNode; trend?: ReactNode; byFact: ReactNode }>) {
+}: Readonly<{
+  data: AccuracyResponse;
+  lede?: ReactNode;
+  trend?: ReactNode;
+  allClaims: ReactNode;
+  byFact: ReactNode;
+}>) {
   const { label: engineLabel } = useEngineCatalog();
   const [view, setView] = useState<ClaimView>('contradicted');
   if (data.state !== 'value')
@@ -61,6 +70,7 @@ export function AccuracyView({
           <TabPanel value="contradicted">
             <ContradictedClaims claims={data.contradicted} />
           </TabPanel>
+          <TabPanel value="all-claims">{allClaims}</TabPanel>
           <TabPanel value="by-fact">{byFact}</TabPanel>
         </Tabs>
       </Section>
@@ -141,7 +151,14 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                 label: 'Accuracy',
                 value: formatShare(data.score.accuracy),
                 missingLabel: 'Unavailable',
-                sub: 'Supported, of claims that were supported or contradicted.',
+                sub: (
+                  <>
+                    Supported of checked ·{' '}
+                    <Tooltip content="Verdicts a person changed">
+                      <span>{coverage.edited} edited</span>
+                    </Tooltip>
+                  </>
+                ),
               },
               // Two different findings: no confirmed fact on the point, and a
               // fact that could not settle the claim. Never one summed figure.

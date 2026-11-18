@@ -1,7 +1,10 @@
 import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
-import { Download } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
+import { useState } from 'react';
 
 import { ClaimsOverTime } from '@/components/perception/claims-over-time';
+import { ClaimsTable } from '@/components/perception/claims-table';
+import { FactsImportDialog } from '@/components/perception/facts-import-dialog';
 import { FactsTable } from '@/components/perception/facts-table';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -19,7 +22,8 @@ type FactViews = ReturnType<typeof useFactViews>;
 
 /**
  * The Perception page's Fact-checking tab (pilot only): the accuracy view
- * under its lede, the claims per run, and the claims by frozen fact.
+ * under its lede, the claims per run, every claim with its verdict, and the
+ * claims by frozen fact.
  */
 export function PerceptionFactChecking({
   query,
@@ -38,6 +42,7 @@ export function PerceptionFactChecking({
           data={data}
           lede={<FactCheckingLede data={data} exporting={views.exporting} />}
           trend={<ClaimsOverTime trend={data.trend} />}
+          allClaims={<ClaimsTable views={views} />}
           byFact={<FactsTable query={views.facts} />}
         />
       )}
@@ -55,6 +60,7 @@ function FactCheckingLede({
   exporting,
 }: Readonly<{ data: AccuracyResponse; exporting: FactViews['exporting'] }>) {
   const { notify } = useToast();
+  const [importing, setImporting] = useState(false);
   const latest = data.trend.at(-1)?.completed_at;
   return (
     <Inline className="items-start justify-between">
@@ -79,6 +85,11 @@ function FactCheckingLede({
         <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
           Edit facts
         </ProjectLink>
+        <Button variant="secondary" onClick={() => setImporting(true)}>
+          <Icon icon={Upload} />
+          Import facts CSV
+        </Button>
+        <FactsImportDialog open={importing} onOpenChange={setImporting} />
         <Button
           variant="secondary"
           pending={exporting.isPending}

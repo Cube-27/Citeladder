@@ -23,7 +23,9 @@ const STATE_WORDS: Record<Exclude<ExecutionClaim['status'], 'verdict'>, string> 
   unavailable: 'Unavailable',
 };
 
-function VerdictChip({ claim }: Readonly<{ claim: ExecutionClaim }>) {
+export function VerdictChip({
+  claim,
+}: Readonly<{ claim: Pick<ExecutionClaim, 'status' | 'verdict'> }>) {
   if (claim.status === 'verdict' && claim.verdict)
     return (
       <StatusMark variant="sentiment" value={VERDICT_TONE[claim.verdict]}>

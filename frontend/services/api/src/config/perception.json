@@ -73,6 +73,8 @@
     "statement_max_chars": 300,
     "source_url_max_chars": 2048,
     "max_facts_per_project": 150,
+    "facts_import_max_rows": 150,
+    "override_note_max_chars": 500,
     "max_frozen_facts": 100,
     "max_claims_per_answer": 6,
     "max_facts_per_verification": 20,

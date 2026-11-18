@@ -1,8 +1,8 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityApi } from '@/lib/api/visibility';
-import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { visibilityMutations, visibilityQueries } from '@/lib/api/visibility-queries';
 import { PERCEPTION_PENDING_POLL_MS } from '@/lib/config/operational';
 import { saveBlob } from '@/lib/download';
 import type { SourceFilters } from '@/components/visibility/source-rows';
@@ -42,9 +42,10 @@ export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
 }
 
 /**
- * The By fact view and the claims export for the same selection, on the
- * Fact-checking tab only. By fact is read once this selection's accuracy has
- * settled, the only state that draws it, so it never keeps mid-check counts.
+ * The By fact and All claims views, verdict changes and the claims export for
+ * the same selection, on the Fact-checking tab only. The views are read once
+ * this selection's accuracy has settled, the only state that draws them, so
+ * they never keep mid-check counts.
  */
 export function useFactViews({
   filters,
@@ -71,6 +72,11 @@ export function useFactViews({
       ? (data, previous) => retainPreviousDataForScope(queries.projectId, data, previous)
       : undefined,
   });
+  const claims = useInfiniteQuery({
+    ...visibilityQueries.accuracyClaims(scope, params),
+    enabled,
+  });
+  const override = useMutation(visibilityMutations.overrideVerdict(scope));
   const exporting = useMutation({
     mutationFn: async () =>
       saveBlob(
@@ -80,5 +86,5 @@ export function useFactViews({
         'fact-check-claims.csv',
       ),
   });
-  return { facts, exporting };
+  return { facts, claims, override, exporting };
 }

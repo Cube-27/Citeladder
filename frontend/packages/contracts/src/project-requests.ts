@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-import { factStatusSchema, factTopicSchema } from './fact-checking.ts';
+import { factStatusSchema, factTopicSchema, overrideVerdictSchema } from './fact-checking.ts';
 import {
   benchmarkModeSchema,
   businessModelSchema,
@@ -132,6 +132,25 @@ export const brandFactUpdateRequestSchema = z.object({
   status: factStatusSchema.optional(),
 });
 export type BrandFactUpdateRequest = z.input<typeof brandFactUpdateRequestSchema>;
+
+/**
+ * Facts read from a CSV in the browser. Each row is checked on its own and
+ * answered by position, so the wire shape stays loose: a bad row is a row
+ * outcome, never a refused import.
+ */
+export const brandFactImportRequestSchema = z.object({
+  rows: z.array(
+    z.object({ topic: z.string(), statement: z.string(), source_url: z.string().nullable() }),
+  ),
+});
+export type BrandFactImportRequest = z.input<typeof brandFactImportRequestSchema>;
+
+/** A person's verdict on one claim; the model's verdict is kept beside it. */
+export const verdictOverrideRequestSchema = z.object({
+  verdict: overrideVerdictSchema,
+  note: text().nullish(),
+});
+export type VerdictOverrideRequest = z.input<typeof verdictOverrideRequestSchema>;
 
 const mapValue = () => text().min(1);
 /**

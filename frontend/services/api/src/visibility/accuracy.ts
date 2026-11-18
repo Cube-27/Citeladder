@@ -51,6 +51,7 @@ import {
   type FactRevision,
 } from '../perception/fact-metrics.ts';
 import { isNamed } from '../perception/passages.ts';
+import { editedMark, newestOverrides } from '../perception/verdict-overrides.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { compareText } from '../text-order.ts';
@@ -175,21 +176,40 @@ async function claimsOf(
     (ids) =>
       db
         .selectFrom('claim_verdicts')
-        .select(['claim_id', 'verdict', 'low_confidence', 'model_omitted', 'fact_revision_ids'])
+        .select([
+          'id',
+          'claim_id',
+          'verdict',
+          'low_confidence',
+          'model_omitted',
+          'fact_revision_ids',
+        ])
         .where('workspace_id', '=', workspaceId)
         .where('verification_id', 'in', ids)
         .execute(),
   );
+  const overrides = await newestOverrides(
+    db,
+    workspaceId,
+    verdictRows.filter((row) => !row.model_omitted).map((row) => row.id),
+  );
   const verdicts = new Map(
-    verdictRows.map((row) => [
-      row.claim_id,
-      {
-        verdict: claimVerdictSchema.parse(row.verdict),
-        low_confidence: row.low_confidence,
-        model_omitted: row.model_omitted,
-        revisionIds: revisionIdsSchema.parse(row.fact_revision_ids),
-      },
-    ]),
+    verdictRows.map((row) => {
+      const verdict = claimVerdictSchema.parse(row.verdict);
+      const override = overrides.get(row.id);
+      return [
+        row.claim_id,
+        {
+          id: row.id,
+          verdict,
+          low_confidence: row.low_confidence,
+          model_omitted: row.model_omitted,
+          override: override?.verdict ?? null,
+          edited: editedMark(verdict, override),
+          revisionIds: revisionIdsSchema.parse(row.fact_revision_ids),
+        },
+      ];
+    }),
   );
   const revisions = await factRevisions(
     db,
@@ -213,6 +233,11 @@ async function claimsOf(
       const topic = factTopicSchema.safeParse(row.topic);
       if (!topic.success) return [];
       const verdict = verdicts.get(row.id);
+      // Only a verdict the claim's status reads from can be overridden.
+      const target =
+        verdict && !verdict.model_omitted && !row.low_confidence && topics.has(topic.data)
+          ? verdict
+          : undefined;
       return [
         {
           ordinal: row.ordinal,
@@ -228,6 +253,8 @@ async function claimsOf(
             verdict,
           }),
           facts: (verdict?.revisionIds ?? []).flatMap((id) => revisions.get(id) ?? []),
+          verdictId: target?.id ?? null,
+          edited: target?.edited ?? null,
         },
       ];
     });
@@ -375,6 +402,7 @@ export const CLAIM_EXPORT_COLUMNS = [
   'claim',
   'facts',
   'verdict',
+  'model_verdict',
   'engine',
   'market',
   'run_date',
@@ -384,7 +412,8 @@ export const CLAIM_EXPORT_COLUMNS = [
 /**
  * The selection's claims under `filters`, newest answer first, as export rows.
  * A claim without a verdict carries its status (pending, low confidence,
- * unavailable) in the verdict column, never a blank.
+ * unavailable) in the verdict column, never a blank. An edited claim's verdict
+ * is the person's, with the model's beside it.
  */
 export async function accuracyClaimRows(
   db: Database,
@@ -420,6 +449,8 @@ export async function accuracyClaimRows(
     claim: claim.claim,
     facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
     verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
+    // Filled only when a person changed the verdict (AV-12).
+    model_verdict: claim.edited?.model_verdict ?? '',
     engine: answer.logicalEngine,
     market: marketName(answer.auditId),
     run_date: answer.observedAt,
