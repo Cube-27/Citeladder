@@ -46,11 +46,24 @@ describe('Insights headline', () => {
       { headline: "You're #2 in AI visibility", sub: 'Leader is named more often.' },
     ],
     [
-      'ignores unmeasured competitors',
+      'ignores an unmeasured competitor beside measured ones',
+      [row('You', 0.3, true), row('Ghost', null), row('Rival', 0.1)],
+      { headline: "You're #1 in AI visibility", sub: "You're named more often than Rival." },
+    ],
+    [
+      'asks for competitors when none are tracked',
+      [row('You', 0.3, true)],
+      {
+        headline: "You aren't tracking any competitors yet",
+        sub: 'Add competitors in Context to see where you rank.',
+      },
+    ],
+    [
+      'keeps tracked but unmeasured competitors apart from none tracked',
       [row('You', 0.3, true), row('Ghost', null)],
       {
-        headline: "You're the only tracked brand measured",
-        sub: 'Add competitors in Context to see where you rank.',
+        headline: "Your competitors' visibility is not measured in this selection",
+        sub: null,
       },
     ],
     [
