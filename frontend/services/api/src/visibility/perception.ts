@@ -26,6 +26,7 @@ import { chunked, groupBy } from '../lists.ts';
 import { frozenPerceptionVersions } from '../perception/admission.ts';
 import {
   classifiedQuotes,
+  entityScores,
   mentionStatus,
   perceptionSummary,
   persistedOutcomeSchema,
@@ -164,21 +165,20 @@ async function selectionAnswers(
   options: { citations: boolean },
 ) {
   const scoped = await scopedSelection(db, selection);
-  const rows = (
-    await evidenceScope(db, scoped)
-      .select([
-        'ra.id',
-        'ra.audit_id',
-        'ra.task_id',
-        'ra.logical_engine',
-        'ra.entity_assessments',
-        'audit.configuration',
-        'snapshot.text as prompt',
-        'snapshot.theme as topic',
-        utcTextOf(observedAt).as('observed_at'),
-      ])
-      .execute()
-  ).flatMap((row) => {
+  const selected = await evidenceScope(db, scoped)
+    .select([
+      'ra.id',
+      'ra.audit_id',
+      'ra.task_id',
+      'ra.logical_engine',
+      'ra.entity_assessments',
+      'audit.configuration',
+      'snapshot.text as prompt',
+      'snapshot.theme as topic',
+      utcTextOf(observedAt).as('observed_at'),
+    ])
+    .execute();
+  const rows = selected.flatMap((row) => {
     const versions = frozenPerceptionVersions(row.configuration);
     return versions ? [{ ...row, versions }] : [];
   });
@@ -213,7 +213,11 @@ async function selectionAnswers(
       citations: (citations.get(row.id) ?? []).map(({ domain, url }) => ({ domain, url })),
     };
   });
-  return { answers, auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText) };
+  return {
+    answers,
+    auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
+    partial: rows.length < selected.length,
+  };
 }
 
 export async function getPerception(
@@ -222,6 +226,71 @@ export async function getPerception(
 ): Promise<PerceptionResponse> {
   const { answers, auditIds } = await selectionAnswers(db, selection, { citations: true });
   return { ...perceptionSummary(answers, policy.perception), source_audit_ids: auditIds };
+}
+
+/**
+ * Each named business's net sentiment over the selection, the brand first; an
+ * empty list when any selected answer's run was admitted without perception,
+ * so a pool never reads as the sentiment of only its perceived runs.
+ */
+export async function entitySentiments(db: Database, selection: RunSelection) {
+  const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
+  if (partial) return [];
+  return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
+    name,
+    is_brand,
+    sentiment: {
+      mentions: coverage.mentions,
+      classified: score.classified,
+      positive: score.positive,
+      negative: score.negative,
+      net_sentiment: score.net_sentiment,
+    },
+  }));
+}
+
+/**
+ * Per perceived audit, the brand's mentions in each of its analyses, read in
+ * one batch. An audit admitted without perception has no entry. The audits
+ * and analyses are already scoped.
+ */
+export async function brandMentionsByAudit(
+  db: Database,
+  input: {
+    workspaceId: string;
+    audits: readonly { id: string; configuration: unknown }[];
+    analyses: readonly { id: string; audit_id: string; entity_assessments: unknown }[];
+  },
+): Promise<Map<string, Map<string, Mention[]>>> {
+  const extractor = new Map(
+    input.audits.flatMap((audit) => {
+      const versions = frozenPerceptionVersions(audit.configuration);
+      return versions ? [[audit.id, versions.extractor_version] as const] : [];
+    }),
+  );
+  const analyses = input.analyses.flatMap((row) => {
+    const version = extractor.get(row.audit_id);
+    return version ? [{ ...row, version }] : [];
+  });
+  const perceived = await perceptionsOf(
+    db,
+    input.workspaceId,
+    new Map(analyses.map((row) => [row.id, row.version])),
+  );
+  const byAudit = groupBy(analyses, (row) => row.audit_id);
+  return new Map(
+    [...extractor.keys()].map((auditId) => [
+      auditId,
+      new Map(
+        (byAudit.get(auditId) ?? []).map((row) => [
+          row.id,
+          mentionsOf(assessmentsSchema.parse(row.entity_assessments), perceived.get(row.id))
+            .map(({ mention }) => mention)
+            .filter((mention) => mention.isBrand),
+        ]),
+      ),
+    ]),
+  );
 }
 
 /** The decoded cursor position; a malformed one is refused, never read as the start. */

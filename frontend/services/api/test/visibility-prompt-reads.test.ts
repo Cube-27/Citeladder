@@ -33,6 +33,7 @@ describe('GET /visibility/prompts', () => {
       analysis: {
         brandMentioned: true,
         avgPosition: 1,
+        searchUsed: true,
         brandMentions: ['Acme Corp'],
         competitorMentions: ['Globex'],
         firstNamed: { kind: 'brand', name: 'Acme Corp' },
@@ -56,7 +57,17 @@ describe('GET /visibility/prompts', () => {
       taskStatus: 'failed',
       analysis: null,
     });
-    await fixtures.execution(tenant, { auditId, promptIndex: 1, promptText: 'cheap crm' });
+    const silent = await fixtures.execution(tenant, {
+      auditId,
+      promptIndex: 1,
+      promptText: 'cheap crm',
+    });
+    // A surface that exposes no search signal: not reported, which is not "no".
+    await db
+      .updateTable('response_analyses')
+      .set({ fanout_state: 'unavailable' })
+      .where('id', '=', silent.analysisId!)
+      .execute();
     await fixtures.promptScore(tenant, auditId, {
       promptIndex: 0,
       promptText: 'best crm',
@@ -81,7 +92,17 @@ describe('GET /visibility/prompts', () => {
       win_answers: 2,
       win_rate: 0.5,
       comparison_status: 'no_baseline',
+      // Acme in 1 of the 4 tracked-brand namings below.
+      share_of_voice: 0.25,
+      // The failed task has no answer; both answers' engines report search use.
+      web_search: { searched: 1, reported: 2, share: 0.5 },
+      // A run admitted without perception classifies nothing: not a zero.
+      sentiment: null,
     });
+    expect([body[0]!.share_of_voice, body[0]!.web_search]).toEqual([
+      null,
+      { searched: 0, reported: 0, share: null },
+    ]);
     // Every brand the answers named, most answers first: competitors count too.
     expect(scored).toMatchObject({
       mentions: 3,
@@ -162,6 +183,9 @@ describe('GET /visibility/prompts', () => {
       rolling_four: [],
       counts: { responses: 2, brand_responses: 1 },
       visibility_rate: 0.5,
+      // Over the pooled namings and pooled answers; neither run searched: 0%, reported.
+      share_of_voice: 1 / 3,
+      web_search: { searched: 0, reported: 2, share: 0 },
       // A name's answers are summed across the pooled runs.
       mentions: 2,
       brands: [

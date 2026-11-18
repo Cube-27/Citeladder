@@ -14,8 +14,12 @@ import { orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
+import { SentimentValue } from '@/components/visibility/sentiment-value';
 
 const TITLE = 'You and your competitors';
+
+const SENTIMENT_HINT =
+  'Net sentiment: positive minus negative mentions, as a share of the classified mentions of each brand, from −100 to +100.';
 
 const POSITION_HINT =
   'Where a brand tends to appear among the brands you track, averaged over the answers that name it. 1.0 means it is named first every time.';
@@ -46,11 +50,13 @@ export function RankingRowsTable({
   const anyPosition = ordered.some((row) => row.avg_position != null);
   // Runs finalized before first-named answers were persisted have no win rate.
   const anyWin = ordered.some((row) => row.win_answers != null);
+  // Runs admitted without perception classify no mention.
+  const anySentiment = ordered.some((row) => row.sentiment != null);
   return (
     <TitledSection title={TITLE} description={description}>
       <DataTable
         label={TITLE}
-        columns={rankingColumns({ anyPosition, anyWin, anyChange })}
+        columns={rankingColumns({ anyPosition, anyWin, anySentiment, anyChange })}
         minWidth="md"
         state={
           ordered.length
@@ -95,6 +101,11 @@ export function RankingRowsTable({
                   <WinRateValue row={row} />
                 </TableCell>
               ) : null}
+              {anySentiment ? (
+                <TableCell numeric>
+                  <SentimentValue sentiment={row.sentiment} />
+                </TableCell>
+              ) : null}
               {anyChange ? (
                 <TableCell numeric>
                   <Delta value={change} unit=" pp" />
@@ -135,8 +146,14 @@ function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
 function rankingColumns({
   anyPosition,
   anyWin,
+  anySentiment,
   anyChange,
-}: Readonly<{ anyPosition: boolean; anyWin: boolean; anyChange: boolean }>): DataTableColumn[] {
+}: Readonly<{
+  anyPosition: boolean;
+  anyWin: boolean;
+  anySentiment: boolean;
+  anyChange: boolean;
+}>): DataTableColumn[] {
   return [
     { key: 'brand', label: 'Brand', kind: 'identity' },
     // Wide enough for the 120px bar beside its rate.
@@ -166,6 +183,17 @@ function rankingColumns({
             label: 'Win rate',
             hint: WIN_RATE_HINT,
             width: 'short',
+            kind: 'number',
+          } as const,
+        ]
+      : []),
+    ...(anySentiment
+      ? [
+          {
+            key: 'sentiment',
+            label: 'Sentiment',
+            hint: SENTIMENT_HINT,
+            width: 'metric',
             kind: 'number',
           } as const,
         ]

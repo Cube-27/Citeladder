@@ -39,21 +39,27 @@ export function useLatestPromptMeasurements(
     // unmeasured" — the honest reading when we could not load the figures.
     if (result.isError) return map;
     for (const row of result.data ?? []) {
-      if (!row.prompt_id) continue;
-      map.set(row.prompt_id, {
-        visibilityRate: row.visibility_rate ?? null,
-        ownedCitationRate: row.owned_citation_rate ?? null,
-        change: promptChange(row),
-        position: row.avg_position ?? null,
-        mentions: row.mentions,
-        brands: row.brands,
-        named: row.named ?? [],
-        sources: row.sources ?? [],
-        answer: { auditId: row.audit_id, promptIndex: row.prompt_index },
-      });
+      if (row.prompt_id) map.set(row.prompt_id, measurementOf(row));
     }
     return map;
   }, [result.data, result.isError, result.isLoading]);
+}
+
+function measurementOf(row: PromptMetricItem): PromptMeasurement {
+  return {
+    visibilityRate: row.visibility_rate ?? null,
+    ownedCitationRate: row.owned_citation_rate ?? null,
+    change: promptChange(row),
+    position: row.avg_position ?? null,
+    shareOfVoice: row.share_of_voice ?? null,
+    sentiment: row.sentiment ?? null,
+    webSearch: row.web_search,
+    mentions: row.mentions,
+    brands: row.brands,
+    named: row.named ?? [],
+    sources: row.sources ?? [],
+    answer: { auditId: row.audit_id, promptIndex: row.prompt_index },
+  };
 }
 
 /** A row's change since the prompt's previous measurement, or why there is none. */

@@ -3,6 +3,8 @@
  * never recomputed; a missing value stays `null` so the component draws the
  * shared missing mark rather than a zero.
  */
+import type { NetSentiment } from '@citeladder/contracts';
+import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { formatPercent, measured } from '@/lib/format';
 import type {
   PerceptionCoverage,
@@ -14,6 +16,28 @@ export function formatNet(value: number | null): string | null {
   if (value === null || Number.isNaN(value)) return null;
   const rounded = Math.round(value);
   return rounded > 0 ? `+${rounded}` : String(rounded);
+}
+
+/**
+ * A net sentiment reading for a table cell or figure: not measured when the
+ * read carried none, no mentions when nothing named the brand, too few below
+ * the minimum classified count (never a zero), else the signed value.
+ */
+export function sentimentReading(
+  sentiment: NetSentiment | null | undefined,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+):
+  | { kind: 'not_measured' }
+  | { kind: 'no_mentions' }
+  | { kind: 'too_few'; classified: number; mentions: number; minimum: number }
+  | { kind: 'value'; net: string; classified: number; mentions: number } {
+  if (!sentiment) return { kind: 'not_measured' };
+  if (sentiment.mentions === 0) return { kind: 'no_mentions' };
+  const { classified, mentions } = sentiment;
+  const net = formatNet(sentiment.net_sentiment);
+  if (classified < minimum || net === null)
+    return { kind: 'too_few', classified, mentions, minimum };
+  return { kind: 'value', net, classified, mentions };
 }
 
 /** A 0–1 share as a whole percentage, or null. */

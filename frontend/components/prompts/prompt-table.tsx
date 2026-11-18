@@ -12,13 +12,26 @@ import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Switch } from '@/components/ui/switch';
 import { Absence } from '@/components/ui/absence';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
-import type { NamedBrand, Prompt, PromptStatus } from '@citeladder/contracts';
+import { SentimentValue, WebSearchValue } from '@/components/visibility/sentiment-value';
+import type {
+  NamedBrand,
+  NetSentiment,
+  Prompt,
+  PromptStatus,
+  WebSearchShare,
+} from '@citeladder/contracts';
+import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { ICONS } from '@/lib/icons';
 import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';
 
 import { CitedDomainMarks } from './cited-domain-marks';
-import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import {
+  formatPosition,
+  formatPositionExact,
+  formatRate,
+  measured,
+} from '@/lib/visibility/dashboard';
 
 /**
  * The change since the run that measured the same prompt before (owner,
@@ -37,6 +50,10 @@ export type PromptMeasurement = PromptMentions & {
   ownedCitationRate: number | null;
   change: PromptChange;
   position: number | null;
+  shareOfVoice: number | null;
+  /** Null when the run classified no sentiment (admitted without perception). */
+  sentiment: NetSentiment | null;
+  webSearch: WebSearchShare | undefined;
   /** Distinct brands named in the answers; `brands` is the leading few. */
   mentions: number;
   brands: readonly NamedBrand[];
@@ -275,6 +292,27 @@ const SHELF_HINT =
 
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
+    key: 'sov',
+    label: 'Share of voice',
+    width: 'short',
+    kind: 'number',
+    hint: SHARE_OF_VOICE_HINT,
+  },
+  {
+    key: 'sentiment',
+    label: 'Sentiment',
+    width: 'figure',
+    kind: 'number',
+    hint: "Net sentiment toward your brand in this prompt's answers: positive minus negative mentions, as a share of the classified ones.",
+  },
+  {
+    key: 'web_search',
+    label: 'Web search',
+    width: 'figure',
+    kind: 'number',
+    hint: "The share of this prompt's answers that searched the web, counting only engines that report it.",
+  },
+  {
     key: 'mentions',
     label: 'Mentions',
     width: 'status',
@@ -326,6 +364,21 @@ function MeasuredCells({
     <>
       <TableCell numeric>
         {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
+      </TableCell>
+      <TableCell numeric>
+        {measurement ? (
+          (measured(formatRate(measurement.shareOfVoice)) ?? (
+            <Absence state="none" reason="No tracked brand was named in these answers." />
+          ))
+        ) : (
+          <Absence state="not_measured" />
+        )}
+      </TableCell>
+      <TableCell numeric>
+        <SentimentValue sentiment={measurement?.sentiment} tooFew="Too few" showCount={false} />
+      </TableCell>
+      <TableCell numeric>
+        <WebSearchValue value={measurement?.webSearch} />
       </TableCell>
       <TableCell>
         {measurement ? (

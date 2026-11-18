@@ -16,6 +16,7 @@ import {
   formatShortDate,
   formatWindowDate,
 } from '@/lib/format';
+import { formatPositionExact, formatWholePercent } from '@/lib/visibility/dashboard';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -51,7 +52,34 @@ export function rangeToFrom(range: TrendRange, now: Date = new Date()): string |
 }
 
 /** Which headline metric a chart plots. */
-export type TrendMetric = 'sov' | 'brand_mention_rate' | 'owned_citation_rate';
+export type TrendMetric = 'sov' | 'brand_mention_rate' | 'owned_citation_rate' | 'avg_position';
+
+type Plotted = number | null;
+
+/**
+ * How a metric sits on the y axis. Rates run 0–100%. A position is better when
+ * lower, so it plots negated with its ticks unsigned: #1 at the top, up is better.
+ */
+export function trendAxis(metric: TrendMetric, lines: readonly (readonly Plotted[])[]) {
+  if (metric !== 'avg_position')
+    return {
+      plot: (value: Plotted) => value,
+      unplot: (value: number) => value,
+      yMin: undefined,
+      yMax: 100,
+      tick: (value: number) => `${Math.round(value)}%`,
+      format: formatWholePercent,
+    };
+  const values = lines.flat().filter((value): value is number => value !== null);
+  return {
+    plot: (value: Plotted) => (value === null ? null : -value),
+    unplot: (value: number) => -value,
+    yMin: -Math.max(2, Math.ceil(Math.max(1, ...values))),
+    yMax: -1,
+    tick: (value: number) => String(Math.round(-value)),
+    format: formatPositionExact,
+  };
+}
 
 /**
  * A point's short axis label and full date. A run point is an instant, shown in
@@ -69,9 +97,11 @@ function pointDates(point: VisibilityTrendPoint, timeZone: string) {
   };
 }
 
-/** A metric's 0–100 value for a point (percentages scaled to whole percent). */
+/** A metric's 0–100 value for a point (percentages scaled to whole percent); a position as is. */
 function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number | null {
   switch (metric) {
+    case 'avg_position':
+      return point.avg_position;
     case 'sov':
       return point.sov.mention === null ? null : point.sov.mention * 100;
     case 'brand_mention_rate':
@@ -147,23 +177,26 @@ const RANKING_METRIC_COLUMN: Record<TrendMetric, (row: RankingMetricRow) => numb
   owned_citation_rate: (row) => row.citation_rate,
   sov: (row) => row.share_of_voice,
   brand_mention_rate: (row) => row.mention_rate,
+  avg_position: (row) => row.avg_position,
 };
 
 type RankingMetricRow = {
   mention_rate: number | null;
   citation_rate: number | null;
   share_of_voice: number | null;
+  avg_position: number | null;
 };
 
 /**
- * One ranking row's value for a metric, as whole percent.
+ * One ranking row's value for a metric, as whole percent; a position as is.
  *
  * Each metric reads its OWN column — plotting mention rate under a Share of
  * voice heading drew a line that was not the metric selected.
  */
 function rankingMetricValue(row: RankingMetricRow, metric: TrendMetric): number | null {
   const value = RANKING_METRIC_COLUMN[metric](row);
-  return value === null || value === undefined ? null : value * 100;
+  if (value === null || value === undefined) return null;
+  return metric === 'avg_position' ? value : value * 100;
 }
 
 /**

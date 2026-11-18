@@ -4117,6 +4117,36 @@
         "required": ["kind", "name", "responses", "logo_url", "website"],
         "additionalProperties": false
       },
+      "NetSentiment": {
+        "type": "object",
+        "properties": {
+          "mentions": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "classified": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "positive": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "negative": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "net_sentiment": {
+            "type": ["number", "null"]
+          }
+        },
+        "required": ["mentions", "classified", "positive", "negative", "net_sentiment"],
+        "additionalProperties": false
+      },
       "ObservedCompetitor": {
         "type": "object",
         "properties": {
@@ -5986,6 +6016,22 @@
           "win_rate": {
             "type": ["number", "null"]
           },
+          "share_of_voice": {
+            "type": ["number", "null"]
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NetSentiment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "web_search": {
+            "$ref": "#/components/schemas/WebSearchShare"
+          },
           "visibility_delta": {
             "type": ["number", "null"]
           },
@@ -6280,6 +6326,16 @@
           },
           "win_rate": {
             "type": ["number", "null"]
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NetSentiment"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -9254,6 +9310,26 @@
           "spans_version_boundary"
         ],
         "additionalProperties": false
+      },
+      "WebSearchShare": {
+        "type": "object",
+        "properties": {
+          "searched": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reported": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "share": {
+            "type": ["number", "null"]
+          }
+        },
+        "required": ["searched", "reported", "share"],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -11387,7 +11463,8 @@
                         "avg_position": null,
                         "win_count": null,
                         "win_answers": null,
-                        "win_rate": null
+                        "win_rate": null,
+                        "sentiment": null
                       }
                     ],
                     "skipped_runs": 1,
@@ -11418,7 +11495,8 @@
                         "avg_position": null,
                         "win_count": null,
                         "win_answers": null,
-                        "win_rate": null
+                        "win_rate": null,
+                        "sentiment": null
                       }
                     ]
                   },
@@ -11453,7 +11531,8 @@
                       "avg_position": null,
                       "win_count": null,
                       "win_answers": null,
-                      "win_rate": null
+                      "win_rate": null,
+                      "sentiment": null
                     }
                   ],
                   "per_engine": [
@@ -11675,6 +11754,13 @@
                     "win_count": null,
                     "win_answers": null,
                     "win_rate": null,
+                    "share_of_voice": null,
+                    "sentiment": null,
+                    "web_search": {
+                      "searched": 1,
+                      "reported": 1,
+                      "share": null
+                    },
                     "visibility_delta": null,
                     "comparison_status": "Example comparison status",
                     "comparison": null,
@@ -12068,7 +12154,8 @@
                         "avg_position": null,
                         "win_count": null,
                         "win_answers": null,
-                        "win_rate": null
+                        "win_rate": null,
+                        "sentiment": null
                       }
                     ],
                     "avg_position": null,

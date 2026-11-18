@@ -109,6 +109,9 @@ describe('PromptLibrary first load', () => {
     ).toEqual([
       'Prompt',
       'Visibility',
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
+      expect.stringMatching(/^Web search/),
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
