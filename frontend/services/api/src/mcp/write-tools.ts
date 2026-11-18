@@ -216,47 +216,67 @@ async function preparePromptChange(
     throw new McpInputError(
       'change assign_topic needs topic_id; pass null to take the prompts out of every topic.',
     );
-  if (wanted !== 'assign_topic' && topicId)
+  if (wanted !== 'assign_topic' && topicId !== undefined)
     throw new McpInputError('topic_id goes only with change assign_topic.');
   const actor = authorize(
     await writeActor(context.db, context.principal, args.project_id),
     preparedChanges.update_prompts.permission,
   );
   const scope = { workspaceId: actor.workspaceId, projectId: args.project_id };
-  const rows = await scopedPrompts(context.db, scope, args.prompt_ids);
-  const change = newChange(args.project_id);
-  const rehearse = (input: Parameters<typeof preparedChanges.update_prompts.rehearse>[4]) =>
-    preparedChanges.update_prompts.rehearse(
-      context.db,
-      context.config,
-      actor,
-      change,
-      input,
-      (trx) => promptOccupancy(trx, actor.workspaceId),
-    );
-  if (wanted === 'assign_topic') {
-    const target = topicId ?? null;
-    const moving = rows.filter((row) => row.topic_id !== target);
-    if (!isNonEmpty(moving))
-      return { state: 'nothing_to_change', preview: 'These prompts are already filed there.' };
-    const { payload } = await rehearse({
-      kind: 'topic',
-      topic_id: target,
-      prompt_ids: moving.map((row) => row.id),
-    });
-    const topics = await listTopics(context.db, scope);
-    const name = topics.find((topic) => topic.id === target)?.name;
-    const where = name === undefined ? 'out of every topic' : `under the topic "${name}"`;
-    const skipped = rows.length - moving.length;
-    return prepared(context, {
-      change,
-      actor,
-      kind: 'update_prompts',
-      payload,
-      preview: `File ${moving.length} prompt(s) ${where}: ${quoted(moving.map((row) => row.text))}. Past runs keep the topic they had.${skipped ? ` ${skipped} already filed there.` : ''}`,
-    });
-  }
-  const status = wanted === 'activate' ? 'active' : 'archived';
+  const selection = {
+    actor,
+    scope,
+    change: newChange(args.project_id),
+    rows: await scopedPrompts(context.db, scope, args.prompt_ids),
+  };
+  if (wanted === 'assign_topic') return prepareRefile(context, selection, topicId ?? null);
+  return prepareStatusChange(context, selection, wanted === 'activate' ? 'active' : 'archived');
+}
+
+type PromptSelection = {
+  actor: Authorized<typeof PROMPTS_WRITE>;
+  scope: { workspaceId: string; projectId: string };
+  change: PreparedChange;
+  rows: Awaited<ReturnType<typeof scopedPrompts>>;
+};
+
+const skippedNote = (skipped: number, state: string) =>
+  skipped ? ` ${skipped} already ${state}.` : '';
+
+async function prepareRefile(
+  context: Context,
+  { actor, scope, change, rows }: PromptSelection,
+  target: string | null,
+): Promise<Evidence> {
+  const moving = rows.filter((row) => row.topic_id !== target);
+  if (!isNonEmpty(moving))
+    return { state: 'nothing_to_change', preview: 'These prompts are already filed there.' };
+  const { payload } = await preparedChanges.update_prompts.rehearse(
+    context.db,
+    context.config,
+    actor,
+    change,
+    { kind: 'topic', topic_id: target, prompt_ids: moving.map((row) => row.id) },
+    noInspection,
+  );
+  const topics = await listTopics(context.db, scope);
+  const name = topics.find((topic) => topic.id === target)?.name;
+  const where = name === undefined ? 'out of every topic' : `under the topic "${name}"`;
+  const skipped = skippedNote(rows.length - moving.length, 'filed there');
+  return prepared(context, {
+    change,
+    actor,
+    kind: 'update_prompts',
+    payload,
+    preview: `File ${moving.length} prompt(s) ${where}: ${quoted(moving.map((row) => row.text))}. Past runs keep the topic they had.${skipped}`,
+  });
+}
+
+async function prepareStatusChange(
+  context: Context,
+  { actor, change, rows }: PromptSelection,
+  status: 'active' | 'archived',
+): Promise<Evidence> {
   const changing = rows.filter((row) => row.status !== status);
   if (!isNonEmpty(changing))
     return { state: 'nothing_to_change', preview: `These prompts are already ${status}.` };
@@ -264,21 +284,23 @@ async function preparePromptChange(
     prompt_set_id: setId,
     prompt_ids: members.map((row) => row.id),
   }));
-  const { payload, inspected: slots } = await rehearse({ kind: 'status', status, groups });
-  const skipped = rows.length - changing.length;
-  const effect =
+  const { payload, inspected: slots } = await preparedChanges.update_prompts.rehearse(
+    context.db,
+    context.config,
+    actor,
+    change,
+    { kind: 'status', status, groups },
+    (trx) => promptOccupancy(trx, actor.workspaceId),
+  );
+  const texts = quoted(changing.map((row) => row.text));
+  const skipped = skippedNote(rows.length - changing.length, status);
+  const preview =
     status === 'archived'
-      ? 'Future audits stop measuring them; past results stay.'
-      : `Audits measure them from the next run. Prompt slots after: ${slots.used} of ${slots.allowance}.`;
+      ? `Archive ${changing.length} prompt(s): ${texts}. Future audits stop measuring them; past results stay.${skipped}`
+      : `Activate ${changing.length} prompt(s): ${texts}. Audits measure them from the next run. Prompt slots after: ${slots.used} of ${slots.allowance}.${skipped}`;
   return prepared(
     context,
-    {
-      change,
-      actor,
-      kind: 'update_prompts',
-      payload,
-      preview: `${wanted === 'activate' ? 'Activate' : 'Archive'} ${changing.length} prompt(s): ${quoted(changing.map((row) => row.text))}. ${effect}${skipped ? ` ${skipped} already ${status}.` : ''}`,
-    },
+    { change, actor, kind: 'update_prompts', payload, preview },
     status === 'active' ? { prompt_slots: slots } : {},
   );
 }

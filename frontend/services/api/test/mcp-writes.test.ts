@@ -261,6 +261,9 @@ it('archives, refiles and activates a selection only on confirmation, all or not
   expect(await failure(prepare({ change: 'assign_topic', prompt_ids: [tenant.promptId] }))).toBe(
     'change assign_topic needs topic_id; pass null to take the prompts out of every topic.',
   );
+  expect(
+    await failure(prepare({ change: 'activate', prompt_ids: [tenant.promptId], topic_id: null })),
+  ).toBe('topic_id goes only with change assign_topic.');
 
   const activate = await prepare({ change: 'activate', prompt_ids: [tenant.promptId] });
   expect(activate).toMatchObject({ prompt_slots: { used: 1 } });
