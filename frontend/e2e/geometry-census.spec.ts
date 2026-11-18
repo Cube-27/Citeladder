@@ -781,11 +781,10 @@ async function expectOneGeometry(page: Page) {
 
   // The project edit panel open, so its mention-rule Switch is drawn.
   records.push(
-    ...(await census(page, '/projects', {
-      label: '/projects (edit panel)',
+    ...(await census(page, '/agent/context?tab=competitors', {
+      label: '/agent/context (edit panel)',
       prepare: async (current) => {
-        await current.getByRole('button', { name: /manage project/i }).click();
-        await current.getByRole('menuitem', { name: 'Edit active project' }).click();
+        await current.getByRole('button', { name: 'Edit competitors' }).click();
         await expect(current.getByRole('switch').first()).toBeVisible();
       },
     })),
