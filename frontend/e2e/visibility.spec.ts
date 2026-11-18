@@ -6,7 +6,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
  * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
- * Sources, Perception, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
+ * Sources, Ads, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
@@ -496,7 +496,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(5);
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);

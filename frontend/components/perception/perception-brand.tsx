@@ -98,7 +98,7 @@ function Lede({
       value: formatShare(recommended.rate),
       missingLabel: 'Unavailable',
       sub:
-        `Named first and recommended: ${recommended.recommended} of ${recommended.mentioned} answers naming you` +
+        `${recommended.recommended} of ${recommended.mentioned} answers naming you` +
         (recommended.recommended_against
           ? `; ${recommended.recommended_against} advised against`
           : ''),

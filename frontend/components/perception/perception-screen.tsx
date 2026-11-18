@@ -46,7 +46,7 @@ export function PerceptionScreen() {
   const pilot = useBrandFacts().data?.enabled ?? false;
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
   const tab = pilot ? requested : 'brand';
-  const accuracy = useAccuracy(filters, queries, pilot);
+  const accuracy = useAccuracy({ filters, queries, pilot });
   const pageFilters = usePageFilters(filters, queries);
   const { auditsQuery } = queries;
   const ready = !auditsQuery.isLoading && !auditsQuery.isError && queries.hasRuns;
@@ -72,7 +72,13 @@ export function PerceptionScreen() {
                     filters={filters}
                     queries={queries}
                     factFigure={
-                      pilot ? factFigure(accuracy.data, () => setTab('fact-checking')) : undefined
+                      pilot
+                        ? factFigure(
+                            // A previous selection's count is not this one's: load instead.
+                            accuracy.isPlaceholderData ? undefined : accuracy.data,
+                            () => setTab('fact-checking'),
+                          )
+                        : undefined
                     }
                   />
                 ) : (

@@ -48,9 +48,11 @@ const theme = (name: string, positive: number, negative: number) => ({
 describe('perception derivations', () => {
   it('heads the tab with the negative share, and says so when nothing is negative', () => {
     expect(negativeHeadline(score(12, 4, 4))).toBe(
-      'AI says something negative about you in 20% of mentions',
+      'AI says something negative about you in 20% of classified mentions',
     );
-    expect(negativeHeadline(score(3, 1, 0))).toBe('AI says nothing negative about you');
+    expect(negativeHeadline(score(3, 1, 0))).toBe(
+      'AI says nothing negative about you in classified mentions',
+    );
     expect(negativeHeadline(score(0, 0, 0))).toBeNull();
   });
 

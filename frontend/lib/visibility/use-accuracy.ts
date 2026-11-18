@@ -14,12 +14,16 @@ import {
  * The Fact-checking tab's read: the same selection as Perception. It rechecks while
  * claims are still being checked, on the perception cadence.
  */
-export function useAccuracy(
-  filters: Pick<SourceFilters, 'engine' | 'cohort'>,
-  queries: SourceQueries,
+export function useAccuracy({
+  filters,
+  queries,
+  pilot,
+}: Readonly<{
+  filters: Pick<SourceFilters, 'engine' | 'cohort'>;
+  queries: SourceQueries;
   /** Outside the fact-checking pilot nothing is read. */
-  pilot = true,
-) {
+  pilot: boolean;
+}>) {
   const params = selectionParams(filters, queries);
   const enabled = pilot && selectionEnabled(queries);
   const query = useQuery({

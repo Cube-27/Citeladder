@@ -88,7 +88,7 @@ describe('Perception view', () => {
     render(<PerceptionView data={response()} />);
     expect(
       screen.getByRole('heading', {
-        name: 'AI says something negative about you in 25% of mentions',
+        name: 'AI says something negative about you in 25% of classified mentions',
       }),
     ).toBeVisible();
     expect(within(screen.getByLabelText('Brand perception')).getByText('4 / 6')).toBeVisible();
@@ -145,9 +145,9 @@ describe('Perception view', () => {
   it('states the recommended count briefly, naming advice against only when it occurred', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
     const basis = (description: string) => screen.getByRole('button', { description });
-    expect(
-      basis('Named first and recommended: 2 of 5 answers naming you; 1 advised against'),
-    ).toHaveAccessibleName(/^Basis of /);
+    expect(basis('2 of 5 answers naming you; 1 advised against')).toHaveAccessibleName(
+      /^Basis of /,
+    );
     unmount();
 
     render(
@@ -163,9 +163,7 @@ describe('Perception view', () => {
         })}
       />,
     );
-    expect(basis('Named first and recommended: 0 of 4 answers naming you')).toHaveAccessibleName(
-      /^Basis of /,
-    );
+    expect(basis('0 of 4 answers naming you')).toHaveAccessibleName(/^Basis of /);
   });
 
   it('marks the classified counts unavailable when the brand has no score, never 0 of 0', () => {

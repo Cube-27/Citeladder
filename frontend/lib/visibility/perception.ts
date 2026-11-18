@@ -95,8 +95,8 @@ type Theme = PerceptionResponse['themes'][number];
 /** The Brand tab's headline, from the brand's own classified mentions. */
 export function negativeHeadline(score: Score | null | undefined): string | null {
   if (!score || score.negative_share === null) return null;
-  if (score.negative === 0) return 'AI says nothing negative about you';
-  return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of mentions`;
+  if (score.negative === 0) return 'AI says nothing negative about you in classified mentions';
+  return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of classified mentions`;
 }
 
 /** The themes with more negative mentions than positive, named in one sentence. */
