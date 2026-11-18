@@ -39,6 +39,16 @@ export const BASELINE_RUNS = { scalar: { kind: 'uuid' }, list: true } as const;
 // `citations.url` is unbounded text, so this cap decides which pages have a
 // detail view at all: the practical ceiling a query string survives.
 export const MAX_URL_LENGTH = 8192;
+/** The answer filters the evidence table and the Query fanouts table both apply. */
+export const EVIDENCE_FILTERS = {
+  outcome: {
+    scalar: { kind: 'literal', values: ['brand_absent', 'uncited', 'competitor_gap'] },
+  },
+  competitor: { scalar: { kind: 'str', maxLength: 255 } },
+  domain: { scalar: { kind: 'str', maxLength: 255 } },
+  url: { scalar: { kind: 'str', maxLength: MAX_URL_LENGTH } },
+  prompt_id: { scalar: { kind: 'uuid' } },
+} as const satisfies ParamSpecs;
 
 /** Every route here reads the path project inside the active workspace. */
 export const family = { family: 'visibility', authorize: 'active-project' } as const;

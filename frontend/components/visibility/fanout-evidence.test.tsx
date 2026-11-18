@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -80,7 +80,6 @@ function Panel({
         runId={null}
         scope={{}}
         scopeReady
-        scopeNarrowed={false}
         isFiltered={false}
         limit={100}
       />
@@ -103,7 +102,6 @@ function EmptyPanel({ onClearFilters }: Readonly<{ onClearFilters?: () => void }
         runId={null}
         scope={{}}
         scopeReady
-        scopeNarrowed={false}
         isFiltered={onClearFilters !== undefined}
         onClearFilters={onClearFilters}
         limit={100}
@@ -146,6 +144,7 @@ describe('Fanout evidence scope', () => {
             total_answers: 50,
             answers: [],
             items: [],
+            compared: false,
           })
         : new Promise((_, reject) => {
             rejectNext = reject;
@@ -165,6 +164,52 @@ describe('Fanout evidence scope', () => {
         '1 distinct searches and 1 total occurrences in the searches shown below',
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Fanout query share, change and brands', () => {
+  const row = (query: string, share: number, change: number | null, brands: [] | null) => ({
+    query,
+    event_count: 3,
+    prompt_count: 1,
+    engines: ['chatgpt'],
+    response_count: 1,
+    brand_response_count: 0,
+    share,
+    change,
+    brands,
+  });
+  const summary = {
+    event_count: 4,
+    distinct_queries: 2,
+    matched_queries: 2,
+    coverage: {},
+    next_cursor: null,
+    total_answers: 0,
+    answers: [],
+    compared: true,
+  };
+
+  it('fills each row from its query’s server figures and lists risers from the server', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockImplementation(async (_projectId, params) => ({
+      ...summary,
+      items:
+        params.order === 'rising'
+          ? [row('crm pricing', 0.25, 0.25, [])]
+          : [row('best crm', 0.75, -0.25, null)],
+    }));
+    const user = userEvent.setup();
+    renderWithProviders(<Panel projectId={A} />);
+    const best = (await screen.findByText('75.0%')).closest('tr')!;
+    expect(within(best).getByText('best crm')).toBeVisible();
+    // Measured before brands were matched: not counted, never "no tracked brand".
+    expect(within(best).getByText('Not counted')).toBeVisible();
+
+    await user.click(screen.getByRole('radio', { name: 'Rising' }));
+    const pricing = (await screen.findByText('crm pricing')).closest('tr')!;
+    expect(within(pricing).getByText('25.0%')).toBeVisible();
+    expect(within(pricing).getByText('No tracked brand')).toBeVisible();
+    expect(screen.queryByText('best crm')).toBeNull();
   });
 });
 

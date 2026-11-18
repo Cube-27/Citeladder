@@ -36,8 +36,11 @@ plan and for your questions record all recommended answers as my decision".
   [Answer perception](../visibility-prompt.md#answer-perception) to say so.
 - **AV-7, win rate roster.** Position and win rate count only the tracked roster,
   never untracked names found in the answer.
-- **AV-8, fanout terms.** BL10 removed server-side fanout grouping. W11 builds fanout
-  terms anyway, but only after W1–W8 ship and only if pilots ask for them.
+- **AV-8, fanout queries.** "i think query fanout was alrady correct just the columns
+  needed to be added" (2026-11-18): no separate word or phrase card. The existing Query
+  fanouts table counts the queries exactly as engines returned them and gains Share,
+  Change (against the previous comparable run) and Brands matched, with Top, Rising and
+  Falling, under the tab's filters.
 - **AV-9, market probes (W12).** Funded from customer audit credits like a normal run.
   The first version uses the closed theme list, not open clusters. Probes run on demand,
   with an optional schedule.
@@ -243,14 +246,14 @@ labels. Rename them to the sidebar's words.
 - The denominator is answers that name at least one tracked business. When none is named,
   the answer is not applicable.
 
-**W11 Answer formats and fanout terms (M, AV-8).**
+**W11 Answer formats and fanout query columns (M, AV-8).**
 - At analysis, parse stored scraper artifacts for shopping, map, product-comparison and
   image elements:
   - API engines are not applicable.
   - Artifacts without markers are unavailable.
 - In-text links versus citations, where the artifact tells them apart.
-- Fanout term counts and brand matches, computed at finalization, with top, rising and
-  falling terms.
+- Per-query counts and brand matches, persisted at finalization; the Query fanouts
+  table adds Share, Change and Brands matched, with top, rising and falling queries.
 
 ### Collection that adds no provider call
 

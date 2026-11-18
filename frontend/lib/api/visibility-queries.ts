@@ -115,12 +115,6 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getFanoutSummary(scope.projectId, params, scoped(scope, signal)),
     }),
-  fanoutTerms: (scope: ProjectScope, params: ParamsOf<'getFanoutTerms'>) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.fanoutTerms(scope, params),
-      queryFn: ({ signal }) =>
-        visibilityApi.getFanoutTerms(scope.projectId, params, scoped(scope, signal)),
-    }),
   perception: (scope: ProjectScope, params: ParamsOf<'getPerception'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.perception(scope, params),

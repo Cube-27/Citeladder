@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Inbox, Search } from 'lucide-react';
 
@@ -11,7 +11,7 @@ import { SearchField } from '@/components/ui/search-field';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { VisibilityEvidenceResponse } from '@citeladder/contracts';
+import type { FanoutQueryRow, VisibilityEvidenceResponse } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
@@ -39,16 +39,18 @@ import {
   SearchScopeNote,
   FanoutCounts,
 } from '@/components/visibility/fanout-totals';
+import {
+  FANOUT_VIEWS,
+  type FanoutScope,
+  type FanoutView,
+  METRIC_COLUMNS,
+  movedState,
+  QueryMetricCells,
+  useFanoutQueries,
+} from '@/components/visibility/fanout-query-metrics';
+import { SegmentedControl } from '@/components/ui/tabs';
 
 const TITLE = 'Query fanouts';
-
-/** The run/engine/cohort scope the evidence table was read under. */
-export type FanoutScope = Readonly<{
-  audit_id?: string;
-  audit_ids?: string[];
-  engine?: string;
-  cohort?: string;
-}>;
 
 /** Rows (or groups) per page, matching the shared table footer. */
 const PAGE_SIZE = 10;
@@ -58,6 +60,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   // The page's filter calls these surfaces; the column uses the same word.
   { key: 'surface', label: 'Surface', width: 'name' },
   { key: 'occurrences', label: 'Occurrences', width: 'figure', kind: 'number' },
+  ...METRIC_COLUMNS,
 ];
 
 /** What a page of this grouping is counting, for the shared table footer. */
@@ -162,15 +165,15 @@ export function FanoutEvidence({
   runId,
   scope,
   scopeReady,
-  scopeNarrowed,
 }: EvidenceTabProps &
   Readonly<{
     runId: string | null;
     scope: FanoutScope;
     scopeReady: boolean;
-    scopeNarrowed: boolean;
   }>) {
   const groupFilter = useFanoutGroupFilter();
+  const [view, setView] = useState<FanoutView>('top');
+  const queries = useFanoutQueries(scope, scopeReady, view);
   const {
     grouping,
     search,
@@ -190,16 +193,19 @@ export function FanoutEvidence({
   const serverNeedle = useDebounced(needle, TABLE_SEARCH_DEBOUNCE_MS);
   const summary = useFanoutSummary(scope, scopeReady, serverNeedle);
   const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
-  // False whenever the server is counting a different population than the
-  // table shows; the headline then falls back to what the reader can see.
-  const selectionWide = isSelectionWide(summary, scopeNarrowed);
-  const matched = summaryMatchesInput ? selectionMatchedQueries(summary, scopeNarrowed) : null;
+  // False until the server's counts land; the headline shows what the reader can see.
+  const selectionWide = isSelectionWide(summary);
+  const matched = summaryMatchesInput ? selectionMatchedQueries(summary) : null;
 
   // Pending, not merely loading: a read still waiting on its scope fetches
   // nothing and has no items, which is not "no searches recorded".
   if (query.isPending)
     return (
-      <StateBlock kind="loading" label="Loading evidence…" shape={{ kind: 'table', columns: 3 }} />
+      <StateBlock
+        kind="loading"
+        label="Loading evidence…"
+        shape={{ kind: 'table', columns: COLUMNS.length }}
+      />
     );
   if (query.isError)
     return (
@@ -219,8 +225,17 @@ export function FanoutEvidence({
     // heading over the table only repeated it (2026-11-03 app review).
     <DataTable
       label={TITLE}
-      busy={{ active: query.isFetching, label: 'Updating evidence' }}
+      busy={{ active: query.isFetching || queries.read.isFetching, label: 'Updating evidence' }}
       toolbar={{
+        // Rising and Falling rank queries by share change; they are never grouped.
+        view: (
+          <SegmentedControl
+            ariaLabel="Query fanouts view"
+            value={view}
+            onChange={setView}
+            options={FANOUT_VIEWS}
+          />
+        ),
         search: (
           <SearchField
             value={search ?? ''}
@@ -235,9 +250,7 @@ export function FanoutEvidence({
         // What the table holds closes the row: the counts, and what a search kept.
         status: (
           <>
-            {needle && matched != null ? (
-              <SearchScopeNote search={needle} matched={matched} />
-            ) : null}
+            <SearchScopeNote search={needle} matched={matched} />
             <span aria-busy={!summaryMatchesInput}>
               <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
             </span>
@@ -245,26 +258,75 @@ export function FanoutEvidence({
         ),
       }}
       columns={COLUMNS}
-      state={visible.length === 0 ? noSearchMatchState(needle, matched) : undefined}
-      pager={
-        unit > PAGE_SIZE
-          ? {
-              range: { from, to, total: unit, noun: GROUP_NOUNS[grouping] },
-              ...pageNumberControls(page, pageCount, setPage),
-            }
-          : undefined
-      }
+      state={tableState({ view, rows: visible.length, needle, matched, queries })}
+      pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
       footer={
         query.data?.truncated
           ? `Showing the newest ${limit} executions; narrow the filters to see the rest.`
           : null
       }
     >
-      {paged.map((group) => (
-        <SearchGroupRows key={group.key} group={group} />
-      ))}
+      <FanoutRows view={view} groups={paged} queries={queries} />
     </DataTable>
   );
+}
+
+/** Top: the evidence rows with each query's server figures; Rising and Falling: the server's rows. */
+function FanoutRows({
+  view,
+  groups,
+  queries,
+}: Readonly<{
+  view: FanoutView;
+  groups: readonly SearchGroup[];
+  queries: ReturnType<typeof useFanoutQueries>;
+}>) {
+  if (view === 'top')
+    return groups.map((group) => (
+      <SearchGroupRows
+        key={group.key}
+        group={group}
+        metrics={queries.byQuery}
+        failed={queries.isError}
+      />
+    ));
+  return queries.rows.map((row) => (
+    <QueryRow
+      key={row.query}
+      query={row.query}
+      engines={row.engines}
+      occurrences={row.event_count}
+      nested={false}
+    >
+      <QueryMetricCells row={row} failed={false} />
+    </QueryRow>
+  ));
+}
+
+/** Top pages by row or group; Rising and Falling are one page. */
+function tablePager(
+  input: Pick<
+    ReturnType<typeof useSearchTable>,
+    'unit' | 'from' | 'to' | 'grouping' | 'page' | 'pageCount' | 'setPage'
+  > & { view: FanoutView },
+) {
+  if (input.view !== 'top' || input.unit <= PAGE_SIZE) return undefined;
+  return {
+    range: { from: input.from, to: input.to, total: input.unit, noun: GROUP_NOUNS[input.grouping] },
+    ...pageNumberControls(input.page, input.pageCount, input.setPage),
+  };
+}
+
+/** The table's state: Top's search-match empty state, or Rising and Falling's own. */
+function tableState(input: {
+  view: FanoutView;
+  rows: number;
+  needle: string;
+  matched: number | null;
+  queries: ReturnType<typeof useFanoutQueries>;
+}) {
+  if (input.view !== 'top') return movedState(input.view, input.queries);
+  return input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined;
 }
 
 /**
@@ -352,8 +414,15 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
  * every search in the tab sits on one set of columns. Repeating a header per
  * group restarted the column widths at each prompt and left nothing aligned.
  */
-function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
-  const { label: engineLabel } = useEngineCatalog();
+function SearchGroupRows({
+  group,
+  metrics,
+  failed,
+}: Readonly<{
+  group: SearchGroup;
+  metrics: ReadonlyMap<string, FanoutQueryRow>;
+  failed: boolean;
+}>) {
   const undisclosedNoun = group.undisclosed === 1 ? 'answer' : 'answers';
   const unavailableNoun = group.unavailable === 1 ? 'answer has' : 'answers have';
   const noExposedNoun = group.noExposedQueries === 1 ? 'answer' : 'answers';
@@ -373,31 +442,60 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
     <>
       {group.label ? (
         <TableRow>
-          <TableCell colSpan={3}>
+          <TableCell colSpan={COLUMNS.length}>
             <ClampText className={textRole('captionStrong')}>{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}
       {group.rows.map((row) => (
-        <TableRow key={`${group.key}-${row.query}`}>
-          <TableCell nested={Boolean(group.label)}>
-            <Inline as="span" className="items-start">
-              <Icon icon={Search} className="text-ink-2" />
-              <ClampText>{row.query}</ClampText>
-            </Inline>
-          </TableCell>
-          <TableCell>{row.engines.map(engineLabel).join(', ')}</TableCell>
-          <TableCell numeric>{row.occurrences}</TableCell>
-        </TableRow>
+        <QueryRow
+          key={`${group.key}-${row.query}`}
+          query={row.query}
+          engines={row.engines}
+          occurrences={row.occurrences}
+          nested={Boolean(group.label)}
+        >
+          <QueryMetricCells row={metrics.get(row.query)} failed={failed} />
+        </QueryRow>
       ))}
       {note ? (
         <TableRow>
-          <TableCell colSpan={3} className={textRole('caption', 'text-ink-2')}>
+          <TableCell colSpan={COLUMNS.length} className={textRole('caption', 'text-ink-2')}>
             {note}
           </TableCell>
         </TableRow>
       ) : null}
     </>
+  );
+}
+
+/** One query: its text, the surfaces that ran it, its count, then its share, change and brands. */
+function QueryRow({
+  query,
+  engines,
+  occurrences,
+  nested,
+  children,
+}: Readonly<{
+  query: string;
+  engines: readonly string[];
+  occurrences: number;
+  nested: boolean;
+  children: ReactNode;
+}>) {
+  const { label: engineLabel } = useEngineCatalog();
+  return (
+    <TableRow>
+      <TableCell nested={nested}>
+        <Inline as="span" className="items-start">
+          <Icon icon={Search} className="text-ink-2" />
+          <ClampText>{query}</ClampText>
+        </Inline>
+      </TableCell>
+      <TableCell>{engines.map(engineLabel).join(', ')}</TableCell>
+      <TableCell numeric>{occurrences}</TableCell>
+      {children}
+    </TableRow>
   );
 }
 

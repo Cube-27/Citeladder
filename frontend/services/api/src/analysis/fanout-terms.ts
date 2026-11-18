@@ -1,93 +1,76 @@
 /**
- * Fanout search terms (AV-8): the words engines searched for while answering,
- * counted per run at finalization from each answer's persisted fanout queries,
- * with the tracked brands each word names and its share change since the
- * previous finalized run.
+ * Fanout queries (AV-8): every query an engine returned while answering,
+ * exactly as it returned it (owner, 2026-11-18), counted per run at
+ * finalization with the tracked brands it names and the previous comparable
+ * run the Query fanouts table compares with.
  */
 import { randomUUID } from 'node:crypto';
-import { fanoutTermSchema } from '@citeladder/contracts/visibility-evidence';
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import type { Audits, ResponseAnalyses } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
-import { answerEvidence } from '../config/answer-evidence.ts';
 import { compareText } from '../text-order.ts';
-import { normalizeText } from './aliases.ts';
+import { askedWholeSet } from '../audits/frozen-configuration.ts';
+import { type EntityPolicy, namesEntity } from './aliases.ts';
+import { frozenComparisonKey } from './comparison.ts';
 import type { ScoringConfig } from './scoring.ts';
 
-const rules = answerEvidence.fanout_terms;
-const STOP_WORDS = new Set<string>(rules.stop_words);
-// Engine states that searched without saying what for: their words are not applicable.
+// Engine states that searched without saying what for: their queries are not applicable.
 const UNREPORTED_STATES = new Set(['unavailable', 'count_only']);
 
-export const storedTermsSchema = z.array(fanoutTermSchema);
-export type FanoutTerm = z.infer<typeof fanoutTermSchema>;
-type TrackedBrand = FanoutTerm['brands'][number] & { keys: Set<string> };
+const namedBrandSchema = z.object({ kind: z.enum(['brand', 'competitor']), name: z.string() });
 
-/** A search's distinct normalized words, without function words or single letters. */
-export function searchTerms(query: string): string[] {
-  return [
-    ...new Set(
-      normalizeText(query)
-        .split(' ')
-        .filter(
-          (word) => Array.from(word).length >= rules.min_term_length && !STOP_WORDS.has(word),
-        ),
-    ),
-  ];
-}
+/** `audit_fanout_terms.terms`: one entry per distinct query the run's engines returned. */
+export const storedQueriesSchema = z.array(
+  z.object({
+    query: z.string(),
+    searches: z.number().int().positive(),
+    brands: z.array(namedBrandSchema),
+  }),
+);
+type StoredQuery = z.infer<typeof storedQueriesSchema>[number];
+type TrackedBrand = z.infer<typeof namedBrandSchema> & {
+  aliases: readonly string[];
+  matching?: EntityPolicy;
+};
 
-/** The brand and every competitor, each with its names and aliases as single-word keys. */
+/** The brand and every competitor, with the names, aliases and matching policy that name it. */
 function trackedBrands(config: ScoringConfig): TrackedBrand[] {
-  const keys = (names: readonly string[]) =>
-    new Set(names.map((name) => normalizeText(name).replaceAll(' ', '')).filter(Boolean));
   return [
-    { kind: 'brand' as const, name: config.brandName, keys: keys(config.brandAliases) },
+    {
+      kind: 'brand' as const,
+      name: config.brandName,
+      aliases: config.brandAliases,
+      matching: config.brandMatching,
+    },
     ...config.competitors.map((c) => ({
       kind: 'competitor' as const,
       name: c.name,
-      keys: keys(c.aliases),
+      aliases: c.aliases,
+      matching: c.matching,
     })),
-  ].filter((brand) => brand.name && brand.keys.size);
+  ].filter((brand) => brand.name && brand.aliases.length);
 }
 
-const round = (value: number) => Math.round(value * 1e6) / 1e6;
-
-/**
- * Terms by searches, then term. A search counts once per term it holds; share
- * is of all the run's searches. With a previous run, a term it had and this
- * run lost stays with zero searches so it can read as falling.
- */
-export function countTerms(input: {
-  queries: readonly string[];
-  config: ScoringConfig;
-  previous: readonly Pick<FanoutTerm, 'term' | 'share'>[] | null;
-}): { totalSearches: number; terms: FanoutTerm[] } {
+/** Queries by searches, then query; every returned query is one search. */
+export function countQueries(
+  queries: readonly string[],
+  config: ScoringConfig,
+): { totalSearches: number; queries: StoredQuery[] } {
   const counts = new Map<string, number>();
-  for (const query of input.queries)
-    for (const term of searchTerms(query)) counts.set(term, (counts.get(term) ?? 0) + 1);
-  const previous = new Map(input.previous?.map((t) => [t.term, t.share]));
-  if (input.previous)
-    for (const [term, share] of previous) if (share > 0 && !counts.has(term)) counts.set(term, 0);
-  const total = input.queries.length,
-    brands = trackedBrands(input.config);
-  const terms = [...counts]
-    .map(([term, searches]) => {
-      const share = total ? round(searches / total) : 0;
-      return {
-        term,
-        searches,
-        share,
-        change: input.previous ? round(share - (previous.get(term) ?? 0)) : null,
-        brands: brands
-          .filter((brand) => brand.keys.has(term))
-          .map(({ kind, name }) => ({ kind, name })),
-      };
-    })
-    // Every term is kept: a capped list would turn a term past the cap into a new one next run.
-    .sort((a, b) => b.searches - a.searches || compareText(a.term, b.term));
-  return { totalSearches: total, terms };
+  for (const query of queries) if (query) counts.set(query, (counts.get(query) ?? 0) + 1);
+  const brands = trackedBrands(config);
+  const rows = [...counts]
+    .map(([query, searches]) => ({
+      query,
+      searches,
+      brands: brands
+        .filter((brand) => namesEntity(query, brand.aliases, brand.matching))
+        .map(({ kind, name }) => ({ kind, name })),
+    }))
+    .sort((a, b) => b.searches - a.searches || compareText(a.query, b.query));
+  return { totalSearches: rows.reduce((sum, row) => sum + row.searches, 0), queries: rows };
 }
 
 /** Engines that searched in this run without ever reporting what they searched for. */
@@ -104,12 +87,18 @@ function unreportedEngines(analyses: readonly Selectable<ResponseAnalyses>[]): s
   ].sort(compareText);
 }
 
-/** The newest earlier finalized run of the same project, market and mode that counted searches. */
-async function previousTerms(db: Database, audit: Selectable<Audits>) {
-  const row = await db
+/**
+ * The newest earlier finalized run that counted searches and is comparable the
+ * way the trend is (same frozen comparison key); a run of selected prompts is
+ * never compared, on either side.
+ */
+async function previousRunId(db: Database, audit: Selectable<Audits>) {
+  const key = frozenComparisonKey(audit.configuration);
+  if (key === null || !askedWholeSet(audit.configuration)) return null;
+  const rows = await db
     .selectFrom('audit_fanout_terms as t')
     .innerJoin('audits as a', 'a.id', 't.audit_id')
-    .select(['t.audit_id', 't.terms'])
+    .select(['t.audit_id', 'a.configuration'])
     .where('t.workspace_id', '=', audit.workspace_id)
     .where('a.workspace_id', '=', audit.workspace_id)
     .where('t.project_id', '=', audit.project_id)
@@ -122,9 +111,11 @@ async function previousTerms(db: Database, audit: Selectable<Audits>) {
     .where('a.completed_at', 'is not', null)
     .orderBy('a.completed_at', 'desc')
     .orderBy('a.id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  return row ? { auditId: row.audit_id, terms: storedTermsSchema.parse(row.terms) } : null;
+    .execute();
+  const previous = rows.find(
+    (row) => askedWholeSet(row.configuration) && frozenComparisonKey(row.configuration) === key,
+  );
+  return previous?.audit_id ?? null;
 }
 
 /** Caller holds the run's finalization transaction; one row per run. */
@@ -135,14 +126,12 @@ export async function persistFanoutTerms(
   config: ScoringConfig,
   at: Date,
 ) {
-  const queries = analyses.flatMap((a) => a.fanout_queries);
-  // No reported search on either side leaves nothing to compare, never a fall to zero.
-  const previous = queries.length ? await previousTerms(db, audit) : null;
-  const { totalSearches, terms } = countTerms({
-    queries,
+  const { totalSearches, queries } = countQueries(
+    analyses.flatMap((a) => a.fanout_queries),
     config,
-    previous: previous?.terms ?? null,
-  });
+  );
+  // No reported search on either side leaves nothing to compare, never a fall to zero.
+  const previous = totalSearches ? await previousRunId(db, audit) : null;
   await db
     .insertInto('audit_fanout_terms')
     .values({
@@ -150,10 +139,10 @@ export async function persistFanoutTerms(
       workspace_id: audit.workspace_id,
       project_id: audit.project_id,
       audit_id: audit.id,
-      previous_audit_id: previous?.auditId ?? null,
+      previous_audit_id: previous,
       total_searches: totalSearches,
       unreported_engines: unreportedEngines(analyses),
-      terms: JSON.stringify(terms),
+      terms: JSON.stringify(queries),
       source_analysis_ids: JSON.stringify(analyses.map((a) => a.id)),
       analyzer_version: policy.audits.analysis.analyzer_version,
       created_at: at,

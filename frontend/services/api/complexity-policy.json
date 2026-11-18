@@ -134,7 +134,6 @@
       "services/api/src/source-pages/persistence.ts::recordInspection::<anonymous>": 32,
       "services/api/src/traffic/performance.ts::getPerformance": 13,
       "services/api/src/traffic/projection.ts::foldGa4": 13,
-      "services/api/src/visibility/fanout.ts::getVisibilityFanout": 13,
       "services/api/src/visibility/prompts.ts::enrichOutcomes": 17,
       "services/api/src/visibility/run-sets.ts::runSetComparisonStatus": 14,
       "services/api/src/visibility/sources.ts::attachPageLinks": 15,

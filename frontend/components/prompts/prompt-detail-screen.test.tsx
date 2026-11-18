@@ -216,7 +216,7 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     );
   expect(rows).toEqual([
     ['#2', 'Cited', 'Yes', 'ShoppingComparison'],
-    ['Not named', '–Not cited', 'No', 'Text only'],
+    ['Not named', '–Not cited', 'No', 'None'],
     ['Not named', '–Not cited', 'Not reported', 'Not applicable'],
   ]);
   expect(listPromptExecutions).toHaveBeenCalledWith(

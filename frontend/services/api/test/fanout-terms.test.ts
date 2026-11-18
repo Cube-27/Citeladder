@@ -1,14 +1,15 @@
 /**
- * Fanout search terms (AV-8): normalization, counts and brand matches derived
- * at finalization, rising and falling against the previous finalized run, and
- * the workspace-authorized read, against real PostgreSQL.
+ * Fanout queries (AV-8): exact-query counts and brand matches persisted at
+ * finalization, and the Query fanouts read's share, change against the
+ * previous comparable run and brands under the tab's filters, against real
+ * PostgreSQL.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { countTerms, persistFanoutTerms, searchTerms } from '../src/analysis/fanout-terms.ts';
+import { countQueries, persistFanoutTerms } from '../src/analysis/fanout-terms.ts';
 import { scoringConfig } from '../src/analysis/scoring.ts';
 import type { Tenant } from './visibility-fixtures.ts';
-import { route, visibilityReads } from './visibility-read-support.ts';
+import { frozen, route, visibilityReads } from './visibility-read-support.ts';
 
 const { db, fixtures, get } = visibilityReads();
 const CONFIGURATION = {
@@ -22,63 +23,57 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe('search term normalization', () => {
-  it('keeps distinct folded words and drops function words and single letters', () => {
-    expect(searchTerms('Best CRM for the Agencies & Acme-Cloud, CRM 2026 — é')).toEqual([
-      'best',
-      'crm',
-      'agencies',
-      'acme',
-      'cloud',
-      '2026',
-    ]);
-  });
-
-  it('counts a search once per term and matches brands by name or alias', () => {
-    const { totalSearches, terms } = countTerms({
-      queries: ['NW pricing pricing', 'acmecloud pricing', 'Northwind trial'],
-      config: scoringConfig(CONFIGURATION),
-      previous: null,
-    });
-    expect(totalSearches).toBe(3);
-    expect(terms).toEqual([
-      { term: 'pricing', searches: 2, share: 0.666667, change: null, brands: [] },
+describe('fanout query counts', () => {
+  it('counts each exact query and gives it every tracked brand it names', () => {
+    const { totalSearches, queries } = countQueries(
+      [
+        'Harbor & Pine coffee',
+        'harbor and pine coffee',
+        'Harbor & Pine coffee',
+        'acmecloud pricing',
+        'pine furniture',
+        'Ridgeline Roasting Co. vs NW',
+        '',
+      ],
+      scoringConfig({
+        ...CONFIGURATION,
+        competitors: [
+          ...CONFIGURATION.competitors,
+          { name: 'Harbor & Pine', aliases: [], domains: [] },
+          { name: 'Ridgeline Roasting Co.', aliases: [], domains: [] },
+        ],
+      }),
+    );
+    const harbor = [{ kind: 'competitor', name: 'Harbor & Pine' }];
+    expect(totalSearches).toBe(6);
+    expect(queries).toEqual([
+      { query: 'Harbor & Pine coffee', searches: 2, brands: harbor },
       {
-        term: 'acmecloud',
+        query: 'Ridgeline Roasting Co. vs NW',
         searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'brand', name: 'Acme Cloud' }],
+        brands: [
+          { kind: 'competitor', name: 'Northwind' },
+          { kind: 'competitor', name: 'Ridgeline Roasting Co.' },
+        ],
       },
-      {
-        term: 'northwind',
-        searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'competitor', name: 'Northwind' }],
-      },
-      {
-        term: 'nw',
-        searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'competitor', name: 'Northwind' }],
-      },
-      { term: 'trial', searches: 1, share: 0.333333, change: null, brands: [] },
+      { query: 'acmecloud pricing', searches: 1, brands: [{ kind: 'brand', name: 'Acme Cloud' }] },
+      { query: 'harbor and pine coffee', searches: 1, brands: harbor },
+      { query: 'pine furniture', searches: 1, brands: [] },
     ]);
   });
 });
 
-/** One finalized run whose answers searched for `queries`, its terms persisted. */
+/** One finalized run whose answers searched for `queries`, its fanout queries persisted. */
 async function finalizedRun(
   tenant: Tenant,
   completedAt: string,
   answers: { engine: string; queries: string[] }[],
   persist = true,
+  frozenOverrides: Record<string, unknown> = {},
 ) {
   const auditId = await fixtures.audit(tenant, {
     completedAt: new Date(completedAt),
-    configuration: CONFIGURATION,
+    configuration: { ...frozen(frozenOverrides), ...CONFIGURATION },
   });
   for (const answer of answers)
     await fixtures.execution(tenant, {
@@ -107,68 +102,80 @@ async function finalizedRun(
 }
 
 const mark = (kind: string, name: string) => ({ kind, name, logo_url: null, website: null });
-
-describe('GET /visibility/fanout-terms', () => {
-  it('serves top, rising and falling against the previous run, within the workspace', async () => {
-    const tenant = await fixtures.tenant();
-    const outsider = await fixtures.tenant();
-    await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
-      { engine: 'chatgpt', queries: ['acme pricing', 'free trial'] },
-    ]);
-    const current = await finalizedRun(tenant, '2026-03-01T00:00:00Z', [
-      { engine: 'chatgpt', queries: ['Acme pricing for agencies', 'NW pricing'] },
-      { engine: 'gemini', queries: ['acmecloud review'] },
-      // Searched without saying what for: not applicable, never zero.
-      { engine: 'claude', queries: [] },
-    ]);
-    const { status, body } = await get(tenant, route(tenant, '/fanout-terms'), {
-      audit_id: current,
-    });
-    expect(status).toBe(200);
-    const row = (term: string, searches: number, share: number, change: number) => ({
-      term,
-      searches,
+const acme = [mark('brand', 'Acme Cloud')];
+type Item = { query: string; event_count: number; share: number; change: number | null };
+const rows = (body: Record<string, unknown>) =>
+  (body.items as (Item & { brands: unknown })[]).map(
+    ({ query, event_count, share, change, brands }) => ({
+      query,
+      event_count,
       share,
       change,
-      brands: [],
+      brands,
+    }),
+  );
+
+describe('GET /visibility/fanout share, change and brands', () => {
+  it('compares one run with its previous comparable run under the same filters', async () => {
+    const tenant = await fixtures.tenant();
+    const outsider = await fixtures.tenant();
+    const february = await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
+      { engine: 'chatgpt', queries: ['acme pricing', 'free trial'] },
+      { engine: 'gemini', queries: ['acme pricing'] },
+    ]);
+    const march = await finalizedRun(tenant, '2026-03-01T00:00:00Z', [
+      { engine: 'chatgpt', queries: ['Acme pricing for agencies', 'NW pricing', 'acme pricing'] },
+      { engine: 'gemini', queries: ['acmecloud review', 'acme pricing'] },
+      { engine: 'claude', queries: [] },
+    ]);
+    const read = async (params: Record<string, string | string[]>) =>
+      (await get(tenant, route(tenant, '/fanout'), { audit_id: march, ...params })).body;
+
+    const top = await read({});
+    expect(top.compared).toBe(true);
+    expect(rows(top)).toEqual([
+      { query: 'acme pricing', event_count: 2, share: 0.4, change: -0.266667, brands: acme },
+      { query: 'Acme pricing for agencies', event_count: 1, share: 0.2, change: 0.2, brands: acme },
+      {
+        query: 'NW pricing',
+        event_count: 1,
+        share: 0.2,
+        change: 0.2,
+        brands: [mark('competitor', 'Northwind')],
+      },
+      { query: 'acmecloud review', event_count: 1, share: 0.2, change: 0.2, brands: acme },
+    ]);
+    expect(rows(await read({ order: 'rising' })).map((row) => row.query)).toEqual([
+      'Acme pricing for agencies',
+      'NW pricing',
+      'acmecloud review',
+    ]);
+    // A query only the previous run searched falls to zero with that run's brands.
+    expect(rows(await read({ order: 'falling' }))).toEqual([
+      { query: 'free trial', event_count: 0, share: 0, change: -0.333333, brands: [] },
+      { query: 'acme pricing', event_count: 2, share: 0.4, change: -0.266667, brands: acme },
+    ]);
+    // The engine filter narrows both runs, so shares and changes are Gemini's alone.
+    expect(rows(await read({ engine: 'gemini' }))).toEqual([
+      { query: 'acme pricing', event_count: 1, share: 0.5, change: -0.5, brands: acme },
+      { query: 'acmecloud review', event_count: 1, share: 0.5, change: 0.5, brands: acme },
+    ]);
+    // Several runs have no one previous run: shares stay, changes are not compared.
+    const pooled = (await get(tenant, route(tenant, '/fanout'), { audit_ids: [february, march] }))
+      .body;
+    expect(pooled.compared).toBe(false);
+    expect(rows(pooled)[0]).toEqual({
+      query: 'acme pricing',
+      event_count: 4,
+      share: 0.5,
+      change: null,
+      brands: acme,
     });
-    const acme = { ...row('acme', 1, 0.333333, -0.166667), brands: [mark('brand', 'Acme Cloud')] };
-    const acmecloud = {
-      ...row('acmecloud', 1, 0.333333, 0.333333),
-      brands: [mark('brand', 'Acme Cloud')],
-    };
-    const nw = { ...row('nw', 1, 0.333333, 0.333333), brands: [mark('competitor', 'Northwind')] };
-    expect(body).toEqual({
-      kind: 'observed',
-      audit_id: current,
-      total_searches: 3,
-      compared: true,
-      unreported_engines: ['claude'],
-      top: [
-        row('pricing', 2, 0.666667, 0.166667),
-        acme,
-        acmecloud,
-        row('agencies', 1, 0.333333, 0.333333),
-        nw,
-        row('review', 1, 0.333333, 0.333333),
-      ],
-      rising: [
-        acmecloud,
-        row('agencies', 1, 0.333333, 0.333333),
-        nw,
-        row('review', 1, 0.333333, 0.333333),
-        row('pricing', 2, 0.666667, 0.166667),
-      ],
-      falling: [row('free', 0, 0, -0.5), row('trial', 0, 0, -0.5), acme],
-    });
-    const foreign = await get(outsider, route(outsider, '/fanout-terms'), { audit_id: current });
-    expect(foreign.status).toBe(404);
-    expect((await get(outsider, route(tenant, '/fanout-terms'))).status).toBe(404);
+    expect((await get(outsider, route(tenant, '/fanout'), { audit_id: march })).status).toBe(404);
   });
 
-  it('reads a run finalized before terms were counted as unavailable, not empty', async () => {
+  it('reads brands as not counted for a run finalized before queries were counted', async () => {
     const tenant = await fixtures.tenant();
-    expect((await get(tenant, route(tenant, '/fanout-terms'))).body).toEqual({ kind: 'not_run' });
     const counted = await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing'] },
     ]);
@@ -178,35 +185,55 @@ describe('GET /visibility/fanout-terms', () => {
       [{ engine: 'chatgpt', queries: ['acme pricing'] }],
       false,
     );
-    expect((await get(tenant, route(tenant, '/fanout-terms'))).body).toEqual({
-      kind: 'unavailable',
-      audit_id: before,
-    });
-    expect(
-      (await get(tenant, route(tenant, '/fanout-terms'), { audit_id: counted })).body,
-    ).toMatchObject({ kind: 'observed', compared: false, rising: [], falling: [] });
+    const read = async (auditId: string) =>
+      rows((await get(tenant, route(tenant, '/fanout'), { audit_id: auditId })).body);
+    expect(await read(before)).toEqual([
+      { query: 'acme pricing', event_count: 1, share: 1, change: null, brands: null },
+    ]);
+    expect(await read(counted)).toEqual([
+      { query: 'acme pricing', event_count: 1, share: 1, change: null, brands: acme },
+    ]);
   });
 
-  it('never compares across a run whose engines reported no search text', async () => {
+  it('compares only with a comparable whole-set run that reported search text', async () => {
     const tenant = await fixtures.tenant();
+    const compared = async (auditId: string) =>
+      (await get(tenant, route(tenant, '/fanout'), { audit_id: auditId })).body.compared;
     await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing'] },
     ]);
     const silent = await finalizedRun(tenant, '2026-03-01T00:00:00Z', [
       { engine: 'claude', queries: [] },
     ]);
-    expect(
-      (await get(tenant, route(tenant, '/fanout-terms'), { audit_id: silent })).body,
-    ).toMatchObject({ kind: 'observed', total_searches: 0, compared: false, top: [], falling: [] });
-    // The next run compares with February, not with the silent run in between.
+    const quiet = (await get(tenant, route(tenant, '/fanout'), { audit_id: silent })).body;
+    expect(quiet).toMatchObject({ compared: false, items: [] });
+    // A run of selected prompts is neither compared nor ever a baseline.
+    const selected = await finalizedRun(
+      tenant,
+      '2026-03-15T00:00:00Z',
+      [{ engine: 'chatgpt', queries: ['acme trial'] }],
+      true,
+      { panel_hash: 'panel-subset', prompt_selection: 'selected' },
+    );
+    expect(await compared(selected)).toBe(false);
+    // The next run compares with February, not with the silent or selected runs in between.
     const next = await finalizedRun(tenant, '2026-04-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing', 'acme trial'] },
     ]);
-    const { body } = await get(tenant, route(tenant, '/fanout-terms'), { audit_id: next });
-    expect(body).toMatchObject({
-      compared: true,
-      rising: [{ term: 'trial', change: 0.5 }],
-      falling: [{ term: 'pricing', change: -0.5 }],
-    });
+    const read = async (order: string) =>
+      rows((await get(tenant, route(tenant, '/fanout'), { audit_id: next, order })).body).map(
+        ({ query, change }) => ({ query, change }),
+      );
+    expect(await read('rising')).toEqual([{ query: 'acme trial', change: 0.5 }]);
+    expect(await read('falling')).toEqual([{ query: 'acme pricing', change: -0.5 }]);
+    // A changed panel is a different measurement, as on the trend.
+    const changed = await finalizedRun(
+      tenant,
+      '2026-05-01T00:00:00Z',
+      [{ engine: 'chatgpt', queries: ['acme pricing'] }],
+      true,
+      { panel_hash: 'panel-2' },
+    );
+    expect(await compared(changed)).toBe(false);
   });
 });

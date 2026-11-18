@@ -312,6 +312,9 @@ export const visibilityFanoutSummarySchema = responseObject({
   matched_queries: z.number().int(),
   coverage: z.record(z.string(), z.number().int()),
   next_cursor: z.string().nullable(),
+  // Whether `change` compares with a previous run: only a one-run selection
+  // whose run has a previous comparable run that reported searches.
+  compared: z.boolean(),
   total_answers: z.number().int(),
   answers: z.array(
     responseObject({
@@ -331,44 +334,17 @@ export const visibilityFanoutSummarySchema = responseObject({
       engines: z.array(z.string()),
       response_count: z.number().int(),
       brand_response_count: z.number().int(),
+      // Of every query occurrence the filters keep (AV-8); `change` is the move
+      // since the previous comparable run under the same filters, null when
+      // not compared. `brands` are the tracked brands the query names, null
+      // when its runs finalized before fanout queries were counted.
+      share: z.number(),
+      change: z.number().nullable(),
+      brands: z.array(namedBrandSchema.omit({ responses: true })).nullable(),
     }),
   ),
 });
-
-// One word the run's engines searched for (AV-8), counted at finalization.
-// `share` is of all the run's searches; `change` is the share move since the
-// previous finalized run, null when that run counted no terms.
-export const fanoutTermSchema = responseObject({
-  term: z.string(),
-  searches: z.number().int().nonnegative(),
-  share: z.number(),
-  change: z.number().nullable(),
-  brands: z.array(responseObject({ kind: z.enum(['brand', 'competitor']), name: z.string() })),
-});
-
-const fanoutTermRowSchema = fanoutTermSchema.extend({
-  brands: z.array(namedBrandSchema.omit({ responses: true })),
-});
-
-// `GET /projects/{id}/visibility/fanout-terms`: the newest selected run's terms.
-// `unavailable`: that run finalized before terms were counted.
-export const visibilityFanoutTermsSchema = z.discriminatedUnion('kind', [
-  responseObject({ kind: z.literal('not_run') }),
-  responseObject({ kind: z.literal('unavailable'), audit_id: uuid() }),
-  responseObject({
-    kind: z.literal('observed'),
-    audit_id: uuid(),
-    total_searches: z.number().int().nonnegative(),
-    compared: z.boolean(),
-    // Engines that searched without reporting what for: not applicable here.
-    unreported_engines: z.array(z.string()),
-    top: z.array(fanoutTermRowSchema),
-    rising: z.array(fanoutTermRowSchema),
-    falling: z.array(fanoutTermRowSchema),
-  }),
-]);
-export type VisibilityFanoutTerms = z.infer<typeof visibilityFanoutTermsSchema>;
-export type FanoutTermRow = z.infer<typeof fanoutTermRowSchema>;
+export type FanoutQueryRow = z.infer<typeof visibilityFanoutSummarySchema>['items'][number];
 
 export type VisibilityExecutionEvidence = z.infer<typeof visibilityExecutionEvidenceSchema>;
 export type VisibilityEvidenceResponse = z.infer<typeof visibilityEvidenceResponseSchema>;

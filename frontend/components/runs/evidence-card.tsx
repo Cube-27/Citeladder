@@ -99,7 +99,7 @@ function inTextLinks(formats: ExecutionEvidence['answer_formats']) {
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
     <FactList
-      layout="metrics"
+      layout="ruled"
       facts={[
         { label: 'Brand', value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned' },
         { label: 'Named first', value: namedFirst(evidence.first_named) },

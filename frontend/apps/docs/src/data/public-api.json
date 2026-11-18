@@ -8798,6 +8798,9 @@
           "next_cursor": {
             "type": ["string", "null"]
           },
+          "compared": {
+            "type": "boolean"
+          },
           "total_answers": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -8875,6 +8878,42 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "share": {
+                  "type": "number"
+                },
+                "change": {
+                  "type": ["number", "null"]
+                },
+                "brands": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": ["brand", "competitor"]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "logo_url": {
+                            "type": ["string", "null"]
+                          },
+                          "website": {
+                            "type": ["string", "null"]
+                          }
+                        },
+                        "required": ["kind", "name", "logo_url", "website"],
+                        "additionalProperties": false
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -8883,7 +8922,10 @@
                 "prompt_count",
                 "engines",
                 "response_count",
-                "brand_response_count"
+                "brand_response_count",
+                "share",
+                "change",
+                "brands"
               ],
               "additionalProperties": false
             }
@@ -8895,6 +8937,7 @@
           "matched_queries",
           "coverage",
           "next_cursor",
+          "compared",
           "total_answers",
           "answers",
           "items"
@@ -12540,6 +12583,7 @@
                     "example": 1
                   },
                   "next_cursor": null,
+                  "compared": true,
                   "total_answers": 1,
                   "answers": [
                     {
@@ -12558,7 +12602,10 @@
                       "prompt_count": 1,
                       "engines": ["Example engines"],
                       "response_count": 1,
-                      "brand_response_count": 1
+                      "brand_response_count": 1,
+                      "share": 1,
+                      "change": null,
+                      "brands": null
                     }
                   ]
                 }
@@ -12667,6 +12714,87 @@
             }
           },
           {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["brand_absent", "uncited", "competitor_gap"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "competitor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
             "name": "query",
             "in": "query",
             "required": false,
@@ -12696,6 +12824,16 @@
                   "type": "null"
                 }
               ]
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "top",
+              "type": "string",
+              "enum": ["top", "rising", "falling"]
             }
           },
           {

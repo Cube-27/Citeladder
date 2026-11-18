@@ -22,6 +22,7 @@ import { defineGetRoute } from './define.ts';
 import {
   BASELINE_RUNS,
   COHORT,
+  EVIDENCE_FILTERS,
   family,
   LIMIT,
   MAX_URL_LENGTH,
@@ -83,13 +84,7 @@ export const visibilitySourceRoutes = [
         ...TOPIC,
         cursor: { scalar: { kind: 'str', maxLength: 2048 } },
         as_of: { scalar: { kind: 'datetime' } },
-        outcome: {
-          scalar: { kind: 'literal', values: ['brand_absent', 'uncited', 'competitor_gap'] },
-        },
-        competitor: { scalar: { kind: 'str', maxLength: 255 } },
-        domain: { scalar: { kind: 'str', maxLength: 255 } },
-        url: { scalar: { kind: 'str', maxLength: MAX_URL_LENGTH } },
-        prompt_id: { scalar: { kind: 'uuid' } },
+        ...EVIDENCE_FILTERS,
         engine: { scalar: { kind: 'str' } },
         ...WINDOW,
         limit: LIMIT,

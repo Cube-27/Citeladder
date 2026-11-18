@@ -414,11 +414,9 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
         distinct_queries: 2,
         coverage: { queries_available: 1 },
         next_cursor: null,
+        compared: false,
       },
     }),
-  );
-  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/fanout-terms(\?.*)?$/, (route) =>
-    route.fulfill({ json: { kind: 'not_run' } }),
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/prompts(\?.*)?$/, (route) =>
     route.fulfill({ json: [] }),

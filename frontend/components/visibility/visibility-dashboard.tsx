@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
-import { FanoutTerms } from '@/components/visibility/fanout-terms';
-import { Stack } from '@/components/ui/layout';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
 import { VisibilityAds } from '@/components/visibility/visibility-ads';
 import { SelectionGate } from '@/components/visibility/selection-gate';
@@ -96,19 +94,15 @@ function DashboardPanel({
     'read-not-cited': sources('read-not-cited'),
     ads: gated(() => <VisibilityAds filters={filters} queries={queries} />),
     'query-fanout': gated(() => (
-      <Stack gap="workspace">
-        <FanoutTerms scope={queries.evidenceScope} enabled={queries.hasEvidenceScope} />
-        <FanoutEvidence
-          query={queries.evidenceQuery}
-          isFiltered={filters.isFiltered}
-          onClearFilters={filters.clearEvidenceFilters}
-          limit={EVIDENCE_LIMIT}
-          runId={queries.activeRunId}
-          scope={queries.evidenceScope}
-          scopeReady={queries.hasEvidenceScope}
-          scopeNarrowed={queries.evidenceScopeNarrowed}
-        />
-      </Stack>
+      <FanoutEvidence
+        query={queries.evidenceQuery}
+        isFiltered={filters.isFiltered}
+        onClearFilters={filters.clearEvidenceFilters}
+        limit={EVIDENCE_LIMIT}
+        runId={queries.activeRunId}
+        scope={queries.evidenceScope}
+        scopeReady={queries.hasEvidenceScope}
+      />
     )),
   };
   return panels[filters.activeTab];

@@ -377,17 +377,21 @@ export function useVisibilityQueries(
     // Null unless the surface filter names an observed surface, which is what
     // decides whether the rates panel belongs on the page at all.
     surfaceEngine,
-    // The run/engine/cohort scope the evidence was read under. The fanout tab
-    // re-uses it to ask the server for SELECTION-wide totals, so its headline
-    // figures describe the same population the table is drawn from.
+    // The scope and filters the evidence was read under. The fanout tab re-uses
+    // them to ask the server for SELECTION-wide totals and per-query shares, so
+    // they describe the same population the table is drawn from.
     evidenceScope: {
       audit_id: evidenceParams.audit_id,
       audit_ids: evidenceParams.audit_ids,
       engine: evidenceParams.engine,
       topic: evidenceParams.topic,
       cohort: evidenceParams.cohort,
+      prompt_id: evidenceParams.prompt_id,
+      outcome: evidenceParams.outcome,
+      competitor: evidenceParams.competitor,
+      domain: evidenceParams.domain,
+      url: evidenceParams.url,
     },
-    evidenceScopeNarrowed: isEvidenceScopeNarrowed(evidenceParams),
     hasEvidenceScope,
     promptOptions: evidenceQuery.data?.prompt_options ?? [],
     prefetchTab,
@@ -484,12 +488,6 @@ function selectionParams(
  * those active a server-side total describes a LARGER population than the
  * table, so a tab must stop presenting it as the table's own.
  */
-function isEvidenceScopeNarrowed(params: ReturnType<typeof evidenceSelectionParams>): boolean {
-  return [params.prompt_id, params.outcome, params.competitor, params.domain, params.url].some(
-    Boolean,
-  );
-}
-
 function evidenceSelectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
   activeRunId: string | null,
