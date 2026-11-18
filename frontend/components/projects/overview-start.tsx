@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { PROMPTS_HREF } from '@/lib/prompts/routes';
+import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */
 export const reached = (stage: CommandCenter['loop']['connected']) =>
@@ -71,7 +71,7 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
 
 function StartButton({ data }: Readonly<{ data: CommandCenter }>) {
   if (data.active_prompt_count === 0)
-    return <ActionButton action="addPrompts" href={PROMPTS_HREF} />;
+    return <ActionButton action="addPrompts" href={PROMPT_BUILDER_HREF} />;
   if (data.next_action.kind === 'audit_running')
     return (
       <Button asChild variant="secondary">

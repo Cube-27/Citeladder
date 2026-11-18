@@ -1,0 +1,135 @@
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { ProjectLink } from '@/components/ui/project-link';
+import { pluralCount } from '@/lib/format';
+import { PROMPTS_HREF } from '@/lib/prompts/routes';
+
+import { liveBuilderStep, type BuilderStep } from './builder-steps';
+import type { BuilderBusiness } from './use-builder-business';
+import type { BuilderTopics } from './use-builder-topics';
+
+/** The footer's left end: Cancel, back to Prompts. */
+export function BuilderCancel() {
+  return (
+    <Button asChild variant="quiet">
+      <ProjectLink href={PROMPTS_HREF}>
+        <Icon icon={X} />
+        Cancel
+      </ProjectLink>
+    </Button>
+  );
+}
+
+/**
+ * The footer's right end: Back, then each step's way forward: save or confirm
+ * before moving on, Generate, and at the end Track for the selected suggestions.
+ */
+export function BuilderStepActions({
+  step,
+  setStep,
+  business,
+  topics,
+  canGenerate,
+  isGenerating,
+  onGenerate,
+  track,
+}: Readonly<{
+  step: BuilderStep;
+  setStep: (step: BuilderStep) => void;
+  business: BuilderBusiness;
+  topics: BuilderTopics;
+  canGenerate: boolean;
+  isGenerating: boolean;
+  onGenerate: () => void;
+  track: { count: number; disabled: boolean; onTrack: () => void };
+}>): ReactNode {
+  const back = (to: BuilderStep) => (
+    <Button variant="quiet" onClick={() => setStep(to)}>
+      <Icon icon={ArrowLeft} />
+      Back
+    </Button>
+  );
+  const advance = async (save: () => Promise<unknown>, to: BuilderStep) => {
+    try {
+      await save();
+      // A person who moved to another step while it saved stays there.
+      if (liveBuilderStep() === step) setStep(to);
+    } catch {
+      // The step shows the failure; the person stays to fix it.
+    }
+  };
+  switch (step) {
+    case 'business':
+      return (
+        <Button
+          variant="primary"
+          disabled={!business.draft}
+          pending={business.save.isPending}
+          pendingLabel="Saving…"
+          onClick={() =>
+            void advance(
+              () => (business.dirty ? business.save.mutateAsync() : Promise.resolve()),
+              'topics',
+            )
+          }
+        >
+          {business.dirty ? 'Save and continue' : 'Continue'}
+          <Icon icon={ArrowRight} />
+        </Button>
+      );
+    case 'topics':
+      return (
+        <>
+          {back('business')}
+          <Button
+            variant="primary"
+            disabled={topics.problem !== null || topics.preview.isPending}
+            pending={topics.confirm.isPending}
+            pendingLabel="Confirming…"
+            onClick={() =>
+              void advance(
+                () => (topics.pending ? topics.confirm.mutateAsync() : Promise.resolve()),
+                'distribution',
+              )
+            }
+          >
+            {topics.pending ? 'Confirm topics' : 'Continue'}
+            <Icon icon={topics.pending ? Check : ArrowRight} />
+          </Button>
+        </>
+      );
+    case 'distribution':
+      return (
+        <>
+          {back('topics')}
+          <Button
+            variant="primary"
+            disabled={!canGenerate}
+            pending={isGenerating}
+            pendingLabel="Generating…"
+            onClick={onGenerate}
+          >
+            <Icon icon={Sparkles} />
+            Generate
+          </Button>
+        </>
+      );
+    case 'review':
+      return (
+        <>
+          {back('distribution')}
+          <Button variant="primary" disabled={track.disabled} onClick={track.onTrack}>
+            <Icon icon={Check} />
+            Track {pluralCount(track.count, 'prompt')}
+          </Button>
+        </>
+      );
+    default: {
+      const exhaustive: never = step;
+      return exhaustive;
+    }
+  }
+}

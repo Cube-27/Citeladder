@@ -497,6 +497,7 @@ it('replays a retried generation run by its run key instead of generating again'
     suggestions: [],
     summary:
       'Staged 0 of 10 requested suggestion(s) for review. Nothing is tracked until the user accepts them in CiteLadder.',
+    review_url: `https://app.example.test/prompts/build?step=review&project=${tenant.projectId}`,
   });
   // The same key for a different run is refused rather than replayed or run.
   expect(

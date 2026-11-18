@@ -73,6 +73,8 @@ export const promptKeys = {
   /** One set's pending generated candidates; `null` before the project has a set. */
   candidates: (scope: ProjectScope, promptSetId: string | null) =>
     prompts.read('candidates', scope, promptSetId),
+  /** The mutation key of a generation run, so a later visit sees one in flight. */
+  generate: (scope: ProjectScope) => prompts.read('generate', scope),
 };
 
 const topics = scopedKeys('topics');

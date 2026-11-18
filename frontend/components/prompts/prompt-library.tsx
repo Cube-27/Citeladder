@@ -1,20 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import {
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from 'react';
+import { useMemo, useState, type ComponentProps, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { promptsMutations } from '@/lib/api/prompts';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
-import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   brandOptions,
@@ -29,7 +22,7 @@ import {
   formValuesToPromptUpdate,
   type PromptFormValues,
 } from '@/lib/prompts/forms';
-import { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
+import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 
 import { PendingReviewNotice } from './candidate-review';
@@ -48,7 +41,6 @@ import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import type { BuilderStep } from './prompt-builder';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -166,21 +158,11 @@ function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactN
  * lifecycle, and AI-generation mutation. Layout: one control row (Active /
  * Archived, search, Topic, filters) over the prompt table at the page's full
  * width; topics are added, renamed and deleted from the Topic menu's dialogs
- * (owner, 2026-11-06). "Prompt Builder" opens the sheet that steers
+ * (owner, 2026-11-06). "Prompt Builder" opens its own page, which steers
  * generation and reviews its suggestions.
  */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
-export function PromptLibrary({
-  generateRequest = 0,
-  reviewRequest = false,
-  offeringRequest = null,
-}: Readonly<{
-  /** Increments once per URL request to open the Prompt Builder. */
-  generateRequest?: number;
-  reviewRequest?: boolean;
-  /** The offering a URL request opens the business step on. */
-  offeringRequest?: string | null;
-}>) {
+export function PromptLibrary() {
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
   // A role that may not edit prompts reads the library with no edit controls.
@@ -205,27 +187,14 @@ export function PromptLibrary({
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
-  const [builderOffering, setBuilderOffering] = useState<string | null>(null);
   const [topicDialog, setTopicDialog] = useState<TopicDialog | null>(null);
-  const hasCompetitors = project.competitors.length > 0;
+  const navigate = useNavigate();
+  const projectHref = useProjectHref();
 
   const topicsQuery = useQuery(topicsQueries.list(scope));
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
   const measurements = useLatestPromptMeasurements(scope);
   const evidence = usePromptEvidence();
-
-  const review = usePromptCandidates({
-    projectId,
-    promptSet,
-    workspaceId,
-    onAccepted: () => {
-      setStatusFilter('active');
-      // Show every newly tracked prompt, whichever topic it landed in.
-      setSelectedTopicId(null);
-    },
-  });
 
   // Every descriptor refreshes the library's reads; these add the screen's own reaction.
   const closeForm = () => {
@@ -238,38 +207,6 @@ export function PromptLibrary({
   const rowMutation = useMutation(promptsMutations.update(scope));
   const toggle = usePromptToggle(scope);
   const importMutation = useMutation(promptsMutations.import(scope, ensurePromptSet));
-
-  // A retry of the same request after a failure reuses its key, so a run the
-  // server already staged is replayed instead of drafted (and paid for) again.
-  const generateKey = useRef<{ request: string; key: string } | null>(null);
-  const generateMutation = useMutation(promptsMutations.generate(scope, ensurePromptSet));
-  const generatePrompts = async (input: PromptGenerateRequest) => {
-    const request = JSON.stringify(input);
-    if (generateKey.current?.request !== request)
-      generateKey.current = { request, key: crypto.randomUUID() };
-    const result = await generateMutation
-      .mutateAsync({ input, idempotencyKey: generateKey.current.key })
-      .catch(() => null);
-    if (result === null) return null;
-    // Only this request's key retires; a different pending request keeps its own.
-    if (generateKey.current?.request === request) generateKey.current = null;
-    review.clearNotice();
-    return result;
-  };
-  // A fresh open clears the last run's outcome, but never a run still in
-  // flight: resetting it would drop `isPending` and allow a second paid run.
-  const openBuilder = (step: BuilderStep, offering: string | null = null) => {
-    if (!generateMutation.isPending) generateMutation.reset();
-    setBuilderStep(step);
-    setBuilderOffering(offering);
-    setBuilderOpen(true);
-  };
-  const openFromUrl = useEffectEvent((step: BuilderStep) => openBuilder(step, offeringRequest));
-  useEffect(() => {
-    if (generateRequest === 0 || !canWrite) return;
-    // oxlint-disable-next-line react-hooks/set-state-in-effect -- open the builder for a URL request.
-    openFromUrl(reviewRequest ? 'review' : 'business');
-  }, [generateRequest, reviewRequest, canWrite]);
 
   const topicMutations = useTopicMutations({
     scope,
@@ -340,7 +277,7 @@ export function PromptLibrary({
   const addPrompts = {
     onImport: () => setImportOpen(true),
     onAdd: openAdd,
-    onGenerate: () => openBuilder('business'),
+    onGenerate: () => void navigate(projectHref(PROMPT_BUILDER_HREF)),
   };
   // Every edit control of the library, for a role that may edit prompts.
   const edits = canWrite
@@ -425,11 +362,7 @@ export function PromptLibrary({
           />
         ) : null}
         <ToggleFailure toggle={toggle.mutation} />
-        <PendingReviewNotice
-          count={review.candidates.length}
-          hidden={builderOpen || !canWrite}
-          onReview={() => openBuilder('review')}
-        />
+        <PendingReviewNotice scope={scope} promptSet={promptSet} hidden={!canWrite} />
 
         <TopicDialogs
           dialog={topicDialog}
@@ -469,22 +402,8 @@ export function PromptLibrary({
               ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
               : undefined
           }
-          projectId={projectId}
-          workspaceId={workspaceId}
-          builderOpen={builderOpen}
-          setBuilderOpen={setBuilderOpen}
-          builderStep={builderStep}
-          builderOffering={builderOffering}
-          hasCompetitors={hasCompetitors}
           topics={topics}
           selectedTopicId={selectedTopicId}
-          generatePrompts={generatePrompts}
-          isGenerating={generateMutation.isPending}
-          generateError={generateMutation.isError ? generateMutation.error : undefined}
-          review={review}
-          setsLoading={isLoading}
-          setsError={error !== null}
-          retrySets={retry}
           limits={limits}
         />
       </>

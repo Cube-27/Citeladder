@@ -22,7 +22,7 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
 import { type AgentOutput, type AgentRevision } from '@/lib/api/agent';
-import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
+import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type PaneTab = 'output' | 'sources' | 'history';
@@ -190,7 +190,7 @@ function PromptBuilderHandoff({ kind }: Readonly<{ kind: AgentOutput['kind'] }>)
   if (kind !== 'prompt_plan' || !canWrite) return null;
   return (
     <Button asChild variant="primary" className="justify-self-start">
-      <ProjectLink href={PROMPTS_GENERATE_HREF}>Open Prompt Builder</ProjectLink>
+      <ProjectLink href={PROMPT_BUILDER_HREF}>Open Prompt Builder</ProjectLink>
     </Button>
   );
 }

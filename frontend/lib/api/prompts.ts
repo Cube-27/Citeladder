@@ -277,6 +277,7 @@ export const promptsMutations = {
    */
   generate: (scope: ProjectScope, resolveSet: SetResolver) =>
     mutationOptions({
+      mutationKey: queryKeys.prompts.generate(scope),
       mutationFn: async ({
         input,
         idempotencyKey,

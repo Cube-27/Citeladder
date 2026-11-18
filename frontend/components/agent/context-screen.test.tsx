@@ -514,12 +514,12 @@ describe('Business map', () => {
     ).toEqual(['Not set', 'Suggested: Small garden', 'Not set']);
     expect(within(row).getByRole('link', { name: offering })).toHaveAttribute(
       'href',
-      expect.stringContaining('/prompts?generate=1&offering=Golf+practice+net'),
+      expect.stringContaining('/prompts/build?offering=Golf+practice+net'),
     );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(within(map).getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
       'href',
-      expect.stringContaining('/prompts?generate=1'),
+      expect.stringContaining('/prompts/build'),
     );
   });
 

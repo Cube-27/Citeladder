@@ -13,7 +13,7 @@ import { textRole } from '@/components/ui/typography';
 import { availabilityLabel, pluralCount } from '@/lib/format';
 import type { BusinessDraft, MapEntryDraft } from '@/lib/prompts/builder-business';
 import { useProjectHref } from '@/lib/navigation/project-destination';
-import { promptsOfferingHref } from '@/lib/prompts/routes';
+import { promptBuilderOfferingHref } from '@/lib/prompts/routes';
 
 type OfferingMap = BusinessDraft['maps'][number];
 
@@ -53,7 +53,7 @@ const foldedFacts = (map: OfferingMap) =>
 function OfferingRow({ map }: Readonly<{ map: OfferingMap }>) {
   const navigate = useNavigate();
   const projectHref = useProjectHref();
-  const href = promptsOfferingHref(map.offering);
+  const href = promptBuilderOfferingHref(map.offering);
   const open = (event: MouseEvent<HTMLTableRowElement>) => {
     // The row's link handles its own press.
     if (event.target instanceof Element && event.target.closest('a, button')) return;

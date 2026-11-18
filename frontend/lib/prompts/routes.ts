@@ -1,13 +1,13 @@
-/** Query parameter that opens the Prompt Builder when the library loads. */
-export const GENERATE_PROMPTS_PARAM = 'generate';
-/** Query parameter that opens the Prompt Builder on its review step. */
-export const REVIEW_PROMPTS_PARAM = 'review';
-/** With `generate=1`: the offering the builder's business step opens and scrolls to. */
-export const OFFERING_PROMPTS_PARAM = 'offering';
-
 export const PROMPTS_HREF = '/prompts';
-export const PROMPTS_GENERATE_HREF = `${PROMPTS_HREF}?${GENERATE_PROMPTS_PARAM}=1`;
+/** The Prompt builder page; its current step and opening offering live in the query. */
+export const PROMPT_BUILDER_HREF = `${PROMPTS_HREF}/build`;
+export const BUILDER_STEP_PARAM = 'step';
+/** The offering the business step opens on and scrolls to. */
+export const BUILDER_OFFERING_PARAM = 'offering';
 
-/** The Prompt Builder opened on one offering's facts. */
-export const promptsOfferingHref = (offering: string) =>
-  `${PROMPTS_GENERATE_HREF}&${new URLSearchParams({ [OFFERING_PROMPTS_PARAM]: offering })}`;
+/** The Prompt builder opened on its review step, for suggestions already waiting. */
+export const PROMPT_BUILDER_REVIEW_HREF = `${PROMPT_BUILDER_HREF}?${BUILDER_STEP_PARAM}=review`;
+
+/** The Prompt builder opened on one offering's facts. */
+export const promptBuilderOfferingHref = (offering: string) =>
+  `${PROMPT_BUILDER_HREF}?${new URLSearchParams({ [BUILDER_OFFERING_PARAM]: offering })}`;

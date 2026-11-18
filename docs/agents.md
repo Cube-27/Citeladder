@@ -614,12 +614,12 @@ Prompt discovery ([decision C](decisions.md#generated-prompts-are-short-buyer-qu
 follows the builder's four steps and never writes prompt text: in the Agent it
 reads business context, `read_prompt_portfolio` and `read_seed_queries` and
 saves a short `prompt_plan` (facts to fix, topics, mix and search data), whose
-**Open Prompt Builder** link (`/prompts?generate=1`) is where a person applies
+**Open Prompt Builder** link (`/prompts/build`) is where a person applies
 it; the Agent gains no write tool. Its public plugin twin, `prompt-discovery`,
 runs the same steps for MCP clients through the builder's owners
 (`preview_topics`, `confirm_topics`, `read_seed_queries`, `generate_prompts`;
 see [MCP](mcp.md#changes)) and ends at the review link. In both, candidates stay
-staged and only a person's Accept in Prompts activates them; every wording rule
+staged and only a person's Track in the Prompt Builder activates them; every wording rule
 lives in the generation configuration.
 
 ## Worker and funding
