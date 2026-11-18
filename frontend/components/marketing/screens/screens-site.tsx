@@ -32,7 +32,7 @@ function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {
 export function ScreenSiteHealth() {
   return (
     <Vignette
-      title="Site Health"
+      title="Site health"
       meta={`acme.com · ${FAILED_CHECKS.length} failed checks`}
       badge={<Badge tone="positive">Score 82</Badge>}
     >

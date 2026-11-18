@@ -1,26 +1,36 @@
 import type { ReactNode } from 'react';
-import { ChevronDown, ChevronsUpDown, CircleHelp, Download, Rocket, Search } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  CircleHelp,
+  Receipt,
+  RefreshCw,
+  Rocket,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
-import { KpiRow } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-import { KPIS } from './demo-data';
-import {
-  ScreenButton,
-  ScreenChartCard,
-  ScreenCols,
-  ScreenDelta,
-  ScreenTableCard,
-  ScreenTabs,
-} from './screen-parts';
-import { BrandTable, VisibilityTrend } from './visibility-demo';
+import { ScreenButton, ScreenTabs } from './screen-parts';
 // The vignette sheet comes first: `.cl-app-page > .cl-vig` overrides `.cl-fcard .cl-vig`.
 import './screen-vignette.css';
 import './screen-app.css';
+
+/** Which header actions a drawn page carries, as the app's page has them. */
+export type PageActions = 'launch' | 'crawl' | 'analysis';
+
+/** A drawn page's head: its title, the sidebar row it lights, its tabs and actions. */
+export type AppPageHead = Readonly<{
+  title: string;
+  active?: NavLabel;
+  tabs?: Readonly<{ items: readonly string[]; selected: string }>;
+  actions?: PageActions;
+}>;
 
 /**
  * The app's Dashboard navigation as the sidebar shows it
@@ -28,39 +38,106 @@ import './screen-app.css';
  * same order, drawn because the live rows fold to a rail below 1280px.
  */
 const NAV = [
-  { title: null, items: [['Overview', ICONS.overview]] },
   {
-    title: 'Analyze',
+    title: 'Home',
     items: [
-      ['Website', ICONS.site],
-      ['Search Demand', ICONS.demand],
-      ['Issues', ICONS.issues],
-      ['Keyword Research', ICONS.searchIntelligence],
-      ['Performance', ICONS.performance],
-      ['Commerce Suite', ICONS.products],
+      ['Overview', ICONS.overview],
+      ['Actions', ICONS.opportunities],
     ],
   },
-  { title: 'Act', items: [['Actions', ICONS.opportunities]] },
   {
-    title: 'Track',
+    title: 'Brand',
+    items: [
+      ['Insights', ICONS.insights],
+      ['Perception', ICONS.perception],
+      ['Competitors', ICONS.competitors],
+    ],
+  },
+  {
+    title: 'Tracking',
     items: [
       ['Prompts', ICONS.prompts],
-      ['AI Visibility', ICONS.visibility],
+      ['Sources', ICONS.visibility],
       ['Runs', ICONS.runs],
-      ['AI Traffic', ICONS.aiTraffic],
+    ],
+  },
+  {
+    title: 'Website',
+    items: [
+      ['Site health', ICONS.site],
+      ['Issues', ICONS.issues],
+      ['AI traffic', ICONS.aiTraffic],
+    ],
+  },
+  {
+    title: 'Search',
+    items: [
+      ['Performance', ICONS.performance],
+      ['Keyword research', ICONS.searchIntelligence],
+    ],
+  },
+  {
+    title: 'Commerce',
+    items: [
+      ['Shopping', ICONS.reports],
+      ['Products', ICONS.products],
     ],
   },
 ] as const;
 
+/** Agent mode: New chat, Skills and Context, then the chats. */
+const AGENT_NAV = [
+  {
+    title: null,
+    items: [
+      ['New chat', ICONS.newChat],
+      ['Skills', ICONS.skills],
+      ['Context', ICONS.context],
+    ],
+  },
+  {
+    title: 'Chats',
+    items: [
+      ['Why did Acme drop on Gemini?', null],
+      ['Draft a session replay pricing page', null],
+      ['Which sources cite Northwind?', null],
+    ],
+  },
+] as const;
+
+/** The foot's row, above the account button. */
+const FOOT = ['Integrations', ICONS.setup] as const;
+
 export type NavLabel = (typeof NAV)[number]['items'][number][0];
 
 /** Open Actions in the Actions row's count slot. */
-const OPEN_COUNTS: Partial<Record<NavLabel, number>> = { Actions: 7 };
+const OPEN_COUNTS: Readonly<Partial<Record<string, number>>> = { Actions: 7 };
 
-function ScreenSidebar({
+type NavGroup = Readonly<{
+  title: string | null;
+  items: readonly (readonly [string, LucideIcon | null])[];
+}>;
+
+function NavRow({
+  label,
+  icon: Icon,
+  active,
+}: Readonly<{ label: string; icon: LucideIcon | null; active: boolean }>) {
+  const count = OPEN_COUNTS[label];
+  return (
+    <span className={cn('type-control cl-app-nav-row', active && 'is-active')}>
+      {Icon && <Icon className="cl-app-nav-icon size-4" aria-hidden />}
+      <span className="cl-app-nav-label">{label}</span>
+      {count !== undefined && <span className="cl-app-nav-count">{count}</span>}
+    </span>
+  );
+}
+
+export function ScreenSidebar({
   active,
   mode = 'Dashboard',
 }: Readonly<{ active?: NavLabel; mode?: 'Dashboard' | 'Agent' }>) {
+  const groups: readonly NavGroup[] = mode === 'Agent' ? AGENT_NAV : NAV;
   return (
     <div className="cl-app-side">
       <div className="cl-app-topbar">
@@ -84,23 +161,17 @@ function ScreenSidebar({
         </span>
       </div>
       <div className="cl-app-nav">
-        {NAV.map((group) => (
-          <div key={group.title ?? 'overview'} className="cl-app-nav-group">
+        {groups.map((group) => (
+          <div key={group.title ?? 'top'} className="cl-app-nav-group">
             {group.title && <p className="type-caption cl-app-nav-title">{group.title}</p>}
-            {group.items.map(([label, Icon]) => (
-              <span
-                key={label}
-                className={cn('type-control cl-app-nav-row', label === active && 'is-active')}
-              >
-                <Icon className="cl-app-nav-icon size-4" aria-hidden />
-                <span className="cl-app-nav-label">{label}</span>
-                {OPEN_COUNTS[label] !== undefined && (
-                  <span className="cl-app-nav-count">{OPEN_COUNTS[label]}</span>
-                )}
-              </span>
+            {group.items.map(([label, icon]) => (
+              <NavRow key={label} label={label} icon={icon} active={label === active} />
             ))}
           </div>
         ))}
+      </div>
+      <div className="cl-app-nav-foot">
+        <NavRow label={FOOT[0]} icon={FOOT[1]} active={false} />
       </div>
     </div>
   );
@@ -116,97 +187,98 @@ export function ScreenAppPage({
   title,
   active,
   mode,
+  tabs,
+  actions,
   children,
-}: Readonly<{
-  title: string;
-  active?: NavLabel;
-  mode?: 'Dashboard' | 'Agent';
-  /** The feature's screen (a vignette), set as the page body. */
-  children: ReactNode;
-}>) {
+}: Readonly<
+  AppPageHead & {
+    mode?: 'Dashboard' | 'Agent';
+    /** The feature's screen (a vignette), set as the page body. */
+    children: ReactNode;
+  }
+>) {
   return (
     <div className="cl-screen cl-screen--app">
       <ScreenSidebar active={active} mode={mode} />
       <div className="cl-app-main">
-        <div className="cl-app-topbar cl-app-header">
-          <p className={textRole('pageTitle')}>{title}</p>
-          <span className="cl-app-actions">
-            <ScreenButton icon={Rocket}>Launch audit</ScreenButton>
-          </span>
-        </div>
+        <ScreenPageHeader title={title} actions={actions} />
+        {tabs && (
+          <div className="cl-app-bands">
+            <ScreenTabs items={tabs.items.map((label) => ({ label }))} selected={tabs.selected} />
+          </div>
+        )}
         <div className="cl-app-content cl-app-page">{children}</div>
       </div>
     </div>
   );
 }
 
-const FILTERS = ['Latest run', 'Last 90 days', 'Weekly', 'All engines'] as const;
+/** A drawn menu trigger: its words, then the chevron. */
+export function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <ScreenButton>
+      {children}
+      <ChevronDown className="text-ink-muted size-4" aria-hidden />
+    </ScreenButton>
+  );
+}
 
 /**
- * The home page's first product view: the AI Visibility page inside
- * the app's own chrome, as the shipped app draws it. The sidebar holds the
- * project switcher in the top bar's cell, Dashboard | Agent, the palette
- * field and the navigation; the page has its 24px title and actions on the
- * same ruled bar, the tabs and filter bands, the KPI row and the trend chart
- * beside the brand table. Every figure comes from the demo dataset.
+ * The header actions a page carries in the app: Sources' Launch run and
+ * metrics help, Site health's schedule and split Run new crawl, Keyword
+ * research's cost, refresh and New analysis. Other pages carry none.
  */
-export function ScreenAppVisibility() {
+function HeaderActions({ actions }: Readonly<{ actions: PageActions }>) {
+  switch (actions) {
+    case 'launch':
+      return (
+        <>
+          <ScreenButton icon={CircleHelp} label="About these metrics" />
+          <ScreenButton variant="primary" icon={Rocket}>
+            Launch run
+          </ScreenButton>
+        </>
+      );
+    case 'crawl':
+      return (
+        <>
+          <ScreenMenuButton>Schedule: Weekly</ScreenMenuButton>
+          <span className="cl-app-split">
+            <ScreenButton>Run new crawl</ScreenButton>
+            <ScreenButton icon={ChevronDown} label="More crawl options" />
+          </span>
+        </>
+      );
+    case 'analysis':
+      return (
+        <>
+          <ScreenButton variant="quiet" icon={Receipt}>
+            Cost details
+          </ScreenButton>
+          <ScreenButton icon={RefreshCw}>Refresh</ScreenButton>
+          <ScreenButton variant="primary">New analysis</ScreenButton>
+        </>
+      );
+    default: {
+      const unhandled: never = actions;
+      return unhandled;
+    }
+  }
+}
+
+/** The page title on the ruled bar the sidebar's project switcher shares, then its actions. */
+export function ScreenPageHeader({
+  title,
+  actions,
+}: Readonly<{ title: string; actions?: PageActions }>) {
   return (
-    <div className="cl-screen cl-screen--app cl-screen--app-overview">
-      <ScreenSidebar active="AI Visibility" />
-      <div className="cl-app-main">
-        <div className="cl-app-topbar cl-app-header">
-          <p className={textRole('pageTitle')}>AI Visibility</p>
-          <span className="cl-app-actions">
-            <ScreenButton icon={Rocket}>Launch audit</ScreenButton>
-            <ScreenButton icon={CircleHelp} label="About these metrics" />
-            <ScreenButton icon={Download}>Export</ScreenButton>
-          </span>
-        </div>
-        <div className="cl-app-bands">
-          <ScreenTabs
-            items={[
-              { label: 'Trends' },
-              { label: 'Sources', count: 186 },
-              { label: 'Perception' },
-              { label: 'Ads' },
-              { label: 'Query fanouts' },
-            ]}
-            selected="Trends"
-          />
-          <span className="cl-app-filters">
-            {FILTERS.map((filter) => (
-              <span key={filter} className="cl-app-filter">
-                <ScreenButton>
-                  {filter}
-                  <ChevronDown className="text-ink-muted size-4" aria-hidden />
-                </ScreenButton>
-              </span>
-            ))}
-          </span>
-        </div>
-        <div className="cl-app-content">
-          <KpiRow
-            segments={KPIS.map((kpi) => ({
-              key: kpi.label,
-              label: kpi.label,
-              value: `${kpi.value}${kpi.unit ?? ''}`,
-              delta: <ScreenDelta change={kpi.change} period="vs last week" />,
-            }))}
-          />
-          <ScreenCols>
-            <ScreenChartCard
-              title="Visibility over time"
-              footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
-            >
-              <VisibilityTrend />
-            </ScreenChartCard>
-            <ScreenTableCard title="Brands" meta="Visibility by brand this week">
-              <BrandTable />
-            </ScreenTableCard>
-          </ScreenCols>
-        </div>
-      </div>
+    <div className="cl-app-topbar cl-app-header">
+      <p className={textRole('pageTitle')}>{title}</p>
+      {actions && (
+        <span className="cl-app-actions">
+          <HeaderActions actions={actions} />
+        </span>
+      )}
     </div>
   );
 }

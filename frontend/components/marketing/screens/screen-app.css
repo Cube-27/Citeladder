@@ -65,9 +65,9 @@
   background: var(--color-paper);
 }
 
-/* The overview ends just under its sidebar and trend card, with no empty band. */
+/* Insights runs past the hero frame's foot, which cuts it inside the competitors table. */
 .cl-screen--app-overview {
-  --screen-h: 728px;
+  --screen-h: 860px;
 }
 
 /* On the website the display face is the hero's H1 alone, so the drawn
@@ -208,6 +208,15 @@
 .cl-app-nav-label {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The foot's row sits at the sidebar's foot, above the account button. */
+
+.cl-app-nav-foot {
+  margin-top: auto;
 }
 
 .cl-app-nav-count {
@@ -265,13 +274,38 @@
   background: var(--color-surface);
 }
 
-.cl-app-content .cl-screen-cols {
-  gap: var(--workspace-gap);
+/* Insights' lede: what the figures count, where you rank, who is ahead. */
+
+.cl-app-lede {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--card-padding);
+}
+
+.cl-app-lede > p {
+  margin: 0;
+}
+
+/* Site health's split Run new crawl: two faces joined on one edge. */
+
+.cl-app-split {
+  display: flex;
+}
+
+.cl-app-split > :first-child {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.cl-app-split > :last-child {
+  margin-inline-start: -1px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
 }
 
 /* Below 1280px the drawn app drops its sidebar; the frame draws the main
-   pane at scale 1 (product-frame.css). The brand table would stack under the
-   trend and be cut mid-card, so the pane ends whole on the trend's caption. */
+   pane at scale 1 (product-frame.css), every section whole. */
 
 @media (max-width: 1279px) {
   .cl-frame--scale .cl-screen--app {
@@ -279,17 +313,7 @@
     height: auto;
   }
 
-  .cl-frame--scale .cl-screen--app .cl-app-content .cl-screen-cols > :nth-child(2) {
-    display: none;
-  }
-
   .cl-frame--scale .cl-screen--app > .cl-app-side {
     display: none;
   }
-}
-
-/* The KPI row is one row of four here at every viewport. */
-
-.cl-app-content [data-kpi-row] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }

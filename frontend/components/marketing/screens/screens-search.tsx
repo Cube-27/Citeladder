@@ -77,7 +77,7 @@ export function ScreenReferrals() {
       <VignetteStats
         stats={[
           { label: 'Sessions', value: '1,846', change: { value: 41, unit: '%', precision: 0 } },
-          { label: 'Share of sessions', value: '3.0%', change: { value: 0.8, unit: ' pts' } },
+          { label: 'Share of sessions', value: '3.0%', change: { value: 0.8, unit: ' pp' } },
           { label: 'Key events', value: '65', change: { value: 12, precision: 0 } },
         ]}
       />
