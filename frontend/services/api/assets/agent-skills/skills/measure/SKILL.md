@@ -17,13 +17,16 @@ Whether an implemented change was followed by a meaningful measured change, and 
 ## Where the data is
 
 - `read_actions` with the Action's id, or filtered to implemented or measuring Actions: what changed and when it went live.
-- `read_visibility_trends` for a window, and `read_visibility_overview` with a baseline run for a direct comparison of two runs.
+- `read_visibility_trends` for a window, with each point's events, and `read_visibility_overview` with a baseline run for a direct comparison of two runs. Both take `topic_id`.
+- `read_prompt_metrics` with `view: history` for one prompt's score per run beside the Actions implemented.
 - `read_performance` with a comparison period, and `read_query_evidence` for one page's queries.
 - `read_perception`: tone, comparable only between runs of the same version.
 
 ## What good looks like
 
 - Compare like with like: same page, prompts, engines, cohort and window length. A changed prompt starts a new series.
+- Name the trend events in the window: a prompt panel or model change is a break, not movement; an Action going live is the date to measure from.
+- Topics are frozen per run, so refiling a prompt never rewrites earlier runs; a topic's series changes membership from the run after a refile.
 - A drafted edit is not a live change; data from before it went live cannot measure it.
 - Show count/denominator and rate on both sides and the change in percentage points: 8/20 → 10/20 is +10 points, not +10%.
 - Small samples and engine variability limit conclusions. Never pick the most favourable window or drop losing prompts.

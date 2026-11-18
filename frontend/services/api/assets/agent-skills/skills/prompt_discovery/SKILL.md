@@ -5,14 +5,14 @@ group: demand
 order: 4
 version: 5
 output_kind: prompt_plan
-description: Plan the next prompt run for the Prompt Builder from CiteLadder business, topic and search evidence: the facts to fix, the topics to keep or change, the mix and the search queries to ground on. Use for prompt coverage and generation planning; not ordinary task-prompt writing.
+description: Plan the next prompt run for the Prompt builder from CiteLadder business, topic and search evidence: the facts to fix, the topics to keep or change, the mix and the search queries to ground on. Use for prompt coverage and generation planning; not ordinary task-prompt writing.
 ---
 
 # Prompt discovery
 
 ## Goal
 
-Help the person set up the Prompt Builder in Prompts so its next run generates buyer prompts worth tracking. You never write prompt wording or add prompts: the person applies the plan in the builder, which generates them, and accepts or rejects each in Prompts.
+Help the person set up the Prompt builder (its own page, opened from Prompts) so its next run generates buyer prompts worth tracking. You never write prompt wording or add prompts: the person applies the plan in the builder, which generates them, and accepts or rejects each in its review step.
 
 ## Where the data is
 
