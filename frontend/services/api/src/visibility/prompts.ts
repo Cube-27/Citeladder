@@ -436,6 +436,24 @@ async function loadOutcomes(
   return { prompts, answers: answerRows, tasks, mentions };
 }
 
+/** The runs' outcomes with each perceived run's brand mentions, read in one batch. */
+async function withBrandMentions(
+  db: Database,
+  input: {
+    workspaceId: string;
+    audits: readonly { id: string; configuration: unknown }[];
+    outcomes: Awaited<ReturnType<typeof loadOutcomes>>;
+  },
+) {
+  const { workspaceId, audits, outcomes } = input;
+  const brandMentions = await brandMentionsByAudit(db, {
+    workspaceId,
+    audits,
+    analyses: outcomes.answers,
+  });
+  return { ...outcomes, brandMentions };
+}
+
 /** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
 async function enrichOutcomes(
   db: Database,
@@ -443,13 +461,16 @@ async function enrichOutcomes(
   rows: readonly PromptRow[],
   audit: { id: string; configuration: unknown; completed_at: string | null; cohort: string },
   query: { logicalEngine: string | null; baselineId: string | null },
-  preloaded?: Awaited<ReturnType<typeof loadOutcomes>> & {
-    brandMentions: Awaited<ReturnType<typeof brandMentionsByAudit>>;
-  },
+  preloaded?: Awaited<ReturnType<typeof withBrandMentions>>,
 ): Promise<void> {
   if (rows.length === 0) return;
   const data =
-    preloaded ?? (await loadOutcomes(db, scope, [audit.id], audit.cohort, query.logicalEngine));
+    preloaded ??
+    (await withBrandMentions(db, {
+      workspaceId: scope.workspaceId,
+      audits: [audit],
+      outcomes: await loadOutcomes(db, scope, [audit.id], audit.cohort, query.logicalEngine),
+    }));
   const prompts = new Map(
     data.prompts.filter((row) => row.audit_id === audit.id).map((row) => [row.prompt_index, row]),
   );
@@ -465,16 +486,8 @@ async function enrichOutcomes(
     data.mentions.filter((row) => row.audit_id === audit.id),
     (row) => row.prompt_index,
   );
-  const [previous, perceived] = await Promise.all([
-    baselineRun(db, scope, audit, query.baselineId),
-    preloaded?.brandMentions ??
-      brandMentionsByAudit(db, {
-        workspaceId: scope.workspaceId,
-        audits: [audit],
-        analyses: data.answers,
-      }),
-  ]);
-  const brandMentions = perceived.get(audit.id) ?? null;
+  const previous = await baselineRun(db, scope, audit, query.baselineId);
+  const brandMentions = data.brandMentions.get(audit.id);
   const runs = previous && {
     current: {
       auditId: audit.id,
@@ -687,14 +700,11 @@ export async function enrichedRows(
     scoreRows(db, scope, query, ids),
     loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine),
   ]);
-  const data = {
-    ...outcomes,
-    brandMentions: await brandMentionsByAudit(db, {
-      workspaceId: scope.workspaceId,
-      audits,
-      analyses: outcomes.answers,
-    }),
-  };
+  const data = await withBrandMentions(db, {
+    workspaceId: scope.workspaceId,
+    audits,
+    outcomes,
+  });
   const byAudit = groupBy(rows, (row) => row.item.audit_id);
   await Promise.all(
     audits.map((audit) =>

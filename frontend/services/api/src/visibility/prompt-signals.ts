@@ -29,13 +29,13 @@ function pooledSearch(parts: readonly Pick<WebSearch, 'searched' | 'reported'>[]
 
 /**
  * One run's signals for a prompt. Only answers whose engine reports search
- * use count toward web search. `brandMentions` is null for a run admitted
+ * use count toward web search. `brandMentions` is absent for a run admitted
  * without perception.
  */
 export function promptSignals(input: {
   answered: readonly Answer[];
   named: readonly BrandCount[];
-  brandMentions: ReadonlyMap<string, Mention[]> | null;
+  brandMentions: ReadonlyMap<string, Mention[]> | undefined;
 }) {
   const reported = input.answered.filter((answer) => searchOf(answer) !== 'not_reported');
   const { brandMentions } = input;
