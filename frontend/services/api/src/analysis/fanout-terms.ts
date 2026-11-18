@@ -11,7 +11,9 @@ import type { Database } from '../db/database.ts';
 import type { Audits, ResponseAnalyses } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
+import { askedWholeSet } from '../audits/frozen-configuration.ts';
 import { type EntityPolicy, namesEntity } from './aliases.ts';
+import { frozenComparisonKey } from './comparison.ts';
 import type { ScoringConfig } from './scoring.ts';
 
 // Engine states that searched without saying what for: their queries are not applicable.
@@ -85,12 +87,18 @@ function unreportedEngines(analyses: readonly Selectable<ResponseAnalyses>[]): s
   ].sort(compareText);
 }
 
-/** The newest earlier finalized run of the same project, market and mode that counted searches. */
+/**
+ * The newest earlier finalized run that counted searches and is comparable the
+ * way the trend is (same frozen comparison key); a run of selected prompts is
+ * never compared, on either side.
+ */
 async function previousRunId(db: Database, audit: Selectable<Audits>) {
-  const row = await db
+  const key = frozenComparisonKey(audit.configuration);
+  if (key === null || !askedWholeSet(audit.configuration)) return null;
+  const rows = await db
     .selectFrom('audit_fanout_terms as t')
     .innerJoin('audits as a', 'a.id', 't.audit_id')
-    .select('t.audit_id')
+    .select(['t.audit_id', 'a.configuration'])
     .where('t.workspace_id', '=', audit.workspace_id)
     .where('a.workspace_id', '=', audit.workspace_id)
     .where('t.project_id', '=', audit.project_id)
@@ -103,9 +111,11 @@ async function previousRunId(db: Database, audit: Selectable<Audits>) {
     .where('a.completed_at', 'is not', null)
     .orderBy('a.completed_at', 'desc')
     .orderBy('a.id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  return row?.audit_id ?? null;
+    .execute();
+  const previous = rows.find(
+    (row) => askedWholeSet(row.configuration) && frozenComparisonKey(row.configuration) === key,
+  );
+  return previous?.audit_id ?? null;
 }
 
 /** Caller holds the run's finalization transaction; one row per run. */

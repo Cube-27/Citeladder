@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { countQueries, persistFanoutTerms } from '../src/analysis/fanout-terms.ts';
 import { scoringConfig } from '../src/analysis/scoring.ts';
 import type { Tenant } from './visibility-fixtures.ts';
-import { route, visibilityReads } from './visibility-read-support.ts';
+import { frozen, route, visibilityReads } from './visibility-read-support.ts';
 
 const { db, fixtures, get } = visibilityReads();
 const CONFIGURATION = {
@@ -69,10 +69,11 @@ async function finalizedRun(
   completedAt: string,
   answers: { engine: string; queries: string[] }[],
   persist = true,
+  frozenOverrides: Record<string, unknown> = {},
 ) {
   const auditId = await fixtures.audit(tenant, {
     completedAt: new Date(completedAt),
-    configuration: CONFIGURATION,
+    configuration: { ...frozen(frozenOverrides), ...CONFIGURATION },
   });
   for (const answer of answers)
     await fixtures.execution(tenant, {
@@ -194,8 +195,10 @@ describe('GET /visibility/fanout share, change and brands', () => {
     ]);
   });
 
-  it('never compares across a run whose engines reported no search text', async () => {
+  it('compares only with a comparable whole-set run that reported search text', async () => {
     const tenant = await fixtures.tenant();
+    const compared = async (auditId: string) =>
+      (await get(tenant, route(tenant, '/fanout'), { audit_id: auditId })).body.compared;
     await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing'] },
     ]);
@@ -204,7 +207,16 @@ describe('GET /visibility/fanout share, change and brands', () => {
     ]);
     const quiet = (await get(tenant, route(tenant, '/fanout'), { audit_id: silent })).body;
     expect(quiet).toMatchObject({ compared: false, items: [] });
-    // The next run compares with February, not with the silent run in between.
+    // A run of selected prompts is neither compared nor ever a baseline.
+    const selected = await finalizedRun(
+      tenant,
+      '2026-03-15T00:00:00Z',
+      [{ engine: 'chatgpt', queries: ['acme trial'] }],
+      true,
+      { panel_hash: 'panel-subset', prompt_selection: 'selected' },
+    );
+    expect(await compared(selected)).toBe(false);
+    // The next run compares with February, not with the silent or selected runs in between.
     const next = await finalizedRun(tenant, '2026-04-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing', 'acme trial'] },
     ]);
@@ -214,5 +226,14 @@ describe('GET /visibility/fanout share, change and brands', () => {
       );
     expect(await read('rising')).toEqual([{ query: 'acme trial', change: 0.5 }]);
     expect(await read('falling')).toEqual([{ query: 'acme pricing', change: -0.5 }]);
+    // A changed panel is a different measurement, as on the trend.
+    const changed = await finalizedRun(
+      tenant,
+      '2026-05-01T00:00:00Z',
+      [{ engine: 'chatgpt', queries: ['acme pricing'] }],
+      true,
+      { panel_hash: 'panel-2' },
+    );
+    expect(await compared(changed)).toBe(false);
   });
 });
