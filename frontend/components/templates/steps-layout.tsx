@@ -62,7 +62,7 @@ export function StepsLayout<T extends string>({
       </div>
       <div
         data-page-band="action-bar"
-        className="bg-raised border-rule rounded-card shadow-pop z-sticky sticky bottom-[var(--content-gutter)] mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 flex-nowrap items-center gap-2 border px-[var(--card-padding)] py-2"
+        className="bg-raised border-rule rounded-card shadow-pop z-sticky sticky bottom-[var(--content-gutter)] mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 flex-wrap items-center gap-2 border px-[var(--card-padding)] py-2"
       >
         {footerStart}
         <span className="flex-1" />

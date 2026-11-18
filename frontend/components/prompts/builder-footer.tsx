@@ -7,7 +7,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { pluralCount } from '@/lib/format';
 import { PROMPTS_HREF } from '@/lib/prompts/routes';
 
-import type { BuilderStep } from './builder-steps';
+import { liveBuilderStep, type BuilderStep } from './builder-steps';
 import type { BuilderBusiness } from './use-builder-business';
 import type { BuilderTopics } from './use-builder-topics';
 
@@ -55,7 +55,8 @@ export function BuilderStepActions({
   const advance = async (save: () => Promise<unknown>, to: BuilderStep) => {
     try {
       await save();
-      setStep(to);
+      // A person who moved to another step while it saved stays there.
+      if (liveBuilderStep() === step) setStep(to);
     } catch {
       // The step shows the failure; the person stays to fix it.
     }

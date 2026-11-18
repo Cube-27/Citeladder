@@ -232,6 +232,31 @@ describe('PromptBuilder', () => {
     expect(await screen.findByRole('button', { name: 'Generate' })).toBeVisible();
   });
 
+  it('keeps the step a person moved to while topics were confirming', async () => {
+    const user = userEvent.setup({ delay: null });
+    serve({});
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mswServer.use(
+      http.post(`/api/v1/projects/${projectId}/topics/confirm`, async () => {
+        await held;
+        return HttpResponse.json([topic]);
+      }),
+    );
+    renderBuilder('topics');
+    await user.click(await screen.findByRole('button', { name: 'Suggest topics' }));
+    await screen.findByRole('textbox', { name: 'Topic name: Golf simulator enclosures' });
+    await user.click(screen.getByRole('button', { name: /Confirm topics/ }));
+    await user.click(screen.getByRole('button', { name: /About your business/ }));
+    release();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save and continue|^Continue/ })).toBeEnabled(),
+    );
+    expect(window.location.search).toBe('');
+  });
+
   it('generates with every builder field, then lands in review with coverage', async () => {
     const user = userEvent.setup({ delay: null });
     serve({});

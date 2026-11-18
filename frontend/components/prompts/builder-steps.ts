@@ -1,4 +1,5 @@
 import { stringUrlCodec } from '@/lib/navigation/url-state';
+import { BUILDER_STEP_PARAM } from '@/lib/prompts/routes';
 
 export type BuilderStep = 'business' | 'topics' | 'distribution' | 'review';
 
@@ -14,3 +15,7 @@ export const builderStepCodec = stringUrlCodec<BuilderStep>(
   BUILDER_STEPS.map((step) => step.value),
   'business',
 );
+
+/** The step the address shows now, past any render a pending save started in. */
+export const liveBuilderStep = (): BuilderStep =>
+  builderStepCodec.parse(new URLSearchParams(window.location.search).get(BUILDER_STEP_PARAM));
