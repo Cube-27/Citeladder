@@ -80,7 +80,7 @@ export function publicApiDocument(routes: readonly RouteContract[]) {
                       content: {
                         'application/json': {
                           ...media,
-                          ...example(media.schema, 'output', doc.response),
+                          ...example(media.schema, 'output', undefined),
                         },
                       },
                     }
