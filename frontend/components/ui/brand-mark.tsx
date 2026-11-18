@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { logoDevUrl } from '@/lib/brand/logo-dev';
 import { brandInitials } from '@/lib/brand/initials';
+import { brandMarkSources } from '@/lib/brand/mark-sources';
 import { cn } from '@/lib/utils';
 
 /**
@@ -45,9 +45,9 @@ export function BrandMark({
   const [failed, setFailed] = useState<Record<string, true>>({});
   const spec = PLACEMENT[placement];
 
-  const cached = logoUrl && !failed[logoUrl] ? logoUrl : null;
-  const remote = logoDevUrl(websiteUrl, spec.pixels);
-  const src = cached ?? (remote && !failed[remote] ? remote : null);
+  const src = brandMarkSources({ logoUrl, websiteUrl, pixels: spec.pixels }).find(
+    (candidate) => !failed[candidate],
+  );
   const [letter = '?'] = brandInitials(name);
 
   return (

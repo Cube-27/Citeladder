@@ -2,6 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Absence } from '@/components/ui/absence';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { RankLegend, RankTable } from '@/components/ui/heat-table';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -39,6 +40,14 @@ export function TopRankings({ query }: Readonly<{ query: UseQueryResult<Visibili
             header: <AxisLabel axes={data.axes} dimension={by} index={i} text={text} />,
             chips: (ranking?.kind === 'measured' ? ranking.leaders : []).map((leader) => ({
               key: `${leader.is_brand}:${leader.name}`,
+              mark: (
+                <BrandMark
+                  name={leader.name}
+                  logoUrl={leader.logo_url}
+                  websiteUrl={leader.website_url}
+                  placement="inline"
+                />
+              ),
               name: leader.name,
               detail: formatRate(leader.mention_rate),
               own: leader.is_brand,

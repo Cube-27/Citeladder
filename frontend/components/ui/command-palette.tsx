@@ -56,6 +56,7 @@ type Command = {
   /** Nav destinations carry their canonical glyph; projects render a brand logo. */
   icon?: LucideIcon;
   logoUrl?: string | null;
+  websiteUrl?: string | null;
   hint?: string;
   /** A destination's address, warmed when its row is highlighted. */
   href?: string;
@@ -199,6 +200,7 @@ export function CommandPalette({
       label: project.brand_name,
       group: 'Switch project',
       logoUrl: project.brand?.logo_url,
+      websiteUrl: project.website_url,
       hint: project.id === activeProjectId ? 'Current' : undefined,
       run: () => selectProject(project.id),
     }));
@@ -372,6 +374,7 @@ export function CommandPalette({
                             <BrandMark
                               name={command.label}
                               logoUrl={command.logoUrl}
+                              websiteUrl={command.websiteUrl}
                               placement="inline"
                             />
                           )}

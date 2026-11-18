@@ -1,4 +1,4 @@
-import { useId, useState, type ComponentProps, type KeyboardEvent } from 'react';
+import { useId, useState, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react';
 
 import { CHART_HEIGHT_PX, chartPath, useChartWidth, type ChartHeight } from '@/components/ui/chart';
 import { ChartFrame, ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
@@ -55,6 +55,8 @@ export type TrendSeries = {
   other?: boolean;
   /** Who the line is (a rival's domain), for its page-wide colour; defaults to `label`. */
   identity?: string;
+  /** The brand's logo beside its name in the key and tooltip. */
+  mark?: ReactNode;
 };
 
 /** Something that happened at a moment: an ink tick on the time axis with its flag. */
@@ -62,6 +64,7 @@ export type TrendEvent = { key: string; timestamp: number; label: string; kind?:
 
 type Line = {
   name: string;
+  mark?: ReactNode;
   values: readonly (number | null)[];
   tone: SeriesTone;
   shape: MarkerShape;
@@ -112,6 +115,7 @@ function StepChartKeys({
 export function StepChart({
   data,
   name,
+  mark,
   series = [],
   events = [],
   label,
@@ -129,6 +133,8 @@ export function StepChart({
   data: readonly TrendPoint[];
   /** The first line's name; defaults to `label`. */
   name?: string;
+  /** The first line's brand logo in the key and tooltip. */
+  mark?: ReactNode;
   /** Up to three further lines on the same points, leader first. */
   series?: readonly TrendSeries[];
   events?: readonly TrendEvent[];
@@ -154,10 +160,11 @@ export function StepChart({
   const [active, setActive] = useState<number | null>(null);
   const fillId = `you-fill-${useId().replaceAll(':', '')}`;
   const height = CHART_HEIGHT_PX[heightRole];
-  const plotted = plottedLines({ data, name: name ?? label, series });
+  const plotted = plottedLines({ data, name: name ?? label, mark, series });
   const tones = useSeriesTones(plotted, you);
   const toned = plotted.map((line, index) => ({
     name: line.name,
+    mark: line.mark,
     values: line.values,
     tone: tones[index] ?? 'other',
   }));
@@ -232,6 +239,7 @@ export function StepChart({
           eventsLabel={placed.length ? eventsLabel : undefined}
           entries={lines.map((line) => ({
             name: line.name,
+            mark: line.mark,
             tone: line.tone,
             shape: line.shape,
             value: latestText(line),
@@ -298,12 +306,19 @@ export function StepChart({
 function plottedLines({
   data,
   name,
+  mark,
   series,
-}: Readonly<{ data: readonly TrendPoint[]; name: string; series: readonly TrendSeries[] }>) {
+}: Readonly<{
+  data: readonly TrendPoint[];
+  name: string;
+  mark: ReactNode;
+  series: readonly TrendSeries[];
+}>) {
   return [
-    { name, identity: name, values: data.map((point) => point.value), other: false },
+    { name, mark, identity: name, values: data.map((point) => point.value), other: false },
     ...series.slice(0, 3).map((entry) => ({
       name: entry.label,
+      mark: entry.mark,
       identity: entry.identity ?? entry.label,
       values: entry.values,
       other: entry.other ?? false,
@@ -368,6 +383,7 @@ function StepChartTip({
       note={point.versionChange?.note}
       rows={lines.map((line) => ({
         name: line.name,
+        mark: line.mark,
         tone: line.tone,
         shape: keyed ? line.shape : undefined,
         value: shown(line.values[active]),

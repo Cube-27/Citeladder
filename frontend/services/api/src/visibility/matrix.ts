@@ -13,7 +13,7 @@ import { listMarkets } from '../projects/markets.ts';
 import { selectionRuns, type DashboardQuery } from './dashboard.ts';
 import { matrixProjection, type MatrixRun } from './matrix-cells.ts';
 import { perceivedAnswers } from './perception.ts';
-import { applyMarks, rankingMarks } from './ranking-marks.ts';
+import { applyIdentities, brandIdentities } from './brand-identities.ts';
 import type { RunScope } from './runs.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 
@@ -98,7 +98,7 @@ export async function getVisibilityMatrix(
           : Promise.resolve(null),
       ),
     ),
-    rankingMarks(db, scope),
+    brandIdentities(db, scope),
   ]);
   const runs = markets.map((market, index): MatrixRun => {
     const run = latest[index];
@@ -127,6 +127,8 @@ export async function getVisibilityMatrix(
     topicNames: new Map(topics.map((topic) => [topic.id, topic.name])),
     filters: { engine: query.logicalEngine, topic: scope.topicId ?? null, cohort: query.cohort },
   });
-  applyMarks(projection.axes.brand, marks);
+  applyIdentities(projection.axes.brand, marks);
+  for (const row of Object.values(projection.rankings).flat())
+    if (row.kind === 'measured') applyIdentities(row.leaders, marks);
   return { source_audit_ids: auditIds, ...projection };
 }

@@ -1,3 +1,4 @@
+import { BrandMark } from '@/components/ui/brand-mark';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -148,6 +149,11 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
             {classificationLabel(classification.data)}
           </StatusMark>
         ) : null}
+        <BrandMark
+          name={page.matched_competitor || page.domain}
+          websiteUrl={page.domain}
+          placement="inline"
+        />
         <span className={textRole('caption')}>
           {site} · {pluralCount(page.citation_count, 'citation')}
         </span>

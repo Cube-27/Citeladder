@@ -1,10 +1,16 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 
 /** One step of the trail: a link back up (with the history state it opens with), or the page itself. */
-export type Crumb = Readonly<{ label: string; href?: string; state?: unknown }>;
+export type Crumb = Readonly<{
+  label: string;
+  href?: string;
+  state?: unknown;
+  /** Drawn before the page's own name, such as a brand's logo. */
+  mark?: ReactNode;
+}>;
 
 /**
  * Where a page sits, one line in the masthead: each step up is a quiet link
@@ -38,8 +44,9 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
           </Fragment>
         ))}
         {current ? (
-          <li aria-current="page" className="text-ink min-w-0 truncate">
-            {current.label}
+          <li aria-current="page" className="text-ink flex min-w-0 items-center gap-2">
+            {current.mark}
+            <span className="min-w-0 truncate">{current.label}</span>
           </li>
         ) : null}
       </ol>

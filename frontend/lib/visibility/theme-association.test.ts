@@ -25,6 +25,8 @@ function entity(
   return {
     name,
     is_brand: isBrand,
+    logo_url: null,
+    website_url: null,
     score: { ...SCORE, classified },
     coverage: {
       mentions: classified,

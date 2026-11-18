@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { brandMarkFields } from './brand-mark.ts';
+
 import { netSentimentSchema } from './visibility.ts';
 
 // The Insights performance matrix and top rankings (W6): your brand, or each
@@ -64,6 +66,7 @@ const grid = z.array(z.array(matrixCellSchema));
 const leaderSchema = z.object({
   name: z.string(),
   is_brand: z.boolean(),
+  ...brandMarkFields,
   mention_rate: z.number(),
 });
 // One row per axis item: at most five brands by mention rate, in the same

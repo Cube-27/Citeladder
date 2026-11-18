@@ -7,6 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
 import { StepChart } from '@/components/ui/step-chart';
+import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
 import type {
   NetSentiment,
@@ -297,8 +298,18 @@ function HistoryLineChart({
       <StepChart
         label={`${metricLabel} over time`}
         name={focused ?? 'You'}
+        mark={
+          <RankedBrandMark
+            rows={points.at(-1)?.rankings}
+            name={focused === null || focusedIsBrand ? null : focused}
+          />
+        }
         data={chartPoints}
-        series={competitors.map((line) => ({ ...line, values: line.values.map(axis.plot) }))}
+        series={competitors.map((line) => ({
+          ...line,
+          mark: <RankedBrandMark rows={points.at(-1)?.rankings} name={line.label} />,
+          values: line.values.map(axis.plot),
+        }))}
         events={events}
         eventLegend
         yMin={axis.yMin}

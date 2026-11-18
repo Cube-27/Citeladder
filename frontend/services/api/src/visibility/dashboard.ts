@@ -42,7 +42,7 @@ import {
   type Metrics,
   type RankingRow,
 } from './metrics.ts';
-import { applyMarks, rankingMarks } from './ranking-marks.ts';
+import { applyIdentities, brandIdentities } from './brand-identities.ts';
 import {
   engineSnapshots,
   loadMeasuredRuns,
@@ -300,7 +300,7 @@ async function runView(
   const engine = query.logicalEngine;
   const metrics = engine === null ? cohort : engineMetrics(cohort, engine);
   const rankings = rankingRows(metrics);
-  applyMarks(rankings, await rankingMarks(db, scope));
+  applyIdentities(rankings, await brandIdentities(db, scope));
   const counts = measurementCounts(metrics);
   return {
     metrics,
@@ -568,7 +568,7 @@ async function rangeVisibility(
   const point = foldBucket(latest.completedAt, sources);
   const counts = point.counts!;
   const rankings = point.rankings.map(asRankingRow);
-  applyMarks(rankings, await rankingMarks(db, scope));
+  applyIdentities(rankings, await brandIdentities(db, scope));
   const comparison = fromAt
     ? await comparePeriod(db, scope, sources, point, query, { fromAt, toAt })
     : emptyComparison();

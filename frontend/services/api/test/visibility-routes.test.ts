@@ -287,6 +287,7 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
         analysis: { competitorMentions },
         observation,
       });
+    await fixtures.competitor(other.projectId, { name: 'Globex', domains: ['globex.example'] });
     await observed(0, {}, ['Globex', 'Globex']);
     await observed(1, {});
     await observed(2, { outcome: 'no_ai_overview', aioPresent: false }, ['Globex']);
@@ -296,6 +297,9 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
     expect(body.competitor_mention_rates).toEqual([
       {
         name: 'Globex',
+        // The roster record's site, so the row draws its logo.
+        logo_url: null,
+        website_url: 'https://globex.example',
         rate: {
           numerator: 1,
           denominator: 2,
@@ -501,7 +505,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         name: 'TransferWise',
         responses: 1,
         logo_url: null,
-        website: 'wise.example',
+        website: 'https://wise.example',
       },
     ]);
   });

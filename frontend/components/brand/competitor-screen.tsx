@@ -13,6 +13,7 @@ import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
+import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-gate';
 import {
@@ -53,7 +54,15 @@ export function CompetitorScreen() {
     <ReportPage
       title={name}
       crumb={
-        <Breadcrumb parts={[{ label: 'Competitors', href: '/competitors' }, { label: name }]} />
+        <Breadcrumb
+          parts={[
+            { label: 'Competitors', href: '/competitors' },
+            {
+              label: name,
+              mark: <RankedBrandMark name={name} rows={queries.visibilityQuery.data?.rankings} />,
+            },
+          ]}
+        />
       }
       filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
     >

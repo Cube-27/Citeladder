@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { brandMarkFields } from './brand-mark.ts';
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
@@ -71,6 +73,7 @@ export const perceptionScoreSchema = responseObject({
 export const perceptionEntitySchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
+  ...brandMarkFields,
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
   // Counts only: quotes stay the brand's own (AV-6).

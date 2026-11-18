@@ -87,7 +87,7 @@ describe('Your brand over time', () => {
     point('2026-11-03T00:00:00Z', 0.31),
   ]);
   const lineNames = (container: HTMLElement) =>
-    [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li')].map(
+    [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li span[title]')].map(
       (label) => label.textContent ?? '',
     );
 

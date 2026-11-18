@@ -245,7 +245,15 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
           .flatMap((row) =>
             row.mention_rate === null
               ? []
-              : [{ name: row.name, is_brand: row.is_brand, mention_rate: row.mention_rate }],
+              : [
+                  {
+                    name: row.name,
+                    is_brand: row.is_brand,
+                    logo_url: null,
+                    website_url: null,
+                    mention_rate: row.mention_rate,
+                  },
+                ],
           )
           .toSorted((a, b) => b.mention_rate - a.mention_rate || compareText(a.name, b.name))
           .slice(0, policy.visibility.matrix_leaders),

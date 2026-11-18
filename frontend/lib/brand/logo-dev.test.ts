@@ -51,6 +51,32 @@ describe('logoDevUrl', () => {
     expect(url.searchParams.get('fallback')).toBe('404');
   });
 
+  it('resolves a brand mark from its stored domain, and to the letter only without one', async () => {
+    process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
+    vi.resetModules();
+    const { brandMarkSources } = await import('./mark-sources');
+    const cdn = (sources: string[]) => sources.map((src) => new URL(src, 'https://app').host);
+
+    // A bare stored domain resolves like a site URL; the cached logo goes first.
+    expect(
+      cdn(brandMarkSources({ logoUrl: null, websiteUrl: 'wise.example', pixels: 20 })),
+    ).toEqual(['img.logo.dev']);
+    expect(
+      cdn(
+        brandMarkSources({
+          logoUrl: '/api/v1/projects/p/logo',
+          websiteUrl: 'acme.com',
+          pixels: 20,
+        }),
+      ),
+    ).toEqual(['app', 'img.logo.dev']);
+    expect(brandMarkSources({ logoUrl: '/api/v1/projects/p/logo', pixels: 20 })).toEqual([
+      '/api/v1/projects/p/logo',
+    ]);
+    expect(brandMarkSources({ logoUrl: null, websiteUrl: null, pixels: 20 })).toEqual([]);
+    expect(brandMarkSources({ logoUrl: '', websiteUrl: 'not a url', pixels: 20 })).toEqual([]);
+  });
+
   it('clamps the size to the CDN maximum', async () => {
     process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
     const { logoDevUrl } = await load();

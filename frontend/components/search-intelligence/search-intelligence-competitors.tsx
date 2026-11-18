@@ -1,6 +1,8 @@
 import { Users } from 'lucide-react';
 
+import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
@@ -77,11 +79,14 @@ export function SearchIntelligenceCompetitors({
       {rows.map(({ competitor, footprint, comparisons, fetched }) => {
         const identity = (
           <TableCell>
-            <TableCellLines
-              title
-              primary={competitor.label}
-              secondary={footprint?.target_hostname ?? competitor.hostname}
-            />
+            <Inline as="span">
+              <BrandMark name={competitor.label} websiteUrl={competitor.hostname} />
+              <TableCellLines
+                title
+                primary={competitor.label}
+                secondary={footprint?.target_hostname ?? competitor.hostname}
+              />
+            </Inline>
           </TableCell>
         );
         if (noneFetched) return <TableRow key={competitor.identity}>{identity}</TableRow>;

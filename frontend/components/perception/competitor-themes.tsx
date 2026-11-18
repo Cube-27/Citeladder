@@ -27,6 +27,7 @@ export function CompetitorThemes({
   entities,
 }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
   const map = themeAssociation(entities);
+  const marks = new Map(entities.map((entity) => [`${entity.is_brand}:${entity.name}`, entity]));
   const columns: readonly DataTableColumn[] = [
     { key: 'brand', label: 'Brand' },
     ...map.themes.map((theme, index): DataTableColumn => ({
@@ -74,24 +75,31 @@ export function CompetitorThemes({
             }
             footer={`A brand with fewer than ${PERCEPTION_MIN_CLASSIFIED} classified mentions reads too few.`}
           >
-            {map.rows.map((row) => (
-              <TableRow key={`${row.isBrand}:${row.name}`} highlight={row.isBrand}>
-                <TableCell>
-                  <Inline as="span">
-                    <BrandMark name={row.name} />
-                    <ClampText lines={1} className={textRole('emphasis')}>
-                      {row.name}
-                    </ClampText>
-                    {row.isBrand ? <YouTag /> : null}
-                  </Inline>
-                </TableCell>
-                {row.cells.map((cell, index) => (
-                  <TableCell key={map.themes[index]} numeric>
-                    <HeatCell cell={cell} />
+            {map.rows.map((row) => {
+              const mark = marks.get(`${row.isBrand}:${row.name}`);
+              return (
+                <TableRow key={`${row.isBrand}:${row.name}`} highlight={row.isBrand}>
+                  <TableCell>
+                    <Inline as="span">
+                      <BrandMark
+                        name={row.name}
+                        logoUrl={mark?.logo_url}
+                        websiteUrl={mark?.website_url}
+                      />
+                      <ClampText lines={1} className={textRole('emphasis')}>
+                        {row.name}
+                      </ClampText>
+                      {row.isBrand ? <YouTag /> : null}
+                    </Inline>
                   </TableCell>
-                ))}
-              </TableRow>
-            ))}
+                  {row.cells.map((cell, index) => (
+                    <TableCell key={map.themes[index]} numeric>
+                      <HeatCell cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
           </DataTable>
         </Stack>
       </SectionContent>

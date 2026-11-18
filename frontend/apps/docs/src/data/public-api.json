@@ -4989,6 +4989,12 @@
           "is_brand": {
             "type": "boolean"
           },
+          "logo_url": {
+            "type": ["string", "null"]
+          },
+          "website_url": {
+            "type": ["string", "null"]
+          },
           "score": {
             "$ref": "#/components/schemas/PerceptionScore"
           },
@@ -5015,7 +5021,15 @@
             "description": "Per theme, the classified mentions raising it at least once."
           }
         },
-        "required": ["name", "is_brand", "score", "coverage", "theme_mentions"],
+        "required": [
+          "name",
+          "is_brand",
+          "logo_url",
+          "website_url",
+          "score",
+          "coverage",
+          "theme_mentions"
+        ],
         "additionalProperties": false
       },
       "PerceptionQuote": {
@@ -9392,6 +9406,12 @@
                 "name": {
                   "type": "string"
                 },
+                "logo_url": {
+                  "type": ["string", "null"]
+                },
+                "website_url": {
+                  "type": ["string", "null"]
+                },
                 "first_offset": {
                   "anyOf": [
                     {
@@ -9420,7 +9440,15 @@
                   "type": "string"
                 }
               },
-              "required": ["kind", "name", "first_offset", "artifact_id", "analyzer_version"],
+              "required": [
+                "kind",
+                "name",
+                "logo_url",
+                "website_url",
+                "first_offset",
+                "artifact_id",
+                "analyzer_version"
+              ],
               "additionalProperties": false
             }
           },
@@ -12266,6 +12294,8 @@
                     {
                       "name": "Example name",
                       "is_brand": true,
+                      "logo_url": null,
+                      "website_url": null,
                       "score": {
                         "positive": null,
                         "neutral": null,
@@ -14243,6 +14273,8 @@
                         {
                           "kind": null,
                           "name": null,
+                          "logo_url": null,
+                          "website_url": null,
                           "first_offset": null,
                           "artifact_id": null,
                           "analyzer_version": null
