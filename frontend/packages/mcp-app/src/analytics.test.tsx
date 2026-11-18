@@ -337,6 +337,16 @@ describe('CiteLadder MCP App', () => {
       context: vi.fn(async () => undefined),
     });
     const row = { mention_count: 1, citation_rate: null, mention_rate: 0.5 };
+    // Event ticks need a time span: an earlier point without events.
+    const withEarlier = <T extends object>(point: T) => [
+      {
+        ...point,
+        completed_at: '2026-10-02T12:00:00Z',
+        source_snapshot_ids: [foreign],
+        events: [],
+      },
+      point,
+    ];
     controller.receive({
       ...result(),
       selection: {
@@ -347,58 +357,56 @@ describe('CiteLadder MCP App', () => {
       },
       evidence: {
         state: 'available',
-        points: [
-          {
-            audit_id: audit,
-            completed_at: '2026-10-03T12:00:00Z',
-            logical_engine: null,
-            visibility_score: null,
-            brand_mention_rate: 0.5,
-            owned_citation_rate: 0,
-            sov: { mention: 0.25 },
-            avg_position: 1.5,
-            rankings: [
-              {
-                ...row,
-                name: 'Acme',
-                is_brand: true,
-                share_of_voice: 0.25,
-                avg_position: 1.5,
-                win_rate: 0.4,
-              },
-              {
-                ...row,
-                name: 'Globex',
-                is_brand: false,
-                share_of_voice: 0.75,
-                avg_position: 1,
-                win_answers: null,
-                win_rate: null,
-              },
-              {
-                ...row,
-                name: 'Initech',
-                is_brand: false,
-                share_of_voice: 0,
-                avg_position: null,
-                win_answers: 0,
-                win_rate: null,
-              },
-            ],
-            source_snapshot_ids: [answerId],
-            analyzer_versions: ['1'],
-            scoring_rule_versions: ['1'],
-            spans_version_boundary: false,
-            events: [
-              {
-                kind: 'action_live',
-                action_id: foreign,
-                title: 'Publish the pricing page',
-                implemented_at: '2026-10-02T00:00:00Z',
-              },
-            ],
-          },
-        ],
+        points: withEarlier({
+          audit_id: audit,
+          completed_at: '2026-10-03T12:00:00Z',
+          logical_engine: null,
+          visibility_score: null,
+          brand_mention_rate: 0.5,
+          owned_citation_rate: 0,
+          sov: { mention: 0.25 },
+          avg_position: 1.5,
+          rankings: [
+            {
+              ...row,
+              name: 'Acme',
+              is_brand: true,
+              share_of_voice: 0.25,
+              avg_position: 1.5,
+              win_rate: 0.4,
+            },
+            {
+              ...row,
+              name: 'Globex',
+              is_brand: false,
+              share_of_voice: 0.75,
+              avg_position: 1,
+              win_answers: null,
+              win_rate: null,
+            },
+            {
+              ...row,
+              name: 'Initech',
+              is_brand: false,
+              share_of_voice: 0,
+              avg_position: null,
+              win_answers: 0,
+              win_rate: null,
+            },
+          ],
+          source_snapshot_ids: [answerId],
+          analyzer_versions: ['1'],
+          scoring_rule_versions: ['1'],
+          spans_version_boundary: false,
+          events: [
+            {
+              kind: 'action_live',
+              action_id: foreign,
+              title: 'Publish the pricing page',
+              implemented_at: '2026-10-02T00:00:00Z',
+            },
+          ],
+        }),
       },
     });
     render(<Analytics controller={controller} />);
@@ -427,7 +435,11 @@ describe('CiteLadder MCP App', () => {
     expect(cells()).not.toContain('Not applicable');
     await competitor('Initech');
     await vi.waitFor(() => expect(cells()).toContain('Not applicable'));
-    expect(shownText()).toContain('Action live: Publish the pricing page');
+    // Placed on the time axis, the event is also listed in words under the chart.
+    const legend = [...document.querySelectorAll('li')].map((item) => item.textContent);
+    expect(legend).toContainEqual(
+      expect.stringMatching(/ · Action live: Publish the pricing page$/),
+    );
   });
   it('tells an empty Actions list apart from an unavailable read', async () => {
     const user = userEvent.setup();

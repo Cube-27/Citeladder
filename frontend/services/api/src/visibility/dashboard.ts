@@ -245,7 +245,7 @@ async function selectedRun(
 }
 
 /** The run's block for the scope's topic; a run that asked no prompt under it measured nothing there. */
-async function topicBlock(
+export async function topicBlock(
   db: Database,
   key: { workspaceId: string; auditId: string; topicId: string },
 ) {

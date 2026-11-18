@@ -91,7 +91,7 @@ const market_id = optional(
 );
 const topic_id = optional(
   uuid.describe(
-    'A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured.',
+    'A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it.',
   ),
 );
 const prompt_id = optional(

@@ -10,7 +10,7 @@ import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-tren
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
 import { parseDatetime } from '../http/datetimes.ts';
-import { scopedSelection } from '../visibility/dashboard.ts';
+import { scopedSelection, topicBlock } from '../visibility/dashboard.ts';
 import { getVisibilityMatrix } from '../visibility/matrix.ts';
 import { getRankedVisibility } from '../visibility/ranking-sentiment.ts';
 import { getVisibilityTopics } from '../visibility/topics.ts';
@@ -72,15 +72,15 @@ async function requireTopic({ db, scope }: ProjectRead, topicId: string | null |
 /**
  * The default selection with nothing to read yet: `no_completed_run`, or
  * `metrics_pending` while the latest run's results are still being written,
- * or `topic_not_measured` when the latest run asked no prompt in the topic.
- * A missing run the caller named is the caller's error, so it is rethrown.
+ * or `topic_not_measured` when the run, once resolved (`ranRun`), asked no
+ * prompt in the topic. Any other missing run the caller named is the caller's
+ * error, so it is rethrown.
  */
-export function notYetMeasured(error: unknown, named: boolean, topic = false): Evidence {
-  if (named || !(error instanceof AnalysisNotFoundError)) throw error;
-  if (error.reason === 'metrics_pending') return unavailable('metrics_pending');
-  return unavailable(
-    topic && error.reason === 'not_measured' ? 'topic_not_measured' : 'no_completed_run',
-  );
+export function notYetMeasured(error: unknown, named: boolean, ranRun = false): Evidence {
+  if (!(error instanceof AnalysisNotFoundError)) throw error;
+  if (ranRun && error.reason === 'not_measured') return unavailable('topic_not_measured');
+  if (named) throw error;
+  return unavailable(error.reason === 'metrics_pending' ? 'metrics_pending' : 'no_completed_run');
 }
 
 export async function visibilityTrends(
@@ -338,10 +338,22 @@ export async function oneRun(
   args: Selection,
 ): Promise<{ kind: 'run'; selection: RunSelection } | { kind: 'none'; evidence: Evidence }> {
   await requireTopic(read, args.topic_id);
+  let ran = false;
   try {
-    return { kind: 'run', selection: await scopedSelection(read.db, runs(read.scope, args)) };
+    const selection = await scopedSelection(read.db, runs(read.scope, args));
+    ran = true;
+    // An empty page would read as zero; a topic the run never asked is not measured.
+    if (args.topic_id && selection.auditId) {
+      const { workspaceId } = read.scope;
+      await topicBlock(read.db, {
+        workspaceId,
+        auditId: selection.auditId,
+        topicId: args.topic_id,
+      });
+    }
+    return { kind: 'run', selection };
   } catch (error) {
-    return { kind: 'none', evidence: notYetMeasured(error, Boolean(args.audit_id)) };
+    return { kind: 'none', evidence: notYetMeasured(error, Boolean(args.audit_id), ran) };
   }
 }
 

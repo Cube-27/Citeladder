@@ -62,9 +62,38 @@ it('filters by a topic of this project only, and tells an unasked topic apart fr
     });
   const auditId = await fixtures.audit(tenant);
   await fixtures.metricSnapshot(tenant, auditId, { metrics: { total_completed: 1 } });
-  expect(await read('read_visibility_overview', { topic_id: own })).toMatchObject({
-    state: 'unavailable',
-    reason: 'topic_not_measured',
+  // An unasked topic is not measured, never an empty (zero) page.
+  for (const name of [
+    'read_visibility_overview',
+    'read_visibility_results',
+    'read_visibility_sources',
+    'read_query_fanouts',
+  ])
+    expect(await read(name, { topic_id: own })).toEqual({
+      state: 'unavailable',
+      reason: 'topic_not_measured',
+      artifact_refs: [],
+    });
+  await db
+    .insertInto('audit_topic_metrics')
+    .values({
+      id: randomUUID(),
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      audit_id: auditId,
+      topic_id: own,
+      topic_name: 'Pricing',
+      visibility_score: 0,
+      metrics: JSON.stringify({ total_completed: 0 }),
+      source_analysis_ids: '[]',
+      analyzer_version: 'test',
+      created_at: new Date(),
+    })
+    .execute();
+  expect(await read('read_visibility_results', { topic_id: own })).toMatchObject({
+    state: 'available',
+    audit_id: auditId,
+    items: [],
   });
   const foreign = await fixtures.tenant();
   const theirs = await topic(db, foreign.projectId, 'Pricing');

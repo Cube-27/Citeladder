@@ -489,7 +489,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           }
         },
         "required": ["project_id"],
@@ -1125,7 +1125,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           },
           "prompt_id": {
             "type": "string",
@@ -1491,7 +1491,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           },
           "view": {
             "default": "summary",
@@ -1548,7 +1548,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           },
           "prompt_id": {
             "type": "string",
@@ -1625,7 +1625,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           },
           "level": {
             "default": "domain",
@@ -1675,7 +1675,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured."
+            "description": "A topic id from read_prompt_portfolio; keep only answers to prompts filed under it when their run was measured. unavailable topic_not_measured means the run asked no prompt in it."
           },
           "from_at": {
             "type": "string",
