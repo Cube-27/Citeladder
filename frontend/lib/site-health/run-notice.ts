@@ -51,6 +51,12 @@ function failureGuidanceFor(code: string | undefined): string {
   }
 }
 
+/** Every named certificate failure (`tls_cert_*`) shares one next step. */
+const guidanceFor = (code: string | undefined) =>
+  code?.startsWith('tls_cert_')
+    ? 'Browsers and AI crawlers refuse this certificate too. Fix or renew it, then re-crawl.'
+    : failureGuidanceFor(code);
+
 export function crawlFailureCopy(
   crawl: Pick<SiteCrawl, 'error_message' | 'failure_summary'>,
 ): CrawlFailureCopy {
@@ -58,7 +64,7 @@ export function crawlFailureCopy(
     crawl.failure_summary?.message ||
     crawl.error_message ||
     'This crawl failed before it produced results.';
-  return { reason, guidance: failureGuidanceFor(crawl.failure_summary?.code) };
+  return { reason, guidance: guidanceFor(crawl.failure_summary?.code) };
 }
 
 /**

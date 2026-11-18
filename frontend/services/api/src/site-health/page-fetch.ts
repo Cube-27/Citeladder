@@ -70,7 +70,21 @@ export function isBotBlock(page: FetchedPage) {
   return !meaningful;
 }
 
+const TLS_CODES: Record<string, string> = a.tls_certificate_error_codes;
+
+/** The named certificate failure in an error or its causes; null for any other failure. */
+export function tlsCertificateCode(error: unknown): string | null {
+  for (let current = error, depth = 0; current instanceof Error && depth < 4; depth++) {
+    const code = 'code' in current ? current.code : undefined;
+    if (typeof code === 'string' && TLS_CODES[code]) return TLS_CODES[code];
+    current = current.cause;
+  }
+  return null;
+}
+
 function errorCode(error: unknown) {
+  const tls = tlsCertificateCode(error);
+  if (tls) return tls;
   if (error instanceof FetchError) return FETCH_ERROR_CODES[error.code] ?? error.code;
   if (error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name))
     return codes.timeout;

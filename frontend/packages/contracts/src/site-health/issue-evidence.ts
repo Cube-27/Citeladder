@@ -49,29 +49,15 @@ const pageKindShape = {
 };
 
 /**
- * Page kinds whose pages repeat each other's title and description, each with
- * its first `max_evidence_items` duplicate sets and of each set the first
+ * Pages across the site repeating one exact title (or meta description): the
+ * first `max_evidence_items` sets and of each set the first
  * `max_evidence_items` pages; the counts are over every set and page.
  */
 const duplicateMetadataEvidenceSchema = z.object({
   ...architectureShape,
-  page_kinds: z.array(
-    z.object({
-      ...pageKindShape,
-      // Evidence is append-only: findings recorded before sets were stored have no
-      // count, and no sets; a recorded kind always has at least one set.
-      duplicate_set_count: count().optional(),
-      duplicate_sets: z
-        .array(
-          z.object({
-            title: z.string(),
-            description: z.string(),
-            page_count: count(),
-            pages: z.array(evidencePageSchema),
-          }),
-        )
-        .default([]),
-    }),
+  duplicate_set_count: count(),
+  duplicate_sets: z.array(
+    z.object({ text: z.string(), page_count: count(), pages: z.array(evidencePageSchema) }),
   ),
 });
 
@@ -129,7 +115,9 @@ export const siteLevelRuleSchema = z.enum([
   'architecture.orphan_pages',
   'architecture.parentless_detail_pages',
   'architecture.unreachable_from_home',
-  'architecture.duplicate_metadata_in_page_kind',
+  'architecture.dead_end_pages',
+  'architecture.duplicate_titles',
+  'architecture.duplicate_meta_descriptions',
   'architecture.unhubbed_page_kind',
   'technical.sitewide_broken_link',
   'technical.sitewide_link_redirect',
@@ -144,6 +132,7 @@ export const siteLevelFindingSchema = z.discriminatedUnion('rule_id', [
       'architecture.breadcrumb_hierarchy_conflict',
       'architecture.orphan_pages',
       'architecture.parentless_detail_pages',
+      'architecture.dead_end_pages',
     ]),
     evidence: pageListEvidenceSchema,
   }),
@@ -152,7 +141,10 @@ export const siteLevelFindingSchema = z.discriminatedUnion('rule_id', [
     evidence: unreachablePagesEvidenceSchema,
   }),
   z.object({
-    rule_id: siteLevelRuleSchema.extract(['architecture.duplicate_metadata_in_page_kind']),
+    rule_id: siteLevelRuleSchema.extract([
+      'architecture.duplicate_titles',
+      'architecture.duplicate_meta_descriptions',
+    ]),
     evidence: duplicateMetadataEvidenceSchema,
   }),
   z.object({

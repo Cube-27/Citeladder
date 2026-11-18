@@ -370,6 +370,13 @@ const FAILURE_MESSAGES: Record<string, string> = {
   response_too_large: "The start URL's response was too large to process",
   unsupported_content_type: 'The start URL did not return an HTML page',
   malformed_response: 'The site returned a response that could not be read',
+  tls_cert_expired: "The site's TLS certificate has expired",
+  tls_cert_not_yet_valid: "The site's TLS certificate is not valid yet",
+  tls_cert_self_signed: "The site's TLS certificate is self-signed",
+  tls_cert_hostname_mismatch: "The site's TLS certificate does not name this domain",
+  tls_cert_untrusted: "The site's TLS certificate chain is incomplete or not trusted",
+  tls_cert_revoked: "The site's TLS certificate has been revoked",
+  tls_cert_invalid: "The site's TLS certificate is invalid",
 };
 
 /** One sentence for a root failure: HTTP failures name the status, retries the attempts. */

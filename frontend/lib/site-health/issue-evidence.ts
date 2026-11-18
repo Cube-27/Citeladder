@@ -57,6 +57,11 @@ function absent(evidence: Evidence, notations: Readonly<Record<string, string>>)
     .map(([, notation]) => notation);
 }
 
+/** A length advisory: `72 characters (recommended 30–60)`. */
+const lengthRange = (evidence: Evidence) => [
+  `${String(evidence.length)} characters (recommended ${String(evidence.min_chars)}–${String(evidence.max_chars)})`,
+];
+
 /** Collapse repeats into a count: three `h1 → h4` lines become `h1 → h4 ×3`. */
 function tally(values: readonly string[]): string[] {
   const counts = new Map<string, number>();
@@ -333,6 +338,23 @@ const FACTS_BY_RULE: Readonly<
   'aeo.source_support_present': () => ['citation'],
   'aeo.llms_txt_present': () => ['/llms.txt'],
   'technical.sitemap_present': () => ['XML sitemap'],
+  'technical.sitemap_valid': (evidence) =>
+    records(evidence.invalid_documents).map((row) => withoutQuery(text(row.url))),
+  'aeo.structured_data_valid': (evidence) => [
+    `${String(evidence.invalid_json_ld_count)} unparseable JSON-LD script(s)`,
+  ],
+  'technical.h1_present': () => ['<h1>'],
+  'technical.http_redirects_to_https': (evidence) => [
+    `${text(evidence.final_url)} answers ${String(evidence.final_status_code)} without redirecting to HTTPS`,
+  ],
+  'technical.title_length': lengthRange,
+  'technical.meta_description_length': lengthRange,
+  'aeo.thin_content': (evidence) => [
+    `${String(evidence.word_count)} words (recommended ${String(evidence.minimum_words)}+)`,
+  ],
+  'aeo.long_paragraphs': (evidence) => [
+    `${String(evidence.long_paragraph_count)} paragraph(s) over ${String(evidence.maximum_words)} words, longest ${String(evidence.longest_paragraph_words)}`,
+  ],
   'aeo.product_brand_identity': () => ['brand'],
   'aeo.product_evidence_facts': () => ['gtin', 'mpn', 'sku'],
   'aeo.offer_freshness_signal': offerFreshness,
@@ -367,7 +389,8 @@ const LEAD_BY_RULE: Readonly<Record<string, string>> = {
   'architecture.unreachable_from_home': 'Unreachable sections:',
   'technical.sitewide_broken_link': 'Broken links shared by most pages:',
   'technical.sitewide_link_redirect': 'Links shared by most pages that redirect:',
-  'architecture.duplicate_metadata_in_page_kind': 'Metadata repeated across pages:',
+  'architecture.duplicate_titles': 'Titles repeated across pages:',
+  'architecture.duplicate_meta_descriptions': 'Meta descriptions repeated across pages:',
   'architecture.unhubbed_page_kind': 'Affected pages:',
 };
 

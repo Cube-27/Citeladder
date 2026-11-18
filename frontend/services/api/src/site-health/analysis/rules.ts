@@ -16,6 +16,7 @@ import {
   checkSitemapRedirect,
   type CheckResult,
 } from './indexing.ts';
+import { ON_PAGE_CHECKS } from './on-page-checks.ts';
 import { analysisPolicy } from './policy.ts';
 import { record, text, textList, type Facts } from './read-facts.ts';
 import { SCHEMA_CHECKS } from './schema-checks.ts';
@@ -99,6 +100,7 @@ const CHECKS: Record<string, (facts: Facts) => CheckResult> = {
   'technical.client_side_redirect': checkClientSideRedirect,
   ...DELIVERY_CHECKS,
   ...SCHEMA_CHECKS,
+  ...ON_PAGE_CHECKS,
   ...contentChecks(composite),
 };
 

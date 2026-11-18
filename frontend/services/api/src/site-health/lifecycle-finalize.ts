@@ -23,6 +23,7 @@ import {
   hreflangConflict,
   sitemapOrphan,
   sitemapPresent,
+  sitemapValid,
 } from './analysis/finalize.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
 import { crawlCoverage } from './coverage.ts';
@@ -295,11 +296,13 @@ async function rootEvaluations(
     ),
   ];
   const coverage = await crawlCoverage(db, crawl);
+  const sitemap = {
+    sampleMode: crawl.sample_mode,
+    sitemap: record(record(crawl.site_facts).sitemap),
+  };
   return [
-    sitemapPresent({
-      sampleMode: crawl.sample_mode,
-      sitemap: record(record(crawl.site_facts).sitemap),
-    }),
+    sitemapPresent(sitemap),
+    sitemapValid(sitemap),
     sitemapOrphan(observed.length, orphans, coverage.state),
     resolutionSet(targets, resolutions, { sitemap: true }),
     redirectChains(resolutions),

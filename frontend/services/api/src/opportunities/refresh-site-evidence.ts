@@ -82,25 +82,17 @@ export function evidencePages(finding: SiteLevelFinding): Page[] {
   const pick = (pages: readonly Page[]) =>
     pages.map(({ site_url_id, url }) => ({ site_url_id, url }));
   switch (finding.rule_id) {
-    case 'architecture.excessive_depth':
-    case 'architecture.breadcrumb_hierarchy_conflict':
-    case 'architecture.orphan_pages':
-    case 'architecture.parentless_detail_pages':
-    case 'architecture.unreachable_from_home':
-      return pick(finding.evidence.pages);
-    case 'architecture.duplicate_metadata_in_page_kind':
-      return finding.evidence.page_kinds.flatMap((kind) =>
-        kind.duplicate_sets.flatMap((set) => pick(set.pages)),
-      );
+    case 'architecture.duplicate_titles':
+    case 'architecture.duplicate_meta_descriptions':
+      return finding.evidence.duplicate_sets.flatMap((set) => pick(set.pages));
     case 'architecture.unhubbed_page_kind':
       return finding.evidence.page_kinds.flatMap((kind) => pick(kind.pages));
     case 'technical.sitewide_broken_link':
     case 'technical.sitewide_link_redirect':
       return finding.evidence.targets.flatMap((target) => pick(target.pages));
-    default: {
-      const unreachable: never = finding;
-      return unreachable;
-    }
+    default:
+      // Every other rule's evidence is a page list; a new shape fails to type-check here.
+      return pick(finding.evidence.pages);
   }
 }
 

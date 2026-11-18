@@ -609,8 +609,26 @@ describe('site setup', () => {
       discovered_complete: true,
       limit_reached: false,
       unread_count: 0,
+      invalid_count: 0,
+      invalid_documents: [],
     });
-    expect(requests).toEqual(['/robots.txt', '/llms.txt', '/index.xml', '/pages.xml']);
+    // The http:// origin probe reads that origin's robots.txt before its root, like any fetch.
+    expect(requests).toEqual([
+      '/robots.txt',
+      '/llms.txt',
+      '/robots.txt',
+      '/',
+      '/index.xml',
+      '/pages.xml',
+    ]);
+    expect(facts.http_origin).toEqual({
+      state: 'answered',
+      url: 'http://example.test/',
+      status_code: 404,
+      first_location: '',
+      final_url: 'http://example.test/',
+      final_status_code: 404,
+    });
     expect(await observations(seed)).toEqual([
       { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
     ]);
@@ -725,7 +743,7 @@ describe('site setup', () => {
     const facts = record((await crawlRow(seed)).site_facts);
     expect(facts.llms_txt).toMatchObject({ fetched: false, url: url('/llms.txt') });
     expect(facts.sitemap).toEqual({ fetched: false, file_count: 0 });
-    expect(requests).toEqual(['/robots.txt']);
+    expect(requests).toEqual(['/robots.txt', '/robots.txt', '/']);
 
     const full = await crawl();
     const resumed = await queued(full, 'site_setup');
@@ -784,6 +802,8 @@ describe('site setup', () => {
       discovered_complete: false,
       limit_reached: true,
       unread_count: 2,
+      invalid_count: 0,
+      invalid_documents: [],
     });
   });
 
@@ -833,7 +853,7 @@ describe('site setup', () => {
     );
     const facts = record((await crawlRow(seed)).site_facts);
     expect(record(facts.robots).sitemaps).toEqual([declared]);
-    expect(requests).toEqual(['/robots.txt', '/llms.txt']);
+    expect(requests).toEqual(['/robots.txt', '/llms.txt', '/robots.txt', '/']);
     expect(facts.sitemap).toMatchObject({ fetched: false, file_count: 0, discovered_count: 0 });
   });
 });

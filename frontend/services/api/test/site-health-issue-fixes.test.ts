@@ -209,25 +209,19 @@ describe('Mark fixed (SH-B12)', () => {
   });
 
   it('counts a site-level finding by the pages its evidence names, not the homepage it is filed on', async () => {
-    const rule = 'architecture.duplicate_metadata_in_page_kind';
+    const rule = 'architecture.duplicate_titles';
     const seed = await fixtures.crawl('completed');
     const full = await crawlAt(seed, at(0));
     const home = await fixtures.page(full, '/', {}, { observed: true });
-    const kind = (page_kind: string, duplicates: number) => ({
-      page_kind,
-      page_count: duplicates + 1,
-      duplicate_metadata_count: duplicates,
-      duplicate_set_count: 1,
-      duplicate_sets: [],
-    });
     await fileIssue({
       seed: full,
       page: home,
       evaluationId: await fixtures.evaluation(full, home, rule, 'missing'),
       ruleId: rule,
       evidence: {
-        count: 3,
-        page_kinds: [kind('about_contact', 5), kind('docs', 5), kind('service', 6)],
+        count: 16,
+        duplicate_set_count: 3,
+        duplicate_sets: [],
         page_kind_counts: { about_contact: 5, docs: 5, service: 6 },
         coverage_state: 'complete',
       },

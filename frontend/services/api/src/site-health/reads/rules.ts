@@ -159,16 +159,17 @@ function wholeSiteScope(
   }
   if (Array.isArray(facts.page_kinds)) {
     const kinds = rows(facts.page_kinds);
-    const key =
-      ruleId === 'architecture.duplicate_metadata_in_page_kind'
-        ? 'duplicate_metadata_count'
-        : 'page_count';
     const affected = kinds.reduce((sum, row) => {
-      const value = row[key];
+      const value = row.page_count;
       return sum + (typeof value === 'number' ? value : 0);
     }, 0);
     return { affected, pageKinds: kindsOf(kinds) };
   }
+  if (Array.isArray(facts.duplicate_sets) && typeof facts.count === 'number')
+    return {
+      affected: facts.count,
+      pageKinds: Object.keys(record(facts.page_kind_counts)).sort(compareText),
+    };
   return null;
 }
 

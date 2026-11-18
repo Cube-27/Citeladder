@@ -262,7 +262,7 @@ function objectBlocks(
  * only as `SoftwareApplication` or `Event` has structured data even though no
  * deeper check reads that type.
  */
-export function declaredSchemaTypes(objects: NestedJsonLd[], root: HtmlNode, maxTypes: number) {
+function declaredSchemaTypes(objects: NestedJsonLd[], root: HtmlNode, maxTypes: number) {
   const types = new Set(objects.flatMap(({ object }) => cleanTypes(object['@type'])));
   for (const node of elements(root))
     if (hasAttribute(node, 'itemscope'))
@@ -273,22 +273,28 @@ export function declaredSchemaTypes(objects: NestedJsonLd[], root: HtmlNode, max
   return [...types].sort(compareText).slice(0, maxTypes);
 }
 
-/** Every object in the page's JSON-LD scripts, in document order, each script parsed once. */
-export function jsonLdObjects(raw: string[]): NestedJsonLd[] {
+/**
+ * Every object in the page's JSON-LD scripts, in document order, each script
+ * parsed once, and how many non-empty scripts failed to parse.
+ */
+function jsonLdObjects(raw: string[]) {
   const objects: NestedJsonLd[] = [];
+  let invalid = 0;
   for (const body of raw) {
+    if (!body.trim()) continue;
     let parsed: unknown;
     try {
       parsed = JSON.parse(body.trim());
     } catch {
-      continue; // A malformed block cannot discard the others.
+      invalid++; // A malformed block cannot discard the others.
+      continue;
     }
     objects.push(...jsonObjects(parsed));
   }
-  return objects;
+  return { objects, invalid };
 }
 
-export function jsonLdBlocks(objects: NestedJsonLd[], maxBlocks: number): SchemaBlock[] {
+function jsonLdBlocks(objects: NestedJsonLd[], maxBlocks: number): SchemaBlock[] {
   const blocks: SchemaBlock[] = [];
   for (const [entityIndex, object] of objects.entries()) {
     blocks.push(...objectBlocks(object, { syntax: 'json-ld', entityIndex }));
@@ -393,7 +399,7 @@ function microdataObject(item: HtmlElement, baseUrl: string, depth = 0): JsonObj
  * read as the equivalent JSON-LD object. A nested item is a block under the
  * property that holds it.
  */
-export function microdataBlocks(root: HtmlNode, maxBlocks: number, baseUrl: string): SchemaBlock[] {
+function microdataBlocks(root: HtmlNode, maxBlocks: number, baseUrl: string): SchemaBlock[] {
   const blocks: SchemaBlock[] = [];
   for (const node of elements(root)) {
     if (!hasAttribute(node, 'itemscope') || !attribute(node, 'itemtype').trim()) continue;
@@ -411,7 +417,7 @@ export function microdataBlocks(root: HtmlNode, maxBlocks: number, baseUrl: stri
  * The preferred Product observations merged into one fact. Nested variant
  * Products are skipped when an identity- or offer-bearing Product exists.
  */
-export function productFacts(blocks: SchemaBlock[]) {
+function productFacts(blocks: SchemaBlock[]) {
   const all = blocks.filter((block) => block.type === 'Product');
   const preferred = all.filter(
     (block) =>
@@ -439,4 +445,25 @@ export function productFacts(blocks: SchemaBlock[]) {
     returns ||= Boolean(product.returns);
   }
   return { schema_product_count: chosen.length, ...merged, shipping, returns };
+}
+
+/** The page's structured data: bounded blocks, declared types, Product facts and unparseable JSON-LD scripts. */
+export function structuredDataFacts(root: HtmlNode, maxBlocks: number, baseUrl: string) {
+  const raw = [...elements(root, 'script')]
+    .filter((node) => attribute(node, 'type').toLowerCase() === 'application/ld+json')
+    .map(textContent);
+  const { objects, invalid } = jsonLdObjects(raw);
+  const jsonLd = jsonLdBlocks(objects, maxBlocks);
+  const microdata = microdataBlocks(root, maxBlocks, baseUrl);
+  const blocks = [...jsonLd, ...microdata].slice(0, maxBlocks);
+  return {
+    blocks,
+    count: blocks.length,
+    has_json_ld: jsonLd.length > 0,
+    has_microdata: microdata.length > 0,
+    invalid_json_ld_count: invalid,
+    types: [...new Set(blocks.map((block) => block.type))].sort(compareText),
+    declared_types: declaredSchemaTypes(objects, root, maxBlocks),
+    product: productFacts(blocks),
+  };
 }

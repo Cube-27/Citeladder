@@ -6,7 +6,6 @@
  */
 import { policy } from '../../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../../config/settings.ts';
-import { compareText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
 import {
   ancestors,
@@ -36,13 +35,7 @@ import { analysisPolicy, limits, squash } from './policy.ts';
 import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
 import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
 import { emptySourceSupport, sameSite, sourceSupportFacts } from './source-support.ts';
-import {
-  declaredSchemaTypes,
-  jsonLdBlocks,
-  jsonLdObjects,
-  microdataBlocks,
-  productFacts,
-} from './structured-data.ts';
+import { structuredDataFacts as structuredData } from './structured-data.ts';
 
 const f = analysisPolicy.facts;
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
@@ -521,25 +514,6 @@ function clearPageOwned<T extends DocumentFacts>(facts: T, reason: string): T {
     contact_points: [],
     commerce: emptyCommerceFacts(),
     extraction: { state: 'unavailable', reason, truncated: facts.extraction.truncated },
-  };
-}
-
-function structuredData(root: HtmlNode, maxBlocks: number, baseUrl: string) {
-  const raw = [...elements(root, 'script')]
-    .filter((node) => attribute(node, 'type').toLowerCase() === 'application/ld+json')
-    .map(textContent);
-  const objects = jsonLdObjects(raw);
-  const jsonLd = jsonLdBlocks(objects, maxBlocks);
-  const microdata = microdataBlocks(root, maxBlocks, baseUrl);
-  const blocks = [...jsonLd, ...microdata].slice(0, maxBlocks);
-  return {
-    blocks,
-    count: blocks.length,
-    has_json_ld: jsonLd.length > 0,
-    has_microdata: microdata.length > 0,
-    types: [...new Set(blocks.map((block) => block.type))].sort(compareText),
-    declared_types: declaredSchemaTypes(objects, root, maxBlocks),
-    product: productFacts(blocks),
   };
 }
 

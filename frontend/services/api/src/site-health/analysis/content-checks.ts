@@ -62,6 +62,12 @@ function structuredDataPresent(facts: Facts): CheckResult {
   const sd = record(facts.structured_data);
   const blocks = count(sd.count);
   const declared = list(sd.declared_types);
+  // Markup the page ships but engines cannot parse is `aeo.structured_data_valid`'s finding.
+  if (!declared.length && count(sd.invalid_json_ld_count) > 0)
+    return [
+      'not_applicable',
+      { reason: 'structured_data_invalid', invalid_json_ld_count: count(sd.invalid_json_ld_count) },
+    ];
   return [
     passFail(declared.length > 0),
     {
@@ -269,12 +275,19 @@ const questionRelationships = (facts: Facts) =>
 const relationshipSources = (items: Record<string, unknown>[]) =>
   [...new Set(items.map((item) => text(item.source)))].sort(compareText);
 
-/** Every observed FAQ question needs a server-rendered answer. */
+/**
+ * Every question-style heading needs a server-rendered answer. An FAQ page is
+ * made of questions, so finding none is unknown; any other page simply has
+ * none to answer.
+ */
 function answerFirst(facts: Facts): CheckResult {
   if (!Array.isArray(facts.question_answer_relationships))
     return ['unknown', { reason: 'question_relationships_unavailable' }];
   const relationships = questionRelationships(facts);
-  if (!relationships.length) return ['unknown', { reason: 'no_question_answer_relationships' }];
+  if (!relationships.length)
+    return text(facts.page_kind) === 'faq'
+      ? ['unknown', { reason: 'no_question_answer_relationships' }]
+      : ['not_applicable', { reason: 'no_question_headings' }];
   const answered = relationships.filter(
     (item) => item.answer_state === 'available' && text(item.answer).trim(),
   );

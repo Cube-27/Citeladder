@@ -33,14 +33,12 @@ function median(values: number[]) {
   if (!sorted.length) return null;
   return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
-/** Pages sharing one normalized title and description, largest set first; blank metadata never matches. */
-export function duplicateSets(members: ArchitecturePage[]) {
+/** Pages sharing one non-blank key, largest set first. */
+function setsBy(members: ArchitecturePage[], keyOf: (page: ArchitecturePage) => string) {
   const signatures = new Map<string, { first: ArchitecturePage; pages: ArchitecturePage[] }>();
   for (const page of members) {
-    const title = normalized(page.title);
-    const description = normalized(page.description);
-    if (!title && !description) continue;
-    const key = JSON.stringify([title, description]);
+    const key = keyOf(page);
+    if (!key) continue;
     const set = signatures.get(key);
     if (set) set.pages.push(page);
     else signatures.set(key, { first: page, pages: [page] });
@@ -49,6 +47,16 @@ export function duplicateSets(members: ArchitecturePage[]) {
     .filter((set) => set.pages.length > 1)
     .sort((a, b) => b.pages.length - a.pages.length || compareText(a.first.url, b.first.url));
 }
+/** Pages of one kind sharing a normalized title and description; blank metadata never matches. */
+const duplicateSets = (members: ArchitecturePage[]) =>
+  setsBy(members, (page) => {
+    const title = normalized(page.title);
+    const description = normalized(page.description);
+    return title || description ? JSON.stringify([title, description]) : '';
+  });
+/** Pages sharing one exact title or description (case and whitespace aside); blank never matches. */
+export const exactDuplicateSets = (members: ArchitecturePage[], field: 'title' | 'description') =>
+  setsBy(members, (page) => normalized(page[field]));
 function kindRow(kind: string, members: ArchitecturePage[]) {
   return {
     page_kind: kind,

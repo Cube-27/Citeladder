@@ -3,6 +3,7 @@ import { policy } from '../../config.ts';
 import { strings } from '../../db/json.ts';
 import { scalarText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
+import { count as integer, list } from './read-facts.ts';
 import { membership, type RuleEvaluation } from './rules.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
@@ -160,6 +161,13 @@ export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<str
     return finalizeEvaluation(rule, 'unknown', { reason: 'insufficient_evidence' });
   const files = Number(input.sitemap.file_count) || 0;
   const unread = Number(input.sitemap.unread_count) || 0;
+  const invalid = Number(input.sitemap.invalid_count) || 0;
+  // A served document that does not parse is `technical.sitemap_valid`'s finding.
+  if (!input.sitemap.fetched && invalid > 0)
+    return finalizeEvaluation(rule, 'not_applicable', {
+      reason: 'sitemap_invalid',
+      invalid_document_count: invalid,
+    });
   if (!input.sitemap.fetched && unread > 0)
     return finalizeEvaluation(rule, 'unknown', {
       reason: 'sitemap_unavailable',
@@ -168,6 +176,38 @@ export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<str
   return finalizeEvaluation(rule, input.sitemap.fetched ? 'satisfied' : 'missing', {
     fetched: input.sitemap.fetched,
     sitemap_file_count: files,
+  });
+}
+
+/**
+ * "Sitemap could not be parsed": a sitemap URL answered with a body that is
+ * not sitemap XML. Evidence is the same site setup walk `sitemapPresent` reads.
+ */
+export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<string, unknown> }) {
+  const rule = 'technical.sitemap_valid';
+  if (input.sampleMode)
+    return finalizeEvaluation(rule, 'not_applicable', { reason: 'sample_crawl' });
+  if (
+    typeof input.sitemap.fetched !== 'boolean' ||
+    input.sitemap.pending === true ||
+    typeof input.sitemap.invalid_count !== 'number'
+  )
+    return finalizeEvaluation(rule, 'unknown', { reason: 'insufficient_evidence' });
+  const invalid = input.sitemap.invalid_count;
+  const files = integer(input.sitemap.file_count);
+  const unread = integer(input.sitemap.unread_count);
+  // A document that went unanswered may be the broken one.
+  if (!invalid && unread)
+    return finalizeEvaluation(rule, 'unknown', {
+      reason: 'sitemap_unavailable',
+      unread_document_count: unread,
+    });
+  if (!invalid && !files)
+    return finalizeEvaluation(rule, 'not_applicable', { reason: 'no_sitemap' });
+  return finalizeEvaluation(rule, invalid ? 'missing' : 'satisfied', {
+    sitemap_file_count: files,
+    invalid_document_count: invalid,
+    invalid_documents: list(input.sitemap.invalid_documents).slice(0, limits.evidence_urls),
   });
 }
 

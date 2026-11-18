@@ -4,22 +4,22 @@ import type {
   UnhubbedPageKindEvidence,
 } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
+import { record } from '../db/json.ts';
+import { onlyOf } from '../lists.ts';
 import { compareText } from '../text-order.ts';
+import { canonicalDeclarations } from './analysis/finalize.ts';
 import {
-  duplicateSets,
+  exactDuplicateSets,
   type ArchitecturePage,
   type buildArchitecture,
 } from './architecture-model.ts';
+import { canonicalUrl } from './url-identity.ts';
 
 const p = policy.site_health.architecture;
 
-type KindEvidence = DuplicateMetadataEvidence | UnhubbedPageKindEvidence;
 type KindRow = ReturnType<typeof buildArchitecture>['page_kinds'][number];
 /** The bounded sample a finding names: its pages or its page kinds. */
-type Sample =
-  | Pick<PageListEvidence, 'pages'>
-  | Pick<DuplicateMetadataEvidence, 'page_kinds'>
-  | Pick<UnhubbedPageKindEvidence, 'page_kinds'>;
+type Sample = Pick<PageListEvidence, 'pages'> | Pick<UnhubbedPageKindEvidence, 'page_kinds'>;
 const pageSample = (pages: PageListEvidence['pages']) => ({ pages });
 const evidencePage = (page: ArchitecturePage) => ({
   site_url_id: page.id,
@@ -32,25 +32,6 @@ const kindCounts = (kind: KindRow) => ({
   page_count: kind.page_count,
   duplicate_metadata_count: kind.duplicate_metadata_count,
 });
-
-/** Each kind's duplicate sets, the shared title and description with the pages repeating them. */
-const duplicateSample =
-  (byId: Map<string, ArchitecturePage>) =>
-  (kinds: KindRow[]): Pick<DuplicateMetadataEvidence, 'page_kinds'> => ({
-    page_kinds: kinds.map((kind) => {
-      const sets = duplicateSets(kind.site_url_ids.map((id) => byId.get(id)!));
-      return {
-        ...kindCounts(kind),
-        duplicate_set_count: sets.length,
-        duplicate_sets: sets.slice(0, p.max_evidence_items).map((set) => ({
-          title: set.first.title,
-          description: set.first.description,
-          page_count: set.pages.length,
-          pages: set.pages.slice(0, p.max_evidence_items).map(evidencePage),
-        })),
-      };
-    }),
-  });
 
 /** Each kind with the pages no hub parents. */
 const unhubbedSample =
@@ -78,6 +59,12 @@ function pageKindCounts<Row extends { page_kind: string }>(
   return counts;
 }
 
+function catalogRule(id: string) {
+  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === id);
+  if (!rule) throw new Error(`Architecture rule '${id}' is absent from its catalog`);
+  return rule;
+}
+
 function evaluation<Row extends { page_kind: string }>(
   id: string,
   rows: Row[],
@@ -86,8 +73,7 @@ function evaluation<Row extends { page_kind: string }>(
   requiresComplete = false,
   pagesOf?: (row: Row) => number,
 ) {
-  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === id);
-  if (!rule) throw new Error(`Architecture rule '${id}' is absent from its catalog`);
+  const rule = catalogRule(id);
   const unavailable = requiresComplete && coverage !== 'complete';
   let outcome = rows.length ? 'missing' : 'satisfied';
   if (unavailable) outcome = 'unknown';
@@ -102,8 +88,50 @@ function evaluation<Row extends { page_kind: string }>(
           ...sample(rows.slice(0, p.max_evidence_items)),
           page_kind_counts: pageKindCounts(rows, pagesOf),
           coverage_state: coverage,
-        } satisfies PageListEvidence | KindEvidence),
+        } satisfies PageListEvidence | UnhubbedPageKindEvidence),
   };
+}
+
+/**
+ * Indexable pages across every page kind repeating one exact title or meta
+ * description. A noindex page or one canonicalized elsewhere has already said
+ * which page should rank, so it never counts.
+ */
+function duplicateMetadata(
+  id: 'architecture.duplicate_titles' | 'architecture.duplicate_meta_descriptions',
+  source: ArchitecturePage[],
+  coverage: string,
+) {
+  const field = id === 'architecture.duplicate_titles' ? 'title' : 'description';
+  const candidates = source.filter(
+    (page) => page.indexable !== false && !canonicalizedElsewhere(page),
+  );
+  const sets = exactDuplicateSets(candidates, field);
+  const affected = sets.flatMap((set) => set.pages);
+  const evidence = {
+    count: affected.length,
+    duplicate_set_count: sets.length,
+    duplicate_sets: sets.slice(0, p.max_evidence_items).map((set) => ({
+      text: set.first[field],
+      page_count: set.pages.length,
+      pages: set.pages.slice(0, p.max_evidence_items).map(evidencePage),
+    })),
+    page_kind_counts: pageKindCounts(affected.map((page) => ({ page_kind: page.kind }))),
+    coverage_state: coverage,
+  } satisfies DuplicateMetadataEvidence;
+  return {
+    rule: catalogRule(id),
+    outcome: sets.length ? 'missing' : 'satisfied',
+    reason: '',
+    evidence,
+  };
+}
+
+function canonicalizedElsewhere(page: ArchitecturePage) {
+  const declarations = canonicalDeclarations(page.facts).map((value) => value.trim());
+  const declared = onlyOf([...new Set(declarations.filter(Boolean))]);
+  const canonical = declared ? canonicalUrl(declared, page.url) : null;
+  return canonical !== null && canonical !== page.url;
 }
 /** The first two path segments: `/blogs/testimonials/a-review` is `/blogs/testimonials`. */
 function sectionOf(url: string) {
@@ -130,6 +158,31 @@ function sections(pages: { url: string }[]) {
   return [...groups.values()]
     .sort((a, b) => b.page_count - a.page_count || compareText(a.path_prefix, b.path_prefix))
     .slice(0, p.max_evidence_items);
+}
+
+/**
+ * Content pages whose main content links to no internal page. Links are read
+ * from the page's own facts, so an unread body has none to judge; when no
+ * content page was read, nothing can be called linked or a dead end.
+ */
+function deadEndPages(
+  pages: ReturnType<typeof buildArchitecture>['hierarchy'],
+  byId: Map<string, ArchitecturePage>,
+  coverage: string,
+) {
+  const content = pages
+    .filter((page) => p.dead_end_page_kinds.includes(page.page_kind))
+    .map((page) => ({ page, row: byId.get(page.site_url_id)! }));
+  const read = content.filter(({ row }) => record(row.facts.extraction).state === 'available');
+  const deadEnds = read.filter(({ row }) => row.contentOutbound === 0).map(({ page }) => page);
+  const result = evaluation('architecture.dead_end_pages', deadEnds, pageSample, coverage);
+  if (read.length || !content.length) return result;
+  return {
+    ...result,
+    outcome: 'unknown',
+    reason: 'content_not_observed',
+    evidence: { reason: 'content_not_observed', coverage_state: coverage },
+  };
 }
 
 /**
@@ -199,19 +252,9 @@ export function architectureRules(
       pageSample,
       coverage,
     ),
-    evaluation(
-      'architecture.duplicate_metadata_in_page_kind',
-      kinds.filter(
-        (kind) =>
-          kind.page_count >= p.duplicate_metadata_min_urls &&
-          kind.duplicate_metadata_count / kind.page_count >= p.duplicate_metadata_rate,
-      ),
-      duplicateSample(byId),
-      coverage,
-      false,
-      // The finding is the duplicated pages, as its group counts them.
-      (kind) => kind.duplicate_metadata_count,
-    ),
+    duplicateMetadata('architecture.duplicate_titles', source, coverage),
+    duplicateMetadata('architecture.duplicate_meta_descriptions', source, coverage),
+    deadEndPages(pages, byId, coverage),
     evaluation(
       'architecture.orphan_pages',
       pages.filter(

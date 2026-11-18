@@ -131,31 +131,41 @@ it('keeps observed orphan and duplicate counts under partial coverage but gates 
     outcome: 'unknown',
     reason: 'coverage_not_complete',
   });
-  expect(
-    partial.find((row) => row.rule.rule_id.endsWith('duplicate_metadata_in_page_kind'))!.outcome,
-  ).toBe('missing');
+  expect(partial.find((row) => row.rule.rule_id.endsWith('duplicate_titles'))!.outcome).toBe(
+    'missing',
+  );
   expect(partial.filter((row) => row.reason === 'coverage_not_complete')).toHaveLength(5);
   const complete = architectureRules(
     buildArchitecture(pages, 'complete', context),
     pages,
     'complete',
   );
-  expect(complete.filter((row) => row.outcome === 'missing')).toHaveLength(5);
+  expect(complete.filter((row) => row.outcome === 'missing')).toHaveLength(6);
   expect(model.structure_depth.buckets.find((row) => row.key === 'depth_3_plus')!.percentage).toBe(
     0.75,
   );
 });
-it('records the pages each duplicate set shares and the pages of an unhubbed kind', () => {
+it('records site-wide duplicate sets, dead ends and the pages of an unhubbed kind', () => {
   const contact = { title: 'Contact us | Acme', description: 'Get in touch' };
+  const read = { extraction: { state: 'available' } };
   const pages = [
     page('home', '/', 'homepage', { depth: 0 }),
     page('c1', '/contact', 'about_contact', contact),
     page('c2', '/pages/contact', 'about_contact', { ...contact, title: ' contact US | acme ' }),
     page('c3', '/support/contact', 'about_contact', contact),
+    // A noindex copy and a copy canonicalized to /contact already name the page to rank.
+    page('n1', '/contact-noindex', 'about_contact', { ...contact, indexable: false }),
+    page('p2', '/contact-2', 'about_contact', {
+      ...contact,
+      facts: { canonical_url: 'https://example.test/contact' },
+    }),
     page('a1', '/about', 'about_contact', { title: 'About', description: '' }),
     page('a2', '/pages/about', 'about_contact', { title: 'About', description: '' }),
     page('team', '/team', 'about_contact', { title: 'Team', description: '' }),
-    // Under a path no hub page sits at: nothing parents them.
+    // Another page kind repeating a title still duplicates it.
+    page('g1', '/guides/about', 'article', { title: 'About', facts: read }),
+    page('g2', '/guides/linked', 'article', { title: 'Linked', facts: read, contentOutbound: 2 }),
+    // Under a path no hub page sits at: nothing parents them. Their bodies were never read.
     page('s1', '/services/install', 'service'),
     page('s2', '/services/repair', 'service'),
     page('s3', '/services/supply', 'service'),
@@ -173,36 +183,49 @@ it('records the pages each duplicate set shares and the pages of an unhubbed kin
     title: pages.find((item) => item.id === id)!.title,
     page_kind: kind,
   });
-  expect(evidence('architecture.duplicate_metadata_in_page_kind')).toMatchObject({
-    count: 1,
-    page_kind_counts: { about_contact: 5 },
-    page_kinds: [
+  const contacts = [
+    sample('c1', 'about_contact'),
+    sample('c2', 'about_contact'),
+    sample('c3', 'about_contact'),
+  ];
+  expect(evidence('architecture.duplicate_titles')).toEqual({
+    count: 6,
+    duplicate_set_count: 2,
+    // Equal sets order by their first page's URL.
+    duplicate_sets: [
       {
-        page_kind: 'about_contact',
-        page_count: 6,
-        duplicate_metadata_count: 5,
-        duplicate_set_count: 2,
-        duplicate_sets: [
-          {
-            title: 'Contact us | Acme',
-            description: 'Get in touch',
-            page_count: 3,
-            pages: [
-              sample('c1', 'about_contact'),
-              sample('c2', 'about_contact'),
-              sample('c3', 'about_contact'),
-            ],
-          },
-          {
-            title: 'About',
-            description: '',
-            page_count: 2,
-            pages: [sample('a1', 'about_contact'), sample('a2', 'about_contact')],
-          },
+        text: 'About',
+        page_count: 3,
+        pages: [
+          sample('a1', 'about_contact'),
+          sample('a2', 'about_contact'),
+          sample('g1', 'article'),
         ],
       },
+      { text: 'Contact us | Acme', page_count: 3, pages: contacts },
     ],
+    page_kind_counts: { about_contact: 5, article: 1 },
+    coverage_state: 'complete',
   });
+  // Blank descriptions never match each other.
+  expect(evidence('architecture.duplicate_meta_descriptions')).toMatchObject({
+    count: 3,
+    duplicate_sets: [{ text: 'Get in touch', page_count: 3, pages: contacts }],
+  });
+  expect(evidence('architecture.dead_end_pages')).toMatchObject({
+    count: 1,
+    pages: [{ site_url_id: 'g1', page_kind: 'article' }],
+  });
+  // With no content page's body read, nothing can be called a dead end or linked.
+  const unread = [page('home', '/', 'homepage', { depth: 0 }), page('u1', '/guides/u', 'article')];
+  const unreadRules = architectureRules(
+    buildArchitecture(unread, 'complete', context),
+    unread,
+    'complete',
+  );
+  expect(
+    unreadRules.find((row) => row.rule.rule_id === 'architecture.dead_end_pages'),
+  ).toMatchObject({ outcome: 'unknown', reason: 'content_not_observed' });
   expect(evidence('architecture.unhubbed_page_kind')).toMatchObject({
     page_kind_counts: { service: 3 },
     page_kinds: [
@@ -352,7 +375,7 @@ it('downgrades complete coverage when architecture evidence reaches its source c
     policy.site_health.architecture.max_pages = previous;
   }
 });
-it('persists exact source IDs, seven root evaluations and replay-safe architecture from current metrics', async () => {
+it('persists exact source IDs, nine root evaluations and replay-safe architecture from current metrics', async () => {
   const seed = await fixtures.crawl();
   const snapshot = await fixtures.snapshot(seed);
   const profile = await fixtures.businessProfile(seed, context);
@@ -401,7 +424,7 @@ it('persists exact source IDs, seven root evaluations and replay-safe architectu
     .selectAll()
     .where('source_architecture_id', '=', architecture.id)
     .execute();
-  expect(evaluations).toHaveLength(7);
+  expect(evaluations).toHaveLength(9);
   expect(evaluations.every((row) => row.analysis_id === home.analysisId)).toBe(true);
   expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(5);
   expect(record(architecture.archetype).archetype).toBe('commerce');
@@ -420,7 +443,7 @@ it('persists exact source IDs, seven root evaluations and replay-safe architectu
       .select('id')
       .where('source_architecture_id', '=', architecture.id)
       .execute(),
-  ).toHaveLength(7);
+  ).toHaveLength(9);
 });
 it('complete coverage creates actionable root findings without borrowing foreign evidence', async () => {
   const seed = await fixtures.crawl();

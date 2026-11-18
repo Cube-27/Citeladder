@@ -377,6 +377,8 @@ admits the best pending rows up to its bound (the plan's discovery cap, at
 least the page limit), and each admission queues a `discover`. The root carries
 the `technical.sitemap_present` ("No sitemap") issue when no sitemap document
 was read and every one tried was answered; an unread one leaves it `unknown`.
+A served document that does not parse as a sitemap is `technical.sitemap_valid`
+("Sitemap could not be parsed"), never "No sitemap".
 
 **Tracked pages** (SH-B6, `tracked-set.ts`). Active `monitored_site_urls` with
 a `fill_order` are the project's tracked pages, and every full crawl analyzes

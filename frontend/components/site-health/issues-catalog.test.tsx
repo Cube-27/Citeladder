@@ -533,7 +533,7 @@ describe('IssuesCatalog', () => {
   });
 
   it('lists duplicate metadata by the pages sharing it, each linking to its page', async () => {
-    const rule = 'architecture.duplicate_metadata_in_page_kind';
+    const rule = 'architecture.duplicate_titles';
     const contact = (id: string, path: string) => ({
       site_url_id: id,
       url: `https://acme.com${path}`,
@@ -551,25 +551,17 @@ describe('IssuesCatalog', () => {
               occurrence({
                 rule_id: rule,
                 evidence: {
-                  count: 1,
+                  count: 3,
                   page_kind_counts: { about_contact: 3 },
                   coverage_state: 'complete',
-                  page_kinds: [
+                  duplicate_set_count: 1,
+                  duplicate_sets: [
                     {
-                      page_kind: 'about_contact',
-                      page_count: 4,
-                      duplicate_metadata_count: 3,
-                      duplicate_set_count: 1,
-                      duplicate_sets: [
-                        {
-                          title: 'Contact us | Acme',
-                          description: '',
-                          page_count: 3,
-                          pages: [
-                            contact('dddddddd-2222-4111-8111-111111111111', '/contact'),
-                            contact('dddddddd-3333-4111-8111-111111111111', '/pages/contact'),
-                          ],
-                        },
+                      text: 'Contact us | Acme',
+                      page_count: 3,
+                      pages: [
+                        contact('dddddddd-2222-4111-8111-111111111111', '/contact'),
+                        contact('dddddddd-3333-4111-8111-111111111111', '/pages/contact'),
                       ],
                     },
                   ],
@@ -587,7 +579,7 @@ describe('IssuesCatalog', () => {
     expect(
       await within(dialog).findByText('These 3 pages share “Contact us | Acme”'),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText('About / Contact, including:')).toBeInTheDocument();
+    expect(within(dialog).getByText('Including:')).toBeInTheDocument();
     const links = within(dialog).getAllByRole('link', { name: /Contact us \| Acme/ });
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,

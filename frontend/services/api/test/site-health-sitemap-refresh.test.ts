@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
+import { sitemapPresent, sitemapValid } from '../src/site-health/analysis/finalize.ts';
 import { crawlCoverage } from '../src/site-health/coverage.ts';
 import { setupSettings } from '../src/site-health/site-setup-task.ts';
 import { acquisitionHarness, url, urlset } from './site-health-acquisition-support.ts';
@@ -61,6 +62,8 @@ describe('stale sitemap index', () => {
       discovered_complete: false,
       limit_reached: false,
       unread_count: 1,
+      invalid_count: 0,
+      invalid_documents: [],
       retries: 1,
     });
     expect(await task(setup)).toMatchObject({ status: 'succeeded' });
@@ -69,6 +72,35 @@ describe('stale sitemap index', () => {
     expect((await crawlCoverage(db, await crawlRow(seed))).evidence.reasons).toEqual([
       'sitemap_documents_unread',
     ]);
+  });
+
+  it('records a served sitemap that does not parse as invalid, not as no sitemap', async () => {
+    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
+    const setup = await queued(seed, 'site_setup');
+    const site = worker({
+      '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' },
+      '/sitemap.xml': {
+        contentType: 'application/xml',
+        body: `<urlset><url><loc>${url('/a')}</loc></urlset>`,
+      },
+    });
+    await walkSetup(site, setup, { ...setupSettings({}), walkRetries: 0 });
+    const sitemap = record(record((await crawlRow(seed)).site_facts).sitemap);
+    expect(sitemap).toMatchObject({
+      fetched: false,
+      unread_count: 0,
+      invalid_count: 1,
+      invalid_documents: [{ url: url('/sitemap.xml') }],
+    });
+    const judged = { sampleMode: false, sitemap };
+    expect([sitemapPresent(judged).outcome, sitemapPresent(judged).reason_code]).toEqual([
+      'not_applicable',
+      'sitemap_invalid',
+    ]);
+    expect(sitemapValid(judged)).toMatchObject({
+      outcome: 'missing',
+      evidence: { invalid_document_count: 1, sitemap_file_count: 0 },
+    });
   });
 
   it.each([
@@ -116,6 +148,8 @@ describe('stale sitemap index', () => {
         discovered_complete: !unread,
         limit_reached: false,
         unread_count: unread,
+        invalid_count: 0,
+        invalid_documents: [],
       });
       expect((await entries(seed)).map((row) => row.listed_url)).toEqual([
         url('/a'),
