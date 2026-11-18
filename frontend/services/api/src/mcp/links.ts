@@ -11,7 +11,11 @@ export function appLink(
   projectId: string,
   params: Record<string, string> = {},
 ): string {
-  const relative = `${path}?${new URLSearchParams({ ...params, project: projectId })}`;
+  // A screen may carry its own query (`?tab=`); the hand-off joins it.
+  const url = new URL(path, 'https://app.invalid');
+  for (const [key, value] of Object.entries({ ...params, project: projectId }))
+    url.searchParams.set(key, value);
+  const relative = `${url.pathname}${url.search}`;
   return origin ? new URL(relative, origin).href : relative;
 }
 

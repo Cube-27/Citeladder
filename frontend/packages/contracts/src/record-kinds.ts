@@ -20,6 +20,7 @@ type RecordKind = {
 };
 
 const own = (path: string) => (field: Field) => (field('id') ? `${path}/${field('id')}` : null);
+const KEYWORD_RESEARCH = '/search-intelligence?tab=overview';
 
 export const RECORD_KINDS = {
   project: { label: 'Project', screen: '/visibility' },
@@ -52,9 +53,10 @@ export const RECORD_KINDS = {
   demand_snapshot: { label: 'Search Demand snapshot', screen: '/search-intelligence' },
   query_snapshot: { label: 'Search Console snapshot', screen: '/performance' },
   query_row: { label: 'Search Console query', screen: '/performance' },
-  search_run: { label: 'Keyword Research run', screen: '/search-intelligence' },
-  search_dataset: { label: 'Keyword Research dataset', screen: '/search-intelligence' },
-  search_row: { label: 'Keyword Research row', screen: '/search-intelligence' },
+  // The Keywords page opens on Demand; Keyword Research records open its Overview.
+  search_run: { label: 'Keyword Research run', screen: KEYWORD_RESEARCH },
+  search_dataset: { label: 'Keyword Research dataset', screen: KEYWORD_RESEARCH },
+  search_row: { label: 'Keyword Research row', screen: KEYWORD_RESEARCH },
 } as const satisfies Record<string, RecordKind>;
 
 export type RecordKindName = keyof typeof RECORD_KINDS;

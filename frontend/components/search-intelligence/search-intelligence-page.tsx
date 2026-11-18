@@ -109,26 +109,41 @@ function selectDatasets(
  */
 export function SearchIntelligencePage() {
   const [tab, setTab] = useUrlState('tab', TAB_CODEC, { clearKeys: DEMAND_KEYS });
+  const view = useSavedView();
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       {tab === 'demand' ? (
         <DemandProjection tabs={TAB_ROW} />
       ) : (
-        <KeywordResearch tab={tab} setTab={setTab} />
+        <KeywordResearch tab={tab} setTab={setTab} view={view} />
       )}
     </TabsRoot>
   );
 }
 
-function KeywordResearch({ tab, setTab }: Readonly<{ tab: Tab; setTab: (tab: PageTab) => void }>) {
+/** The saved scope, market and comparison chosen, held above the tabs so a visit to Demand keeps them. */
+function useSavedView() {
+  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
+  const [market, setMarket] = useState('');
+  const [scope, setScope] = useState('');
+  return { comparison, setComparison, market, setMarket, scope, setScope };
+}
+
+function KeywordResearch({
+  tab,
+  setTab,
+  view,
+}: Readonly<{
+  tab: Tab;
+  setTab: (tab: PageTab) => void;
+  view: ReturnType<typeof useSavedView>;
+}>) {
   const { workspaceId, projectId } = useProjectScope();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
   const [citationOrigin, setCitationOrigin] = useState<string>();
-  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
-  const [market, setMarket] = useState('');
-  const [scope, setScope] = useState('');
+  const { comparison, setComparison, market, setMarket, scope, setScope } = view;
   const [action, setAction] = useState<SearchReviewAction>('analysis');
   const requestScope = { workspaceId, projectId };
   const readiness = useQuery({
