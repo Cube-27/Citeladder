@@ -19,6 +19,8 @@ import {
   heatScale,
   matrixCsvMetricHeader,
   matrixCsvRows,
+  noTopicsMessage,
+  noTopicsRecorded,
   READING_LABELS,
   type CellReading,
 } from '@/lib/visibility/matrix';
@@ -93,6 +95,10 @@ export function PerformanceMatrix({
   function body() {
     const state = matrixBodyState(query, 'matrix');
     if (state || !data) return state;
+    if ((rows === 'topic' || columns === 'topic') && noTopicsRecorded(data.rankings.topic))
+      return (
+        <StateBlock kind="empty" inline message={noTopicsMessage(data.source_audit_ids.length)} />
+      );
     if (!rowText.length || !columnText.length)
       return (
         <StateBlock

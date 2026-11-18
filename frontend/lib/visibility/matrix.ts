@@ -117,6 +117,20 @@ export function matrixCsvRows({
   );
 }
 
+/**
+ * Every topic reads `not_recorded`: the selected runs predate topic snapshots,
+ * so the section says so once instead of once per topic.
+ */
+export function noTopicsRecorded(rows: readonly Readonly<{ kind: string }>[]): boolean {
+  return rows.length > 0 && rows.every((row) => row.kind === 'not_recorded');
+}
+
+export function noTopicsMessage(runs: number): string {
+  return runs > 1
+    ? "These runs didn't record topics. The next run will."
+    : "This run didn't record topics. The next run will.";
+}
+
 export const READING_LABELS = {
   not_run: 'Not run',
   not_recorded: 'Topic not recorded for this run',

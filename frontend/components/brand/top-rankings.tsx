@@ -10,7 +10,8 @@ import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
-import { READING_LABELS } from '@/lib/visibility/matrix';
+import { StateBlock } from '@/components/ui/state-block';
+import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
 import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
 
 const byCodec = stringUrlCodec(
@@ -59,8 +60,10 @@ export function TopRankings({ query }: Readonly<{ query: UseQueryResult<Visibili
     : [];
   function body() {
     if (!data) return null;
-    if (segments.length > 0 && rows.length === 0)
-      return <Absence state="unavailable" label={READING_LABELS.not_recorded} />;
+    if (by === 'topic' && noTopicsRecorded(data.rankings.topic))
+      return (
+        <StateBlock kind="empty" inline message={noTopicsMessage(data.source_audit_ids.length)} />
+      );
     return (
       <RankTable
         labelledBy="insights-rankings"

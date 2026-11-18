@@ -103,8 +103,8 @@ function StepChartKeys({
  * fill under it; rivals take their page-wide identity colours
  * (`SeriesTonesContext`) at 1.5px with hollow markers. A missing period breaks
  * the line and shows a `well` band with its word; nothing is interpolated.
- * A chart of one period is no chart: each line prints as a compact row under
- * one date. Lines are named at
+ * By default a chart of one period is no chart: each line prints as a compact
+ * row under one date (`lonePoint="plot"` marks the points instead). Lines are named at
  * their right end with their latest value (dated when it is older than the
  * last point), and a key replaces the labels when they would collide or a
  * line has no value to label.
@@ -128,6 +128,7 @@ export function StepChart({
   eventsLabel,
   eventLegend = false,
   you = true,
+  lonePoint = 'list',
 }: Readonly<{
   /** The first line, one entry per point; its labels and timestamps place every line. */
   data: readonly TrendPoint[];
@@ -155,6 +156,8 @@ export function StepChart({
   eventLegend?: boolean;
   /** The first line is your brand (the accent); false draws it as the first rival. */
   you?: boolean;
+  /** One period: `list` prints each line's value as a row; `plot` marks each line's point under a key. */
+  lonePoint?: 'list' | 'plot';
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -170,7 +173,8 @@ export function StepChart({
   }));
   const shown = shownWith(format);
   const [only] = data;
-  if (only && data.length === 1) {
+  const lone = lonePointMode(lonePoint, data.length);
+  if (only && lone.list) {
     return (
       <ChartFrame>
         <SingleMeasurements label={label} point={only} lines={toned} format={format} />
@@ -219,9 +223,9 @@ export function StepChart({
       ? []
       : [{ key: line.name, text: labelText(line), tone: line.tone, y: labelled.y(latest) }];
   });
-  const endLabels = ends.length === toned.length ? placeEndLabels(ends, labelled.right) : null;
+  const endLabels = lone.endLabels(ends, toned.length, labelled.right);
   const scale = endLabels ? labelled : scaleFor(24);
-  const keyed = !endLabels && toned.length > 1;
+  const keyed = !endLabels && toned.length >= lone.keyedFrom;
   const lines = shapedLines(toned, keyed);
   const count = data.length;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -300,6 +304,21 @@ export function StepChart({
       />
     </ChartFrame>
   );
+}
+
+/**
+ * How one period draws: `list` as rows of values; `plot` as points whose lines
+ * all end at one x, so a key names even a single line rather than end labels.
+ */
+function lonePointMode(lonePoint: 'list' | 'plot', count: number) {
+  const plot = count === 1 && lonePoint === 'plot';
+  return {
+    list: count === 1 && !plot,
+    keyedFrom: plot ? 1 : 2,
+    /** End labels when every line has a latest value to name, else null and a key. */
+    endLabels: (ends: Parameters<typeof placeEndLabels>[0], lines: number, right: number) =>
+      !plot && ends.length === lines ? placeEndLabels(ends, right) : null,
+  };
 }
 
 /** The first line from `data`, then up to three further lines, each with the identity its colour follows. */

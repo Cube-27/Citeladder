@@ -107,4 +107,36 @@ describe('Your brand over time', () => {
     expect(roster.some((name) => name.startsWith('You'))).toBe(true);
     expect(roster.some((name) => name.startsWith('Kmart Australia'))).toBe(true);
   });
+
+  it('shows the chart skeleton while the history loads, and the empty state only once it read none', () => {
+    const states = (container: HTMLElement) =>
+      [...container.querySelectorAll<HTMLElement>('[data-state-block]')].map(
+        (block) => block.dataset.stateBlock,
+      );
+    const pending = {
+      data: undefined,
+      isPending: true,
+      isError: false,
+      isSuccess: false,
+      isFetching: true,
+    } as unknown as UseQueryResult<VisibilityTrendPoint[]>;
+    const loading = render(<BrandTrend query={pending} selected={selected} />);
+    expect(states(loading.container)).toEqual(['loading']);
+    expect(loading.container.querySelector('[data-chart-frame]')).toBeNull();
+    loading.unmount();
+
+    const none = render(<BrandTrend query={loaded([])} selected={selected} />);
+    expect(states(none.container)).toEqual(['empty']);
+  });
+
+  it('plots one run as a point per brand under a key, not a list of values', () => {
+    const { container } = render(
+      <BrandTrend query={loaded([point('2026-11-17T00:00:00Z', 0.31)])} selected={selected} />,
+    );
+    expect(container.querySelector('[data-single-measurement]')).toBeNull();
+    expect(container.querySelectorAll('[data-trend-line="you"] circle')).toHaveLength(1);
+    expect(lineNames(container)).toEqual(['You', 'Kmart Australia', 'Target Australia']);
+    // Each brand's mark sits in its key entry.
+    expect(container.querySelectorAll('ul[aria-hidden] li [data-brand-mark]')).toHaveLength(3);
+  });
 });
