@@ -7,7 +7,6 @@ import { VERDICT_LABELS } from '@/lib/visibility/accuracy';
 
 const STACK = [
   { key: 'supported', fill: 'fill-positive bg-positive' },
-  // `fill-current` with the text colour reuses generated utilities instead of a new `fill-negative`.
   { key: 'contradicted', fill: 'fill-current text-negative bg-negative' },
   { key: 'inconclusive', fill: 'fill-data-other bg-data-other' },
 ] as const;
