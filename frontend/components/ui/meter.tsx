@@ -27,6 +27,10 @@ const METER_FILL = {
   negative: 'bg-negative',
 } as const satisfies Record<MeterTone, string>;
 
+/** A fill eases to its new width (300ms) and its tone (200ms). */
+const FILL_MOTION =
+  'block h-full [transition:width_var(--motion-slide)_var(--ease-standard),background-color_var(--motion-open)_var(--ease-standard)]';
+
 function percentOf(value: number | null, max: number) {
   if (value === null || max <= 0) return null;
   return (Math.min(max, Math.max(0, value)) / max) * 100;
@@ -62,7 +66,7 @@ function MeterTrack({
       className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
-        <span className={cn('block h-full', fill)} style={{ width: `${percent}%` }} />
+        <span className={cn(FILL_MOTION, fill)} style={{ width: `${percent}%` }} />
       )}
     </div>
   );
@@ -150,7 +154,7 @@ export function CellMeter({
       data-meter-tone={tone}
       className="bg-well block h-2 w-30 overflow-hidden rounded-sm"
     >
-      <span className={cn('block h-full', METER_FILL[tone])} style={{ width: `${percent}%` }} />
+      <span className={cn(FILL_MOTION, METER_FILL[tone])} style={{ width: `${percent}%` }} />
     </div>
   );
 }

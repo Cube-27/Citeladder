@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 
 import { ProjectLink } from '@/components/ui/project-link';
@@ -39,7 +40,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
               )}
             </li>
             <li aria-hidden className="shrink-0">
-              ›
+              <ChevronRight className="block size-3" />
             </li>
           </Fragment>
         ))}

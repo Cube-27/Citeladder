@@ -328,6 +328,16 @@
   --motion-tint: 150ms;
   --motion-slide: 300ms;
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  /* HeroUI v3's overlay timings: a dialog or drawer enters (and a toast
+     leaves, a disclosure's chevron turns) over --motion-overlay, a dialog or
+     info hint leaves over --motion-overlay-exit, a toast moves over
+     --motion-toast; a loading shape's sweep crosses it every --motion-sweep. */
+  --motion-overlay: 250ms;
+  --motion-overlay-exit: 100ms;
+  --motion-toast: 350ms;
+  --motion-sweep: 2s;
+  --ease-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-sweep: linear;
   /* The website's steps (and the app's draft edge); app open/close never uses them. */
   --motion-normal: 150ms;
   --motion-slow: 200ms;
@@ -2010,33 +2020,6 @@ label {
   [data-chart-frame] {
   border: 0;
   padding: 0;
-}
-
-/* Skeleton blocks: a soft shimmer crosses them; under reduced motion they are still. */
-.skeleton-block {
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-surface) 55%, transparent),
-    transparent
-  );
-  background-size: 50% 100%;
-  background-repeat: no-repeat;
-  animation: skeleton-shimmer 1.6s ease-in-out infinite;
-}
-@keyframes skeleton-shimmer {
-  from {
-    background-position: -100% 0;
-  }
-  to {
-    background-position: 200% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-block {
-    animation: none;
-    background-image: none;
-  }
 }
 
 /* A DataTable column's alignment and numerals load with DataTable

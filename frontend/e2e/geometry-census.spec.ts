@@ -724,6 +724,10 @@ async function expectOneGeometry(page: Page) {
         await expect(
           current.getByRole('button', { name: /^Switch to (?:light|dark) theme$/ }),
         ).toBeVisible();
+        // The menu grows from 96% as it opens: measure it at rest, not mid-scale.
+        await current
+          .getByRole('menu')
+          .evaluate((menu) => Promise.all(menu.getAnimations().map((motion) => motion.finished)));
       },
     })),
   );

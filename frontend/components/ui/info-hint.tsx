@@ -4,6 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 
 import { focusFromKeyboard } from '@/components/ui/input-modality';
 import { TOOLTIP_SHEET } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 /**
  * A short explanation attached to a label, without spending a line on it.
@@ -55,7 +56,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
           // Focus stays on the button; returning it there on close would reopen the tip.
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className={TOOLTIP_SHEET}
+          className={cn(TOOLTIP_SHEET, 'popover-panel')}
         >
           {children}
         </PopoverPrimitive.Content>

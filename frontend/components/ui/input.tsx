@@ -33,10 +33,10 @@ export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} [:root:not([data-public-surface])_&]:hover:overlay-hover ${FIELD_SHAPE}`;
 
 /**
- * A typed field (Input, SearchField) tints its own fill 4% ink on hover
- * over 150ms instead of the trigger's 6% overlay (globals.css `field-hover`).
+ * A typed field (Input, SearchField, Textarea) tints its own fill 4% ink on
+ * hover over 150ms instead of the trigger's 6% overlay (globals.css `field-hover`).
  */
-const FIELD_HOVER = 'field-hover transition-colors duration-[var(--motion-tint)]';
+export const FIELD_HOVER = 'field-hover transition-colors duration-[var(--motion-tint)]';
 const TYPED_FIELD_BOX = {
   line: `${FIELD_BOX} ${FIELD_HOVER}`,
   soft: `${SOFT_FIELD_EDGE} ${FIELD_SHAPE} ${FIELD_HOVER} [--field-fill:var(--color-control-fill)]`,

@@ -7,7 +7,7 @@ import {
   type Ref,
 } from 'react';
 
-import { FIELD_EDGE } from '@/components/ui/input';
+import { FIELD_EDGE, FIELD_HOVER } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
@@ -19,8 +19,9 @@ const textareaClasses =
   'text-ink placeholder:text-ink-2 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
 
 const fieldClasses = cn(
-  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,outline-color] duration-[var(--motion-fast)]',
+  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2',
   FIELD_EDGE,
+  FIELD_HOVER,
 );
 
 /**
