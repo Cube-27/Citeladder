@@ -41,6 +41,8 @@ CREATE TABLE public.audit_topic_metrics (
     topic_name character varying(255) NOT NULL,
     visibility_score double precision NOT NULL,
     metrics jsonb NOT NULL,
+    -- The analyses the block counts, as metric_snapshots keeps them (invariant 5).
+    source_analysis_ids jsonb NOT NULL,
     analyzer_version character varying(32) NOT NULL,
     created_at timestamp with time zone NOT NULL
 );
