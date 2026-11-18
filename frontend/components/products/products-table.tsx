@@ -145,8 +145,11 @@ export function ProductsTable({
   selectable = true,
   empty,
   description,
+  actions,
   onRetry = () => void query.refetch(),
 }: Readonly<{
+  /** The table's own actions (Columns, Export), at its top right. */
+  actions?: ReactNode;
   /** What an empty page says: none yet, or none matching the filters. */
   empty: ProductsEmpty;
   /** A failed read's one Retry: the page's other reads may have failed with it. */
@@ -222,6 +225,7 @@ export function ProductsTable({
     <DataTable
       label="Products"
       description={description}
+      actions={actions}
       columns={tableColumns}
       rowCount={rows.length}
       pageSize={pageSize}

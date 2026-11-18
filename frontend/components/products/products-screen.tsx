@@ -280,15 +280,6 @@ function ProductsContent({
               </>
             ) : null
           }
-          actions={
-            <>
-              <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
-              <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
-                <Icon icon={Download} />
-                Export
-              </Button>
-            </>
-          }
         />
       }
     >
@@ -317,6 +308,16 @@ function ProductsContent({
               Open {selectedCategory.name}: its competitors and shopping prompts
             </TextLink>
           ) : undefined
+        }
+        // Columns and Export act on the table, so they sit at its top right (design.md).
+        actions={
+          <>
+            <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
+            <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
+              <Icon icon={Download} />
+              Export
+            </Button>
+          </>
         }
         trackable={filters.source === 'all'}
         // Checked products are for competitor discovery, a run.
