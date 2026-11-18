@@ -785,6 +785,8 @@ async function expectOneGeometry(page: Page) {
       label: '/agent/context (edit panel)',
       prepare: async (current) => {
         await current.getByRole('button', { name: 'Edit competitors' }).click();
+        // An ordinary brand name keeps its mention rule behind a disclosure.
+        await current.locator('summary', { hasText: 'Mention rule' }).first().click();
         await expect(current.getByRole('switch').first()).toBeVisible();
       },
     })),
