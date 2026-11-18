@@ -164,7 +164,6 @@ export async function loadMeasuredRuns(
   }));
 }
 
-/** Each of the workspace's runs' frozen engine routes. */
 /**
  * A pooled period's trend selection: the newest measured runs of its window
  * in the pool's market, whatever their configuration, so a trend breaks where
@@ -193,6 +192,7 @@ export async function periodTrendSelection(
   return { ...selection, auditId: null, auditIds, fromAt: null, toAt: null };
 }
 
+/** Each of the workspace's runs' frozen engine routes. */
 export async function engineSnapshots(
   db: Database,
   workspaceId: string,
