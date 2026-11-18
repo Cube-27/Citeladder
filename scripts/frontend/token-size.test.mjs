@@ -117,7 +117,9 @@ test('the baseline exempts its files up to their recorded size and may only shri
     );
     // CI judges baselined files whether or not the branch changed them.
     repo.git('commit', '-qm', 'grown', '--no-verify');
-    assert.match(repo.check('--base', 'HEAD').stderr, /now 7001 tokens, over its recorded 7000/u);
+    const grownInCi = repo.check('--base', 'HEAD');
+    assert.equal(grownInCi.status, 1);
+    assert.match(grownInCi.stderr, /now 7001 tokens, over its recorded 7000/u);
     repo.git('reset', '-q', '--hard', 'HEAD~1');
 
     repo.policy({ 'frontend/big.ts': 7000, 'frontend/new.ts': 6500 });
