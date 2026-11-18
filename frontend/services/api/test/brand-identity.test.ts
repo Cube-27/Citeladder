@@ -152,6 +152,7 @@ async function suggestion(input: {
       domain: input.domain,
       name_key: input.domain === null ? input.name.toLowerCase() : null,
       engine_total: 4,
+      citation_count: input.domain === null ? null : 3,
       qualification_reason: 'Cited across prompts and engines',
       prompt_count: input.prompts ?? 2,
       engine_count: input.engines ?? 2,

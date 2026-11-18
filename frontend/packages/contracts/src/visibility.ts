@@ -313,7 +313,7 @@ const observedCompetitorFields = {
   qualification_reason: z.string(),
   prompt_count: z.number().int(),
   engine_count: z.number().int(),
-  /** The run's engines; null on a suggestion recorded before the total was. */
+  /** The engines the run asked; null on a suggestion recorded before the total was. */
   engine_total: z.number().int().nullable(),
   market_relevant: z.boolean(),
   analyzer_version: z.string(),

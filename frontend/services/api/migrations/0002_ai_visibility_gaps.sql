@@ -58,3 +58,61 @@ ALTER TABLE ONLY public.audit_topic_metrics
 
 ALTER TABLE ONLY public.audit_topic_metrics
     ADD CONSTRAINT audit_topic_metrics_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+-- Competitor suggestions (AV-11, W14): a candidate is a cited domain or a name the
+-- perception call labelled; a person's accept or reject records who and when.
+-- NULL counts: recorded before these columns existed.
+ALTER TABLE public.observed_entity_candidates
+    ADD COLUMN kind character varying(32) NOT NULL DEFAULT 'cited_domain',
+    ADD COLUMN name_key character varying(255),
+    ADD COLUMN citation_count integer,
+    ADD COLUMN engine_total integer,
+    ADD COLUMN decided_by_user_id uuid,
+    ADD COLUMN decided_at timestamp with time zone,
+    ALTER COLUMN domain DROP NOT NULL;
+
+ALTER TABLE public.observed_entity_candidates
+    ALTER COLUMN kind DROP DEFAULT,
+    ADD CONSTRAINT ck_observed_candidate_kind CHECK (
+        CASE kind
+            WHEN 'cited_domain' THEN domain IS NOT NULL AND name_key IS NULL
+            WHEN 'named_in_answers' THEN domain IS NULL AND name_key IS NOT NULL AND citation_count IS NULL
+            ELSE false
+        END
+    ),
+    ADD CONSTRAINT uq_observed_candidate_name UNIQUE (audit_id, name_key),
+    ADD CONSTRAINT observed_entity_candidates_decided_by_user_id_fkey FOREIGN KEY (decided_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- The untracked business names each answer's perception returned, verified
+-- against its passages: raw observations, append-only.
+CREATE TABLE public.answer_untracked_names (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    perception_id uuid NOT NULL,
+    analysis_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    name_key character varying(255) NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT uq_answer_untracked_name UNIQUE (perception_id, name_key);
+
+CREATE INDEX ix_answer_untracked_names_audit_id ON public.answer_untracked_names USING btree (audit_id, name_key);
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_perception_id_fkey FOREIGN KEY (perception_id) REFERENCES public.answer_perceptions(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;

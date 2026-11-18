@@ -502,6 +502,8 @@ describe('public API requests', () => {
         name: 'Fleet Feet',
         kind: 'cited_domain',
         domain: 'fleetfeet.example',
+        citation_count: 2,
+        engine_total: 2,
         qualification_reason: 'Cited across prompts and engines',
         prompt_count: 2,
         engine_count: 2,
@@ -610,7 +612,7 @@ describe('public API requests', () => {
       outcomes.push(`${response.status} ${contract.method} ${contract.path}`);
     }
     expect(outcomes.filter((outcome) => !outcome.startsWith('404 '))).toEqual([]);
-    expect(outcomes).toHaveLength(16);
+    expect(outcomes).toHaveLength(17);
     expect(await state()).toEqual(before);
   });
 
