@@ -335,5 +335,40 @@ export const visibilityFanoutSummarySchema = responseObject({
   ),
 });
 
+// One word the run's engines searched for (AV-8), counted at finalization.
+// `share` is of all the run's searches; `change` is the share move since the
+// previous finalized run, null when that run counted no terms.
+export const fanoutTermSchema = responseObject({
+  term: z.string(),
+  searches: z.number().int().nonnegative(),
+  share: z.number(),
+  change: z.number().nullable(),
+  brands: z.array(responseObject({ kind: z.enum(['brand', 'competitor']), name: z.string() })),
+});
+
+const fanoutTermRowSchema = fanoutTermSchema.extend({
+  brands: z.array(namedBrandSchema.omit({ responses: true })),
+});
+
+// `GET /projects/{id}/visibility/fanout-terms`: the newest selected run's terms.
+// `unavailable`: that run finalized before terms were counted.
+export const visibilityFanoutTermsSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('not_run') }),
+  responseObject({ kind: z.literal('unavailable'), audit_id: uuid() }),
+  responseObject({
+    kind: z.literal('observed'),
+    audit_id: uuid(),
+    total_searches: z.number().int().nonnegative(),
+    compared: z.boolean(),
+    // Engines that searched without reporting what for: not applicable here.
+    unreported_engines: z.array(z.string()),
+    top: z.array(fanoutTermRowSchema),
+    rising: z.array(fanoutTermRowSchema),
+    falling: z.array(fanoutTermRowSchema),
+  }),
+]);
+export type VisibilityFanoutTerms = z.infer<typeof visibilityFanoutTermsSchema>;
+export type FanoutTermRow = z.infer<typeof fanoutTermRowSchema>;
+
 export type VisibilityExecutionEvidence = z.infer<typeof visibilityExecutionEvidenceSchema>;
 export type VisibilityEvidenceResponse = z.infer<typeof visibilityEvidenceResponseSchema>;

@@ -353,6 +353,22 @@ export const firstNamedSchema = z.discriminatedUnion('kind', [
 ]);
 export type FirstNamed = z.infer<typeof firstNamedSchema>;
 
+export const answerFormatSchema = z.enum(['shopping', 'map', 'comparison', 'image']);
+// What a scraper answer showed besides text. `observed` with no formats is a
+// finding; an API engine is `not_applicable`; an unreadable envelope `unavailable`.
+export const answerFormatsSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('observed'),
+    formats: z.array(answerFormatSchema),
+    // Distinct links written in the answer text, apart from its citations.
+    in_text_links: z.number().int().nonnegative(),
+  }),
+  responseObject({ kind: z.literal('unavailable') }),
+  responseObject({ kind: z.literal('not_applicable') }),
+]);
+export type AnswerFormat = z.infer<typeof answerFormatSchema>;
+export type AnswerFormats = z.infer<typeof answerFormatsSchema>;
+
 // One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
@@ -392,6 +408,7 @@ export const executionEvidenceSchema = responseObject({
   search_query_count: z.number().int(),
   avg_position: z.number().nullable(),
   first_named: firstNamedSchema,
+  answer_formats: answerFormatsSchema,
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
   competitors_mentioned: z.array(z.string()),

@@ -23,6 +23,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
+import { storedAnswerFormats } from '../analysis/answer-formats.ts';
 import { groupBy } from '../lists.ts';
 import { scopedPrompt } from '../prompts/prompts.ts';
 import { compareText } from '../text-order.ts';
@@ -100,6 +101,9 @@ export async function getPromptAnswers(
       'ra.owned_domain_cited',
       'ra.search_used',
       'ra.fanout_state',
+      'ra.answer_format_state',
+      'ra.answer_formats',
+      'ra.in_text_link_count',
       utcTextOf(sql.ref('a.completed_at')).as('run_at'),
     ])
     .orderBy('a.completed_at', 'desc')
@@ -132,6 +136,7 @@ export async function getPromptAnswers(
         row.brand_mentioned && row.avg_position !== null ? Math.round(row.avg_position) : null,
       cited: row.owned_domain_cited,
       search: searchOf(row),
+      answer_formats: storedAnswerFormats(row),
     })),
     next_cursor:
       last && found.length > query.limit

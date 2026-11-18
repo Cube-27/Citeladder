@@ -42,6 +42,7 @@ const evidence: ExecutionEvidence = {
   search_query_count: 0,
   avg_position: null,
   first_named: { kind: 'none' },
+  answer_formats: { kind: 'not_applicable' },
   score: null,
   citations: [],
   competitors_mentioned: [],

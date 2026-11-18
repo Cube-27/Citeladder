@@ -22,7 +22,10 @@ import {
   visibilityMarketsSchema,
   visibilitySchema,
 } from '@citeladder/contracts/visibility';
-import { visibilityFanoutSummarySchema } from '@citeladder/contracts/visibility-evidence';
+import {
+  visibilityFanoutSummarySchema,
+  visibilityFanoutTermsSchema,
+} from '@citeladder/contracts/visibility-evidence';
 import {
   perceptionQuotePageSchema,
   perceptionResponseSchema,
@@ -45,6 +48,7 @@ import {
 import { getAds } from '../visibility/ads.ts';
 import { getRankedVisibility } from '../visibility/ranking-sentiment.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
+import { getVisibilityFanoutTerms } from '../visibility/fanout-terms.ts';
 import { getMarketVisibility } from '../visibility/markets.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import { getPromptHistory } from '../visibility/prompt-history.ts';
@@ -440,6 +444,27 @@ export const visibilityRoutes = [
             to_at: null,
           }),
           { query: query.query, search: query.search, cursor: query.cursor, limit: query.limit },
+        ),
+      );
+    },
+  }),
+  defineGetRoute({
+    ...family,
+    path: '/api/v1/projects/{project_id}/visibility/fanout-terms',
+    params: { path: PROJECT_PATH, query: { ...RUNS, cohort: COHORT } },
+    response: visibilityFanoutTermsSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      return selectionErrors(() =>
+        getVisibilityFanoutTerms(
+          db,
+          runSelection(workspace.workspaceId, path.project_id, {
+            ...query,
+            engine: null,
+            topic: null,
+            from_at: null,
+            to_at: null,
+          }),
         ),
       );
     },
