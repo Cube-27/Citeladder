@@ -38,6 +38,8 @@ type FilterBase = Readonly<{
   reset: () => void;
   /** Draws the filter as an icon chip in the row (`FilterBar` keeps at most four). */
   icon?: FilterIcon;
+  /** The page's placement puts it in Filters, so the row never takes it in. */
+  inFilters?: boolean;
   /**
    * The data window a period reads, at the row's end while its chip shows
    * only its icon: "Latest run · 18 Nov 09:12". Defaults to `valueLabel`.

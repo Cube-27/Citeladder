@@ -25,7 +25,6 @@ function renderRow({
     <Row
       view={view}
       selectionMode={selectionMode}
-      onChangeSelectionMode={vi.fn()}
       runs={[]}
       selectedRunId={null}
       onSelectMeasurement={vi.fn()}
@@ -35,7 +34,7 @@ function renderRow({
       promptId={null}
       onChangePrompt={vi.fn()}
       range="90d"
-      onChangeRange={vi.fn()}
+      onSelectPeriod={vi.fn()}
       granularity="run"
       onChangeGranularity={vi.fn()}
       cohort="core"
@@ -81,25 +80,18 @@ const MARKETS: ProjectMarket[] = [
 const TOPICS = [{ id: 't1', name: 'Pricing' }];
 
 describe('useVisibilityFilterMenu', () => {
-  it('offers a period and a grouping only while every run in a period is pooled', () => {
-    const { unmount } = renderRow({ selectionMode: 'run' });
-    // Beside "Latest run", "Last 90 days" and "Per run" contradicted the selection.
-    expect(rowChips()).toEqual([
-      'Measurement: Latest run',
-      'Surface: All surfaces',
-      'Prompts: Unbranded',
-    ]);
+  it('keeps the row as it is when the period is pooled, with Group by in Filters', async () => {
+    const row = ['Engines: All engines', 'Prompts: Unbranded'];
+    const props = { topics: TOPICS, onChangeTopic: vi.fn() };
+    const { unmount } = renderRow({ selectionMode: 'run', ...props });
+    expect(rowChips()).toEqual(['Measurement: Latest run', ...row]);
+    // With one market hidden, Topic still waits in Filters rather than taking its place.
+    expect(await filtersMenu()).toEqual(['Topic: All topics']);
     unmount();
 
-    renderRow({ selectionMode: 'range' });
-    // The pooled period stands beside the measurement, so the window stays in the row.
-    expect(rowChips()).toEqual([
-      'Measurement: All runs in period',
-      'Period: Last 90 days',
-      'Surface: All surfaces',
-      'Prompts: Unbranded',
-      'Group by: Per run',
-    ]);
+    renderRow({ selectionMode: 'range', range: '30d', ...props });
+    expect(rowChips()).toEqual(['Measurement: Last 30 days', ...row]);
+    expect(await filtersMenu()).toEqual(['Topic: All topics', 'Group by: Per run']);
   });
 
   it('keeps each page’s four icon filters in the row and the rest in Filters', async () => {
@@ -113,11 +105,11 @@ describe('useVisibilityFilterMenu', () => {
     });
     expect(rowChips()).toEqual([
       'Measurement: Latest run',
-      'Surface: All surfaces',
+      'Engines: All engines',
       'Market: United States',
       'Prompts: Unbranded',
     ]);
-    // A fifth icon filter waits in Filters; set, it follows as a removable value chip.
+    // Topic waits in Filters; set, it follows as a removable value chip.
     expect(screen.getByRole('button', { name: 'Remove Topic filter' })).toBeVisible();
     expect(await filtersMenu()).toEqual(['Topic: Pricing']);
     unmount();
@@ -134,7 +126,7 @@ describe('useVisibilityFilterMenu', () => {
     // Competitors read by topic; the prompt cohort moves behind Filters.
     expect(rowChips()).toEqual([
       'Measurement: Latest run',
-      'Surface: All surfaces',
+      'Engines: All engines',
       'Market: United States',
       'Topic: All topics',
     ]);
@@ -168,18 +160,18 @@ describe('useVisibilityFilterMenu', () => {
     expect(screen.getByRole('button', { name: 'Measurement: 2 Nov 2026' })).toBeVisible();
   });
 
-  it('pools the period from the measurement chip, and picks a run by id', async () => {
+  it('pools a period from the measurement chip, and picks a run by id', async () => {
     const user = userEvent.setup();
-    const onChangeSelectionMode = vi.fn();
+    const onSelectPeriod = vi.fn();
     const onSelectMeasurement = vi.fn();
     renderRow({
       selectionMode: 'run',
       runs: [{ id: 'run-2', status: 'completed', label: '2 Nov 2026', completedAt: null }],
-      onChangeSelectionMode,
+      onSelectPeriod,
       onSelectMeasurement,
     });
-    await chooseFilterOption(user, 'Measurement', 'All runs in period');
-    expect(onChangeSelectionMode.mock.calls).toEqual([['range']]);
+    await chooseFilterOption(user, 'Measurement', 'Last 12 months');
+    expect(onSelectPeriod.mock.calls).toEqual([['1y']]);
     await chooseFilterOption(user, 'Measurement', '2 Nov 2026');
     expect(onSelectMeasurement.mock.calls).toEqual([['run-2']]);
   });
