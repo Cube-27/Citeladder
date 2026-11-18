@@ -173,10 +173,13 @@ describe('HTTP origin and TLS certificate failures', () => {
   const failure = (code: string, cause?: Error) =>
     Object.assign(new Error(code, cause ? { cause } : undefined), cause ? {} : { code });
   const failed = (error: unknown) => ({ kind: 'error' as const, code: probeFailureCode(error) });
-  const root = (probe: ReturnType<typeof httpOriginFacts> | null) => {
+  const root = (
+    probe: ReturnType<typeof httpOriginFacts> | null,
+    finalUrl = 'https://example.test/',
+  ) => {
     const row = evaluatePageRules({
       has_html: true,
-      delivery: { final_url: 'https://example.test/' },
+      delivery: { final_url: finalUrl },
       site: probe ? { http_origin: probe } : {},
     }).find((item) => item.rule_id === 'technical.http_redirects_to_https')!;
     return [row.outcome, row.reason_code];
@@ -184,8 +187,10 @@ describe('HTTP origin and TLS certificate failures', () => {
   const probe = 'http://example.test/';
 
   it('maps what the http:// probe observed to the rule outcome', () => {
+    // A root configured as http:// is probed too: its redirect to HTTPS is what passes.
     expect(httpOriginUrl('https://example.test')).toBe(probe);
-    expect(httpOriginUrl('http://example.test')).toBeNull();
+    expect(httpOriginUrl('http://example.test')).toBe(probe);
+    expect(httpOriginUrl('https://example.test:8443')).toBeNull();
     expect(
       root(
         httpOriginFacts(
@@ -215,10 +220,15 @@ describe('HTTP origin and TLS certificate failures', () => {
         'http_origin_unread',
       ]);
     expect(root(httpOriginFacts(null, { kind: 'error', code: '' }))).toEqual([
+      'unknown',
+      'no_http_origin',
+    ]);
+    expect(root(null)).toEqual(['unknown', 'insufficient_evidence']);
+    // A root that itself lands on plain HTTP is the HTTPS rule's finding, not this one.
+    expect(root(httpOriginFacts(probe, page(200, probe)), probe)).toEqual([
       'not_applicable',
       'root_not_https',
     ]);
-    expect(root(null)).toEqual(['unknown', 'insufficient_evidence']);
   });
 
   it('reads a refused http:// port at its robots.txt as nothing served over HTTP', async () => {

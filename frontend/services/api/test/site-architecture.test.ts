@@ -375,7 +375,7 @@ it('downgrades complete coverage when architecture evidence reaches its source c
     policy.site_health.architecture.max_pages = previous;
   }
 });
-it('persists exact source IDs, seven root evaluations and replay-safe architecture from current metrics', async () => {
+it('persists exact source IDs, nine root evaluations and replay-safe architecture from current metrics', async () => {
   const seed = await fixtures.crawl();
   const snapshot = await fixtures.snapshot(seed);
   const profile = await fixtures.businessProfile(seed, context);
@@ -424,7 +424,7 @@ it('persists exact source IDs, seven root evaluations and replay-safe architectu
     .selectAll()
     .where('source_architecture_id', '=', architecture.id)
     .execute();
-  expect(evaluations).toHaveLength(7);
+  expect(evaluations).toHaveLength(9);
   expect(evaluations.every((row) => row.analysis_id === home.analysisId)).toBe(true);
   expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(5);
   expect(record(architecture.archetype).archetype).toBe('commerce');
@@ -443,7 +443,7 @@ it('persists exact source IDs, seven root evaluations and replay-safe architectu
       .select('id')
       .where('source_architecture_id', '=', architecture.id)
       .execute(),
-  ).toHaveLength(7);
+  ).toHaveLength(9);
 });
 it('complete coverage creates actionable root findings without borrowing foreign evidence', async () => {
   const seed = await fixtures.crawl();

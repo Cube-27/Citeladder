@@ -66,11 +66,14 @@ function longParagraphs(facts: Facts): CheckResult {
 
 /** The `http://` origin probe site setup recorded: it must hand every visitor to HTTPS. */
 function httpRedirectsToHttps(facts: Facts): CheckResult {
+  // A root served over plain HTTP is `technical.https`'s finding.
+  if (!text(record(facts.delivery).final_url).startsWith('https://'))
+    return ['not_applicable', { reason: 'root_not_https' }];
   const probe = record(record(facts.site).http_origin);
   const evidence = { ...probe };
   switch (text(probe.state)) {
     case 'not_probed':
-      return ['not_applicable', { ...evidence, reason: text(probe.reason) || 'root_not_https' }];
+      return ['unknown', { ...evidence, reason: text(probe.reason) || 'no_http_origin' }];
     case 'unanswered':
       return ['satisfied', evidence];
     case 'answered': {

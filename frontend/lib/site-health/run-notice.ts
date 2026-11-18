@@ -47,11 +47,15 @@ function failureGuidanceFor(code: string | undefined): string {
     case 'ssrf_blocked':
       return 'Choose a publicly reachable start URL, then re-crawl.';
     default:
-      if (code?.startsWith('tls_cert_'))
-        return 'Browsers and AI crawlers refuse this certificate too. Fix or renew it, then re-crawl.';
       return 'Re-crawl to try again.';
   }
 }
+
+/** Every named certificate failure (`tls_cert_*`) shares one next step. */
+const guidanceFor = (code: string | undefined) =>
+  code?.startsWith('tls_cert_')
+    ? 'Browsers and AI crawlers refuse this certificate too. Fix or renew it, then re-crawl.'
+    : failureGuidanceFor(code);
 
 export function crawlFailureCopy(
   crawl: Pick<SiteCrawl, 'error_message' | 'failure_summary'>,
@@ -60,7 +64,7 @@ export function crawlFailureCopy(
     crawl.failure_summary?.message ||
     crawl.error_message ||
     'This crawl failed before it produced results.';
-  return { reason, guidance: failureGuidanceFor(crawl.failure_summary?.code) };
+  return { reason, guidance: guidanceFor(crawl.failure_summary?.code) };
 }
 
 /**

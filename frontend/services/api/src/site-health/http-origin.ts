@@ -14,14 +14,11 @@ const limits = policy.site_health.page_analysis.facts.limits;
 // Only a refused port proves nothing is served; a reset or unreachable host may be transient.
 const NOT_SERVED = new Set(['ECONNREFUSED']);
 
-/** The plain-HTTP root of an HTTPS origin; null when the origin is not HTTPS. */
+/** The plain-HTTP root of a web origin; null on a custom port, whose HTTP twin is unknowable. */
 export function httpOriginUrl(origin: string) {
-  try {
-    const url = new URL(origin);
-    return url.protocol === 'https:' ? `http://${url.host}/` : null;
-  } catch {
-    return null;
-  }
+  const url = URL.parse(origin);
+  const web = url?.protocol === 'https:' || url?.protocol === 'http:';
+  return url && web && !url.port ? `http://${url.hostname}/` : null;
 }
 
 /** The code a failed probe keeps: a named certificate failure, else the error's own code. */
@@ -33,7 +30,7 @@ export function httpOriginFacts(
   url: string | null,
   observed: { kind: 'page'; page: FetchedPage } | { kind: 'error'; code: string },
 ) {
-  if (!url) return { state: 'not_probed', reason: 'root_not_https' } as const;
+  if (!url) return { state: 'not_probed', reason: 'no_http_origin' } as const;
   if (observed.kind === 'page') {
     const first = observed.page.redirectChain?.[0];
     return {

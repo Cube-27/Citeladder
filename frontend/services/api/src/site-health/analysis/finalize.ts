@@ -3,6 +3,7 @@ import { policy } from '../../config.ts';
 import { strings } from '../../db/json.ts';
 import { scalarText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
+import { count as integer, list } from './read-facts.ts';
 import { membership, type RuleEvaluation } from './rules.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
@@ -193,8 +194,8 @@ export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<strin
   )
     return finalizeEvaluation(rule, 'unknown', { reason: 'insufficient_evidence' });
   const invalid = input.sitemap.invalid_count;
-  const files = Number(input.sitemap.file_count) || 0;
-  const unread = Number(input.sitemap.unread_count) || 0;
+  const files = integer(input.sitemap.file_count);
+  const unread = integer(input.sitemap.unread_count);
   // A document that went unanswered may be the broken one.
   if (!invalid && unread)
     return finalizeEvaluation(rule, 'unknown', {
@@ -203,13 +204,10 @@ export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<strin
     });
   if (!invalid && !files)
     return finalizeEvaluation(rule, 'not_applicable', { reason: 'no_sitemap' });
-  const documents = Array.isArray(input.sitemap.invalid_documents)
-    ? input.sitemap.invalid_documents.slice(0, limits.evidence_urls)
-    : [];
   return finalizeEvaluation(rule, invalid ? 'missing' : 'satisfied', {
     sitemap_file_count: files,
     invalid_document_count: invalid,
-    invalid_documents: documents,
+    invalid_documents: list(input.sitemap.invalid_documents).slice(0, limits.evidence_urls),
   });
 }
 
