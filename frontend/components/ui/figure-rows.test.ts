@@ -12,13 +12,14 @@ describe('figureRows', () => {
     [4, 358, [2, 2]],
     [5, 358, [2, 2, 1]],
     [6, 358, [2, 2, 2]],
-    [3, 400, [2, 1]],
+    [3, 380, [2, 1]],
+    [3, 400, [3]],
     [3, 420, [3]],
     [2, 480, [2]],
     [3, 480, [3]],
     [4, 480, [2, 2]],
     [5, 480, [3, 2]],
-    [6, 480, [2, 2, 2]],
+    [6, 480, [3, 3]],
     [2, 734, [2]],
     [3, 734, [3]],
     [4, 734, [4]],
@@ -32,7 +33,8 @@ describe('figureRows', () => {
     [1, 234, [1]],
     [3, 234, [1, 1, 1]],
     [7, 234, [2, 2, 2, 1]],
-    [6, 1008, [3, 3]],
+    [6, 1008, [6]],
+    [6, 950, [3, 3]],
     [6, 563, [3, 3]],
     [7, 1168, [4, 3]],
     [7, 563, [3, 2, 2]],
@@ -42,11 +44,9 @@ describe('figureRows', () => {
     expect(figureRows({ count, width })).toEqual(rows);
   });
 
-  it('keeps three plain figures on a row down to 128px cells, three with a lead to 160px', () => {
-    // A half card at 1366 (507): 158px cells.
-    expect(figureRows({ count: 3, width: 507 })).toEqual([3]);
-    expect(figureRows({ count: 3, width: 507, lead: true })).toEqual([1, 1, 1]);
-    expect(figureRows({ count: 3, width: 734, lead: true })).toEqual([3]);
+  it('keeps three figures on a row down to 128px cells', () => {
+    expect(figureRows({ count: 3, width: 384 })).toEqual([3]);
+    expect(figureRows({ count: 3, width: 383 })).toEqual([2, 1]);
   });
 
   it('holds two a row below 480px, and leaves no figure alone from 480px unless three stack', () => {

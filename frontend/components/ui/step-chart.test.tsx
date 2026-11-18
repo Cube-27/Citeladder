@@ -60,7 +60,7 @@ describe('StepChart', () => {
       container.querySelector('[data-trend-line="you"] path[fill="none"]')?.getAttribute('d') ?? '';
     expect(path).not.toMatch(/[HVC]/);
     expect(runsOf(container)).toBe(3);
-    expect(container.querySelector('[data-gap-bands]')).toHaveTextContent('Not measured');
+    expect(container.querySelector('[data-gap-bands]')).toHaveTextContent('No reading');
     expect(container.querySelectorAll('[data-gap-bands] rect')).toHaveLength(1);
     expect(container.querySelectorAll('[data-trend-line="you"] circle')).toHaveLength(4);
     // Only your line carries the soft fill, and only under runs of two or more points.
@@ -112,7 +112,7 @@ describe('StepChart', () => {
       within(screen.getByRole('list', { name: 'Share' }))
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['You10%', 'GlobexNot measured']);
+    ).toEqual(['You10%', 'Globex—Not measured']);
     expect(screen.getAllByText('Measured 1 Jun 2026')).toHaveLength(1);
     expect(container.querySelector('[data-chart-frame]')?.getAttribute('data-chart-frame')).toBe(
       'auto',
@@ -194,7 +194,7 @@ describe('StepChart', () => {
       />,
     );
     expect(labels()).toEqual([]);
-    expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent('You20GlobexNot measured');
+    expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent('You20Globex—');
   });
 
   it('draws your line in the accent unless the chart has no "you"', () => {

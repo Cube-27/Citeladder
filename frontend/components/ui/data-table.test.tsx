@@ -280,7 +280,7 @@ describe('DataTable', () => {
     ]);
     expect(screen.getByRole('button', { name: 'Open /pricing' })).toBeVisible();
     expect(screen.getByRole('button', { name: /next/i })).toBeEnabled();
-    expect(screen.queryByRole('heading', { name: 'Not measured yet' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'No measurements yet' })).toBeNull();
   });
 
   it('states the time zone once in the footer of a table with a date column', () => {

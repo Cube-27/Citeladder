@@ -10,6 +10,7 @@ import type {
   VisibilityMatrix,
 } from '@citeladder/contracts/visibility-matrix';
 import type { MATRIX_METRICS } from '@/lib/config/visibility';
+import { availabilityLabel } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { sentimentReading } from '@/lib/visibility/perception';
 
@@ -120,5 +121,5 @@ export const READING_LABELS = {
   not_run: 'Not run',
   not_recorded: 'Topic not recorded for this run',
   too_few: 'Too few',
-  not_measured: 'Not measured',
+  not_measured: availabilityLabel('not_measured'),
 } as const;

@@ -90,7 +90,7 @@ describe('UsageTable', () => {
 
   it('marks an unread consumption on an unlimited row as not measured, never zero', () => {
     const row = renderRow(item({ limit_state: 'unlimited', consumed: null }));
-    expect(cells(row)[1]).toBe('–Not measured');
+    expect(cells(row)[1]).toBe('—Not measured');
   });
 
   it('says an unused zero allowance is not included instead of drawing an empty bar', () => {

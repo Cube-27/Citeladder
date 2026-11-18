@@ -123,7 +123,7 @@ type Subject = Readonly<{
 
 type MeasuredOptions<T, M extends T> = Subject &
   Readonly<{
-    /** True when the persisted answer holds a measurement; false is "Not measured yet". */
+    /** True when the persisted answer holds a measurement; false is "No measurements yet". */
     measured: (data: T) => data is M;
     notMeasured: NotMeasuredCopy;
   }>;
@@ -289,7 +289,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
       return (
         <EmptyBody
           icon={CircleDashed}
-          heading="Not measured yet"
+          heading="No measurements yet"
           description={props.description}
           action={props.action}
           headingLevel={props.headingLevel ?? containerLevel}

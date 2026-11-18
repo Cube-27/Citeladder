@@ -55,7 +55,7 @@ describe('RankingRowsTable', () => {
     ).toEqual([['Globex', expect.stringMatching(/\/competitors\/Globex$/)]]);
     expect(screen.getByRole('columnheader', { name: /^Position/ })).toBeVisible();
     expect(cellsOf('Acme').slice(2, 4)).toEqual(['40.0%', '1.5']);
-    expect(cellsOf('Globex').slice(2, 4)).toEqual(['40.0%', 'Not measured']);
+    expect(cellsOf('Globex').slice(2, 4)).toEqual(['40.0%', '—Not measured']);
   });
   it('distinguishes measured zero, unavailable rates, and incomparable changes', () => {
     render(

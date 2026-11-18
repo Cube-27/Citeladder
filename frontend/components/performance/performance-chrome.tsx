@@ -204,7 +204,7 @@ function missingCoverageNotice(
     return 'No imported data covers this range yet. Sync to import it, or choose a range inside the covered history.';
   }
   if (comparisonMissing) {
-    return 'The comparison period has no imported data, so its columns show as not measured.';
+    return 'The comparison period has no imported data, so its columns show a dash.';
   }
   return null;
 }

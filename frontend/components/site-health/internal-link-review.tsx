@@ -90,7 +90,7 @@ export function InternalLinkReview({
             )}
             <p className="type-caption">
               {link.target.contextual_inbound === null
-                ? 'Existing contextual links to the destination were not measured.'
+                ? "Existing contextual links to the destination weren't counted."
                 : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}{' '}
               {link.placement
                 ? 'Link the highlighted phrase in the captured passage. Check the current page before editing.'

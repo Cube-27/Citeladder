@@ -178,7 +178,7 @@ describe('developerTicket', () => {
         '## How it will be verified',
         '',
         '- Missing structured data: checked by the next crawl of this page',
-        '- Thin content: not measured automatically',
+        '- Thin content: no automatic check',
         '',
         'When it ships, record the deployment on the Action in CiteLadder: Mark implemented with the day it went live and the release, pull request or commit. Readings before that day are not counted.',
         '',

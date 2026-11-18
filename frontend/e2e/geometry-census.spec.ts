@@ -155,16 +155,11 @@ const TABLE_ROW_HEIGHT_TWO_LINES = 56;
 const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
-/** A FigureStrip cell is padded 16 (2.2); a strip's cells share one height. */
-const FIGURE_CELL_PADDING_Y = 16;
+/** A FigureStrip cell is padded 12; a strip's cells share one height. */
+const FIGURE_CELL_PADDING_Y = 12;
 const FIGURE_STRIP_HEIGHT_SPREAD = 0;
-/** A metric card is two rows: 16 + label 20 + 4 + value 28 + 16; a score's 64 ring makes 96. */
-const FIGURE_CARD_HEIGHT = 84;
-const FIGURE_CARD_HEIGHT_SCORE = 96;
-/** Under 240px a score card stacks its label over the ring: 16 + label + 4 + 64 + 16. */
-const FIGURE_CARD_STACKED_SCORE_LESS_LABEL = 100;
-/** A pressable cell inside a card is a control: padded 12 by 16. */
-const FIGURE_PRESSABLE_PADDING_Y = 12;
+/** A figure cell is two lines: 12 + label 20 + 4 + value 24 + 12. */
+const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
 /** A count strip's cell, pressable as a whole (the Actions goal strip). */
@@ -469,33 +464,13 @@ function measure({ route }: { route: string }) {
   // A DataTable's title-and-toolbar row, whatever it holds; the caption under it is not part of it.
   for (const element of all('[data-data-table-header]'))
     add('data-table-header.height', element, element.getBoundingClientRect().height);
-  // A FigureStrip: every cell's padding, and the cells of one strip at one
+  // A FigureStrip: every cell's padding and its two-line height (a two-line
+  // label or a sub line adds to it), and the cells of one strip at one
   // height (the spread between the tallest and the shortest).
-  // A pressable cell inside a card is a control padded 12; a metric card on
-  // the ground is two rows, 84 tall (96 beside a score's ring).
   for (const element of all('[data-figure-cell]')) {
-    const padding = px(getComputedStyle(element).paddingTop);
-    const pressableCell = element.matches('[data-pressable]') && padding !== 16;
-    add(
-      pressableCell ? 'figure-cell.pressable-padding-y' : 'figure-cell.padding-y',
-      element,
-      padding,
-    );
-    // Under 240px a score card stacks its label over the ring, so it grows by the label.
-    const stackedScore =
-      element.matches('[data-figure-kind="score"]') && element.clientWidth - 2 * padding < 240;
-    const label = element.querySelector('dt');
-    if (padding === 16 && stackedScore && label)
-      add(
-        'figure-card.height.score-stacked-less-label',
-        element,
-        element.getBoundingClientRect().height - label.getBoundingClientRect().height,
-      );
-    if (padding !== 16 || element.matches('[data-label-lines="2"]') || stackedScore) continue;
-    const role = element.matches('[data-figure-kind="score"]')
-      ? 'figure-card.height.score'
-      : 'figure-card.height';
-    add(role, element, element.getBoundingClientRect().height);
+    add('figure-cell.padding-y', element, px(getComputedStyle(element).paddingTop));
+    if (element.matches('[data-label-lines="2"], [data-sub-line]')) continue;
+    add('figure-cell.height', element, element.getBoundingClientRect().height);
   }
   for (const row of all('dl[data-figure-strip]')) {
     const heights = Array.from(row.children)
@@ -836,16 +811,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
   expectOneValue(records, 'figure-cell.padding-y', FIGURE_CELL_PADDING_Y);
   expectOneValue(records, 'figure-strip.height-spread', FIGURE_STRIP_HEIGHT_SPREAD);
-  expectOneValue(records, 'figure-card.height', FIGURE_CARD_HEIGHT);
-  // The fixtures may hold no score ring or pressable cell; when they do, each has one value.
-  for (const [role, expected] of [
-    ['figure-card.height.score', FIGURE_CARD_HEIGHT_SCORE],
-    ['figure-card.height.score-stacked-less-label', FIGURE_CARD_STACKED_SCORE_LESS_LABEL],
-    ['figure-cell.pressable-padding-y', FIGURE_PRESSABLE_PADDING_Y],
-  ] as const)
-    expect
-      .soft([...valuesOf(records, role).keys()].filter((value) => value !== expected))
-      .toEqual([]);
+  expectOneValue(records, 'figure-cell.height', FIGURE_CELL_HEIGHT);
   expectOneValue(records, 'icon.size', ICON_SIZE);
   expectOneValue(records, 'icon-tile.size', ICON_TILE_SIZE);
   expectOneValue(records, 'row-part.gap', ROW_PART_GAP);

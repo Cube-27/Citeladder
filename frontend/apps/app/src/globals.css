@@ -2295,22 +2295,28 @@ label {
   );
 }
 
-/* FigureStrip (`figureRows`): a wrapping row of figures 16 apart, each as wide
-   as its row's share, so the strip is never wider than its container. On the
-   ground each figure is a metric card; inside a card the figures are cells 16
-   apart with no edge and no divider. A card is two rows (label and its hint,
-   then value and Delta): 84 tall, 96 for a score's ring. Cells stretch to
-   their row's height and the value sits at the foot, so a wrapped label never
-   moves its value off the row's baseline. */
+/* FigureStrip (`figureRows`): one flat row of figures, each as wide as its
+   row's share, with no gap and no card. A hairline runs above the strip and
+   under every row; a thin divider opens every cell but a row's first. Lines
+   are inset shadows, so they add no height: a cell is 12 + label 20 + 4 +
+   value 24 + 12 = 72. Cells stretch to their row's height and the value sits
+   at the foot, so a wrapped label never moves its value off the baseline. */
+[data-figure-strip] {
+  box-shadow: inset 0 1px 0 var(--color-rule);
+}
 [data-figure-cell] {
-  flex: 0 0 calc((100% - (var(--row) - 1) * 16px) / var(--row));
+  flex: 0 0 calc(100% / var(--row));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
+  row-gap: 4px;
+  padding: 12px 16px;
+  box-shadow:
+    inset 0 -1px 0 var(--color-rule),
+    inset 1px 0 0 var(--color-rule);
 }
-[data-figure-cell] > dt {
-  grid-row: 1;
-  grid-column: -2;
+[data-figure-cell][data-row-start] {
+  box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 /* A label wraps between words only, never mid-word and never cut. */
 [data-figure-cell] dt {
@@ -2323,92 +2329,37 @@ label {
 }
 [data-figure-cell] > [data-figure-value] {
   grid-row: 2;
-  grid-column: -2;
   align-self: end;
-}/* An absent value is its word at body size on the value's 28px line. */
+  min-height: var(--text-heading--line-height);
+}
+/* An absent value is its muted mark at body size on the value's 24px line. */
 [data-figure-value] [data-absence] {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   font-weight: var(--weight-regular);
 }
-:is([data-figure-kind='icon'], [data-figure-score-body]) {
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 12px;
-}
-[data-figure-lead-slot] {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-/* Loading: `well` blocks at radius 4 for text, a circle for a score's ring. */
-[data-figure-block='text'] {
+/* Loading: `well` blocks at radius 4. */
+[data-figure-block] {
   border-radius: 4px;
 }
-[data-figure-block='ring'] {
-  border-radius: 50%;
-}
-/* A score card is a size container: from 240px its label and Delta centre on
-   the ring beside them; narrower, the label takes the full first row and the
-   ring and its Delta the second. */
-[data-figure-kind='score'] {
-  container-type: inline-size;
-  grid-template-rows: minmax(0, 1fr);
-}
-[data-figure-score-body] {
-  display: grid;
-  grid-template-rows: 1fr auto auto 1fr;
-  align-self: center;
-}
-[data-figure-score-body] > [data-figure-lead-slot] {
-  grid-row: 1 / -1;
-}
-[data-figure-score-body] > dt {
-  grid-row: 2;
-  grid-column: 2;
-}
-[data-figure-score-body] > [data-figure-value] {
-  grid-row: 3;
-  grid-column: 2;
-}
-@container (width < 240px) {
-  [data-figure-score-body] {
-    grid-template-rows: auto auto;
-  }
-  [data-figure-score-body] > dt {
-    grid-row: 1;
-    grid-column: 1 / -1;
-  }
-  [data-figure-score-body] > :is([data-figure-lead-slot], [data-figure-value]) {
-    grid-row: 2;
-    align-self: center;
-  }
-}
-/* On the ground a figure is a card with no edge; a pressable one keeps the
-   control edge, inset, so 16 padding still makes an 84 card. */
-:root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
+/* The strip's lead (a run's status) stays a card above the row on the ground. */
+:root:not([data-public-surface]) [data-figure-lead] {
   padding: 16px;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
-  box-shadow: var(--fr, var(--shadow-card));
+  box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  :is([data-figure-cell], [data-figure-lead]) {
-  padding: var(--fp, 0);
-  border: var(--fe, 0);
-  border-radius: var(--radius-control);
+  [data-figure-lead] {
+  padding: 0;
   background-color: transparent;
   box-shadow: none;
 }
 /* A pressable figure tints as one piece (its overlay-hover and -pressed
-   utilities); a chosen one takes the well. Inside a card it is a control:
-   12/16 padding and a control edge. The filled series swatch marks the chosen one. */
-[data-figure-cell][data-pressable] {
-  --fp: 12px 16px;
-  --fe: 1px solid var(--color-control-edge);
-  --fr: inset 0 0 0 1px var(--color-control-edge);
-}
-:root:not([data-public-surface]) [data-figure-cell][data-selected] {
+   utilities); a chosen one fills with the well, inside the row's lines. The
+   filled series swatch marks the chosen one too. */
+[data-figure-cell][data-selected] {
   background-color: var(--color-well);
 }
 [data-figure-cell] dt :is(a, button):is(:hover, :focus-visible) {

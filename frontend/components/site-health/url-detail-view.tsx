@@ -224,7 +224,7 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
                 <StateBlock
                   kind="empty"
                   inline
-                  message="Internal links not measured for this page."
+                  message="Internal links weren't counted for this page."
                 />
               )}
             </Stack>

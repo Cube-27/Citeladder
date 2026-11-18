@@ -17,7 +17,7 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
  * as the score cards. Classification completeness and the exact scored cohort
  * come from their own persisted fields. An `other` bucket can be scored by
  * independently applicable checks even though classification abstained.
- * Missing means render `Not measured`, never a fabricated zero.
+ * Missing renders the not-measured Absence dash, never a fabricated zero.
  *
  * READ-ONLY by design. This used to expand each row into an accordion holding
  * its own paginated URL list, checkboxes, and a "Re-analyze selected" button —

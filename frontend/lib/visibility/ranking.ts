@@ -95,7 +95,7 @@ export function standingHeadline(standing: BrandStanding): {
 } {
   switch (standing.kind) {
     case 'unmeasured':
-      return { headline: 'Your AI visibility is not measured in this selection', sub: null };
+      return { headline: 'No AI visibility readings for you in this selection', sub: null };
     case 'alone':
       return {
         headline: "You aren't tracking any competitors yet",
@@ -103,7 +103,7 @@ export function standingHeadline(standing: BrandStanding): {
       };
     case 'competitors_unmeasured':
       return {
-        headline: "Your competitors' visibility is not measured in this selection",
+        headline: 'No visibility readings for your competitors in this selection',
         sub: null,
       };
     case 'ranked': {

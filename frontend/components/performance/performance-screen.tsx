@@ -218,9 +218,10 @@ function SearchConsoleWorkspace({
 }>) {
   if (!available) return null;
   // The strip and the charts it drives are one section: selecting a figure
-  // changes the charts directly beneath it.
+  // changes the charts directly beneath it. The figure row sits on the ground;
+  // only the chart keeps a card (owner 2026-11-18: no cards but tables, charts).
   return (
-    <Section aria-labelledby="performance-search-console">
+    <Section variant="group" aria-labelledby="performance-search-console">
       <SectionHeader actions={<MetricDefinitions />}>
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
         {coverage ? (
@@ -240,7 +241,9 @@ function SearchConsoleWorkspace({
           marks={METRIC_MARKS}
           loading={refreshing}
         />
-        <PerformanceChart series={series} />
+        <Section aria-label="Search Console chart">
+          <PerformanceChart series={series} />
+        </Section>
       </Stack>
     </Section>
   );
@@ -261,7 +264,7 @@ function Ga4Workspace({
 }>) {
   if (!available) return null;
   return (
-    <Section aria-labelledby="performance-ga4">
+    <Section variant="group" aria-labelledby="performance-ga4">
       <SectionHeader>
         <SectionTitle id="performance-ga4">Google Analytics 4</SectionTitle>
         <SectionDescription>

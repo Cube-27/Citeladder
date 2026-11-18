@@ -41,7 +41,7 @@ const dimensionLabel = (dimension: MatrixDimension) =>
  * Insights → Performance matrix (W6): one metric across two of engine, topic,
  * market and brand, at most ten items an axis. A pair never asked reads "Not
  * run"; sentiment under the classified minimum "Too few"; a value that does
- * not apply "Not measured". Only measured values take the heat tint.
+ * not apply the Absence dash. Only measured values take the heat tint.
  */
 export function PerformanceMatrix({
   query,

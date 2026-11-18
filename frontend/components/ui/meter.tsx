@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useId } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { availabilityLabel, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils';
  * A score out of 100 is a `ScoreRing`; work in progress is a `RungMeter`.
  *
  * `value: null` is an unmeasured value, never zero: an empty track, no
- * `aria-valuenow`, and "Not measured" as the spoken value.
+ * `aria-valuenow`, the Absence mark as its value and "Not measured" spoken.
  */
 export type MeterTone = 'ink' | 'accent' | 'warning' | 'negative';
 
@@ -107,7 +108,9 @@ export function Meter({
         >
           {label}
         </span>
-        <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">{shown}</span>
+        <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">
+          {valueLabel === undefined && value === null ? <Absence state="not_measured" /> : shown}
+        </span>
       </MeterLabelRow>
       <MeterTrack
         value={value}

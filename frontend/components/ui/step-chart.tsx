@@ -533,7 +533,7 @@ function StepPlot({
         bands={gapBands(lines[0]?.values ?? [], scale)}
         top={scale.padTop}
         bottom={bottom}
-        word={availabilityLabel('not_measured')}
+        word="No reading"
       />
       {scale.ticks.map((tick) => {
         const y = Math.round(scale.y(tick)) + 0.5;

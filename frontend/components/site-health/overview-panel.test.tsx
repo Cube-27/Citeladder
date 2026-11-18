@@ -479,7 +479,7 @@ describe('OverviewPanel', () => {
     const scoreOf = (label: string) =>
       within(within(table).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
     expect(scoreOf('Commerce')).toBe('Not applicable');
-    expect(scoreOf('Answerability')).toBe('Not measured');
+    expect(scoreOf('Answerability')).toBe('—Not measured');
   });
 
   const ALERT = "Couldn't load the Website overview";

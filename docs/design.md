@@ -400,8 +400,10 @@ its own spacing, size or radius on them.
   right-aligned, rows sit on hairlines
   and tint on hover only when pressing them does something. Your row carries
   the accent mark.
-- **FigureStrip:** key figures as stat cards side by side, columns from the
-  count, every card one height and the values on one baseline.
+- **FigureStrip:** key figures as one flat row on the surface, never cards
+  (owner 2026-11-18): hairlines above and below, thin dividers between equal
+  cells, columns from the count, each cell a muted label with its hint over
+  the value and its inline delta, values on one baseline.
 - **Progress is rungs:** RungMark for your citation standing, RungMeter for a
   0 to 100 score or a quota, RungTrail for steps. No rings, donuts, smooth
   curves or generic progress bars.
@@ -423,8 +425,8 @@ its own spacing, size or radius on them.
   (`input-modality.ts`); inside a clipped row it is drawn 2px in.
 - **Targets** are at least 24×24 everywhere.
 
-**Data states.** Use the state actually known; never punctuation alone or a
-fabricated zero. An observed zero is a Value: `0` in full ink.
+**Data states.** Use the state actually known; never a fabricated zero, and
+punctuation alone only as Absence's not-measured mark below. An observed zero is a Value: `0` in full ink.
 
 | Label              | Meaning                                        |
 | ------------------ | ---------------------------------------------- |
@@ -439,7 +441,9 @@ fabricated zero. An observed zero is a Value: `0` in full ink.
 
 **Value** prints every measured value, and **Absence** every missing one, in
 the same line box. An absence is its word in `ink-2`, printed by Absence
-and nowhere else; not applicable is a plain `n/a` in `ink-2`;
+and nowhere else; not measured is a muted em dash instead, the word kept in
+its tooltip and accessible name (owner 2026-11-18), and a sentence or heading
+says it in plain words without the phrase; not applicable is a plain `n/a` in `ink-2`;
 excluded is a tag with the word struck through. A stale value is `ink-2`
 with its "as of" date; a conflicting one carries a `≠` in the warning tone.
 A state shared by a section or column is said once, on its header.

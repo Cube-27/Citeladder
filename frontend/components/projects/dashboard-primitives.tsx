@@ -44,7 +44,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
   const summary = movements
     .map(
       (row) =>
-        `${engines.label(row.label)}: ${row.previous === null ? 'not measured' : percentFigure(row.previous)} to ${row.current === null ? 'not measured' : percentFigure(row.current)}`,
+        `${engines.label(row.label)}: ${row.previous === null ? 'no reading' : percentFigure(row.previous)} to ${row.current === null ? 'no reading' : percentFigure(row.current)}`,
     )
     .join('; ');
   return (

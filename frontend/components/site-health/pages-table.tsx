@@ -34,8 +34,8 @@ import { useProjectHref } from '@/lib/navigation/project-destination';
  * the Web fundamentals and AEO readiness scores and the last audit. A page whose
  * analysis has not completed (queued, running, error, blocked…) carries its
  * status badge beside the title, so a failure stays visible on every view.
- * Missing / not-yet-analysed scores render the `Not measured` placeholder —
- * never a fabricated zero (an error/blocked row shows `Not measured`, not 0).
+ * Missing / not-yet-analysed scores render the not-measured Absence dash —
+ * never a fabricated zero (an error/blocked row shows the dash, not 0).
  * The whole row is clickable and navigates to the Slice 8 per-URL detail route
  * (`/site/crawls/[crawlId]/pages/[siteUrlId]`); the title link is the
  * keyboard/screen-reader affordance.
