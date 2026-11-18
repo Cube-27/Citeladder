@@ -46,6 +46,28 @@ plan and for your questions record all recommended answers as my decision".
   "N edited" disclosure. Brand facts stay typed by people, as
   [onboarding](../onboarding.md#brand-facts) says; models never draft them.
 
+Recorded from the owner's answers in chat on 2026-11-18, while reviewing the first mockup:
+
+- **AV-13, no Answers tab.** Asked whether the cross-run Answers list should fold into the
+  prompt page, the owner answered "yes". W7 is a section on the prompt page.
+- **AV-14, a Brand group.** "instead of putting everything inside ai visibility we can make
+  two new options in sidebar": a Brand sidebar group with Insights and Perception. "fact
+  checking goes inside perception": Perception has Brand, Market, Objections and
+  Fact-checking tabs, and AI Visibility loses its Perception and Accuracy tabs.
+- **AV-15, only what we have.** "dont try to copy what we dont have": a screen shows only
+  data CiteLadder stores or a workstream here adds. Reference features without that data
+  (tags, social channels, per-quote source lists) are not built.
+
+## Where it lives
+
+- **Brand → Insights:** W3, W4, W6, W10 and W14, with W5 as a filter and matrix axis. A
+  brand row opens the W8 competitor page.
+- **Brand → Perception:** the Brand tab holds today's perception views plus W1 and the W8
+  theme map; Fact-checking holds today's accuracy views plus W2 and W15; Market is W12;
+  Objections is W13.
+- **Prompts and the prompt page:** W3 columns, W9 and W7.
+- **AI Visibility:** W11 fanout terms; answer formats show in the existing evidence drawer.
+
 ## Gap summary
 
 | Area | Status | Evidence |
@@ -118,12 +140,14 @@ What applies to every workstream:
 - Empty cells read "not run" or "not measured".
 - Needs an index review. Depends on W3 and W5.
 
-**W7 Answers explorer (L).**
-- A cross-run list of successful answers, paged by keyset and bound to a snapshot like
-  Sources.
-- Filters: run range, market, engine, prompt, topic, brand named, cited, search used.
-- Each row opens the existing evidence card.
-- Linked as "recent answers" from prompt detail, ranking rows and perception quotes.
+**W7 Past answers on the prompt page (M, AV-13).**
+- A "Past answers" section on the prompt page: every successful answer the prompt got
+  across runs, newest first, paged by keyset.
+- Filters in the page's control strip: run range, engine, market, brand named, cited,
+  search used.
+- Each row opens the existing evidence drawer.
+- Pages that link to a prompt's answers (competitor focus, perception quotes) open the
+  prompt page.
 
 **W8 Competitor focus and theme association (M, AV-6).**
 - Picking a competitor shows:
@@ -132,7 +156,7 @@ What applies to every workstream:
   - the prompts where it is named and you are not
 - A brand-by-theme heat map from `entity_sentiments.aspects`, showing your
   most-associated theme and your largest gap to each theme's leader.
-- Depends on W3 and W7.
+- Depends on W3.
 
 **W9 Bulk prompt actions (M).**
 - Row selection, including range select.
