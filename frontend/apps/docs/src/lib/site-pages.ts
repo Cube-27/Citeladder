@@ -39,7 +39,7 @@ export const sitePages = [
   })),
   ...API_SCHEMAS.map((schema) => ({
     title: schema.name,
-    description: `The ${schema.name} schema shared by API endpoints.`,
+    description: schema.description,
     group: API_GROUP,
     href: schema.href,
     body: schema.rows.map((row) => row.name).join('\n'),

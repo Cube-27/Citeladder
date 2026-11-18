@@ -44,8 +44,8 @@ export function publicApiDocument(routes: readonly RouteContract[]) {
   );
   const document: OpenApiDocument = openApiDocument(published, emit);
   const documented = new Set<string>();
-  const example = (schema: JsonSchema, io: 'input' | 'output', override: unknown) => ({
-    example: override ?? exampleOf(schema, { components, io }),
+  const json = (media: { schema: JsonSchema }, example: unknown) => ({
+    'application/json': { ...media, example },
   });
   const paths = Object.fromEntries(
     Object.entries(document.paths).map(([path, item]) => [
@@ -60,32 +60,11 @@ export function publicApiDocument(routes: readonly RouteContract[]) {
           if (!doc) throw new Error(`Public operation ${key} has no entry in operation-docs`);
           documented.add(key);
           const body = operation.requestBody?.content['application/json'];
-          const requestBody =
-            operation.requestBody && body
-              ? {
-                  ...operation.requestBody,
-                  content: {
-                    'application/json': { ...body, ...example(body.schema, 'input', doc.request) },
-                  },
-                }
-              : operation.requestBody;
           const responses = Object.fromEntries(
             Object.entries(operation.responses).map(([status, response]) => {
               const media = response.content?.['application/json'];
-              return [
-                status,
-                media
-                  ? {
-                      ...response,
-                      content: {
-                        'application/json': {
-                          ...media,
-                          ...example(media.schema, 'output', undefined),
-                        },
-                      },
-                    }
-                  : response,
-              ];
+              const example = media && exampleOf(media.schema, { components, io: 'output' });
+              return [status, media ? { ...response, content: json(media, example) } : response];
             }),
           );
           // `x-citeladder-scope`: the API key scope the operation needs.
@@ -96,7 +75,17 @@ export function publicApiDocument(routes: readonly RouteContract[]) {
               summary: doc.summary,
               description: doc.description,
               tags: [groupOf(path)],
-              ...(requestBody ? { requestBody } : {}),
+              ...(operation.requestBody && body
+                ? {
+                    requestBody: {
+                      ...operation.requestBody,
+                      content: json(
+                        body,
+                        doc.request ?? exampleOf(body.schema, { components, io: 'input' }),
+                      ),
+                    },
+                  }
+                : {}),
               responses,
               ...(scope ? { 'x-citeladder-scope': scope } : {}),
             },

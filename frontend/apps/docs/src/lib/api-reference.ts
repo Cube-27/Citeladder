@@ -75,9 +75,15 @@ const slugify = (text: string) =>
 
 /** The resource an operation's tag belongs to; an unmapped tag is a resource of its own. */
 function resourceOf(tag: string) {
-  const found = RESOURCES.find((resource) => (resource.tags as readonly string[]).includes(tag));
-  if (found) return { id: found.id, label: found.label, rank: RESOURCES.indexOf(found) };
-  return { id: tag, label: tag.replaceAll('-', ' '), rank: RESOURCES.length };
+  const rank = RESOURCES.findIndex((resource) => resource.tags.some((own) => own === tag));
+  const found = RESOURCES[rank];
+  if (found)
+    return {
+      id: found.id,
+      label: found.label,
+      rank: [rank, found.tags.findIndex((own) => own === tag)],
+    };
+  return { id: tag, label: tag.replaceAll('-', ' '), rank: [RESOURCES.length, 0] };
 }
 
 function bodyOf(body: z.infer<typeof media> | undefined) {
@@ -95,13 +101,9 @@ export function buildOperations(document: ApiDocument) {
         status.startsWith('2'),
       );
       const response = success?.[1].content?.['application/json'];
-      const tag = operation.tags?.[0] ?? 'projects';
-      const resource = resourceOf(tag);
-      const tagRank = RESOURCES.find((candidate) => candidate.id === resource.id)?.tags.indexOf(
-        tag as never,
-      );
+      const resource = resourceOf(operation.tags?.[0] ?? 'projects');
       return {
-        order: [resource.rank, tagRank ?? 0, pathIndex, methodIndex] as const,
+        order: [...resource.rank, pathIndex, methodIndex],
         method: method.toUpperCase(),
         path,
         summary: operation.summary,
@@ -154,6 +156,7 @@ export function groupOperations(operations: readonly ApiOperation[]) {
 function buildSchemas(document: ApiDocument) {
   return Object.entries(document.components.schemas).map(([name, schema]) => ({
     name,
+    description: `The ${name} schema shared by API endpoints.`,
     href: schemaHref(name),
     type: typeOf(schema),
     rows: fieldRows(schema),
