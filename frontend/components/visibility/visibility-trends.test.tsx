@@ -47,6 +47,7 @@ function point(completedAt: string, brandRate: number): VisibilityTrendPoint {
     scoring_rule_versions: ['1'],
     spans_version_boundary: false,
     comparison_key: 'k',
+    events: [],
   } as unknown as VisibilityTrendPoint;
 }
 

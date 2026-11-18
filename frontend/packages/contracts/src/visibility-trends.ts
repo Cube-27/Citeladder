@@ -20,6 +20,30 @@ const visibilityTrendSovSchema = responseObject({
 // — aliased so the two contracts can't drift apart silently.
 const visibilityTrendRankingRowSchema = rankingRowSchema;
 
+// What changed at a point, from persisted rows only: the frozen prompt panel or
+// an engine's frozen model differs from the previous run's, or an Action went
+// live since it. A bucket carries every event of the runs it folds.
+export const visibilityTrendEventSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('prompt_panel'),
+    added: z.number().int(),
+    archived: z.number().int(),
+    removed: z.number().int(),
+  }),
+  responseObject({
+    kind: z.literal('model_change'),
+    logical_engine: z.string(),
+    from_model: z.string(),
+    to_model: z.string(),
+  }),
+  responseObject({
+    kind: z.literal('action_live'),
+    action_id: uuid(),
+    title: z.string(),
+    implemented_at: z.string(),
+  }),
+]);
+
 // One point in the cross-run Visibility trend (backend `VisibilityTrendPoint`).
 // A raw per-run point carries a set `audit_id`; a week/month bucket folds many
 // snapshots (`audit_id` is null) and carries the full provenance list. Version
@@ -55,8 +79,10 @@ export const visibilityTrendPointSchema = responseObject({
   analyzer_versions: z.array(z.string()),
   scoring_rule_versions: z.array(z.string()),
   spans_version_boundary: z.boolean(),
+  events: z.array(visibilityTrendEventSchema).default([]),
 });
 
 // The trends endpoint returns a chronological list of points (never wrapped).
 export const visibilityTrendListSchema = z.array(visibilityTrendPointSchema);
 export type VisibilityTrendPoint = z.infer<typeof visibilityTrendPointSchema>;
+export type VisibilityTrendEvent = z.infer<typeof visibilityTrendEventSchema>;

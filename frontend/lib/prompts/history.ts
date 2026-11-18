@@ -46,6 +46,7 @@ export function implementationEvents(
   return implementations.map((item) => ({
     key: `${item.action_id}:${item.implemented_at}`,
     timestamp: new Date(item.implemented_at).getTime(),
+    kind: 'action',
     label: `Marked implemented ${formatDisplayDate(item.implemented_at, timeZone)}: ${item.title}`,
   }));
 }
