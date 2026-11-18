@@ -1,11 +1,11 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { MenuItem } from '@/components/ui/menu';
-import { SplitButton } from '@/components/ui/split-button';
+import { SPLIT_ACTION_JOIN, SplitButton } from '@/components/ui/split-button';
 import { Tooltip } from '@/components/ui/tooltip';
 
 /** A page fetched although robots.txt excludes it, because its crawl ignored robots.txt. */
@@ -62,21 +62,19 @@ export function StartCrawlControl({
         onStart('ignore');
       },
     });
-  const button = (joint: CSSProperties) => (
+  const button = (
     <ActionButton
       action="runCrawl"
       onClick={() => onStart()}
       pending={pending}
       pendingLabel="Starting…"
-      style={joint}
+      style={SPLIT_ACTION_JOIN}
     />
   );
   return (
     <>
       <SplitButton
-        action={(joint) =>
-          note ? <Tooltip content={`${note}.`}>{button(joint)}</Tooltip> : button(joint)
-        }
+        action={note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
         menuLabel="More crawl options"
         disabled={pending}
       >
