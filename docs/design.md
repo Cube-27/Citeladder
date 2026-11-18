@@ -311,6 +311,17 @@ a count hold their widest value's width, and a pending button keeps its
 label's box. A page the window scrolls ends in `--page-end-space` (a third of
 the viewport), so content shrinking near the bottom never pulls the scroll.
 
+**One loading state per page load.** What is drawn before a page has one owner
+(`FirstFrame`, from the route manifest's `shell` flag; `index.html`'s boot
+frame makes the same choice). A shell route draws the shell and its page's
+skeleton; a flow route outside the shell (sign-in, sign-up, setup, the
+workspace chooser, an invitation) keeps its plain ground, with no sidebar,
+masthead or loading card, until its own card arrives. Each wait hands over
+once and never remounts a loader; a frame drawn for a screen that never comes
+reads as a flicker (#524, #551). A workspace gate still answering holds the
+content slot, so a workspace switch keeps the shell mounted. Data already on
+screen stays rendered while it refreshes.
+
 ## Elevation & Depth
 
 - **Content sits on the surface; boxes are earned (owner, 2026-11-18).** In

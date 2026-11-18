@@ -2,8 +2,9 @@
  * The first paint before the bundle (STA-02), built from the route manifest:
  * index.html's `.boot-shell` gets the sidebar's rows at build, and
  * `/boot-title.js`, a same-origin classic script (the CSP allows no inline
- * script), titles the masthead and the document from the path, shows the
- * mode's rows and applies the stored sidebar width.
+ * script), shows the shell frame only on a shell path (a flow path keeps the
+ * plain ground, as `FirstFrame` does), titles the masthead and the document,
+ * shows the mode's rows and applies the stored sidebar width.
  */
 import type * as Manifest from '../../lib/navigation/app-routes.ts';
 
@@ -50,6 +51,7 @@ export function bootSidebarHtml(manifest: RouteManifest): string {
 export function bootTitleScript(manifest: RouteManifest): string {
   const routes = manifest.APP_ROUTES.map((route) => [
     route.path,
+    route.shell,
     route.shell && route.title ? route.title : null,
   ]);
   return `// Generated at build from lib/navigation/app-routes.ts by apps/app/boot-shell.ts.
@@ -70,7 +72,10 @@ try {
     }
   }
   const shell = document.querySelector('.boot-shell');
-  const title = route ? route[1] : null;
+  const title = route ? route[2] : null;
+  // A flow path (sign-in, setup, the chooser) keeps the bare ground; any
+  // other path is the shell's, as the router's first frame decides.
+  if (shell && (!route || route[1])) shell.dataset.bootShell = '';
   if (shell && title) {
     shell.dataset.bootMode = path === '/agent' || path.startsWith('/agent/') ? 'agent' : 'dashboard';
     const heading = shell.querySelector('.boot-title');

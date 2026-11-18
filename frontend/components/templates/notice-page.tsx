@@ -103,7 +103,7 @@ export function NoticePage({ heading, ...notice }: NoticeContent) {
 
 /**
  * Notice page before the shell can open (a route that failed, access that
- * ended, the session loading), inside `ShellFallback`'s `main`: the card and
+ * ended, the session loading), inside `FirstFrame`'s `main`: the card and
  * its one heading, 48 from the top.
  */
 export function NoticeScreen(notice: NoticeContent) {

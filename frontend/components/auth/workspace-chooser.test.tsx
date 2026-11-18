@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -58,19 +58,11 @@ describe('WorkspaceChooser', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it('goes straight into the only workspace a person owns', async () => {
-    const select = choose([OWN]);
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?workspace=${OWN.id}`),
-    );
-    expect(select).toHaveBeenCalledWith(OWN.id);
-  });
-
-  it('sends someone who belongs to no workspace to set one up', async () => {
+  // Sole-destination shortcuts are the route loader's alone (bootstrap-loader.test.ts).
+  it('offers setup, not an endless wait, to someone who belongs to no workspace', async () => {
     choose([], 'no_workspace');
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/onboarding?setup=workspace'),
-    );
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Set up your own workspace' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/onboarding?setup=workspace');
   });
 
   it('offers an invited workspace beside setting up your own, with its access', async () => {

@@ -34,8 +34,8 @@ import { RouteLoadingScreen } from './page-shell';
 import { ShellContext } from './shell-context';
 
 /**
- * The shell before the session and the workspace reads resolve, drawn at
- * once (OL-01): the sidebar with its real rows from the route manifest (no
+ * A shell route's first frame (`FirstFrame` picks it; flow routes never get
+ * it), drawn at once (OL-01): the sidebar with its real rows from the route manifest (no
  * read needed; inert until the shell opens), blocks where the project and
  * the account go, the masthead titled from the route, and the page's
  * skeleton in `main`. The settled shell draws every part at the same place,

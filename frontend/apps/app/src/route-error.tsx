@@ -2,7 +2,7 @@ import { SearchX } from 'lucide-react';
 import { useEffect } from 'react';
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { FirstFrame } from '@/components/layout/first-frame';
 import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -85,7 +85,7 @@ export function NotFoundScreen() {
 export function RouteError() {
   useReportedRouteError('route');
   return (
-    <ShellFallback>
+    <FirstFrame>
       <NoticeScreen
         tone="warning"
         heading="This page could not be opened"
@@ -93,20 +93,20 @@ export function RouteError() {
       >
         Reload this page to try again.
       </NoticeScreen>
-    </ShellFallback>
+    </FirstFrame>
   );
 }
 
 /**
  * The signed-in routes failed before the shell could open (the session or
- * workspace read failed): the shell's frame with the page's masthead and the
- * error where the content begins, never a bare page. Its navigation needs the
+ * workspace read failed): the path's first frame with the error where the
+ * content begins, never a bare page. Its navigation needs the
  * session that failed, so the way out is a fresh load of Overview.
  */
 export function ShellRouteError() {
   useReportedRouteError('route');
   return (
-    <ShellFallback>
+    <FirstFrame>
       <NoticePage
         tone="warning"
         {...COULD_NOT_OPEN}
@@ -119,6 +119,6 @@ export function ShellRouteError() {
           </>
         }
       />
-    </ShellFallback>
+    </FirstFrame>
   );
 }

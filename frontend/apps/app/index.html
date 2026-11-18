@@ -18,8 +18,9 @@
         when the preference script finds it collapsed. The switcher's and the
         account's blocks (44, or 40 in the rail) and the switch's 24 above and
         12 below keep the rows at their hydrated y. Rows are 32 on a 34
-        pitch (44 under a coarse pointer). /boot-title.js shows the rows and
-        the title on a shell path. -->
+        pitch (44 under a coarse pointer). /boot-title.js marks a shell path
+        (data-boot-shell) and shows the rows and the title; a flow path
+        (sign-in, setup, the chooser) keeps the bare ground (PR 524). -->
     <style>
       .boot-shell {
         position: fixed;
@@ -34,6 +35,9 @@
       }
       .boot-shell * {
         box-sizing: border-box;
+      }
+      .boot-shell:not([data-boot-shell]) > * {
+        display: none;
       }
       .boot-side {
         flex: none;

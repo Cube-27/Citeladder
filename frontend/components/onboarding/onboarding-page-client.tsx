@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { FirstFrame } from '@/components/layout/first-frame';
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { AuthActions } from '@/components/ui/auth-shell';
@@ -19,11 +19,10 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { OnboardingScreen } from './onboarding-screen';
 import { WorkspaceSetup } from './workspace-setup';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
-import { StateBlock } from '@/components/ui/state-block';
 
 export function OnboardingPageClient() {
   return (
-    <Suspense fallback={<ShellFallback />}>
+    <Suspense fallback={<FirstFrame />}>
       <ProjectSetupGate />
     </Suspense>
   );
@@ -126,14 +125,8 @@ function ProjectSetupLoading({
     return () => window.clearTimeout(timer);
   }, [attempt]);
 
-  if (!stalled)
-    return (
-      <StateBlock
-        kind="loading"
-        label="Loading your workspace…"
-        shape={{ kind: 'facts', rows: 2 }}
-      />
-    );
+  // The flow's plain frame, never a loading card on a blank page (PR 524).
+  if (!stalled) return <FirstFrame />;
   return (
     <ProjectSetupBlocked
       title="Your workspace is taking longer to load"
