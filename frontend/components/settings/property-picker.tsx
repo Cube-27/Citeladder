@@ -140,8 +140,14 @@ export function SelectedPropertyMark({
 }: Readonly<{ connection: IntegrationConnection }>) {
   const { activeProject } = useProjectContext();
   const mappings = useQuery(integrationsQueries.mappings(connection.workspace_id, connection.id));
-  // Unread is unknown, never "none selected".
-  if (mappings.isPending) return null;
+  // Unread is unknown, never "none selected". It holds the code face's line,
+  // so the row does not grow when the id lands.
+  if (mappings.isPending)
+    return (
+      <span aria-hidden className={textRole('code')}>
+        {' '}
+      </span>
+    );
   if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
   const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
   if (!selected)

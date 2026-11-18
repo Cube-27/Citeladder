@@ -180,6 +180,12 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
+  // The table's row count is unknown until its read lands, so what follows it
+  // is placed after that: a page of loading rows collapsing to a few would
+  // pull it up.
+  const tableQuery = readNotCited ? nearMissQuery : sourceQuery;
+  const tableSettled = tableQuery.data !== undefined || tableQuery.isError;
+
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
@@ -234,13 +240,13 @@ export function SourcesPanel({
 
       {/* The table leads; the usage over time and the type mix explain it below.
           Both chart citations, which near misses by definition are not. */}
-      {readNotCited ? null : (
+      {readNotCited || !tableSettled ? null : (
         <AppGrid layout="main-aside">
           <UsageCard dimension={dimension} query={seriesQuery} />
           <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
         </AppGrid>
       )}
-      {domain ? null : (
+      {domain || !tableSettled ? null : (
         <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
       )}
     </Stack>

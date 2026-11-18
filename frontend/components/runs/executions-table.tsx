@@ -67,8 +67,8 @@ export function ExecutionsTable({
     <TitledSection title="Executions">
       <DataTable
         label="Executions"
-        // The filters need rows to choose from: none while the read stands in.
-        toolbar={state ? undefined : { filters: filters.definitions }}
+        // Held while the list loads, so its arrival moves nothing; an error or empty read has none.
+        toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
         columns={COLUMNS}
         state={state ?? unmatched}
         rowLines={2}

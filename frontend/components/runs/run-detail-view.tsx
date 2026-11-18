@@ -90,6 +90,9 @@ export function RunDetailView(props: Readonly<RunDetailViewProps>) {
   // second failed or loading table, but executions that did load stay shown.
   if (props.auditRead.error && !props.audit && !props.executions)
     return <AuditSection {...props} />;
+  // The run's status line and notices (a failed or partial run's error) sit
+  // above the table, so the table is placed only once the run has drawn them.
+  if (!props.audit && !props.auditRead.error) return <AuditSection {...props} />;
   return (
     <>
       <AuditSection {...props} />

@@ -68,10 +68,12 @@ export function Conversation({
   const output = latestOutput(detail);
   const { byMessage, unplaced } = outputPlacements(detail);
   const items = threadItems(detail, new Set(byMessage.keys()));
-  // The latest exchange is on screen when a chat opens; only older turns defer,
-  // and never one holding a document the Documents list scrolls to.
+  // The latest two exchanges fill the screen when a chat opens; only older
+  // turns defer, and never one holding a document the Documents list scrolls
+  // to. A deferred turn on screen paints at its 320px estimate first, then
+  // snaps to its height and moves the thread.
   const older = (index: number, holdsDocument = false) =>
-    index < items.length - 2 && !holdsDocument ? 'render-when-visible' : undefined;
+    index < items.length - 4 && !holdsDocument ? 'render-when-visible' : undefined;
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (

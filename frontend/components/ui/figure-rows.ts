@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 /**
  * How a FigureStrip breaks its figures into rows, apart from the strip so the
@@ -86,13 +86,18 @@ export function figureRowCells(fit: StripFit): { size: number; rowStart: boolean
   );
 }
 
-/** A strip's width, kept current; wide until measured. */
+/**
+ * A strip's width, kept current; wide until measured. Measured before the
+ * first paint, so a strip never paints one row and then rewraps.
+ */
 export function useStripWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = ref.current;
     if (!node || typeof ResizeObserver === 'undefined') return;
+    const measured = node.getBoundingClientRect().width;
+    if (measured > 0) setWidth(measured);
     const observer = new ResizeObserver(([entry]) => {
       if (entry) setWidth(entry.contentRect.width);
     });

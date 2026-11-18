@@ -394,7 +394,25 @@ describe('bootstrapPrivateRoutes', () => {
       },
     );
 
-    it('starts the landing screen’s reads while the access gate is still answering', async () => {
+    it.each([
+      [
+        `/ai-traffic?project=${PROJECT}`,
+        [
+          `/api/v1/projects/${PROJECT}/ai-traffic/insights?range=30d`,
+          `/api/v1/projects/${PROJECT}/ai-traffic/overview?range=30d`,
+          `/api/v1/projects/${PROJECT}/crawl-logs/sources`,
+        ],
+      ],
+      // A tab in the address warms that tab's reads, not the landing tab's.
+      [
+        `/ai-traffic?project=${PROJECT}&tab=pages`,
+        [`/api/v1/projects/${PROJECT}/crawl-logs/sources`],
+      ],
+      [
+        `/search-intelligence?project=${PROJECT}&tab=keywords`,
+        [`/api/v1/projects/${PROJECT}/search-intelligence`],
+      ],
+    ])('starts %s’s reads while the access gate is still answering', async (address, reads) => {
       window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
       stub({ projects: [PROJECT_SUMMARY] });
       let answer!: (response: HttpResponse<DefaultBodyType>) => void;
@@ -412,7 +430,7 @@ describe('bootstrapPrivateRoutes', () => {
       const requests = recordRequests();
       let settled = false;
 
-      const pending = run(`/ai-traffic?project=${PROJECT}`).then((location) => {
+      const pending = run(address).then((location) => {
         settled = true;
         return location;
       });
@@ -423,13 +441,7 @@ describe('bootstrapPrivateRoutes', () => {
           .filter((path) => path.startsWith(`/api/v1/projects/${PROJECT}/`))
           .filter((path) => !path.startsWith(`/api/v1/projects/${PROJECT}/actions`))
           .sort();
-      await waitFor(() =>
-        expect(screenReads()).toEqual([
-          `/api/v1/projects/${PROJECT}/ai-traffic/insights?range=30d`,
-          `/api/v1/projects/${PROJECT}/ai-traffic/overview?range=30d`,
-          `/api/v1/projects/${PROJECT}/crawl-logs/sources`,
-        ]),
-      );
+      await waitFor(() => expect(screenReads()).toEqual(reads));
       expect(settled).toBe(false);
 
       answer(HttpResponse.json({ status: 'active', expires_at: null }));
