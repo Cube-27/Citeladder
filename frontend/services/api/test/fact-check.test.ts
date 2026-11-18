@@ -321,6 +321,7 @@ describe('claim extraction and verification', () => {
   it('extracts brand claims in the perception call, verifies them against the frozen facts and reads the accuracy', async () => {
     await enroll(tenant);
     await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    await confirmedFact(tenant, 'company', 'Founded in 2019.');
     const auditId = await fixtures.audit(tenant, {
       configuration: await pilotConfiguration(tenant),
     });
@@ -405,6 +406,54 @@ describe('claim extraction and verification', () => {
         ['not_covered', []],
       ],
     );
+
+    // By fact groups on the revision the run froze; the unclaimed fact is not raised.
+    const observedAt = (summary.body.contradicted as { observed_at: string }[])[0]!.observed_at;
+    const byFact = await call(tenant, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);
+    expect(byFact.body).toMatchObject({
+      enabled: true,
+      facts: [
+        {
+          fact_id: fact!.id,
+          revision: 2,
+          statement: 'Pro costs $59 per month.',
+          counts: {
+            kind: 'raised',
+            claims: 1,
+            supported: 0,
+            contradicted: 1,
+            inconclusive: 0,
+            last_raised_at: observedAt,
+          },
+        },
+        { revision: 2, statement: 'Founded in 2019.', counts: { kind: 'not_raised' } },
+      ],
+    });
+
+    const csv = await app.request(
+      `/api/v1/projects/${tenant.projectId}/visibility/accuracy/claims/export?audit_id=${auditId}`,
+      {
+        headers: {
+          cookie: `${config.session.cookieName}=${token}`,
+          'x-workspace-id': tenant.workspaceId,
+        },
+      },
+    );
+    expect(csv.headers.get('content-disposition')).toBe(
+      'attachment; filename="fact-check-claims.csv"',
+    );
+    const market = 'United States · English';
+    expect(await csv.text()).toBe(
+      'claim,facts,verdict,engine,market,run_date,prompt\r\n' +
+        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,chatgpt,${market},${observedAt},best tools?\r\n` +
+        `Acme integrates with Slack.,,not_covered,chatgpt,${market},${observedAt},best tools?\r\n`,
+    );
+
+    // Another workspace, inside the pilot, cannot read this run's facts or claims.
+    const attacker = await fixtures.tenant();
+    await enroll(attacker);
+    const forged = await call(attacker, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);
+    expect(forged.status).toBe(404);
   });
 
   it('verifies a claim the extractor filed under a neighbouring topic instead of calling it not covered', async () => {

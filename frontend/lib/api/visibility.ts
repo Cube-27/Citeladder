@@ -33,7 +33,10 @@ import {
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
-import { accuracyResponseSchema } from '@citeladder/contracts/fact-checking';
+import {
+  accuracyFactListSchema,
+  accuracyResponseSchema,
+} from '@citeladder/contracts/fact-checking';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { definedQuery, withQuery } from './shared';
@@ -145,6 +148,28 @@ export const visibilityApi = {
     );
     return strictValidate(accuracyResponseSchema, result, 'visibility.getAccuracy');
   },
+  /** The selection's frozen fact revisions, each with the verdicts that cite it. */
+  getAccuracyFacts: async (
+    projectId: string,
+    params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/accuracy/facts`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(accuracyFactListSchema, result, 'visibility.getAccuracyFacts');
+  },
+  /** The selection's claims as a CSV file. */
+  exportAccuracyClaims: (
+    projectId: string,
+    params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    apiClient.getBlob(
+      withQuery(`/projects/${projectId}/visibility/accuracy/claims/export`, definedQuery(params)),
+      options,
+    ),
   /** Ads in ChatGPT Search answers for the selected runs: presence, advertisers and creatives. */
   getAds: async (
     projectId: string,

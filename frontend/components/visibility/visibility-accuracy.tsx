@@ -5,9 +5,9 @@ import {
   type AccuracyResponse,
 } from '@citeladder/contracts/fact-checking';
 import { ShieldCheck } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { AppGrid } from '@/components/ui/app-grid';
+import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -29,28 +29,42 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
+type ClaimView = 'contradicted' | 'by-fact';
+
+const CLAIM_VIEWS = [
+  { value: 'contradicted', label: 'Contradicted' },
+  { value: 'by-fact', label: 'By fact' },
+] as const satisfies readonly { value: ClaimView; label: string }[];
+
 /**
  * What answers claimed about the brand, checked against its confirmed facts.
  * Accuracy always travels with its coverage, and a claim without a verdict is
- * a named state, never a zero. `lede` heads the key figures' card.
+ * a named state, never a zero. `lede` heads the key figures' card, `trend`
+ * follows it, and `byFact` is the claims card's second view.
  */
 export function AccuracyView({
   data,
   lede,
-}: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
+  trend,
+  byFact,
+}: Readonly<{ data: AccuracyResponse; lede?: ReactNode; trend?: ReactNode; byFact: ReactNode }>) {
   const { label: engineLabel } = useEngineCatalog();
+  const [view, setView] = useState<ClaimView>('contradicted');
   if (data.state !== 'value')
     return <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />;
   return (
     <SectionStack>
       <Headline data={data} lede={lede} />
-      {/* The contradictions and the sources cited beside them are one
-          question; the two-column table sits beside the claims where the
-          width allows. */}
-      <AppGrid layout="halves">
-        <ContradictedClaims claims={data.contradicted} />
-        <CitedTable cited={data.cited_alongside} />
-      </AppGrid>
+      {trend}
+      <Section aria-label="Claims">
+        <Tabs value={view} onValueChange={setView} items={CLAIM_VIEWS} ariaLabel="Claims" spaced>
+          <TabPanel value="contradicted">
+            <ContradictedClaims claims={data.contradicted} />
+          </TabPanel>
+          <TabPanel value="by-fact">{byFact}</TabPanel>
+        </Tabs>
+      </Section>
+      <CitedTable cited={data.cited_alongside} />
       <BreakdownTable title="By topic" column="Topic" rows={data.topics} label={topicLabel} />
       <BreakdownTable title="By engine" column="Engine" rows={data.engines} label={engineLabel} />
     </SectionStack>
@@ -163,40 +177,38 @@ function ClaimLink({ claim }: Readonly<{ claim: AccuracyClaim }>) {
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <TitledSection
-      title="Contradicted claims"
-      description="What answers said about you that a confirmed fact contradicts, quoted exactly."
-    >
-      <SectionContent>
-        {!claims.length ? (
-          <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
-        ) : (
-          <Stack as="ul">
-            {claims.map((claim) => (
-              <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
-                <ClaimLink claim={claim} />
-                {claim.facts.map((fact) => (
-                  <span key={fact.statement} className="type-caption text-ink-2">
-                    Your fact: {fact.statement}
-                  </span>
-                ))}
-                <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
-                  {/* The badge takes the claim's own verdict tone; a claim
+    <Stack gap="item">
+      <p className={textRole('caption', 'text-ink-2')}>
+        What answers said about you that a confirmed fact contradicts, quoted exactly.
+      </p>
+      {!claims.length ? (
+        <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
+      ) : (
+        <Stack as="ul">
+          {claims.map((claim) => (
+            <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
+              <ClaimLink claim={claim} />
+              {claim.facts.map((fact) => (
+                <span key={fact.statement} className="type-caption text-ink-2">
+                  Your fact: {fact.statement}
+                </span>
+              ))}
+              <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
+                {/* The badge takes the claim's own verdict tone; a claim
                       without a verdict yet is neutral, not negative. */}
-                  <StatusMark
-                    variant="sentiment"
-                    value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
-                  >
-                    {TOPIC_LABELS[claim.topic]}
-                  </StatusMark>
-                  {engineLabel(claim.logical_engine)} · {claim.prompt}
-                </Inline>
-              </Stack>
-            ))}
-          </Stack>
-        )}
-      </SectionContent>
-    </TitledSection>
+                <StatusMark
+                  variant="sentiment"
+                  value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
+                >
+                  {TOPIC_LABELS[claim.topic]}
+                </StatusMark>
+                {engineLabel(claim.logical_engine)} · {claim.prompt}
+              </Inline>
+            </Stack>
+          ))}
+        </Stack>
+      )}
+    </Stack>
   );
 }
 

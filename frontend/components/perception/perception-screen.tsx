@@ -15,7 +15,7 @@ import { selectionPageState } from '@/components/visibility/selection-page';
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
-import { useAccuracy } from '@/lib/visibility/use-accuracy';
+import { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
 import { usePerception } from '@/lib/visibility/use-perception';
 import {
   useVisibilityFilters,
@@ -43,6 +43,7 @@ export function PerceptionScreen() {
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
   const tab = pilot ? requested : 'brand';
   const accuracy = useAccuracy({ filters, queries, pilot });
+  const factViews = useFactViews({ filters, queries, pilot: pilot && tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
   return (
@@ -76,7 +77,7 @@ export function PerceptionScreen() {
                     }
                   />
                 ) : (
-                  <PerceptionFactChecking query={accuracy} />
+                  <PerceptionFactChecking query={accuracy} views={factViews} />
                 )
               }
             </SelectionGate>

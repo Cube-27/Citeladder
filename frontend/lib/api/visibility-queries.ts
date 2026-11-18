@@ -112,6 +112,12 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getAccuracy(scope.projectId, params, scoped(scope, signal)),
     }),
+  accuracyFacts: (scope: ProjectScope, params: ParamsOf<'getAccuracyFacts'>) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.accuracyFacts(scope, params),
+      queryFn: ({ signal }) =>
+        visibilityApi.getAccuracyFacts(scope.projectId, params, scoped(scope, signal)),
+    }),
   /** Ad creatives, paged by the read's own cursor. */
   ads: (scope: ProjectScope, params: Omit<ParamsOf<'getAds'>, 'cursor'>) =>
     infiniteQueryOptions({
