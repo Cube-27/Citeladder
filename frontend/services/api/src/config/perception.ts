@@ -36,6 +36,7 @@ const factCheck = z.strictObject({
   max_cited_alongside: positive,
   claims_default_limit: positive,
   claims_max_limit: positive,
+  claims_export_max_rows: positive,
   eval_policy_version: version,
   eval_thresholds: z.strictObject({
     max_false_contradiction_rate: share,

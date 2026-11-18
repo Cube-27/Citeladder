@@ -1,18 +1,30 @@
 import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
+import { Download } from 'lucide-react';
 
-import { buttonClasses } from '@/components/ui/button';
+import { ClaimsOverTime } from '@/components/perception/claims-over-time';
+import { FactsTable } from '@/components/perception/facts-table';
+import { Button, buttonClasses } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { useToast } from '@/components/ui/toast';
+import { humanizeApiError } from '@/lib/api/errors';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { AccuracyView } from '@/components/visibility/visibility-accuracy';
-import type { useAccuracy } from '@/lib/visibility/use-accuracy';
+import type { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
 
-/** The Perception page's Fact-checking tab (pilot only): today's Accuracy view under its lede. */
+type FactViews = ReturnType<typeof useFactViews>;
+
+/**
+ * The Perception page's Fact-checking tab (pilot only): the accuracy view
+ * under its lede, the claims per run, and the claims by frozen fact.
+ */
 export function PerceptionFactChecking({
   query,
-}: Readonly<{ query: ReturnType<typeof useAccuracy> }>) {
+  views,
+}: Readonly<{ query: ReturnType<typeof useAccuracy>; views: FactViews }>) {
   return (
     <AnalysisRead
       query={query}
@@ -21,7 +33,14 @@ export function PerceptionFactChecking({
       busy={query.isFetching}
       ready={query.data}
     >
-      {(data) => <AccuracyView data={data} lede={<FactCheckingLede data={data} />} />}
+      {(data) => (
+        <AccuracyView
+          data={data}
+          lede={<FactCheckingLede data={data} exporting={views.exporting} />}
+          trend={<ClaimsOverTime trend={data.trend} />}
+          byFact={<FactsTable query={views.facts} />}
+        />
+      )}
     </AnalysisRead>
   );
 }
@@ -31,7 +50,11 @@ function contradictedHeadline(count: number) {
   return `Your facts contradict ${count} ${count === 1 ? 'claim' : 'claims'} AI made`;
 }
 
-function FactCheckingLede({ data }: Readonly<{ data: AccuracyResponse }>) {
+function FactCheckingLede({
+  data,
+  exporting,
+}: Readonly<{ data: AccuracyResponse; exporting: FactViews['exporting'] }>) {
+  const { notify } = useToast();
   const latest = data.trend.at(-1)?.completed_at;
   return (
     <Inline className="items-start justify-between">
@@ -52,9 +75,26 @@ function FactCheckingLede({ data }: Readonly<{ data: AccuracyResponse }>) {
           Correct them at the pages AI reads, not in the answer itself.
         </p>
       </Stack>
-      <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
-        Edit facts
-      </ProjectLink>
+      <Inline gap="item" className="shrink-0">
+        <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
+          Edit facts
+        </ProjectLink>
+        <Button
+          variant="secondary"
+          pending={exporting.isPending}
+          onClick={() =>
+            exporting.mutate(undefined, {
+              onError: (error) =>
+                notify("Couldn't export the claims", humanizeApiError(error).message, {
+                  tone: 'negative',
+                }),
+            })
+          }
+        >
+          <Icon icon={Download} />
+          Export claims CSV
+        </Button>
+      </Inline>
     </Inline>
   );
 }

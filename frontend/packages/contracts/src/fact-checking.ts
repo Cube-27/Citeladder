@@ -157,6 +157,38 @@ export const accuracyResponseSchema = responseObject({
   trend: z.array(accuracyTrendPointSchema),
 });
 
+// The verdicts citing one frozen fact revision. `not_raised`: no checked claim
+// in the selection cited it, which is not a count of zero; `pending`: none has
+// yet, but claims are still being checked.
+const factClaimCountsSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('raised'),
+    claims: z.number().int(),
+    supported: z.number().int(),
+    contradicted: z.number().int(),
+    inconclusive: z.number().int(),
+    last_raised_at: z.string(),
+  }),
+  responseObject({ kind: z.literal('not_raised') }),
+  responseObject({ kind: z.literal('pending') }),
+]);
+
+// A fact revision as the selected runs froze it, with the verdicts citing it.
+export const accuracyFactSchema = responseObject({
+  revision_id: uuid(),
+  fact_id: uuid(),
+  revision: z.number().int(),
+  topic: factTopicSchema,
+  statement: z.string(),
+  counts: factClaimCountsSchema,
+});
+
+// `enabled` is false outside the fact-checking pilot; `facts` is then empty.
+export const accuracyFactListSchema = responseObject({
+  enabled: z.boolean(),
+  facts: z.array(accuracyFactSchema),
+});
+
 export const accuracyClaimPageSchema = responseObject({
   items: z.array(accuracyClaimSchema),
   next_cursor: z.string().nullable(),
@@ -180,4 +212,6 @@ export type AccuracyResponse = z.infer<typeof accuracyResponseSchema>;
 export type AccuracyCoverage = z.infer<typeof accuracyCoverageSchema>;
 export type AccuracyScore = z.infer<typeof accuracyScoreSchema>;
 export type AccuracyClaim = z.infer<typeof accuracyClaimSchema>;
+export type AccuracyFact = z.infer<typeof accuracyFactSchema>;
+export type AccuracyFactList = z.infer<typeof accuracyFactListSchema>;
 export type ExecutionClaim = z.infer<typeof executionClaimSchema>;

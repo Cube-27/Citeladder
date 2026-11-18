@@ -1,6 +1,7 @@
 /**
- * Fact-check reads: the selection's accuracy summary, its claim pages and the
- * claims of one execution.
+ * Fact-check reads: the selection's accuracy summary, its claim pages and
+ * export rows, its frozen facts with the verdicts citing them, and the claims
+ * of one execution.
  *
  * Projections over persisted `answer_claims`, `fact_verifications`,
  * `claim_verdicts` and the frozen fact revisions; nothing is extracted,
@@ -10,11 +11,14 @@
 import {
   claimVerdictSchema,
   factTopicSchema,
+  type AccuracyFactList,
   type AccuracyResponse,
   type ExecutionClaim,
 } from '@citeladder/contracts/fact-checking';
+import { marketLabel } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
+import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcTextOf, wireUtc } from '../db/timestamps.ts';
@@ -23,6 +27,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
+import { assertExportBound } from '../http/table-export.ts';
 import { chunked, groupBy } from '../lists.ts';
 import {
   checkedTopics,
@@ -36,16 +41,18 @@ import {
   claimOrder,
   claimStatus,
   claimView,
+  factBreakdown,
   positionedClaims,
   score,
   unavailableReason,
   type ClaimRow,
   type Extraction,
   type FactAnswer,
-  type FactRef,
+  type FactRevision,
 } from '../perception/fact-metrics.ts';
 import { isNamed } from '../perception/passages.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
+import { listMarkets } from '../projects/markets.ts';
 import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
 import { perceptionRows } from './perception.ts';
@@ -83,6 +90,37 @@ function identityOf({ versions, factCheck }: Frozen) {
     factCheck.metrics_version,
     factCheck.fact_set_hash,
   ]);
+}
+
+/** The workspace's fact revisions by id; a revision on an unknown topic is left out. */
+async function factRevisions(
+  db: Database,
+  workspaceId: string,
+  revisionIds: readonly string[],
+): Promise<Map<string, FactRevision>> {
+  const rows = await chunked([...new Set(revisionIds)], (ids) =>
+    db
+      .selectFrom('brand_fact_revisions')
+      .select(['id', 'fact_id', 'revision', 'topic', 'statement', 'source_url'])
+      .where('workspace_id', '=', workspaceId)
+      .where('id', 'in', ids)
+      .execute(),
+  );
+  return new Map(
+    rows.flatMap((row) => {
+      const topic = factTopicSchema.safeParse(row.topic);
+      if (!topic.success) return [];
+      const fact: FactRevision = {
+        revision_id: row.id,
+        fact_id: row.fact_id,
+        revision: row.revision,
+        topic: topic.data,
+        statement: row.statement,
+        source_url: row.source_url,
+      };
+      return [[row.id, fact] as const];
+    }),
+  );
 }
 
 /** Each analysis's extraction and claim rows with their statuses and cited facts. */
@@ -153,28 +191,10 @@ async function claimsOf(
       },
     ]),
   );
-  const revisionIds = [...new Set([...verdicts.values()].flatMap((row) => row.revisionIds))];
-
-  const revisions = new Map(
-    (
-      await chunked(revisionIds, (ids) =>
-        db
-          .selectFrom('brand_fact_revisions')
-          .select(['id', 'topic', 'statement', 'source_url'])
-          .where('workspace_id', '=', workspaceId)
-          .where('id', 'in', ids)
-          .execute(),
-      )
-    ).flatMap((row) => {
-      const topic = factTopicSchema.safeParse(row.topic);
-      if (!topic.success) return [];
-      const ref: FactRef = {
-        topic: topic.data,
-        statement: row.statement,
-        source_url: row.source_url,
-      };
-      return [[row.id, ref] as const];
-    }),
+  const revisions = await factRevisions(
+    db,
+    workspaceId,
+    [...verdicts.values()].flatMap((row) => row.revisionIds),
   );
   const claimsByPerception = groupBy(claimRows, (row) => row.perception_id);
   const result = new Map<string, { extraction: Extraction; claims: ClaimRow[] }>();
@@ -232,6 +252,7 @@ async function selectionAnswers(
         'ra.logical_engine',
         'ra.entity_assessments',
         'audit.configuration',
+        'audit.market_id',
         'snapshot.text as prompt',
         utcTextOf(observedAt).as('observed_at'),
       ])
@@ -271,6 +292,15 @@ async function selectionAnswers(
     answers,
     factChecked,
     auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
+    frozenRevisionIds: rows.flatMap((row) => row.frozen.factCheck.facts.map((f) => f.revision_id)),
+    marketOf: new Map(
+      rows.map((row) => {
+        const { country_code = '', language_code = '' } = readFrozenConfiguration(
+          row.configuration,
+        );
+        return [row.audit_id, { id: row.market_id, country_code, language_code }];
+      }),
+    ),
   };
 }
 
@@ -313,6 +343,90 @@ function cursorPosition(cursor: string, fingerprint: Record<string, unknown>) {
   return { observed_at, execution_id, ordinal: offset };
 }
 
+type ClaimFilters = { topic: string | null; verdict: string | null };
+
+function claimFilter(filters: ClaimFilters) {
+  return (claim: ClaimRow) =>
+    (filters.topic === null || claim.topic === filters.topic) &&
+    (filters.verdict === null ||
+      (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict));
+}
+
+/** The selection's frozen fact revisions, each with the verdicts that cite it. */
+export async function getAccuracyFacts(
+  db: Database,
+  selection: RunSelection,
+): Promise<AccuracyFactList> {
+  if (!(await factCheckingEnabled(db, selection.workspaceId))) return { enabled: false, facts: [] };
+  const { answers, frozenRevisionIds } = await selectionAnswers(db, selection, {
+    citations: false,
+  });
+  const cited = answers.flatMap((answer) =>
+    answer.claims.flatMap((claim) => claim.facts.map((fact) => fact.revision_id)),
+  );
+  const revisions = await factRevisions(db, selection.workspaceId, [
+    ...frozenRevisionIds,
+    ...cited,
+  ]);
+  return { enabled: true, facts: factBreakdown(answers, [...revisions.values()]) };
+}
+
+export const CLAIM_EXPORT_COLUMNS = [
+  'claim',
+  'facts',
+  'verdict',
+  'engine',
+  'market',
+  'run_date',
+  'prompt',
+] as const;
+
+/**
+ * The selection's claims under `filters`, newest answer first, as export rows.
+ * A claim without a verdict carries its status (pending, low confidence,
+ * unavailable) in the verdict column, never a blank.
+ */
+export async function accuracyClaimRows(
+  db: Database,
+  selection: RunSelection,
+  filters: ClaimFilters,
+): Promise<Record<(typeof CLAIM_EXPORT_COLUMNS)[number], string>[]> {
+  if (!(await factCheckingEnabled(db, selection.workspaceId))) return [];
+  const { answers, marketOf } = await selectionAnswers(db, selection, { citations: false });
+  const keep = claimFilter(filters);
+  const claims = answers
+    .flatMap((answer) =>
+      answer.claims.filter(keep).map((claim) => ({
+        answer,
+        claim,
+        observed_at: answer.observedAt,
+        execution_id: answer.executionId,
+        ordinal: claim.ordinal,
+      })),
+    )
+    .sort(claimOrder);
+  assertExportBound(claims.length, settings.claims_export_max_rows);
+  // An additional market keeps its own label while it exists; the default market
+  // and a deleted one read as the country and language the run froze.
+  const labels = new Map(
+    (await listMarkets(db, selection)).map((market) => [market.id, market.label]),
+  );
+  const marketName = (auditId: string) => {
+    const market = marketOf.get(auditId);
+    if (!market) return '';
+    return (market.id !== null && labels.get(market.id)) || marketLabel(market);
+  };
+  return claims.map(({ answer, claim }) => ({
+    claim: claim.claim,
+    facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
+    verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
+    engine: answer.logicalEngine,
+    market: marketName(answer.auditId),
+    run_date: answer.observedAt,
+    prompt: answer.prompt,
+  }));
+}
+
 export async function getAccuracyClaims(
   db: Database,
   selection: RunSelection,
@@ -332,13 +446,9 @@ export async function getAccuracyClaims(
   if (!(await factCheckingEnabled(db, selection.workspaceId)))
     return { items: [], next_cursor: null };
   const { answers } = await selectionAnswers(db, selection, { citations: false });
-  const claims = positionedClaims(
-    answers,
-    (claim) =>
-      (filters.topic === null || claim.topic === filters.topic) &&
-      (filters.verdict === null ||
-        (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict)),
-  ).filter((claim) => after === null || claimOrder(claim, after) > 0);
+  const claims = positionedClaims(answers, claimFilter(filters)).filter(
+    (claim) => after === null || claimOrder(claim, after) > 0,
+  );
   const page = claims.slice(0, filters.limit);
   const last = page.at(-1);
   return {

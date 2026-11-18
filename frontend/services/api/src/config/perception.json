@@ -84,6 +84,7 @@
     "max_cited_alongside": 10,
     "claims_default_limit": 20,
     "claims_max_limit": 100,
+    "claims_export_max_rows": 10000,
     "eval_policy_version": "fact-eval-v1",
     "eval_thresholds": {
       "max_false_contradiction_rate": 0.05,

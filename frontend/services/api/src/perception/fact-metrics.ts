@@ -8,6 +8,7 @@ import {
   claimUnavailableReasonSchema,
   type AccuracyClaim,
   type AccuracyCoverage,
+  type AccuracyFact,
   type AccuracyResponse,
   type AccuracyScore,
   type ClaimVerdict,
@@ -26,7 +27,9 @@ export type ClaimStatus =
   | { kind: 'pending' }
   | { kind: 'unavailable'; reason: UnavailableReason };
 
-export type FactRef = AccuracyClaim['facts'][number];
+type FactRef = AccuracyClaim['facts'][number];
+/** A frozen fact revision: what a verdict cites and what By fact groups on. */
+export type FactRevision = FactRef & { revision_id: string; fact_id: string; revision: number };
 
 export type ClaimRow = {
   ordinal: number;
@@ -36,7 +39,7 @@ export type ClaimRow = {
   start: number;
   end: number;
   status: ClaimStatus;
-  facts: FactRef[];
+  facts: FactRevision[];
 };
 
 /** Claim extraction for one answer that names the brand. */
@@ -199,8 +202,78 @@ export function claimView(claim: ClaimRow) {
     status: status.kind,
     verdict: status.kind === 'verdict' ? status.verdict : null,
     reason: status.kind === 'unavailable' ? status.reason : null,
-    facts: claim.facts,
+    facts: claim.facts.map(({ topic, statement, source_url }) => ({
+      topic,
+      statement,
+      source_url,
+    })),
   };
+}
+
+/**
+ * Each frozen fact revision with the supported, contradicted and inconclusive
+ * verdicts citing it. A revision no such verdict cites is `pending` while any
+ * answer or claim is still being checked, then `not_raised`.
+ */
+export function factBreakdown(
+  answers: readonly FactAnswer[],
+  frozen: readonly FactRevision[],
+): AccuracyFact[] {
+  const tallies = new Map<
+    string,
+    { supported: number; contradicted: number; inconclusive: number; last: string }
+  >();
+  for (const answer of answers)
+    for (const { status, facts } of answer.claims) {
+      if (status.kind !== 'verdict' || status.verdict === 'not_covered') continue;
+      for (const id of new Set(facts.map((fact) => fact.revision_id))) {
+        const tally = tallies.get(id) ?? {
+          supported: 0,
+          contradicted: 0,
+          inconclusive: 0,
+          last: answer.observedAt,
+        };
+        tally[status.verdict]++;
+        if (compareText(answer.observedAt, tally.last) > 0) tally.last = answer.observedAt;
+        tallies.set(id, tally);
+      }
+    }
+  const checking = answers.some(
+    (answer) =>
+      answer.extraction.kind === 'pending' ||
+      answer.claims.some((claim) => claim.status.kind === 'pending'),
+  );
+  return frozen
+    .map((fact): AccuracyFact => {
+      const tally = tallies.get(fact.revision_id);
+      return {
+        revision_id: fact.revision_id,
+        fact_id: fact.fact_id,
+        revision: fact.revision,
+        topic: fact.topic,
+        statement: fact.statement,
+        counts: tally
+          ? {
+              kind: 'raised',
+              claims: tally.supported + tally.contradicted + tally.inconclusive,
+              supported: tally.supported,
+              contradicted: tally.contradicted,
+              inconclusive: tally.inconclusive,
+              last_raised_at: tally.last,
+            }
+          : { kind: checking ? 'pending' : 'not_raised' },
+      };
+    })
+    .sort(
+      (a, b) =>
+        raisedClaims(b) - raisedClaims(a) ||
+        compareText(a.statement, b.statement) ||
+        b.revision - a.revision,
+    );
+}
+
+function raisedClaims(fact: AccuracyFact) {
+  return fact.counts.kind === 'raised' ? fact.counts.claims : -1;
 }
 
 /** The claims `keep` accepts, with their answer context, in claim order. */

@@ -9,6 +9,7 @@ import { policy } from '../src/config.ts';
 import {
   accuracySummary,
   claimStatus,
+  factBreakdown,
   type ClaimRow,
   type FactAnswer,
 } from '../src/perception/fact-metrics.ts';
@@ -341,6 +342,23 @@ describe('accuracy metrics', () => {
     // A checked run whose answers never named the brand has no claims, not no facts.
     expect(accuracySummary([], true, facts).state).toBe('no_claims');
     expect(accuracySummary([], false, facts).state).toBe('no_facts');
+
+    // By fact: an uncited revision is not raised only once nothing is left to check.
+    const revision = {
+      revision_id: '00000000-0000-4000-8000-0000000000f1',
+      fact_id: '00000000-0000-4000-8000-0000000000f2',
+      revision: 1,
+      topic: 'pricing',
+      statement: 'Pro costs $59 per month.',
+      source_url: null,
+    } as const;
+    const countsOf = (answers: FactAnswer[]) =>
+      factBreakdown(answers, [revision]).map((fact) => fact.counts);
+    expect(countsOf([answer({ claims: [row(0, { kind: 'pending' })] })])).toEqual([
+      { kind: 'pending' },
+    ]);
+    expect(countsOf([answer({ extraction: { kind: 'pending' } })])).toEqual([{ kind: 'pending' }]);
+    expect(countsOf([answer({})])).toEqual([{ kind: 'not_raised' }]);
   });
 
   it('marks a trend point not comparable when the fact set or versions change', () => {
