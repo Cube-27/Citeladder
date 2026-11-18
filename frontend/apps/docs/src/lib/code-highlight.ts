@@ -5,7 +5,7 @@
  * tokens' text, joined, is always the input.
  */
 export type CodeLanguage = 'json' | 'shell' | 'javascript' | 'python';
-export type CodeTokenKind = 'key' | 'string' | 'number' | 'literal' | 'keyword' | 'comment';
+type CodeTokenKind = 'key' | 'string' | 'number' | 'literal' | 'keyword' | 'comment';
 export type CodeToken = { kind: CodeTokenKind | null; text: string };
 
 const KEYWORDS: Record<CodeLanguage, ReadonlySet<string>> = {
