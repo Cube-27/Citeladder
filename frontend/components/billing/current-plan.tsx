@@ -177,6 +177,17 @@ function ResumeNotice({
   );
 }
 
+/** An operator grant: beside a paid plan it speaks for the grant alone, never the plan. */
+function OverrideNotice({ besidePlan }: Readonly<{ besidePlan: boolean }>) {
+  return (
+    <Notice tone="info">
+      {besidePlan
+        ? 'An operator override adds access beside this plan. The override is read-only here, expires with its grant and includes no funded AI credits.'
+        : 'This access is read-only here and expires with its grant. It is not a paid subscription and includes no funded AI credits.'}
+    </Notice>
+  );
+}
+
 /** Everything the reader should know about the plan's state, most urgent first. */
 function PlanNotices({
   entitlement,
@@ -184,19 +195,14 @@ function PlanNotices({
 }: Readonly<{ entitlement: BillingEntitlement | null; planName: (key: string) => string }>) {
   const subscription = entitlement?.subscription ?? null;
   const notice = subscription ? STATUS_NOTICE[subscription.status] : undefined;
-  const override = entitlement?.grants.some(
-    (grant) => grant.source_kind === 'override' && grant.revoked_at === null,
-  );
+  const active = (kind: string) =>
+    entitlement?.grants.some((grant) => grant.source_kind === kind && grant.revoked_at === null);
+  const override = active('override');
   return (
     <>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
-      {override ? (
-        <Notice tone="info">
-          This access is read-only here and expires with its grant. It is not a paid subscription
-          and includes no funded AI credits.
-        </Notice>
-      ) : null}
+      {override ? <OverrideNotice besidePlan={active('plan') === true} /> : null}
       {entitlement?.trial_grant ? (
         <Notice tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.

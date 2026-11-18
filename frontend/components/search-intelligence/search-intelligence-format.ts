@@ -1,15 +1,32 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
 import type { CredentialMode } from '@/lib/api/billing';
-import { availabilityLabel, formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
+import {
+  availabilityLabel,
+  formatAmount,
+  formatDisplayDate,
+  formatWindowDate,
+  pluralCount,
+} from '@/lib/format';
 
 const numberFormats = new Map<number, Intl.NumberFormat>();
 
-/** A provider figure, or null when the provider did not report one. */
-export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
+function providerNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '' || typeof value === 'boolean')
     return null;
   const number = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(number)) return null;
+  return Number.isFinite(number) ? number : null;
+}
+
+/** A provider price in the row's own currency ("$3.20"), or null when it reported none. */
+export function searchAmount(value: unknown, currency: string | null): string | null {
+  const number = providerNumber(value);
+  return number === null ? null : formatAmount(number, currency);
+}
+
+/** A provider figure, or null when the provider did not report one. */
+export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
+  const number = providerNumber(value);
+  if (number === null) return null;
   let format = numberFormats.get(maximumFractionDigits);
   if (!format) {
     format = new Intl.NumberFormat('en', { maximumFractionDigits });

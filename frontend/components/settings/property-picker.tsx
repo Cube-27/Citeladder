@@ -14,6 +14,7 @@ import {
   type IntegrationProperty,
 } from '@/lib/api/integrations';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { endSentence } from '@/lib/format';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
@@ -233,7 +234,7 @@ export function PropertyPicker({
         title={`Choose a ${noun}`}
         description={
           activeProject
-            ? `Data for the selected property is imported into ${activeProject.name}.`
+            ? endSentence(`Data for the selected property is imported into ${activeProject.name}`)
             : 'Select a project before choosing a property.'
         }
       >

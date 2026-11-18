@@ -154,7 +154,7 @@ export type RankChip = { key: string; mark: ReactNode; name: string; detail: str
 
 /**
  * RankTable — each segment's leaders as chips in place columns; your own chip
- * takes the accent wash. A segment without leaders reads `empty` across.
+ * takes the accent wash. A segment without leaders reads `empty` in every place.
  */
 export function RankTable({
   labelledBy,
@@ -184,33 +184,33 @@ export function RankTable({
         {rows.map((row) => (
           <TableRow key={row.key}>
             <TableRowHeader>{row.header}</TableRowHeader>
-            {row.chips.length === 0 ? (
-              <td colSpan={places} className="p-1 text-center">
-                {row.empty}
-              </td>
-            ) : (
-              columns.map((index) => {
-                const chip = row.chips[index];
-                return (
-                  <td key={chip?.key ?? index} className="p-1">
-                    {chip ? (
-                      <div
-                        className={cn(
-                          'rounded-mark flex h-[var(--control-md)] items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap',
-                          chip.own
-                            ? textRole('captionStrong', 'bg-accent-wash text-accent-text')
-                            : textRole('caption', 'bg-well text-ink'),
-                        )}
-                      >
-                        {chip.mark}
-                        <span className="min-w-0 truncate">{chip.name}</span>
-                        <span className="opacity-80">{chip.detail}</span>
-                      </div>
-                    ) : null}
+            {row.chips.length === 0
+              ? columns.map((index) => (
+                  <td key={index} className="p-1 text-center">
+                    {row.empty}
                   </td>
-                );
-              })
-            )}
+                ))
+              : columns.map((index) => {
+                  const chip = row.chips[index];
+                  return (
+                    <td key={chip?.key ?? index} className="p-1">
+                      {chip ? (
+                        <div
+                          className={cn(
+                            'rounded-mark flex h-[var(--control-md)] items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap',
+                            chip.own
+                              ? textRole('captionStrong', 'bg-accent-wash text-accent-text')
+                              : textRole('caption', 'bg-well text-ink'),
+                          )}
+                        >
+                          {chip.mark}
+                          <span className="min-w-0 truncate">{chip.name}</span>
+                          <span className="opacity-80">{chip.detail}</span>
+                        </div>
+                      ) : null}
+                    </td>
+                  );
+                })}
           </TableRow>
         ))}
       </TableBody>

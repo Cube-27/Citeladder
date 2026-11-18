@@ -39,12 +39,13 @@ type NoticeContent = Readonly<{
 }>;
 
 /**
- * The full-page Notice in a card, its label in `caption-strong` (the tone's
- * word, or `label`): the tone's glyph beside the heading (never colour
- * alone), the sentence 8 under it (at most 72 characters wide) and the ways
- * forward 16 under that, on the main column's one left edge. Outside the
- * shell its heading is the page's `h1`; under a masthead (`heading` null) the
- * masthead's title is the one heading and the glyph leads the sentence (FOC-03).
+ * The full-page Notice, its label in `caption-strong` (the tone's word, or
+ * `label`): the tone's glyph beside the heading (never colour alone), the
+ * sentence 8 under it (at most 72 characters wide) and the ways forward 16
+ * under that, on the main column's one left edge. Outside the shell it is a
+ * card and its heading is the page's `h1`; under a masthead (`heading` null)
+ * it sits on the surface, unboxed, the masthead's title the one heading and
+ * the glyph leading the sentence (FOC-03).
  */
 function NoticeBlock({
   tone,
@@ -62,7 +63,10 @@ function NoticeBlock({
   return (
     <section
       data-notice-tone={tone}
-      className="bg-surface rounded-card shadow-card flex w-full flex-col gap-4 p-[var(--page-top-gap)]"
+      className={cn(
+        'flex w-full flex-col gap-4',
+        heading && 'bg-surface rounded-card shadow-card p-[var(--page-top-gap)]',
+      )}
     >
       {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
       <div className="flex flex-col gap-2">
@@ -88,7 +92,7 @@ function NoticeBlock({
 
 /**
  * Notice page inside the shell: the masthead titled with the notice's heading
- * (its one `h1`), then the Notice card where the content begins. Not found, a
+ * (its one `h1`), then the Notice on the surface where the content begins. Not found, a
  * screen that failed, a workspace with no projects, the workspace loading
  * (which keeps the route's title).
  */

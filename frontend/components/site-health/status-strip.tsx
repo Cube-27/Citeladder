@@ -5,14 +5,13 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { Absence } from '@/components/ui/absence';
 import type { SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
-import { formatCount } from '@/lib/format';
+import { endSentence, formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { crawlFailureCopy, dashboardRunNotice } from '@/lib/site-health/run-notice';
 import {
   canShowDiscoveredTotal,
   discoveryProgressLabel,
-  endSentence,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
   type SiteHealthPhase,

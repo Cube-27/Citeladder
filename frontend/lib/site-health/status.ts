@@ -309,15 +309,6 @@ export function inventoryModeForPhase(
 }
 
 /**
- * Failure reasons arrive WITHOUT terminal punctuation (the worker's humanized
- * sentences and rows that carry only `error_message` alike); renderers join reason +
- * guidance as consecutive sentences, so normalize the join once here.
- */
-export function endSentence(text: string): string {
-  return /[.!?]$/.test(text) ? text : `${text}.`;
-}
-
-/**
  * The status a reader sees. A crawl that is partial only because some
  * discovered links were dead, blocked or not web pages analyzed everything it
  * reached — that is a normal crawl, so it reads as completed rather than as an

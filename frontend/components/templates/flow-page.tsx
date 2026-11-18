@@ -36,12 +36,15 @@ export function FlowLogo() {
  */
 export function FlowPage({
   label,
+  kicker = label,
   barEnd,
   footer,
   children,
 }: Readonly<{
   /** The main landmark's name and the card's kicker ("Account access"). */
   label: string;
+  /** The kicker in place of `label`; `null` for none, when the heading says the same. */
+  kicker?: string | null;
   barEnd?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -63,7 +66,7 @@ export function FlowPage({
         className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
       >
         <div className="bg-surface rounded-overlay shadow-card flex flex-col gap-4 p-[var(--page-top-gap)]">
-          <p className={textRole('captionStrong')}>{label}</p>
+          {kicker === null ? null : <p className={textRole('captionStrong')}>{kicker}</p>}
           <div className="flex flex-col">{children}</div>
         </div>
       </main>

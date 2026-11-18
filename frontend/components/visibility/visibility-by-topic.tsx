@@ -28,6 +28,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'position', label: 'Position', width: 'figure', kind: 'number' },
   { key: 'rank', label: 'Your rank', width: 'figure', kind: 'number' },
 ];
+const VALUE_KEYS = COLUMNS.slice(1).map((column) => column.key);
 
 function topicsState(query: UseQueryResult<VisibilityTopics>): DataTableState | undefined {
   if (query.isError)
@@ -112,12 +113,15 @@ export function VisibilityByTopic({
                 </TableCell>
               </>
             ) : (
-              <TableCell numeric colSpan={5}>
-                <Absence
-                  state={row.kind === 'not_run' ? 'not_run' : 'unavailable'}
-                  label={READING_LABELS[row.kind]}
-                />
-              </TableCell>
+              // A dash in every value position, the reason in each one's name.
+              VALUE_KEYS.map((key) => (
+                <TableCell key={key} numeric>
+                  <Absence
+                    state={row.kind === 'not_run' ? 'not_run' : 'unavailable'}
+                    label={READING_LABELS[row.kind]}
+                  />
+                </TableCell>
+              ))
             )}
           </TableRow>
         ))}

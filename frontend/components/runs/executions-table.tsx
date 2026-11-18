@@ -11,7 +11,6 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/compone
 import { Absence } from '@/components/ui/absence';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { productTransportLabel } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { Execution } from '@citeladder/contracts';
 import { EXECUTION_STATES, executionFailureReason, executionStatusLabel } from '@/lib/runs/status';
@@ -30,7 +29,9 @@ const COLUMNS: readonly DataTableColumn[] = [
  * Executions table for a run (F10), on the shared `DataTable`.
  *
  * One row per execution/queue task: the prompt, the
- * engine badge (logical + transport), status badge, and latency.
+ * engine, status badge, and latency. The engine's name already says its
+ * route ("ChatGPT API"); the vendor behind an observed surface is a
+ * procurement detail, so no row names a transport.
  * Succeeded rows open the evidence drawer without leaving the run. The read's
  * loading, error and empty states render inside the table under its header.
  * The list arrives whole, so the Engine and Status filters and the pages are
@@ -87,12 +88,7 @@ export function ExecutionsTable({
                 <ClampText>{prompt}</ClampText>
               </TableCell>
               <TableCell>
-                {/* The engine over the transport that reached it, each on its own line. */}
-                <TableCellLines
-                  title
-                  primary={engines.label(execution.logical_engine)}
-                  secondary={productTransportLabel(execution.transport_provider)}
-                />
+                <TableCellLines title primary={engines.label(execution.logical_engine)} />
               </TableCell>
               <TableCell>
                 <Stack gap="tight" className="justify-items-start">

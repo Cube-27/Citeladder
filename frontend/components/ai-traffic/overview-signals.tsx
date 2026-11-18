@@ -17,7 +17,6 @@ import {
 import type { SourceStep } from '@/components/integrations/data-sources';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { ClampText } from '@/components/ui/clamp-text';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
@@ -346,16 +345,14 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
   if (!coverage && !crawl.last_processed_at) return null;
   return (
     <SectionDescription className="min-w-0">
-      <ClampText>
-        {coverage}
-        {coverage && crawl.last_processed_at ? ' ' : null}
-        {crawl.last_processed_at ? (
-          <>
-            Reporting timezone: {crawl.reporting_timezone}. Processed{' '}
-            <DisplayTime value={crawl.last_processed_at} />.
-          </>
-        ) : null}
-      </ClampText>
+      {coverage}
+      {coverage && crawl.last_processed_at ? ' ' : null}
+      {crawl.last_processed_at ? (
+        <>
+          Reporting timezone: {crawl.reporting_timezone}. Processed{' '}
+          <DisplayTime value={crawl.last_processed_at} />.
+        </>
+      ) : null}
     </SectionDescription>
   );
 }

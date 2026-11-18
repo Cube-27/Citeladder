@@ -8,7 +8,6 @@ import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { useShownSpan } from '@/components/ui/data-table-fit';
 import {
   isRowSurfaceClick,
   TableActionsCell,
@@ -510,19 +509,16 @@ function AveragePosition({ measurement }: Readonly<{ measurement?: PromptMeasure
 
 /**
  * A Commerce prompt is measured as part of the shopping shelf, never on its
- * own: its figures do not apply here (a known gap, not a missing run). One
- * cell spans the figures; the Visibility head's hint says why, once.
+ * own: its figures do not apply here (a known gap, not a missing run). Each
+ * value position holds the dash with the reason as its name; the Visibility
+ * head's hint says why.
  */
 function ShelfMeasuredCells({ columns }: Readonly<{ columns: readonly DataTableColumn[] }>) {
-  const span = useShownSpan(columns.map((column) => column.key));
-  return (
-    <TableCell colSpan={span}>
-      {/* The column map would end-align the span as the Visibility figure. */}
-      <div className="text-start">
-        <Absence state="not_applicable" label="Measured with Shopping" />
-      </div>
+  return columns.map((column) => (
+    <TableCell key={column.key} numeric={column.kind === 'number'}>
+      <Absence state="not_applicable" label="Measured with Shopping" />
     </TableCell>
-  );
+  ));
 }
 
 const NOT_COMPARED = {

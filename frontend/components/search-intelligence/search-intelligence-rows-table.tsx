@@ -22,7 +22,9 @@ const URL_FIELDS: ReadonlySet<string> = new Set(['url', 'url_from']);
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: string | null) {
   const result = row[column.field];
-  if (column.numeric) return <SearchValue value={result} digits={column.precision ?? 0} />;
+  if (column.currencyField)
+    return <SearchValue value={result} currency={cellText(row[column.currencyField])} />;
+  if (column.numeric) return <SearchValue value={result} />;
   if (URL_FIELDS.has(column.field) && typeof result === 'string' && result)
     return <UrlText url={result} origin={origin} />;
   return cellText(result) ?? <Absence />;

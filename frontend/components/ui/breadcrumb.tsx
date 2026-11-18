@@ -16,10 +16,16 @@ export type Crumb = Readonly<{
 /**
  * Where a page sits, one line in the masthead: each step up is a quiet link
  * cut at 272px, the last is the page itself. The whole trail cuts rather
- * than wraps, so a long title never changes the masthead's height.
+ * than wraps, so a long title never changes the masthead's height. A page
+ * whose body has no h1 of its own passes `heading`: the page's name in the
+ * trail is then its h1, drawn the same.
  */
-export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
+export function Breadcrumb({
+  parts,
+  heading = false,
+}: Readonly<{ parts: readonly Crumb[]; heading?: boolean }>) {
   const current = parts.at(-1);
+  const Name = heading ? 'h1' : 'span';
   return (
     // As the masthead's title: under `rail` it adds no width of its own, so a long trail cuts.
     <nav aria-label="Breadcrumb" className="not-rail:w-0 flex min-w-28 flex-1">
@@ -47,7 +53,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
         {current ? (
           <li aria-current="page" className="text-ink flex min-w-0 items-center gap-2">
             {current.mark}
-            <span className="min-w-0 truncate">{current.label}</span>
+            <Name className="min-w-0 truncate">{current.label}</Name>
           </li>
         ) : null}
       </ol>

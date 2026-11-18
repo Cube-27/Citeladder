@@ -1,4 +1,5 @@
 import type { RankingRow, WinCounts } from '@citeladder/contracts';
+import { endSentence } from '@/lib/format';
 import { formatRank } from '@/lib/visibility/dashboard';
 
 /** Where one roster competitor's page lives: keyed by its roster name. */
@@ -79,7 +80,7 @@ type Ranked = Extract<BrandStanding, { kind: 'ranked' }>;
 /** The brand just ahead; at the top, the brand just behind. */
 function neighbourLine({ ahead, behind }: Ranked): string | null {
   if (ahead) return `${ahead} is named more often.`;
-  if (behind) return `You're named more often than ${behind}.`;
+  if (behind) return endSentence(`You're named more often than ${behind}`);
   return null;
 }
 

@@ -1,7 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 
 import {
-  CHART_AXIS_TEXT,
   CHART_HEIGHT_PX,
   CHART_PLOT_FRAME,
   chartTicks,
@@ -10,6 +9,7 @@ import {
 } from '@/components/ui/chart';
 import { ChartFrame, ChartTable, chartTipLeft } from '@/components/ui/chart-frame';
 import { SHEET_FACE } from '@/components/ui/slip';
+import { AXIS_TEXT } from '@/components/ui/step-chart-parts';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -125,7 +125,7 @@ export function StackedBarChart({
                     y={at}
                     textAnchor="end"
                     dominantBaseline="middle"
-                    className={CHART_AXIS_TEXT}
+                    className={AXIS_TEXT}
                   >
                     {tick}
                   </text>
@@ -172,7 +172,7 @@ export function StackedBarChart({
                       x={center(index)}
                       y={height - 6}
                       textAnchor="middle"
-                      className={CHART_AXIS_TEXT}
+                      className={AXIS_TEXT}
                     >
                       {bar.axisLabel}
                     </text>

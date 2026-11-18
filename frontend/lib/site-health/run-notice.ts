@@ -13,7 +13,9 @@
 import type { RunStatusValue } from '@/components/ui/status-mark';
 import type { SiteCrawl } from '@citeladder/contracts';
 
-import { crawlDisplayStatus, endSentence } from './status';
+import { endSentence } from '@/lib/format';
+
+import { crawlDisplayStatus } from './status';
 
 /**
  * Reason + what-to-do copy for a failed crawl (SH-2/SH-5 — B1), shared by the

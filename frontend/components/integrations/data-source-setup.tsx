@@ -325,6 +325,7 @@ function UnconnectedState({
         <ConnectButton family={lead} onConnect={() => startConnect(lead)} />
         {rest.slice(0, 1).map((family) => (
           <Button key={family} variant="quiet" onClick={() => startConnect(family)}>
+            <Icon icon={Plug} />
             Connect {FAMILY_META[family].title}
           </Button>
         ))}

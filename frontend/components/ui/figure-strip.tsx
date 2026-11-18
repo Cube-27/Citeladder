@@ -251,7 +251,8 @@ function FigureValueLine({ segment, subLine }: FigurePart) {
 function FigureSub({ segment }: FigurePart) {
   return (
     <dd className="type-caption text-ink-2 min-w-0 truncate">
-      {segment.sub && !segment.loading ? segment.sub : ' '}
+      {/* A no-break space: a plain one collapses, and the line with it. */}
+      {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );
 }
