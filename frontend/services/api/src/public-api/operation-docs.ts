@@ -15,7 +15,8 @@ export type OperationDoc = {
 };
 
 const PROJECT_PREFIX = '/v1/projects/{project_id}';
-const IDEMPOTENCY_ADVICE = ' Send an Idempotency-Key header so a retry never runs it twice.';
+const IDEMPOTENCY_ADVICE =
+  ' Send an Idempotency-Key header so a retry within 24 hours never runs it twice.';
 const SET_ID = '00000000-0000-4000-8000-000000000001';
 
 /** The key of an operation: its method and its path below the project, `GET /prompts`. */
