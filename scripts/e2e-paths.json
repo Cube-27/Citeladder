@@ -19,6 +19,10 @@
     "sources": [
       "frontend/apps/app/src/globals.css",
       "frontend/components/layout/page-shell.tsx",
+      "frontend/components/prompts/prompt-bulk-bar.tsx",
+      "frontend/components/prompts/prompt-library.tsx",
+      "frontend/components/prompts/prompt-table.tsx",
+      "frontend/components/prompts/prompt-toolbar.tsx",
       "frontend/components/templates/**",
       "frontend/components/ui/app-shell.tsx",
       "frontend/components/ui/count-strip.tsx",
@@ -27,6 +31,7 @@
       "frontend/components/ui/filter-bar.tsx",
       "frontend/components/ui/masthead.tsx",
       "frontend/components/ui/section.tsx",
+      "frontend/components/ui/selection-dock.tsx",
       "frontend/components/ui/sidebar.tsx",
       "frontend/components/ui/slip.tsx",
       "frontend/components/ui/state-block.tsx",
