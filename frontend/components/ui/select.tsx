@@ -8,30 +8,6 @@ import { cn } from '@/lib/utils';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';
 
-const SIZER = 'invisible col-start-1 row-start-1 h-0 overflow-hidden whitespace-nowrap';
-
-/**
- * One choice's label, taking width but no height and no ink. A text label is
- * drawn by CSS from an attribute, so it adds no text to the page: assistive
- * technology and text queries see the selected value alone.
- */
-function SizerLabel({ label }: Readonly<{ label: ReactNode }>) {
-  if (label === undefined || label === null || label === '') return null;
-  if (typeof label === 'string')
-    return (
-      <span
-        aria-hidden
-        data-select-sizer={label}
-        className={cn(SIZER, 'before:content-[attr(data-select-sizer)]')}
-      />
-    );
-  return (
-    <span aria-hidden className={SIZER}>
-      {label}
-    </span>
-  );
-}
-
 function radixValue(value: string | undefined): string | undefined {
   return value === '' ? EMPTY_VALUE : value;
 }
@@ -52,8 +28,9 @@ type SelectOption<T extends string> = {
 /**
  * Select — a closed trigger that opens a listbox (Radix: arrows move, Enter
  * picks, Escape closes, disabled options are skipped). The trigger is the
- * soft-edged field (`SOFT_FIELD_BOX`) with a `chevron-down`, and is as wide as its widest
- * option, so a pick never resizes it. The list is the menu panel with 32px
+ * soft-edged field (`SOFT_FIELD_BOX`) sized to its value, with a `chevron-down`
+ * that turns over while open (owner 2026-11-18: a pick may resize it). A held
+ * press scales it to 97%. The list is the menu panel with 32px
  * rows (48px with a description); the selected row shows a check in a
  * reserved slot, so nothing shifts. For long lists use `SearchableSelect`.
  */
@@ -107,23 +84,14 @@ export function Select<T extends string>({
         aria-required={required || undefined}
         id={id}
         className={cn(
-          'focus-input',
+          'focus-input press',
           SOFT_FIELD_BOX,
           'data-[placeholder]:text-ink-2 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
           className,
         )}
       >
-        {/* The value shares one grid cell with every option label, drawn
-            invisibly, so the trigger is as wide as its widest choice and
-            choosing another never resizes it or moves its neighbours. */}
-        <span className="grid min-w-0 flex-1 text-start">
-          <span className="col-start-1 row-start-1 min-w-0 truncate">
-            <SelectPrimitive.Value placeholder={placeholder} />
-          </span>
-          <SizerLabel label={placeholder} />
-          {options.map((option) => (
-            <SizerLabel key={option.value} label={option.label} />
-          ))}
+        <span className="min-w-0 flex-1 truncate text-start">
+          <SelectPrimitive.Value placeholder={placeholder} />
         </span>
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="text-ink-2 size-4 shrink-0" aria-hidden />

@@ -1,10 +1,12 @@
 /* Authenticated interaction motion. Timing lives in globals.css; feature files
    consume semantic component classes rather than defining local animation. */
 
-/* Popups (menus, selects, popovers, tooltips, info hints) and toasts open and
-   close with keyframes: Radix Presence keeps content mounted only while an
-   animation runs. They move 4px from the trigger's side and back on close
-   (toasts sit at the top). No scale, so no transform-origin. */
+/* Popups (menus, selects, popovers, tooltips, info hints), toasts and the
+   selection dock open and close with one keyframe pair: Radix Presence keeps
+   content mounted only while an animation runs. Each moves from
+   `--popup-from` (4px from its side, a tooltip a 2px rise, the dock 8px up)
+   and grows from `--popup-scale` (a menu or select list from 96% at its
+   anchor). Menus and tooltips enter in --motion-tint. */
 .menu-panel,
 .tooltip-panel,
 .toast-panel {
@@ -19,24 +21,43 @@
 [data-side='right'] {
   --popup-from: -4px 0;
 }
+.tooltip-panel[data-side] {
+  --popup-from: 0 2px;
+}
+.menu-panel[class] {
+  --popup-from: 0;
+  --popup-scale: 0.96;
+  transform-origin: var(--radix-popper-transform-origin);
+}
 @keyframes popup-in {
   from {
     opacity: 0;
     translate: var(--popup-from);
+    scale: var(--popup-scale, 1);
   }
 }
 @keyframes popup-out {
   to {
     opacity: 0;
     translate: var(--popup-from);
+    scale: var(--popup-scale, 1);
   }
 }
 :is(.menu-panel, .tooltip-panel, .toast-panel)[data-state$='open'],
 .menu-panel[data-open] {
   animation: popup-in var(--motion-open) var(--ease-standard);
 }
+:is(.menu-panel, .tooltip-panel)[data-state$='open'],
+.menu-panel[data-open] {
+  animation-duration: var(--motion-tint);
+}
 :is(.menu-panel, .tooltip-panel, .toast-panel)[data-state='closed'] {
   animation: popup-out var(--motion-close) var(--ease-exit) both;
+}
+/* The dock is centred by its own translate, so it rises from there. */
+[data-selection-dock] {
+  --popup-from: -50% 8px;
+  animation: popup-in var(--motion-tint) var(--ease-standard);
 }
 
 /* A swipe moves the toast 1:1, eases back on cancel (Radix clears both
@@ -51,37 +72,26 @@
   --popup-from: 100% 0;
 }
 
-@keyframes modal-overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Dialogs and drawers on the same pair: scrims fade, a dialog grows from
+   98.5% (centred by its own translate), a drawer slides in from its side. */
+:is(.dialog-overlay, .drawer-overlay) {
+  --popup-from: 0;
 }
-
-@keyframes modal-panel-in {
-  from {
-    opacity: 0;
-    scale: 0.985;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-  }
+.dialog-panel {
+  --popup-from: -50% 0;
+  --popup-scale: 0.985;
 }
-
-.dialog-overlay[data-state='open'] {
-  animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
+.drawer-panel {
+  --popup-from: 100% 0;
 }
-.dialog-overlay[data-state='closed'] {
-  animation: modal-overlay-in var(--motion-close) var(--ease-exit) reverse both;
+.drawer-panel[data-side='left'] {
+  --popup-from: -100% 0;
 }
-.dialog-panel[data-state='open'] {
-  animation: modal-panel-in var(--motion-open) var(--ease-standard) both;
+:is(.dialog-overlay, .dialog-panel, .drawer-overlay, .drawer-panel)[data-state='open'] {
+  animation: popup-in var(--motion-open) var(--ease-standard) both;
 }
-.dialog-panel[data-state='closed'] {
-  animation: modal-panel-in var(--motion-close) var(--ease-exit) reverse both;
+:is(.dialog-overlay, .dialog-panel, .drawer-overlay, .drawer-panel)[data-state='closed'] {
+  animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
 
 /* The sidebar's content fades in as its column eases to the rail or back.

@@ -1,13 +1,14 @@
 {
   "format_version": 1,
-  "comment": "Byte ceilings for what a COLD load pays before any route code runs. Raise a limit only with a measurement in the PR that explains what the bytes buy.",
+  "comment": "Byte ceilings for what a COLD load pays before any route code runs. The CSS limits follow css_comment below; a JS limit rises only with a measurement in the PR that explains what the bytes buy.",
   "budgets": {
     "apps/app": {
-      "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Includes the route loader that resolves the shell's opening decision before first paint \u2014 it costs ~4.6 KB gzip and removes three full-viewport paints from a cold load, which is a trade worth making explicitly. React, React Router and Zod are split into vendor chunks: that costs ~600 B gzip in boundary overhead and buys cache stability, since an edit under lib/api used to invalidate React Router for every returning reader. eager_css_gzip rose 96 B (22243 to 22339, owner 16 Nov 2026, PR #933): Tailwind compiles the lazy Actions v3 tree's own geometry rules (row grid at two breakpoints, 76px goal cell, strip hairline, indents, dock offset) into the entry CSS; measured 80 B over after cutting the rest.",
+      "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Includes the route loader that resolves the shell's opening decision before first paint — it costs ~4.6 KB gzip and removes three full-viewport paints from a cold load, which is a trade worth making explicitly. React, React Router and Zod are split into vendor chunks: that costs ~600 B gzip in boundary overhead and buys cache stability, since an edit under lib/api used to invalidate React Router for every returning reader.",
+      "css_comment": "CSS limits (owner rule, 18 Nov 2026): each eager_css limit is the value measured after a debt audit plus a 10% buffer, rounded up. When a change exhausts the buffer, first audit and remove eager CSS debt (rules nothing renders, duplicate keyframes or transitions, hand-written CSS an emitted utility replaces, CSS only lazy routes use, which moves to their chunk), then re-measure and reset both limits to measured + 10%, with the before, after and new limits in the PR. Never raise a limit any other way. Current: 114304 B raw and 21977 B gzip measured on 18 Nov 2026 (PR #1019).",
       "eager_js_raw": 900736,
       "eager_js_gzip": 281643,
-      "eager_css_raw": 119768,
-      "eager_css_gzip": 22339
+      "eager_css_raw": 125735,
+      "eager_css_gzip": 24175
     }
   }
 }

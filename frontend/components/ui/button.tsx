@@ -23,7 +23,8 @@ import { cn } from '@/lib/utils';
  * words name it, so the edge needs no 3:1), `quiet` no edge (`ink-2`, `ink`
  * on hover) for toolbars, rows and navigation, `danger` the secondary face
  * with a crimson label (filled only in a confirm dialog, `danger-confirm`).
- * Hover is the 6% ink tint, pressed and open the 10% tint; nothing moves.
+ * Hover is the 6% ink tint, pressed and open the 10% tint; in the app a
+ * held press also scales the button to 97% (`press`, globals.css).
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
@@ -44,7 +45,7 @@ const SOFT_EDGE = 'bg-control-fill border border-control-edge shadow-control';
 // The app's one disabled look (well fill, no edge) is in globals.css, after
 // every variant. The website keeps its 45% disabled face.
 const BUTTON_BASE =
-  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
 // `--control-md-padding` turns 16 where `control-md` turns 44 (app only).
 const BUTTON_SIZE: Record<ButtonSize, string> = {
@@ -129,11 +130,12 @@ function NativeButton({
       data-button-variant={variant}
       aria-busy={pending || undefined}
       disabled={props.disabled || pending}
-      className={buttonClasses(variant, className, size)}
+      className={buttonClasses(variant, cn(pending && 'pointer-events-none', className), size)}
     >
-      {/* Busy keeps the button's width: the label keeps its box (hidden) and
-          the live rung with the pending verb takes its place inside it. The
-          pending label is what assistive technology hears. */}
+      {/* Busy keeps the button's width: the idle label keeps its box
+          (hidden) and the live rung with the label, or the pending verb,
+          is laid over it, using the side padding for the rung, so nothing
+          beside the button moves. That label is what assistive technology hears. */}
       <span
         aria-hidden={pending || undefined}
         className={cn('inline-flex items-center gap-2', pending && 'invisible')}
@@ -141,13 +143,11 @@ function NativeButton({
         {children}
       </span>
       {pending ? (
-        <span className="absolute inset-0 inline-flex items-center justify-center gap-2 overflow-hidden px-2">
+        <span className="absolute inset-0 inline-flex items-center justify-center gap-1 overflow-hidden">
           <Spinner />
-          {pendingLabel ? (
-            <span className="truncate">{pendingLabel}</span>
-          ) : (
-            <span className="sr-only">{children}</span>
-          )}
+          <span className="inline-flex min-w-0 items-center gap-2 truncate">
+            {pendingLabel ?? children}
+          </span>
         </span>
       ) : null}
     </button>

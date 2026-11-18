@@ -6,7 +6,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
 const TAG_SHAPE =
-  'type-caption border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark px-2 normal-nums whitespace-nowrap [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:text-ink';
+  'type-caption border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-2 normal-nums whitespace-nowrap [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:text-ink';
 
 /**
  * The two tag looks, 24px tall, 12/16, radius 4, never wider than their

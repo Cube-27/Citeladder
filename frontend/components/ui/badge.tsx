@@ -20,14 +20,14 @@ const TONE: Record<BadgeTone, string> = {
 };
 
 /**
- * The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. Centred on
+ * The badge face: 22px, 8px padding with a 2px gap (HeroUI's chip), `radius-xs`, 12/16 medium. Centred on
  * the line it sits in: a badge that leads with an icon would otherwise take
  * the icon's bottom edge as its baseline and stretch a 40px table row. It
  * sets its own family and tracking, so a badge inside a figure (a Stat's
  * value) never inherits the figure's tight tracking.
  */
 const BADGE_FACE =
-  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
+  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

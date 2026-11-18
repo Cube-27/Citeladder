@@ -43,6 +43,8 @@ import {
   type HeadingLevel,
 } from '@/components/ui/state-block';
 
+import './data-table.css';
+
 export type { DataTableColumn, DataTableSelection, DataTableState };
 
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;

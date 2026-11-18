@@ -18,8 +18,8 @@ import { POP_FACE } from '@/components/ui/slip';
 
 /**
  * The floating panel menus and listboxes share: the pop face (`raised`, a
- * 1px `rule` border, radius 8, `shadow-pop`), a 4px inset, entering in 200ms
- * ease-out.
+ * 1px `rule` border, radius 8, `shadow-pop`), a 4px inset, growing from 96%
+ * at its anchor in 150ms (ui-motion.css).
  */
 export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
 
@@ -30,7 +30,8 @@ export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-h
  * labels align whether checked or not. Hover and keyboard highlight take the
  * hover overlay; keyboard focus adds the shared 2px ring, which the
  * panel's 4px inset holds. A row a script focused as the pointer moved draws
- * no ring once the reader has pressed (`input-modality.ts`). `danger` is `negative` text with a `negative-soft`
+ * no ring once the reader has pressed (`input-modality.ts`). A held press
+ * scales the row to 98%. `danger` is `negative` text with a `negative-soft`
  * highlight.
  */
 export function menuItemClasses({
@@ -38,7 +39,7 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 py-1 text-left transition-colors select-none',
+    'press [--press:0.98]focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 py-1 text-left transition-colors select-none',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent [&_svg]:text-negative'

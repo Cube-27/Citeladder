@@ -181,11 +181,6 @@
   }
 }
 
-.cl-frame-screen .type-delta {
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
-}
-
 .cl-frame-caption {
   display: flex;
   flex-direction: column;

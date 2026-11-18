@@ -170,7 +170,6 @@ typography:
   type-caption: { fontSize: 12px, lineHeight: 16px }
   type-control: { fontSize: 14px, lineHeight: 20px }
   type-data-sm: { fontSize: 12px, lineHeight: 16px }
-  type-delta: { fontSize: 12px, lineHeight: 16px }
   type-display: { fontSize: 28px, lineHeight: 36px }
   type-eyebrow: { fontSize: 12px, lineHeight: 16px }
   type-figure: { fontSize: 24px, lineHeight: 32px }
@@ -305,9 +304,9 @@ and empty states keep their footprint: a table with views (`reserveRows`) keeps
 its tallest view's height (plain space, never blank rows) and its pager in
 every view and state, a section that appears after a read or a condition
 reserves its settled height from the first frame, a count holds its widest
-value's width, and a pending button keeps its
-label's box. A page the window scrolls ends in `--page-end-space` (a third of
-the viewport), so content shrinking near the bottom never pulls the scroll.
+value's width, and a pending button keeps its width. A press may scale a
+control in place; it never moves its neighbours. A page the window scrolls
+ends in `--page-end-space` (a third of the viewport), so content shrinking near the bottom never pulls the scroll.
 
 **One loading state per page load.** What is drawn before a page has one owner
 (`FirstFrame`, from the route manifest's `shell` flag; `index.html`'s boot

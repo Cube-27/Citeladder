@@ -168,9 +168,12 @@ const logDirectory = join(gitDirectory, 'quality-logs');
 mkdirSync(logDirectory, { recursive: true });
 const failedSteps = [];
 
+const logPathFor = (name) =>
+  join(logDirectory, `${name.toLowerCase().replaceAll(/[^a-z0-9]+/gu, '-')}.log`);
+
 function step(name, command, commandArgs, cwd, env = process.env) {
   process.stdout.write(`${name}…\n`);
-  const logPath = join(logDirectory, `${name.toLowerCase().replaceAll(/[^a-z0-9]+/gu, '-')}.log`);
+  const logPath = logPathFor(name);
   const log = openSync(logPath, 'w');
   let result;
   try {
@@ -224,7 +227,11 @@ function frontendChecks() {
   // The budget reads the build's manifest, so it only runs against a fresh
   // build; after a failed one it would judge stale output.
   if (artifacts.has('app') && pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
-    pnpm('Eager bundle budget', ['check:bundle']);
+    // A pass prints its measurement too: the budget's buffer is reset from it
+    // (frontend/scripts/bundle-budget.json).
+    if (pnpm('Eager bundle budget', ['check:bundle'])) {
+      process.stdout.write(readFileSync(logPathFor('Eager bundle budget'), 'utf8'));
+    }
   }
   if (artifacts.size < Object.keys(BUILD_INPUTS).length) {
     process.stdout.write('Unaffected production builds skipped; CI builds every artifact.\n');
