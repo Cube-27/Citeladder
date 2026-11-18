@@ -44,11 +44,13 @@ export const RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = [
 
 /**
  * Resolve a range preset into an inclusive UTC `from` bound (ISO 8601), or
- * `undefined` for "all time". `now` is injectable for deterministic tests.
+ * `undefined` for "all time". The bound starts its UTC day: it sits in query
+ * keys, and a bound to the millisecond made every mount a new key.
  */
 export function rangeToFrom(range: TrendRange, now: Date = new Date()): string | undefined {
   if (range === 'all') return undefined;
   const from = new Date(now);
+  from.setUTCHours(0, 0, 0, 0);
   if (range === '30d') from.setUTCDate(from.getUTCDate() - 30);
   else if (range === '90d') from.setUTCDate(from.getUTCDate() - 90);
   else if (range === '1y') from.setUTCFullYear(from.getUTCFullYear() - 1);

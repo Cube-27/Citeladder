@@ -2,21 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
-import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
-import { RankingRowsTable } from '@/components/visibility/ranking-rows';
+import { RankingRowsPending, RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
+  selectionPageFilterBar,
   selectionPageState,
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { coverageSummary } from '@/lib/visibility/coverage';
 import {
   useVisibilityFilters,
@@ -32,6 +33,7 @@ export function CompetitorsScreen() {
   const queries = useVisibilityQueries(filters, 'competitors');
   const state = selectionPageState(queries);
   const pageFilters = useSelectionPageFilters({ view: 'competitors', filters, queries });
+  const { project } = useProjectScope();
   const timeZone = useDisplayTimeZone();
   const formatDate = (iso: string) => formatDisplayDate(iso, timeZone);
   const suggestions = useQuery(
@@ -47,14 +49,18 @@ export function CompetitorsScreen() {
           <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
         </Button>
       }
-      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
+      filters={selectionPageFilterBar(state, pageFilters)}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
-      {state ? (
+      {/* While the runs load, the gate below draws the table's footprint. */}
+      {state && state !== 'loading' ? (
         <SelectionPageStateBlock state={state} queries={queries} />
       ) : (
         <SectionStack>
-          <SelectionGate query={queries.visibilityQuery}>
+          <SelectionGate
+            query={queries.visibilityQuery}
+            pending={<RankingRowsPending brands={project.competitors.length + 1} />}
+          >
             {(selected) => (
               <RankingRowsTable
                 rows={selected.rankings}

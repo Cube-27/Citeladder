@@ -3,13 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PerformanceMatrix } from '@/components/brand/performance-matrix';
 import { TopRankings } from '@/components/brand/top-rankings';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { SectionStack } from '@/components/ui/section';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
+  selectionPageFilterBar,
   selectionPageState,
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
@@ -38,9 +38,7 @@ export function InsightsScreen() {
   const { search } = useLocation();
   const projectHref = useProjectHref();
   return (
-    <ReportPage
-      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
-    >
+    <ReportPage filters={selectionPageFilterBar(state, pageFilters)}>
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
         <SelectionPageStateBlock state={state} queries={queries} />
@@ -51,8 +49,8 @@ export function InsightsScreen() {
               <SectionStack aria-busy={queries.visibilityQuery.isFetching}>
                 <InsightsLede selected={selected} />
                 <BrandTrend query={queries.trendQuery} selected={selected} />
-                <PerformanceMatrix query={queries.matrixQuery} />
-                <TopRankings query={queries.matrixQuery} />
+                <PerformanceMatrix query={queries.matrixQuery} selected={selected} />
+                <TopRankings query={queries.matrixQuery} selected={selected} />
                 <VisibilityByTopic
                   query={queries.topicsQuery}
                   topic={filters.topic}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { toChartPoints } from '@/lib/visibility/trends';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { rangeToFrom, toChartPoints } from '@/lib/visibility/trends';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 
 function point(
@@ -88,5 +89,22 @@ describe('measurement history', () => {
 
   it('returns no fabricated points for empty history', () => {
     expect(toChartPoints([], 'sov')).toEqual([]);
+  });
+});
+
+describe('range presets', () => {
+  // Two mounts of the same screen, seconds apart: the trend key must not change.
+  it('resolves a preset to the same day-aligned bound across mounts', () => {
+    const scope = { workspaceId: 'w-1', projectId: 'p-1' };
+    const keyAt = (now: string) =>
+      visibilityQueries.trends(scope, { from: rangeToFrom('90d', new Date(now)) }).queryKey;
+    expect(keyAt('2026-11-18T14:00:57.928Z')).toEqual(keyAt('2026-11-18T14:01:19.126Z'));
+    expect(rangeToFrom('90d', new Date('2026-11-18T14:00:57.928Z'))).toBe(
+      '2026-08-20T00:00:00.000Z',
+    );
+    expect(rangeToFrom('1y', new Date('2026-11-18T23:59:59.999Z'))).toBe(
+      '2025-11-18T00:00:00.000Z',
+    );
+    expect(rangeToFrom('all', new Date('2026-11-18T14:00:57.928Z'))).toBeUndefined();
   });
 });

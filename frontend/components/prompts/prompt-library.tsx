@@ -26,7 +26,7 @@ import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { useRowSelection } from '@/lib/prompts/selection';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 
-import { PendingReviewNotice } from './candidate-review';
+import { PendingReviewNotice, usePendingReview } from './candidate-review';
 import { PromptEmptyState } from './prompt-empty-state';
 import type { PendingDelete } from './confirm-delete-dialog';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
@@ -99,9 +99,14 @@ function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error:
  * and adding them beside rows already on screen moved every cell sideways.
  */
 function awaitingFirstLoad(
-  state: Readonly<{ promptsLoading: boolean; hasPrompts: boolean; figuresRead: boolean }>,
+  state: Readonly<{
+    promptsLoading: boolean;
+    hasPrompts: boolean;
+    figuresRead: boolean;
+    reviewRead: boolean;
+  }>,
 ): boolean {
-  return state.promptsLoading || (state.hasPrompts && !state.figuresRead);
+  return state.promptsLoading || (state.hasPrompts && !state.figuresRead) || !state.reviewRead;
 }
 
 const promptStatusCodec = stringUrlCodec<PromptStatus>(['active', 'archived'], 'active');
@@ -186,6 +191,7 @@ export function PromptLibrary() {
     retry,
     retrying,
   } = usePromptSet();
+  const review = usePendingReview({ scope, promptSet, hidden: !canWrite });
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
@@ -357,7 +363,14 @@ export function PromptLibrary() {
   // Status, search and filters share one control band once loaded; the first
   // load holds it so the table starts where the box stood.
   const figuresRead = measurements !== undefined;
-  if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
+  if (
+    awaitingFirstLoad({
+      promptsLoading: isLoading,
+      hasPrompts,
+      figuresRead,
+      reviewRead: review.settled,
+    })
+  ) {
     return (
       <ReportPage filters={<FilterBar />}>
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
@@ -399,7 +412,7 @@ export function PromptLibrary() {
           />
         ) : null}
         <ToggleFailure toggle={toggle.mutation} />
-        <PendingReviewNotice scope={scope} promptSet={promptSet} hidden={!canWrite} />
+        <PendingReviewNotice count={review.count} />
 
         <TopicDialogs
           dialog={topicDialog}

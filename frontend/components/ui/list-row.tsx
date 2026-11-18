@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
+import { SkeletonBlock } from '@/components/ui/skeleton-block';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -152,6 +153,23 @@ export function OpenRow({
 }
 
 /** A ruled list of `DisclosureRow`s. */
+/** An `OpenRow` with a caption while its read is pending: the row's geometry, blocks for text. */
+export function OpenRowSkeleton() {
+  return (
+    <span aria-hidden className={cn(pressableRowClasses, 'pointer-events-none')}>
+      <span className="grid min-w-0 flex-1 gap-1">
+        <span className={textRole('body', 'flex h-lh items-center')}>
+          <SkeletonBlock className="w-2/5" />
+        </span>
+        <span className="type-caption flex h-lh items-center">
+          <SkeletonBlock className="w-3/5" />
+        </span>
+      </span>
+      <Icon icon={ChevronRight} className="text-ink-2 shrink-0 opacity-0" />
+    </span>
+  );
+}
+
 export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) {
   return <ul className="divide-rule grid min-w-0 divide-y">{children}</ul>;
 }

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import type { PromptAnswerSearch } from '@citeladder/contracts';
 import { rangeFilter, singleFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { PromptAnswerParams } from '@/lib/api/runs';
@@ -45,8 +43,6 @@ export function usePromptAnswerFilters({
   const [brand, setBrand] = useUrlState('brand', optionalStringUrlCodec);
   const [cited, setCited] = useUrlState('cited', CITED);
   const [search, setSearch] = useUrlState('search', SEARCH);
-  // One instant per visit, so the window's bound does not move every render.
-  const [now] = useState(() => new Date());
   const roster = [project.brand_name, ...project.competitors.map((c) => c.name)];
   return {
     engine,
@@ -97,7 +93,7 @@ export function usePromptAnswerFilters({
     answers: {
       market: market ?? undefined,
       engine: engine ?? undefined,
-      from: rangeToFrom(period, now),
+      from: rangeToFrom(period),
       brand: brand ?? undefined,
       cited: cited === 'any' ? undefined : cited === 'cited',
       search: search === 'any' ? undefined : search,

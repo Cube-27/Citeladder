@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -21,6 +23,18 @@ type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export type SelectionPageState = 'loading' | 'error' | 'empty' | null;
+
+/**
+ * The page's filter strip. It stands while the runs load too, so its row is
+ * already there when they answer and nothing under it moves.
+ */
+export function selectionPageFilterBar(
+  state: SelectionPageState,
+  filters: readonly FilterDefinition[],
+): ReactNode {
+  if (state !== null && state !== 'loading') return undefined;
+  return <FilterBar {...pageStripFilters(filters)} />;
+}
 
 export function selectionPageState(queries: Queries): SelectionPageState {
   if (queries.auditsQuery.isLoading) return 'loading';

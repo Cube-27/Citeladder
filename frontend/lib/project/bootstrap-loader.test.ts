@@ -481,6 +481,30 @@ describe('bootstrapPrivateRoutes', () => {
       requests.stop();
     });
 
+    it('after sign-in, reads the selected project’s view and its screen before redirecting to it', async () => {
+      // Sign-in clears the remembered project, so nothing can be guessed.
+      stub({ projects: [PROJECT_SUMMARY] });
+      mswServer.use(
+        http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
+        http.get(`/api/v1/projects/${PROJECT}/*`, () =>
+          HttpResponse.json({ error: { message: 'not here' } }, { status: 404 }),
+        ),
+      );
+      const requests = recordRequests();
+      const started = () => requests.paths.map((path) => path.replace(/\?.*$/u, ''));
+
+      expect(await run('/projects')).toBe(`/projects?project=${PROJECT}`);
+      // Only the first pass ran: the redirected load would join these, not start them.
+      await waitFor(() =>
+        expect(
+          [`/api/v1/projects/${PROJECT}`, `/api/v1/projects/${PROJECT}/command-center`].filter(
+            (path) => started().includes(path),
+          ),
+        ).toEqual([`/api/v1/projects/${PROJECT}`, `/api/v1/projects/${PROJECT}/command-center`]),
+      );
+      requests.stop();
+    });
+
     it('withdraws a remembered workspace’s guess and reads the project in its own', async () => {
       const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
       window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, OTHER);

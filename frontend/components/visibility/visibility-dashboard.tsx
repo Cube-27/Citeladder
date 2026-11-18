@@ -7,6 +7,7 @@ import { VisibilityAds } from '@/components/visibility/visibility-ads';
 import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
+  selectionPageFilterBar,
   selectionPageState,
   useSelectionPageFilters,
   type SelectionPageState,
@@ -15,7 +16,6 @@ import type { Visibility } from '@citeladder/contracts';
 import { VisibilityActions } from '@/components/visibility/visibility-toolbar';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { useTableFilters } from '@/components/visibility/table-filters';
 import { VISIBILITY_TABS, type SourceTab, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
@@ -62,7 +62,7 @@ function VisibilityWorkspace({
             onIntent={queries.prefetchTab}
           />
         }
-        filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
+        filters={selectionPageFilterBar(state, pageFilters)}
       >
         {queries.activeRun && state !== 'empty' ? (
           <ActiveRunBanner run={queries.activeRun} />

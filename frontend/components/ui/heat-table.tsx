@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import {
   Table,
@@ -9,6 +9,7 @@ import {
   TableRowHeader,
 } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
+import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { absenceOf } from '@/lib/format';
@@ -78,6 +79,58 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+/**
+ * A heat or rank table while its read is pending: the same head and rows at
+ * the loaded height, so the sections under it do not move when it answers.
+ */
+export function GridTableSkeleton({
+  label,
+  rows,
+  columns,
+  variant,
+}: Readonly<{ label: string; rows: number; columns: number; variant: 'heat' | 'rank' }>) {
+  const cell =
+    variant === 'heat' ? (
+      <td className="p-0.5">
+        <SkeletonBlock className="rounded-mark h-10 min-h-10" />
+      </td>
+    ) : (
+      <td className="p-1">
+        <SkeletonBlock className="rounded-mark h-[var(--control-md)]" />
+      </td>
+    );
+  return (
+    <SkeletonFrame label={label} variant="grid">
+      <Table fixed>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
+              <SkeletonBlock className="w-16" />
+            </TableHead>
+            {Array.from({ length: columns }, (_, index) => (
+              <TableHead key={index}>
+                <SkeletonBlock className="mx-auto w-12" />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: rows }, (_, row) => (
+            <TableRow key={row}>
+              <TableRowHeader>
+                <SkeletonBlock className="w-24" />
+              </TableRowHeader>
+              {Array.from({ length: columns }, (_, index) => (
+                <Fragment key={index}>{cell}</Fragment>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </SkeletonFrame>
   );
 }
 

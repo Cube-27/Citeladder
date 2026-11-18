@@ -180,7 +180,9 @@ export function DataTable({
               cells={parts.colSpan}
               colSpan={shown.length + (selection ? 1 : 0)}
               state={replacing ? undefined : state}
-              pageSize={paging.pageSize}
+              // Loading cannot know yet whether the rows fit on one page: it
+              // draws the page asked for, the likelier loaded height.
+              pageSize={state?.kind === 'loading' ? pageSize : paging.pageSize}
               rowCount={rowCount}
               rowLines={rowLines}
               reserve={reserveRows}
