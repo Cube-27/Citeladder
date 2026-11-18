@@ -43,11 +43,12 @@ export type CitedDomain = z.infer<typeof citedDomainSchema>;
 
 // Win rate (AV-7): of the answers naming at least one tracked business, how many
 // named this one first. `win_answers` null is unavailable (finalized before the
-// derivation), 0 is not applicable; `win_rate` is null in both.
+// derivation), 0 is not applicable; `win_rate` is null in both. Absent: this read
+// does not serve win rate.
 export const winCountsSchema = responseObject({
-  win_count: z.number().int().nullable().default(null),
-  win_answers: z.number().int().nullable().default(null),
-  win_rate: z.number().nullable().default(null),
+  win_count: z.number().int().nullable().optional(),
+  win_answers: z.number().int().nullable().optional(),
+  win_rate: z.number().nullable().optional(),
 });
 export type WinCounts = z.infer<typeof winCountsSchema>;
 
@@ -159,7 +160,7 @@ export const visibilitySchema = responseObject({
   win_by_topic: z
     .array(responseObject({ topic: z.string(), ...winCountsSchema.shape }))
     .nullable()
-    .default(null),
+    .optional(),
   created_at: z.string(),
 });
 

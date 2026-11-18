@@ -5959,6 +5959,33 @@
           "avg_position": {
             "type": ["number", "null"]
           },
+          "win_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_answers": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_rate": {
+            "type": ["number", "null"]
+          },
           "visibility_delta": {
             "type": ["number", "null"]
           },
@@ -6225,6 +6252,33 @@
             ]
           },
           "avg_position": {
+            "type": ["number", "null"]
+          },
+          "win_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_answers": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_rate": {
             "type": ["number", "null"]
           }
         },
@@ -7879,6 +7933,53 @@
           "avg_position": {
             "type": ["number", "null"]
           },
+          "win_by_topic": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "topic": {
+                      "type": "string"
+                    },
+                    "win_count": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "win_answers": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "win_rate": {
+                      "type": ["number", "null"]
+                    }
+                  },
+                  "required": ["topic"],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "type": "string"
           }
@@ -8476,6 +8577,33 @@
           },
           "counts": {
             "$ref": "#/components/schemas/MeasurementCounts"
+          },
+          "win_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_answers": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "win_rate": {
+            "type": ["number", "null"]
           }
         },
         "required": [
@@ -11256,7 +11384,10 @@
                         "matched_visibility_rate": null,
                         "matched_visibility_delta": null,
                         "matched_response_count": null,
-                        "avg_position": null
+                        "avg_position": null,
+                        "win_count": null,
+                        "win_answers": null,
+                        "win_rate": null
                       }
                     ],
                     "skipped_runs": 1,
@@ -11284,7 +11415,10 @@
                         "matched_visibility_rate": null,
                         "matched_visibility_delta": null,
                         "matched_response_count": null,
-                        "avg_position": null
+                        "avg_position": null,
+                        "win_count": null,
+                        "win_answers": null,
+                        "win_rate": null
                       }
                     ]
                   },
@@ -11316,7 +11450,10 @@
                       "matched_visibility_rate": null,
                       "matched_visibility_delta": null,
                       "matched_response_count": null,
-                      "avg_position": null
+                      "avg_position": null,
+                      "win_count": null,
+                      "win_answers": null,
+                      "win_rate": null
                     }
                   ],
                   "per_engine": [
@@ -11336,10 +11473,14 @@
                         "expected": null,
                         "failed": null,
                         "not_run": null
-                      }
+                      },
+                      "win_count": null,
+                      "win_answers": null,
+                      "win_rate": null
                     }
                   ],
                   "avg_position": null,
+                  "win_by_topic": null,
                   "created_at": "2026-01-15T09:30:00.000Z"
                 }
               }
@@ -11531,6 +11672,9 @@
                     "visibility_rate": null,
                     "owned_citation_rate": null,
                     "avg_position": null,
+                    "win_count": null,
+                    "win_answers": null,
+                    "win_rate": null,
                     "visibility_delta": null,
                     "comparison_status": "Example comparison status",
                     "comparison": null,
@@ -11921,7 +12065,10 @@
                         "matched_visibility_rate": null,
                         "matched_visibility_delta": null,
                         "matched_response_count": null,
-                        "avg_position": null
+                        "avg_position": null,
+                        "win_count": null,
+                        "win_answers": null,
+                        "win_rate": null
                       }
                     ],
                     "avg_position": null,

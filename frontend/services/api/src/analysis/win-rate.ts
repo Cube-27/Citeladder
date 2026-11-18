@@ -113,7 +113,7 @@ export function sumWinCounts(parts: readonly WinCounts[]): WinCounts {
   let count = 0;
   let answers = 0;
   for (const part of parts) {
-    if (part.win_count === null || part.win_answers === null) return UNAVAILABLE;
+    if (part.win_count == null || part.win_answers == null) return UNAVAILABLE;
     count += part.win_count;
     answers += part.win_answers;
   }

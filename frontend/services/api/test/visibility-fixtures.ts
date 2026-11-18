@@ -14,6 +14,8 @@ import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts'
 import { asOwner, Fixtures } from './support.ts';
 
 const now = () => new Date();
+const firstNamedFixture = (first: AnswerFirstNamed | undefined) =>
+  first ? firstNamedColumns(first) : {};
 
 export type Json = Parameters<typeof JSON.stringify>[0];
 
@@ -414,7 +416,7 @@ export class VisibilityFixtures extends Fixtures {
         unintended_domain_cited: false,
         citation_count: citations.length,
         avg_position: spec.avgPosition ?? null,
-        ...(spec.firstNamed && firstNamedColumns(spec.firstNamed)),
+        ...firstNamedFixture(spec.firstNamed),
         search_used: spec.searchUsed ?? false,
         search_query_count: spec.searchQueryCount ?? 0,
         ...fanoutProjection({
