@@ -63,6 +63,8 @@ function TrendBody({
   metric: Metric;
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
 }>) {
+  if (query.isPending)
+    return <StateBlock kind="loading" label="Loading the history…" shape={{ kind: 'chart' }} />;
   if (query.isError)
     return (
       <Notice
@@ -72,11 +74,9 @@ function TrendBody({
         fallback="Check your connection and try again."
       />
     );
-  if (query.isSuccess && !query.data.length)
+  if (!query.data.length)
     return <StateBlock kind="empty" inline message="No runs in this period." />;
-  return (
-    <TrendChart name={name} metric={metric} points={query.data ?? []} busy={query.isFetching} />
-  );
+  return <TrendChart name={name} metric={metric} points={query.data} busy={query.isFetching} />;
 }
 
 function TrendChart({

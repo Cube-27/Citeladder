@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MatrixCell, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
-import { cellAt, cellReading, matrixCsvRows, type MatrixMetric } from './matrix';
+import { cellAt, cellReading, matrixCsvRows, noTopicsRecorded, type MatrixMetric } from './matrix';
 
 const measured = (over: Partial<Extract<MatrixCell, { kind: 'measured' }>>): MatrixCell => ({
   kind: 'measured',
@@ -86,5 +86,15 @@ describe('performance matrix cells', () => {
     expect(csv('avg_position', [[measured({ avg_position: 2.345 })]])).toEqual([
       ['ChatGPT', 'Acme', 2.35, 12],
     ]);
+  });
+
+  it('says a selection recorded no topics only when every topic reads not recorded', () => {
+    const rows = (...kinds: string[]) => kinds.map((kind) => ({ kind }));
+    expect([
+      noTopicsRecorded(rows('not_recorded', 'not_recorded')),
+      noTopicsRecorded(rows('not_recorded', 'measured')),
+      noTopicsRecorded(rows('not_recorded', 'not_run')),
+      noTopicsRecorded([]),
+    ]).toEqual([true, false, false, false]);
   });
 });

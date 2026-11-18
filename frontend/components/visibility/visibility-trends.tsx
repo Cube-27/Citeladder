@@ -6,7 +6,7 @@ import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
-import { StepChart } from '@/components/ui/step-chart';
+import { StepChart, type TrendEvent } from '@/components/ui/step-chart';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
 import type {
@@ -33,7 +33,7 @@ import {
 } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
-import { availabilityLabel, formatCount, formatDisplayDate, pluralCount } from '@/lib/format';
+import { availabilityLabel, formatCount, formatDisplayDate } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
   SHARE_OF_VOICE_HINT,
@@ -254,8 +254,11 @@ type TrendBodyProps = Readonly<{
   brandName: string | null;
 }>;
 
-/** The failed read, no runs in the window, or the line chart. */
+/** The failed read, the loading chart, no runs in the window, or the line chart. */
 function TrendBody({ query, ...chart }: TrendBodyProps) {
+  // No data yet is loading, never an empty chart; retained data stays while it refetches.
+  if (query.isPending)
+    return <StateBlock kind="loading" label="Loading the history…" shape={{ kind: 'chart' }} />;
   if (query.isError)
     return (
       <Notice
@@ -265,9 +268,9 @@ function TrendBody({ query, ...chart }: TrendBodyProps) {
         fallback="Check your connection and try again."
       />
     );
-  if (query.isSuccess && !query.data.length)
+  if (!query.data.length)
     return <StateBlock kind="empty" inline message="No runs in this period." />;
-  return <HistoryLineChart points={query.data ?? []} busy={query.isFetching} {...chart} />;
+  return <HistoryLineChart points={query.data} busy={query.isFetching} {...chart} />;
 }
 
 function HistoryLineChart({
@@ -325,17 +328,16 @@ function HistoryLineChart({
         yMax={axis.yMax}
         yFormat={axis.tick}
         format={(plotted) => axis.format(axis.unplot(plotted))}
+        lonePoint="plot"
       />
-      <p className={textRole('caption')}>
-        {focused === null && competitors.length
-          ? `You and the ${pluralCount(competitors.length, 'tracked brand')} named most often in the latest period; use Focus to plot one on its own. `
-          : ''}
-        A line breaks where two runs are not comparable, so a run with no comparable run beside it
-        shows as a lone mark.
-        {events.some((event) => event.kind === 'action')
-          ? ' A marker shows when work went live, not that it changed these rates.'
-          : ''}
-      </p>
+      <p className={textRole('caption')}>{trendCaption(points.length, events)}</p>
     </Stack>
   );
+}
+
+function trendCaption(runs: number, events: readonly TrendEvent[]): string {
+  if (runs === 1) return 'The trend appears after the next comparable run.';
+  return events.some((event) => event.kind === 'action')
+    ? 'Lines break between runs that are not comparable; a marker shows when work went live, not that it changed these rates.'
+    : 'Lines break between runs that are not comparable.';
 }

@@ -12,7 +12,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { READING_LABELS } from '@/lib/visibility/matrix';
+import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'topic', label: 'Topic' },
@@ -40,6 +40,14 @@ function topicsState(query: UseQueryResult<VisibilityTopics>): DataTableState | 
   if (query.isPending) return { kind: 'loading', label: 'Loading topics…' };
   if (query.data.items.length === 0)
     return { kind: 'empty', headingLevel: 3, icon: Tags, heading: 'No topics yet' };
+  if (noTopicsRecorded(query.data.items))
+    return {
+      kind: 'empty',
+      headingLevel: 3,
+      icon: Tags,
+      heading: 'No topics recorded',
+      description: noTopicsMessage(query.data.source_audit_ids.length),
+    };
   return undefined;
 }
 
