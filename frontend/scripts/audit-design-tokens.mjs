@@ -189,7 +189,10 @@ const tokenBlock = (group, entries) =>
   [
     '```yaml',
     `${group}:`,
-    ...entries.map(({ name, value, note }) => `  ${name}: ${value}${note ? ` # ${note}` : ''}`),
+    ...entries.map(({ name, value, note }) => {
+      const comment = note ? ` # ${note}` : '';
+      return `  ${name}: ${value}${comment}`;
+    }),
     '```',
   ].join('\n');
 // Single quotes, as the repository's formatter writes YAML, so a formatted

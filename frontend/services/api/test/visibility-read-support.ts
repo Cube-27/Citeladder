@@ -53,7 +53,8 @@ export function visibilityReads() {
       for (const item of [value].flat()) search.append(key, item);
     }
     const token = await sessionToken({ sub: tenant.userId, ver: 0 });
-    const response = await app.request(`${path}${search.size ? `?${search}` : ''}`, {
+    const suffix = search.size ? `?${search}` : '';
+    const response = await app.request(`${path}${suffix}`, {
       headers: { cookie: `${config.session.cookieName}=${token}` },
     });
     return { status: response.status, body: (await response.json()) as Body & Row[] };
