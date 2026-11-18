@@ -22,12 +22,12 @@ The comparison prompt names a brand. Keep that framing separate from discovery q
 
 ## Build prompts with the Prompt Builder
 
-Open **Prompts** and choose **Prompt Builder**. It opens beside the prompt library in four steps, each prefilled from your project. Nothing is saved until a step's save or confirm button is used.
+Open **Prompts** and choose **Prompt Builder**. It opens as its own page with four steps, each prefilled from your project. Nothing is saved until a step's save or confirm button is used.
 
 1. **About your business.** Check what you sell, who buys each offering, the situations and attributes that shape the choice, buyer roles, category terms, jobs to be done and your business model. Service areas appear for local and regional businesses. **Anything else for this run** steers this run only, without changing saved facts.
 2. **Topics.** Keep, rename or remove your topics, or add your own. **Suggest topics** proposes buyer-facing categories from your saved offerings, without your brand or product-line names; each suggestion uses AI credits. **Confirm topics** saves the whole plan at once.
 3. **Distribution.** Choose the number of prompts, the branded share (20% by default), the share of competitor-alternative questions (available once you track a competitor), the intent mix (25/50/25 by default), the personas to balance across, and whether to use your search data. Each search the run would use is listed by topic, and you can untick any of them.
-4. **Review.** Accept the suggestions worth tracking. A coverage line for each topic and each part of the mix shows whether it is on target, short or empty; **More** on a short or empty line generates again for just that topic or share.
+4. **Review.** Select the suggestions worth tracking and choose **Track**. A coverage line for each topic and each part of the mix shows whether it is on target, short or empty; **More** on a short or empty line generates again for just that topic or share.
 
 Suggestions are short questions about one need each, planned across awareness, consideration and decision. Questions that join two alternatives, run past 16 words or closely repeat another prompt are dropped before you see them, and a branded question may only describe you with attributes you confirmed.
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQuery } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import type { Topic } from '@citeladder/contracts';
 import { promptsMutations } from '@/lib/api/prompts';
+import { queryKeys } from '@/lib/api/query-keys';
 import { topicsQueries } from '@/lib/api/topics';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { BUILDER_OFFERING_PARAM, PROMPTS_HREF } from '@/lib/prompts/routes';
@@ -65,6 +66,8 @@ function BuilderForProject() {
   // server already staged is replayed instead of drafted (and paid for) again.
   const generateKey = useRef<{ request: string; key: string } | null>(null);
   const generateMutation = useMutation(promptsMutations.generate(scope, ensurePromptSet));
+  // A run started on an earlier visit is still in flight: no second paid run.
+  const isGenerating = useIsMutating({ mutationKey: queryKeys.prompts.generate(scope) }) > 0;
   const generatePrompts = async (input: PromptGenerateRequest) => {
     const request = JSON.stringify(input);
     if (generateKey.current?.request !== request)
@@ -104,7 +107,7 @@ function BuilderForProject() {
       topics={topics}
       hasCompetitors={project.competitors.length > 0}
       generate={generatePrompts}
-      isGenerating={generateMutation.isPending}
+      isGenerating={isGenerating}
       generateError={generateMutation.isError ? generateMutation.error : undefined}
       review={review}
       sets={{ loading: isLoading, error: error !== null, retry }}

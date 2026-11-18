@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import type {
@@ -12,12 +12,14 @@ import type {
   SeedQueries,
   Topic,
 } from '@citeladder/contracts';
-import { makeFormLimits } from '@/test/fixtures/prompts';
+import { makeProject } from '@/test/fixtures/project';
+import { makeFormLimits, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import type { BuilderStep } from './builder-steps';
 import { PromptBuilder } from './prompt-builder';
+import { PromptBuilderPage } from './prompt-builder-page';
 
 const projectId = '55555555-5555-4555-8555-555555555555';
 const workspaceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -324,5 +326,67 @@ describe('PromptBuilder', () => {
     expect(track).toHaveTextContent('Track 1 prompt');
     await user.click(track);
     expect(accept).toHaveBeenCalledWith(['b']);
+  });
+});
+
+describe('PromptBuilderPage', () => {
+  it('keeps a run from an earlier visit pending, and never moves a person who left', async () => {
+    const user = userEvent.setup({ delay: null });
+    serve({});
+    const set = makeSet([]);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let runs = 0;
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([set]))),
+      http.get(`/api/v1/prompt-sets/${set.id}/candidates`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${projectId}/topics`, () => HttpResponse.json([topic])),
+      http.post(`/api/v1/prompt-sets/${set.id}/generate`, async () => {
+        runs += 1;
+        await held;
+        return HttpResponse.json(result);
+      }),
+    );
+    // Each visit lands on Distribution; leaving goes back to Prompts.
+    const visit = (onPage: boolean) => {
+      window.history.pushState(null, '', onPage ? '/prompts/build?step=distribution' : '/prompts');
+      return onPage;
+    };
+    function Visits() {
+      const [onPage, setOnPage] = useState(() => visit(true));
+      return (
+        <>
+          {onPage ? <PromptBuilderPage /> : null}
+          <button type="button" onClick={() => setOnPage(visit(!onPage))}>
+            {onPage ? 'Leave' : 'Return'}
+          </button>
+        </>
+      );
+    }
+    const project = makeProject({ id: projectId });
+    const { queryClient } = renderWithProviders(<Visits />, {
+      projectSelection: {
+        projects: [project],
+        activeProject: project,
+        activeProjectId: project.id,
+        status: 'ready',
+      },
+    });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(runs).toBe(1));
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+    expect(await screen.findByRole('button', { name: /Generating/ })).toBeDisabled();
+
+    // The run finishes after the person left: their address keeps no builder step.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    release();
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    expect(window.location.pathname + window.location.search).toBe('/prompts');
+    expect(runs).toBe(1);
   });
 });

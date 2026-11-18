@@ -1,5 +1,5 @@
 import { stringUrlCodec } from '@/lib/navigation/url-state';
-import { BUILDER_STEP_PARAM } from '@/lib/prompts/routes';
+import { BUILDER_STEP_PARAM, PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
 export type BuilderStep = 'business' | 'topics' | 'distribution' | 'review';
 
@@ -16,6 +16,11 @@ export const builderStepCodec = stringUrlCodec<BuilderStep>(
   'business',
 );
 
-/** The step the address shows now, past any render a pending save started in. */
-export const liveBuilderStep = (): BuilderStep =>
-  builderStepCodec.parse(new URLSearchParams(window.location.search).get(BUILDER_STEP_PARAM));
+/**
+ * The step the address shows now, past any render a pending save or run started
+ * in; `null` once the person has left the builder, so its step never follows them.
+ */
+export const liveBuilderStep = (): BuilderStep | null =>
+  window.location.pathname === PROMPT_BUILDER_HREF
+    ? builderStepCodec.parse(new URLSearchParams(window.location.search).get(BUILDER_STEP_PARAM))
+    : null;

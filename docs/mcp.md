@@ -229,8 +229,8 @@ The Prompt Builder tools call the same command owners as the builder's routes
 holds and owner errors. A model call cannot be rehearsed inside a rolled-back
 transaction, so they are not prepared: the server instructions and the
 `prompt-discovery` plugin skill require the user's yes before each, and
-`generate_prompts` activates nothing (only Accept in Prompts does). Its required
-`run_key` is the generation owner's idempotency key: a retry with the same key
+`generate_prompts` activates nothing (only Track in the Prompt Builder does).
+Its required `run_key` is the generation owner's idempotency key: a retry with the same key
 and request replays the persisted run instead of spending a second one, and the
 same key for a different request is refused.
 

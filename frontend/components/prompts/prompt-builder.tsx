@@ -19,7 +19,7 @@ import { BuilderBusinessStep } from './builder-business-step';
 import { BuilderDistributionStep } from './builder-distribution-step';
 import { BuilderCancel, BuilderStepActions } from './builder-footer';
 import { BuilderReviewStep, RunCoverage } from './builder-review-step';
-import { BUILDER_STEPS, builderStepCodec } from './builder-steps';
+import { BUILDER_STEPS, builderStepCodec, liveBuilderStep } from './builder-steps';
 import { BuilderTopicsStep } from './builder-topics-step';
 import { CandidateReviewPanel, useCandidateSelection } from './candidate-review';
 import { GenerateErrorAlert, GenerateResultAlert } from './generation-alerts';
@@ -86,7 +86,7 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
         ? { ...current, results: [...current.results, result] }
         : { request, results: [result] },
     );
-    setStep('review');
+    if (liveBuilderStep() !== null) setStep('review');
   };
   const last = run?.results.at(-1);
   const runNotices = (

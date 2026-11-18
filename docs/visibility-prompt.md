@@ -32,7 +32,7 @@ binding and generation settings; `config/api.json` owns HTTP admission limits.
 Native prompt normalization owns persisted identity. Generation defaults
 resolve at use time.
 
-The **Prompt Builder** (a right-hand sheet on Prompts, below) is where people
+The **Prompt Builder** (its own page under Prompts, below) is where people
 shape generation: business facts, topics, distribution, search seeds and count,
 each prefilled from saved data. It samples the broad market by default: the
 category's buyer questions across offerings, stages, intents and personas, with
@@ -65,7 +65,8 @@ over-allowance accept writes nothing. Unreviewed candidates expire after
 `GENERATION_CANDIDATE_RETENTION_HOURS` and outcome records after
 `GENERATION_REJECTED_OUTCOME_RETENTION_DAYS`; expired rows are hidden and
 purged by the next generation or review. The Prompt Builder's review step shows the pending list with
-select-all and **Accept selected** / **Reject selected**; within a run, rows
+select-all and **Reject selected**, and its footer's **Track** accepts the
+selection; within a run, rows
 the quality judge flagged are listed last with advisory labels and stay
 selectable.
 
@@ -361,20 +362,23 @@ prompt text or a proposal of its own:
 
 - In the Agent it saves a **prompt plan** following the builder's steps (facts
   to fix, topics to keep or change, mix and search data) and offers **Open
-  Prompt Builder** (`/prompts?generate=1`); the Agent stays read-only.
+  Prompt Builder** (`/prompts/build`); the Agent stays read-only.
 - Over [MCP](mcp.md), a connection with Allow changes runs the steps through
   the builder's own owners: `get_project_business_context`, then
   `preview_topics` and `confirm_topics`, then `read_seed_queries`, then
   `generate_prompts` with the agreed distribution and seeds. Candidates stay
-  staged; the result links to `/prompts?review=1`, where only a person's Accept
-  activates them.
+  staged; the result links to `/prompts/build?step=review`, where only a
+  person's Track activates them.
 
 Review intent survives loading; failed reads offer retry, and an empty or
 expired batch is explained rather than opening generation setup. Prompt-set
 creation waits for its list read and serializes local attempts per project.
 
-The Prompt Builder is a right-hand sheet with four steps; each open is a fresh
-session, and nothing it edits is written until its step saves or confirms.
+The Prompt Builder is the page `/prompts/build`: four steps down the left (the
+current one in the address as `?step=`, done ones reopenable), a fixed footer.
+Each visit is a fresh session, and nothing it edits is written until its step
+saves or confirms. A generation run still in flight from an earlier visit keeps
+Generate pending, so it is never paid for twice.
 
 1. **About your business**: offerings, buyer roles, each offering's audiences,
    situations/constraints and attributes, service areas (only for a local or regional
@@ -430,9 +434,8 @@ neither filter, and one with no completed answer shows its sources as unknown,
 not none. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
-the project has an active prompt. `/prompts?generate=1` opens the Prompt
-Builder at its first step and `/prompts?review=1` at review, once per arrival,
-and the parameter is then removed from the URL.
+the project has an active prompt. Prompt Builder and the empty states open
+`/prompts/build`; waiting suggestions link to its review step.
 
 People control generation end to end in the Prompt Builder: topics, search
 queries and their source, distribution (branded share, competitor-alternative
