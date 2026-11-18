@@ -8,7 +8,6 @@ import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
 import { storedInstant, utcTextOf, wireUtc } from '../db/timestamps.ts';
 import type { RunScope, TrendSource } from './runs.ts';
 import type { TrendPoint } from './trend-folding.ts';
@@ -35,33 +34,16 @@ function modelChanges([previous, next]: Pair): VisibilityTrendEvent[] {
   });
 }
 
-/** Runs whose frozen panel hash differs from the run before them. */
-async function panelChangedPairs(
-  db: Database,
-  scope: RunScope,
-  pairs: readonly Pair[],
-): Promise<Pair[]> {
-  if (pairs.length === 0) return [];
-  const rows = await db
-    .selectFrom('audits')
-    .select(['id', 'configuration'])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('id', 'in', [...new Set(pairs.flat().map((source) => source.auditId))])
-    .execute();
-  const hashes = new Map(rows.map((row) => [row.id, record(row.configuration).panel_hash]));
-  return pairs.filter(
-    ([previous, next]) => hashes.get(previous.auditId) !== hashes.get(next.auditId),
-  );
-}
-
-/** Prompts added, archived or removed between each pair's frozen prompt snapshots. */
+/**
+ * Prompts added, archived or removed between each pair's frozen prompt
+ * snapshots, read only for pairs whose frozen panel hash differs.
+ */
 async function panelChanges(
   db: Database,
   scope: RunScope,
   pairs: readonly Pair[],
 ): Promise<Map<string, VisibilityTrendEvent>> {
-  const changed = await panelChangedPairs(db, scope, pairs);
+  const changed = pairs.filter(([previous, next]) => previous.panelHash !== next.panelHash);
   const events = new Map<string, VisibilityTrendEvent>();
   if (changed.length === 0) return events;
   const snapshots = await db
