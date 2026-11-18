@@ -4,7 +4,11 @@
  * `container-app` body, DocsSidebar as the rail, the page (its ArticleHeader
  * and Prose) in the reading column, a Toc on the right and an ArticlePager
  * and the docs footer at the end. `wide` is for reference pages: no Toc, and
- * the generated blocks take the full column. No hero, illustrations or CTAs;
+ * the generated blocks take the full column. An `aside` slot (an endpoint's
+ * examples) is a column level with the title from 1280px, held under the bar
+ * while the page scrolls, and follows the page body below. Only the page
+ * scrolls the reading column: the rail and the side columns fill the viewport
+ * under the bar and scroll inside themselves. No hero, illustrations or CTAs;
  * Open app is the one filled control.
  */
 import { websiteHref } from '@/lib/config/app-link';
@@ -44,6 +48,7 @@ const {
   updated,
   jsonLd,
 } = Astro.props;
+const hasAside = Astro.slots.has('aside');
 const path = Astro.url.pathname;
 const contact = websiteHref('/contact');
 ---
@@ -77,13 +82,26 @@ const contact = websiteHref('/contact');
       <div class="cl-docs-body">
         <DocLayout toc={wide ? [] : toc}>
           <DocsSidebar slot="rail" />
-          <slot />
-          {(previous || next) && <ArticlePager previous={previous} next={next} />}
-          <footer class="cl-docs-footer">
-            <span>© CiteLadder documentation</span>
-            <a href={contact}>Get help</a>
-            <a href={websiteHref('/privacy')}>Privacy</a>
-          </footer>
+          <div class:list={['cl-docs-page', { 'cl-docs-page--aside': hasAside }]}>
+            <div class="cl-docs-page-main">
+              <div class="cl-docs-page-body"><slot /></div>
+              <div class="cl-docs-page-end">
+                {(previous || next) && <ArticlePager previous={previous} next={next} />}
+                <footer class="cl-docs-footer">
+                  <span>© CiteLadder documentation</span>
+                  <a href={contact}>Get help</a>
+                  <a href={websiteHref('/privacy')}>Privacy</a>
+                </footer>
+              </div>
+            </div>
+            {
+              hasAside && (
+                <aside class="cl-docs-page-aside" aria-label="Examples">
+                  <slot name="aside" />
+                </aside>
+              )
+            }
+          </div>
           <a slot="toc-end" class="cl-docs-help" href={contact}>
             Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden />
           </a>
@@ -96,13 +114,65 @@ const contact = websiteHref('/contact');
 <style>
   .cl-docs-shell {
     min-height: 100vh;
-    background: var(--color-surface);
+    background: var(--color-site-page);
     color: var(--color-ink);
   }
+  /* No bottom padding here: the reading column carries it, so the grid ends
+     at the page's end and the sticky columns are never pushed up there. */
   .cl-docs-body {
     max-width: var(--container-app);
     margin: 0 auto;
-    padding: 40px 24px 96px;
+    padding: 40px 24px 0;
+  }
+  .cl-docs-shell :global(:is(.cl-doc-rail, .cl-doc-toc)) {
+    top: calc(var(--docs-bar-height) + 40px);
+    height: calc(100dvh - var(--docs-bar-height) - 40px);
+    max-height: none;
+    padding-bottom: 24px;
+    overscroll-behavior: contain;
+  }
+  .cl-docs-page,
+  .cl-docs-page-main,
+  .cl-docs-page-body,
+  .cl-docs-page-end {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    min-width: 0;
+  }
+  .cl-docs-page-end {
+    padding-bottom: 96px;
+  }
+  .cl-docs-page--aside .cl-docs-page-main {
+    display: contents;
+  }
+  .cl-docs-page-body {
+    order: 1;
+  }
+  .cl-docs-page-aside {
+    order: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .cl-docs-page-end {
+    order: 3;
+  }
+  @media (min-width: 1280px) {
+    .cl-docs-page--aside {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+      align-items: start;
+      gap: 48px;
+    }
+    .cl-docs-page--aside .cl-docs-page-main {
+      display: flex;
+    }
+    .cl-docs-page-aside {
+      position: sticky;
+      top: calc(var(--docs-bar-height) + 40px);
+      max-height: calc(100dvh - var(--docs-bar-height) - 64px);
+    }
   }
   .cl-docs-footer {
     display: flex;
@@ -137,12 +207,19 @@ const contact = websiteHref('/contact');
   }
   @media (max-width: 899px) {
     .cl-docs-body {
-      padding: 32px 20px 64px;
+      padding: 32px 20px 0;
+    }
+    .cl-docs-page-end {
+      padding-bottom: 64px;
     }
   }
   @media print {
     .cl-docs-body {
       padding: 0;
+    }
+    .cl-docs-page-aside {
+      position: static;
+      max-height: none;
     }
     .cl-docs-footer,
     .cl-docs-shell :global(.cl-pager) {

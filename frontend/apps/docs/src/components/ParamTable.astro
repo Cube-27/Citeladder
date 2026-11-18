@@ -2,8 +2,9 @@
 /**
  * ParamTable — the reference blocks' parameter table (DocsParams in the
  * system): a 36px header over a `line` hairline, like prose tables, and
- * `line` rules with wrapping cells. The Parameter cell holds the mono name, its
- * type and whether it is required; Description shows only when the source
+ * `line` rules with wrapping cells. The Parameter cell holds the mono name
+ * over small tags: its type, where the request carries it (API parameters)
+ * and "required" in `negative` when it is; Description shows only when the source
  * describes a row, with the allowed values and the default under it. Named
  * API schemas link to their entry. Columns are fixed, so rows never reflow.
  */
@@ -12,8 +13,10 @@ import { schemaHref, type ReferenceRow } from '../lib/json-schema';
 interface Props {
   title: string;
   rows: readonly ReferenceRow[];
+  /** Where an API request carries the rows (path, query, header or body). */
+  location?: string;
 }
-const { title, rows } = Astro.props;
+const { title, rows, location } = Astro.props;
 const described = rows.some((row) => row.description || row.values.length || row.defaultValue);
 ---
 
@@ -36,14 +39,13 @@ const described = rows.some((row) => row.description || row.values.length || row
                 <div class="cl-docs-param">
                   <code class="cl-docs-param-name">{row.name}</code>
                   <span class="cl-docs-param-meta">
-                    <span>
+                    <span class="cl-docs-param-tag">
                       {row.type.map((part) =>
                         part.schema ? <a href={schemaHref(part.schema)}>{part.text}</a> : part.text,
                       )}
                     </span>
-                    <span class:list={{ 'cl-docs-param-req': row.required }}>
-                      {row.required ? 'Required' : 'Optional'}
-                    </span>
+                    {location && <span class="cl-docs-param-tag">{location}</span>}
+                    {row.required && <span class="cl-docs-param-tag is-required">required</span>}
                   </span>
                 </div>
               </td>
@@ -125,7 +127,7 @@ const described = rows.some((row) => row.description || row.values.length || row
   .cl-docs-param {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
   }
   .cl-docs-param-name {
@@ -139,12 +141,21 @@ const described = rows.some((row) => row.description || row.values.length || row
   .cl-docs-param-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0 8px;
-    color: var(--color-ink-muted);
+    gap: 4px;
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
     overflow-wrap: anywhere;
+  }
+  .cl-docs-param-tag {
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-secondary);
+  }
+  .cl-docs-param-tag.is-required {
+    background: var(--color-negative-soft);
+    color: var(--color-negative);
   }
   .cl-docs-param-meta a {
     color: var(--color-ink);
@@ -152,9 +163,6 @@ const described = rows.some((row) => row.description || row.values.length || row
     text-decoration-color: var(--color-line-control);
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
-  }
-  .cl-docs-param-req {
-    color: var(--color-ink);
   }
   .cl-docs-param-desc {
     display: flex;

@@ -3,6 +3,7 @@
  * built from the operation's path, parameters and example body.
  */
 import type { ApiOperation } from './api-reference';
+import type { CodeLanguage } from './code-highlight';
 
 const API_ORIGIN = 'https://api.citeladder.com';
 const FAKE_UUID = '00000000-0000-4000-8000-000000000001';
@@ -11,7 +12,7 @@ const IDEMPOTENCY_KEY = 'Idempotency-Key';
 type Snippet = {
   id: 'curl' | 'javascript' | 'python';
   label: string;
-  language: string;
+  language: CodeLanguage;
   code: string;
 };
 
@@ -104,7 +105,7 @@ export function buildSnippets(operation: ApiOperation): Snippet[] {
   ].join('\n');
 
   return [
-    { id: 'curl', label: 'cURL', language: 'bash', code: curl },
+    { id: 'curl', label: 'cURL', language: 'shell', code: curl },
     { id: 'javascript', label: 'JavaScript', language: 'javascript', code: javascript },
     { id: 'python', label: 'Python', language: 'python', code: python },
   ];

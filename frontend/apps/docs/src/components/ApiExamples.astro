@@ -1,42 +1,45 @@
 ---
 /**
- * ApiExamples — the endpoint page's right column: a request card whose bar
+ * ApiExamples — the endpoint page's examples column: a request card whose bar
  * switches the language (cURL, JavaScript, Python) beside a Copy button, and
- * a response card whose bar names the status beside its own Copy button. Both
- * cards are CodeBlock markup, so the system's copy behaviour and look apply.
+ * a response card whose bar names the status beside its own Copy button, the
+ * selected tab on the accent underline. Both cards are CodeBlock markup, so
+ * the system's copy behaviour and look apply, with the samples coloured at
+ * build time (code-highlight.ts). Held in a viewport-high column, the cards
+ * share its height and each scrolls inside itself; the column never scrolls.
  */
 import CodeBlock from '@/components/content/CodeBlock.astro';
 import type { ApiOperation } from '../lib/api-reference';
 import ApiCopyButton from './ApiCopyButton.astro';
 import { buildSnippets } from '../lib/api-snippets';
+import { highlightHtml } from '../lib/code-highlight';
 
 interface Props {
   operation: ApiOperation;
 }
 const { operation } = Astro.props;
-const snippets = buildSnippets(operation);
+const snippets = buildSnippets(operation).map((snippet) => ({
+  ...snippet,
+  html: highlightHtml(snippet.code, snippet.language),
+}));
 const { status, body } = operation.response;
 const responseExample =
   body?.example === null || body?.example === undefined
     ? null
-    : JSON.stringify(body.example, null, 2);
+    : highlightHtml(JSON.stringify(body.example, null, 2), 'json');
 ---
 
 <CodeBlock />
-<div class="cl-docs-examples" data-api-examples>
-  <figure
-    class="cl-code"
-    data-api-request
-    data-snippets={JSON.stringify(Object.fromEntries(snippets.map((s) => [s.id, s.code])))}
-  >
+<div class="cl-docs-examples">
+  <figure class="cl-code" data-api-request>
     <figcaption class="cl-code-bar">
-      <div class="cl-docs-lang-tabs" role="tablist" aria-label="Request language">
+      <div class="cl-docs-code-tabs" role="tablist" aria-label="Request language">
         {
           snippets.map((snippet, index) => (
             <button
               type="button"
               role="tab"
-              class="cl-docs-lang-tab"
+              class="cl-docs-code-tab"
               aria-selected={index === 0 ? 'true' : 'false'}
               id={`api-lang-${snippet.id}`}
               aria-controls="api-request-panel"
@@ -50,18 +53,24 @@ const responseExample =
       </div>
       <ApiCopyButton />
     </figcaption>
-    <pre class="cl-code-pre" role="tabpanel" id="api-request-panel" aria-labelledby={`api-lang-${snippets[0]?.id}`} tabindex="0"><code
-        >{snippets[0]?.code}</code
-      ></pre>
+    {snippets.map((snippet) => <template data-api-snippet={snippet.id} set:html={snippet.html} />)}
+    <pre
+      class="cl-code-pre"
+      role="tabpanel"
+      id="api-request-panel"
+      aria-labelledby={`api-lang-${snippets[0]?.id}`}
+      tabindex="0"><code set:html={snippets[0]?.html} /></pre>
   </figure>
   {
     responseExample && (
       <figure class="cl-code">
         <figcaption class="cl-code-bar">
-          <span class="cl-docs-status-tab">{status}</span>
+          <span class="cl-docs-code-tab" data-on>
+            {status}
+          </span>
           <ApiCopyButton />
         </figcaption>
-        <pre class="cl-code-pre" tabindex="0"><code>{responseExample}</code></pre>
+        <pre class="cl-code-pre" tabindex="0"><code set:html={responseExample} /></pre>
       </figure>
     )
   }
@@ -73,23 +82,50 @@ const responseExample =
     flex-direction: column;
     gap: 16px;
     min-width: 0;
+    min-height: 0;
   }
-  /* The response body is long: it scrolls inside its card, not the page. */
-  .cl-docs-examples :global(.cl-code-pre) {
-    max-height: 420px;
-  }
-  .cl-docs-lang-tabs {
+  .cl-docs-examples :global(.cl-code) {
     display: flex;
-    gap: 2px;
+    flex-direction: column;
+    min-height: 0;
   }
-  .cl-docs-lang-tab,
-  .cl-docs-status-tab {
+  .cl-docs-examples :global(.cl-code-bar) {
+    flex-shrink: 0;
+  }
+  /* A long sample scrolls inside its card, on the narrow scrollbar, and
+     never hands the scroll on to the page. */
+  .cl-docs-examples :global(.cl-code-pre) {
+    min-height: 0;
+    max-height: 420px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  /* In the held column the request keeps its height up to 40% of the
+     viewport and the response takes the rest. */
+  @media (min-width: 1280px) {
+    .cl-docs-examples :global(.cl-code-pre) {
+      max-height: none;
+    }
+    .cl-docs-examples [data-api-request] {
+      flex-shrink: 0;
+    }
+    .cl-docs-examples [data-api-request] :global(.cl-code-pre) {
+      max-height: 40vh;
+    }
+  }
+  .cl-docs-code-tabs {
+    display: flex;
+    align-self: stretch;
+    gap: 4px;
+  }
+  .cl-docs-code-tab {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    height: var(--control-sm);
+    align-self: stretch;
     padding: 0 8px;
     border: 0;
-    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--color-ink-muted);
     font-family: var(--font-mono);
@@ -97,24 +133,52 @@ const responseExample =
     line-height: var(--text-eyebrow--line-height);
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
+    transition: color var(--motion-fast) var(--ease-standard);
   }
-  .cl-docs-lang-tab {
+  button.cl-docs-code-tab {
     cursor: pointer;
   }
-  .cl-docs-lang-tab:hover,
-  .cl-docs-lang-tab[aria-selected='true'],
-  .cl-docs-status-tab {
-    background: var(--color-surface);
+  .cl-docs-code-tab::after {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    content: '';
+  }
+  .cl-docs-code-tab:hover,
+  .cl-docs-code-tab:is([aria-selected='true'], [data-on]) {
     color: var(--color-ink);
+  }
+  .cl-docs-code-tab:is([aria-selected='true'], [data-on])::after {
+    background: var(--color-accent);
+  }
+  .cl-docs-examples :global(.cl-tok-key) {
+    color: var(--color-info);
+  }
+  .cl-docs-examples :global(.cl-tok-string) {
+    color: var(--color-positive);
+  }
+  .cl-docs-examples :global(.cl-tok-number) {
+    color: var(--color-warning);
+  }
+  .cl-docs-examples :global(.cl-tok-literal) {
+    color: var(--color-negative);
+  }
+  .cl-docs-examples :global(.cl-tok-keyword) {
+    color: var(--color-accent-ink);
+  }
+  .cl-docs-examples :global(.cl-tok-comment) {
+    color: var(--color-ink-muted);
   }
 </style>
 
 <script>
-  // The language tabs swap the one code element's text, so Copy reads what is shown.
+  // The language tabs swap in the chosen sample's coloured markup, so Copy
+  // reads what is shown.
   for (const root of document.querySelectorAll<HTMLElement>('[data-api-request]')) {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-api-lang]')];
-    const code = root.querySelector('code');
-    const snippets: Record<string, string> = JSON.parse(root.dataset.snippets ?? '{}');
+    const code = root.querySelector('pre code');
     const select = (selected: HTMLButtonElement) => {
       for (const tab of tabs) {
         const on = tab === selected;
@@ -122,7 +186,10 @@ const responseExample =
         tab.tabIndex = on ? 0 : -1;
       }
       code?.parentElement?.setAttribute('aria-labelledby', selected.id);
-      if (code) code.textContent = snippets[selected.dataset.apiLang ?? ''] ?? '';
+      const sample = root.querySelector<HTMLTemplateElement>(
+        `template[data-api-snippet="${selected.dataset.apiLang ?? ''}"]`,
+      );
+      if (code && sample) code.replaceChildren(sample.content.cloneNode(true));
     };
     for (const [index, tab] of tabs.entries()) {
       tab.addEventListener('click', () => select(tab));

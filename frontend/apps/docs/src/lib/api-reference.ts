@@ -112,6 +112,7 @@ export function buildOperations(document: ApiDocument) {
         scope: operation['x-citeladder-scope'] ?? null,
         parameters: PARAMETER_LOCATIONS.map((location) => ({
           title: PARAMETER_TITLES[location],
+          location,
           rows: (operation.parameters ?? [])
             .filter((parameter) => parameter.in === location)
             .map((parameter) =>
