@@ -11,16 +11,11 @@ export type FanoutSummary = Readonly<{
 }>;
 
 /**
- * Whether the server's figures describe the population the table draws from.
- *
- * They do only when the summary has landed AND the table is not narrowed past
- * what the fanout endpoint takes — it accepts the run/engine/cohort scope, but
- * not the prompt, outcome, competitor, domain or URL filters the evidence
- * table also applies. When it is narrowed, the server is counting a larger
- * population than the reader can see.
+ * Whether the server's figures have landed. The fanout endpoint takes every
+ * filter the evidence table applies, so once they land they describe the
+ * population the table draws from.
  */
-export function isSelectionWide(summary: FanoutSummary, scopeNarrowed: boolean): boolean {
-  if (scopeNarrowed) return false;
+export function isSelectionWide(summary: FanoutSummary): boolean {
   return summary.distinctQueries !== null && summary.eventCount !== null;
 }
 
@@ -29,11 +24,8 @@ export function isSelectionWide(summary: FanoutSummary, scopeNarrowed: boolean):
  * the table shows. Decided here so the two notes below and the headline can
  * never disagree about whose population they describe.
  */
-export function selectionMatchedQueries(
-  summary: FanoutSummary,
-  scopeNarrowed: boolean,
-): number | null {
-  return isSelectionWide(summary, scopeNarrowed) ? summary.matchedQueries : null;
+export function selectionMatchedQueries(summary: FanoutSummary): number | null {
+  return isSelectionWide(summary) ? summary.matchedQueries : null;
 }
 
 /**
@@ -44,8 +36,7 @@ export function selectionMatchedQueries(
  * whichever evidence window happened to be loaded and shown under these same
  * labels, so they moved on every page.
  *
- * When `selectionWide` is false the server cannot speak for what the table
- * shows, so the figures come from the loaded window instead and the caption
+ * Until the server's figures land they come from the loaded window instead and the caption
  * changes with them. Selection labels over page numbers is the exact fault
  * this block was written to remove.
  */

@@ -626,10 +626,11 @@ AI Overview expose no retrieval and stay not available, never zero. Provider
 brand entities remain raw supplementary evidence, and nothing records
 query-to-source associations. Query Fanouts uses
 only returned query text, distinguishing unavailable evidence from an explicitly
-empty query list. Neither state claims that no search occurred. Its search terms
-are a per-run fact finalization writes (`audit_fanout_terms`, every cohort's
-returned queries, share change against the previous run that counted terms); a
-run finalized without them reads unavailable. Answer formats and in-text links
+empty query list. Neither state claims that no search occurred. Each exact
+query's count and the tracked brands it names are a per-run fact finalization
+writes (`audit_fanout_terms`, with the previous comparable run); the read counts
+share and change under the tab's filters, and a run finalized without them reads
+its brands as not counted. Answer formats and in-text links
 settle on the response analysis from the scraper envelope; non-scraper engines
 are not applicable. Accepted scraper
 submissions use their frozen recovery window even after the ordinary run deadline;

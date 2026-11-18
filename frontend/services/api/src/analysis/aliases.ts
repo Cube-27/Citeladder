@@ -179,21 +179,6 @@ function firstOccurrence(
   return first;
 }
 
-/** Token spans of every counting occurrence of any alias in already-tokenized text. */
-export function entitySpans(
-  tokens: readonly string[],
-  aliases: readonly string[],
-  entity?: EntityPolicy,
-): { start: number; end: number }[] {
-  return aliases.flatMap((alias) => {
-    const words = normalizeAlias(alias).split(' ').filter(Boolean);
-    if (!words.length) return [];
-    return [...occurrences(tokens, words)]
-      .filter((found) => occurrenceCounts(tokens, found, entity))
-      .map(({ start, end }) => ({ start, end }));
-  });
-}
-
 /** Whether `text` names the entity through any alias, under its matching policy. */
 export function namesEntity(
   text: string,

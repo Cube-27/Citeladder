@@ -47,7 +47,7 @@ export type EvidenceFilters = {
 
 type Scope = ReturnType<typeof evidenceScope>;
 
-function applyFilters(base: Scope, filters: EvidenceFilters): Scope {
+export function applyFilters(base: Scope, filters: EvidenceFilters): Scope {
   let statement = base;
   if (filters.outcome === 'competitor_gap' && !filters.competitor) {
     throw new TrendQueryError('A competitor is required for a competitor gap');
