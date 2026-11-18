@@ -39,6 +39,8 @@ const configurationShape = {
   anthropic_max_uses: z.number().int().nonnegative(),
   openai_max_tool_calls: z.number().int().nonnegative(),
   panel_hash: z.string(),
+  /** Whether the run asked its whole prompt set or prompts a person selected. */
+  prompt_selection: z.enum(['set', 'selected']),
   measurement_policy: z.looseObject(measurementShape),
   engine_routes: z.record(z.string(), frozenRouteSchema),
 };
@@ -83,6 +85,10 @@ const searchRequestShape = {
 };
 /** A search-surface task's frozen request (`request_snapshot`), read field by field. */
 export const readFrozenSearchRequest = (value: unknown) => readFields(searchRequestShape, value);
+
+/** Whether a run asked its whole prompt set; a run frozen before the key existed did. */
+export const askedWholeSet = (configuration: unknown) =>
+  readFrozenConfiguration(configuration).prompt_selection !== 'selected';
 
 /** A stored configuration's typed fields; anything missing or malformed is unavailable. */
 export function readFrozenConfiguration(value: unknown): FrozenConfiguration {

@@ -19,6 +19,7 @@ function source(metrics: Record<string, unknown>, completed: number): TrendSourc
     retrievalEnabled: true,
     modelProvenance: [],
     panelHash: null,
+    wholeSet: true,
     analyzerVersion: 'v1',
     scoringRuleVersion: 'v1',
     totalCompleted: completed,

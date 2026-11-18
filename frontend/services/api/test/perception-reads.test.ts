@@ -10,6 +10,7 @@ import { createApp } from '../src/app.ts';
 import { entitySentiments } from '../src/visibility/perception.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
+import { frozen } from './visibility-read-support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -441,6 +442,49 @@ describe('GET /visibility/perception', () => {
         template_version: VERSIONS.template_version,
         aspects: [],
       },
+    ]);
+  });
+
+  it("trends a pooled period over every measured run in its window, breaking where runs aren't comparable", async () => {
+    const period = await fixtures.tenant();
+    const outsider = await fixtures.tenant();
+    const run = async (owner: Tenant, at: string, panel: string, label: string) => {
+      const id = await fixtures.audit(owner, {
+        completedAt: new Date(at),
+        configuration: { ...frozen({ panel_hash: panel }), ...CONFIGURATION },
+      });
+      await fixtures.metricSnapshot(owner, id, { metrics: { total_completed: 1 } });
+      await answer(owner, id, {
+        outcome: 'classified',
+        entities: [{ name: 'Acme', kind: 'brand', label }],
+      });
+      return id;
+    };
+    await run(period, '2026-03-20T00:00:00Z', 'panel-1', 'negative');
+    const pooled = await run(period, '2026-04-02T00:00:00Z', 'panel-1', 'positive');
+    const other = await run(period, '2026-04-05T00:00:00Z', 'panel-2', 'negative');
+    await run(outsider, '2026-04-03T00:00:00Z', 'panel-1', 'negative');
+
+    const { status, body } = await get(
+      period,
+      `/api/v1/projects/${period.projectId}/visibility/perception`,
+      { audit_ids: pooled, from: '2026-04-01T00:00:00Z', to: '2026-04-08T00:00:00Z' },
+    );
+
+    expect(status).toBe(200);
+    // The headline stays on the pool; the trend covers the period.
+    expect(body).toMatchObject({
+      source_audit_ids: [pooled],
+      brand: { score: { classified: 1, net_sentiment: 100 } },
+    });
+    expect(
+      (body.trend as { audit_id: string; comparable: boolean }[]).map((point) => [
+        point.audit_id,
+        point.comparable,
+      ]),
+    ).toEqual([
+      [pooled, true],
+      [other, false],
     ]);
   });
 

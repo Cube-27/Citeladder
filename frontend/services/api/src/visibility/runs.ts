@@ -14,12 +14,13 @@ import {
   modelProvenanceFor,
   type ModelProvenance,
 } from '../analysis/provenance.ts';
-import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
+import { askedWholeSet, readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { storedInstant, timestamptz, utcTextOf } from '../db/timestamps.ts';
 import type { ParsedDatetime } from '../http/datetimes.ts';
 import { onlyOf } from '../lists.ts';
+import type { RunSelection } from './selection.ts';
 import {
   cohortMetrics,
   engineMetrics,
@@ -164,6 +165,34 @@ export async function loadMeasuredRuns(
 }
 
 /** Each of the workspace's runs' frozen engine routes. */
+/**
+ * A pooled period's trend selection: the newest measured runs of its window
+ * in the pool's market, whatever their configuration, so a trend breaks where
+ * runs aren't comparable instead of showing the pool alone. Null unless the
+ * already authorized `selection` names a pool over a window.
+ */
+export async function periodTrendSelection(
+  db: Database,
+  selection: RunSelection,
+): Promise<RunSelection | null> {
+  const [pooled] = selection.auditIds ?? [];
+  if (pooled === undefined || (selection.fromAt === null && selection.toAt === null)) return null;
+  const run = await db
+    .selectFrom('audits')
+    .select('market_id')
+    .where('workspace_id', '=', selection.workspaceId)
+    .where('id', '=', pooled)
+    .executeTakeFirstOrThrow();
+  const runs = await loadMeasuredRuns(
+    db,
+    { ...selection, marketId: run.market_id },
+    { fromAt: selection.fromAt, toAt: selection.toAt, newest: visibility.selection_max_runs },
+  );
+  if (runs.length === 0) return null;
+  const auditIds = runs.map((measured) => measured.auditId);
+  return { ...selection, auditId: null, auditIds, fromAt: null, toAt: null };
+}
+
 export async function engineSnapshots(
   db: Database,
   workspaceId: string,
@@ -215,6 +244,8 @@ export type TrendSource = {
   retrievalEnabled: boolean | null;
   modelProvenance: ModelProvenance[];
   panelHash: string | null;
+  /** False for a run of selected prompts: its panel is a subset, not a change. */
+  wholeSet: boolean;
   analyzerVersion: string;
   scoringRuleVersion: string;
   totalCompleted: number;
@@ -254,6 +285,7 @@ export function trendSource(
     retrievalEnabled: auditFrozenRetrievalEnabled(run.configuration),
     modelProvenance: run.provenance,
     panelHash: readFrozenConfiguration(run.configuration).panel_hash ?? null,
+    wholeSet: askedWholeSet(run.configuration),
     analyzerVersion: run.analyzerVersion,
     scoringRuleVersion: run.scoringRuleVersion,
     totalCompleted: metricCount(metrics.total_completed),

@@ -14,6 +14,7 @@ import {
   type PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
 
+import { frozenComparisonKey } from '../analysis/comparison.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcTextOf, wireUtc } from '../db/timestamps.ts';
@@ -29,6 +30,7 @@ import {
   entityScores,
   mentionStatus,
   perceptionSummary,
+  perceptionTrend,
   persistedOutcomeSchema,
   quoteOrder,
   type Mention,
@@ -37,6 +39,7 @@ import {
 import { isNamed } from '../perception/passages.ts';
 import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
+import { periodTrendSelection } from './runs.ts';
 import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const QUOTES_CURSOR_SCOPE = 'visibility.perception.quotes';
@@ -209,6 +212,7 @@ async function selectionAnswers(
         metrics: row.versions.metrics_version,
         model: row.versions.model,
       },
+      comparisonKey: frozenComparisonKey(row.configuration, scoped.logicalEngine),
       mentions: mentionsOf(assessments, perceived.get(row.id)).map(({ mention }) => mention),
       brandRecommendation: assessments.find((row) => row.entity_kind === 'brand')?.state ?? null,
       topicId: row.topic_id,
@@ -226,8 +230,17 @@ export async function getPerception(
   db: Database,
   selection: RunSelection,
 ): Promise<PerceptionResponse> {
-  const { answers, auditIds } = await selectionAnswers(db, selection, { citations: true });
-  return { ...perceptionSummary(answers, policy.perception), source_audit_ids: auditIds };
+  const scoped = await scopedSelection(db, selection);
+  const [{ answers, auditIds }, period] = await Promise.all([
+    selectionAnswers(db, scoped, { citations: true }),
+    periodTrendSelection(db, scoped),
+  ]);
+  const summary = perceptionSummary(answers, policy.perception);
+  // The headline reads the pool; a pooled period's trend reads every run in it.
+  const trend = period
+    ? perceptionTrend((await selectionAnswers(db, period, { citations: false })).answers)
+    : summary.trend;
+  return { ...summary, trend, source_audit_ids: auditIds };
 }
 
 /**

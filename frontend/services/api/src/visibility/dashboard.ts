@@ -349,6 +349,8 @@ function configurationGroup(source: TrendSource): string {
   return `${source.comparisonKey || source.auditId}:${source.analyzerVersion}:${source.scoringRuleVersion}`;
 }
 
+const runsWholeSet = (sources: readonly TrendSource[]) => sources.some((source) => source.wholeSet);
+
 function rangeGroups(
   runs: readonly MeasuredRun[],
   query: Pick<DashboardQuery, 'logicalEngine' | 'cohort' | 'configurationKey'>,
@@ -365,11 +367,14 @@ function rangeGroups(
   );
   if (groups.size === 0)
     throw new AnalysisNotFoundError('No measurements in the selected period', 'not_measured');
-  // The configuration measured most recently, unless the reader chose one.
+  // The configuration measured most recently, unless the reader chose one;
+  // a whole prompt set wins over runs of selected prompts.
   let key = query.configurationKey;
   if (key === null) {
     let latest: TrendSource | null = null;
+    const anyWholeSet = runsWholeSet([...groups.values()].flat());
     for (const [group, sources] of groups) {
+      if (anyWholeSet && !runsWholeSet(sources)) continue;
       const last = lastOf(sources);
       if (latest === null || last.completedAt > latest.completedAt) {
         key = group;

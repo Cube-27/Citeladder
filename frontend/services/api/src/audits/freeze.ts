@@ -534,6 +534,8 @@ export async function prepareAudit(
     fact_check: factCheck,
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
+    // A selection's panel differs from the set's without the set changing.
+    prompt_selection: input.prompt_ids.length ? 'selected' : 'set',
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),
     engine_routes: Object.fromEntries(
       routes.map((route) => [
