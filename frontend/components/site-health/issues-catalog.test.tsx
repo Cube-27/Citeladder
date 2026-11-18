@@ -304,7 +304,7 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
     // Tallest tab (24) plus four: the one issue, then 27 rows held as one blank space.
     const held = screen.getByRole('region', { name: 'Issues' }).querySelector('tbody + tbody tr');
-    expect(held).toHaveStyle({ '--data-table-rows': '27' });
+    expect(held?.getAttribute('style')).toMatch(/--data-table-rows: 27;/);
   });
 
   it('switches tabs and ordering as server params, from the first page', async () => {
