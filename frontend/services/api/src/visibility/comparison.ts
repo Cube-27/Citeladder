@@ -66,7 +66,8 @@ export type SelectedRun = {
   metrics: Metrics;
 };
 
-type Selector = { cohort: string; engine: string | null };
+/** `topicId` narrows matched cells to the topic each run froze (AV-5). */
+type Selector = { cohort: string; engine: string | null; topicId?: string | null };
 
 /** The frozen context two runs must share before any cell can be matched. */
 const panelFreeKey = (configuration: unknown) =>
@@ -84,8 +85,9 @@ export async function compareSelection(
   db: Database,
   scope: RunScope,
   current: SelectedRun,
-  selector: Selector & { baselineId: string | null },
+  requested: Selector & { baselineId: string | null },
 ): Promise<VisibilityComparison> {
+  const selector = { ...requested, topicId: scope.topicId ?? null };
   if (selector.baselineId) return walkBaseline(db, scope, current, selector);
   if (current.completedAt === null) return emptyComparison();
   const persisted = await persistedBaseline(db, current, selector);
@@ -98,6 +100,8 @@ export async function compareSelection(
     toAt: null,
     auditId: persisted.baseline_audit_id,
   });
+  // The baseline run asked nothing in the selected topic: there is nothing to compare.
+  if (previous === undefined && scope.topicId) return emptyComparison();
   const comparison =
     key !== null && previous !== undefined
       ? await candidateComparison(db, current, previous, selector, key)
@@ -273,6 +277,7 @@ export async function loadComparisonCells(
     .where('ra.audit_id', 'in', [current.auditId, previous.auditId])
     .where('ra.cohort', 'in', [...selectedCohorts(selector.cohort)]);
   if (selector.engine) query = query.where('ra.logical_engine', '=', selector.engine);
+  if (selector.topicId) query = query.where('prompt.topic_id', '=', selector.topicId);
   const cells = new Map<string, Map<string, ComparisonCell>>([
     [current.auditId, new Map()],
     [previous.auditId, new Map()],
@@ -441,6 +446,7 @@ export async function competitorGaps(
     auditIds: readonly string[];
     cohort: string;
     engine: string | null;
+    topicId?: string | null;
   },
 ): Promise<Map<string, number>> {
   if (input.auditIds.length === 0) return new Map();
@@ -453,6 +459,18 @@ export async function competitorGaps(
     .where('ra.brand_mentioned', '=', false)
     .where('ra.cohort', 'in', [...selectedCohorts(input.cohort)]);
   if (input.engine) query = query.where('ra.logical_engine', '=', input.engine);
+  if (input.topicId) {
+    const topicId = input.topicId;
+    query = query.where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom('audit_tasks as task')
+          .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.id', 'task.prompt_snapshot_id')
+          .select('task.id')
+          .whereRef('task.id', '=', 'ra.task_id')
+          .where('snapshot.topic_id', '=', topicId),
+      ),
+    );
+  }
   const rows = await query.groupBy('mention.competitor_name').execute();
   return new Map(rows.map((row) => [row.competitor_name, Number(row.gaps)]));
 }

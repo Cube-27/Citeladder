@@ -12,12 +12,11 @@ import { useProjectMarkets } from '@/lib/project/use-project-markets';
  */
 export function useMarketVisibility(
   requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
-  cohort: VisibilityCohortParam,
+  params: { cohort: VisibilityCohortParam; topic?: string },
   onInsights: boolean,
 ) {
   const { workspaceId, projectId } = requestScope;
   const markets = useProjectMarkets(projectId, workspaceId);
-  const params = { cohort };
   const marketRowsQuery = useQuery({
     ...visibilityQueries.markets(requestScope, params),
     enabled: onInsights && markets.length > 1,

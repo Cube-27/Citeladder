@@ -97,17 +97,13 @@ describe('versioned audit aggregates', () => {
     ]);
     const metrics = aggregateRun(answers, config);
     expect(metrics.win_tally).toEqual({ answers: 2, first: { Acme: 1, Rival: 1 } });
-    expect(metrics.per_topic_win_tally).toEqual({
-      Shoes: { answers: 2, first: { Acme: 1, Rival: 1 } },
-      Boots: { answers: 0, first: {} },
-    });
     expect(winCounts(metrics.win_tally, 'Acme')).toEqual({
       win_count: 1,
       win_answers: 2,
       win_rate: 0.5,
     });
     // Nothing tracked named: not applicable (no rate), distinct from a zero win rate.
-    expect(winCounts(metrics.per_topic_win_tally.Boots!, 'Acme')).toEqual({
+    expect(winCounts(aggregateRun(answers.slice(2), config).win_tally, 'Acme')).toEqual({
       win_count: 0,
       win_answers: 0,
       win_rate: null,

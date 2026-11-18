@@ -356,13 +356,6 @@ export function aggregateRun(rows: AggregateExecution[], config: ScoringConfig) 
     share_of_voice: shareOfVoice(scores, config),
     average_positions: positions(scores, config),
     win_tally: wins(rows, config),
-    // Topic as the run's prompt snapshot froze it (AV-5).
-    per_topic_win_tally: Object.fromEntries(
-      [...groupBy(rows, (row) => row.prompt_theme_snapshot || 'Untagged')].map(([topic, group]) => [
-        topic,
-        wins(group, config),
-      ]),
-    ),
     citation_totals: {
       citations,
       owned_citations: ownedCitations,

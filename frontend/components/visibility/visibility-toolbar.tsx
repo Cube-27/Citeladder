@@ -65,6 +65,10 @@ type ToolbarProps = Readonly<{
   /** A non-default market's id; `null` is the project default. */
   market?: string | null;
   onChangeMarket?: (market: string | null) => void;
+  /** The project's topics; a page that reads by frozen topic passes them. */
+  topics?: readonly { id: string; name: string }[];
+  topic?: string | null;
+  onChangeTopic?: (topic: string | null) => void;
 }>;
 
 /**
@@ -98,6 +102,7 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
       onChange: props.onChangeCohort,
     }),
     engineFilter(props, catalog),
+    topicFilter(props),
     evidence ? promptFilter(props) : null,
     evidence ? outcomeFilter(props) : null,
     pooled
@@ -222,6 +227,40 @@ function engineFilter(
       ...(observed.length ? [{ label: 'Observed surfaces', options: observed.map(option) }] : []),
     ],
     onChange: onChangeEngine,
+  });
+}
+
+const EVERY_TOPIC = '__all__';
+
+/**
+ * Which project topic the answers were filed under when their run froze them
+ * (AV-5), so a prompt refiled later keeps its old answers where they were.
+ */
+function topicFilter({
+  topics = [],
+  topic = null,
+  onChangeTopic,
+}: ToolbarProps): FilterDefinition | null {
+  if (!onChangeTopic || (topics.length === 0 && topic === null)) return null;
+  return choiceFilter({
+    id: 'topic',
+    label: 'Topic',
+    value: topic ?? EVERY_TOPIC,
+    defaultValue: EVERY_TOPIC,
+    defaultIsEvery: true,
+    valueLabel:
+      topic === null
+        ? 'All'
+        : (topics.find((option) => option.id === topic)?.name ?? 'Deleted topic'),
+    groups: [
+      {
+        options: [
+          { value: EVERY_TOPIC, label: 'All' },
+          ...topics.map((option) => ({ value: option.id, label: option.name })),
+        ],
+      },
+    ],
+    onChange: (value) => onChangeTopic(value === EVERY_TOPIC ? null : value),
   });
 }
 

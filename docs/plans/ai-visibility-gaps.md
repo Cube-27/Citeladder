@@ -80,6 +80,11 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
   (2026-11-18, with two reference products' API docs): a full API reference section on
   the docs site, with a page per endpoint and request and response examples. Shipped in
   #967.
+- **AV-21, one migration for this plan.** "dont add more migrations since nothing is
+  deployed yet so all changes of this session in terms of migration should go into 0002
+  itself" (2026-11-18): every schema change of this plan goes into
+  `0002_ai_visibility_gaps.sql`, one header comment per part. Production is still on
+  `0001_baseline` only (verified 2026-11-18).
 
 ## Where it lives
 

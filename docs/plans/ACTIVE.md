@@ -21,7 +21,7 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   measured triggers.
 - [AI visibility gaps](ai-visibility-gaps.md) (owner, 2026-11-17): reporting
   views, derivations and probes the product lacks against an AI-visibility
-  reference, with owner decisions AV-1 to AV-20. Phase 1 fills the new Brand,
+  reference, with owner decisions AV-1 to AV-21. Phase 1 fills the new Brand,
   Tracking and Search pages (N1–N7) and adds W1–W11, W14 and W15; Phase 2 is the
   W12 and W13 probes; Phase 3 updates the docs site and changelog. The mockups
   were approved on 2026-11-18, and the new sidebar with empty Brand pages has

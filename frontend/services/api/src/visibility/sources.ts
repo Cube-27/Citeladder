@@ -106,6 +106,7 @@ function answerRows(db: Database, selection: RunSelection, runs: Runs, asOf: str
     .where('answer.created_at', '<=', sql<Date>`${asOf}::timestamptz`);
   if (selection.logicalEngine !== null)
     rows = rows.where('answer.logical_engine', '=', selection.logicalEngine);
+  if (selection.topicId) rows = rows.where('answer.topic_id', '=', selection.topicId);
   return rows.select(['answer.analysis_ids', 'answer.prompt_keys']);
 }
 
@@ -135,6 +136,7 @@ function sourceRows(
     .where('source.created_at', '<=', sql<Date>`${input.asOf}::timestamptz`);
   if (selection.logicalEngine !== null)
     rows = rows.where('source.logical_engine', '=', selection.logicalEngine);
+  if (selection.topicId) rows = rows.where('source.topic_id', '=', selection.topicId);
   if (filters.domain) rows = rows.where('source.domain', '=', filters.domain);
   if (filters.standing === 'gap')
     rows = rows.where(sql<boolean>`source.url_hash in (${gapPageHashes(selection)})`);

@@ -1,9 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
+
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
+import { topicsQueries } from '@/lib/api/topics';
 import type { VisibilityView } from '@/lib/visibility/dashboard';
 import type {
   useVisibilityFilters,
@@ -63,6 +66,9 @@ export function useSelectionPageFilters({
   filters: Filters;
   queries: Queries;
 }>): readonly FilterDefinition[] {
+  const topicsQuery = useQuery(
+    topicsQueries.list({ workspaceId: queries.workspaceId, projectId: queries.projectId }),
+  );
   return useVisibilityFilterMenu({
     view,
     runs: queries.runOptions,
@@ -86,5 +92,8 @@ export function useSelectionPageFilters({
     markets: queries.markets,
     market: filters.market,
     onChangeMarket: filters.setMarket,
+    topics: topicsQuery.data ?? [],
+    topic: filters.topic,
+    onChangeTopic: filters.setTopic,
   });
 }

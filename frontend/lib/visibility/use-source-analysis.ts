@@ -52,6 +52,14 @@ export function selectionParams(
   };
 }
 
+/** The selection plus the topic filter, for the reads that group answers by frozen topic. */
+export function topicSelectionParams(
+  filters: Pick<SourceFilters, 'engine' | 'cohort'>,
+  queries: SourceQueries,
+) {
+  return { ...selectionParams(filters, queries), topic: queries.topic };
+}
+
 /** Whether a selection reads anything: a range with no runs reads nothing. */
 export function selectionEnabled(queries: SourceQueries): boolean {
   return Boolean(queries.activeRunId && queries.selectedRunIds?.length !== 0);
@@ -72,7 +80,7 @@ export function useSourceAnalysis(
 ) {
   const comparison = queries.visibilityQuery.data?.comparison;
   const params = {
-    ...selectionParams(filters, queries),
+    ...topicSelectionParams(filters, queries),
     baseline_audit_ids:
       comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined,
     domain: set(scope.domain),
@@ -112,7 +120,7 @@ export function useSourceSeries(
   },
 ) {
   const params = {
-    ...selectionParams(filters, queries),
+    ...topicSelectionParams(filters, queries),
     dimension: scope.dimension,
     granularity: filters.granularity === 'run' ? 'day' : filters.granularity,
     domain: set(scope.domain),
@@ -136,7 +144,7 @@ export function useSourceSeries(
 
 /** One cited URL's detail page: overview, engines, prompts, co-named brands. */
 export function useSourceUrl(filters: SourceFilters, queries: SourceQueries, url: string | null) {
-  const params = { ...selectionParams(filters, queries), url: url ?? '' };
+  const params = { ...topicSelectionParams(filters, queries), url: url ?? '' };
   return useQuery({
     ...visibilityQueries.sourceUrl(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
@@ -156,7 +164,7 @@ export function useSourceUrl(filters: SourceFilters, queries: SourceQueries, url
  */
 export function useSourceDomains(filters: SourceFilters, queries: SourceQueries) {
   const params = {
-    ...selectionParams(filters, queries),
+    ...topicSelectionParams(filters, queries),
     dimension: 'domain' as const,
     limit: SOURCE_DOMAIN_OPTIONS,
   };

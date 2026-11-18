@@ -50,7 +50,13 @@ export type MeasuredRun = {
  * A project's runs in one measurement market. Markets never mix in a
  * projection: an omitted or `null` market is the project default.
  */
-export type RunScope = { workspaceId: string; projectId: string; marketId?: string | null };
+export type RunScope = {
+  workspaceId: string;
+  projectId: string;
+  marketId?: string | null;
+  /** Read each run's block for this frozen topic; a run that never asked it is not measured. */
+  topicId?: string | null;
+};
 export const marketOf = (scope: { marketId?: string | null }) => scope.marketId ?? null;
 
 /** A request timestamp, or a stored one read back as `utcText`. */
@@ -82,16 +88,26 @@ export async function loadMeasuredRuns(
     auditId?: string;
   },
 ): Promise<MeasuredRun[]> {
+  // A topic reads the block finalization froze for it, and a run that asked
+  // no prompt filed under it is left out, as a run that skipped an engine is.
+  const topicId = scope.topicId ?? null;
+  const measured = (column: string) => sql.ref(`${topicId ? 'topic' : 'snapshot'}.${column}`);
   let query = db
     .selectFrom('metric_snapshots as snapshot')
     .innerJoin('audits as audit', 'audit.id', 'snapshot.audit_id')
+    .leftJoin('audit_topic_metrics as topic', (join) =>
+      join
+        .onRef('topic.audit_id', '=', 'audit.id')
+        .on('topic.workspace_id', '=', scope.workspaceId)
+        .on(sql<boolean>`topic.topic_id = ${topicId}`),
+    )
     .select([
-      'snapshot.id as snapshot_id',
+      sql<string>`${measured('id')}`.as('snapshot_id'),
       'snapshot.audit_id',
       'snapshot.analyzer_version',
       'snapshot.scoring_rule_version',
-      'snapshot.visibility_score',
-      'snapshot.metrics',
+      sql<number>`${measured('visibility_score')}`.as('visibility_score'),
+      sql<unknown>`${measured('metrics')}`.as('metrics'),
       utcTextOf(sql.ref('snapshot.created_at')).as('snapshot_created_at'),
       'audit.status',
       'audit.configuration',
@@ -105,6 +121,7 @@ export async function loadMeasuredRuns(
     .where('audit.audit_scope', '=', visibility.brand_audit_scope)
     .where('audit.status', 'in', visibility.dashboard_audit_statuses)
     .where('audit.completed_at', 'is not', null);
+  if (topicId) query = query.where('topic.id', 'is not', null);
   if (window.auditId !== undefined) query = query.where('audit.id', '=', window.auditId);
   if (window.fromAt) query = query.where('audit.completed_at', '>=', instantOperand(window.fromAt));
   if (window.toAt) query = query.where('audit.completed_at', '<=', instantOperand(window.toAt));

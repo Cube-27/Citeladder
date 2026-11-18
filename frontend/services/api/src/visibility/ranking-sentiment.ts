@@ -25,6 +25,7 @@ export async function getRankedVisibility(
     auditIds: pooled,
     logicalEngine: query.logicalEngine,
     cohort: query.cohort,
+    topicId: scope.topicId ?? null,
     fromAt: null,
     toAt: null,
   });

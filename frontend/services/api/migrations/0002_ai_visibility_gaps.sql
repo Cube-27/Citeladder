@@ -1,0 +1,60 @@
+-- Win rate (AV-7): the tracked business each answer names first, derived at
+-- finalization from the stored mention offsets. NULL kind: analysed before this
+-- derivation existed (unavailable); 'none': no tracked business named.
+ALTER TABLE public.response_analyses
+    ADD COLUMN first_named_kind character varying(16),
+    ADD COLUMN first_named_name character varying(255),
+    -- CASE, not OR: a NULL kind would make an OR clause UNKNOWN, which CHECK accepts.
+    ADD CONSTRAINT ck_response_analyses_first_named CHECK (
+        CASE
+            WHEN first_named_kind IS NULL OR first_named_kind = 'none' THEN first_named_name IS NULL
+            WHEN first_named_kind IN ('brand', 'competitor') THEN first_named_name IS NOT NULL
+            ELSE false
+        END
+    );
+
+-- Topic dimension (AV-5): answers group by the topic their prompt had when the
+-- run froze it, so refiling or renaming a topic never rewrites a past run. A
+-- run's prompt snapshots freeze the topic and its name; finalization groups the
+-- run's Sources facts by that topic and writes one metric block per topic. Runs
+-- finalized before this froze no topic and read as not run in every topic.
+ALTER TABLE public.audit_prompt_snapshots
+    ADD COLUMN topic_id uuid,
+    ADD COLUMN topic_name character varying(255),
+    ADD CONSTRAINT ck_audit_prompt_snapshot_topic CHECK (((topic_id IS NULL) = (topic_name IS NULL)));
+
+ALTER TABLE public.audit_answer_aggregates ADD COLUMN topic_id uuid;
+
+ALTER TABLE public.audit_answer_aggregates DROP CONSTRAINT uq_audit_answer_aggregate;
+
+ALTER TABLE ONLY public.audit_answer_aggregates
+    ADD CONSTRAINT uq_audit_answer_aggregate UNIQUE NULLS NOT DISTINCT (audit_id, logical_engine, cohort, topic_id);
+
+ALTER TABLE public.audit_source_aggregates ADD COLUMN topic_id uuid;
+
+CREATE TABLE public.audit_topic_metrics (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    topic_id uuid NOT NULL,
+    topic_name character varying(255) NOT NULL,
+    visibility_score double precision NOT NULL,
+    metrics jsonb NOT NULL,
+    analyzer_version character varying(32) NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT uq_audit_topic_metric UNIQUE (audit_id, topic_id);
+
+CREATE INDEX ix_audit_topic_metrics_workspace_id ON public.audit_topic_metrics USING btree (workspace_id);
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;

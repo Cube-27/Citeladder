@@ -53,6 +53,8 @@ export const visibilityKeys = {
   // participates in the key so switching a control re-derives the view.
   trends: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('trends', scope, filters),
+  topics: (scope: ProjectScope, filters: ListFilters = {}) =>
+    visibility.read('topics', scope, filters),
   perception: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('perception', scope, filters),
   accuracy: (scope: ProjectScope, filters: ListFilters = {}) =>

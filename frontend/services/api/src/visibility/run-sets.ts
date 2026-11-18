@@ -24,9 +24,17 @@ export async function runSetComparisonStatus(
   },
 ): Promise<string> {
   const ids = new Set([...input.currentIds, ...input.baselineIds]);
+  const topicId = scope.topicId ?? null;
   const rows = await db
     .selectFrom('audits as audit')
     .innerJoin('metric_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
+    // Under a topic, coverage is the topic's: a failure elsewhere in the run is not its gap.
+    .leftJoin('audit_topic_metrics as topic', (join) =>
+      join
+        .onRef('topic.audit_id', '=', 'audit.id')
+        .on('topic.workspace_id', '=', scope.workspaceId)
+        .on(sql<boolean>`topic.topic_id = ${topicId}`),
+    )
     .select([
       'audit.id',
       'audit.configuration',
@@ -34,6 +42,7 @@ export async function runSetComparisonStatus(
       'snapshot.analyzer_version',
       'snapshot.scoring_rule_version',
       'snapshot.metrics',
+      'topic.metrics as topic_metrics',
     ])
     .where('audit.workspace_id', '=', scope.workspaceId)
     .where('audit.project_id', '=', scope.projectId)
@@ -63,9 +72,20 @@ export async function runSetComparisonStatus(
     const key = frozenComparisonKey(row.configuration, input.engine);
     if (key === null) return 'identity_unavailable';
     identities.add(JSON.stringify([key, row.analyzer_version, row.scoring_rule_version]));
-    const cohort = cohortMetrics(row.metrics, input.cohort);
-    const metrics = input.engine === null ? cohort : engineMetrics(cohort, input.engine);
-    if (!isComplete(measurementCounts(metrics))) return 'partial_coverage';
+    if (!covered(row, { ...input, topicId })) return 'partial_coverage';
   }
   return identities.size !== 1 || input.currentIds.length === 0 ? 'changed_context' : 'comparable';
+}
+
+/** Whether a run answered everything the selection asks of it; under a topic, only that topic. */
+function covered(
+  row: { metrics: unknown; topic_metrics: unknown },
+  selection: { cohort: string; engine: string | null; topicId: string | null },
+): boolean {
+  const block = selection.topicId ? row.topic_metrics : row.metrics;
+  // A run that asked nothing in the topic has no answers there to be missing.
+  if (block === null) return true;
+  const cohort = cohortMetrics(block, selection.cohort);
+  const metrics = selection.engine === null ? cohort : engineMetrics(cohort, selection.engine);
+  return isComplete(measurementCounts(metrics));
 }

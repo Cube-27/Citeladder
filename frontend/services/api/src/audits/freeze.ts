@@ -105,7 +105,12 @@ export async function launchPrompts(
     .selectFrom('prompts as p')
     .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
     .innerJoin('projects as project', 'project.id', 's.project_id')
+    // The topic's name as filed now: the run freezes it with the prompt.
+    .leftJoin('topics as topic', (join) =>
+      join.onRef('topic.id', '=', 'p.topic_id').onRef('topic.workspace_id', '=', 'p.workspace_id'),
+    )
     .selectAll('p')
+    .select('topic.name as topic_name')
     .where('project.workspace_id', '=', workspaceId)
     .where('project.id', '=', projectId)
     .where('p.enabled', '=', true)

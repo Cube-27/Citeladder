@@ -64,6 +64,13 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getVisibilityTrends(scope.projectId, params, scoped(scope, signal)),
     }),
+  /** The selection's By topic rows. */
+  topics: (scope: ProjectScope, params: ParamsOf<'getVisibilityTopics'>) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.topics(scope, params),
+      queryFn: ({ signal }) =>
+        visibilityApi.getVisibilityTopics(scope.projectId, params, scoped(scope, signal)),
+    }),
   sources: (scope: ProjectScope, params: ParamsOf<'getSources'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.sources(scope, params),

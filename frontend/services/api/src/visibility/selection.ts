@@ -53,6 +53,8 @@ export type RunSelection = {
   cohort: string;
   fromAt: ParsedDatetime | null;
   toAt: ParsedDatetime | null;
+  /** Answers whose prompt was filed under this topic when its run froze it. */
+  topicId?: string | null;
 };
 
 export function isLogicalEngine(engine: string): boolean {
@@ -189,6 +191,7 @@ export function evidenceScope(db: Database, selection: RunSelection) {
   if (selection.logicalEngine !== null) {
     query = query.where('ra.logical_engine', '=', selection.logicalEngine);
   }
+  if (selection.topicId) query = query.where('snapshot.topic_id', '=', selection.topicId);
   return query;
 }
 

@@ -177,12 +177,6 @@ export const visibilitySchema = responseObject({
   rankings: z.array(rankingRowSchema),
   per_engine: z.array(visibilityEngineSchema),
   avg_position: z.number().nullable(),
-  // The brand's win rate per topic, as each run's prompt snapshot froze it (AV-5);
-  // null when a pooled run predates the derivation (unavailable).
-  win_by_topic: z
-    .array(responseObject({ topic: z.string(), ...winCountsSchema.shape }))
-    .nullable()
-    .optional(),
   created_at: z.string(),
 });
 
