@@ -19,6 +19,9 @@ export const FACT_CSV_SAMPLE_ROWS: readonly (readonly [string, string, string])[
   ['company', 'Founded in 2019.', ''],
 ];
 
+/** Mirrors the API's `fact_check.facts_import_max_rows`, which refuses a larger request whole. */
+const FACT_CSV_MAX_ROWS = 150;
+
 const HEADER_KEYS = {
   topic: new Set(['topic']),
   statement: new Set(['statement', 'fact']),
@@ -84,5 +87,13 @@ export function parseFactCsv(raw: string): ParsedFactCsv {
   if (columns.topic < 0 || columns.statement < 0)
     return { rows: [], errors: ['The first row must name the topic and statement columns.'] };
   const rows = data.map((cells, index) => parseRow(cells, columns, index + 1));
-  return { rows, errors: rows.length ? [] : ['No data rows were found.'] };
+  if (!rows.length) return { rows, errors: ['No data rows were found.'] };
+  if (rows.length > FACT_CSV_MAX_ROWS)
+    return {
+      rows,
+      errors: [
+        `The file has ${rows.length} rows; import up to ${FACT_CSV_MAX_ROWS} at a time by splitting it.`,
+      ],
+    };
+  return { rows, errors: [] };
 }

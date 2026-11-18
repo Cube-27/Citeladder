@@ -47,5 +47,13 @@ describe('parseFactCsv', () => {
       'The first row must name the topic and statement columns.',
     ]);
     expect(parseFactCsv('topic,statement\n').errors).toEqual(['No data rows were found.']);
+    const rows = (count: number) =>
+      ['topic,statement', ...Array.from({ length: count }, (_, i) => `pricing,Fact ${i}.`)].join(
+        '\n',
+      );
+    expect([parseFactCsv(rows(150)).errors, parseFactCsv(rows(151)).errors]).toEqual([
+      [],
+      ['The file has 151 rows; import up to 150 at a time by splitting it.'],
+    ]);
   });
 });
