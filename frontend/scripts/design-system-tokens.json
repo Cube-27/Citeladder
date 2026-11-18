@@ -592,7 +592,7 @@
             "fontWeight": 500,
             "letterSpacing": "-0.02em",
             "sample": "38.4%",
-            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app, and the website PageHighlight's figures. The sans face at 500, 28/36; the ScoreRing and DonutChart centres use the same face at 32/38."
+            "usage": "The number in a key figure, the plan price in the app, and the website PageHighlight's figures. The sans face at 500, 28/36; the ScoreRing and DonutChart centres use the same face at 32/38."
           },
           {
             "name": "caption",

@@ -431,16 +431,10 @@ a.cl-fcard:hover {
 
 /* ---------- A FeatureCard: its tint panel holds the white image ---------- */
 .cl-fcard > .cl-frame .cl-frame-well {
-  padding: 24px;
+  padding: var(--frame-pad);
   border: 0;
 }
 
 .cl-fcard > .cl-frame .cl-vig {
   border-color: transparent;
-}
-
-@media (max-width: 767px) {
-  .cl-fcard > .cl-frame .cl-frame-well {
-    padding: 12px;
-  }
 }

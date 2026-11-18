@@ -22,7 +22,7 @@ import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 import './screen-parts.css';
 
 /**
- * The parts the full app screens share (`ScreenAppVisibility`,
+ * The parts the full app screens share (`ScreenAppInsights`,
  * `ScreenVisibility`): app views at a fixed natural size built from the
  * app's own components. A screen is a still, so its controls are drawn,
  * never wired.

@@ -14,7 +14,8 @@ import { PageSection, SectionHeader } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
-import { ScreenAppPage, ScreenAppVisibility } from '../screens/screen-app';
+import { ScreenAppPage } from '../screens/screen-app';
+import { ScreenAppInsights } from '../screens/screen-app-insights';
 import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
@@ -38,8 +39,8 @@ function Hero() {
       }
       frame={
         // The real app, chrome and all, as the page's first product view.
-        <ProductFrame label="The AI Visibility page in the CiteLadder app" fit="scale">
-          <ScreenAppVisibility />
+        <ProductFrame label="The Insights page in the CiteLadder app" fit="scale" hero>
+          <ScreenAppInsights />
         </ProductFrame>
       }
     />

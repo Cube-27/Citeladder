@@ -29,6 +29,7 @@ export function ProductFrame({
   children,
   label,
   fit = 'fluid',
+  hero = false,
   title,
   caption,
 }: Readonly<{
@@ -37,11 +38,16 @@ export function ProductFrame({
   /** What the screen shows, for screen readers. */
   label?: string;
   fit?: FrameFit;
+  /**
+   * The home page's main image: the screen drawn at full size, running to
+   * the backdrop's foot with no padding under it.
+   */
+  hero?: boolean;
   title?: ReactNode;
   caption?: ReactNode;
 }>) {
   return (
-    <figure className={cn('cl-frame', `cl-frame--${fit}`)}>
+    <figure className={cn('cl-frame', `cl-frame--${fit}`, hero && 'cl-frame--hero')}>
       <div className="cl-frame-card">
         <div // NOSONAR -- a live component screen shown as one picture, named by its label; <img> cannot hold it
           className="cl-frame-well"

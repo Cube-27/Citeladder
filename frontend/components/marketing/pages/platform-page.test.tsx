@@ -55,9 +55,9 @@ it('renders the hero screen alone and the highlights, steps, questions and FAQ a
     />,
   );
   expect(
-    screen.getByRole('img', { name: 'Site Health for acme.com: score 82, 7 failed checks' })
+    screen.getByRole('img', { name: 'Site health for acme.com: score 82, 7 failed checks' })
       .textContent,
-  ).toMatch(/^Site Healthacme\.com · 7 failed checksScore 82/);
+  ).toMatch(/^Site healthacme\.com · 7 failed checksScore 82/);
   // The screen is the hero's one image: no tile beside it restates its numbers.
   expect(screen.getAllByText('Score 82')).toHaveLength(1);
   expect(screen.queryByText('Pages blocked')).not.toBeInTheDocument();

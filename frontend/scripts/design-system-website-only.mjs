@@ -8,7 +8,6 @@ const WEBSITE_ONLY_OWNERS = {
   citation: 'CitationMark',
   callout: 'Notice',
   card: 'Section, Slip or Well',
-  'stat-row': 'FigureStrip',
   'trend-chart': 'StepChart',
   sparkline: 'StepChart',
 };

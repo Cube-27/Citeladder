@@ -1,9 +1,20 @@
 /* ---------- ProductFrame ---------- */
+/* `--frame-pad`: the one backdrop padding round every product image on the
+   website (a FeatureCard's well included); only the hero drops its foot. */
+
 .cl-frame {
+  --frame-pad: 24px;
+
   display: flex;
   flex-direction: column;
   min-width: 0;
   margin: 0;
+}
+
+@media (max-width: 767px) {
+  .cl-frame {
+    --frame-pad: 12px;
+  }
 }
 
 /* The product image's frame: a lit backdrop (a spotlight), not a shadow. A
@@ -15,7 +26,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  padding: 48px;
+  padding: var(--frame-pad);
   border: 0;
   position: relative;
   isolation: isolate;
@@ -60,18 +71,10 @@
 }
 
 /* Only a FeatureCard, whose copy sits under its image, gets the well (a
-   stage): the card radius, and small padding round the
-   screen, tighter top and bottom. */
+   stage) with the card radius; its padding is `--frame-pad` (features.css). */
 
 .cl-fcard .cl-frame-well {
-  padding: 12px 16px;
   border-radius: var(--site-radius-card);
-}
-
-@media (max-width: 767px) {
-  .cl-fcard .cl-frame-well {
-    padding: 8px 12px;
-  }
 }
 
 /* A vignette's frame is at most 760 wide (a 694px card at 1440), centred in
@@ -139,6 +142,12 @@
 
   .cl-phero-media .cl-frame--scale .cl-frame-screen > .cl-screen {
     --screen-w: var(--screen-natural);
+  }
+
+  /* The home page's main image draws the app at its real size (scale 1),
+     laid out at the frame's width. */
+  .cl-frame--hero .cl-frame-screen > .cl-screen {
+    --screen-w: min(var(--screen-natural), 100cqi);
   }
 }
 
@@ -219,25 +228,29 @@
 
 @media (max-width: 767px) {
   .cl-frame-card {
-    padding: 16px;
     border-radius: var(--site-radius-card);
   }
 }
 
-/* A full app screen rises out of its panel and ends 32px above the panel's
-   foot, clipped at that inner edge, so the crop never lands on the panel's
-   rim. Its cards and the drawn app carry their own edges, so the screen draws
-   no second ring or fill around them. */
+/* A full app screen sits in its panel clipped at the panel's inner edge, so
+   the crop never lands on the panel's rim. Its cards and the drawn app carry
+   their own edges, so the screen draws no second ring or fill around them. */
 
 .cl-frame--scale > .cl-frame-card {
-  padding-bottom: 32px;
   overflow: hidden;
 }
 
-@media (max-width: 767px) {
-  .cl-frame--scale > .cl-frame-card {
-    padding-bottom: 16px;
-  }
+/* The hero's screen runs to the panel's foot: no padding under it, and its
+   own foot edge dropped so it reads as cut by the frame. */
+
+.cl-frame--hero > .cl-frame-card {
+  padding-bottom: 0;
+}
+
+.cl-frame--hero .cl-frame-screen > .cl-screen {
+  border-bottom: 0;
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
 }
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well {

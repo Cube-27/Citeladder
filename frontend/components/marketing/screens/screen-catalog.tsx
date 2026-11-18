@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
 import { ProductFrame, type FrameFit } from './product-frame';
-import type { NavLabel } from './screen-app';
+import type { AppPageHead, NavLabel } from './screen-app';
 import {
   ScreenActions,
   ScreenAgentBrief,
@@ -66,11 +66,11 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   answer: vignette(ScreenAnswer, 'A ChatGPT answer that names Acme Analytics first'),
   sources: vignette(ScreenSources, 'Domains cited in answers about Acme Analytics'),
   'cited-url': vignette(ScreenCitedUrl, 'acme.com/pricing: which engines retrieve and cite it'),
-  'site-health': vignette(ScreenSiteHealth, 'Site Health for acme.com: score 82, 7 failed checks'),
+  'site-health': vignette(ScreenSiteHealth, 'Site health for acme.com: score 82, 7 failed checks'),
   'crawler-access': vignette(ScreenCrawlerAccess, 'AI crawler access to acme.com from robots.txt'),
   demand: vignette(
     ScreenDemand,
-    'Search Demand signals for acme.com: a query in striking distance, a CTR gap, two pages on one query and an emerging query',
+    'Demand signals in Keyword research for acme.com: a query in striking distance, a CTR gap, two pages on one query and an emerging query',
   ),
   referrals: vignette(ScreenReferrals, 'Sessions referred to acme.com by AI assistants'),
   perception: vignette(ScreenPerception, 'How AI engines describe Acme Analytics'),
@@ -85,8 +85,8 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   commerce: vignette(ScreenCommerce, 'Which products AI answers recommended for Acme Startup'),
 };
 
-/** Where a module's feature lives in the app: the page title and the sidebar row it lights. */
-type AppPlace = Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
+/** Where a module's feature lives in the app: the page's head, or the Agent mode. */
+type AppPlace = AppPageHead & Readonly<{ mode?: 'Agent' }>;
 
 /**
  * Each module's focused screen and its place in the app, by platform route,
@@ -96,10 +96,25 @@ type AppPlace = Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
 type ModuleScreen = Readonly<{ screen: PlatformScreen; page: AppPlace }>;
 
 /** A module shown on its own app page, whose title is the sidebar row it lights. */
-const onPage = (screen: PlatformScreen, page: NavLabel) => ({
-  screen,
-  page: { title: page, active: page },
-});
+const onPage = (
+  screen: PlatformScreen,
+  page: NavLabel,
+  head: Omit<AppPageHead, 'title' | 'active'> = {},
+): ModuleScreen => ({ screen, page: { title: page, active: page, ...head } });
+
+/** The app's tabs for a page, with the module's tab open. */
+const tab = (items: readonly string[], selected: string) => ({ tabs: { items, selected } });
+const SOURCES_TABS = ['Domains', 'URLs', 'Read, not cited', 'Query fanouts', 'Ads'];
+const KEYWORD_TABS = ['Demand', 'Overview', 'Keywords', 'Organic competitors', 'Backlinks'];
+const SITE_TABS = [
+  'Overview',
+  'Pages',
+  'Architecture',
+  'AEO readiness',
+  'Internal links',
+  'Changes',
+];
+const TRAFFIC_TABS = ['Overview', 'Crawlers', 'Referrals', 'Pages', 'Activity'];
 /** A module shown in the Agent workspace. */
 const inAgent = (screen: PlatformScreen) => ({
   screen,
@@ -107,13 +122,29 @@ const inAgent = (screen: PlatformScreen) => ({
 });
 
 export const MODULE_SCREENS = {
-  '/platform/ai-visibility': onPage('engines', 'AI Visibility'),
-  '/platform/cited-sources': onPage('sources', 'AI Visibility'),
-  '/platform/ai-referral-analytics': onPage('referrals', 'AI Traffic'),
-  '/platform/product-visibility': onPage('commerce', 'Commerce Suite'),
-  '/platform/site-health': onPage('site-health', 'Website'),
-  '/platform/search-demand': onPage('demand', 'Search Demand'),
-  '/platform/keyword-research': onPage('keywords', 'Keyword Research'),
+  '/platform/ai-visibility': onPage('engines', 'Insights'),
+  '/platform/cited-sources': onPage('sources', 'Sources', {
+    ...tab(SOURCES_TABS, 'Domains'),
+    actions: 'launch',
+  }),
+  '/platform/ai-referral-analytics': onPage(
+    'referrals',
+    'AI traffic',
+    tab(TRAFFIC_TABS, 'Referrals'),
+  ),
+  '/platform/product-visibility': onPage('commerce', 'Shopping'),
+  '/platform/site-health': onPage('site-health', 'Site health', {
+    ...tab(SITE_TABS, 'Overview'),
+    actions: 'crawl',
+  }),
+  '/platform/search-demand': onPage('demand', 'Keyword research', {
+    ...tab(KEYWORD_TABS, 'Demand'),
+    actions: 'analysis',
+  }),
+  '/platform/keyword-research': onPage('keywords', 'Keyword research', {
+    ...tab(KEYWORD_TABS, 'Keywords'),
+    actions: 'analysis',
+  }),
   // Content-gap work is listed in Actions (AS1).
   '/platform/content-optimization': onPage('content-optimization', 'Actions'),
   '/platform/agents': inAgent('agent-chat'),

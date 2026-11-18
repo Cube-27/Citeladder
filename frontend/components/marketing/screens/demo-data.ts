@@ -16,7 +16,7 @@ export type Change = Readonly<{
   policy?: DeltaPolicy;
 }>;
 
-const pts = (value: number): Change => ({ value, unit: ' pts' });
+const pts = (value: number): Change => ({ value, unit: ' pp' });
 
 export const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
   chatgpt: 'ChatGPT',
@@ -32,26 +32,94 @@ export const CHECKED = 'Checked today, 06:00 UTC';
 /* ---------- Brands and visibility ---------- */
 
 export const TREND = {
-  acme: [27.9, 29.6, 30.2, 31.8, 32.5, 33.1, 34.2, 38.4],
+  acme: [27.9, 29.6, 30.2, 31.8, 32.5, 33.1, 34.2, 38.3],
   northwind: [46.0, 45.2, 45.8, 44.6, 44.1, 43.5, 42.9, 41.7],
-  lumen: [30.4, 31.0, 29.8, 30.6, 29.9, 29.2, 28.8, 27.5],
+  lumen: [30.4, 31.0, 29.8, 30.6, 29.9, 29.2, 28.8, 27.4],
+  fathom: [18.1, 17.6, 17.9, 17.2, 17.4, 17.0, 17.1, 17.0],
 } as const;
+
+/** Net sentiment, or too few classified mentions to show one (under 20; never zero). */
+export type BrandSentiment = Readonly<
+  { kind: 'value'; net: number; classified: number } | { kind: 'too_few'; classified: number }
+>;
 
 export type Brand = Readonly<{
   name: string;
   domain: string;
   visibility: number;
   change: Change;
+  shareOfVoice: number;
+  /**
+   * The average place answers name the brand among the four tracked brands:
+   * its `wins` at 1, its other mentions between 2 and 4.
+   */
+  position: number;
+  /** Answers naming the brand first, of the WIN_ANSWERS naming any tracked brand. */
+  wins: number;
+  /** Answers naming the brand: `visibility` is mentions / 412, to one decimal place. */
+  mentions: number;
+  sentiment: BrandSentiment;
   own?: boolean;
 }>;
 
-/** Ranked by visibility, leader first. */
+/** This week's answers that name at least one tracked brand: win rate's denominator. */
+export const WIN_ANSWERS = 296;
+
+/** Ranked by visibility, leader first. Shares of voice and wins each sum to the whole. */
 export const BRANDS: readonly Brand[] = [
-  { name: 'Northwind', domain: 'northwind.io', visibility: 41.7, change: pts(-1.2) },
-  { name: 'Acme Analytics', domain: 'acme.com', visibility: 38.4, change: pts(4.2), own: true },
-  { name: 'Lumen', domain: 'lumen.app', visibility: 27.5, change: pts(-1.3) },
-  { name: 'Fathom Labs', domain: 'fathomlabs.com', visibility: 16.9, change: pts(-0.2) },
+  {
+    name: 'Northwind',
+    domain: 'northwind.io',
+    visibility: 41.7,
+    change: pts(-1.2),
+    shareOfVoice: 33.4,
+    position: 1.5,
+    wins: 114,
+    mentions: 172,
+    sentiment: { kind: 'value', net: 38, classified: 151 },
+  },
+  {
+    name: 'Acme Analytics',
+    domain: 'acme.com',
+    visibility: 38.3,
+    change: pts(4.1),
+    shareOfVoice: 30.8,
+    position: 1.7,
+    wins: 92,
+    mentions: 158,
+    sentiment: { kind: 'value', net: 46, classified: 141 },
+    own: true,
+  },
+  {
+    name: 'Lumen',
+    domain: 'lumen.app',
+    visibility: 27.4,
+    change: pts(-1.4),
+    shareOfVoice: 22.1,
+    position: 1.9,
+    wins: 60,
+    mentions: 113,
+    sentiment: { kind: 'value', net: 12, classified: 97 },
+  },
+  {
+    name: 'Fathom Labs',
+    domain: 'fathomlabs.com',
+    visibility: 17.0,
+    change: pts(-0.1),
+    shareOfVoice: 13.7,
+    position: 2.1,
+    wins: 30,
+    mentions: 70,
+    sentiment: { kind: 'too_few', classified: 14 },
+  },
 ];
+
+/** What changed under the trend, by week index, as the app marks it. */
+export const TREND_EVENTS = [
+  { week: 2, kind: 'panel', label: 'Prompt panel: 12 prompts added' },
+  { week: 5, kind: 'model', label: 'Gemini model changed: 2.5 Pro → 3 Pro' },
+  { week: 6, kind: 'action', label: 'Action live: Session replay pricing page' },
+] as const;
 
 export type Kpi = Readonly<{
   label: string;
@@ -62,7 +130,7 @@ export type Kpi = Readonly<{
 }>;
 
 export const KPIS: readonly Kpi[] = [
-  { label: 'Visibility', value: '38.4', unit: '%', change: pts(4.2), spark: TREND.acme },
+  { label: 'Visibility', value: '38.3', unit: '%', change: pts(4.1), spark: TREND.acme },
   {
     label: 'Share of voice',
     value: '30.8',
@@ -77,10 +145,10 @@ export const KPIS: readonly Kpi[] = [
     spark: [151, 160, 166, 171, 178, 186, 194, 212],
   },
   {
-    label: 'Avg. position',
-    value: '2.6',
+    label: 'Position',
+    value: '1.7',
     change: { value: -0.3, policy: 'lower-is-better' },
-    spark: [3.4, 3.3, 3.2, 3.1, 3.1, 3.0, 2.9, 2.6],
+    spark: [2.5, 2.4, 2.3, 2.2, 2.2, 2.1, 2.0, 1.7],
   },
 ];
 
@@ -433,7 +501,7 @@ export const CONTENT_WORK: readonly Readonly<{
 
 /** Read-only tool calls an assistant made this week, each with what it returned. */
 export const MCP_CALLS: readonly Readonly<{ tool: string; result: string; time: string }>[] = [
-  { tool: 'read_visibility_overview', result: 'Visibility 38.4%, up 4.2 pts', time: '0.4s' },
+  { tool: 'read_visibility_overview', result: 'Visibility 38.3%, up 4.1 pp', time: '0.4s' },
   { tool: 'read_visibility_sources', result: '212 citations to acme.com', time: '0.3s' },
   { tool: 'read_ai_crawlability', result: 'GPTBot and Google-Extended restricted', time: '0.3s' },
   { tool: 'read_actions', result: '7 open actions, 2 High', time: '0.2s' },
