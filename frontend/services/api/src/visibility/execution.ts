@@ -20,6 +20,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { wireUtc, utcText } from '../db/timestamps.ts';
 import { scalarText } from '../text-order.ts';
+import { brandIdentities, markFirstNamed, type BrandIdentity } from './brand-identities.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence } from './surface.ts';
 import { executionClaims } from './accuracy.ts';
@@ -86,11 +87,14 @@ export async function getExecutionEvidence(
     .executeTakeFirst();
   const audit = await db
     .selectFrom('audits')
-    .select('configuration')
+    .select(['configuration', 'project_id'])
     .where('id', '=', analysis.audit_id)
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
   const score = scoreObject(analysis.score);
+  const identities = audit
+    ? await brandIdentities(db, { workspaceId: input.workspaceId, projectId: audit.project_id })
+    : new Map<string, BrandIdentity>();
   const [search_surface, perception, claims, ads] = await Promise.all([
     executionSurfaceEvidence(db, {
       workspaceId: input.workspaceId,
@@ -148,7 +152,7 @@ export async function getExecutionEvidence(
     search_used: analysis.search_used,
     search_query_count: analysis.search_query_count,
     avg_position: analysis.avg_position,
-    first_named: storedFirstNamed(analysis),
+    first_named: markFirstNamed(storedFirstNamed(analysis), identities),
     answer_formats: storedAnswerFormats(analysis),
     score,
     citations: citations.map((citation) => ({

@@ -501,7 +501,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         name: 'TransferWise',
         responses: 1,
         logo_url: null,
-        website: 'wise.example',
+        website: 'https://wise.example',
       },
     ]);
   });

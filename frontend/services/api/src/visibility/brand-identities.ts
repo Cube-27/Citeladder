@@ -4,11 +4,15 @@
  * A mention is persisted as a NAME, resolved against this
  * project's brand and competitor records (every competitor alias included);
  * the tracked brand wins a name collision, and a name that resolves to
- * nothing has no mark rather than a borrowed one.
+ * nothing has no mark rather than a borrowed one. The one resolver for every
+ * read that names a brand, so a stored domain always reaches the mark.
  */
+import type { FirstNamed } from '@citeladder/contracts/audits';
 import type { NamedBrand } from '@citeladder/contracts/visibility';
 import { sql } from 'kysely';
 
+import { normalizeDomain } from '../analysis/domains.ts';
+import { strings } from '../db/json.ts';
 import type { ProjectScope } from '../projects/brand-profile.ts';
 import { brandLogoUrl, competitorLogoUrl } from '../projects/logos.ts';
 import type { Database } from '../db/database.ts';
@@ -62,8 +66,31 @@ export function identityKey(name: unknown): string {
   return scalarText(name).trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
-function listOf(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
+/** A stored site or bare domain as `https://host`, or null when none parses. */
+function siteOf(value: string | null | undefined): string | null {
+  const domain = normalizeDomain(value);
+  return domain ? `https://${domain}` : null;
+}
+
+/** The mark fields for one recorded name; both null for a name with no record. */
+export function markOf(identities: ReadonlyMap<string, BrandIdentity>, name: string) {
+  const identity = identities.get(identityKey(name));
+  return { logo_url: identity?.logo_url ?? null, website_url: identity?.website ?? null };
+}
+
+/** The stored first-named business with its mark; none and unavailable stay as they are. */
+export function markFirstNamed(first: FirstNamed, identities: ReadonlyMap<string, BrandIdentity>) {
+  return first.kind === 'brand' || first.kind === 'competitor'
+    ? { ...first, ...markOf(identities, first.name) }
+    : first;
+}
+
+/** Set each named row's logo and website from `identities`, in place. */
+export function applyIdentities(
+  rows: readonly { name: string; logo_url?: string | null; website_url?: string | null }[],
+  identities: ReadonlyMap<string, BrandIdentity>,
+): void {
+  for (const row of rows) Object.assign(row, markOf(identities, row.name));
 }
 
 /** The scope's project marks keyed by `identityKey`. */
@@ -86,9 +113,20 @@ export async function brandIdentities(
     .where('project_id', '=', projectId)
     .executeTakeFirst();
   if (brand?.name) {
+    const owned = project.website_url
+      ? undefined
+      : await db
+          .selectFrom('owned_domains')
+          .select('domain')
+          .where('workspace_id', '=', workspaceId)
+          .where('project_id', '=', projectId)
+          .where('domain', '!=', '')
+          .orderBy('created_at')
+          .limit(1)
+          .executeTakeFirst();
     found.set(identityKey(brand.name), {
       logo_url: brand.logo_asset_id ? brandLogoUrl(project.id) : null,
-      website: project.website_url || null,
+      website: siteOf(project.website_url || owned?.domain),
     });
   }
   const competitors = await db
@@ -99,12 +137,11 @@ export async function brandIdentities(
     .orderBy('created_at')
     .execute();
   for (const competitor of competitors) {
-    const domains = listOf(competitor.domains).filter(Boolean).map(String);
     const identity = {
       logo_url: competitor.logo_asset_id ? competitorLogoUrl(project.id, competitor.id) : null,
-      website: domains[0] ?? null,
+      website: strings(competitor.domains).map(siteOf).find(Boolean) ?? null,
     };
-    for (const name of [competitor.name, ...listOf(competitor.aliases)]) {
+    for (const name of [competitor.name, ...strings(competitor.aliases)]) {
       const key = identityKey(name);
       if (name && !found.has(key)) found.set(key, identity);
     }

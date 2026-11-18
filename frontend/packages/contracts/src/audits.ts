@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { brandMarkFields } from './brand-mark.ts';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
 import { auditMarketSchema } from './markets.ts';
@@ -277,6 +278,7 @@ const aioLinkSchema = responseObject({
 export const surfaceEntitySchema = responseObject({
   name: z.string(),
   kind: z.enum(['brand', 'competitor']),
+  ...brandMarkFields,
   mentioned: z.boolean(),
   linked: z.boolean(),
   cited: z.boolean(),
@@ -323,6 +325,7 @@ export const aioRateSchema = responseObject({
 
 const aioCompetitorRateSchema = responseObject({
   name: z.string(),
+  ...brandMarkFields,
   rate: aioRateSchema,
 });
 
@@ -352,6 +355,14 @@ export const firstNamedSchema = z.discriminatedUnion('kind', [
   responseObject({ kind: z.literal('unavailable') }),
 ]);
 export type FirstNamed = z.infer<typeof firstNamedSchema>;
+
+// The same, with the named business's mark, for a read that draws it.
+export const markedFirstNamedSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('brand'), name: z.string(), ...brandMarkFields }),
+  responseObject({ kind: z.literal('competitor'), name: z.string(), ...brandMarkFields }),
+  responseObject({ kind: z.literal('none') }),
+  responseObject({ kind: z.literal('unavailable') }),
+]);
 
 export const answerFormatSchema = z.enum(['shopping', 'map', 'comparison', 'image']);
 // What a scraper answer showed besides text. `observed` with no formats is a
@@ -407,7 +418,7 @@ export const executionEvidenceSchema = responseObject({
   search_used: z.boolean(),
   search_query_count: z.number().int(),
   avg_position: z.number().nullable(),
-  first_named: firstNamedSchema,
+  first_named: markedFirstNamedSchema,
   answer_formats: answerFormatsSchema,
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),

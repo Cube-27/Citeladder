@@ -227,7 +227,12 @@ function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
       {named.slice(0, MAX_CHIPS).map((mention) => (
         <Tooltip key={`${mention.kind}:${mention.name}`} content={mention.name}>
           <span className="inline-flex">
-            <BrandMark name={mention.name || 'Brand'} placement="inline" />
+            <BrandMark
+              name={mention.name || 'Brand'}
+              logoUrl={mention.logo_url}
+              websiteUrl={mention.website_url}
+              placement="inline"
+            />
           </span>
         </Tooltip>
       ))}

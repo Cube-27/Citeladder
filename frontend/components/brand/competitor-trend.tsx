@@ -6,6 +6,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StepChart } from '@/components/ui/step-chart';
+import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
@@ -104,13 +105,20 @@ function TrendChart({
       <StepChart
         label={`${metricLabel} over time`}
         name="You"
+        mark={<RankedBrandMark rows={points.at(-1)?.rankings} name={null} />}
         data={yours.map((point) => ({
           ...point,
           value: axis.plot(point.value),
           label: `${point.dateLabel} · ${axis.format(point.value)}`,
           axisLabel: point.label,
         }))}
-        series={[{ label: name, values: theirs.map(axis.plot) }]}
+        series={[
+          {
+            label: name,
+            mark: <RankedBrandMark rows={points.at(-1)?.rankings} name={name} />,
+            values: theirs.map(axis.plot),
+          },
+        ]}
         events={events}
         eventLegend
         yMin={axis.yMin}

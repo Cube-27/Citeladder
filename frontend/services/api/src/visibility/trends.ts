@@ -8,7 +8,7 @@
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { toUtc, type ParsedDatetime } from '../http/datetimes.ts';
-import { applyMarks, rankingMarks } from './ranking-marks.ts';
+import { applyIdentities, brandIdentities } from './brand-identities.ts';
 import { withPointSentiments } from './ranking-sentiment.ts';
 import {
   loadMeasuredRuns,
@@ -103,8 +103,8 @@ export async function getVisibilityTrends(
   const points = (
     query.granularity === 'run' ? sources.map(rawPoint) : bucketPoints(sources, query.granularity)
   ).slice(-visibility.trend_max_points);
-  const marks = await rankingMarks(db, scope);
-  for (const point of points) applyMarks(point.rankings, marks);
+  const marks = await brandIdentities(db, scope);
+  for (const point of points) applyIdentities(point.rankings, marks);
   const withEvents = await withTrendEvents(db, scope, sources, points);
   return withPointSentiments(db, scope, query, withEvents);
 }

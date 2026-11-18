@@ -93,7 +93,7 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
   );
 }
 
-export type RankChip = { key: string; name: string; detail: string; own: boolean };
+export type RankChip = { key: string; mark: ReactNode; name: string; detail: string; own: boolean };
 
 /**
  * RankTable — each segment's leaders as chips in place columns; your own chip
@@ -145,6 +145,7 @@ export function RankTable({
                             : textRole('caption', 'bg-well text-ink'),
                         )}
                       >
+                        {chip.mark}
                         <span className="min-w-0 truncate">{chip.name}</span>
                         <span className="opacity-80">{chip.detail}</span>
                       </div>

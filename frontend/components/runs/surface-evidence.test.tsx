@@ -23,6 +23,8 @@ function entity(overrides: Partial<SurfaceEntity> = {}): SurfaceEntity {
   return {
     name: 'Acme Corp',
     kind: 'brand',
+    logo_url: null,
+    website_url: null,
     mentioned: false,
     linked: false,
     cited: false,

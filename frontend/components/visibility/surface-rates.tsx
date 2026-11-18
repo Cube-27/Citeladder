@@ -2,7 +2,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import { Absence } from '@/components/ui/absence';
-import { Stack } from '@/components/ui/layout';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { Inline, Stack } from '@/components/ui/layout';
 import { SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { formatPercent } from '@/lib/format';
@@ -84,7 +85,16 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
         {rates.map((entry) => (
           <LedgerItem
             key={entry.name}
-            title={entry.name}
+            title={
+              <Inline as="span">
+                <BrandMark
+                  name={entry.name}
+                  logoUrl={entry.logo_url}
+                  websiteUrl={entry.website_url}
+                />
+                {entry.name}
+              </Inline>
+            }
             meta={
               entry.rate.value === null ? (
                 <Absence state="unavailable" className="type-body text-ink-2" />

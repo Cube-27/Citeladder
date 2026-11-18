@@ -399,6 +399,12 @@ function themeMentions(mentions: readonly Mention[]) {
     .sort((a, b) => b.mentions - a.mentions || compareText(a.theme, b.theme));
 }
 
+// The read resolves marks against the project records (`brand-identities.ts`).
+const UNMARKED: { logo_url: string | null; website_url: string | null } = {
+  logo_url: null,
+  website_url: null,
+};
+
 /** Every named business's score and coverage: the brand first, then most mentioned. */
 export function entityScores(answers: readonly PerceptionAnswer[]) {
   const byEntity = new Map<string, { name: string; isBrand: boolean; mentions: Mention[] }>();
@@ -413,6 +419,7 @@ export function entityScores(answers: readonly PerceptionAnswer[]) {
     .map(({ name, isBrand, mentions }) => ({
       name,
       is_brand: isBrand,
+      ...UNMARKED,
       score: score(mentions),
       coverage: coverage(mentions),
       theme_mentions: themeMentions(mentions),

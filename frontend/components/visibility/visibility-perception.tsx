@@ -5,6 +5,7 @@ import type {
 } from '@citeladder/contracts/visibility-perception';
 import { MessageSquareQuote } from 'lucide-react';
 
+import { BrandMark } from '@/components/ui/brand-mark';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -57,6 +58,11 @@ export function EntityTable({ entities }: Readonly<{ entities: PerceptionRespons
           <TableRow key={entity.name} highlight={entity.is_brand}>
             <TableCell>
               <Inline as="span">
+                <BrandMark
+                  name={entity.name}
+                  logoUrl={entity.logo_url}
+                  websiteUrl={entity.website_url}
+                />
                 <ClampText>{entity.name}</ClampText>
                 {entity.is_brand ? <YouTag /> : null}
               </Inline>

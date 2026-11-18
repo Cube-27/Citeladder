@@ -1,6 +1,7 @@
 import { Check, Link2, Minus, Users } from 'lucide-react';
 
 import { Tag } from '@/components/ui/tag';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
@@ -64,6 +65,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
     <TableRow>
       <TableRowHeader>
         <Inline as="span">
+          <BrandMark name={entity.name} logoUrl={entity.logo_url} websiteUrl={entity.website_url} />
           <ClampText>{entity.name}</ClampText>
           {entity.kind === 'brand' ? <Tag>Your brand</Tag> : null}
         </Inline>

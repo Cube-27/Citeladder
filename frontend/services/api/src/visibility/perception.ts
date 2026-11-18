@@ -38,6 +38,7 @@ import {
 } from '../perception/metrics.ts';
 import { isNamed } from '../perception/passages.ts';
 import { compareText } from '../text-order.ts';
+import { applyIdentities, brandIdentities } from './brand-identities.ts';
 import { scopedSelection } from './dashboard.ts';
 import { periodTrendSelection } from './runs.ts';
 import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
@@ -239,6 +240,7 @@ export async function getPerception(
     periodTrendSelection(db, scoped),
   ]);
   const summary = perceptionSummary(answers, policy.perception);
+  applyIdentities(summary.entities, await brandIdentities(db, scoped));
   // The headline reads the pool; a pooled period's trend reads every run in it.
   const trend = period
     ? perceptionTrend((await selectionAnswers(db, period, { citations: false })).answers)

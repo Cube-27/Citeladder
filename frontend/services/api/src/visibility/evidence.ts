@@ -23,6 +23,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { compareText } from '../text-order.ts';
+import { brandIdentities, markOf, type BrandIdentity } from './brand-identities.ts';
 import {
   authorizedSelection,
   evidenceScope,
@@ -216,7 +217,11 @@ export async function getVisibilityEvidence(
   const shown = rows.slice(0, options.limit);
   const ids = shown.map((row) => row.analysis_id);
   const [mentions, citations] = await Promise.all([
-    mentionsByAnalysis(db, selection.workspaceId, ids),
+    mentionsByAnalysis(db, {
+      workspaceId: selection.workspaceId,
+      analysisIds: ids,
+      identities: await brandIdentities(db, selection),
+    }),
     citationsByAnalysis(db, selection.workspaceId, ids),
   ]);
   // One label per prompt; a prompt renamed within the selection shows one text.
@@ -280,8 +285,15 @@ type Mention = EvidenceItem['mentions'][number];
 /** Brand then competitor mentions per answer, each in recorded order. */
 async function mentionsByAnalysis(
   db: Database,
-  workspaceId: string,
-  analysisIds: readonly string[],
+  {
+    workspaceId,
+    analysisIds,
+    identities,
+  }: {
+    workspaceId: string;
+    analysisIds: readonly string[];
+    identities: ReadonlyMap<string, BrandIdentity>;
+  },
 ): Promise<Map<string, Mention[]>> {
   const grouped = new Map<string, Mention[]>();
   if (analysisIds.length === 0) return grouped;
@@ -324,6 +336,7 @@ async function mentionsByAnalysis(
       list.push({
         kind,
         name: row.name || '',
+        ...markOf(identities, row.name || ''),
         first_offset: row.first_offset,
         artifact_id: row.artifact_id,
         analyzer_version: row.analyzer_version || '',

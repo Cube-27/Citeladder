@@ -254,8 +254,21 @@ describe('GET /visibility/matrix', () => {
     expect(rankings.engine![1]).toEqual({
       kind: 'measured',
       leaders: [
-        { name: 'Globex', is_brand: false, mention_rate: 0.5 },
-        { name: 'Acme Corp', is_brand: true, mention_rate: 0 },
+        // Each leader carries the mark its record stores, for the chip.
+        {
+          name: 'Globex',
+          is_brand: false,
+          logo_url: null,
+          website_url: 'https://globex.example',
+          mention_rate: 0.5,
+        },
+        {
+          name: 'Acme Corp',
+          is_brand: true,
+          logo_url: `/api/v1/projects/${tenant.projectId}/logo`,
+          website_url: 'https://acme.example',
+          mention_rate: 0,
+        },
       ],
     });
     expect(rankings.topic![1]).toEqual({ kind: 'not_run' });

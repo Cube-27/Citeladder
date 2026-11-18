@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
 
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Delta } from '@/components/ui/delta';
+import { Inline } from '@/components/ui/layout';
 import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
@@ -175,7 +177,17 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
             <Rows
               rows={visibility.rankings.slice(0, WIDGET_ROWS).map((row) => ({
                 key: row.name,
-                label: row.is_brand ? <strong>{row.name}</strong> : row.name,
+                label: (
+                  <Inline as="span">
+                    <BrandMark
+                      name={row.name}
+                      logoUrl={row.logo_url}
+                      websiteUrl={row.website_url}
+                      placement="inline"
+                    />
+                    {row.is_brand ? <strong>{row.name}</strong> : row.name}
+                  </Inline>
+                ),
                 value: formatRate(row.share_of_voice),
               }))}
             />

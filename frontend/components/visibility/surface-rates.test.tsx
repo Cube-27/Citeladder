@@ -92,6 +92,8 @@ describe('AI Overview rates', () => {
         competitor_mention_rates: [
           {
             name: 'Globex',
+            logo_url: null,
+            website_url: null,
             rate: rate({
               numerator: 1,
               denominator: 40,
@@ -101,6 +103,8 @@ describe('AI Overview rates', () => {
           },
           {
             name: 'Initech',
+            logo_url: null,
+            website_url: null,
             rate: rate({
               numerator: 30,
               denominator: 40,

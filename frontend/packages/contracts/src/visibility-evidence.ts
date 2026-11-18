@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { citationSchema } from './audits.ts';
+import { brandMarkFields } from './brand-mark.ts';
 import { pageEntitySchema } from './source-pages.ts';
 import { namedBrandSchema } from './visibility.ts';
 
@@ -42,6 +43,7 @@ const visibilityEvidenceSearchEventSchema = responseObject({
 const visibilityMentionEvidenceSchema = responseObject({
   kind: z.enum(['brand', 'competitor']),
   name: z.string(),
+  ...brandMarkFields,
   first_offset: z.number().int().nullable(),
   artifact_id: uuid().nullable(),
   analyzer_version: z.string(),

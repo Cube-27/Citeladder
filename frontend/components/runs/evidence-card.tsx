@@ -75,7 +75,12 @@ function namedFirst(first: ExecutionEvidence['first_named']) {
     case 'competitor':
       return (
         <Inline gap="tight">
-          <BrandMark name={first.name} placement="inline" />
+          <BrandMark
+            name={first.name}
+            logoUrl={first.logo_url}
+            websiteUrl={first.website_url}
+            placement="inline"
+          />
           {first.name}
         </Inline>
       );

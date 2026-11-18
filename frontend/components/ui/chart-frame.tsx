@@ -78,6 +78,8 @@ function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: Mark
 
 export type KeyEntry = Readonly<{
   name: string;
+  /** The brand's logo, drawn between the swatch and the name. */
+  mark?: ReactNode;
   tone: SeriesTone;
   shape?: MarkerShape;
   value?: string;
@@ -101,6 +103,7 @@ export function ChartKey({
       {entries.map((entry) => (
         <li key={entry.name} className={item}>
           <SeriesSwatch tone={entry.tone} shape={entry.shape} />
+          {entry.mark}
           <span className="min-w-0 truncate" title={entry.name}>
             {entry.name}
           </span>
@@ -167,6 +170,7 @@ export function ChartTipSheet({
       {rows.map((row) => (
         <div key={row.name} className={textRole('caption', 'flex items-center gap-2 text-ink')}>
           <SeriesSwatch tone={row.tone} />
+          {row.mark}
           <span className="min-w-0 flex-1 truncate">{row.name}</span>
           <span className="tabular-nums">{row.value}</span>
         </div>
