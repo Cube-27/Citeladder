@@ -139,10 +139,9 @@ map or `missingLabel` string. Which word or mark to use belongs to
 #1009 a muted dash again), and every change missed some of the parallel
 vocabularies. CodeAnt's custom rule caught collapsed absence states in about
 50 of the last 150 PRs. `prompt-table.tsx`, `lib/visibility/matrix.ts` and
-`ai-traffic/url-panel.tsx` were each flagged in four PRs. About 15 local
-vocabularies remain, for example `lib/ai-traffic/vocabulary.ts:77`,
-`components/runs/evidence-card.tsx:90` and the `missingLabel: 'Unavailable'`
-props in `visibility-ads.tsx`, `surface-rates.tsx` and `dashboard-sections.tsx`.
+`ai-traffic/url-panel.tsx` were each flagged in four PRs. #1014 routed the
+local vocabularies through `lib/format.ts`; job statuses (`rung-trail.tsx`,
+`INTERNAL_LINK_STATES`) are workflow states, not absent values.
 **Check:**
 `rg "'(Not measured|Unavailable|Not available|No data|Not run)'" frontend/components frontend/lib`
 outside `lib/format.ts`. Any `missingLabel:` literal.
