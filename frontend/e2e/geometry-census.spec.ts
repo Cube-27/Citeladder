@@ -157,8 +157,6 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
-/** A count strip's cell, pressable as a whole (the Actions goal strip). */
-const COUNT_CELL_HEIGHT = 76;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
@@ -216,16 +214,13 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
-    // A work tree's level rows and a count strip's cells are whole-row targets
-    // (components/ui/work-tree.tsx, count-strip.tsx), measured as their own roles.
+    // A work tree's level rows and a pressable figure's cell are whole-row
+    // targets (components/ui/work-tree.tsx, figure-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
       add('tree-row.height', element, element.getBoundingClientRect().height);
       continue;
     }
-    if (element.matches('[data-count-cell] > button')) {
-      add('count-cell.height', element, element.getBoundingClientRect().height);
-      continue;
-    }
+    if (element.matches('[data-figure-cell] > button')) continue;
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (
@@ -748,7 +743,6 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
-  expectOneValue(records, 'count-cell.height', COUNT_CELL_HEIGHT);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);

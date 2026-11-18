@@ -77,7 +77,7 @@ test('built marketing hydrates with one enforced header and blocks injected scri
     { path: '/privacy', carrier: 'meta', status: 200 },
   ] as const;
   for (const { path, carrier, status } of pages) {
-    const response = await page.goto(`https://127.0.0.1:8794${path}`);
+    const response = await page.goto(`http://127.0.0.1:8794${path}`);
     expect(response?.status()).toBe(status);
     const header = response?.headers()['content-security-policy'];
     const meta = page.locator('meta[http-equiv="content-security-policy"]');
@@ -105,7 +105,7 @@ test('built marketing hydrates with one enforced header and blocks injected scri
   });
   await expect(page.locator('html')).not.toHaveAttribute('data-injected', 'executed');
   await checkInjectedBeacon(page);
-  const missing = await page.request.get('https://127.0.0.1:8794/not-a-page.html');
+  const missing = await page.request.get('http://127.0.0.1:8794/not-a-page.html');
   expect(missing.status()).toBe(404);
   // The 404 page is prerendered too, so its policy is its one <meta> element.
   expect(missing.headers()['content-security-policy']).toBeUndefined();

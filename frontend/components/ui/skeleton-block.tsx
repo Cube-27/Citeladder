@@ -113,9 +113,13 @@ function TitleBlock() {
 }
 
 /** A widget's frame as it loads: its title's line over its body's shape. */
-export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
+export function WidgetCardBlocks({
+  shape,
+  framed = true,
+}: Readonly<{ shape: LoadingShape; framed?: boolean }>) {
+  const layout = 'skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]';
   return (
-    <div className={frameClasses('skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]')}>
+    <div className={framed ? frameClasses(layout) : layout}>
       <span className="flex h-6 items-center">
         <TitleBlock />
       </span>

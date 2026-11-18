@@ -93,13 +93,9 @@ export function ProjectSwitcher() {
                 <MenuItem
                   key={workspace.id}
                   data-active={selected}
-                  // A different workspace shares none of this route's
-                  // resources — a run id, a crawl id, a selected category all
-                  // belong to the one being left — so a switch lands on the
-                  // new workspace's Overview rather than carrying a path that
-                  // will only resolve to "unavailable". Re-picking the active
-                  // workspace stays the no-op it looks like.
-                  onSelect={() => selectWorkspace(workspace.id, selected ? undefined : '/projects')}
+                  // The same page in the new workspace, its record ids dropped;
+                  // re-picking the active workspace stays the no-op it looks like.
+                  onSelect={() => selectWorkspace(workspace.id)}
                   icon={<Building2 aria-hidden />}
                   selected={selected}
                 >

@@ -258,6 +258,7 @@ a fresh scope before work starts.
 | Prompt generation extras | Advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
 | Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
 | Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |
+| Engines multi-select | Pick several engines at once. Needs an engines list parameter on about 15 visibility and perception routes and a code-computed merge of per-engine aggregates: positions, sentiment and win rate are not count-additive. Owner undecided (2026-11-18). |
 
 ## Removed
 

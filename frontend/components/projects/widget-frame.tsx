@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -17,6 +17,12 @@ export type WidgetLink = Readonly<{ href: string; label: string; name?: string }
  * stretches its plot into the height, and a `list` starts at the head.
  */
 type WidgetFill = 'figure' | 'chart' | 'list';
+
+/**
+ * Whether the grid cell frames its widget. Full-width widgets sit on the
+ * surface as sections; half-width tiles keep their frames (owner, 2026-11-18).
+ */
+export const WidgetFramedContext = createContext(true);
 
 type WidgetHeadProps = Readonly<{
   id: string;
@@ -53,6 +59,8 @@ export function WidgetFrame({
   children: ReactNode;
 }>) {
   const figure = fill === 'figure';
+  const framed = use(WidgetFramedContext);
+  const layout = 'flex h-full min-w-0 flex-col';
   const linkElement = link ? (
     <TextLink href={link.href} underline="hover">
       {link.name ? <span className="sr-only">{link.name}: </span> : null}
@@ -65,7 +73,7 @@ export function WidgetFrame({
       gap="workspace"
       aria-labelledby={id}
       data-overview-widget=""
-      className={frameClasses('flex h-full min-w-0 flex-col')}
+      className={framed ? frameClasses(layout) : layout}
     >
       <WidgetHead
         id={id}

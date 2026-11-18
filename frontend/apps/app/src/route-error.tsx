@@ -1,4 +1,3 @@
-import { SearchX } from 'lucide-react';
 import { useEffect } from 'react';
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
@@ -60,21 +59,6 @@ export function ScreenError() {
         </>
       }
     />
-  );
-}
-
-/** An application URL that matches no screen. */
-export function NotFoundScreen() {
-  return (
-    <NoticePage
-      tone="info"
-      icon={SearchX}
-      label={null}
-      heading="Page not found"
-      actions={<OverviewLink />}
-    >
-      There is no page at this address. Check the link, or go back to Overview.
-    </NoticePage>
   );
 }
 
