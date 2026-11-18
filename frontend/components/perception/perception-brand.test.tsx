@@ -49,7 +49,15 @@ const quote = {
 };
 
 function response(overrides: Partial<PerceptionResponse> = {}): PerceptionResponse {
-  const brand = { name: 'Acme', is_brand: true, score: score(), coverage, theme_mentions: [] };
+  const brand = {
+    name: 'Acme',
+    is_brand: true,
+    logo_url: null,
+    website_url: null,
+    score: score(),
+    coverage,
+    theme_mentions: [],
+  };
   return {
     state: 'value',
     reason: null,
@@ -61,6 +69,8 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
       {
         name: 'Rival',
         is_brand: false,
+        logo_url: null,
+        website_url: null,
         score: score({ classified: 0, positive: 0, negative: 0, net_sentiment: null }),
         coverage: { ...coverage, mentions: 2, classified: 0 },
         theme_mentions: [],
@@ -101,7 +111,15 @@ describe('Perception view', () => {
     render(
       <PerceptionView
         data={response({
-          brand: { name: 'Acme', is_brand: true, score: enough, coverage, theme_mentions: [] },
+          brand: {
+            name: 'Acme',
+            is_brand: true,
+            logo_url: null,
+            website_url: null,
+            score: enough,
+            coverage,
+            theme_mentions: [],
+          },
         })}
       />,
     );

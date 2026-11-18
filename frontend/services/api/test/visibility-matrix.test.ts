@@ -265,7 +265,7 @@ describe('GET /visibility/matrix', () => {
         {
           name: 'Acme Corp',
           is_brand: true,
-          logo_url: `/api/v1/projects/${tenant.projectId}/logo`,
+          logo_url: null,
           website_url: 'https://acme.example',
           mention_rate: 0,
         },
