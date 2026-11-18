@@ -37,7 +37,7 @@ import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 const MEASUREMENT_LABELS: Record<string, string> = {
   measured: 'Measured',
   limited_evidence: 'Limited evidence',
-  not_measured: 'No evidence',
+  not_measured: 'Not checked',
   excluded: 'Excluded',
   not_applicable: 'Not applicable',
 };

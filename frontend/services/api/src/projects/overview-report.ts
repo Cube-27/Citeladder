@@ -39,7 +39,7 @@ import { readOverviewLayout } from './overview-layout.ts';
 const ROWS = policy.projects.overview_report_list_rows;
 const COHORT = policy.visibility.core_cohort;
 const NO_COMPARISON = 'No comparison yet';
-const NO_READING = 'No reading in this run';
+const NO_READING = 'No value';
 
 type View = ReportContext['view'];
 type Action = View['actions'][number];
