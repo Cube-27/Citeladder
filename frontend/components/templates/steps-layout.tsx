@@ -10,7 +10,7 @@ export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
 /**
  * Steps: a task worked through in order, inside a shell page's body. The
- * steps run down a 220 column on the left (numbered, the current one on the
+ * steps run down a 224 column on the left (numbered, the current one on the
  * nav's current tile, completed ones ticked and clickable to go back to),
  * the current step's content beside them, and a raised action bar pinned to
  * the window's foot: `footerStart` at its left, `footerEnd` at its right. The
@@ -41,8 +41,8 @@ export function StepsLayout<T extends string>({
   const index = steps.findIndex((step) => step.value === current);
   return (
     <div className="flex min-h-[calc(100dvh-var(--route-chrome-height))] min-w-0 flex-1 flex-col">
-      <div className="desktop:grid-cols-[220px_minmax(0,1fr)] grid min-w-0 flex-1 content-start items-start gap-[var(--content-gutter)]">
-        <nav aria-label={label} className="flex min-w-0 flex-col">
+      <div className="desktop:flex-row flex min-w-0 flex-1 flex-col gap-[var(--content-gutter)]">
+        <nav aria-label={label} className="flex w-56 shrink-0 flex-col">
           <ol className="flex min-w-0 flex-col gap-1">
             {steps.map((step, position) => (
               <li key={step.value}>
@@ -57,7 +57,7 @@ export function StepsLayout<T extends string>({
           </ol>
           {note ? <p className={textRole('caption', 'text-ink-2 px-2 pt-3')}>{note}</p> : null}
         </nav>
-        <section aria-label={steps[index]?.label} className="min-w-0">
+        <section aria-label={steps[index]?.label} className="min-w-0 flex-1">
           {children}
         </section>
       </div>
