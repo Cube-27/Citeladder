@@ -65,7 +65,7 @@ export function SelectionBar({
         {formatCount(selected)} selected
       </span>
       {hint ? (
-        <span className={textRole('caption', 'rail:inline hidden truncate')}>{hint}</span>
+        <span className={textRole('caption', 'rail:block hidden truncate')}>{hint}</span>
       ) : null}
       <span className="ms-auto flex items-center gap-2">{children}</span>
     </div>

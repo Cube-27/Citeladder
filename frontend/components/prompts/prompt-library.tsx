@@ -242,14 +242,11 @@ export function PromptLibrary() {
     [byTopic, search, filters, measurements],
   );
   // A filter change shows other rows, so it starts a new selection.
-  const selection = useRowSelection(visible);
+  const selection = useRowSelection(
+    visible,
+    JSON.stringify([statusFilter, selectedTopicId, search, filters]),
+  );
   const bulk = usePromptBulk(scope, { topics, onDone: selection.clear });
-  const refilter =
-    <T,>(set: (value: T) => void) =>
-    (value: T) => {
-      selection.clear();
-      set(value);
-    };
   const confirmDelete = (pending: PendingDelete) => {
     switch (pending.kind) {
       case 'topic':
@@ -368,21 +365,17 @@ export function PromptLibrary() {
       filters={libraryFilterBar(
         hasPrompts,
         promptFilterControls({
-          status: {
-            value: statusFilter,
-            counts: statusCounts,
-            onChange: refilter(setStatusFilter),
-          },
+          status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
           search,
-          onSearchChange: refilter(setSearch),
+          onSearchChange: setSearch,
           filters,
-          onFiltersChange: refilter(setFilters),
+          onFiltersChange: setFilters,
           personas,
           measured: measuredChoices,
           topic: topicFilter({
             topics,
             selectedTopicId,
-            onSelect: refilter(setSelectedTopicId),
+            onSelect: setSelectedTopicId,
             manage: edits?.topics,
           }),
         }),

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
@@ -336,6 +336,17 @@ describe('PromptLibrary bulk actions', () => {
 
     await user.type(screen.getByRole('searchbox'), 'boots');
     expect(screen.queryByRole('toolbar', { name: 'Selected prompts' })).not.toBeInTheDocument();
+
+    // Back and forward change the status in the address, not through the control.
+    await user.click(box('Best hiking boots?'));
+    const travel = (status: string) =>
+      act(() => {
+        window.history.pushState(null, '', `/projects/${bulkProject.id}/prompts?status=${status}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+    travel('active');
+    travel('archived');
+    expect(box('Best hiking boots?')).not.toBeChecked();
     window.history.replaceState(null, '', '/');
   });
 });

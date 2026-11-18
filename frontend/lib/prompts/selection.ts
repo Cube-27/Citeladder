@@ -42,10 +42,16 @@ export function togglePage(
 
 /**
  * A table's row selection over the rows it shows, in their order. Only shown
- * rows count as selected, so a row a refresh removed is never acted on.
+ * rows count as selected, so a row a refresh removed is never acted on. Any
+ * change of `view` (the filters, however they changed) starts a new selection.
  */
-export function useRowSelection<T extends { id: string }>(rows: readonly T[]) {
+export function useRowSelection<T extends { id: string }>(rows: readonly T[], view: string) {
   const [selection, setSelection] = useState<RowSelection>(EMPTY);
+  const [selectedView, setSelectedView] = useState(view);
+  if (view !== selectedView) {
+    setSelectedView(view);
+    setSelection(EMPTY);
+  }
   const selected = rows.filter((row) => selection.ids.has(row.id));
   return {
     ids: selection.ids,
