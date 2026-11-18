@@ -215,11 +215,16 @@ describe('GET /visibility/perception', () => {
       recommended: { mentioned: 5, recommended: 1, recommended_against: 0, rate: 0.2 },
     });
     expect(body.entities).toEqual([
-      expect.objectContaining({ name: 'Acme', is_brand: true }),
+      expect.objectContaining({
+        name: 'Acme',
+        is_brand: true,
+        theme_mentions: [{ theme: 'support', mentions: 2 }],
+      }),
       expect.objectContaining({
         name: 'Rival',
         is_brand: false,
         score: expect.objectContaining({ net_sentiment: 100 }),
+        theme_mentions: [],
       }),
     ]);
     expect(body.negative_quotes).toEqual([
@@ -228,6 +233,61 @@ describe('GET /visibility/perception', () => {
         run_id: auditId,
         execution_id: classifiedTask,
       }),
+    ]);
+  });
+
+  it('counts competitor themes per mention while its quotes stay out of the brand’s (AV-6)', async () => {
+    const run = await fixtures.audit(tenant, { configuration: CONFIGURATION });
+    await answer(tenant, run, {
+      outcome: 'classified',
+      entities: [
+        { name: 'Acme', kind: 'brand', label: 'positive' },
+        {
+          name: 'Rival',
+          kind: 'competitor',
+          label: 'negative',
+          // Two aspects on one theme are one mention raising it.
+          aspects: [
+            aspect('negative', 'Rival support is slow'),
+            aspect('negative', 'Rival support is rude', 30),
+            { ...aspect('positive', 'Rival is cheap'), theme: 'pricing' },
+          ],
+        },
+      ],
+    });
+    await answer(tenant, run, {
+      outcome: 'classified',
+      entities: [
+        {
+          name: 'Rival',
+          kind: 'competitor',
+          label: 'negative',
+          aspects: [aspect('negative', 'x')],
+        },
+      ],
+    });
+    const { body } = await get(
+      tenant,
+      `/api/v1/projects/${tenant.projectId}/visibility/perception`,
+      { audit_id: run },
+    );
+    expect([
+      (body.entities as Body[]).map((entity) => [entity.name, entity.theme_mentions]),
+      body.themes,
+      body.negative_quotes,
+    ]).toEqual([
+      [
+        ['Acme', []],
+        [
+          'Rival',
+          [
+            { theme: 'support', mentions: 2 },
+            { theme: 'pricing', mentions: 1 },
+          ],
+        ],
+      ],
+      [],
+      [],
     ]);
   });
 

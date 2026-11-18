@@ -113,7 +113,7 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
           onChange: props.onChangeRange,
         })
       : null,
-    pooled && props.view === 'insights'
+    pooled && (props.view === 'insights' || props.view === 'competitor')
       ? choiceFilter({
           id: 'granularity',
           label: 'Group by',

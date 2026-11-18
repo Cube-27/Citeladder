@@ -19,6 +19,9 @@ export const WIN_RATE_HINT =
  */
 export const PERCEPTION_MIN_CLASSIFIED = 20;
 
+/** Theme columns the competitor theme map shows: the most raised across brands. */
+export const THEME_MAP_COLUMNS = 6;
+
 export const ANSWER_OUTCOMES = [
   { value: 'all', label: 'All answers' },
   { value: 'brand_absent', label: 'Brand absent' },

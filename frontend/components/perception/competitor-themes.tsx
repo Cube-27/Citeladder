@@ -1,0 +1,109 @@
+import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
+
+import { Absence } from '@/components/ui/absence';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { ClampText } from '@/components/ui/clamp-text';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { FigureStrip } from '@/components/ui/figure-strip';
+import { HeatValue } from '@/components/ui/heat-value';
+import { Inline, Stack } from '@/components/ui/layout';
+import { SectionContent, TitledSection } from '@/components/ui/section';
+import { TableCell, TableRow, YouTag } from '@/components/ui/table';
+import { textRole } from '@/components/ui/typography';
+import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
+import { formatShare, themeLabel } from '@/lib/visibility/perception';
+import { themeAssociation, type ThemeCell } from '@/lib/visibility/theme-association';
+
+const TITLE = 'How AI describes competitors';
+
+/**
+ * Brand → Perception: each tracked brand's share of mentions raising each
+ * theme (AV-6). Counts only: competitor quotes are never shown.
+ */
+export function CompetitorThemes({
+  entities,
+}: Readonly<{ entities: PerceptionResponse['entities'] }>) {
+  const map = themeAssociation(entities);
+  const columns: readonly DataTableColumn[] = [
+    { key: 'brand', label: 'Brand', width: 'lead' },
+    ...map.themes.map((theme): DataTableColumn => ({
+      key: theme,
+      label: themeLabel(theme),
+      kind: 'number',
+      width: 'figure',
+    })),
+  ];
+  return (
+    <TitledSection
+      title={TITLE}
+      description="Share of each brand’s mentions that raise the theme · quotes stay yours only"
+    >
+      <SectionContent>
+        <Stack gap="item">
+          <FigureStrip
+            label="Theme association"
+            segments={[
+              {
+                key: 'top',
+                label: 'Your most associated theme',
+                value: map.top ? themeLabel(map.top.theme) : null,
+                missingLabel: 'Too few',
+                sub: map.top ? `${formatShare(map.top.share)} of your mentions` : undefined,
+              },
+              {
+                key: 'gap',
+                label: 'Largest gap to the leader',
+                value: map.gap ? themeLabel(map.gap.theme) : null,
+                missingLabel: map.top ? 'No gap' : 'Too few',
+                sub: map.gap ? `${map.gap.leader} ahead by ${map.gap.points} pts` : undefined,
+              },
+            ]}
+          />
+          <DataTable
+            label={TITLE}
+            columns={columns}
+            minWidth="md"
+            state={
+              map.themes.length
+                ? undefined
+                : { kind: 'empty', inline: true, message: 'No themes in these answers.' }
+            }
+            footer={`A brand with fewer than ${PERCEPTION_MIN_CLASSIFIED} classified mentions reads too few.`}
+          >
+            {map.rows.map((row) => (
+              <TableRow key={`${row.isBrand}:${row.name}`} highlight={row.isBrand}>
+                <TableCell>
+                  <Inline as="span">
+                    <BrandMark name={row.name} />
+                    <ClampText lines={1} className={textRole('emphasis')}>
+                      {row.name}
+                    </ClampText>
+                    {row.isBrand ? <YouTag /> : null}
+                  </Inline>
+                </TableCell>
+                {row.cells.map((cell, index) => (
+                  <TableCell key={map.themes[index]} numeric>
+                    <HeatCell cell={cell} />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </DataTable>
+        </Stack>
+      </SectionContent>
+    </TitledSection>
+  );
+}
+
+/** A share over a tint as deep as the share; too few is a named absence, never a zero. */
+function HeatCell({ cell }: Readonly<{ cell: ThemeCell }>) {
+  if (cell.kind === 'too_few')
+    return (
+      <Absence
+        state="unavailable"
+        label="Too few"
+        reason={`Shows from ${PERCEPTION_MIN_CLASSIFIED} classified mentions; ${cell.classified} so far.`}
+      />
+    );
+  return <HeatValue share={cell.share}>{formatShare(cell.share)}</HeatValue>;
+}

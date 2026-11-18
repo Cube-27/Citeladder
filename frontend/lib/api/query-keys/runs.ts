@@ -57,6 +57,8 @@ export const visibilityKeys = {
     visibility.read('topics', scope, filters),
   perception: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('perception', scope, filters),
+  competitor: (scope: ProjectScope, name: string, filters: ListFilters = {}) =>
+    visibility.read('competitor', scope, name, filters),
   accuracy: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('accuracy', scope, filters),
   accuracyFacts: (scope: ProjectScope, filters: ListFilters = {}) =>

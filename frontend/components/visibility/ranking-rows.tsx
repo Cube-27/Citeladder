@@ -10,11 +10,12 @@ import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
+import { competitorHref, orderByVisibility, rankingRowKey } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
+import { TextLink } from '@/components/ui/text-link';
 
 const TITLE = 'You and your competitors';
 
@@ -80,7 +81,13 @@ export function RankingRowsTable({
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                   <ClampText lines={1} className={textRole('emphasis')}>
-                    {row.name}
+                    {row.is_brand ? (
+                      row.name
+                    ) : (
+                      <TextLink href={competitorHref(row.name)} text="inherit" underline="hover">
+                        {row.name}
+                      </TextLink>
+                    )}
                   </ClampText>
                   {row.is_brand ? <YouTag /> : null}
                 </Inline>

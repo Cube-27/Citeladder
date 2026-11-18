@@ -12,6 +12,8 @@
   "ads_advertisers_limit": 50,
   "ads_creatives_default_limit": 20,
   "ads_creatives_max_limit": 50,
+  "competitor_sources_limit": 10,
+  "competitor_named_instead_limit": 10,
   "trend_granularities": ["day", "month", "run", "week"],
   "trend_default_granularity": "run",
   "trend_max_points": 100,

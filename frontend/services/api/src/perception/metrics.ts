@@ -375,6 +375,19 @@ function trend(answers: readonly PerceptionAnswer[]) {
   });
 }
 
+/** Per theme, the classified mentions raising it at least once: most raised first. */
+function themeMentions(mentions: readonly Mention[]) {
+  const counts = new Map<string, number>();
+  for (const mention of mentions) {
+    if (mention.status.kind !== 'classified') continue;
+    for (const theme of new Set(mention.aspects.map((aspect) => aspect.theme)))
+      counts.set(theme, (counts.get(theme) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([theme, count]) => ({ theme, mentions: count }))
+    .sort((a, b) => b.mentions - a.mentions || compareText(a.theme, b.theme));
+}
+
 /** Every named business's score and coverage: the brand first, then most mentioned. */
 export function entityScores(answers: readonly PerceptionAnswer[]) {
   const byEntity = new Map<string, { name: string; isBrand: boolean; mentions: Mention[] }>();
@@ -391,6 +404,7 @@ export function entityScores(answers: readonly PerceptionAnswer[]) {
       is_brand: isBrand,
       score: score(mentions),
       coverage: coverage(mentions),
+      theme_mentions: themeMentions(mentions),
     }))
     .sort(
       (a, b) =>

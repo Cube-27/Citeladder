@@ -1,6 +1,7 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 import { useState } from 'react';
 
+import { CompetitorThemes } from '@/components/perception/competitor-themes';
 import { PerceptionBreakdown } from '@/components/perception/perception-breakdown';
 import { AppGrid } from '@/components/ui/app-grid';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -58,8 +59,10 @@ export function PerceptionView({
         <EntityTable entities={data.entities} />
         <NegativeQuotes quotes={data.negative_quotes} />
       </AppGrid>
-      {/* Last on the page: its views and opened themes change its height only. */}
       <PerceptionBreakdown data={data} />
+      {data.entities.some((entity) => !entity.is_brand) ? (
+        <CompetitorThemes entities={data.entities} />
+      ) : null}
     </SectionStack>
   );
 }

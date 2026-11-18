@@ -49,7 +49,7 @@ const quote = {
 };
 
 function response(overrides: Partial<PerceptionResponse> = {}): PerceptionResponse {
-  const brand = { name: 'Acme', is_brand: true, score: score(), coverage };
+  const brand = { name: 'Acme', is_brand: true, score: score(), coverage, theme_mentions: [] };
   return {
     state: 'value',
     reason: null,
@@ -63,6 +63,7 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
         is_brand: false,
         score: score({ classified: 0, positive: 0, negative: 0, net_sentiment: null }),
         coverage: { ...coverage, mentions: 2, classified: 0 },
+        theme_mentions: [],
       },
     ],
     engines: [],
