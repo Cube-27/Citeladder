@@ -95,7 +95,7 @@ test('tests, codegen, config, content and registries are ignored; authored sourc
   );
 });
 
-test('the baseline exempts its files and may only shrink', () => {
+test('the baseline exempts its files up to their recorded size and may only shrink', () => {
   const repo = repository();
   try {
     repo.policy({ 'frontend/big.ts': 7000 });
@@ -103,9 +103,24 @@ test('the baseline exempts its files and may only shrink', () => {
     repo.git('add', '.');
     repo.git('commit', '-qm', 'baseline');
 
-    repo.write('frontend/big.ts', 'x'.repeat(28_004));
+    repo.write('frontend/big.ts', 'x'.repeat(27_996));
     repo.git('add', 'frontend/big.ts');
     assert.deepEqual(repo.check('--staged'), { status: 0, stderr: '' });
+
+    repo.write('frontend/big.ts', 'x'.repeat(28_001));
+    repo.git('add', 'frontend/big.ts');
+    const grown = repo.check('--staged');
+    assert.equal(grown.status, 1);
+    assert.match(
+      grown.stderr,
+      /frontend\/big\.ts: now 7001 tokens, over its recorded 7000; split the file/u,
+    );
+    // CI judges baselined files whether or not the branch changed them.
+    repo.git('commit', '-qm', 'grown', '--no-verify');
+    const grownInCi = repo.check('--base', 'HEAD');
+    assert.equal(grownInCi.status, 1);
+    assert.match(grownInCi.stderr, /now 7001 tokens, over its recorded 7000/u);
+    repo.git('reset', '-q', '--hard', 'HEAD~1');
 
     repo.policy({ 'frontend/big.ts': 7000, 'frontend/new.ts': 6500 });
     repo.write('frontend/new.ts', 'x'.repeat(26_000));

@@ -21,6 +21,7 @@ const APPEND_ONLY = [
   'agent_tool_attempts',
   'aio_observations',
   'answer_ad_observations',
+  'answer_untracked_names',
   'billing_catalog_imports',
   'billing_payments',
   'brand_research_snapshots',

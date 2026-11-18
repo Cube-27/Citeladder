@@ -358,9 +358,9 @@ changed files, so `--no-verify` does not bypass it.
 `frontend/scripts/token-size-policy.json` holds the limit, the ignore list
 (tests, codegen, migrations, marketing content, config owners, design tokens
 and the MCP tool registries, each with its reason) and the baseline of files
-already over the limit on 13 November 2026. A baseline file is exempt; the
-baseline may only shrink, and an entry is deleted once a split brings its file
-under the limit.
+already over the limit on 13 November 2026, with each file's recorded size. A
+baseline file may not grow past its recorded size; the baseline may only
+shrink, and an entry is deleted once a split brings its file under the limit.
 
 To bring a file under the limit, split it along its seams (functions and types
 that change together, a class and its collaborators, a route group, a
