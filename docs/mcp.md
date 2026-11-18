@@ -177,7 +177,11 @@ crawls, calls a provider, enqueues work or writes; changes are a separate
 catalogue (below). The generated public tool reference lists the tools.
 
 Each market is measured apart: market-scoped reads take `market_id` (omitted
-is the default market). Ads never count as citations. `read_page_text` reads
+is the default market). Visibility overview, trends, results, sources, query
+fanouts and competitor focus take `topic_id`, the topic each run froze (AV-5),
+and refuse a topic of another project. New reads are views on an existing tool
+before they are new tools (owner, 2026-11-18), because every tool also sits in
+the Agent's cached prefix. Ads never count as citations. `read_page_text` reads
 the crawled page, never the live one. Page URLs the Site tools return drop
 their query string and fragment (they can carry tokens or emails); pages that
 differ only by query stay apart by `site_url_id`, and their cursors carry no URL.

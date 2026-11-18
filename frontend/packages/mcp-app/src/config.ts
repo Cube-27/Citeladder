@@ -8,5 +8,8 @@ export const appPolicy = {
   metrics: [
     { value: 'brand_mention_rate', label: 'Brand mention rate' },
     { value: 'owned_citation_rate', label: 'Owned citation rate' },
+    { value: 'share_of_voice', label: 'Share of voice' },
+    { value: 'avg_position', label: 'Average position' },
+    { value: 'win_rate', label: 'Win rate' },
   ],
 } as const;

@@ -318,6 +318,24 @@ The in-app Agent stays read-only.
 Source: owner decisions D4.2 and D4.4 of 10 October 2026 (competitive tracker F4).
 [MCP](mcp.md#changes) owns the shipped behavior.
 
+## MCP reads grow by views first
+
+MCP and the Agent share one read catalogue, and every tool sits in the Agent's
+cached prefix, so new visibility reads are views and parameters on existing
+tools first: a topic filter on the overview, trends, results and sources reads,
+`view: topics|matrix` on the overview and `view: facts` on fact checks. At most
+three new reads were added: prompt metrics with history and past answers, query
+fanouts, and competitors with list, focus and suggestion views. Tool
+descriptions are refreshed with the metrics the reads return, and links, the
+docs site and the changelog follow. Confirmed MCP writes for competitor
+suggestions and bulk prompt changes are a separate decision; there is no prompt
+delete over MCP, and the Agent stays read-only.
+
+Source: owner, 18 November 2026 (AI visibility gaps plan, API/MCP audit Q3 and
+Q4: "plus also referesh tool descriptions and fix links and subsequently update
+docs subdomain and changelog, also update website content wherever
+applicable"). [MCP](mcp.md#the-catalogue) owns the shipped behavior.
+
 ## Site Health crawler parity checks and Apple's crawlers
 
 Site Health gains the deterministic crawler checks a comparison with two

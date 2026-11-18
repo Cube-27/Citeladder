@@ -10,14 +10,17 @@ import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-tren
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
 import { parseDatetime } from '../http/datetimes.ts';
-import { getVisibility, scopedSelection } from '../visibility/dashboard.ts';
+import { scopedSelection } from '../visibility/dashboard.ts';
+import { getVisibilityMatrix } from '../visibility/matrix.ts';
+import { getRankedVisibility } from '../visibility/ranking-sentiment.ts';
+import { getVisibilityTopics } from '../visibility/topics.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
-import { getAccuracy, getAccuracyClaims } from '../visibility/accuracy.ts';
+import { getAccuracy, getAccuracyClaims, getAccuracyFacts } from '../visibility/accuracy.ts';
 import { getAds } from '../visibility/ads.ts';
 import { policy } from '../config.ts';
 import {
@@ -31,16 +34,18 @@ import { pagination, reference, unavailable } from './data.ts';
 import { McpInputError, type Evidence, type ProjectRead, type ReadScope } from './types.ts';
 import { mcpPolicy } from './config.ts';
 
-type Selection = {
+export type Selection = {
   market_id?: string | null;
   audit_id?: string | null;
   engine?: string | null;
   cohort: string;
+  topic_id?: string | null;
 };
-type Page = { cursor?: string | null; limit?: number | null };
+export type Page = { cursor?: string | null; limit?: number | null };
 const inMarket = (scope: ReadScope, args: Selection) => ({
   ...scope,
   marketId: args.market_id ?? null,
+  topicId: args.topic_id ?? null,
 });
 const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   ...inMarket(scope, args),
@@ -52,18 +57,34 @@ const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   toAt: null,
 });
 
+/** A topic filter names one of this project's topics; an ID alone authorizes nothing. */
+async function requireTopic({ db, scope }: ProjectRead, topicId: string | null | undefined) {
+  if (!topicId) return;
+  const topic = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'topics')
+    .select('id')
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', topicId)
+    .executeTakeFirst();
+  if (!topic) throw new McpInputError('topic_id is not a topic of this project');
+}
+
 /**
  * The default selection with nothing to read yet: `no_completed_run`, or
- * `metrics_pending` while the latest run's results are still being written.
+ * `metrics_pending` while the latest run's results are still being written,
+ * or `topic_not_measured` when the latest run asked no prompt in the topic.
  * A missing run the caller named is the caller's error, so it is rethrown.
  */
-function notYetMeasured(error: unknown, named: boolean): Evidence {
+export function notYetMeasured(error: unknown, named: boolean, topic = false): Evidence {
   if (named || !(error instanceof AnalysisNotFoundError)) throw error;
-  return unavailable(error.reason === 'metrics_pending' ? 'metrics_pending' : 'no_completed_run');
+  if (error.reason === 'metrics_pending') return unavailable('metrics_pending');
+  return unavailable(
+    topic && error.reason === 'not_measured' ? 'topic_not_measured' : 'no_completed_run',
+  );
 }
 
 export async function visibilityTrends(
-  { db, scope }: ProjectRead,
+  read: ProjectRead,
   args: Selection & {
     from_at: string;
     to_at: string;
@@ -80,6 +101,8 @@ export async function visibilityTrends(
     mcpPolicy.trend_max_window_days * 86400000
   )
     throw new McpInputError(`Trend windows are limited to ${mcpPolicy.trend_max_window_days} days`);
+  await requireTopic(read, args.topic_id);
+  const { db, scope } = read;
   const points = visibilityTrendListSchema.parse(
     await getVisibilityTrends(db, inMarket(scope, args), {
       logicalEngine: args.engine ?? null,
@@ -151,19 +174,30 @@ export async function perceptionRead(
 
 /**
  * Fact-check accuracy for the latest or a chosen run: the summary (accuracy
- * always with its coverage) or a page of claims with their verdicts and the
- * confirmed facts behind them. Outside the pilot the read is `not_enabled`.
+ * always with its coverage), a page of claims with their verdicts and the
+ * confirmed facts behind them, or each fact with the verdicts that cite it.
+ * Outside the pilot the read is `not_enabled`.
  */
 export async function factChecksRead(
   { db, scope }: ProjectRead,
   args: Selection &
     Page & {
-      view: 'summary' | 'claims';
+      view: 'summary' | 'claims' | 'facts';
       topic?: string | null;
       verdict?: string | null;
     },
 ): Promise<Evidence> {
   try {
+    if (args.view === 'facts') {
+      const list = await getAccuracyFacts(db, runs(scope, args));
+      if (!list.enabled) return unavailable('not_enabled');
+      return {
+        state: 'available',
+        view: 'facts',
+        facts: list.facts,
+        artifact_refs: [],
+      };
+    }
     if (args.view === 'claims') {
       if (!(await factCheckingEnabled(db, scope.workspaceId))) return unavailable('not_enabled');
       const page = await getAccuracyClaims(db, runs(scope, args), {
@@ -224,23 +258,47 @@ export async function adsRead(
   }
 }
 
-/** The dashboard projection for one run, with that run's status and progress. */
-export async function visibilityOverview(
-  { db, scope, origin }: ProjectRead,
-  args: Selection & { baseline_id?: string | null },
-): Promise<Evidence> {
+type OverviewArgs = Selection & {
+  baseline_id?: string | null;
+  view?: 'summary' | 'topics' | 'matrix';
+};
+
+/**
+ * The dashboard projection for one run, with that run's status and progress;
+ * or the same selection per topic (`topics`) or per topic and market (`matrix`).
+ */
+export async function visibilityOverview(read: ProjectRead, args: OverviewArgs): Promise<Evidence> {
+  const { db, scope } = read;
+  const query = {
+    auditId: args.audit_id ?? null,
+    logicalEngine: args.engine ?? null,
+    selectionMode: args.audit_id ? 'run' : 'latest',
+    fromAt: null,
+    toAt: null,
+    configurationKey: null,
+    cohort: args.cohort,
+  } as const;
+  const named = Boolean(args.audit_id || args.baseline_id);
   try {
+    await requireTopic(read, args.topic_id);
+    if (args.view === 'topics' || args.view === 'matrix') {
+      if (args.baseline_id) throw new McpInputError('baseline_id applies only to view summary');
+      const projection =
+        args.view === 'topics'
+          ? await getVisibilityTopics(db, inMarket(scope, args), query)
+          : await getVisibilityMatrix(db, inMarket(scope, args), query);
+      return {
+        state: 'available',
+        view: args.view,
+        ...projection,
+        artifact_refs: projection.source_audit_ids.map((id) => reference('audit', id)),
+      };
+    }
     if (args.baseline_id) await authorizeRunSet(db, scope, [args.baseline_id]);
     const projection = visibilitySchema.parse(
-      await getVisibility(db, inMarket(scope, args), {
-        auditId: args.audit_id ?? null,
-        logicalEngine: args.engine ?? null,
+      await getRankedVisibility(db, inMarket(scope, args), {
+        ...query,
         baselineId: args.baseline_id ?? null,
-        selectionMode: args.audit_id ? 'run' : 'latest',
-        fromAt: null,
-        toAt: null,
-        configurationKey: null,
-        cohort: args.cohort,
       }),
     );
     const run = await new WorkspaceScope(scope.workspaceId)
@@ -259,25 +317,37 @@ export async function visibilityOverview(
         answers_failed: run.failed_count,
         completed_at: run.completed_at,
       },
-      link: appLink(origin, `/runs/${projection.audit_id}`, scope.projectId),
+      link: appLink(read.origin, `/runs/${projection.audit_id}`, scope.projectId),
       artifact_refs: [reference('audit', projection.audit_id)],
     };
   } catch (error) {
-    return notYetMeasured(error, Boolean(args.audit_id || args.baseline_id));
+    return notYetMeasured(error, named, Boolean(args.topic_id));
+  }
+}
+
+/** One run's selection, or why there is nothing to read yet. */
+export async function oneRun(
+  read: ProjectRead,
+  args: Selection,
+): Promise<{ kind: 'run'; selection: RunSelection } | { kind: 'none'; evidence: Evidence }> {
+  await requireTopic(read, args.topic_id);
+  try {
+    return { kind: 'run', selection: await scopedSelection(read.db, runs(read.scope, args)) };
+  } catch (error) {
+    const named = Boolean(args.audit_id);
+    return { kind: 'none', evidence: notYetMeasured(error, named, Boolean(args.topic_id)) };
   }
 }
 
 export async function visibilityResults(
-  { db, scope }: ProjectRead,
+  read: ProjectRead,
   args: Selection &
     Page & { prompt_id?: string | null; domain?: string | null; url?: string | null },
 ): Promise<Evidence> {
-  let selection: RunSelection;
-  try {
-    selection = await scopedSelection(db, runs(scope, args));
-  } catch (error) {
-    return notYetMeasured(error, Boolean(args.audit_id));
-  }
+  const { db } = read;
+  const run = await oneRun(read, args);
+  if (run.kind === 'none') return run.evidence;
+  const { selection } = run;
   const page = await getVisibilityEvidence(db, selection, {
     promptId: args.prompt_id ?? null,
     outcome: null,
@@ -310,16 +380,14 @@ export async function visibilityResults(
 }
 
 export async function visibilitySources(
-  { db, scope }: ProjectRead,
+  read: ProjectRead,
   args: Selection & Page & { level: 'domain' | 'url'; domain?: string | null },
 ): Promise<Evidence> {
-  let selection: RunSelection;
-  try {
-    // One run, as the description promises: the named run or the market's latest.
-    selection = await scopedSelection(db, runs(scope, args));
-  } catch (error) {
-    return notYetMeasured(error, Boolean(args.audit_id));
-  }
+  const { db } = read;
+  // One run, as the description promises: the named run or the market's latest.
+  const run = await oneRun(read, args);
+  if (run.kind === 'none') return run.evidence;
+  const { selection } = run;
   const auditId = selection.auditId;
   if (auditId === null) throw new Error('A sources read selects exactly one run');
   let page: Awaited<ReturnType<typeof getVisibilitySources>>;
@@ -424,7 +492,7 @@ export async function renderAnalytics(
       granularity: 'run',
     });
   } else {
-    const overview = await visibilityOverview(read, selection);
+    const overview = await visibilityOverview(read, { ...selection, view: 'summary' });
     if (typeof overview.audit_id === 'string') resolved.audit_id = overview.audit_id;
     evidence =
       view === 'sources' && resolved.audit_id ? await visibilitySources(read, resolved) : overview;
