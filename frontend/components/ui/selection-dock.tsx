@@ -22,7 +22,7 @@ export function SelectionDock({
   return (
     <DockLayer>
       {summary === null ? null : (
-        <DockBar label={label}>
+        <DockBar label={label} slidesIn>
           <span className={textRole('body', 'px-2 whitespace-nowrap tabular-nums')}>{summary}</span>
           {children}
         </DockBar>
@@ -56,11 +56,17 @@ function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="pointer-events-none sticky bottom-5 z-10 h-0">{children}</div>;
 }
 
-function DockBar({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+/** `slidesIn`: a selection's bar slides up as it appears (ui-motion.css). */
+function DockBar({
+  label,
+  slidesIn,
+  children,
+}: Readonly<{ label: string; slidesIn?: boolean; children: ReactNode }>) {
   return (
     <div
       role="toolbar"
       aria-label={label}
+      data-selection-dock={slidesIn ? '' : undefined}
       className={cn(
         POP_FACE,
         'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 p-2',

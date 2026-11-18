@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 /**
  * Tooltip — a short label that names an icon button or explains a number, on
  * a sheet (`raised`, hairline edge, the one shadow), `caption` type, 4/8px
- * padding, 8px from its anchor, no arrow. It shows after 300ms on hover and at once on
- * keyboard focus; a shortcut prints as mono `on-ink` text, never a Kbd cap.
+ * padding, 8px from its anchor, no arrow. It fades in with a 2px rise
+ * (ui-motion.css), after 300ms on hover and at once on keyboard focus; a shortcut prints as mono `on-ink` text, never a Kbd cap.
  * Only keyboard focus opens it: the focus a browser restores when the reader
  * returns to the tab, or one a script moves after a press, does not.
  *

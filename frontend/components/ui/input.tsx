@@ -22,7 +22,7 @@ export const FIELD_EDGE = `bg-surface border border-control-line ${PUBLIC_EDGE}`
  * tint, never a darker edge; focus and invalid are FIELD_EDGE's. The website
  * keeps its hairline edge.
  */
-const SOFT_FIELD_EDGE = `bg-control-fill border border-control-edge shadow-control [:root:not([data-public-surface])_&]:hover:overlay-hover ${PUBLIC_EDGE}`;
+const SOFT_FIELD_EDGE = `bg-control-fill border border-control-edge shadow-control ${PUBLIC_EDGE}`;
 
 const FIELD_SHAPE =
   'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]';
@@ -30,7 +30,16 @@ const FIELD_SHAPE =
 /** A form field's box: FIELD_EDGE, the control radius, at least `control-md` tall. */
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 /** A search or filter control's box: the soft edge on the same shape. */
-export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} ${FIELD_SHAPE}`;
+export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} [:root:not([data-public-surface])_&]:hover:overlay-hover ${FIELD_SHAPE}`;
+
+/**
+ * A typed field (Input, SearchField) tints its own fill 4% ink on hover
+ * instead of the trigger's 6% overlay (globals.css `field-hover`).
+ */
+const TYPED_FIELD_BOX = {
+  line: `${FIELD_BOX} field-hover`,
+  soft: `${SOFT_FIELD_EDGE} ${FIELD_SHAPE} field-hover [--field-fill:var(--color-control-fill)]`,
+} as const;
 
 /**
  * A field fills its column (`fill`) unless its role is narrower: `quantity`
@@ -82,7 +91,7 @@ export function Input({
         ref={ref}
         className={cn(
           'focus-input',
-          edge === 'soft' ? SOFT_FIELD_BOX : FIELD_BOX,
+          TYPED_FIELD_BOX[edge],
           'placeholder:text-ink-2 disabled:cursor-not-allowed disabled:opacity-60',
           inputWidths[width],
           containerClassName,
@@ -97,7 +106,7 @@ export function Input({
     <div
       className={cn(
         'focus-frame flex items-center gap-2',
-        edge === 'soft' ? SOFT_FIELD_BOX : FIELD_BOX,
+        TYPED_FIELD_BOX[edge],
         props.disabled && 'cursor-not-allowed opacity-60',
         endContentFlush && 'pe-1',
         containerClassName,

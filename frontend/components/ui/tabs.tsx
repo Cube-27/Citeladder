@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   type ButtonHTMLAttributes,
   type KeyboardEvent,
@@ -20,7 +21,7 @@ import { cn } from '@/lib/utils';
  * keeps its height) that scrolls sideways inside itself (its scrollbar
  * hidden) when its items overflow; each item is `body` in `ink-2`, and the
  * current one is `ink` at `label` weight with the 2px accent underline
- * ("you are here") on the hairline. One face for page tabs, in-section tabs
+ * ("you are here") on the hairline, sliding from item to item. One face for page tabs, in-section tabs
  * and the Segmented view switch.
  */
 const TAB_STRIP =
@@ -28,6 +29,8 @@ const TAB_STRIP =
 
 /** Past the edge fade, so the cue never covers the item it reveals. */
 const REVEAL_PADDING = 32;
+
+const SELECTED_ITEM = '[aria-selected="true"], [aria-checked="true"]';
 
 /**
  * Keeps the strip's current item in view, on mount and on every selection:
@@ -37,7 +40,7 @@ function useRevealSelected(selected: string | null) {
   const strip = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const list = strip.current;
-    const item = list?.querySelector<HTMLElement>('[aria-selected="true"], [aria-checked="true"]');
+    const item = list?.querySelector<HTMLElement>(SELECTED_ITEM);
     if (!list || !item) return;
     const start = item.offsetLeft - REVEAL_PADDING;
     const end = item.offsetLeft + item.offsetWidth + REVEAL_PADDING - list.clientWidth;
@@ -45,6 +48,38 @@ function useRevealSelected(selected: string | null) {
     else if (list.scrollLeft < end) list.scrollLeft = end;
   }, [selected]);
   return strip;
+}
+
+/**
+ * Places the strip's one accent underline (`TabMark`) under its current
+ * item, and again whenever the strip or that item resizes; globals.css
+ * slides it there. Without a current item each item draws its own.
+ */
+function useTabMark(strip: RefObject<HTMLDivElement | null>, selected: string | null) {
+  useLayoutEffect(() => {
+    const list = strip.current;
+    const item = list?.querySelector<HTMLElement>(SELECTED_ITEM);
+    if (!list || !item) {
+      list?.removeAttribute('data-tab-mark-ready');
+      return;
+    }
+    const place = () => {
+      list.style.setProperty('--tab-mark-x', `${item.offsetLeft}px`);
+      list.style.setProperty('--tab-mark-w', `${item.offsetWidth}px`);
+      list.setAttribute('data-tab-mark-ready', '');
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(place);
+    observer.observe(list);
+    observer.observe(item);
+    return () => observer.disconnect();
+  }, [strip, selected]);
+}
+
+/** The strip's sliding underline; a direct child of the strip. */
+function TabMark() {
+  return <span aria-hidden data-tab-mark="" />;
 }
 
 /**
@@ -87,7 +122,7 @@ function tabFace({
 }: Readonly<{ kind: TabKind; selected: boolean; className?: string }>) {
   const tab = kind !== 'segment';
   return cn(
-    'focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-tint)] disabled:cursor-not-allowed disabled:opacity-60',
     TAB_KIND[kind],
     tab &&
       'isolate px-3 before:absolute before:inset-x-0 before:inset-y-1 before:-z-10 before:rounded-mark before:content-[""]',
@@ -261,6 +296,7 @@ function TabStrip<T extends string>({
 }: Readonly<TabStripProps<T> & { kind?: Exclude<TabKind, 'segment'> }>) {
   const active = useContext(ActiveTabContext);
   const strip = useRevealSelected(active);
+  useTabMark(strip, active);
   return (
     <StripFrame>
       {(ref, region) => (
@@ -290,6 +326,7 @@ function TabStrip<T extends string>({
               {item.count === undefined ? null : <ControlCount count={item.count} />}
             </TabsPrimitive.Trigger>
           ))}
+          <TabMark />
         </TabsPrimitive.List>
       )}
     </StripFrame>
@@ -401,6 +438,7 @@ export function SegmentedControl<T extends string>({
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   const strip = useRevealSelected(value);
+  useTabMark(strip, value);
   // With an off-list `value` nothing is checked; fall back to the first option
   // so the group stays reachable by keyboard.
   const selectedIndex = options.findIndex((option) => option.value === value);
@@ -485,6 +523,7 @@ export function SegmentedControl<T extends string>({
             })}
           </div>
           {trailing}
+          <TabMark />
         </div>
       )}
     </StripFrame>

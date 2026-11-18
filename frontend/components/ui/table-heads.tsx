@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 
 import { TableHead } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -50,10 +50,11 @@ const SORT_ALIGN = {
  * `th` (it describes the column, and that is where a screen reader looks for
  * it), the glyph after the label.
  *
- * The active column takes primary ink (the header row's own `aria-sort` rule)
- * and the glyph is muted until active. The
- * button's name is the visible label (plus the sublabel when present), so it
- * is pressed with Enter or Space like any other button.
+ * The active column takes primary ink (the header row's own `aria-sort` rule).
+ * The one arrow holds its slot but shows only at half on hover or focus and
+ * whole on the sorted column, turned up for ascending (globals.css
+ * `sort-glyph`). The button's name is the visible label (plus the sublabel
+ * when present), so it is pressed with Enter or Space like any other button.
  */
 export function SortableTableHead({
   label,
@@ -83,11 +84,7 @@ export function SortableTableHead({
   // An inactive column has no order: no `aria-sort` and the neutral glyph, so
   // the announcement and the arrow can never drift apart.
   let ariaSort: 'ascending' | 'descending' | undefined;
-  let Icon = ArrowUpDown;
-  if (active) {
-    ariaSort = descending ? 'descending' : 'ascending';
-    Icon = descending ? ArrowDown : ArrowUp;
-  }
+  if (active) ariaSort = descending ? 'descending' : 'ascending';
   const align = numeric ? SORT_ALIGN.end : SORT_ALIGN.start;
   const button = (
     <button
@@ -108,7 +105,7 @@ export function SortableTableHead({
         )}
       >
         <span className="truncate">{label}</span>
-        <Icon className={cn('size-3 shrink-0', !active && 'text-ink-2')} aria-hidden />
+        <ArrowDown className="sort-glyph size-3 shrink-0" aria-hidden />
       </span>
       {sublabel ? (
         <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>

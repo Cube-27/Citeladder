@@ -1,23 +1,26 @@
 /* Authenticated interaction motion. Timing lives in globals.css; feature files
    consume semantic component classes rather than defining local animation. */
 
-/* Popups (menus, selects, popovers, tooltips, info hints) and toasts open and
-   close with keyframes: Radix Presence keeps content mounted only while an
-   animation runs. They move 4px from the trigger's side and back on close
-   (toasts sit at the top). No scale, so no transform-origin. */
-.menu-panel,
+/* Popups and toasts open and close with keyframes: Radix Presence keeps
+   content mounted only while an animation runs. Tooltips and toasts move
+   from the trigger's side (a tooltip 2px, a toast 4px; toasts sit at the
+   top); menus and selects grow from their anchor instead (below). */
 .tooltip-panel,
 .toast-panel {
-  --popup-from: 0 -4px;
+  --popup-distance: 4px;
+  --popup-from: 0 calc(-1 * var(--popup-distance));
+}
+.tooltip-panel {
+  --popup-distance: 2px;
 }
 [data-side='top'] {
-  --popup-from: 0 4px;
+  --popup-from: 0 var(--popup-distance);
 }
 [data-side='left'] {
-  --popup-from: 4px 0;
+  --popup-from: var(--popup-distance) 0;
 }
 [data-side='right'] {
-  --popup-from: -4px 0;
+  --popup-from: calc(-1 * var(--popup-distance)) 0;
 }
 @keyframes popup-in {
   from {
@@ -31,12 +34,44 @@
     translate: var(--popup-from);
   }
 }
-:is(.menu-panel, .tooltip-panel, .toast-panel)[data-state$='open'],
-.menu-panel[data-open] {
+.toast-panel[data-state$='open'] {
   animation: popup-in var(--motion-open) var(--ease-standard);
 }
-:is(.menu-panel, .tooltip-panel, .toast-panel)[data-state='closed'] {
+.tooltip-panel[data-state$='open'] {
+  animation: popup-in var(--motion-tint) var(--ease-standard);
+}
+:is(.tooltip-panel, .toast-panel)[data-state='closed'] {
   animation: popup-out var(--motion-close) var(--ease-exit) both;
+}
+
+/* A menu or select list grows from 96% at its anchor's corner. */
+@keyframes popup-grow {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+.menu-panel {
+  transform-origin: var(--radix-popper-transform-origin);
+}
+.menu-panel:is([data-state='open'], [data-open]) {
+  animation: popup-grow var(--motion-tint) var(--ease-fluid);
+}
+.menu-panel[data-state='closed'] {
+  animation: popup-grow var(--motion-snap) var(--ease-exit) reverse both;
+}
+
+/* The selection dock slides up into place as a selection starts. */
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-selection-dock] {
+    animation: dock-in var(--motion-tint) var(--ease-fluid);
+  }
 }
 
 /* A swipe moves the toast 1:1, eases back on cancel (Radix clears both

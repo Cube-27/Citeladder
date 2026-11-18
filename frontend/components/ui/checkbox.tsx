@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
-import { Check, Minus } from 'lucide-react';
+import { Minus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -26,11 +26,31 @@ export type CheckboxProps = AccessibleCheckbox & {
 /**
  * The 16px box: `surface` with the control line,
  * radius 2; checked and indeterminate are an `ink` fill with an `on-ink`
- * check or dash. It is drawn centred in a 24×24 target (`CHECK_TARGET`), so
- * the target is never under 24. Shared with the table's row checkbox.
+ * check or dash. The fill scales in and the check draws itself; a held
+ * press scales the box to 92% (globals.css "Checkbox"). It is drawn centred
+ * in a 24×24 target (`CHECK_TARGET`), so the target is never under 24.
+ * Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[background-color,border-color] duration-[var(--motion-fast)] before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] disabled:cursor-not-allowed';
+  'check-box press [--press-scale:0.92] focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[border-color] duration-[var(--motion-fast)] before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] disabled:cursor-not-allowed';
+
+/** Lucide's check, with a unit path length so its stroke can draw on. */
+function CheckMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-3"
+      aria-hidden
+    >
+      <path data-check-path="" pathLength={1} d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 
 /** The 24×24 box the 16px control centres in, on the first 20px text line. */
 const CHECK_TARGET = 'inline-flex size-[var(--target-min)] shrink-0 items-center justify-center';
@@ -66,11 +86,12 @@ function Box({
       aria-describedby={ariaDescribedBy}
       className={CHECK_BOX}
     >
-      <CheckboxPrimitive.Indicator>
+      {/* Always mounted, so the check can draw on and off. */}
+      <CheckboxPrimitive.Indicator forceMount className="grid place-items-center">
         {checked === 'indeterminate' ? (
           <Minus className="size-3 [stroke-width:3]" aria-hidden />
         ) : (
-          <Check className="size-3 [stroke-width:3]" aria-hidden />
+          <CheckMark />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
