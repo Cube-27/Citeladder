@@ -3,6 +3,8 @@
   "fanout_projection_version": "fanout-1",
   "evidence_default_limit": 100,
   "evidence_max_limit": 500,
+  "prompt_answers_page_size": 25,
+  "prompt_answers_max_limit": 100,
   "source_movers_default_limit": 5,
   "source_movers_max_limit": 20,
   "source_url_max_prompts": 50,

@@ -27,6 +27,8 @@ export type ObservationInput = {
 
 export type ExecutionInput = {
   auditId: string;
+  /** The tracked prompt the run's frozen snapshot names. */
+  promptId?: string;
   engine?: string;
   transportModel?: string;
   transportProvider?: string;
@@ -62,6 +64,8 @@ export type ExecutionInput = {
     }[];
     brandMentions?: string[];
     competitorMentions?: string[];
+    /** Each mentioned name's first offset in the answer. */
+    mentionOffsets?: Record<string, number>;
     /** Pages the answer read; omitted means the surface exposed no reads. */
     retrieved?: { url: string; isOwned?: boolean; urlHash?: string | null }[];
   } | null;
@@ -293,6 +297,7 @@ export class VisibilityFixtures extends Fixtures {
           id: snapshotId,
           workspace_id: tenant.workspaceId,
           audit_id: input.auditId,
+          prompt_id: input.promptId ?? null,
           prompt_index: promptIndex,
           text: input.promptText ?? `prompt ${promptIndex}`,
           theme: input.theme ?? '',
@@ -432,13 +437,23 @@ export class VisibilityFixtures extends Fixtures {
     for (const name of spec.brandMentions ?? []) {
       await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('brand_mentions')
-        .values({ ...mention, id: randomUUID(), brand_name: name })
+        .values({
+          ...mention,
+          id: randomUUID(),
+          brand_name: name,
+          first_offset: spec.mentionOffsets?.[name] ?? null,
+        })
         .execute();
     }
     for (const name of spec.competitorMentions ?? []) {
       await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('competitor_mentions')
-        .values({ ...mention, id: randomUUID(), competitor_name: name })
+        .values({
+          ...mention,
+          id: randomUUID(),
+          competitor_name: name,
+          first_offset: spec.mentionOffsets?.[name] ?? null,
+        })
         .execute();
     }
     for (const [ordinal, citation] of citations.entries()) {
