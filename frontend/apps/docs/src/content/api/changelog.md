@@ -8,6 +8,10 @@ updated: '2026-11-18'
 
 Additions and changes within `v1`. Existing fields keep their meaning; new fields and operations are added without a new version.
 
+## November 18, 2026: Field and parameter descriptions
+
+The visibility, perception, query fan-out, prompt metric and competitor suggestion fields, and the shared selection parameters (`audit_id`, `audit_ids`, `market`, `topic`, `engine`, `cohort`, `selection_mode`, `baseline_*`, `standing`, `granularity` and others), now carry a `description` in [openapi.json](https://api.citeladder.com/v1/openapi.json) and on the endpoint pages. [Metrics and states](/api/metrics/) defines each metric. No field or behaviour changed.
+
 ## November 18, 2026: Answers, rate limit headers and new visibility fields
 
 New operations, under the `read` scope:
@@ -27,7 +31,7 @@ Added to existing operations:
 - Perception breakdowns by engine, topic, prompt and over time, and competitor themes.
 - [Reject a competitor suggestion](/api/endpoints/competitors/reject-a-competitor-suggestion/), and suggestions found by a name answers used (`kind: named_in_answers`) as well as by a cited domain.
 
-See [Values that are not numbers](/api/#values-that-are-not-numbers) for when the new fields are `null` or `0`.
+See [Metrics and states](/api/metrics/) for when the new fields are `null` or `0`.
 
 ## November 18, 2026: Endpoint pages and a description for every operation
 

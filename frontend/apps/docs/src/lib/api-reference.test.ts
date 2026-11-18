@@ -21,7 +21,13 @@ const document = apiDocument.parse({
         'x-citeladder-scope': 'prompts:write',
         parameters: [
           { name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string' } },
-          { name: 'limit', in: 'query', required: true, schema: { type: 'integer' } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: true,
+            description: 'Rows per page.',
+            schema: { type: 'integer' },
+          },
         ],
         requestBody: {
           content: {
@@ -59,6 +65,18 @@ describe('API operations', () => {
       '/api/endpoints/prompts/list-prompts/',
       '/api/endpoints/prompts/list-prompts-post/',
       '/api/endpoints/prompts/list-prompt-sets/',
+    ]);
+  });
+
+  it("describes a parameter row from the OpenAPI parameter's description", () => {
+    const write = operations.find(({ method }) => method === 'POST');
+    expect(
+      write?.parameters.flatMap(({ rows }) =>
+        rows.map(({ name, description }) => [name, description]),
+      ),
+    ).toEqual([
+      ['limit', 'Rows per page.'],
+      ['Idempotency-Key', undefined],
     ]);
   });
 });

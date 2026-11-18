@@ -42,27 +42,30 @@ const perceptionStateSchema = z.enum(['value', 'pending', 'unavailable', 'no_men
 
 // "N of M mentions classified": every mention lands in exactly one bucket.
 export const perceptionCoverageSchema = responseObject({
-  mentions: z.number().int(),
-  classified: z.number().int(),
-  pending: z.number().int(),
-  not_assessable: z.number().int(),
-  low_confidence: z.number().int(),
-  unavailable: z.array(
-    responseObject({ reason: perceptionUnavailableReasonSchema, count: z.number().int() }),
-  ),
+  mentions: z.number().int().describe('Mentions in the selection; each lands in one bucket below.'),
+  classified: z.number().int().describe('Labelled with enough confidence to count.'),
+  pending: z.number().int().describe('Waiting for classification.'),
+  not_assessable: z.number().int().describe('Read, but carrying no tone to judge.'),
+  low_confidence: z.number().int().describe('Labelled below the confidence floor: not counted.'),
+  unavailable: z
+    .array(responseObject({ reason: perceptionUnavailableReasonSchema, count: z.number().int() }))
+    .describe('Mentions that could not be classified, by reason.'),
 });
 
-// Label counts over classified mentions. Shares and net sentiment are null
-// when nothing was classified; `mixed` counts only in the denominator.
+const SHARE_OF_CLASSIFIED = 'over `classified`, 0–1. Null: nothing classified.';
+// `mixed` counts only in the denominator.
 export const perceptionScoreSchema = responseObject({
   positive: z.number().int(),
   neutral: z.number().int(),
   negative: z.number().int(),
   mixed: z.number().int(),
-  classified: z.number().int(),
-  positive_share: z.number().nullable(),
-  negative_share: z.number().nullable(),
-  net_sentiment: z.number().nullable(),
+  classified: z.number().int().describe('All four labels together: the denominator.'),
+  positive_share: z.number().nullable().describe(`\`positive\` ${SHARE_OF_CLASSIFIED}`),
+  negative_share: z.number().nullable().describe(`\`negative\` ${SHARE_OF_CLASSIFIED}`),
+  net_sentiment: z
+    .number()
+    .nullable()
+    .describe('(positive − negative) / classified × 100, −100 to 100. Null: nothing classified.'),
 });
 
 export const perceptionEntitySchema = responseObject({
@@ -70,13 +73,14 @@ export const perceptionEntitySchema = responseObject({
   is_brand: z.boolean(),
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
-  // Per theme, the classified mentions raising it at least once. Counts only:
-  // quotes stay the brand's own (AV-6).
-  theme_mentions: z.array(responseObject({ theme: z.string(), mentions: z.number().int() })),
+  // Counts only: quotes stay the brand's own (AV-6).
+  theme_mentions: z
+    .array(responseObject({ theme: z.string(), mentions: z.number().int() }))
+    .describe('Per theme, the classified mentions raising it at least once.'),
 });
 
 export const perceptionBreakdownSchema = responseObject({
-  key: z.string(),
+  key: z.string().describe('The engine, topic or prompt this row covers.'),
   label: z.string(),
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
@@ -111,16 +115,19 @@ const perceptionThemeSchema = responseObject({
 // cited alongside the criticism, never shown to have caused it.
 const perceptionDriverSchema = responseObject({
   domain: z.string(),
-  answers: z.number().int(),
+  answers: z
+    .number()
+    .int()
+    .describe('Answers with a negative aspect of the brand that cited it: alongside, not a cause.'),
   example_url: z.string().nullable(),
 });
 
 // Deterministic first-mention recommendation reading (English phrasing only).
 const perceptionRecommendedSchema = responseObject({
-  mentioned: z.number().int(),
+  mentioned: z.number().int().describe('Answers that named the brand.'),
   recommended: z.number().int(),
   recommended_against: z.number().int(),
-  rate: z.number().nullable(),
+  rate: z.number().nullable().describe('`recommended` / `mentioned`, 0–1. Null: no mention.'),
   limitation: z.string(),
 });
 
@@ -132,23 +139,26 @@ const perceptionTrendPointSchema = responseObject({
   extractor_version: z.string(),
   template_version: z.string(),
   metrics_version: z.string(),
-  // False when this point's versions differ from the previous point's.
-  comparable: z.boolean(),
+  comparable: z.boolean().describe("False when this point's versions differ from the previous."),
 });
 
 export const perceptionResponseSchema = responseObject({
-  state: perceptionStateSchema,
+  state: perceptionStateSchema.describe(
+    '`value`: at least one confident label. `pending`: waiting for classification. `unavailable`: nothing classifiable (see `reason`). `no_mentions`: no answer named the brand.',
+  ),
   reason: perceptionUnavailableReasonSchema.nullable(),
-  source_audit_ids: z.array(uuid()),
+  source_audit_ids: z.array(uuid()).describe('The runs this read counts.'),
   brand: perceptionEntitySchema.nullable(),
   coverage: perceptionCoverageSchema,
-  entities: z.array(perceptionEntitySchema),
-  engines: z.array(perceptionBreakdownSchema),
-  topics: z.array(perceptionBreakdownSchema),
-  prompts: z.array(perceptionBreakdownSchema),
+  entities: z.array(perceptionEntitySchema).describe('The brand and each competitor named.'),
+  engines: z.array(perceptionBreakdownSchema).describe("The brand's tone per engine."),
+  topics: z.array(perceptionBreakdownSchema).describe("The brand's tone per topic."),
+  prompts: z.array(perceptionBreakdownSchema).describe("The brand's tone per prompt."),
   themes: z.array(perceptionThemeSchema),
   negative_quotes: z.array(perceptionQuoteSchema),
-  drivers: z.array(perceptionDriverSchema),
+  drivers: z
+    .array(perceptionDriverSchema)
+    .describe('Sources cited alongside negative aspects of the brand.'),
   recommended: perceptionRecommendedSchema,
   trend: z.array(perceptionTrendPointSchema),
 });

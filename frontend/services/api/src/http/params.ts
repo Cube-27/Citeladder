@@ -41,6 +41,8 @@ export type ParamSpec = {
   list?: boolean;
   required?: boolean;
   default?: unknown;
+  /** Published as the OpenAPI parameter's description. */
+  description?: string;
 };
 
 type SpecValue<P extends ParamSpec> = P extends { list: true }

@@ -57,8 +57,12 @@ import { getVisibilityTrends } from '../visibility/trends.ts';
 import { defineGetRoute } from './define.ts';
 import { competitorFocusRoute } from './visibility-competitor.ts';
 import {
+  BASELINE_ID,
   BASELINE_RUNS,
   COHORT,
+  cohortFilter,
+  CURSOR,
+  ENGINE,
   EVIDENCE_FILTERS,
   family,
   LIMIT,
@@ -76,16 +80,22 @@ import { visibilitySourceRoutes } from './visibility-sources.ts';
 
 /** The dashboard's selection: the latest run, one run, or a period of one configuration. */
 const DASHBOARD_SELECTION = {
-  audit_id: { scalar: { kind: 'uuid' } },
+  audit_id: RUNS.audit_id,
   ...MARKET,
   ...TOPIC,
-  engine: { scalar: { kind: 'str' } },
+  engine: ENGINE,
   selection_mode: {
     scalar: { kind: 'literal', values: ['latest', 'run', 'range'] },
     default: 'latest',
+    description:
+      "`latest`: the market's newest finished run. `run`: the run named by `audit_id`. `range`: the runs of one configuration between `from` and `to`.",
   },
   ...WINDOW,
-  configuration_key: { scalar: { kind: 'str' } },
+  configuration_key: {
+    scalar: { kind: 'str' },
+    description:
+      'With `range`: which measurement configuration to read when the period mixes several. Omitted: the one measured most recently, preferring whole prompt sets.',
+  },
   cohort: COHORT,
 } as const;
 
@@ -133,7 +143,7 @@ export const visibilityRoutes = [
       query: {
         ...PERCEPTION_SELECTION,
         ...TOPIC,
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        cursor: CURSOR,
         limit: {
           scalar: { kind: 'int', ge: 1, le: policy.visibility.ads_creatives_max_limit },
           default: policy.visibility.ads_creatives_default_limit,
@@ -174,7 +184,7 @@ export const visibilityRoutes = [
         entity: { scalar: { kind: 'str', maxLength: 255 } },
         theme: { scalar: { kind: 'literal', values: policy.perception.themes } },
         polarity: { scalar: { kind: 'literal', values: ['positive', 'negative'] } },
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        cursor: CURSOR,
         limit: {
           scalar: { kind: 'int', ge: 1, le: policy.perception.quotes_max_limit },
           default: policy.perception.quotes_default_limit,
@@ -214,7 +224,7 @@ export const visibilityRoutes = [
       path: PROJECT_PATH,
       query: {
         ...CLAIM_FILTERS,
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        cursor: CURSOR,
         limit: {
           scalar: { kind: 'int', ge: 1, le: policy.perception.fact_check.claims_max_limit },
           default: policy.perception.fact_check.claims_default_limit,
@@ -269,7 +279,7 @@ export const visibilityRoutes = [
     path: '/api/v1/projects/{project_id}/visibility',
     params: {
       path: PROJECT_PATH,
-      query: { ...DASHBOARD_SELECTION, baseline_id: { scalar: { kind: 'uuid' } } },
+      query: { ...DASHBOARD_SELECTION, baseline_id: BASELINE_ID },
     },
     response: visibilitySchema,
     async handle({ c, db }, { path, query }) {
@@ -323,12 +333,15 @@ export const visibilityRoutes = [
       query: {
         ...RUNS,
         baseline_audit_ids: BASELINE_RUNS,
-        engine: { scalar: { kind: 'str' } },
-        baseline_id: { scalar: { kind: 'uuid' } },
-        // Omitted reads core; a per-prompt latest read takes none.
-        cohort: { scalar: COHORT.scalar },
-        // `prompt` reads each tracked prompt's own latest run: the prompt library.
-        latest: { scalar: { kind: 'literal', values: ['run', 'prompt'] }, default: 'run' },
+        engine: ENGINE,
+        baseline_id: BASELINE_ID,
+        cohort: cohortFilter('Omitted: `core`. `latest=prompt` takes no cohort.'),
+        latest: {
+          scalar: { kind: 'literal', values: ['run', 'prompt'] },
+          default: 'run',
+          description:
+            "`run`: every prompt of the selected run. `prompt`: each tracked prompt's own latest run, taking no other selection.",
+        },
       },
     },
     response: z.array(promptMetricItemSchema),
@@ -361,8 +374,7 @@ export const visibilityRoutes = [
     path: '/api/v1/projects/{project_id}/visibility/prompts/{prompt_id}/history',
     params: {
       path: { ...PROJECT_PATH, prompt_id: { scalar: { kind: 'uuid' }, required: true } },
-      // No cohort reads the prompt's own.
-      query: { ...MARKET, engine: { scalar: { kind: 'str' } }, cohort: { scalar: COHORT.scalar } },
+      query: { ...MARKET, engine: ENGINE, cohort: cohortFilter("Omitted: the prompt's own.") },
     },
     response: promptHistorySchema,
     async handle({ c, db }, { path, query }) {
@@ -385,14 +397,21 @@ export const visibilityRoutes = [
       query: {
         ...MARKET,
         ...TOPIC,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         ...WINDOW,
         granularity: {
           scalar: { kind: 'str' },
           default: policy.visibility.trend_default_granularity,
+          description: `The length of each series point: ${policy.visibility.trend_granularities.map((value) => `\`${value}\``).join(', ')}. \`run\` plots one point per run.`,
         },
-        transport_model: { scalar: { kind: 'str' } },
-        retrieval_enabled: { scalar: { kind: 'bool' } },
+        transport_model: {
+          scalar: { kind: 'str' },
+          description: 'Only runs answered by this exact provider model.',
+        },
+        retrieval_enabled: {
+          scalar: { kind: 'bool' },
+          description: 'Only runs with web retrieval on (`true`) or off (`false`).',
+        },
         cohort: COHORT,
       },
     },
@@ -421,16 +440,24 @@ export const visibilityRoutes = [
       query: {
         ...RUNS,
         ...TOPIC,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
         ...EVIDENCE_FILTERS,
-        query: { scalar: { kind: 'str', maxLength: 8192 } },
-        search: { scalar: { kind: 'str', maxLength: 512 } },
+        query: {
+          scalar: { kind: 'str', maxLength: 8192 },
+          description: 'One fanout query, exactly: pages the answers that searched it instead.',
+        },
+        search: {
+          scalar: { kind: 'str', maxLength: 512 },
+          description: 'Only queries containing this text, ignoring case.',
+        },
         order: {
           scalar: { kind: 'literal', values: ['top', 'rising', 'falling'] },
           default: 'top',
+          description:
+            '`top`: most answers first, paged. `rising` and `falling`: one page by share change against the previous comparable run.',
         },
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        cursor: CURSOR,
         limit: LIMIT,
       },
     },

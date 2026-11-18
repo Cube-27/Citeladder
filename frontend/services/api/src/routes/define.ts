@@ -172,9 +172,11 @@ function parameterObject(specs: ParamSpecs): z.ZodObject {
   for (const [name, spec] of Object.entries(specs)) {
     const scalar = scalarSchema(spec);
     const item = spec.list ? z.array(scalar) : scalar;
-    if (spec.required) shape[spec.alias ?? name] = item;
-    else if (spec.default !== undefined) shape[spec.alias ?? name] = item.default(spec.default);
-    else shape[spec.alias ?? name] = item.nullable().optional();
+    let schema: z.ZodType;
+    if (spec.required) schema = item;
+    else if (spec.default !== undefined) schema = item.default(spec.default);
+    else schema = item.nullable().optional();
+    shape[spec.alias ?? name] = spec.description ? schema.describe(spec.description) : schema;
   }
   return z.object(shape);
 }

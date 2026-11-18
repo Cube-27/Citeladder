@@ -296,11 +296,15 @@ answers across runs and the answers of a run selection, under the `read` scope.
 The other Phase 1 reads (topics, matrix, competitor focus, fact-checking and the
 rest) stay in the app. v1 keeps its conventions: no RFC 9457 problem details and
 no switch to offset paging. Each endpoint documents its own paging honestly,
-and responses carry the draft IETF RateLimit headers.
+and responses carry the draft IETF RateLimit headers. The API and MCP
+references are kept current with what ships: tool and operation descriptions,
+field and parameter descriptions, links into the app, the docs site and the
+changelog.
 
 Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4);
 owner, 18 November 2026 (AI visibility gaps plan): public API reads "Answers"
-only, and v1 conventions "Keep v1 as is".
+only, v1 conventions "Keep v1 as is", and "referesh tool descriptions and fix
+links and subsequently update docs subdomain and changelog".
 [Public API](public-api.md) owns the shipped behavior.
 
 ## MCP writes are confirmed user decisions

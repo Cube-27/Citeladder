@@ -16,6 +16,7 @@ type OpenApiParameter = {
   name: string;
   in: 'path' | 'query' | 'header' | 'cookie';
   required: boolean;
+  description?: string;
   schema: JsonSchema;
 };
 
@@ -51,11 +52,12 @@ function parameters(location: OpenApiParameter['in'], object?: z.ZodObject): Ope
   const generated = jsonSchema(object, 'input');
   const properties = (generated.properties ?? {}) as Record<string, JsonSchema>;
   const required = new Set((generated.required ?? []) as string[]);
-  return Object.entries(properties).map(([name, schema]) => ({
+  return Object.entries(properties).map(([name, { description, ...schema }]) => ({
     name,
     in: location,
     // OpenAPI requires every path parameter.
     required: location === 'path' || required.has(name),
+    ...(typeof description === 'string' ? { description } : {}),
     schema,
   }));
 }

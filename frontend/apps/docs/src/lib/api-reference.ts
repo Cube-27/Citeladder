@@ -28,6 +28,7 @@ export const apiDocument = z.object({
               name: z.string(),
               in: z.enum(PARAMETER_LOCATIONS),
               required: z.boolean().optional(),
+              description: z.string().optional(),
               schema: jsonSchema,
             }),
           )
@@ -115,9 +116,10 @@ export function buildOperations(document: ApiDocument) {
           location,
           rows: (operation.parameters ?? [])
             .filter((parameter) => parameter.in === location)
-            .map((parameter) =>
-              referenceRow(parameter.name, parameter.schema, parameter.required ?? false),
-            ),
+            .map((parameter) => ({
+              ...referenceRow(parameter.name, parameter.schema, parameter.required ?? false),
+              description: parameter.description ?? parameter.schema.description,
+            })),
         })).filter((group) => group.rows.length > 0),
         request: bodyOf(request),
         response: { status: success?.[0] ?? null, body: bodyOf(response) },

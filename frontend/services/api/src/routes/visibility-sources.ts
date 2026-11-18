@@ -22,6 +22,8 @@ import { defineGetRoute } from './define.ts';
 import {
   BASELINE_RUNS,
   COHORT,
+  CURSOR,
+  ENGINE,
   EVIDENCE_FILTERS,
   family,
   LIMIT,
@@ -34,6 +36,17 @@ import {
   WINDOW,
 } from './visibility-selection.ts';
 
+const DIMENSION = {
+  scalar: { kind: 'literal', values: ['domain', 'url'] },
+  default: 'domain',
+  description: 'Rows per publisher domain, or per cited page URL.',
+} as const;
+const AS_OF = {
+  scalar: { kind: 'datetime' },
+  description:
+    'Read runs finished by this time, with a timezone, so paging is stable. Omitted: now; later pages carry it in the cursor.',
+} as const;
+
 export const visibilitySourceRoutes = [
   defineGetRoute({
     ...family,
@@ -45,15 +58,22 @@ export const visibilitySourceRoutes = [
         ...RUNS,
         ...TOPIC,
         baseline_audit_ids: BASELINE_RUNS,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
-        domain: { scalar: { kind: 'str', maxLength: 255 } },
+        domain: {
+          scalar: { kind: 'str', maxLength: 255 },
+          description: 'One publisher domain: its pages, as with `dimension=url`.',
+        },
         source_type: { scalar: { kind: 'str', maxLength: 64 } },
-        standing: { scalar: { kind: 'literal', values: ['gap'] } },
-        dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
+        standing: {
+          scalar: { kind: 'literal', values: ['gap'] },
+          description:
+            '`gap`: only pages that list a tracked competitor and not the business. Page rows only (`dimension=url` or a `domain`).',
+        },
+        dimension: DIMENSION,
         ...WINDOW,
-        as_of: { scalar: { kind: 'datetime' } },
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        as_of: AS_OF,
+        cursor: CURSOR,
         limit: LIMIT,
       },
     },
@@ -84,10 +104,10 @@ export const visibilitySourceRoutes = [
       query: {
         ...RUNS,
         ...TOPIC,
-        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
-        as_of: { scalar: { kind: 'datetime' } },
+        cursor: CURSOR,
+        as_of: AS_OF,
         ...EVIDENCE_FILTERS,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         ...WINDOW,
         limit: LIMIT,
         cohort: COHORT,
@@ -116,14 +136,15 @@ export const visibilitySourceRoutes = [
     params: {
       path: PROJECT_PATH,
       query: {
-        dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
+        dimension: DIMENSION,
         granularity: {
           scalar: { kind: 'literal', values: ['day', 'week', 'month'] },
           default: 'day',
+          description: 'The length of each series point.',
         },
         ...RUNS,
         ...TOPIC,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
         domain: { scalar: { kind: 'str', maxLength: 255 } },
         url: { scalar: { kind: 'str', minLength: 1, maxLength: MAX_URL_LENGTH } },
@@ -158,7 +179,7 @@ export const visibilitySourceRoutes = [
       query: {
         ...RUNS,
         ...TOPIC,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
         ...WINDOW,
         limit: LIMIT,
@@ -184,9 +205,9 @@ export const visibilitySourceRoutes = [
         ...RUNS,
         ...TOPIC,
         baseline_audit_ids: BASELINE_RUNS,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
-        dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
+        dimension: DIMENSION,
         ...WINDOW,
         limit: {
           scalar: { kind: 'int', ge: 1, le: policy.visibility.source_movers_max_limit },
@@ -215,7 +236,7 @@ export const visibilitySourceRoutes = [
         url: { scalar: { kind: 'str', minLength: 1, maxLength: MAX_URL_LENGTH }, required: true },
         ...RUNS,
         ...TOPIC,
-        engine: { scalar: { kind: 'str' } },
+        engine: ENGINE,
         cohort: COHORT,
         ...WINDOW,
       },
