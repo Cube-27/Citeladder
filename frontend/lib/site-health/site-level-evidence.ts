@@ -26,6 +26,7 @@ export const pageListRules: readonly SiteLevelRule[] = siteLevelRuleSchema.extra
   'architecture.orphan_pages',
   'architecture.parentless_detail_pages',
   'architecture.unreachable_from_home',
+  'architecture.dead_end_pages',
 ]).options;
 /** Every rule whose finding is persisted once for the site. */
 export const siteLevelRules: readonly SiteLevelRule[] = siteLevelRuleSchema.options;
@@ -55,11 +56,9 @@ type LinkTarget = Readonly<{
   pages: readonly EvidencePage[];
 }>;
 
-/** Pages of one kind sharing a title and description: how many, and a bounded sample. */
+/** Pages sharing one exact title or meta description: how many, and a bounded sample. */
 type DuplicateSet = Readonly<{
-  pageKind: string;
-  title: string;
-  description: string;
+  text: string;
   pageCount: number;
   pages: readonly EvidencePage[];
 }>;
@@ -140,19 +139,16 @@ export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelE
   const finding = siteLevelFinding(ruleId, evidence);
   if (finding === null) return null;
   switch (finding.rule_id) {
-    case 'architecture.duplicate_metadata_in_page_kind':
+    case 'architecture.duplicate_titles':
+    case 'architecture.duplicate_meta_descriptions':
       return {
         kind: 'duplicate_sets',
-        total: countedPages(finding.evidence.page_kind_counts),
-        sets: finding.evidence.page_kinds.flatMap((row) =>
-          row.duplicate_sets.map((set) => ({
-            pageKind: row.page_kind,
-            title: set.title,
-            description: set.description,
-            pageCount: set.page_count,
-            pages: set.pages.map((page) => evidencePage(page, false)),
-          })),
-        ),
+        total: finding.evidence.count,
+        sets: finding.evidence.duplicate_sets.map((set) => ({
+          text: set.text,
+          pageCount: set.page_count,
+          pages: set.pages.map((page) => evidencePage(page, false)),
+        })),
       };
     case 'architecture.unhubbed_page_kind':
       return {
@@ -179,10 +175,6 @@ export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelE
 /** A page count in words: `1 page`, `158 pages`. */
 export const pageCountLabel = (count: number) =>
   `${String(count)} ${count === 1 ? 'page' : 'pages'}`;
-
-/** What a duplicate set's pages repeat: their title, else their description. */
-export const sharedText = (set: Pick<DuplicateSet, 'title' | 'description'>) =>
-  set.title.trim() || set.description;
 
 /** Where a sitewide link lands, as the reader would fix it: `404`, `/new`, `redirect loop`. */
 export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): string {
@@ -219,7 +211,7 @@ export function siteLevelFacts(ruleId: string, evidence: unknown): string[] {
     case undefined:
       return [];
     case 'duplicate_sets':
-      return listed.sets.map((set) => `“${sharedText(set)}” (${pageCountLabel(set.pageCount)})`);
+      return listed.sets.map((set) => `“${set.text}” (${pageCountLabel(set.pageCount)})`);
     case 'link_targets':
       return listed.targets.map((target) => {
         const origin = originOf(target.url);

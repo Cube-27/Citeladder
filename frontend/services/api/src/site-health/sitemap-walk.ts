@@ -21,6 +21,8 @@ import { trackedOrder } from './tracked-set.ts';
 import { classifyUrlAdmission } from './url-admission.ts';
 
 const crawlPolicy = policy.site_health.crawl;
+const { evidence_urls: evidenceUrls, signal_detail_chars: evidenceChars } =
+  policy.site_health.page_analysis.facts.limits;
 const logger = getLogger('site_health.setup');
 
 export type WalkSettings = {
@@ -57,7 +59,12 @@ const unavailableStatus = (status: number) => status === 408 || status === 429 |
  * `unread` when no answer settled it (no response, a timeout, a rate limit or
  * a server error), which is no evidence either way.
  */
-type Unanswered = { kind: 'absent' | 'unread'; status: number | null };
+type Unanswered = {
+  kind: 'absent' | 'unread';
+  status: number | null;
+  /** Why a served body did not parse as a sitemap. */
+  invalid?: string;
+};
 type SitemapRead =
   | { kind: 'page'; page: Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['fetch']>> }
   | Unanswered;
@@ -98,7 +105,7 @@ async function sitemapDocument(
 
 /**
  * One sitemap document read and parsed off the event loop. A body that does
- * not parse is the server's answer that it serves no sitemap there (`absent`);
+ * not parse serves no sitemap there (`absent`, with why it is `invalid`);
  * a parse that overran its time limit or a body over the byte cap settled
  * nothing (`unread`).
  */
@@ -119,7 +126,8 @@ async function readSitemap(
     };
   } catch (error) {
     if (error instanceof SitemapTooLargeError) return { kind: 'unread', status };
-    if (error instanceof SitemapParseError) return { kind: 'absent', status };
+    if (error instanceof SitemapParseError)
+      return { kind: 'absent', status, invalid: error.message.slice(0, evidenceChars) };
     if (error instanceof InterpretationTimeoutError) return { kind: 'unread', status };
     throw error;
   }
@@ -153,6 +161,7 @@ export async function walkSitemaps(
     ),
     queue: [],
     unread: 0,
+    invalid: [],
     refetched: false,
     namedBy: new Map(),
   };
@@ -183,6 +192,8 @@ export async function walkSitemaps(
     complete,
     limitReached,
     unread: walk.unread,
+    invalidCount: walk.invalid.length,
+    invalid: walk.invalid.slice(0, evidenceUrls),
     ...admittedUrls(walk.collector, crawl),
   };
 }
@@ -222,6 +233,8 @@ type Walk = {
   queue: Entry[];
   /** Documents no answer settled (unfetched, timed out, rate-limited or failing), or an index's child refused. */
   unread: number;
+  /** Served documents that did not parse as a sitemap, in answer order. */
+  invalid: { url: string; reason: string }[];
   /** An index was already re-fetched past a cache; once per walk. */
   refetched: boolean;
   /** How many read documents name each child reference. */
@@ -239,6 +252,7 @@ function collect(walk: Walk, entry: Entry, read: SitemapAnswer) {
   const { url, depth, source } = entry;
   if (source.kind === 'refetch') return collectRefetch(walk, entry, source.index, read);
   if (read.kind !== 'parsed') {
+    if (read.invalid) walk.invalid.push({ url, reason: read.invalid });
     // A child its index declares but the server refuses is a stale or broken index, not a missing sitemap.
     if (read.kind === 'absent' && depth === 0) return;
     walk.unread++;

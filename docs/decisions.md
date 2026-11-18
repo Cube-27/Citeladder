@@ -318,8 +318,9 @@ chains and loops; internal links to redirects; exact and near-duplicate main
 content; sitemap URLs that redirect and sitemap `lastmod` dates that contradict
 the page; and meta-refresh or script redirects. All run on evidence the crawl
 already fetches, so they add no fetch or infrastructure cost. Headless
-rendering, external-link checks and readability or pixel-width heuristics stay
-out.
+rendering and external-link checks stay out. Title and meta description length,
+thin content and long paragraphs are in as advisories: config thresholds,
+never scored, never defects.
 
 Applebot joins both crawler-access checks (Apple's search and Apple
 Intelligence crawler), and Applebot-Extended joins the AI-crawler check as a
@@ -330,7 +331,10 @@ crawls are the top Site Health backlog priorities.
 
 Source: owner, 17 October 2026, approving the crawler comparison report
 ("proceed with implementation of 5 findings plus applebot"; recrawl and
-scheduled crawls "should go in backlog as top priority").
+scheduled crawls "should go in backlog as top priority"); owner, 18 November
+2026, on the Searchable comparison: "no healdess rendering but what about
+readbaility/length heuristics for crawled pages", then "Title/meta length, Thin
+content, Long paragraphs, advisory is fine".
 [Site Health](site-health.md) owns the behavior.
 
 ## The public site presents CiteLadder as open source

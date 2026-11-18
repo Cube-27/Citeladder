@@ -62,6 +62,7 @@ export function emptyContentFacts() {
     },
     primary_heading_outline: [] as { level: number; text: string }[],
     primary_table_headers: [] as string[][],
+    primary_paragraph_word_counts: [] as number[],
     question_answer_relationships: [] as ReturnType<typeof questionAnswerRelationships>,
   };
 }
@@ -130,6 +131,20 @@ function substantiveProposition(scope: Owned) {
       return text.slice(0, limits.first_answer_chars);
   }
   return '';
+}
+
+/** Word counts of the primary content's own prose paragraphs, in document order. */
+function paragraphWordCounts(scope: Owned) {
+  const counts: number[] = [];
+  let scanned = 0;
+  for (const paragraph of elements(scope.region, 'p')) {
+    if (++scanned > regionPolicy.max_containers_scanned) break;
+    if (!owned(paragraph, scope) || isMetadataOrCta(paragraph)) continue;
+    const count = words(squash(textContent(paragraph))).length;
+    if (count) counts.push(count);
+    if (counts.length >= limits.paragraphs_kept) break;
+  }
+  return counts;
 }
 
 function providerIdentity(proposition: string) {
@@ -232,6 +247,7 @@ export function contentFacts(page: PageScope) {
     entity_proposition: entityProposition(scope, proposition),
     primary_heading_outline: headingOutline(scope),
     primary_table_headers: tableHeaders(scope),
+    primary_paragraph_word_counts: paragraphWordCounts(scope),
     question_answer_relationships: questionAnswerRelationships(scope),
   };
 }

@@ -1,6 +1,6 @@
 /**
  * The `site_setup` task, one per crawl: resolve robots and the AI-crawler
- * stance, probe llms.txt, and run a full crawl's discovery (SH-B5). It walks
+ * stance, probe llms.txt and the http:// origin, and run a full crawl's discovery (SH-B5). It walks
  * the sitemap tree (`sitemap-walk.ts`), saves every admissible URL it lists to
  * the crawl's inventory, stores their count (the crawl's discovered count, a
  * lower bound when a safety ceiling cut it short) and fills the tracked set's
@@ -27,6 +27,7 @@ import {
   insertSitemapEntries,
   upsertSiteUrls,
 } from './admission-writes.ts';
+import { probeHttpOrigin } from './http-origin.ts';
 import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { analyzeSeed, lockRuntime } from './frontier.ts';
 import {
@@ -124,6 +125,7 @@ async function siteEvidence(
         page.status >= 200 && page.status < 300 && page.body.toString('utf8').trim() !== '';
     }
   }
+  const httpOrigin = await probeHttpOrigin(ctx, origin);
   return {
     body: robots?.body ?? null,
     facts: {
@@ -139,6 +141,7 @@ async function siteEvidence(
         sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
       },
       llms_txt: llms,
+      http_origin: httpOrigin,
       sitemap: { fetched: false, file_count: 0, pending: true },
     },
   };
@@ -482,6 +485,9 @@ async function sitemapDiscovery(input: {
       limit_reached: walk.limitReached,
       // Documents no answer settled: without a read one, "No sitemap" stays unknown.
       unread_count: walk.unread,
+      // Served documents that are not sitemap XML: "Sitemap could not be parsed", never "No sitemap".
+      invalid_count: walk.invalidCount,
+      invalid_documents: walk.invalid,
       ...(retries ? { retries } : {}),
     },
   };

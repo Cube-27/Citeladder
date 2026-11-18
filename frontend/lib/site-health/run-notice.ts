@@ -47,6 +47,8 @@ function failureGuidanceFor(code: string | undefined): string {
     case 'ssrf_blocked':
       return 'Choose a publicly reachable start URL, then re-crawl.';
     default:
+      if (code?.startsWith('tls_cert_'))
+        return 'Browsers and AI crawlers refuse this certificate too. Fix or renew it, then re-crawl.';
       return 'Re-crawl to try again.';
   }
 }

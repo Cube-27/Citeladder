@@ -16,7 +16,6 @@ import { originOf, sitePath } from '@/lib/site-health/evidence-values';
 import {
   linkOutcomeLabel,
   pageCountLabel,
-  sharedText,
   siteLevelEvidence,
   type SiteLevelEvidence,
 } from '@/lib/site-health/site-level-evidence';
@@ -357,7 +356,7 @@ function SiteLevelList({
 }
 
 /**
- * Duplicate metadata, one row per set of pages sharing a title and
+ * Duplicate metadata, one row per set of pages sharing a title or meta
  * description: what they share, how many share it, and the pages.
  */
 function DuplicateSetList({
@@ -387,19 +386,15 @@ function DuplicateSetList({
           <Stack
             as="li"
             gap="tight"
-            key={set.pages[0]?.siteUrlId ?? `${set.pageKind}:${sharedText(set)}`}
+            key={set.pages[0]?.siteUrlId ?? set.text}
             className={ledgerItemClasses()}
           >
             <ClampText className={textRole('body')}>
-              {`These ${pageCountLabel(set.pageCount)} share “${sharedText(set)}”`}
+              {`These ${pageCountLabel(set.pageCount)} share “${set.text}”`}
             </ClampText>
-            {set.title.trim() && set.description ? (
-              <ClampText className="type-caption">{set.description}</ClampText>
+            {set.pages.length < set.pageCount ? (
+              <span className="type-caption">Including:</span>
             ) : null}
-            <span className="type-caption">
-              {pageKindLabel(set.pageKind)}
-              {set.pages.length < set.pageCount ? ', including:' : ':'}
-            </span>
             {/* Each page link is its own row, at least 24 high, so stacked targets never touch (WCAG 2.5.8). */}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
