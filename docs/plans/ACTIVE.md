@@ -46,6 +46,13 @@ move and remove other backlog work) and
 
 ## Queued
 
+- Agent as the app's hero (owner, 2026-11-18), not started: "improve the in
+  app agent substabtially and make it the main hero of the app ... the idea is
+  to basically have parity between mcp and in app agent and the agent drives
+  the app not the other way round". It changes accepted rules (the in-app
+  Agent is read-only under [MCP writes](../decisions.md#mcp-writes-are-confirmed-user-decisions)
+  and invariants §10 and §13), so it needs a scoped plan and the owner's
+  answers before work starts.
 - [Backlog](backlog.md): tier 2 (before launch: compliance, hardening, billing
   and release acceptance) and tier 3 (low priority, future reference only).
   Neither tier is an execution assignment.

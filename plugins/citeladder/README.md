@@ -5,7 +5,7 @@ The source package contains public read-only review skills, the
 connection. It requires a connected CiteLadder account, explicit workspace
 consent and existing project measurements. A connection approved with **Allow
 changes** also lists change tools, which `prompt-discovery` needs to follow the
-Prompt Builder's steps and generate suggestions for review in CiteLadder. Every
+Prompt builder's steps and generate suggestions for review in CiteLadder. Every
 change needs the user's yes first; a prepared change runs only after the user
 agrees to its preview, and the skills never call `confirm_change` without that
 explicit yes. There
