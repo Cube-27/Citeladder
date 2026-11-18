@@ -1640,11 +1640,17 @@ a.focus-ring:active .type-caption {
      specificity, so the side-by-side rule below overrides it. */
   :where(
     [data-page-body]
-      :is(section, [data-app-grid]:has(> section)):not(
+      :is(section, [data-app-grid]:has(> section:not([data-section='framed']))):not(
         [data-section='framed'],
-        :has([data-figure-strip]:last-child)
+        :has(
+          > [data-figure-strip]:last-child,
+          > :last-child > [data-figure-strip]:last-child,
+          > :last-child > :last-child > [data-figure-strip]:last-child,
+          > :last-child > :last-child > :last-child > [data-figure-strip]:last-child,
+          > :last-child > :last-child > :last-child > :last-child > [data-figure-strip]:last-child
+        )
       )
-      + :is(section, [data-app-grid]:has(> section)):not(
+      + :is(section, [data-app-grid]:has(> section:not([data-section='framed']))):not(
         [data-section='framed'],
         [data-app-grid] > *,
         .surface-card *,
@@ -1653,14 +1659,14 @@ a.focus-ring:active .type-caption {
         [data-section='framed'] *
       ),
     [data-page-body]
-      [data-app-grid]:has(> section):not(
+      [data-app-grid]:has(> section:not([data-section='framed'])):not(
         .surface-card *,
         .surface-slip *,
         [role='dialog'] *,
         [data-section='framed'] *
       )
       > *
-      + *
+      + :not([data-section='framed'])
   ) {
     position: relative;
     padding-top: var(--page-section-gap);
@@ -1677,7 +1683,7 @@ a.focus-ring:active .type-caption {
   /* Stacked, a grid's sections are a section gap apart; side by side, twice
      that across with the rule down the middle of the gap. */
   [data-page-body]
-    [data-app-grid]:has(> section):not(
+    [data-app-grid]:has(> section:not([data-section='framed'])):not(
       :where(.surface-card *, .surface-slip *, [role='dialog'] *, [data-section='framed'] *)
     ) {
     --grid-gap-y: var(--page-section-gap);
@@ -1695,10 +1701,21 @@ a.focus-ring:active .type-caption {
         --grid-gap-x: calc(2 * var(--page-section-gap));
       }
     }
+    /* Only the first row sits flush with the grid's top. */
+    &[data-app-grid='pair'] > :nth-child(2),
+    &[data-app-grid='thirds'] > :nth-child(-n + 3) {
+      @variant column-split {
+        padding-top: 0;
+      }
+    }
+    &:is([data-app-grid='halves'], [data-app-grid='main-aside']) > :nth-child(2) {
+      @variant column-wide {
+        padding-top: 0;
+      }
+    }
     &[data-app-grid='pair'] > :nth-child(even),
     &[data-app-grid='thirds'] > :not(:nth-child(3n + 1)) {
       @variant column-split {
-        padding-top: 0;
         &::before {
           inset-block: 0;
           inset-inline: calc(-1 * var(--page-section-gap)) auto;
@@ -1709,7 +1726,6 @@ a.focus-ring:active .type-caption {
     }
     &:is([data-app-grid='halves'], [data-app-grid='main-aside']) > :nth-child(even) {
       @variant column-wide {
-        padding-top: 0;
         &::before {
           inset-block: 0;
           inset-inline: calc(-1 * var(--page-section-gap)) auto;
