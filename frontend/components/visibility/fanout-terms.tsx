@@ -112,6 +112,32 @@ function TermRow({ row }: Readonly<{ row: FanoutTermRow }>) {
   );
 }
 
+const empty = (heading: string, description: string): DataTableState => ({
+  kind: 'empty',
+  headingLevel: 3,
+  icon: Search,
+  heading,
+  description,
+});
+
+/** Each view's own empty list once the run reported searches. */
+const EMPTY_VIEW = {
+  top: empty('No terms counted', 'This run’s searches held only short or common words.'),
+  rising: empty('No term rose', 'No term gained share of searches since the previous run.'),
+  falling: empty('No term fell', 'No term lost share of searches since the previous run.'),
+} satisfies Record<View, DataTableState>;
+
+function observedState(
+  data: Extract<VisibilityFanoutTerms, { kind: 'observed' }>,
+  view: View,
+): DataTableState | undefined {
+  if (!data.total_searches)
+    return empty('No searches reported', 'No engine reported a search in this run.');
+  if (view !== 'top' && !data.compared)
+    return empty('Nothing to compare yet', 'Changes show once an earlier run counted terms.');
+  return data[view].length ? undefined : EMPTY_VIEW[view];
+}
+
 function termsState(
   read: RetryableRead & Readonly<{ isError: boolean }>,
   data: VisibilityFanoutTerms | undefined,
@@ -125,13 +151,6 @@ function termsState(
       fallback: 'Check your connection and try again.',
     };
   if (!data) return { kind: 'loading', label: 'Loading search terms…' };
-  const empty = (heading: string, description: string): DataTableState => ({
-    kind: 'empty',
-    headingLevel: 3,
-    icon: Search,
-    heading,
-    description,
-  });
   switch (data.kind) {
     case 'not_run':
       return empty('No finished run', 'Search terms are counted when a run finishes.');
@@ -141,16 +160,7 @@ function termsState(
         'This run finished before search terms were counted. The next run will have them.',
       );
     case 'observed':
-      if (!data.total_searches)
-        return empty('No searches reported', 'No engine reported a search in this run.');
-      if (view !== 'top' && !data.compared)
-        return empty('Nothing to compare yet', 'Changes show once an earlier run counted terms.');
-      if (data[view].length) return undefined;
-      if (view === 'top')
-        return empty('No terms counted', 'This run’s searches held only short or common words.');
-      return view === 'rising'
-        ? empty('No term rose', 'No term gained share of searches since the previous run.')
-        : empty('No term fell', 'No term lost share of searches since the previous run.');
+      return observedState(data, view);
     default: {
       const unreachable: never = data;
       return unreachable;
