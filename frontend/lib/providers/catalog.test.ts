@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { ProviderConnection } from '@citeladder/contracts';
 
 import {
-  TRANSPORT_LABELS,
   buildEngineCards,
   buildProviderGroups,
   connectionForTransport,
@@ -15,7 +14,6 @@ import {
   isVerified,
   mergeRoutePayload,
   transportForEngine,
-  transportLabel,
 } from './catalog';
 import { engineCatalog } from './engines';
 import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
@@ -73,11 +71,6 @@ describe('engine catalogue', () => {
     expect(engines.modelLabel('chatgpt', 'gpt-6.1-terra')).toBe('gpt-6.1-terra');
     expect(engines.modelLabel('chatgpt_search', 'chat_gpt-llm-scraper')).toBeNull();
     expect(engines.modelLabel('uncatalogued', 'some-model')).toBeNull();
-  });
-
-  it('labels known transports and falls back for unknown ones', () => {
-    expect(transportLabel('openai')).toBe(TRANSPORT_LABELS.openai);
-    expect(transportLabel('cohere')).toBe('cohere');
   });
 });
 

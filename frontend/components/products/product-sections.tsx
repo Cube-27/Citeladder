@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { Inline } from '@/components/ui/layout';
 import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
@@ -62,11 +64,18 @@ export function CompetingProducts({
               {row.name}
             </TextLink>
           }
-          caption={[
-            holderCaption(row),
-            `In ${pluralCount(row.shared, 'shared answer')}`,
-            `ranked above it in ${formatCount(row.ahead)}`,
-          ].join(' · ')}
+          caption={
+            <Inline as="span" gap="tight">
+              {row.brand ? <BrandMark name={row.brand} placement="inline" /> : null}
+              <span className="truncate">
+                {[
+                  holderCaption(row),
+                  `In ${pluralCount(row.shared, 'shared answer')}`,
+                  `ranked above it in ${formatCount(row.ahead)}`,
+                ].join(' · ')}
+              </span>
+            </Inline>
+          }
           meta={
             <span className="type-caption tabular-nums">
               Position{' '}

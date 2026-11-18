@@ -78,7 +78,11 @@ export function WorkspaceChooser() {
 
 function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
   return (
-    <FlowPage label="Choose a workspace" barEnd={<UserMenuTrigger presenter="compact" />}>
+    <FlowPage
+      label="Choose a workspace"
+      kicker={null}
+      barEnd={<UserMenuTrigger presenter="compact" />}
+    >
       <FlowBlock title="Choose a workspace" sub="You can switch between workspaces at any time.">
         {children}
       </FlowBlock>

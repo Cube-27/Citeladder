@@ -14,9 +14,10 @@ export type SearchColumn = {
   label: string;
   numeric?: boolean;
   detail?: boolean;
-  precision?: number;
   /** Hides, the last first, where the table's frame has no room for it. */
   low?: boolean;
+  /** The row field naming the figure's currency: the figure is then a price. */
+  currencyField?: string;
 };
 /** Columns per row kind; the footprint's columns are the fallback for an unknown kind. */
 export const SEARCH_COLUMNS_BY_KIND: {
@@ -36,7 +37,13 @@ export const SEARCH_COLUMNS_BY_KIND: {
     { field: 'search_volume', label: 'Volume', numeric: true },
     { field: 'url', label: 'Ranking page' },
     { field: 'etv', label: 'Est. traffic', numeric: true },
-    { field: 'cpc', label: 'CPC (USD)', numeric: true, precision: 2, low: true },
+    {
+      field: 'cpc',
+      label: 'CPC (USD)',
+      numeric: true,
+      currencyField: 'cpc_currency',
+      low: true,
+    },
     { field: 'difficulty', label: 'Difficulty', numeric: true, low: true },
     { field: 'intent', label: 'Intent', low: true },
   ],

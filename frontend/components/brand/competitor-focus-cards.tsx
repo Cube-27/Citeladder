@@ -7,7 +7,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { formatCount } from '@/lib/format';
+import { endSentence, formatCount } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
 
 /** "10 of 32" when the read capped the list, else nothing. */
@@ -38,7 +38,7 @@ export function CompetitorSources({ focus }: Readonly<{ focus: CompetitorFocus }
               kind: 'empty',
               inline: true,
               message: focus.answers
-                ? `No sources cited in answers naming ${name}.`
+                ? endSentence(`No sources cited in answers naming ${name}`)
                 : `No answer named ${name} in this selection.`,
             }
       }

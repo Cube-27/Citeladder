@@ -33,7 +33,7 @@ import {
   themeLabel,
 } from '@/lib/visibility/perception';
 
-/** Themes the "How AI describes you" list shows at most. */
+/** Themes the "Themes in answers" list shows at most. */
 const THEME_LIST_LIMIT = 8;
 
 /**
@@ -143,7 +143,7 @@ function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }
   const most = ranked[0]?.[order] ?? 0;
   return (
     <TitledSection
-      title="How AI describes you"
+      title="Themes in answers"
       actions={
         <SegmentedControl
           value={order}

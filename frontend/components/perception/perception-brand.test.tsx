@@ -99,8 +99,8 @@ describe('Perception view', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
     // 4 classified: no share in the headline or the lede, never "nothing negative".
     expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
-    // The lede falls back to the theme card's title.
-    expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(2);
+    // The lede falls back to a neutral heading, said once.
+    expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(1);
     const lede = within(screen.getByLabelText('Brand perception'));
     expect(lede.getAllByText('Too few classified')).toHaveLength(2);
     expect(lede.getByText('Too few answers')).toBeVisible();

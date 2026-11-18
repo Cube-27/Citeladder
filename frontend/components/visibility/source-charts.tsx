@@ -5,7 +5,8 @@ import { ChartFrame } from '@/components/ui/chart-frame';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartDonut, type Part } from '@/components/ui/part-donut';
 import { StepChart, type TrendSeries } from '@/components/ui/step-chart';
-import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { hostOf, seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -95,6 +96,7 @@ function UsagePlot({
     <StepChart
       label={label}
       name={first.label}
+      mark={<SourceMark source={first.key} />}
       data={(query.data?.buckets ?? []).map((bucket, index) => ({
         label: bucketLabel(bucket),
         value: first.points[index]?.value ?? null,
@@ -109,6 +111,18 @@ function UsagePlot({
 
 type UsageLine = ReturnType<typeof toChartSeries>[number];
 
+/** A source line's favicon in the key: a domain is its own host, a page its URL's. */
+function SourceMark({ source }: Readonly<{ source: string }>) {
+  const host = source.includes('/') ? hostOf(source) : source;
+  return (
+    <BrandMark
+      name={host ?? source}
+      websiteUrl={host ? `https://${host}` : null}
+      placement="inline"
+    />
+  );
+}
+
 /**
  * The lines after the first, at most three: past that, the remaining sources
  * fold into one Other line. Other is the sum of their shares, so where one
@@ -120,6 +134,7 @@ function usageComparisons(lines: readonly UsageLine[]): TrendSeries[] {
   const values = (line: UsageLine) => line.points.map((point) => point.value);
   const comparisons: TrendSeries[] = named.map((line) => ({
     label: line.label,
+    mark: <SourceMark source={line.key} />,
     values: values(line),
   }));
   if (!merged.length) return comparisons;

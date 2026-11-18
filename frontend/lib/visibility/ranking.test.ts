@@ -33,6 +33,14 @@ describe('Insights headline', () => {
       { headline: "You're #1 in AI visibility", sub: "You're named more often than Second." },
     ],
     [
+      'closes on a brand that ends in a full stop with one stop',
+      [row('You', 0.7, true), row('Bluebird Bean Co.', 0.5)],
+      {
+        headline: "You're #1 in AI visibility",
+        sub: "You're named more often than Bluebird Bean Co.",
+      },
+    ],
+    [
       'shares a rank on a tie and says who ties',
       [row('Leader', 0.9), row('Zulu', 0.5), row('Acme', 0.5, true), row('Back', 0.1)],
       {

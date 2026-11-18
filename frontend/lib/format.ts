@@ -255,6 +255,14 @@ export function pluralCount(count: number, noun: string): string {
   return `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
 }
 
+/**
+ * Close a sentence once: a text that already ends in `.`, `!` or `?` (a
+ * worker's reason, a brand like "Bluebird Bean Co.") gets no second stop.
+ */
+export function endSentence(text: string): string {
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
 /** Percent-encoding layers a crawled URL can carry (`%2527` is `'` encoded twice). */
 const MAX_URL_DECODE_PASSES = 3;
 

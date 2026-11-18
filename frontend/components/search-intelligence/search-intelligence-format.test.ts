@@ -4,6 +4,7 @@ import {
   evidenceFields,
   reportedCost,
   runEstimate,
+  searchAmount,
 } from './search-intelligence-format';
 
 it('keeps a calendar date on its own day west of UTC, and zones a timestamp', () => {
@@ -39,6 +40,13 @@ it('distinguishes unconfirmed, unknown, zero and fractional provider costs', () 
   expect(reportedCost({ ...byok, provider_reported_cost_usd: '0.024468' })).toBe('$0.024468');
   expect(runEstimate(byok)).toBe('$0.0245');
   expect(estimateUsd('1.00000000')).toBe('1.0000');
+});
+
+it('prices a provider CPC in its currency, keeping unreported apart from zero', () => {
+  expect(searchAmount(3.2, 'USD')).toBe('$3.20');
+  expect(searchAmount('0.15', 'USD')).toBe('$0.15');
+  expect(searchAmount(0, 'USD')).toBe('$0.00');
+  expect(searchAmount(null, 'USD')).toBeNull();
 });
 
 it('prices a managed analysis in AI credits only, pending until it settles', () => {

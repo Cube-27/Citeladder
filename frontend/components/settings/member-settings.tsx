@@ -9,7 +9,7 @@ import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
-import { pluralCount } from '@/lib/format';
+import { endSentence, pluralCount } from '@/lib/format';
 import { SearchField } from '@/components/ui/search-field';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -216,7 +216,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           <SectionTitle>Members</SectionTitle>
           <SectionDescription>
             {membersQuery.data
-              ? `${pluralCount(membersQuery.data.length, 'member')} in ${workspaceName}. Change a role or remove someone here.`
+              ? `${endSentence(`${pluralCount(membersQuery.data.length, 'member')} in ${workspaceName}`)} Change a role or remove someone here.`
               : `Who belongs to ${workspaceName} and what each person may do.`}
           </SectionDescription>
         </SectionHeader>

@@ -58,18 +58,6 @@ describe('ExecutionsTable', () => {
     expect(screen.getByText('Prompt #5')).toBeVisible();
   });
 
-  it('names the engine and the transport that served it', () => {
-    render(
-      <ExecutionsTable
-        executions={[execution({ logical_engine: 'gemini', transport_provider: 'google' })]}
-        onSelectEvidence={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText('Gemini API')).toBeVisible();
-    expect(screen.getByText('Google')).toBeVisible();
-  });
-
   it('renders an unreported latency as a placeholder, not as zero', () => {
     render(
       <ExecutionsTable

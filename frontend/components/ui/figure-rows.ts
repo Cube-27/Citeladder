@@ -38,7 +38,8 @@ type StripFit = Readonly<{ count: number; width: number }>;
  * 4 + 3 and 8 are 4 + 4, and narrower cells take fewer (4 become 2 + 2, 3
  * stack). Three figures stay on one row while each keeps 128px (a strip of
  * 384px). Below a 480px strip a row holds at most two and an odd last figure
- * takes the full row; wider, no row holds one figure alone unless three stack.
+ * sits alone in the first column; wider, no row holds one figure alone unless
+ * three stack.
  */
 export function figureRows({ count, width }: StripFit): number[] {
   if (count <= 0) return [];
@@ -72,12 +73,16 @@ function balancedPairs(count: number): number[] {
 }
 
 /**
- * Each figure's row size, in order (the `--row` its cell's flex-basis reads in
- * globals.css), and whether it opens its row, where no divider precedes it.
+ * Each figure's column count, in order (the `--row` its cell's flex-basis
+ * reads in globals.css), and whether it opens its row, where no divider
+ * precedes it. Every row takes the first row's columns, so a shorter last row
+ * keeps the same cell width and its dividers line up with the row above.
  */
 export function figureRowCells(fit: StripFit): { size: number; rowStart: boolean }[] {
-  return figureRows(fit).flatMap((size) =>
-    Array.from({ length: size }, (_, index) => ({ size, rowStart: index === 0 })),
+  const rows = figureRows(fit);
+  const columns = rows[0] ?? 1;
+  return rows.flatMap((count) =>
+    Array.from({ length: count }, (_, index) => ({ size: columns, rowStart: index === 0 })),
   );
 }
 

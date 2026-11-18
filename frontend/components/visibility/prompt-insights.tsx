@@ -4,7 +4,8 @@ import { UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -81,11 +82,19 @@ export function CompetitorSuggestions({
           {rows.map((candidate) => (
             <TableRow key={candidate.id}>
               <TableCell>
-                <TableCellLines
-                  title
-                  primary={candidate.name}
-                  secondary={candidate.kind === 'cited_domain' ? candidate.domain : undefined}
-                />
+                <Inline as="span">
+                  <BrandMark
+                    name={candidate.name}
+                    websiteUrl={
+                      candidate.kind === 'cited_domain' ? `https://${candidate.domain}` : null
+                    }
+                  />
+                  <TableCellLines
+                    title
+                    primary={candidate.name}
+                    secondary={candidate.kind === 'cited_domain' ? candidate.domain : undefined}
+                  />
+                </Inline>
               </TableCell>
               <TableCell>
                 <Tag>{FOUND_BY[candidate.kind]}</Tag>

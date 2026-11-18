@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { figureRows } from './figure-rows';
+import { figureRowCells, figureRows } from './figure-rows';
 
 // Widths: a phone (358); the narrow-strip edge (480); a full main column at
 // 982 (734), 1366 (1100), 1440 (1168) and 1280 (1008); a half at 1366 (563);
@@ -42,6 +42,19 @@ describe('figureRows', () => {
     [8, 563, [3, 3, 2]],
   ])('lays %i figures in %ipx as %j', (count, width, rows) => {
     expect(figureRows({ count, width })).toEqual(rows);
+  });
+
+  it('gives a wrapped row the columns of the first, so its dividers line up', () => {
+    expect(figureRowCells({ count: 7, width: 1168 })).toEqual([
+      { size: 4, rowStart: true },
+      { size: 4, rowStart: false },
+      { size: 4, rowStart: false },
+      { size: 4, rowStart: false },
+      { size: 4, rowStart: true },
+      { size: 4, rowStart: false },
+      { size: 4, rowStart: false },
+    ]);
+    expect(figureRowCells({ count: 3, width: 234 }).map(({ size }) => size)).toEqual([1, 1, 1]);
   });
 
   it('keeps three figures on a row down to 128px cells', () => {

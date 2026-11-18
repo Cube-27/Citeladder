@@ -24,7 +24,7 @@ import type {
 } from '@citeladder/contracts';
 
 /** Human display names for each transport provider. */
-export const TRANSPORT_LABELS: Record<TransportProvider, string> = {
+const TRANSPORT_LABELS: Record<TransportProvider, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   google: 'Google',
@@ -48,25 +48,6 @@ export const ENGINE_LOGOS: Record<string, string> = {
   grok: '/brand/grok.webp',
   perplexity: '/brand/perplexity.webp',
 };
-
-/** Human label for a transport key (falls back to the raw key). */
-export function transportLabel(key: string): string {
-  return TRANSPORT_LABELS[key as TransportProvider] ?? key;
-}
-
-/**
- * The transport as the PRODUCT names it, or null where naming it says nothing
- * a reader can act on.
- *
- * A measured LLM answer is genuinely "ChatGPT via OpenAI" — the reader chose
- * that route and can change it. An observed search surface is not: "Google AI
- * Overview" IS the product, and the vendor we reach the results page through is
- * a procurement detail. It belongs on the credential card in Settings, where
- * someone is entering those credentials, and nowhere in AI visibility.
- */
-export function productTransportLabel(key: string): string | null {
-  return key === 'dataforseo' ? null : transportLabel(key);
-}
 
 /** The single fixed route on an engine card. */
 type EngineRouteOption = {

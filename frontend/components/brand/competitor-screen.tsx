@@ -56,6 +56,7 @@ export function CompetitorScreen() {
       title={name}
       crumb={
         <Breadcrumb
+          heading
           parts={[
             { label: 'Competitors', href: '/competitors' },
             {
