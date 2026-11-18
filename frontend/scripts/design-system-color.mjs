@@ -1,7 +1,8 @@
 /**
  * Colour arithmetic for the design-system checks: WCAG contrast, CIELAB
  * lightness, CIEDE2000 distance and colour-vision-deficiency simulation.
- * Pure functions over six-digit hex strings; no token knowledge lives here.
+ * Pure functions over six-digit hex strings, which `parseColour` reads from
+ * the stylesheet's literals; no token knowledge lives here.
  */
 
 const channels = (hex) =>
@@ -17,6 +18,64 @@ const fromLinear = (channel) =>
 
 export const isHex = (value) => /^#[0-9a-f]{6}$/i.test(value ?? '');
 
+const toHex = (rgb) =>
+  '#' + rgb.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('');
+
+const multiply = (matrix, vector) =>
+  matrix.map((row) => row.reduce((sum, weight, index) => sum + weight * vector[index], 0));
+
+// CSS Color 4's OKLab, inverse direction: OKLab to LMS, then LMS to linear sRGB.
+const OKLAB_TO_LMS = [
+  [1, 0.3963377773761749, 0.2158037573099136],
+  [1, -0.1055613458156586, -0.0638541728258133],
+  [1, -0.0894841775298119, -1.2914855480194092],
+];
+const LMS_TO_SRGB = [
+  [4.0767416360759583, -3.3077115392580629, 0.2309699031821043],
+  [-1.2684379732850315, 2.6097573492876882, -0.341319376002657],
+  [-0.0041960761386756, -0.7034186179359362, 1.7076146940746117],
+];
+
+/** `oklch(L% C H)` as 8-bit sRGB channels, clipped to the gamut. */
+function oklchChannels(lightness, chroma, hue) {
+  const radians = (hue * Math.PI) / 180;
+  const lab = [lightness, chroma * Math.cos(radians), chroma * Math.sin(radians)];
+  const lms = multiply(OKLAB_TO_LMS, lab).map((value) => value ** 3);
+  return multiply(LMS_TO_SRGB, lms).map((linear) =>
+    Math.round(Math.min(1, Math.max(0, fromLinear(linear))) * 255),
+  );
+}
+
+const alphaOf = (text) => {
+  if (text === undefined) return 1;
+  return text.endsWith('%') ? Number(text.slice(0, -1)) / 100 : Number(text);
+};
+
+/**
+ * A literal colour as `{ rgb, alpha }` with 8-bit channels: six-digit hex,
+ * `rgb(r g b / a%)` or `oklch(L% C H / a%)`. Anything else is undefined.
+ */
+export function parseColour(value) {
+  const text = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  if (isHex(text)) return { rgb: channels(text).map((channel) => channel * 255), alpha: 1 };
+  const rgb = /^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*(?:\/\s*([\d.]+%?)\s*)?\)$/.exec(text);
+  if (rgb) return { rgb: [rgb[1], rgb[2], rgb[3]].map(Number), alpha: alphaOf(rgb[4]) };
+  const oklch = /^oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+%?)\s*)?\)$/.exec(
+    text,
+  );
+  if (!oklch) return undefined;
+  const [lightness, chroma, hue] = [oklch[1], oklch[2], oklch[3]].map(Number);
+  return { rgb: oklchChannels(lightness / 100, chroma, hue), alpha: alphaOf(oklch[4]) };
+}
+
+/** A parsed colour as `#rrggbb` when opaque, `rgb(r g b / a%)` when translucent. */
+export function formatColour({ rgb, alpha }) {
+  if (alpha >= 1) return toHex(rgb);
+  return `rgb(${rgb.map(Math.round).join(' ')} / ${Number((alpha * 100).toFixed(4))}%)`;
+}
+
 function relativeLuminance(hex) {
   const [red, green, blue] = channels(hex).map(toLinear);
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
@@ -28,19 +87,14 @@ export function contrastRatio(first, second) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-/** Source-over composite of `rgb(r g b / a%)` or a hex onto an opaque hex. */
+/** Source-over composite of any `parseColour` literal onto an opaque hex. */
 export function composite(value, backdrop) {
-  if (isHex(value)) return value.toLowerCase();
-  const match = value?.match(/^rgb\((\d+)\s+(\d+)\s+(\d+)\s*\/\s*([\d.]+)%\)$/);
-  if (!match || !isHex(backdrop)) return undefined;
-  const alpha = Number(match[4]) / 100;
+  const colour = parseColour(value);
+  if (colour?.alpha === 1) return toHex(colour.rgb);
+  if (!colour || !isHex(backdrop)) return undefined;
   const base = channels(backdrop).map((channel) => channel * 255);
-  return (
-    '#' +
-    [1, 2, 3]
-      .map((index) => Math.round(Number(match[index]) * alpha + base[index - 1] * (1 - alpha)))
-      .map((channel) => channel.toString(16).padStart(2, '0'))
-      .join('')
+  return toHex(
+    colour.rgb.map((channel, index) => channel * colour.alpha + base[index] * (1 - colour.alpha)),
   );
 }
 

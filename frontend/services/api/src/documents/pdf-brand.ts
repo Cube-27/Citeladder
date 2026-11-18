@@ -23,6 +23,8 @@ import {
 } from '@citeladder/contracts/brand-logo';
 import { create as parseFont } from 'fontkit';
 
+import { oklchToHex } from './oklch.ts';
+
 /** The tokens a document paints with, by the `globals.css` custom property that owns each. */
 const TOKENS = {
   ink: '--color-ink',
@@ -170,7 +172,7 @@ async function tokenSource(): Promise<string> {
   }
 }
 
-/** Each token's first (light) declaration, with `var()` references resolved. */
+/** Each token's first (light) declaration as hex, with `var()` references resolved. */
 function parsePalette(css: string): Palette {
   const declared = new Map<string, string>();
   for (const match of css.matchAll(/^[ \t]*(--[a-z0-9-]+)[ \t]*:([^;{}]+);/gimu)) {
@@ -181,9 +183,9 @@ function parsePalette(css: string): Palette {
     const value = declared.get(name);
     const reference = /^var\((--[a-z0-9-]+)\)$/iu.exec(value ?? '')?.[1];
     if (reference && !seen.has(reference)) return resolve(reference, new Set([...seen, name]));
-    if (!value || !/^#[0-9a-f]{6}$/iu.test(value))
-      throw new Error(`Design token ${name} has no light hex value`);
-    return value;
+    const hex = value && (/^#[0-9a-f]{6}$/iu.test(value) ? value : oklchToHex(value));
+    if (!hex) throw new Error(`Design token ${name} has no light sRGB colour`);
+    return hex;
   };
   const token = (tone: Tone) => resolve(TOKENS[tone], new Set());
   return {

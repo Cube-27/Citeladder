@@ -16,8 +16,8 @@
       {
         "name": "paper",
         "value": {
-          "light": "#f4f4f4",
-          "dark": "#0a0a0a"
+          "light": "oklch(96.7% 0 0)",
+          "dark": "oklch(14.5% 0 0)"
         },
         "usage": "The ground: the page of the app and the website and the app's top bar (white cards sit on it in light, lighter cards in dark). Never an inset."
       },
@@ -32,120 +32,120 @@
       {
         "name": "surface",
         "value": {
-          "light": "#ffffff",
-          "dark": "#151515"
+          "light": "oklch(100% 0 0)",
+          "dark": "oklch(19.6% 0 0)"
         },
         "usage": "The container: the docs page ground; cards, panels, tables, dialogs, drawers, menus, popovers, toasts, inputs and the selected tab everywhere."
       },
       {
         "name": "surface-sunken",
         "value": {
-          "light": "#ececec",
-          "dark": "#1e1e1e"
+          "light": "oklch(94.3% 0 0)",
+          "dark": "oklch(23.5% 0 0)"
         },
         "usage": "The inset, only inside a container: wells, code blocks, table header rows, an inline note or empty state, skeletons. On the ground an inset becomes a bordered container (`.surface-inset`)."
       },
       {
         "name": "state-hover",
         "value": {
-          "light": "rgba(17,17,17,0.06)",
-          "dark": "rgba(244,244,244,0.06)"
+          "light": "oklch(from {ink} l c h / 6%)",
+          "dark": "oklch(from {ink} l c h / 6%)"
         },
         "usage": "Hover: an ink overlay (`overlay-hover`) over any fill, on rows, menu items, nav items and buttons."
       },
       {
         "name": "state-pressed",
         "value": {
-          "light": "rgba(17,17,17,0.08)",
-          "dark": "rgba(244,244,244,0.08)"
+          "light": "oklch(from {ink} l c h / 8%)",
+          "dark": "oklch(from {ink} l c h / 8%)"
         },
         "usage": "Pressed and open: an ink overlay (`overlay-pressed`) on a trigger whose menu is open, a toggled button and a segmented track."
       },
       {
         "name": "state-selected",
         "value": {
-          "light": "rgba(17,17,17,0.1)",
-          "dark": "rgba(244,244,244,0.1)"
+          "light": "oklch(from {ink} l c h / 10%)",
+          "dark": "oklch(from {ink} l c h / 10%)"
         },
         "usage": "Selected: an ink overlay (`overlay-selected`) on the selected row, list item or current nav item (with its 2px accent bar); never shared with hover."
       },
       {
         "name": "stage-sky",
         "value": {
-          "light": "#d2e2f8",
-          "dark": "#13223d"
+          "light": "oklch(90.8% 0.035 256)",
+          "dark": "oklch(25.4% 0.055 261)"
         },
         "usage": "One tint the website's editorial illustrations draw with. Never text, a button, a card or a page fill."
       },
       {
         "name": "stage-mint",
         "value": {
-          "light": "#cdeedf",
-          "dark": "#0f2a26"
+          "light": "oklch(92.1% 0.04 166)",
+          "dark": "oklch(26.2% 0.034 183)"
         },
         "usage": "One tint the website's editorial illustrations draw with. Never text, a button, a card or a page fill."
       },
       {
         "name": "stage-lilac",
         "value": {
-          "light": "#dfd6f7",
-          "dark": "#231b3d"
+          "light": "oklch(89.3% 0.046 298)",
+          "dark": "oklch(25% 0.063 292)"
         },
         "usage": "One tint the website's editorial illustrations draw with. Never text, a button, a card or a page fill."
       },
       {
         "name": "stage-peach",
         "value": {
-          "light": "#fcdac6",
-          "dark": "#2f1b22"
+          "light": "oklch(91.2% 0.0465 52)",
+          "dark": "oklch(25% 0.0336 357.2)"
         },
         "usage": "One tint the website's editorial illustrations draw with. Never text, a button, a card or a page fill."
       },
       {
         "name": "line",
         "value": {
-          "light": "#e5e5e5",
-          "dark": "#2a2a2a"
+          "light": "oklch(92.2% 0 0)",
+          "dark": "oklch(28.5% 0 0)"
         },
         "usage": "Every soft edge on `surface`: the 1px border of every container (card, panel, table frame, dialog, drawer, menu, toast), the chrome rules, table rules, dividers, the edge of a chip, tag, citation, kbd, secondary button and selected tab, and the resting edge of every form control (inputs, selects, textareas, chip inputs, the Agent composer, the docs search trigger, the CSV file input, checkbox and radio boxes), with shadow-edge under a field. A divider inside a dialog or the search palette is line, never darker, and line is the 3px halo around a focused field."
       },
       {
         "name": "line-strong",
         "value": {
-          "light": "#d4d4d4",
-          "dark": "#3a3a3a"
+          "light": "oklch(87% 0 0)",
+          "dark": "oklch(34.8% 0 0)"
         },
         "usage": "One soft step darker than line: a divider or edge drawn on `surface-sunken`, where line would vanish, a form control's hover edge and the dashed edge of reserved slots (Turnstile, the new-workspace tile)."
       },
       {
         "name": "line-control",
         "value": {
-          "light": "#858585",
-          "dark": "#747474"
+          "light": "oklch(61.7% 0 0)",
+          "dark": "oklch(56% 0 0)"
         },
         "usage": "Marks that need 3:1 but are not borders: the chart crosshair, the Switch's off track, the ink TextLink underline, the StepList pending ring and a not-cited engine mark. Never the edge of a control (that is line), card or box."
       },
       {
         "name": "ink",
         "value": {
-          "light": "#111111",
-          "dark": "#f4f4f4"
+          "light": "oklch(17.8% 0 0)",
+          "dark": "oklch(96.7% 0 0)"
         },
         "usage": "Headings, primary text and numbers on paper, surface, surface-sunken and every -soft tint (accent-soft, positive-soft, negative-soft, warning-soft, info-soft): callout bodies are ink. Also the primary button fill and the inverted tile."
       },
       {
         "name": "ink-hover",
         "value": {
-          "light": "#2a2a2a",
-          "dark": "#d6d6d6"
+          "light": "oklch(28.5% 0 0)",
+          "dark": "oklch(87.6% 0 0)"
         },
         "usage": "Primary button fill on hover."
       },
       {
         "name": "ink-secondary",
         "value": {
-          "light": "#525252",
-          "dark": "#a6a6a6"
+          "light": "oklch(43.9% 0 0)",
+          "dark": "oklch(72.5% 0 0)"
         },
         "usage": "Leads and body copy on the website, descriptions, unselected tabs, nav links. On paper, surface and surface-sunken."
       },
@@ -160,32 +160,32 @@
       {
         "name": "on-ink",
         "value": {
-          "light": "#ffffff",
-          "dark": "#111111"
+          "light": "oklch(100% 0 0)",
+          "dark": "oklch(17.8% 0 0)"
         },
         "usage": "Text and icons on an ink fill: the primary button label, the inverted tile."
       },
       {
         "name": "accent",
         "value": {
-          "light": "#e8501a",
-          "dark": "#ff6a33"
+          "light": "oklch(63.4% 0.1973 37.5)",
+          "dark": "oklch(70.3% 0.194 39.3)"
         },
         "usage": "Flare, the only hue: the logo bars and \"Cite\", active rungs, your own brand's citation number and chart series, the selected nav marker in the app. A mark, never body text, a button fill or a background."
       },
       {
         "name": "accent-ink",
         "value": {
-          "light": "#b53a0c",
-          "dark": "#ff9466"
+          "light": "oklch(52.3% 0.1667 37.5)",
+          "dark": "oklch(77% 0.1428 43.5)"
         },
         "usage": "Accent as text: inline links inside long reading copy (docs, blog, legal). On paper, surface and accent-soft."
       },
       {
         "name": "accent-soft",
         "value": {
-          "light": "#ffe6da",
-          "dark": "#3b1a0c"
+          "light": "oklch(94.2% 0.032 47)",
+          "dark": "oklch(26.2% 0.057 43)"
         },
         "usage": "Tint behind ink: the highlighter mark and your own brand's citation pill or table row."
       },
@@ -200,88 +200,88 @@
       {
         "name": "positive",
         "value": {
-          "light": "#0b6e69",
-          "dark": "#4fd1c5"
+          "light": "oklch(48.7% 0.0817 189.2)",
+          "dark": "oklch(78.6% 0.1143 186.6)"
         },
         "usage": "Gains, healthy checks, \"cited\", success toasts. Teal, so it never relies on red versus green alone. Text on paper, surface and positive-soft; always beside an arrow, icon or word."
       },
       {
         "name": "positive-soft",
         "value": {
-          "light": "#d6f2ef",
-          "dark": "#0e2e2b"
+          "light": "oklch(94% 0.0295 189)",
+          "dark": "oklch(27.6% 0.0378 187)"
         },
         "usage": "Background of positive badges and success callouts."
       },
       {
         "name": "negative",
         "value": {
-          "light": "#c4122f",
-          "dark": "#ff7387"
+          "light": "oklch(52.36% 0.2032 21.9)",
+          "dark": "oklch(72.8% 0.171 13.6)"
         },
         "usage": "Losses, failed checks, errors, destructive actions. Text on paper, surface and negative-soft; always beside an arrow, icon or word."
       },
       {
         "name": "negative-soft",
         "value": {
-          "light": "#ffe2e6",
-          "dark": "#3d0e16"
+          "light": "oklch(93.8% 0.032 8)",
+          "dark": "oklch(24.8% 0.073 14)"
         },
         "usage": "Background of negative badges and error callouts."
       },
       {
         "name": "warning",
         "value": {
-          "light": "#8a5000",
-          "dark": "#f5b84a"
+          "light": "oklch(48.8% 0.1102 64.2)",
+          "dark": "oklch(82% 0.142 79)"
         },
         "usage": "Needs attention, partial data, stale results, trial ending. Text on paper, surface and warning-soft."
       },
       {
         "name": "warning-soft",
         "value": {
-          "light": "#fff0d1",
-          "dark": "#3a2a0a"
+          "light": "oklch(95.9% 0.0436 85)",
+          "dark": "oklch(29.7% 0.052 81)"
         },
         "usage": "Background of warning badges and callouts."
       },
       {
         "name": "info",
         "value": {
-          "light": "#1f5fbf",
-          "dark": "#7fb0ff"
+          "light": "oklch(50.2% 0.164 258.98)",
+          "dark": "oklch(75.5% 0.126 259.6)"
         },
         "usage": "Neutral information callouts and \"note\" admonitions in docs. Text on paper, surface and info-soft; never decorative."
       },
       {
         "name": "info-soft",
         "value": {
-          "light": "#e3edfc",
-          "dark": "#14243d"
+          "light": "oklch(94.3% 0.023 258)",
+          "dark": "oklch(26% 0.052 259)"
         },
         "usage": "Background of info callouts."
       },
       {
         "name": "data-other",
         "value": {
-          "light": "#c2c2c2",
-          "dark": "#4a4a4a"
+          "light": "oklch(81.4% 0 0)",
+          "dark": "oklch(41% 0 0)"
         },
         "usage": "The \"Other\" series and slice, always textured (a dashed line) and labelled, so it never reads as a fourth brand."
       },
       {
         "name": "scrim",
         "value": {
-          "light": "rgba(17,17,17,0.32)",
-          "dark": "rgba(0,0,0,0.64)"
+          "light": "oklch(from {ink} l c h / 32%)",
+          "dark": "oklch(0% 0 0 / 64%)"
         },
         "usage": "The backdrop behind dialogs, drawers and the command palette. Nothing else."
       },
       {
         "name": "chart-grid",
         "value": {
-          "light": "#ececec",
-          "dark": "#262626"
+          "light": "oklch(94.3% 0 0)",
+          "dark": "oklch(26.9% 0 0)"
         },
         "usage": "Chart gridlines and axis baselines. Decorative."
       },
@@ -416,24 +416,24 @@
       {
         "name": "data-rival-2",
         "value": {
-          "light": "#2f6f9f",
-          "dark": "#2f6f9f"
+          "light": "oklch(52.3% 0.1 244)",
+          "dark": "oklch(52.3% 0.1 244)"
         },
         "usage": "The second rival series; cool hues only for rivals. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "data-rival-3",
         "value": {
-          "light": "#4b3a8a",
-          "dark": "#4b3a8a"
+          "light": "oklch(41% 0.128 289.3)",
+          "dark": "oklch(41% 0.128 289.3)"
         },
         "usage": "The third rival series. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "data-rival-4",
         "value": {
-          "light": "#1f7d73",
-          "dark": "#1f7d73"
+          "light": "oklch(53.4% 0.0855 184.4)",
+          "dark": "oklch(53.4% 0.0855 184.4)"
         },
         "usage": "The fourth rival series; a fifth and later are data-other. The website aliases its own role here; the app binds its value."
       },
@@ -812,40 +812,40 @@
       {
         "name": "shadow-edge",
         "value": {
-          "light": "0 1px 2px rgba(17,17,17,0.05)",
-          "dark": "0 1px 2px rgba(0,0,0,0.40)"
+          "light": "0 1px 2px oklch(17.8% 0 0 / 5%)",
+          "dark": "0 1px 2px oklch(0% 0 0 / 40%)"
         },
         "usage": "The faint smudge under a form control's soft line edge: inputs, textareas, search fields, select triggers, chip inputs, checkbox and radio boxes, the Agent composer. No ring of its own, so the 1px border stays the only edge; shadow-xs would double it."
       },
       {
         "name": "shadow-control",
         "value": {
-          "light": "0 1px 2px rgb(16 24 40 / 0.06)",
-          "dark": "0 1px 2px rgb(0 0 0 / 0.35)"
+          "light": "0 1px 2px oklch(21% 0.034 263 / 6%)",
+          "dark": "0 1px 2px oklch(0% 0 0 / 35%)"
         },
         "usage": "The app's shadow under a labelled control's control-edge: secondary and danger buttons, link-buttons, operable tags. None on the website and docs."
       },
       {
         "name": "shadow-xs",
         "value": {
-          "light": "0 0 0 1px rgba(17,17,17,0.08), 0 1px 2px rgba(17,17,17,0.06)",
-          "dark": "0 0 0 1px rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.5)"
+          "light": "0 0 0 1px oklch(17.8% 0 0 / 8%), 0 1px 2px oklch(17.8% 0 0 / 6%)",
+          "dark": "0 0 0 1px oklch(100% 0 0 / 8%), 0 1px 2px oklch(0% 0 0 / 50%)"
         },
         "usage": "Website and docs chips and pills whose ring is their edge, and the Switch thumb. Not an app edge."
       },
       {
         "name": "shadow-pop",
         "value": {
-          "light": "0 0 0 1px rgba(17,17,17,0.08), 0 2px 6px rgba(17,17,17,0.06), 0 16px 40px -8px rgba(17,17,17,0.14)",
-          "dark": "0 0 0 1px rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.6)"
+          "light": "0 0 0 1px oklch(17.8% 0 0 / 8%), 0 2px 6px oklch(17.8% 0 0 / 6%), 0 16px 40px -8px oklch(17.8% 0 0 / 14%)",
+          "dark": "0 0 0 1px oklch(100% 0 0 / 10%), 0 16px 40px oklch(0% 0 0 / 60%)"
         },
         "usage": "The website and docs floating surfaces whose ring is their edge: the mega menu, popovers, the docs search dialog, a product image. The app binds its own pop for menus and popovers."
       },
       {
         "name": "shadow-sheet",
         "value": {
-          "light": "0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%)",
-          "dark": "0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%)"
+          "light": "0 1px 2px oklch(21.8% 0.006 92 / 6%), 0 12px 32px -8px oklch(21.8% 0.006 92 / 18%)",
+          "dark": "0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%)"
         },
         "usage": "The app's one shadow, under a sheet. Nothing at rest has a shadow."
       }
