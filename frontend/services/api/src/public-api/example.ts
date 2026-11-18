@@ -115,7 +115,10 @@ function typedExample(
 
 export function exampleOf(schema: JsonSchema, context: ExampleContext): unknown {
   let counter = 0;
-  const nextId = () => fakeUuid((counter += 1));
+  const nextId = () => {
+    counter += 1;
+    return fakeUuid(counter);
+  };
   const walk: Walk = (node, depth, key) => {
     if (depth > MAX_DEPTH) return null;
     const target = resolved(node, context.components);
