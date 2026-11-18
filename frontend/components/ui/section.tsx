@@ -1,41 +1,37 @@
-import { createContext, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * What a section draws (law 5, surfaces not rules):
- *   `card`  — the default: a `surface` card with no edge, the card radius
- *             and `shadow-card`, its head inside, 16 padding.
- *   `group` — no card: a head on the ground over a row or grid of cards
- *             (stat cards, a queue of slips, widgets), 32 below the block above.
+ * What a section draws:
+ *   `surface` — the default: no box. Its head (title, a one-line description,
+ *               actions at the right) and its body sit straight on the page
+ *               surface; space and the heading separate it from its neighbours.
+ *   `framed`  — opt-in, for the few blocks that earn a box: a light `rule`
+ *               frame at the card radius, padded 16, with no fill or shadow.
+ * Tables and charts draw their own frame; a section never boxes them again.
  */
-export type SectionVariant = 'card' | 'group';
+export type SectionVariant = 'surface' | 'framed';
 
 const SECTION_FACE: Record<SectionVariant, string> = {
-  card: 'bg-surface text-ink rounded-card shadow-card p-[var(--card-padding)]',
-  group: '',
+  surface: '',
+  framed: 'border-rule rounded-card border p-[var(--card-padding)]',
 };
 
 /**
  * Section — the default grouping on every page. It owns the rhythm above it:
- * cards sit 16 apart and titled groups 32 (globals.css, `surface-section`),
- * so a page sets no vertical gap. A card never sits in a card: a section
- * inside a card section draws no card of its own, and a slip inside one
- * steps down to an inset (globals.css). It sets no display of its own, so a
- * sticky child keeps its scroll container.
+ * sections sit 32 apart (globals.css, `surface-section`), so a page sets no
+ * vertical gap. It sets no display of its own, so a sticky child keeps its
+ * scroll container.
  */
-/** Whether a block sits inside a card section, whose padding is its outer inset. */
-export const InCardContext = createContext(false);
-
 export function Section({
   children,
   className,
-  variant = 'card',
+  variant = 'surface',
   ...props
 }: Readonly<ComponentPropsWithoutRef<'section'> & { variant?: SectionVariant }>) {
-  const inCard = useContext(InCardContext);
   return (
     <section
       {...props}
@@ -43,15 +39,13 @@ export function Section({
       className={cn('surface-section min-w-0', SECTION_FACE[variant], className)}
     >
       {/* Under the section's h2 title, a block state's heading is an h3. */}
-      <StateHeadingLevelContext value={3}>
-        <InCardContext value={inCard || variant === 'card'}>{children}</InCardContext>
-      </StateHeadingLevelContext>
+      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
     </section>
   );
 }
 
 /**
- * SectionHeader — the card's head, always on top of its body: the title and,
+ * SectionHeader — the section's head, always on top of its body: the title and,
  * 4 below, the caption on the left; `actions` (a quiet Button, a small control
  * group, or a count as caption text) top-aligned at the right end of the title
  * row, 8 apart. When the row is too narrow the actions wrap under the caption,
@@ -102,7 +96,7 @@ export function SectionTitle({
   );
 }
 
-/** SectionTitleLine — the title with the card's status right after it, 8 apart. */
+/** SectionTitleLine — the title with the section's status right after it, 8 apart. */
 export function SectionTitleLine({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
 }
@@ -120,7 +114,7 @@ export function SectionDescription({
   );
 }
 
-/** A form card's foot: under a `rule` 16 below the body, its actions right-aligned 16 under it. */
+/** A form section's foot: under a `rule` 16 below the body, its actions right-aligned 16 under it. */
 export function SectionFoot({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="border-rule mt-4 flex flex-wrap justify-end gap-2 border-t pt-4">
@@ -174,7 +168,7 @@ export function TitledSection({
   );
 }
 
-/** A page's sections, cards 16 apart; a titled group adds its own 32 above. */
+/** A page's sections, 32 apart. */
 export function SectionStack({
   children,
   ...props
@@ -182,8 +176,8 @@ export function SectionStack({
   return (
     <div
       {...props}
-      data-rhythm-gap="workspace"
-      className="flex min-w-0 flex-col gap-[var(--workspace-gap)]"
+      data-rhythm-gap="section"
+      className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
     >
       {children}
     </div>

@@ -67,7 +67,7 @@ function BacklinkMetrics({
   );
   return (
     <>
-      <Section variant="group" aria-labelledby="backlink-summary">
+      <Section aria-labelledby="backlink-summary">
         <SectionHeader>
           <SectionTitle id="backlink-summary">Backlink summary</SectionTitle>
           {summary ? (

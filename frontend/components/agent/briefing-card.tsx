@@ -8,7 +8,6 @@ import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
-import { slipClasses } from '@/components/ui/slip';
 
 const BRIEFING_REQUEST =
   'What should I work on this week? Brief me on the highest-value work, why each item matters with its evidence, and the first step for each.';
@@ -16,8 +15,8 @@ const BRIEFING_REQUEST =
 /**
  * "What should I work on?": one click starts a growth-plan chat that mentions
  * the project's top open Actions, so their diagnoses are in its context. It
- * runs only when the user asks; nothing is scheduled. A slip under the
- * composer, whose Send is the page's one primary, so Brief me is secondary.
+ * runs only when the user asks; nothing is scheduled. It sits on the surface
+ * under the composer, whose Send is the page's one primary, so Brief me is secondary.
  */
 export function BriefingCard({
   workspaceId,
@@ -40,7 +39,7 @@ export function BriefingCard({
       ? `Reads your evidence and your top ${top.length} open ${actionLabel}.`
       : 'Reads your evidence across Visibility, Website, Demand and Performance.';
   return (
-    <Stack as="section" aria-labelledby="agent-briefing" className={slipClasses()}>
+    <Stack as="section" aria-labelledby="agent-briefing">
       <Stack gap="tight">
         <h2 id="agent-briefing" className={textRole('subheading')}>
           What should I work on?

@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
+import { FRAME_FACE } from '@/components/ui/slip';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * A tree leaf's work rows in their own surface box: a column-head row, then
+ * A tree leaf's work rows in a light frame: a column-head row, then
  * 56px rows of tick, title (with a muted line), scope, impact and source.
  * The columns are fixed, so no row moves another; below desktop, scope and
  * source fold away.
@@ -30,7 +31,7 @@ export function WorkRows({
 }>) {
   const [title, scope, impact, source] = heads;
   return (
-    <div className="bg-surface rounded-card shadow-card overflow-hidden">
+    <div className={cn(FRAME_FACE, 'overflow-hidden')}>
       <table aria-label={label} className="block w-full">
         <thead className="block">
           <tr className={cn(GRID, textRole('captionStrong', 'bg-ground h-8'))}>

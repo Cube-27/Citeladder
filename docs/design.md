@@ -126,9 +126,9 @@ colors:
 
 <!-- generated:tokens:end -->
 
-- **App roles.** Fills: `ground` (the page), `chrome` (sidebar and
-  masthead, a step lighter than the ground), `surface` (cards, slips,
-  fields), `raised` (sheets), `well` (sunken material, a chart's gap band,
+- **App roles.** Fills: `ground` (the page; in the shell, one colour with
+  `surface`), `chrome` (the sidebar, a step lighter than the ground),
+  `surface` (slips, fields), `raised` (sheets), `well` (sunken material, a chart's gap band,
   the selected state) and `control-fill` (secondary buttons, selects, search
   and filter fields, operable tags). Lines: `rule` (dividers between rows
   inside a surface and on chrome edges), `control-edge` (the soft edge of a
@@ -313,24 +313,29 @@ the viewport), so content shrinking near the bottom never pulls the scroll.
 
 ## Elevation & Depth
 
-- **Flat surfaces, not borders (owner, 2026-11-17).** In both themes a
-  surface nobody clicks (a card, a section, a DataTable, a slip, a well, a
-  stat or score card, a StateBlock, the setup, flow and notice cards, the
-  Details card, a box of rows) has no outer border: it reads as a fill one
-  step above the ground, with `shadow-card` in light (none in dark).
-  Anything clickable keeps its edge: fields, selects, buttons, segmented
-  controls, checkboxes, and clickable cards (`IconCard`, a pressable figure),
-  which also take the hover overlay. Dividers between rows inside a surface
-  stay, in `rule`. Floating sheets keep their hairline.
-- **The app has four containers and no others.** A **Section** is a card
-  (`surface`, `rounded-card`, `shadow-card`) with an `h2` title; it is the
-  default grouping and never holds another card. A **Slip** (`surface`,
-  `rounded-card`, `shadow-card`) is one object you can act on. A **Well**
-  (`well`, radius 6) holds quoted or raw material. A **Sheet** (`raised`, a
-  hairline, radius 8 or 12, `shadow-pop` or `shadow-sheet`) is anything that
-  floats; a modal sheet also sits on the `scrim`.
-- **Boxes are at most two deep** and a slip never holds a slip. To separate a
-  group, add the missing divider; never wrap a section in a box.
+- **Content sits on the surface; boxes are earned (owner, 2026-11-18).** In
+  the signed-in shell the page is one surface: the ground and `surface` are
+  one colour in both themes. The page header and the filter row each close
+  on a hairline; the lede is text; sections are a heading, a one-line
+  description and their content straight on the surface, 32 apart, with no
+  box, padding box or divider around them. Settings groups are rows divided
+  by a faint `rule`. An empty state, a figure row and an explainer are never
+  boxed.
+- **What keeps a container.** A **Frame** (a `rule` edge at `rounded-card`,
+  no fill, no shadow) holds a table, a plotted chart (its key inside), an
+  Overview widget or a box of rows; a table's title, tabs, filters and
+  actions sit on the surface above its frame, and its column names are the
+  frame's first row, unfilled. A **Slip** (`surface`, a `rule` edge,
+  `rounded-card`, `shadow-card`) is one object you can act on: a clickable
+  card (`IconCard`, which takes the `control-edge`), a plan or add-on with its
+  buttons. A **Well** (`well`, radius 6) holds quoted or raw material. A
+  **Sheet** (`raised`, a hairline, radius 8 or 12, `shadow-pop` or
+  `shadow-sheet`) is anything that floats: dialogs, drawers, popovers, menus;
+  a modal sheet also sits on the `scrim`. The Agent composer keeps its card.
+  A `framed` Section is the opt-in frame for any other block that earns one.
+- **Boxes are at most two deep** and a slip never holds a slip; inside a
+  container a table or chart draws no second frame. To separate a group, use
+  space and a heading; never wrap a section in a box.
 - **Every sheet keeps two separation cues in each theme:** the hairline and
   the shadow in light, the lighter `raised` fill and the hairline in dark.
 - **The website and docs are flat.** Panels are one flat neutral fill

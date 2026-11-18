@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SectionDescription } from '@/components/ui/section';
-import { slipClasses } from '@/components/ui/slip';
+import { frameClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -28,7 +28,7 @@ type WidgetHeadProps = Readonly<{
 }>;
 
 /**
- * One Overview widget: a card with one head (its title in `heading` at the
+ * One Overview widget: a light frame with one head (its title in `heading` at the
  * left, its status or link at the right), then a figure, a chart or a short
  * list. A `figure` widget keeps its description in a hint after the title, so
  * its card is the head and one figure. Widgets in a row share a height.
@@ -65,7 +65,7 @@ export function WidgetFrame({
       gap="workspace"
       aria-labelledby={id}
       data-overview-widget=""
-      className={slipClasses('flex h-full min-w-0 flex-col')}
+      className={frameClasses('flex h-full min-w-0 flex-col')}
     >
       <WidgetHead
         id={id}

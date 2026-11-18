@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
 import { figureRowCells, useStripWidth } from '@/components/ui/figure-rows';
-import { slipClasses } from '@/components/ui/slip';
+import { frameClasses } from '@/components/ui/slip';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -74,10 +74,10 @@ function TitleBlock() {
   return <SkeletonBlock className="h-4 w-40 max-w-full" />;
 }
 
-/** A widget's card as it loads: its title's line over its body's shape. */
+/** A widget's frame as it loads: its title's line over its body's shape. */
 export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
-    <div className={slipClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
+    <div className={frameClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
       <span className="flex h-6 items-center">
         <TitleBlock />
       </span>

@@ -333,8 +333,7 @@ function ProductSetup({
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'product', id: detail.product.holder_id } as const;
   return (
-    // A titled group: its Actions, competitors and prompts are cards of their own.
-    <Section variant="group" aria-labelledby="product-setup">
+    <Section aria-labelledby="product-setup">
       <SectionHeader>
         <SectionTitle id="product-setup">Setup</SectionTitle>
       </SectionHeader>

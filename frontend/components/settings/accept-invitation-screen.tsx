@@ -126,7 +126,7 @@ function InvitationDeadEnd({
   useDocumentTitle(heading);
   return (
     // The flow page's card is the frame, so the state draws none of its own.
-    <Stack gap="item" data-section="card" className="min-w-0 justify-items-center">
+    <Stack gap="item" data-section="framed" className="min-w-0 justify-items-center">
       <StateBlock
         kind="empty"
         icon={Link2Off}

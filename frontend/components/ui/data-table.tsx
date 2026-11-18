@@ -37,7 +37,6 @@ import {
 import { Table, TableTitleLinesContext, type TableMinWidth } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-import { InCardContext } from '@/components/ui/section';
 import {
   StateBlock,
   StateHeadingLevelContext,
@@ -49,11 +48,12 @@ export type { DataTableColumn, DataTableSelection, DataTableState };
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
 /**
- * DataTable — the record table organism, a card: an optional header bar
- * (title, toolbar), a head row on `well` (36), body rows of 40 (56 for two
- * lines) with `rule` lines between rows only, and a footer bar with the Pager
- * and the sideways steppers. The page passes data, columns and rows; it sets
- * no geometry.
+ * DataTable — the record table organism: an optional header bar (title,
+ * toolbar) on the page surface, then the table alone in a light frame (the
+ * head row, 36, with no fill as its first row; body rows of 40, 56 for two
+ * lines, with `rule` lines between rows only), and a footer bar under the
+ * frame with the Pager and the sideways steppers. The page passes data,
+ * columns and rows; it sets no geometry.
  *
  *   columns — each column declares its kind, which sets the head's and every
  *            cell's alignment, face, minimum width and truncation together
@@ -409,15 +409,11 @@ function DataTableFoot({
   pager,
   steppers,
 }: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined; steppers: ReactNode }>) {
-  const outer = useBarOuter();
   if (!pager && !footer) return null;
   return (
     <div
       data-data-table-foot=""
-      className={cn(
-        'flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pt-3',
-        outer.foot,
-      )}
+      className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-[var(--table-bar-inset,16px)] pt-3"
     >
       {footer ? (
         <div className="type-caption grid min-h-8 min-w-0 content-center gap-1">{footer}</div>
@@ -464,16 +460,12 @@ function pagingLayout(
 }
 
 /**
- * The header bar: the title, then the toolbar on one row, the description
- * one caption line under it, and the steppers when no footer bar exists.
- * 12 over the 32 title row puts the title 16 from the top, as from the left;
- * the footer bar takes the same 12 round its 32 control row.
+ * The header bar, on the surface above the frame: the title, then the
+ * toolbar on one row, the description one caption line under it, and the
+ * steppers when no footer bar exists; 12 above the frame. It starts on the
+ * page's left edge, or inside a container at the container's padding
+ * (`--table-bar-inset`, globals.css), as does the footer bar.
  */
-function useBarOuter(): { head: string; foot: string } {
-  // Inside a card section, its padding (or its header's gap) is that side.
-  return useContext(InCardContext) ? { head: '', foot: '' } : { head: 'pt-3', foot: 'pb-3' };
-}
-
 function DataTableHeader({
   title,
   headingId,
@@ -491,9 +483,10 @@ function DataTableHeader({
   actions?: ReactNode;
   steppers: ReactNode;
 }>) {
-  const outer = useBarOuter();
   if (!title && !toolbar && !description && !actions) {
-    return steppers ? <div className="flex justify-end px-4 pt-2">{steppers}</div> : null;
+    return steppers ? (
+      <div className="flex justify-end px-[var(--table-bar-inset,16px)] pb-2">{steppers}</div>
+    ) : null;
   }
   const head = (
     <>
@@ -508,12 +501,12 @@ function DataTableHeader({
     </>
   );
   if (!actions)
-    return <header className={cn('grid min-w-0 gap-1 px-4 pb-3', outer.head)}>{head}</header>;
+    return (
+      <header className="grid min-w-0 gap-1 px-[var(--table-bar-inset,16px)] pb-3">{head}</header>
+    );
   // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
-    <header
-      className={cn('flex flex-wrap items-start justify-between gap-2 px-4 pb-3', outer.head)}
-    >
+    <header className="flex flex-wrap items-start justify-between gap-2 px-[var(--table-bar-inset,16px)] pb-3">
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
     </header>

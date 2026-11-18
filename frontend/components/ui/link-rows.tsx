@@ -3,11 +3,12 @@ import { ChevronRight } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
+import { FRAME_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * Rows that each open a page, in one surface box: 48px each on fixed
+ * Rows that each open a page, in one light frame: 48px each on fixed
  * columns (an optional tick, the name, two 96px facts, a chevron), so no row
  * moves another; a "Show more" (`WorkRowsMore`) closes the box.
  */
@@ -19,7 +20,7 @@ export function LinkRows({
   more,
 }: Readonly<{ label: string; children: ReactNode; more?: ReactNode }>) {
   return (
-    <div className="bg-surface rounded-card shadow-card overflow-hidden">
+    <div className={cn(FRAME_FACE, 'overflow-hidden')}>
       <ul aria-label={label} className="divide-rule divide-y">
         {children}
       </ul>

@@ -87,7 +87,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   return (
     <>
       {[...groups].map(([group, rows]) => (
-        <Section key={group} variant="group" aria-label={group}>
+        <Section key={group} aria-label={group}>
           <SectionHeader>
             <SectionTitle level={2}>
               {group} <span className="text-ink-2">({rows.length})</span>

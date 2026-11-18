@@ -1308,12 +1308,9 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     border-radius: var(--radius-control);
   }
   .prose-content .prose-table-frame table { margin: 0; }
-  /* In an Agent reply the prose stays on the ground; a table sits in a card. */
+  /* In an Agent reply the prose stays on the surface; a table takes the light frame. */
   :root:not([data-public-surface]) [data-turn-rail] .prose-table-frame {
-    border: 0;
-    background: var(--color-surface);
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
   }
   /* A table keeps readable columns and scrolls inside its frame; it never
      squeezes its cells to the column width letter by letter. */
@@ -1587,17 +1584,25 @@ a.focus-ring:active .type-caption {
 }
 
 /* Containers. On the website a container is `surface` with one 1px `line`
-   border. In the app a surface nobody clicks (a card, a section, a table, a
-   state frame) has no edge: it is a fill one step above the ground, and
-   only clickable things draw an edge. What sits inside a container never
-   draws a second frame, and an inset inside one is the sunken fill; on the
-   ground an inset (`.surface-inset`: a neutral callout, an inline empty
-   state) is a surface instead. */
+   border. In the app the signed-in shell is one surface: the ground and the
+   surface are one colour, and sections, lede text, figures and empty states
+   sit on it with no box (owner, 2026-11-18). Only tables, charts and
+   `framed` sections take a light `rule` frame with no fill; clickable cards,
+   dialogs, drawers and menus keep their box. What sits inside a container
+   never draws a second frame, and an inset (`.surface-inset`: a neutral
+   callout, an inline empty state) is the sunken fill. */
+:root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
+  --color-ground: var(--color-surface);
+}
+:root:not([data-public-surface]) [data-app-surface] {
+  --table-ground: var(--color-ground);
+}
+
 .table-frame {
   border: 1px solid var(--color-rule);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   .table-frame {
   border: 0;
 }
@@ -1608,26 +1613,20 @@ a.focus-ring:active .type-caption {
 }
 :root:not([data-public-surface]) .surface-inset {
   border-color: transparent;
-}
-
-:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  .surface-inset {
-  border-color: transparent;
   background: var(--color-well);
 }
 
 /* A card never sits in a card (2.4). Inside a card, a dialog or a drawer, a
-   card or a slip steps down to the inset, and a card section to a plain group
-   (no fill, shadow or padding of its own). A clickable slip keeps its edge. */
-:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+   card or a slip steps down to the inset, and a framed section to a plain
+   group (no edge or padding of its own). A clickable slip keeps its edge. */
+:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   :is(.surface-card, .surface-slip) {
   background: var(--color-well);
   box-shadow: none;
 }
-:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  [data-section='card'] {
-  background: transparent;
-  box-shadow: none;
+:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+  [data-section='framed'] {
+  border: 0;
   padding: 0;
 }
 
@@ -1661,23 +1660,25 @@ a.focus-ring:active .type-caption {
 }
 
 /* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
-   A card section that is not first in its container sits 16 below the block
-   above it, a titled group 32. A container that already spaces its children
-   (Stack, PageSections, SectionStack, AppGrid) names its gap in
-   `data-rhythm-gap`, so the section adds only the difference. */
+   A section that is not first in its container sits 32 below the block
+   above it. A container that already spaces its children (Stack,
+   PageSections, SectionStack, AppGrid) names its gap in `data-rhythm-gap`,
+   so the section adds only the difference. */
 @layer components {
-  /* Settings (3.4): one card per group across the column, its head on top
-     and every block (lists, tables, notices, button rows) at full card
-     width. Only a form field (text input, textarea, select) stops at 640. */
+  /* Settings (3.4): one section per group across the column, its head on top
+     and every block (lists, tables, notices, button rows) at full width.
+     Only a form field (text input, textarea, select) stops at 640. */
   [data-settings-sections] .surface-section [data-form-field] {
     max-width: var(--container-form);
   }
-  .surface-section {
-    --section-above: var(--workspace-gap);
-    --rhythm-gap-above: 0px;
+  /* Settings groups read as rows of one list: a faint divider between them. */
+  [data-settings-sections] [data-page-content] > .surface-section + .surface-section {
+    border-top: 1px solid var(--color-rule);
+    padding-top: var(--page-section-gap);
   }
-  .surface-section[data-section='group'] {
+  .surface-section {
     --section-above: var(--page-section-gap);
+    --rhythm-gap-above: 0px;
   }
   .surface-section:not(:first-child) {
     margin-block-start: max(0px, calc(var(--section-above) - var(--rhythm-gap-above)));
@@ -1973,37 +1974,44 @@ label {
   --data-table-identity-min: 25ch;
 }
 
-/* DataTable is a card: surface, no edge, radius 8 and the card shadow.
-   It clips its own corners, so a head well meets the rounded edge with no
-   radius of its own (`clip`, not `hidden`: no scroll container, so sticky
-   heads still pin). Inside another container it draws no second card: it
-   bleeds to the container's edges, so its first and last cells still align
-   with the container's padding. */
+/* A DataTable's title, description, toolbar, steppers and pager sit on the
+   page surface, on its left edge; only the table is framed: a `rule` edge at
+   the card radius, no fill, clipped to its corners (`clip`, not `hidden`: no
+   scroll container, so sticky heads still pin). Inside another container it
+   draws no second frame: it bleeds to the container's edges, and its bars
+   take the container's padding so the first and last cells still align. */
 :root:not([data-public-surface]) [data-data-table] {
-  --table-ground: var(--color-surface);
-  background: var(--color-surface);
+  --table-bar-inset: 0px;
+}
+:root:not([data-public-surface]) [data-data-table-frame] {
+  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
   overflow: clip;
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   [data-data-table] {
+  --table-bar-inset: var(--card-padding);
   margin-inline: calc(var(--card-padding) * -1);
-  box-shadow: none;
-  background: transparent;
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+  [data-data-table-frame] {
+  border: 0;
+  border-radius: 0;
   overflow: visible;
 }
 :root:not([data-public-surface]) :where([role='dialog']) [data-data-table] {
   --table-ground: var(--color-raised);
 }
-/* The footer bar closes the card under a rule, like a sheet's footer. */
-[data-data-table-foot] {
+/* Inside a container the footer bar closes the table under a rule, like a sheet's footer. */
+:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+  [data-data-table-foot] {
   border-top: 1px solid var(--color-rule);
 }
 
-/* A Table on its own in the app (outside a DataTable) is a card on the
-   ground and plain inside a container. */
+/* A Table on its own in the app (outside a DataTable) takes the same frame on
+   the surface and is plain inside a container. */
 :root:not([data-public-surface]) .table-frame {
   --table-row-height: 40px;
   --table-row-height-2: 56px;
@@ -2014,12 +2022,10 @@ label {
 :root:not([data-public-surface])
   .table-frame:not(
     [data-data-table] *,
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
+    :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog']) *
   ) {
-  --table-ground: var(--color-surface);
-  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
 }
 @media (max-width: 899px), (pointer: coarse) {
   :root:not([data-public-surface]) .table-frame {
@@ -2027,7 +2033,9 @@ label {
   }
 }
 
-/* The head row: a `well` band 36 high, caption-strong, sentence case, ink-2. */
+/* The head row: the frame's first row, 36 high, caption-strong, sentence
+   case, ink-2, with no fill of its own (the table's ground keeps a sticky
+   head opaque over scrolled rows) and a `rule` under it. */
 :root:not([data-public-surface]) .table-frame thead th {
   height: 36px;
   font-size: var(--text-caption);
@@ -2036,8 +2044,8 @@ label {
   letter-spacing: normal;
   text-transform: none;
   color: var(--color-ink-2);
-  background: var(--color-well);
-  box-shadow: none;
+  background: var(--table-ground);
+  box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 :root:not([data-public-surface]) .table-frame thead th[aria-sort] {
   color: var(--color-ink);
@@ -2075,7 +2083,6 @@ label {
 [data-pinned] .table-frame thead tr > :nth-child(1),
 [data-pinned='2'] .table-frame thead tr > :nth-child(2) {
   z-index: 20;
-  background-color: var(--color-well);
 }
 
 /* DataTable column widths (`DataTableColumns`): each fixed column at its
@@ -2124,15 +2131,12 @@ label {
   }
 }
 
-/* A StateBlock on the page is a card, padded 24. Inside a container (a card,
-   section, slip, table or dialog) it draws no second frame: padding 16, and
-   the gaps under the icon tile and above the actions step down to 8 and 12. */
+/* A StateBlock on the page sits on the surface with no box, padded 24. Inside
+   a container (a framed section, slip, table or dialog) it pads 16, and the
+   gaps under the icon tile and above the actions step down to 8 and 12. */
 :root:not([data-public-surface]) [data-state-frame] {
   --state-title-gap: 16px;
   --state-action-gap: 16px;
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
   padding: 24px;
 }
 :root:not([data-public-surface])
@@ -2140,16 +2144,29 @@ label {
     .surface-card,
     .surface-slip,
     .surface-well,
-    [data-section='card'],
+    [data-section='framed'],
     [role='dialog'],
     [data-data-table]
   )
   [data-state-frame] {
   --state-title-gap: 8px;
   --state-action-gap: 12px;
-  background: none;
-  box-shadow: none;
   padding: 16px;
+}
+
+/* A plotted chart (one with a height role) on the page takes the light frame
+   a table takes, padded 12 by 16, its key inside; inside a container it
+   draws none. A drawing sized by its own rows stays on the surface. */
+:root:not([data-public-surface]) [data-chart-frame]:not([data-chart-frame='auto']) {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+  [data-chart-frame] {
+  border: 0;
+  padding: 0;
 }
 
 /* Skeleton blocks: a soft shimmer crosses them; under reduced motion they are still. */
@@ -2239,7 +2256,7 @@ label {
 }
 
 /* Rows are divided by `rule` lines between them only: drawn inside the row
-   (an inset line), never under the last row or the head. A ledger row takes
+   (an inset line), never under the last row. A ledger row takes
    the same line. */
 .table-frame tbody > tr > :is(td, th),
 [data-ledger-item] {
@@ -2350,7 +2367,7 @@ label {
   box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   [data-figure-lead] {
   padding: 0;
   background-color: transparent;

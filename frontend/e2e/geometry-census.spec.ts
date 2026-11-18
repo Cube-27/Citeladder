@@ -123,37 +123,32 @@ const NAV_ROW_HEIGHT = 32;
  * 24 left and right (`--page-pad-inline`) and 16 above and below the first
  * row (`--page-pad-block`), as is the sidebar's mode switch, so the first row
  * and the switch share a centre line (16 + 32 / 2 = 32 under the masthead).
- * A filter row under tabs sits 16 below them and the body 12 below it;
- * otherwise the body starts 16 below.
+ * A filter row under tabs sits 16 below them; the body starts 16 below the
+ * last band.
  */
 const BAND_GAP = 0;
 const PAGE_PAD_INLINE = 24;
 const PAGE_PAD_BLOCK = 16;
 const BODY_TOP_GAP = PAGE_PAD_BLOCK;
-const FILTERED_BODY_TOP_GAP = 12;
-/** The content band's cards stand 16 apart (a titled group adds its own 32). */
-const CONTENT_GAP = 16;
+/** The content band's sections stand 32 apart on the page surface. */
+const CONTENT_GAP = 32;
 /** Neighbouring slips sit on the grid, one grid gap apart. */
 const SLIP_GAP = 16;
 /** One card recipe (2.4) for slips: padding 16 and radius 8. */
 const SLIP_INSET = 16;
 const SLIP_RADIUS = 8;
-/** A section is a card: 16 inside it to its head. */
-const SECTION_INSET_TOP = 16;
 /**
- * A state's height is its content. On the page an empty or loading state is
- * a card padded 24; inside a container, and as a read error (its Notice is
- * the box), it draws no frame of its own and has no padding.
+ * A state's height is its content. As a read error (its Notice is the box) or
+ * inside a container, a state that draws no frame has no padding.
  */
 const QUERY_STATE_PADDING = 0;
-const QUERY_STATE_FRAME_PADDING = 24;
 /**
  * A row of a title over its caption (`TableCellLines`): 8 + a body line (20)
  * + 4 + a caption line (16) + 8, the last row included.
  */
 const TABLE_ROW_HEIGHT_TWO_LINES = 56;
 const TABLE_CELL_PADDING_Y = 8;
-/** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
+/** A DataTable's title-and-toolbar row is one control high. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
 /** A FigureStrip cell is padded 12; a strip's cells share one height. */
 const FIGURE_CELL_PADDING_Y = 12;
@@ -325,16 +320,8 @@ function measure({ route }: { route: string }) {
   bandGap('[data-page-band="filters"]', 'band.gap');
   const underTabs = (element: Element) =>
     element.previousElementSibling?.matches('[data-page-band="tabs"]') === true;
-  for (const body of all('[data-page-body]')) {
-    const filters = body.previousElementSibling;
-    const filteredUnderTabs =
-      filters?.matches('[data-page-band="filters"]') === true && underTabs(filters);
-    add(
-      filteredUnderTabs ? 'body.filtered-top-gap' : 'body.top-gap',
-      body,
-      px(getComputedStyle(body).paddingTop),
-    );
-  }
+  for (const body of all('[data-page-body]'))
+    add('body.top-gap', body, px(getComputedStyle(body).paddingTop));
   for (const band of all('[data-page-band]'))
     if (band.previousElementSibling?.matches('[data-masthead]'))
       add('band.first-top-gap', band, px(getComputedStyle(band).paddingTop));
@@ -374,26 +361,16 @@ function measure({ route }: { route: string }) {
       centre(firstRow) - mainEdge - (centre(modeSwitch) - sideEdge),
     );
   }
-  // Content rhythm: the gap between consecutive cards of the content band (a
-  // titled group sets its own 32 above it).
+  // Content rhythm: the gap between consecutive sections of the content band.
   for (const region of all('[data-page-content]')) {
     let previous: Element | undefined;
     for (const child of Array.from(region.children).filter(visible)) {
-      if (previous && !child.matches('[data-section="group"]')) {
+      if (previous) {
         const above = previous.getBoundingClientRect().bottom;
         add('content.gap', child, child.getBoundingClientRect().top - above);
       }
       previous = child;
     }
-  }
-  // Card sections: the 16 inside them to the head. A card section inside
-  // another container draws no card of its own (globals.css).
-  for (const section of all('[data-section="card"]')) {
-    const host =
-      '[data-section="card"], .surface-card, .surface-slip, .surface-well, [role="dialog"]';
-    if (section.parentElement?.closest(host)) continue;
-    const style = getComputedStyle(section);
-    add('section.inset-top', section, px(style.paddingTop));
   }
   // Slips: the gap between neighbouring slips, and where their content
   // starts — the ink, not the CSS, because the same 16 can sit on the slip or
@@ -454,12 +431,8 @@ function measure({ route }: { route: string }) {
     add('slip.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
   for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
-    const style = getComputedStyle(element);
-    // A frame-capable state inside a container draws no fill and pads 16 (compact).
-    if (element.matches('[data-state-frame]')) {
-      if (style.backgroundColor !== 'rgba(0, 0, 0, 0)')
-        add('query-state.frame-padding', element, px(style.paddingTop));
-    } else if (!nestedState(element)) add('query-state.padding', element, px(style.paddingTop));
+    if (!element.matches('[data-state-frame]') && !nestedState(element))
+      add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
   }
   // A DataTable's title-and-toolbar row, whatever it holds; the caption under it is not part of it.
   for (const element of all('[data-data-table-header]'))
@@ -793,18 +766,13 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'band.first-top-gap', PAGE_PAD_BLOCK);
   expectOneValue(records, 'main.padding-x', PAGE_PAD_INLINE);
   expectOneValue(records, 'first-row.centre-offset', 0);
-  expectOneValue(records, 'body.filtered-top-gap', FILTERED_BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
-  expectOneValue(records, 'section.inset-top', SECTION_INSET_TOP);
   expectOneValue(records, 'slip.gap', SLIP_GAP);
   expectOneValue(records, 'slip.padding', SLIP_INSET);
   expectOneValue(records, 'slip.radius', SLIP_RADIUS);
   expectOneValue(records, 'slip.inset-top', SLIP_INSET);
   expectOneValue(records, 'slip.inset-left', SLIP_INSET);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
-  // The census fixtures hold no page-level empty state, so this role may be absent.
-  const framePaddings = [...valuesOf(records, 'query-state.frame-padding').keys()];
-  expect.soft(framePaddings.filter((value) => value !== QUERY_STATE_FRAME_PADDING)).toEqual([]);
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'table-head.cut', 0);

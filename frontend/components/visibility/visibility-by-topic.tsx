@@ -59,13 +59,11 @@ export function VisibilityByTopic({
   onSelectTopic: (topic: string) => void;
 }>) {
   return (
-    <TitledSection title="By topic">
-      <DataTable
-        label="By topic"
-        columns={COLUMNS}
-        footer="Each answer counts under the topic its prompt had when the run asked it."
-        state={topicsState(query)}
-      >
+    <TitledSection
+      title="By topic"
+      description="Each answer counts under the topic its prompt had when the run asked it"
+    >
+      <DataTable label="By topic" columns={COLUMNS} state={topicsState(query)}>
         {(query.data?.items ?? []).map((row) => (
           <TableRow key={row.topic_id}>
             <TableCell>

@@ -39,8 +39,8 @@ export type PageFrameSlots = Readonly<{
  * The anatomy every shell page shares: the masthead, then the optional page
  * tabs and filter row, then the body. The first of them sits `--page-pad-block`
  * under the masthead, level with the sidebar's mode switch, with
- * `--page-pad-block` again below it; a filter row under tabs takes that space,
- * and the body sits 12 below the filter row. The masthead's
+ * `--page-pad-block` again below it. The filter row closes 12 below its
+ * controls on a hairline across the main column, like the masthead's. The masthead's
  * menu button, search and "Ask agent" come from the shell. Geometry is tokens
  * only; a page passes content into the slots and sets none of its own. A
  * narrow route (its manifest `width`) centres the whole frame, title and
@@ -102,20 +102,15 @@ export function PageFrame({
           </div>
         ) : null}
         {filters ? (
+          // A hairline under the filter row, across the main column like the masthead's.
           <div
             data-page-band="filters"
-            className="flex min-w-0 items-center pt-[var(--page-pad-block)]"
+            className="before:border-rule relative isolate flex min-w-0 items-center pt-[var(--page-pad-block)] pb-3 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b"
           >
             {filters}
           </div>
         ) : null}
-        <div
-          data-page-body=""
-          className={cn(
-            'flex min-w-0 flex-1 flex-col',
-            filters && tabs ? 'pt-3' : 'pt-[var(--page-pad-block)]',
-          )}
-        >
+        <div data-page-body="" className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]">
           {children}
         </div>
       </div>
@@ -123,7 +118,7 @@ export function PageFrame({
   );
 }
 
-/** The body's cards, 16 apart (a titled group adds its own 32), on the one left edge. */
+/** The body's sections on the page surface, 32 apart, on the one left edge. */
 export function PageSections({
   className,
   children,
@@ -131,8 +126,8 @@ export function PageSections({
   return (
     <div
       data-page-content=""
-      data-rhythm-gap="workspace"
-      className={cn('flex min-w-0 flex-col gap-[var(--workspace-gap)]', className)}
+      data-rhythm-gap="section"
+      className={cn('flex min-w-0 flex-col gap-[var(--page-section-gap)]', className)}
     >
       {children}
     </div>
