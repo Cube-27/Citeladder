@@ -209,23 +209,156 @@ it('keeps a passing prompt whose identical earlier copy failed binding', async (
   expect(String(prepared.preview)).toContain('Add 1 active prompt(s)');
 });
 
-it('archives prompts only on confirmation', async () => {
+it('archives, refiles and activates a selection only on confirmation, all or nothing', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
-  const prepared = await call(principal, 'prepare_archive_prompts', {
-    project_id: tenant.projectId,
-    prompt_ids: [tenant.promptId],
-  });
-  expect(prepared.preview).toBe(
+  const prepare = (args: Record<string, unknown>) =>
+    call(principal, 'prepare_update_prompts', { project_id: tenant.projectId, ...args });
+  const confirm = async (prepared: Record<string, unknown>) =>
+    call(principal, 'confirm_change', { confirmation_token: String(prepared.confirmation_token) });
+  const filedUnder = async () =>
+    (
+      await db
+        .selectFrom('prompts')
+        .select('topic_id')
+        .where('id', '=', tenant.promptId)
+        .executeTakeFirstOrThrow()
+    ).topic_id;
+
+  const archive = await prepare({ change: 'archive', prompt_ids: [tenant.promptId] });
+  expect(archive.preview).toBe(
     'Archive 1 prompt(s): "Which running shoes suit road use?". Future audits stop measuring them; past results stay.',
   );
   expect(await promptTexts(tenant.setId)).toEqual(['Which running shoes suit road use? [active]']);
-  await call(principal, 'confirm_change', {
-    confirmation_token: String(prepared.confirmation_token),
+  expect(await confirm(archive)).toMatchObject({
+    change: 'update_prompts',
+    summary: 'Archived 1 prompt(s).',
   });
   expect(await promptTexts(tenant.setId)).toEqual([
     'Which running shoes suit road use? [archived]',
   ]);
+
+  const shoes = await topic(db, tenant.projectId, 'Running shoes');
+  const refile = await prepare({
+    change: 'assign_topic',
+    prompt_ids: [tenant.promptId],
+    topic_id: shoes,
+  });
+  expect(refile.preview).toBe(
+    'File 1 prompt(s) under the topic "Running shoes": "Which running shoes suit road use?". Past runs keep the topic they had.',
+  );
+  expect(await filedUnder()).toBeNull();
+  await confirm(refile);
+  expect(await filedUnder()).toBe(shoes);
+
+  // A prompt from another project refuses the selection before anything is prepared.
+  const elsewhere = await auditTenant(db, fixtures);
+  expect(
+    await failure(
+      prepare({ change: 'activate', prompt_ids: [tenant.promptId, elsewhere.promptId] }),
+    ),
+  ).toBe('1 prompt(s) were not found in this project');
+  expect(await failure(prepare({ change: 'assign_topic', prompt_ids: [tenant.promptId] }))).toBe(
+    'change assign_topic needs topic_id; pass null to take the prompts out of every topic.',
+  );
+  expect(
+    await failure(prepare({ change: 'activate', prompt_ids: [tenant.promptId], topic_id: null })),
+  ).toBe('topic_id goes only with change assign_topic.');
+
+  const activate = await prepare({ change: 'activate', prompt_ids: [tenant.promptId] });
+  expect(activate).toMatchObject({ prompt_slots: { used: 1 } });
+  await confirm(activate);
+  expect(await promptTexts(tenant.setId)).toEqual(['Which running shoes suit road use? [active]']);
+  expect(await promptTexts(elsewhere.setId)).toEqual([
+    'Which running shoes suit road use? [active]',
+  ]);
+  expect(
+    await db
+      .selectFrom('mcp_confirmations')
+      .select('kind')
+      .where('grant_id', '=', principal.grantId)
+      .where('consumed_at', 'is not', null)
+      .execute(),
+  ).toEqual([{ kind: 'update_prompts' }, { kind: 'update_prompts' }, { kind: 'update_prompts' }]);
+});
+
+it('accepts and rejects competitor suggestions of its own project only', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  const auditId = await fixtures.audit(tenant);
+  const suggestion = async (projectId: string, audit: string, name: string) => {
+    const id = randomUUID();
+    await db
+      .insertInto('observed_entity_candidates')
+      .values({
+        id,
+        workspace_id: tenant.workspaceId,
+        project_id: projectId,
+        audit_id: audit,
+        name,
+        kind: 'cited_domain',
+        domain: `${name.toLowerCase().replaceAll(' ', '')}.example`,
+        citation_count: 2,
+        engine_total: 2,
+        qualification_reason: 'Cited across prompts and engines',
+        prompt_count: 2,
+        engine_count: 2,
+        market_relevant: true,
+        analyzer_version: 'observed-competitor-v1',
+        source_analysis_ids: JSON.stringify([randomUUID()]),
+        source_artifact_ids: JSON.stringify([]),
+        status: 'pending',
+        created_at: new Date(),
+      })
+      .execute();
+    return id;
+  };
+  const review = (suggestionId: string, decision: string) =>
+    call(principal, 'review_competitor_suggestion', {
+      project_id: tenant.projectId,
+      suggestion_id: suggestionId,
+      decision,
+    });
+  const fleet = await suggestion(tenant.projectId, auditId, 'Fleet Feet');
+  const runner = await suggestion(tenant.projectId, auditId, 'Runner Hub');
+  const sibling = await fixtures.project(tenant.workspaceId);
+  const theirs = await suggestion(
+    sibling,
+    await fixtures.audit({ ...tenant, projectId: sibling }),
+    'Road Runner',
+  );
+
+  expect(await review(fleet, 'accept')).toMatchObject({
+    change: 'review_competitor_suggestion',
+    summary: 'Now tracking Fleet Feet.',
+  });
+  expect(await review(runner, 'reject')).toMatchObject({
+    summary: 'Rejected the suggestion Runner Hub.',
+  });
+  expect(await failure(review(runner, 'accept'))).toBe(
+    'This suggestion was rejected; add the competitor instead',
+  );
+  expect(await failure(review(theirs, 'accept'))).toMatch(/not found/i);
+  const statuses = await db
+    .selectFrom('observed_entity_candidates')
+    .select(['name', 'status'])
+    .where('id', 'in', [fleet, runner, theirs])
+    .orderBy('name')
+    .execute();
+  expect(statuses).toEqual([
+    { name: 'Fleet Feet', status: 'accepted' },
+    { name: 'Road Runner', status: 'pending' },
+    { name: 'Runner Hub', status: 'rejected' },
+  ]);
+  expect(
+    (
+      await db
+        .selectFrom('competitors')
+        .select('name')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .execute()
+    ).map((row) => row.name),
+  ).toEqual(['Fleet Feet']);
 });
 
 it('refuses a confirmation after expiry, revocation, demotion or from another connection', async () => {

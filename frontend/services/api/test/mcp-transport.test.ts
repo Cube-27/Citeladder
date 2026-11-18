@@ -199,7 +199,7 @@ describe('hosted MCP transport', () => {
       canWrite: true,
     });
     const hints = Object.fromEntries((await list()).map((tool) => [tool.name, tool.annotations]));
-    expect(hints.prepare_archive_prompts).toEqual({
+    expect(hints.prepare_update_prompts).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: true,

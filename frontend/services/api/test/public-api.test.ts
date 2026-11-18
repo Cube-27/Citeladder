@@ -480,9 +480,10 @@ describe('public API requests', () => {
         created_at: new Date(),
       })
       .execute();
+    const foreignPrompt = await prompt(db, setId, 'Which trail shoes grip wet rock?');
     const foreignIds: Record<string, string> = {
       prompt_set_id: setId,
-      prompt_id: await prompt(db, setId, 'Which trail shoes grip wet rock?'),
+      prompt_id: foreignPrompt,
       topic_id: await topic(db, other, 'Trail running'),
       action_id: action.id,
       audit_id: auditId,
@@ -499,6 +500,10 @@ describe('public API requests', () => {
       },
       'post /v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts': {
         prompts: [{ text: 'Which trail shoes drain fast?' }],
+      },
+      'post /v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts/bulk-status': {
+        prompt_ids: [foreignPrompt],
+        status: 'archived',
       },
       'patch /v1/projects/{project_id}/prompts/{prompt_id}': { enabled: false },
       'patch /v1/projects/{project_id}/topics/{topic_id}': { name: 'Road running' },
@@ -577,7 +582,7 @@ describe('public API requests', () => {
       outcomes.push(`${response.status} ${contract.method} ${contract.path}`);
     }
     expect(outcomes.filter((outcome) => !outcome.startsWith('404 '))).toEqual([]);
-    expect(outcomes).toHaveLength(17);
+    expect(outcomes).toHaveLength(18);
     expect(await state()).toEqual(before);
   });
 

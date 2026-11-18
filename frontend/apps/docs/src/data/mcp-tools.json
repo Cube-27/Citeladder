@@ -437,7 +437,7 @@
     {
       "name": "read_competitors",
       "title": "Read competitors",
-      "description": "Read the competitors. view list is the tracked roster (names, aliases, domains) and the brand's own domains. view focus is one tracked competitor against the brand over a run: how many answers named it, the sources cited where it was named, and the prompts where it was named instead of the brand; it defaults to the latest completed run and takes topic_id. view suggestions lists pending competitor suggestions from audits (a cited domain or a name answers used), with how many prompts and engines raised them; a suggestion is a signal for the person to accept or reject in CiteLadder, not a tracked competitor. Use read_visibility_overview for every brand's rates side by side.",
+      "description": "Read the competitors. view list is the tracked roster (names, aliases, domains) and the brand's own domains. view focus is one tracked competitor against the brand over a run: how many answers named it, the sources cited where it was named, and the prompts where it was named instead of the brand; it defaults to the latest completed run and takes topic_id. view suggestions lists pending competitor suggestions from audits (a cited domain or a name answers used), with how many prompts and engines raised them; a suggestion is a signal, not a tracked competitor, until the user accepts it (review_competitor_suggestion, or in CiteLadder). Use read_visibility_overview for every brand's rates side by side.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -990,7 +990,7 @@
     {
       "name": "read_prompt_portfolio",
       "title": "Read prompts",
-      "description": "List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_archive_prompts and prepare_launch_audit.",
+      "description": "List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_update_prompts and prepare_launch_audit.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -2066,7 +2066,7 @@
     {
       "name": "delete_topic",
       "title": "Delete a topic",
-      "description": "Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_archive_prompts.",
+      "description": "Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_update_prompts.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -2279,34 +2279,6 @@
       "access": "write"
     },
     {
-      "name": "prepare_archive_prompts",
-      "title": "Prepare to archive prompts",
-      "description": "Preview archiving tracked prompts so future audits stop measuring them; past results stay. Nothing changes until the user agrees and you call confirm_change.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_ids": {
-            "minItems": 1,
-            "maxItems": 200,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Prompt ids from read_prompt_portfolio."
-          }
-        },
-        "required": ["project_id", "prompt_ids"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
       "name": "prepare_declare_implemented",
       "title": "Prepare to declare an Action implemented",
       "description": "Preview declaring that the work of an open Action is done, so CiteLadder checks later evidence against it. Nothing changes until the user agrees and you call confirm_change.",
@@ -2479,6 +2451,51 @@
       "access": "write"
     },
     {
+      "name": "prepare_update_prompts",
+      "title": "Prepare a prompt change",
+      "description": "Preview one change to tracked prompts: activate them so audits measure them, archive them so future audits stop measuring them (past results stay), or assign_topic to file them under one topic (topic_id null takes them out of every topic; past runs keep the topic they had). Every prompt id must be in the project or nothing changes; prompts already in that state are skipped. Activation and refiling are refused when a prompt does not fit its topic or the plan has no prompt slots. Nothing changes until the user agrees and you call confirm_change. Prompts cannot be deleted here; the user deletes them in CiteLadder.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
+          },
+          "change": {
+            "type": "string",
+            "enum": ["activate", "archive", "assign_topic"],
+            "description": "activate, archive, or assign_topic (needs topic_id)."
+          },
+          "prompt_ids": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Prompt ids from read_prompt_portfolio or read_prompt_metrics."
+          },
+          "topic_id": {
+            "description": "With assign_topic: a topic id from read_prompt_portfolio topics or create_topic, or null to take the prompts out of every topic.",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["project_id", "change", "prompt_ids"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
       "name": "preview_topics",
       "title": "Preview topics",
       "description": "Propose buyer-facing topics for the project beside the topics it already has, as the Prompt Builder's topic step does. A topic is a category a buyer asks about (for example \"golf nets\"), never a product line, model, size or the brand. Spends one AI model call and saves nothing: show the user the existing and proposed topic names, let them keep, rename, delete or add, then save the plan they agreed to with confirm_topics. more lists proposals past the cap. Refused until the project lists at least one offering.",
@@ -2550,6 +2567,34 @@
       "access": "write"
     },
     {
+      "name": "review_competitor_suggestion",
+      "title": "Accept or reject a competitor suggestion",
+      "description": "Decide one competitor suggestion that read_competitors view suggestions listed, after the user chose: accept tracks it as a competitor (its domain, or the name answers used), reject hides it from later suggestions. Runs at once and records who decided. Refused if the suggestion is not in this project, if the project has reached its competitor limit, or if it was already decided the other way; remove_competitor undoes an accept.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
+          },
+          "suggestion_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A suggestion id from read_competitors view suggestions."
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["accept", "reject"],
+            "description": "accept tracks it; reject hides it."
+          }
+        },
+        "required": ["project_id", "suggestion_id", "decision"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
       "name": "update_action_status",
       "title": "Update an Action status",
       "description": "Accept one Action the user will work on, decline one they do not want, or restore a declined one to New. Runs at once; an in-progress Action can be declined but not moved back to New, and a done one cannot change. To record that the work was done, use prepare_declare_implemented instead.",
@@ -2580,7 +2625,7 @@
     {
       "name": "update_prompt_text",
       "title": "Edit a prompt",
-      "description": "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt use prepare_archive_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
+      "description": "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt or refile it under a topic use prepare_update_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
       "input_schema": {
         "type": "object",
         "properties": {

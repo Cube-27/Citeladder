@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { domainMatches } from '../analysis/domains.ts';
 import { lockSuggestions, suggestionRows } from '../analysis/observed-competitors.ts';
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ObservedEntityCandidates } from '../generated/db-schema.ts';
 import { isTracked } from '../perception/untracked-names.ts';
@@ -160,7 +160,7 @@ export function acceptSuggestion(
   decision: Decision,
   candidateId: string,
 ): Promise<Competitor> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await lockProject(trx, decision);
     const candidate = await lockedCandidate(trx, decision, candidateId);
     if (candidate.status === REJECTED)
@@ -210,7 +210,7 @@ export function rejectSuggestion(
   decision: Decision,
   candidateId: string,
 ): Promise<Suggestion> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     // The project lock first, as accept takes it: both update every row of a key.
     await lockProject(trx, decision);
     const candidate = await lockedCandidate(trx, decision, candidateId);
