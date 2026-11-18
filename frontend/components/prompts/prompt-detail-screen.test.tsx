@@ -228,7 +228,7 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     ['Not named', '–Not cited', 'Not reported', 'Not applicable'],
   ]);
   const bold = [...table.querySelectorAll('tbody strong')].map((name) => name.textContent);
-  expect(bold).toEqual(['Acme']);
+  expect(bold).toEqual(['Acme, named first']);
   expect(screen.getByText(/newest first · bold brand was named first$/)).toBeVisible();
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),

@@ -222,7 +222,10 @@ export function BrandsNamed({
                 placement="inline"
               />
               {brand === lead ? (
-                <strong className={textRole('emphasis', 'text-ink truncate')}>{brand.name}</strong>
+                <strong className={textRole('emphasis', 'text-ink truncate')}>
+                  {brand.name}
+                  <span className="sr-only">, named first</span>
+                </strong>
               ) : null}
             </Inline>
           </span>

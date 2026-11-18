@@ -297,9 +297,12 @@ function PromptRowMenu({
           <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEdit(prompt)}>
             Edit
           </MenuItem>
-          <MenuItem icon={<Icon icon={Power} />} onSelect={() => onToggleEnabled(prompt)}>
-            {prompt.enabled ? 'Disable' : 'Enable'}
-          </MenuItem>
+          {/* An archived prompt shows only Archived, so its enabled state isn't offered. */}
+          {prompt.status === 'archived' ? null : (
+            <MenuItem icon={<Icon icon={Power} />} onSelect={() => onToggleEnabled(prompt)}>
+              {prompt.enabled ? 'Disable' : 'Enable'}
+            </MenuItem>
+          )}
           {onSetStatus && prompt.status !== 'archived' ? (
             <MenuItem
               icon={<Icon icon={Archive} />}
