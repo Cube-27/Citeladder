@@ -1,4 +1,12 @@
-import { createContext, useContext, useLayoutEffect, useRef, useState, type Ref } from 'react';
+import {
+  createContext,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 
 import {
   columnFloor,
@@ -67,6 +75,7 @@ export function useFittedColumns({
   columns,
   selection,
 }: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean }>) {
+  const scope = useId();
   const frameRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<readonly number[]>([]);
@@ -105,14 +114,32 @@ export function useFittedColumns({
 
   const hiddenSet = new Set(hidden);
   const shown = columns.filter((_, index) => !hiddenSet.has(index));
+  const positions = hidden.map((index) => index + (selection ? 2 : 1));
   return {
     frameRef,
     shown,
     shownKeys: new Set(shown.map((column) => column.key)),
-    /** 1-based cell positions to hide, the select column counted. */
-    hiddenCols: hidden.map((index) => index + (selection ? 2 : 1)).join(' '),
-    probe: hasLow ? <FloorProbe ref={probeRef} columns={columns} selection={selection} /> : null,
+    /** The frame's scope for the hiding rule; undefined while nothing hides. */
+    fitScope: positions.length ? scope : undefined,
+    probe: hasLow ? (
+      <>
+        <FloorProbe ref={probeRef} columns={columns} selection={selection} />
+        {positions.length ? <style>{hidingRule(scope, positions)}</style> : null}
+      </>
+    ) : null,
   };
+}
+
+/**
+ * Hides the head and cells at the given 1-based positions in one table. A
+ * row with a spanning cell (a state, the reserved space, a full-row note)
+ * keeps its cells; it spans the shown columns (`useShownSpan`).
+ */
+function hidingRule(scope: string, positions: readonly number[]): string {
+  const cells = positions.map(
+    (position) => `[data-fit="${scope}"] tr:not(:has(> [colspan])) > :nth-child(${position})`,
+  );
+  return `${cells.join(',')}{display:none}`;
 }
 
 /**
@@ -132,7 +159,7 @@ function FloorProbe({
     <div
       ref={ref}
       aria-hidden
-      className="pointer-events-none invisible absolute start-0 top-0 h-0 overflow-hidden"
+      className="pointer-events-none invisible absolute h-0 overflow-hidden"
     >
       <div style={{ width: SELECT_WIDTH }} />
       {withEdges(columns, selection).map(({ column, edge }) => (

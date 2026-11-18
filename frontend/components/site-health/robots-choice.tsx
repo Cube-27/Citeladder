@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -62,18 +62,21 @@ export function StartCrawlControl({
         onStart('ignore');
       },
     });
-  const button = (
+  const button = (joint: CSSProperties) => (
     <ActionButton
       action="runCrawl"
       onClick={() => onStart()}
       pending={pending}
       pendingLabel="Starting…"
+      style={joint}
     />
   );
   return (
     <>
       <SplitButton
-        action={note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
+        action={(joint) =>
+          note ? <Tooltip content={`${note}.`}>{button(joint)}</Tooltip> : button(joint)
+        }
         menuLabel="More crawl options"
         disabled={pending}
       >

@@ -1970,19 +1970,6 @@ label {
   --data-table-identity-min: 25ch;
 }
 
-/* Split button (`SplitButton`): the action and its menu trigger are one
-   control. Their inner corners are square and they share one edge, which is
-   the divider between them. */
-[data-split-button] > :first-child {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-}
-[data-split-button] > :last-child {
-  margin-inline-start: -1px;
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-}
-
 /* DataTable is a card: surface, no edge, radius 8 and the card shadow.
    It clips its own corners, so a head well meets the rounded edge with no
    radius of its own (`clip`, not `hidden`: no scroll container, so sticky
@@ -2247,27 +2234,6 @@ label {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* A low-priority column the frame has no room for (`useFittedColumns`):
-   its head and cells leave the layout; its `col` is not drawn. A row with a
-   spanning cell keeps its cells and spans the shown columns (`useShownSpan`). */
-[data-hidden-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(1),
-[data-hidden-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(2),
-[data-hidden-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(3),
-[data-hidden-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(4),
-[data-hidden-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(5),
-[data-hidden-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(6),
-[data-hidden-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(7),
-[data-hidden-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(8),
-[data-hidden-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(9),
-[data-hidden-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(10),
-[data-hidden-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(11),
-[data-hidden-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(12),
-[data-hidden-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(13),
-[data-hidden-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(14),
-[data-hidden-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(15),
-[data-hidden-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state], [data-table-spacer], :has(> [colspan])) > :nth-child(16) {
-  display: none;
-}
 
 /* Rows are divided by `rule` lines between them only: drawn inside the row
    (an inset line), never under the last row or the head. A ledger row takes
@@ -2276,7 +2242,7 @@ label {
 [data-ledger-item] {
   box-shadow: inset 0 -1px 0 var(--color-rule);
 }
-.table-frame tbody > tr:is(:last-child, :has(+ [data-table-spacer])) > :is(td, th) {
+.table-frame tbody > tr:last-child > :is(td, th) {
   box-shadow: none;
 }
 

@@ -263,7 +263,7 @@ export function columnsMinWidth({
  * The width is a custom property so the narrow layout (globals.css) can give
  * the identity column the rest and collapse a `desktopOnly` column. A hidden
  * low-priority column has no `col`; its head and cells hide by position
- * (`data-hidden-cols`), so the shown cells meet the shown `col`s in order.
+ * (`useFittedColumns`), so the shown cells meet the shown `col`s in order.
  */
 export function DataTableColumns({
   columns,

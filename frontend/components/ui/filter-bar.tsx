@@ -61,9 +61,9 @@ export type FilterBarProps = Readonly<{
  * share All filters (with the count of active ones) in a full row, one that
  * also holds a view, a search and actions (Products), or beside a search when
  * there are more than `FILTERS_BESIDE_SEARCH`, so the row stays one line and
- * the search keeps its width. From 900px it is one row and the search grows
- * from 200 to at most 320, so it never runs up to a view or tabs beside the
- * row (owner, 2026-11-18); when the row cannot hold everything, controls wrap as whole
+ * the search keeps its width. From 900px it is one row and the search is 256
+ * wide (200 at least), so it never runs up to a view or tabs beside the row
+ * (owner, 2026-11-18); when the row cannot hold everything, controls wrap as whole
  * units, the actions at the line's right end, and nothing shrinks below its
  * label. Below 900px the bar stacks into one full-width column in the same
  * order.
@@ -80,11 +80,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
       className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
-      {search ? (
-        <div className="rail:flex-[1_1_200px] rail:min-w-[200px] rail:max-w-80 min-w-0">
-          {search}
-        </div>
-      ) : null}
+      {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
       {filters ? (
         <RowFilters filters={filters} grouped={grouped(filters.length, searched, full)} />
       ) : null}

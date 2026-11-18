@@ -133,7 +133,7 @@ export function DataTable({
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
   const parts = dataTableParts({ title, label, headingId, columns, selection });
-  const { frameRef, probe, hiddenCols, shown, shownKeys } = useFittedColumns({
+  const { frameRef, probe, fitScope, shown, shownKeys } = useFittedColumns({
     columns,
     selection: Boolean(selection),
   });
@@ -171,7 +171,7 @@ export function DataTable({
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}
-          hiddenCols={hiddenCols}
+          fitScope={fitScope}
           probe={probe}
         >
           <DataTableColumns columns={columns} shown={shown} selection={selection} />
@@ -354,7 +354,7 @@ function DataTableFrame({
   naming,
   pinned,
   frameRef,
-  hiddenCols,
+  fitScope,
   probe,
   children,
 }: Readonly<{
@@ -365,9 +365,9 @@ function DataTableFrame({
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
-  /** 1-based positions of the low-priority columns hidden for room. */
-  hiddenCols: string;
-  /** The hidden boxes that measure the column floors. */
+  /** The scope the hiding rule for low-priority columns targets, while any hide. */
+  fitScope: string | undefined;
+  /** The hidden boxes that measure the column floors, and the hiding rule. */
   probe: ReactNode;
   children: ReactNode;
 }>) {
@@ -377,7 +377,7 @@ function DataTableFrame({
       ref={frameRef}
       data-data-table-frame=""
       {...layout}
-      data-hidden-cols={hiddenCols || undefined}
+      data-fit={fitScope}
       data-pinned={pinned}
       hidden={hidden}
       className="relative isolate min-w-0"

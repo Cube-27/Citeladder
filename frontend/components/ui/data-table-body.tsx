@@ -68,22 +68,26 @@ export function DataTableBody({
   }
   const rest =
     reserve && pageSize !== undefined && rowCount !== undefined ? pageSize - rowCount : 0;
+  // The held space is a body of its own, so the last real row stays the last
+  // row of its body and draws no line, like any table's last row.
   return (
-    <TableBody>
-      {children}
+    <>
+      <TableBody>{children}</TableBody>
       {rest > 0 ? (
-        <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
-          aria-hidden="true"
-          data-table-spacer=""
-          style={stateFootprint(rest, rowLines)}
-        >
-          <TableCell
-            colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)*var(--data-table-row))]"
-          />
-        </tr>
+        <TableBody>
+          <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
+            aria-hidden="true"
+            data-table-spacer=""
+            style={stateFootprint(rest, rowLines)}
+          >
+            <TableCell
+              colSpan={colSpan}
+              className="h-[calc(var(--data-table-rows)*var(--data-table-row))]"
+            />
+          </tr>
+        </TableBody>
       ) : null}
-    </TableBody>
+    </>
   );
 }
 
