@@ -331,15 +331,6 @@ export function PromptLibrary() {
     add: edits?.add,
     table: (
       <>
-        <PromptBulkBar
-          selected={selection.selected}
-          topics={topics}
-          max={limits?.bulk_prompts_max ?? 0}
-          pending={bulk.pending}
-          onClear={selection.clear}
-          onChange={(change) => bulk.run(change, selection.selected)}
-          onDelete={() => setPendingDelete({ kind: 'prompts', prompts: selection.selected })}
-        />
         <PromptTable
           prompts={visible}
           actions={edits?.rows}
@@ -348,6 +339,16 @@ export function PromptLibrary() {
           setNames={setNames}
           topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
+        />
+        {/* The zero-height dock goes after the table: before it, it doubled the section gap. */}
+        <PromptBulkBar
+          selected={selection.selected}
+          topics={topics}
+          max={limits?.bulk_prompts_max ?? 0}
+          pending={bulk.pending}
+          onClear={selection.clear}
+          onChange={(change) => bulk.run(change, selection.selected)}
+          onDelete={() => setPendingDelete({ kind: 'prompts', prompts: selection.selected })}
         />
       </>
     ),
