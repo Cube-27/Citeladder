@@ -715,25 +715,65 @@ describe('issue catalog', () => {
     const stale = await page(seed, '/stale', { current: false });
     for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
     await issue(seed, home, 'technical.title_present');
-    await issue(seed, home, 'technical.meta_description_present');
+    await issue(seed, home, 'technical.canonical_integrity');
+    // A medium advisory on more pages than the medium defect still follows it.
+    for (const target of [home, product])
+      await issue(seed, target, 'technical.meta_description_present');
     // An issue of a superseded analysis is history, not the crawl's state.
     await issue(seed, stale, 'technical.https');
 
     const body = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
-    expect(body.items.map((group: { rule_id: string }) => group.rule_id)).toEqual([
-      'technical.indexable',
-      'technical.title_present',
+    expect(body.items.map((group) => [group.rule_id, group.finding_class])).toEqual([
+      ['technical.indexable', 'defect'],
+      ['technical.title_present', 'defect'],
+      ['technical.canonical_integrity', 'defect'],
+      ['technical.meta_description_present', 'advisory'],
     ]);
     expect(body.items[0]).toMatchObject({
       group_id: issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
       affected_url_count: 2,
     });
-    expect(body.summary).toMatchObject({
-      issue_count: 2,
-      advisory_issue_type_count: 1,
-      occurrence_count: 3,
-      severity_counts: { critical: 0, high: 2 },
+    expect(body.items[3]).toMatchObject({
+      group_id: issueGroupId(seed.crawlId, 'technical.meta_description_present', 'advisory'),
+      affected_url_count: 2,
     });
+    expect(body.summary).toMatchObject({
+      issue_count: 3,
+      advisory_issue_type_count: 1,
+      occurrence_count: 6,
+      severity_counts: { critical: 0, high: 2, medium: 1 },
+    });
+    // A class still narrows the list and its counts.
+    const defects = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues?finding_class=defect`,
+      siteIssuesPageSchema,
+    );
+    expect(defects.items.map((group) => group.rule_id)).toEqual([
+      'technical.indexable',
+      'technical.title_present',
+      'technical.canonical_integrity',
+    ]);
+    expect(defects.summary.occurrence_count).toBe(4);
+    // Pages first, an advisory on two pages leads the one-page defects.
+    const byPages = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues?sort=pages&limit=2`,
+      siteIssuesPageSchema,
+    );
+    expect(byPages.items.map((group) => group.rule_id)).toEqual([
+      'technical.indexable',
+      'technical.meta_description_present',
+    ]);
+    const resumed = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues?sort=pages&limit=2&cursor=${byPages.next_cursor}`,
+      siteIssuesPageSchema,
+    );
+    expect(resumed.items.map((group) => group.rule_id)).toEqual([
+      'technical.title_present',
+      'technical.canonical_integrity',
+    ]);
     const high = await json(
       seed,
       `/site-crawls/${seed.crawlId}/issues?severity=high`,

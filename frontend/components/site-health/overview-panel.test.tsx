@@ -424,10 +424,7 @@ describe('OverviewPanel', () => {
     const table = await screen.findByRole('table', { name: 'Top issues' });
     expect(
       screen.getByRole('link', { name: 'Visible creator attribution incomplete' }),
-    ).toHaveAttribute(
-      'href',
-      '/issues?rule=aeo.visible_attribution&section=content&finding_class=advisory',
-    );
+    ).toHaveAttribute('href', '/issues?rule=aeo.visible_attribution&section=content');
     expect(screen.getByRole('link', { name: 'Missing page title' })).toHaveAttribute(
       'href',
       '/issues?rule=technical.title_present',

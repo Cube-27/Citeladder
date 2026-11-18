@@ -221,12 +221,20 @@ describe('issue-group Actions', () => {
     const read = urlActionsSchema.parse(await (await request(own.seed, path)).json());
     const labels = Object.fromEntries((await issueActions(own.seed)).map((a) => [a.id, a]));
     expect(
-      read.items.map((item) => [labels[item.id]?.target_label ?? item.id, item.summary]),
+      read.items.map((item) => [
+        labels[item.id]?.target_label ?? item.id,
+        item.summary,
+        item.finding_class,
+      ]),
     ).toEqual([
-      ['Mobile viewport missing', 'Add a responsive viewport meta declaration.'],
-      ['Missing structured data', 'Add schema.org structured data (JSON-LD preferred).'],
-      // An Agent Action without findings has no secondary line.
-      [agentPage.id, null],
+      ['Mobile viewport missing', 'Add a responsive viewport meta declaration.', 'defect'],
+      [
+        'Missing structured data',
+        'Add schema.org structured data (JSON-LD preferred).',
+        'advisory',
+      ],
+      // An Agent Action without findings has no secondary line and no class.
+      [agentPage.id, null, null],
     ]);
     expect(read.page_kind).toBe('product');
     expect(Date.parse(read.last_crawled_at)).toBeGreaterThan(Date.parse('2026-01-01'));

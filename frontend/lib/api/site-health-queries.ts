@@ -40,6 +40,7 @@ const ISSUE_KEY_PARAMS = [
   'page_kind',
   'section',
   'sort',
+  'finding_class',
 ] as const satisfies ReadonlyArray<keyof IssuesParams>;
 
 /**
@@ -47,10 +48,7 @@ const ISSUE_KEY_PARAMS = [
  * that spells "unset" as undefined shares the entry of one that leaves it out.
  */
 function issueKeyFilters(params: IssuesParams = {}) {
-  return {
-    ...Object.fromEntries(ISSUE_KEY_PARAMS.map((name) => [name, params[name] ?? null])),
-    finding_class: params.finding_class ?? 'defect',
-  };
+  return Object.fromEntries(ISSUE_KEY_PARAMS.map((name) => [name, params[name] ?? null]));
 }
 
 /**

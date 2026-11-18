@@ -109,6 +109,9 @@ export const actionItemSchema = responseObject({
   // An issue-family Action's affected pages (its cohort's count); null for
   // every other target kind.
   page_count: z.number().int().nullable().default(null),
+  // An issue-family Action's Site Health class, so an advisory reads as one;
+  // null for every other target kind.
+  finding_class: z.enum(['defect', 'advisory']).nullable().default(null),
   // The row's secondary line: an issue family's Site Health fix as Issues
   // shows it, else the strongest finding's title; null when it has neither.
   summary: z.string().nullable().default(null),

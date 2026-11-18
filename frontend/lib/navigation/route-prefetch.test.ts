@@ -288,8 +288,8 @@ describe('prefetchRoute', () => {
       expect(filed).toHaveLength(2);
       expect(filed).toEqual(expect.arrayContaining([page, worst]));
     });
-    // The summary's worst defects, across every tab.
-    expect(asked).toEqual(['?limit=3&finding_class=defect']);
+    // The summary's worst issues, across every tab and both classes.
+    expect(asked).toEqual(['?limit=3']);
     dashboard.release();
   });
 

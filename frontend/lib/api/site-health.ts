@@ -112,6 +112,7 @@ export type IssuesParams = {
   dimension?: string;
   rule?: string;
   site_url_id?: string;
+  /** Absent lists defects and advisories together. */
   finding_class?: 'defect' | 'advisory';
   page_kind?: string; // v2 P1: issues affecting one classified page type
   section?: IssueSection; // the Issues tab

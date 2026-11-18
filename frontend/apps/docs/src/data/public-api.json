@@ -390,6 +390,18 @@
               }
             ]
           },
+          "finding_class": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["defect", "advisory"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "summary": {
             "default": null,
             "type": ["string", "null"]
@@ -1050,6 +1062,7 @@
           "member_count",
           "declarable_member_count",
           "page_count",
+          "finding_class",
           "summary",
           "handoff",
           "evidence_cleared_at",
@@ -1251,6 +1264,18 @@
               }
             ]
           },
+          "finding_class": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["defect", "advisory"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "summary": {
             "default": null,
             "type": ["string", "null"]
@@ -1288,6 +1313,7 @@
           "member_count",
           "declarable_member_count",
           "page_count",
+          "finding_class",
           "summary",
           "handoff",
           "evidence_cleared_at",
@@ -10548,9 +10574,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "defect",
-              "type": "string",
-              "enum": ["defect", "advisory"]
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["defect", "advisory"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         ],
@@ -14841,6 +14873,7 @@
                       "member_count": 1,
                       "declarable_member_count": 1,
                       "page_count": null,
+                      "finding_class": null,
                       "summary": null,
                       "handoff": null,
                       "evidence_cleared_at": null,
@@ -15166,6 +15199,7 @@
                       "member_count": 1,
                       "declarable_member_count": 1,
                       "page_count": null,
+                      "finding_class": null,
                       "summary": null,
                       "handoff": null,
                       "evidence_cleared_at": null,
@@ -15299,6 +15333,7 @@
                   "member_count": 1,
                   "declarable_member_count": 1,
                   "page_count": null,
+                  "finding_class": null,
                   "summary": null,
                   "handoff": {
                     "context": "action",
@@ -15434,6 +15469,7 @@
                   "member_count": 1,
                   "declarable_member_count": 1,
                   "page_count": null,
+                  "finding_class": null,
                   "summary": null,
                   "handoff": {
                     "context": "action",

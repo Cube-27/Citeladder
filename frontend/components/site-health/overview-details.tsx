@@ -339,7 +339,6 @@ function issueHref(issue: SiteHealthOverview['top_issues'][number]): string {
   const params = new URLSearchParams({ rule: issue.rule_id });
   // The tab the rule is listed under, so the filtered list is the one on screen.
   if (issue.section && issue.section !== 'technical') params.set('section', issue.section);
-  if (issue.finding_class === 'advisory') params.set('finding_class', issue.finding_class);
   return `/issues?${params.toString()}`;
 }
 
