@@ -800,9 +800,10 @@ platform-funded like perception. The policy, topics, caps and templates are the
   `not_enabled` outside the pilot; `/visibility/accuracy/facts` reads
   `enabled: false` and `/visibility/accuracy/claims/export` an empty CSV. By
   fact groups verdicts on the fact revision the run froze, so editing a fact
-  never moves past claims; a frozen fact no verdict cites is "not raised". `pnpm facts:eval --live` is the operator-only
-  calibration; the pilot's false-contradiction rate is reviewed with the owner
-  before general release.
+  never moves past claims; a frozen fact no verdict cites is "pending" while
+  claims are still being checked, then "not raised".
+  `pnpm facts:eval --live` is the operator-only calibration; the pilot's
+  false-contradiction rate is reviewed with the owner before general release.
 
 ## Ads in AI answers
 

@@ -454,6 +454,12 @@ describe('claim extraction and verification', () => {
     await enroll(attacker);
     const forged = await call(attacker, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);
     expect(forged.status).toBe(404);
+    const forgedCsv = await call(
+      attacker,
+      'GET',
+      `/visibility/accuracy/claims/export?audit_id=${auditId}`,
+    );
+    expect(forgedCsv.status).toBe(404);
   });
 
   it('verifies a claim the extractor filed under a neighbouring topic instead of calling it not covered', async () => {

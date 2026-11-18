@@ -27,7 +27,7 @@ export type ClaimStatus =
   | { kind: 'pending' }
   | { kind: 'unavailable'; reason: UnavailableReason };
 
-export type FactRef = AccuracyClaim['facts'][number];
+type FactRef = AccuracyClaim['facts'][number];
 /** A frozen fact revision: what a verdict cites and what By fact groups on. */
 export type FactRevision = FactRef & { revision_id: string; fact_id: string; revision: number };
 
@@ -212,7 +212,8 @@ export function claimView(claim: ClaimRow) {
 
 /**
  * Each frozen fact revision with the supported, contradicted and inconclusive
- * verdicts citing it. A revision no such verdict cites is `not_raised`.
+ * verdicts citing it. A revision no such verdict cites is `pending` while any
+ * answer or claim is still being checked, then `not_raised`.
  */
 export function factBreakdown(
   answers: readonly FactAnswer[],
@@ -237,6 +238,11 @@ export function factBreakdown(
         tallies.set(id, tally);
       }
     }
+  const checking = answers.some(
+    (answer) =>
+      answer.extraction.kind === 'pending' ||
+      answer.claims.some((claim) => claim.status.kind === 'pending'),
+  );
   return frozen
     .map((fact): AccuracyFact => {
       const tally = tallies.get(fact.revision_id);
@@ -255,7 +261,7 @@ export function factBreakdown(
               inconclusive: tally.inconclusive,
               last_raised_at: tally.last,
             }
-          : { kind: 'not_raised' },
+          : { kind: checking ? 'pending' : 'not_raised' },
       };
     })
     .sort(

@@ -43,7 +43,7 @@ export function PerceptionScreen() {
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
   const tab = pilot ? requested : 'brand';
   const accuracy = useAccuracy({ filters, queries, pilot });
-  const factViews = useFactViews({ filters, queries, pilot: pilot && tab === 'fact-checking' });
+  const factViews = useFactViews({ filters, queries, pilot: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
   return (

@@ -158,7 +158,8 @@ export const accuracyResponseSchema = responseObject({
 });
 
 // The verdicts citing one frozen fact revision. `not_raised`: no checked claim
-// in the selection cited it, which is not a count of zero.
+// in the selection cited it, which is not a count of zero; `pending`: none has
+// yet, but claims are still being checked.
 const factClaimCountsSchema = z.discriminatedUnion('kind', [
   responseObject({
     kind: z.literal('raised'),
@@ -169,6 +170,7 @@ const factClaimCountsSchema = z.discriminatedUnion('kind', [
     last_raised_at: z.string(),
   }),
   responseObject({ kind: z.literal('not_raised') }),
+  responseObject({ kind: z.literal('pending') }),
 ]);
 
 // A fact revision as the selected runs froze it, with the verdicts citing it.

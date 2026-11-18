@@ -60,7 +60,6 @@ function tableState(query: UseQueryResult<AccuracyFactList>, facts: readonly Acc
 }
 
 function FactRow({ fact }: Readonly<{ fact: AccuracyFact }>) {
-  const { counts } = fact;
   return (
     <TableRow>
       <TableCell>
@@ -69,7 +68,15 @@ function FactRow({ fact }: Readonly<{ fact: AccuracyFact }>) {
           <span className={textRole('caption', 'text-ink-2')}>· revision {fact.revision}</span>
         </span>
       </TableCell>
-      {counts.kind === 'raised' ? (
+      <FactCounts counts={fact.counts} />
+    </TableRow>
+  );
+}
+
+function FactCounts({ counts }: Readonly<{ counts: AccuracyFact['counts'] }>) {
+  switch (counts.kind) {
+    case 'raised':
+      return (
         <>
           <TableCell numeric>{counts.claims}</TableCell>
           <TableCell numeric>{counts.supported}</TableCell>
@@ -79,11 +86,21 @@ function FactRow({ fact }: Readonly<{ fact: AccuracyFact }>) {
             <TableTime value={counts.last_raised_at} />
           </TableCell>
         </>
-      ) : (
+      );
+    case 'not_raised':
+    case 'pending':
+      return (
         <TableCell colSpan={5}>
-          <Absence label="Not raised in any answer" />
+          <Absence
+            label={
+              counts.kind === 'pending' ? 'Claims still being checked' : 'Not raised in any answer'
+            }
+          />
         </TableCell>
-      )}
-    </TableRow>
-  );
+      );
+    default: {
+      const unreachable: never = counts;
+      return unreachable;
+    }
+  }
 }
