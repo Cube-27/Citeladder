@@ -1,6 +1,7 @@
 /**
- * The Issues catalog a crawl's unfiltered read serves, persisted per finding
- * class on `site_issue_catalogs`.
+ * The Issues catalog a crawl's unfiltered read serves, persisted on
+ * `site_issue_catalogs` per finding class and once for both classes together
+ * (`catalogClassKey`).
  *
  * It is written wherever the crawl's current issue set changes, in that
  * writer's transaction: every issue-currency refresh (the terminal
@@ -23,6 +24,7 @@ import { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
 import {
+  catalogClassKey,
   catalogItems,
   catalogSources,
   ISSUE_FINDING_CLASSES,
@@ -105,20 +107,21 @@ async function referenceSnippets(
 
 export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<void> {
   const now = new Date();
-  for (const findingClass of ISSUE_FINDING_CLASSES) {
+  for (const findingClass of [...ISSUE_FINDING_CLASSES, null]) {
     const filters = unfilteredIssues(findingClass);
     // One transaction connection: the class's reads, then its write.
     const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
     const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
     const sources = await catalogSources(db, crawl, findingClass); // NOSONAR -- In order on the writer's connection.
-    const snippets = await referenceSnippets(db, crawl, findingClass); // NOSONAR -- In order on the writer's connection.
+    // The combined row repeats the class rows' groups; their snippets stay on those rows.
+    const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR -- In order on the writer's connection.
     await db // NOSONAR -- In order on the writer's connection.
       .insertInto('site_issue_catalogs')
       .values({
         workspace_id: crawl.workspace_id,
         project_id: crawl.project_id,
         crawl_id: crawl.id,
-        finding_class: findingClass,
+        finding_class: catalogClassKey(findingClass),
         items: JSON.stringify(items),
         summary: JSON.stringify(summary),
         sources: JSON.stringify(sources),

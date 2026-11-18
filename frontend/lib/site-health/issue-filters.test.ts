@@ -33,6 +33,8 @@ describe('toIssueParams', () => {
     expect(wire('')).toEqual([undefined, undefined]);
     expect(wire('high')).toEqual(['high', 'defect']);
     expect(wire('advisory')).toEqual([undefined, 'advisory']);
+    // An unrecognized inbound value reads as "all", so it narrows nothing.
+    expect(wire('critical')).toEqual([undefined, undefined]);
   });
 
   it('maps the rule_id filter onto the wire `rule` param', () => {

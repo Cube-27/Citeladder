@@ -9,8 +9,8 @@
  * list.
  *
  * The list holds defects and advisories together unless a finding class
- * narrows it. The unfiltered list and summary of each finding class are
- * persisted per crawl once its issues are final, and again when a page rerun lands in it
+ * narrows it. The unfiltered list and summary of each finding class, and of
+ * both together, are persisted per crawl once its issues are final, and again when a page rerun lands in it
  * (`site-health/issue-catalog.ts`), and read from there. A filtered read
  * (search, severity, category, dimension, rule, page, page kind) and a crawl
  * whose catalog is not written yet compute them
@@ -139,8 +139,11 @@ export type IssueSummary = Omit<
 /** The finding classes the catalog lists, each with its own groups and summary. */
 export const ISSUE_FINDING_CLASSES = ['defect', 'advisory'] as const;
 
+/** A persisted catalog's `finding_class`: the class, or `all` for both classes together. */
+export const catalogClassKey = (findingClass: string | null) => findingClass ?? 'all';
+
 /** No filter beyond the finding class: the catalog its writers persist per crawl. */
-export const unfilteredIssues = (findingClass: string): IssueFilters => ({
+export const unfilteredIssues = (findingClass: string | null): IssueFilters => ({
   query: null,
   severity: null,
   category: null,
@@ -339,7 +342,9 @@ export async function issues(
   // any other filter, and a crawl not yet published, is computed here. The
   // tab and the ordering cut the listed groups, so the persisted catalog
   // serves every tab.
-  const catalog = isUnfiltered(filters) ? await persistedCatalog(db, crawl, filters) : null;
+  const catalog = isUnfiltered(filters)
+    ? await persistedCatalog(db, crawl, filters.findingClass)
+    : null;
   const [listed, summary, monitored] = await Promise.all([
     catalog?.items ?? catalogItems(db, crawl, filters),
     catalog?.summary ?? issueSummary(db, crawl, filters),
@@ -419,16 +424,22 @@ type CatalogSources = z.infer<typeof catalogSourcesSchema>;
 export async function catalogSources(
   db: Database,
   crawl: Crawl,
-  findingClass: string,
+  findingClass: string | null,
 ): Promise<CatalogSources> {
-  const { rows } = await sql<{ rule_id: string; issue_ids: unknown; evaluation_ids: unknown }>`
-    select i.rule_id, jsonb_agg(i.id order by i.id) as issue_ids,
+  const { rows } = await sql<{
+    rule_id: string;
+    finding_class: string;
+    issue_ids: unknown;
+    evaluation_ids: unknown;
+  }>`
+    select i.rule_id, i.finding_class, jsonb_agg(i.id order by i.id) as issue_ids,
       jsonb_agg(distinct i.evaluation_id) as evaluation_ids
-    from site_issues i where ${currentIssues(crawl)} and i.finding_class = ${findingClass}
-    group by i.rule_id order by i.rule_id`.execute(db);
+    from site_issues i where ${currentIssues(crawl)}
+      ${findingClass ? sql`and i.finding_class = ${findingClass}` : sql``}
+    group by i.rule_id, i.finding_class order by i.rule_id, i.finding_class`.execute(db);
   return catalogSourcesSchema.parse(
     rows.map((row) => ({
-      group_id: issueGroupId(crawl.id, row.rule_id, findingClass),
+      group_id: issueGroupId(crawl.id, row.rule_id, row.finding_class),
       issue_ids: row.issue_ids,
       evaluation_ids: row.evaluation_ids,
     })),
@@ -443,28 +454,16 @@ const catalogSchema = z.object({
   }),
 });
 
-/**
- * The crawl's persisted unfiltered catalog, or null before its issues are
- * final. Without a class it lists both classes' persisted groups; their
- * affected pages overlap, so that summary is computed.
- */
-async function persistedCatalog(db: Database, crawl: Crawl, filters: IssueFilters) {
-  const classes = filters.findingClass ? [filters.findingClass] : [...ISSUE_FINDING_CLASSES];
-  const rows = await db
+/** The crawl's persisted unfiltered catalog for the class, or null before its issues are final. */
+async function persistedCatalog(db: Database, crawl: Crawl, findingClass: string | null) {
+  const row = await db
     .selectFrom('site_issue_catalogs')
     .select(['items', 'summary'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
-    .where('finding_class', 'in', classes)
-    .execute();
-  if (rows.length < classes.length) return null;
-  const [first, ...rest] = rows.map((row) => catalogSchema.parse(row));
-  if (!first) return null;
-  if (rest.length === 0) return first;
-  return {
-    items: [first, ...rest].flatMap((catalog) => catalog.items),
-    summary: await issueSummary(db, crawl, filters),
-  };
+    .where('finding_class', '=', catalogClassKey(findingClass))
+    .executeTakeFirst();
+  return row ? catalogSchema.parse(row) : null;
 }
 
 export async function issueDetail(

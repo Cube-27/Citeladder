@@ -105,11 +105,12 @@ export function issueSeverityChange(key: IssueSeverityChoice): Pick<IssueFilters
 /**
  * The wire's severity and finding class for a severity filter: a defect
  * severity lists defects only (an advisory row shows no severity), the
- * advisory level lists advisories, and none lists both.
+ * advisory level lists advisories, and any other value, which the choice
+ * reads as "all", lists both.
  */
 function severityParams(severity: string): Pick<IssuesParams, 'severity' | 'finding_class'> {
   if (severity === 'advisory') return { finding_class: 'advisory' };
-  return severity ? { severity, finding_class: 'defect' } : {};
+  return isSeverityClass(severity) ? { severity, finding_class: 'defect' } : {};
 }
 
 /** Build issue request params. */
