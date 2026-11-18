@@ -24,6 +24,13 @@ describe('groupEvidence', () => {
     ]);
   });
 
+  it('links each kind to its current page', () => {
+    const one = (kind: string) => groupEvidence([`citeladder://${kind}/${A}`])[0]?.href;
+    expect(['project', 'prompt', 'site_issue', 'search_row', 'visibility_result'].map(one)).toEqual(
+      ['/projects', `/prompts/${A}`, '/issues', '/search-intelligence?tab=overview', '/visibility'],
+    );
+  });
+
   it('counts repeated references once and never links an unknown kind', () => {
     expect(
       groupEvidence([

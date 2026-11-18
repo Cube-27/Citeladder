@@ -689,7 +689,7 @@ export function retrievalDocument({
   const normalized = z.record(z.string(), z.json()).parse(jsonValue(record));
   const serialized = JSON.stringify(normalized);
   const uri = `citeladder://${kind}/${id}`;
-  const url = appLink(origin, recordPath(kind, normalized), projectId);
+  const url = appLink(origin, recordPath(kind, { id, ...normalized }), projectId);
   const limit = Math.min(maxBytes, mcpPolicy.max_document_bytes);
   // The record travels once, as the document text.
   const document = (textPart: string, partUris: string[] = []) => ({
