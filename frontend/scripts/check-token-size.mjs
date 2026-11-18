@@ -60,10 +60,15 @@ export function tokenSizeFailures({ policy, basePolicy, changed, sizes }) {
     const bytes = sizes.get(file);
     if (basePolicy && !Object.hasOwn(basePolicy.baseline, file))
       baseline.push(`${file}: new baseline entry; the baseline may only shrink, so split the file`);
+    const recorded = policy.baseline[file];
     if (bytes == null) baseline.push(`${file}: no longer exists; delete its baseline entry`);
     else if (tokensOf(policy, bytes) <= limit)
       baseline.push(
         `${file}: now ${tokensOf(policy, bytes)} tokens, within the ${limit} limit; delete its baseline entry`,
+      );
+    else if (tokensOf(policy, bytes) > recorded)
+      baseline.push(
+        `${file}: now ${tokensOf(policy, bytes)} tokens, over its recorded ${recorded}; split the file`,
       );
   }
   return { oversized, baseline };

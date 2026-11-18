@@ -27,7 +27,8 @@ import { groupBy } from '../lists.ts';
 import { compareText } from '../text-order.ts';
 import { scopedPrompt } from '../prompts/prompts.ts';
 import { ratio } from './metrics.ts';
-import { answerStates, getPromptMetrics, outcomeCounts } from './prompts.ts';
+import { answerStates, outcomeCounts } from './prompt-outcomes.ts';
+import { getPromptMetrics } from './prompts.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import { selectedCohorts, validateEngineAndRange, validatePromptCohort } from './selection.ts';
 
