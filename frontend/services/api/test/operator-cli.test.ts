@@ -255,7 +255,7 @@ it.each([
       if (refusal) {
         expect(result).toMatchObject({ code: 1, stderr: refusal });
         // A flag-shaped value is refused before gcloud runs; a foreign host after it reads the secret.
-        expect(gcloud.length).toBe(extra.length ? 0 : 2);
+        expect(gcloud).toHaveLength(extra.length ? 0 : 2);
         await expect(readFile(child, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
         return;
       }

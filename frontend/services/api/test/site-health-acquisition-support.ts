@@ -34,7 +34,7 @@ export const links = (...paths: string[]) =>
 export const url = (path: string) => `https://example.test${path}`;
 export const urlset = (...paths: string[]) => ({
   contentType: 'application/xml',
-  body: `<urlset>${paths.map((path) => `<url><loc>${path}</loc></url>`).join('')}</urlset>`,
+  body: ['<urlset>', ...paths.map((path) => `<url><loc>${path}</loc></url>`), '</urlset>'].join(''),
 });
 
 type CrawlOptions = {
@@ -47,7 +47,7 @@ type CrawlOptions = {
 
 /** Crawls, tasks and readers for the Site Health acquisition tests, over one test database. */
 export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
-  async function crawl(options: CrawlOptions = {}, limits = { monitored: 50, sample: 10 }) {
+  async function crawl(options: CrawlOptions = {}, { monitored = 50, sample = 10 } = {}) {
     const seed = await fixtures.crawl('running');
     await db
       .updateTable('site_crawls')
@@ -71,8 +71,8 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
       .values({
         id: randomUUID(),
         workspace_id: seed.workspaceId,
-        monitored_url_limit: limits.monitored,
-        sample_url_limit: limits.sample,
+        monitored_url_limit: monitored,
+        sample_url_limit: sample,
         discovery_mode: 'full',
         count_disclosure: true,
         resolved_entitlement_lifecycle_version: 1,
@@ -101,7 +101,7 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
       fetcher: new SitePageFetcher(db, recordedSite(pages, requests), fetchSettings),
     });
   }
-  async function lease(taskId: string, owner: string) {
+  function lease(taskId: string, owner: string) {
     return db
       .updateTable('site_crawl_tasks')
       .set({

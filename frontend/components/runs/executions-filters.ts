@@ -24,8 +24,8 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
   key: string;
 }> {
   const catalog = useEngineCatalog();
-  const [engineChoice, setEngine] = useState<string>(ALL);
-  const [statusChoice, setStatus] = useState<ExecutionStatus | typeof ALL>(ALL);
+  const [engineChoice, setEngineChoice] = useState<string>(ALL);
+  const [statusChoice, setStatusChoice] = useState<ExecutionStatus | typeof ALL>(ALL);
   const engines = distinct(executions.map((execution) => execution.logical_engine));
   const statuses = distinct(executions.map((execution) => execution.status));
   const engine = engines.includes(engineChoice) ? engineChoice : ALL;
@@ -46,7 +46,7 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
             ],
           },
         ],
-        onChange: setEngine,
+        onChange: setEngineChoice,
       }),
       choiceFilter<ExecutionStatus | typeof ALL>({
         id: 'status',
@@ -62,7 +62,7 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
             ],
           },
         ],
-        onChange: setStatus,
+        onChange: setStatusChoice,
       }),
     ],
     rows: executions.filter(

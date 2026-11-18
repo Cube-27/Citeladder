@@ -46,6 +46,9 @@ export function PerceptionScreen() {
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
+  // A previous selection's count is not this one's: load instead.
+  const accuracyData = accuracy.isPlaceholderData ? undefined : accuracy.data;
+  const brandFact = pilot ? factFigure(accuracyData, () => setTab('fact-checking')) : undefined;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
@@ -63,19 +66,7 @@ export function PerceptionScreen() {
             <SelectionGate query={queries.visibilityQuery}>
               {() =>
                 tab === 'brand' ? (
-                  <BrandTab
-                    filters={filters}
-                    queries={queries}
-                    factFigure={
-                      pilot
-                        ? factFigure(
-                            // A previous selection's count is not this one's: load instead.
-                            accuracy.isPlaceholderData ? undefined : accuracy.data,
-                            () => setTab('fact-checking'),
-                          )
-                        : undefined
-                    }
-                  />
+                  <BrandTab filters={filters} queries={queries} factFigure={brandFact} />
                 ) : (
                   <PerceptionFactChecking query={accuracy} views={factViews} />
                 )

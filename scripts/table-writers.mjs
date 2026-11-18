@@ -159,13 +159,20 @@ export function moduleWrites(source, knownTables) {
       .replace(/^public\./u, '');
     if (knownTables.has(table)) tables.add(table);
   }
+  if (sqlWrites(strings, knownTables, tables)) dynamic = true;
+  return { tables: [...tables].sort(compare), dynamic };
+}
+
+/** Adds the known tables raw SQL strings write to `tables`; true when one writes a computed table. */
+function sqlWrites(strings, knownTables, tables) {
+  let dynamic = false;
   for (const text of strings)
     for (const pattern of SQL_WRITES)
       for (const match of text.matchAll(pattern)) {
         if (match[2]) dynamic = true;
         else if (knownTables.has(match[1].toLowerCase())) tables.add(match[1].toLowerCase());
       }
-  return { tables: [...tables].sort(compare), dynamic };
+  return dynamic;
 }
 
 /** The table names of the generated schema's `DB` interface. */

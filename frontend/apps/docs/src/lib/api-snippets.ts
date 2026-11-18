@@ -27,12 +27,13 @@ function queryExample(row: ApiOperation['parameters'][number]['rows'][number]): 
 
 /** The request line's URL: path parameters filled with a fake id, required query parameters added. */
 function exampleUrl(operation: ApiOperation): string {
-  const path = operation.path.replaceAll(/\{[^}]+\}/g, FAKE_UUID);
+  const path = operation.path.replaceAll(/\{[^{}]+\}/g, FAKE_UUID);
   const required = operation.parameters
     .filter((group) => group.title === 'Query parameters')
     .flatMap((group) => group.rows.filter((row) => row.required));
   const query = required.map((row) => `${row.name}=${queryExample(row)}`).join('&');
-  return `${API_ORIGIN}${path}${query ? `?${query}` : ''}`;
+  const search = query ? `?${query}` : '';
+  return `${API_ORIGIN}${path}${search}`;
 }
 
 /** A JSON value as a Python literal, indented to sit inside a call. */
@@ -40,20 +41,16 @@ export function pythonLiteral(value: unknown, indent: number): string {
   const pad = ' '.repeat(indent);
   if (value === null || value === undefined) return 'None';
   if (typeof value === 'boolean') return value ? 'True' : 'False';
-  if (Array.isArray(value))
-    return value.length === 0
-      ? '[]'
-      : `[\n${value.map((item) => `${pad}    ${pythonLiteral(item, indent + 4)},`).join('\n')}\n${pad}]`;
+  if (Array.isArray(value)) {
+    const lines = value.map((item) => `${pad}    ${pythonLiteral(item, indent + 4)},`);
+    return value.length === 0 ? '[]' : ['[', ...lines, `${pad}]`].join('\n');
+  }
   if (typeof value === 'object') {
     const entries = Object.entries(value);
-    return entries.length === 0
-      ? '{}'
-      : `{\n${entries
-          .map(
-            ([key, item]) =>
-              `${pad}    ${JSON.stringify(key)}: ${pythonLiteral(item, indent + 4)},`,
-          )
-          .join('\n')}\n${pad}}`;
+    const lines = entries.map(
+      ([key, item]) => `${pad}    ${JSON.stringify(key)}: ${pythonLiteral(item, indent + 4)},`,
+    );
+    return entries.length === 0 ? '{}' : ['{', ...lines, `${pad}}`].join('\n');
   }
   return JSON.stringify(value);
 }
@@ -72,11 +69,13 @@ export function buildSnippets(operation: ApiOperation): Snippet[] {
   ];
   const method = operation.method;
 
+  const verb = method === 'GET' ? '' : ` -X ${method}`;
+  // An apostrophe closes a single-quoted shell argument, so it is written as '\''.
+  const shellBody = json && JSON.stringify(body).replaceAll("'", String.raw`'\''`);
   const curl = [
-    `curl${method === 'GET' ? '' : ` -X ${method}`} "${url}"`,
+    `curl${verb} "${url}"`,
     ...headers.map(([name, value]) => `-H "${name}: ${value}"`),
-    // An apostrophe closes a single-quoted shell argument, so it is written as '\''.
-    ...(json ? [`-d '${JSON.stringify(body).replaceAll("'", "'\\''")}'`] : []),
+    ...(shellBody ? [`-d '${shellBody}'`] : []),
   ].join(' \\\n  ');
 
   const javascript = [

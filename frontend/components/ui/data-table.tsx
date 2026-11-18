@@ -30,7 +30,11 @@ import { Table, TableTitleLinesContext, type TableMinWidth } from '@/components/
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import { InCardContext } from '@/components/ui/section';
-import { StateBlock, StateHeadingLevelContext } from '@/components/ui/state-block';
+import {
+  StateBlock,
+  StateHeadingLevelContext,
+  type HeadingLevel,
+} from '@/components/ui/state-block';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
 
@@ -189,7 +193,7 @@ function HeldFootprint({
   children,
 }: Readonly<{
   state: ComponentProps<typeof StateBlock> | null;
-  level: 1 | 2 | 3;
+  level: HeadingLevel;
   held: boolean;
   children: ReactNode;
 }>) {
@@ -260,7 +264,7 @@ function TimeZoneNote() {
 }
 
 /** A state under the table's own title takes the next level. */
-const stateLevel = (title: string | undefined, level: 1 | 2 | 3): 1 | 2 | 3 => {
+const stateLevel = (title: string | undefined, level: HeadingLevel): HeadingLevel => {
   if (!title) return level;
   return level === 1 ? 2 : 3;
 };
@@ -283,7 +287,7 @@ function replacingState(
 function ReplacingState({
   state,
   level,
-}: Readonly<{ state: ComponentProps<typeof StateBlock>; level: 1 | 2 | 3 }>) {
+}: Readonly<{ state: ComponentProps<typeof StateBlock>; level: HeadingLevel }>) {
   return (
     <StateHeadingLevelContext value={level}>
       {state.kind === 'empty' && state.inline ? (
@@ -451,7 +455,7 @@ function DataTableHeader({
 }: Readonly<{
   title?: string;
   headingId: string;
-  level: 1 | 2 | 3;
+  level: HeadingLevel;
   toolbar?: FilterBarProps;
   description?: ReactNode;
   actions?: ReactNode;
@@ -496,7 +500,7 @@ function TitleRow({
 }: Readonly<{
   title?: string;
   headingId: string;
-  level: 1 | 2 | 3;
+  level: HeadingLevel;
   toolbar?: FilterBarProps;
   children: ReactNode;
 }>) {

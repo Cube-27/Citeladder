@@ -18,6 +18,11 @@ export type RadioOption<T extends string> = {
 const RADIO =
   'focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
+const LIST_LAYOUT = {
+  list: 'flex flex-col gap-3',
+  inline: 'flex flex-row flex-wrap gap-x-6 gap-y-2',
+} as const;
+
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
  * the options 12px apart; `inline` sets short options on one wrapping row,
@@ -60,9 +65,7 @@ export function RadioGroup<T extends string>({
               columns === 2 && 'column-split:grid-cols-2',
               columns === 3 && 'column-split:grid-cols-3',
             )
-          : variant === 'inline'
-            ? 'flex flex-row flex-wrap gap-x-6 gap-y-2'
-            : 'flex flex-col gap-3',
+          : LIST_LAYOUT[variant],
         className,
       )}
     >

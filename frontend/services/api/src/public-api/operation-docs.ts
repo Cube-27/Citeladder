@@ -21,13 +21,13 @@ const SET_ID = '00000000-0000-4000-8000-000000000001';
 
 /** The key of an operation: its method and its path below the project, `GET /prompts`. */
 export function docKey(method: string, path: string): string {
-  const relative =
-    path === PROJECT_PREFIX
-      ? '/'
-      : path.startsWith(`${PROJECT_PREFIX}/`)
-        ? path.slice(PROJECT_PREFIX.length)
-        : path;
-  return `${method.toUpperCase()} ${relative}`;
+  return `${method.toUpperCase()} ${relativePath(path)}`;
+}
+
+function relativePath(path: string): string {
+  if (path === PROJECT_PREFIX) return '/';
+  if (path.startsWith(`${PROJECT_PREFIX}/`)) return path.slice(PROJECT_PREFIX.length);
+  return path;
 }
 
 const REQUEST_EXAMPLES: Readonly<Record<string, unknown>> = {
