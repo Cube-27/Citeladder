@@ -11,6 +11,7 @@ import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-gate';
+import { selectionPageState } from '@/components/visibility/selection-page';
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
@@ -43,9 +44,7 @@ export function PerceptionScreen() {
   const tab = pilot ? requested : 'brand';
   const accuracy = useAccuracy({ filters, queries, pilot });
   const pageFilters = usePageFilters(filters, queries);
-  const { auditsQuery } = queries;
-  const ready = !auditsQuery.isLoading && !auditsQuery.isError && queries.hasRuns;
-  const showFilters = ready || (auditsQuery.isError && queries.hasRuns);
+  const ready = selectionPageState(queries) === null;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
@@ -55,7 +54,7 @@ export function PerceptionScreen() {
             ariaLabel="Perception views"
           />
         }
-        filters={showFilters ? <FilterBar filters={pageFilters} /> : undefined}
+        filters={ready ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {queries.activeRun && queries.hasRuns ? <ActiveRunBanner run={queries.activeRun} /> : null}
         <TabPanel value={tab} className="focus-ring">

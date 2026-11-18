@@ -836,10 +836,10 @@ or scoring, and no other engine reads as zero ads.
 
 ## Read and UI surface
 
-Visibility has Sources, Perception, Ads and Query Fanout; Sources is default. The
-trend, key figures and engine comparison live on Brand → Insights and the brand
-ranking with competitor suggestions on Brand → Competitors (AV-14, AV-16); both
-read the same selection and filters. Trends
+Visibility has Sources, Ads and Query Fanout; Sources is default. The trend, key
+figures and engine comparison live on Brand → Insights, the brand ranking with
+competitor suggestions on Brand → Competitors, and perception on Brand →
+Perception (AV-14, AV-16); all read the same selection and filters. Trends
 read the newest `trend_max_runs` runs in the window, bucket them and then cap the
 number of points (`trend_max_points`), so a run-heavy week stays one point. When
 the run bound cuts history, the bucket holding the cut is dropped whole rather
