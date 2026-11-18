@@ -10,6 +10,7 @@ import { promptTrend, type Aggregate, type AggregateExecution } from './aggregat
 import { frozenComparisonKey } from './comparison.ts';
 import { storedFirstNamed } from './win-rate.ts';
 import { persistObservedCompetitors } from './observed-competitors.ts';
+import { persistFanoutTerms } from './fanout-terms.ts';
 import { persistTopicMetrics, runAggregate, type ScopedTask } from './run-metrics.ts';
 import { compareText } from '../text-order.ts';
 import { persistSourceAggregates } from '../visibility/source-aggregates.ts';
@@ -186,6 +187,7 @@ export async function deriveRunMetrics(
     at,
   );
   await persistObservedCompetitors(trx, audit, analyses, config, at);
+  await persistFanoutTerms(trx, audit, analyses, config, at);
   return { metric, metrics, visibility, completed: analyses.length };
 }
 

@@ -46,6 +46,8 @@ export const visibilityKeys = {
     visibility.read('source-movers', scope, filters),
   fanout: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('fanout', scope, filters),
+  fanoutTerms: (scope: ProjectScope, filters: ListFilters = {}) =>
+    visibility.read('fanout-terms', scope, filters),
   /** The selection's projection: one run, a range, or the latest. */
   selection: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('selection', scope, filters),

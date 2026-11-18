@@ -173,6 +173,12 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
+// Found formats, none found, and an API engine's not applicable stay distinct.
+const ANSWER_FORMATS: readonly PromptAnswer['answer_formats'][] = [
+  { kind: 'observed', formats: ['shopping', 'comparison'], in_text_links: 1 },
+  { kind: 'observed', formats: [], in_text_links: 0 },
+];
+
 const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => ({
   execution_id: RUN(n),
   audit_id: RUN(1),
@@ -183,6 +189,7 @@ const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => 
   position: n === 1 ? 2 : null,
   cited: n === 1,
   search,
+  answer_formats: ANSWER_FORMATS[n - 1] ?? { kind: 'not_applicable' },
 });
 
 it('reads Past answers under the strip filters, keeping an unreported search apart from no', async () => {
@@ -208,9 +215,9 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
         .map((cell) => cell.textContent),
     );
   expect(rows).toEqual([
-    ['#2', 'Cited', 'Yes'],
-    ['Not named', '–Not cited', 'No'],
-    ['Not named', '–Not cited', 'Not reported'],
+    ['#2', 'Cited', 'Yes', 'ShoppingComparison'],
+    ['Not named', '–Not cited', 'No', 'Text only'],
+    ['Not named', '–Not cited', 'Not reported', 'Not applicable'],
   ]);
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),

@@ -14,6 +14,7 @@ import { z } from 'zod';
 import {
   visibilityEvidenceResponseSchema,
   visibilityFanoutSummarySchema,
+  visibilityFanoutTermsSchema,
   visibilitySourceMoversSchema,
   visibilitySourceNearMissesSchema,
   visibilitySourceSeriesSchema,
@@ -272,6 +273,17 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilityFanoutSummarySchema, result, 'visibility.getFanoutSummary');
+  },
+  getFanoutTerms: async (
+    projectId: string,
+    params: { audit_id?: string; audit_ids?: string[]; cohort?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/fanout-terms`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilityFanoutTermsSchema, result, 'visibility.getFanoutTerms');
   },
   getSources: async (
     projectId: string,

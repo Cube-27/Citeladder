@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { answerFormatsSchema } from './audits.ts';
 import { namedBrandSchema } from './visibility.ts';
 
 /**
@@ -23,6 +24,7 @@ export const promptAnswerSchema = z.object({
   position: z.number().int().nullable(),
   cited: z.boolean(),
   search: promptAnswerSearchSchema,
+  answer_formats: answerFormatsSchema,
 });
 
 // `GET /projects/{id}/prompts/{prompt_id}/executions`: newest run first. No

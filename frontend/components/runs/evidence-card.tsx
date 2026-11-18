@@ -16,6 +16,8 @@ import type { Highlight } from '@/lib/markdown/highlight';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
+import { AnswerFormatTags } from '@/components/runs/answer-formats';
+import { Absence } from '@/components/ui/absence';
 import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -88,6 +90,12 @@ function namedFirst(first: ExecutionEvidence['first_named']) {
   }
 }
 
+/** Links written in the answer text, counted only where the stored page tells them from citations. */
+function inTextLinks(formats: ExecutionEvidence['answer_formats']) {
+  if (formats.kind === 'observed') return formats.in_text_links;
+  return <Absence state={formats.kind} />;
+}
+
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
     <FactList
@@ -96,6 +104,11 @@ function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>
         { label: 'Brand', value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned' },
         { label: 'Named first', value: namedFirst(evidence.first_named) },
         { label: 'Owned sources', value: evidence.owned_citation_count },
+        {
+          label: 'Answer formats',
+          value: <AnswerFormatTags formats={evidence.answer_formats} />,
+        },
+        { label: 'In-text links', value: inTextLinks(evidence.answer_formats) },
         { label: 'Citations', value: evidence.citation_count },
         {
           label: 'Searches',

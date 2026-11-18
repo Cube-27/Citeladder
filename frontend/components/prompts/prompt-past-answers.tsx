@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import type { PromptAnswer, PromptAnswerPage } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
+import { AnswerFormatTags } from '@/components/runs/answer-formats';
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
@@ -32,6 +33,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'you', label: 'You', kind: 'number' },
   { key: 'cited', label: 'Cited', width: 'short' },
   { key: 'search', label: 'Search used', width: 'figure' },
+  { key: 'formats', label: 'Answer formats', width: 'lead' },
 ];
 
 /**
@@ -137,6 +139,9 @@ export function PromptPastAnswers({
             <TableCell>
               <SearchUsed search={answer.search} />
             </TableCell>
+            <TableCell>
+              <AnswerFormatTags formats={answer.answer_formats} />
+            </TableCell>
           </TableRow>
         ))}
       </DataTable>
@@ -175,8 +180,8 @@ function tableState(
   return undefined;
 }
 
-/** The tracked brands the answer named, first-named first, as their marks. */
-function BrandsNamed({ brands }: Readonly<{ brands: PromptAnswer['brands'] }>) {
+/** Tracked brands as their marks, in the given order; none is "No tracked brand". */
+export function BrandsNamed({ brands }: Readonly<{ brands: PromptAnswer['brands'] }>) {
   // Measured, and no tracked brand was named: a finding, never "not measured".
   if (!brands.length) return <Absence state="none" label="No tracked brand" />;
   return (
