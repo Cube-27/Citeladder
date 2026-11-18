@@ -36,7 +36,7 @@ import {
   type BrandCount,
 } from './brand-identities.ts';
 import { round2 } from './metrics.ts';
-import { brandMentionsByAnalysis } from './perception.ts';
+import { brandMentionsByAudit } from './perception.ts';
 import { pooledSignals, promptSignals } from './prompt-signals.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import { marketOf, type RunScope } from './runs.ts';
@@ -443,7 +443,9 @@ async function enrichOutcomes(
   rows: readonly PromptRow[],
   audit: { id: string; configuration: unknown; completed_at: string | null; cohort: string },
   query: { logicalEngine: string | null; baselineId: string | null },
-  preloaded?: Awaited<ReturnType<typeof loadOutcomes>>,
+  preloaded?: Awaited<ReturnType<typeof loadOutcomes>> & {
+    brandMentions: Awaited<ReturnType<typeof brandMentionsByAudit>>;
+  },
 ): Promise<void> {
   if (rows.length === 0) return;
   const data =
@@ -463,14 +465,16 @@ async function enrichOutcomes(
     data.mentions.filter((row) => row.audit_id === audit.id),
     (row) => row.prompt_index,
   );
-  const [previous, brandMentions] = await Promise.all([
+  const [previous, perceived] = await Promise.all([
     baselineRun(db, scope, audit, query.baselineId),
-    brandMentionsByAnalysis(db, {
-      workspaceId: scope.workspaceId,
-      configuration: audit.configuration,
-      analyses: data.answers.filter((row) => row.audit_id === audit.id),
-    }),
+    preloaded?.brandMentions ??
+      brandMentionsByAudit(db, {
+        workspaceId: scope.workspaceId,
+        audits: [audit],
+        analyses: data.answers,
+      }),
   ]);
+  const brandMentions = perceived.get(audit.id) ?? null;
   const runs = previous && {
     current: {
       auditId: audit.id,
@@ -672,7 +676,7 @@ export async function enrichedRows(
   ids: readonly string[],
 ): Promise<PromptRow[]> {
   if (!ids.length) return [];
-  const [audits, rows, data] = await Promise.all([
+  const [audits, rows, outcomes] = await Promise.all([
     db
       .selectFrom('audits')
       .select(['id', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
@@ -683,6 +687,14 @@ export async function enrichedRows(
     scoreRows(db, scope, query, ids),
     loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine),
   ]);
+  const data = {
+    ...outcomes,
+    brandMentions: await brandMentionsByAudit(db, {
+      workspaceId: scope.workspaceId,
+      audits,
+      analyses: outcomes.answers,
+    }),
+  };
   const byAudit = groupBy(rows, (row) => row.item.audit_id);
   await Promise.all(
     audits.map((audit) =>

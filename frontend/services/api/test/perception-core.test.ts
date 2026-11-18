@@ -7,6 +7,7 @@ import { perceptionPrompt } from '../src/perception/model.ts';
 import { locateQuote, validateOutput } from '../src/perception/validate.ts';
 import {
   coverage,
+  entityScores,
   mentionStatus,
   perceptionSummary,
   readState,
@@ -287,6 +288,31 @@ describe('perception metrics', () => {
       low_confidence: 0,
       unavailable: [{ reason: 'model_omitted', count: 1 }],
     });
+  });
+
+  it('scores a competitor sharing the brand name apart from the brand', () => {
+    const answer: PerceptionAnswer = {
+      auditId: 'run-a',
+      executionId: 'run-a-e',
+      observedAt: '2026-10-01T00:00:00Z',
+      logicalEngine: 'chatgpt',
+      prompt: 'best tools?',
+      topic: 'tools',
+      versions: { extractor: 'x1', template: 't1', metrics: 'm1', model: 'model-a' },
+      mentions: [classified('positive'), { ...classified('negative'), isBrand: false }],
+      brandRecommendation: 'mentioned',
+      citations: [],
+    };
+    expect(
+      entityScores([answer]).map((entity) => [
+        entity.name,
+        entity.is_brand,
+        entity.score.net_sentiment,
+      ]),
+    ).toEqual([
+      ['Acme', true, 100],
+      ['Acme', false, -100],
+    ]);
   });
 
   it('marks a trend point after a version change as not comparable and links quotes to the run', () => {

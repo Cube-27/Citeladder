@@ -377,14 +377,16 @@ function trend(answers: readonly PerceptionAnswer[]) {
 
 /** Every named business's score and coverage: the brand first, then most mentioned. */
 export function entityScores(answers: readonly PerceptionAnswer[]) {
-  const byEntity = new Map<string, { isBrand: boolean; mentions: Mention[] }>();
+  const byEntity = new Map<string, { name: string; isBrand: boolean; mentions: Mention[] }>();
   for (const mention of answers.flatMap((answer) => answer.mentions)) {
-    const entity = byEntity.get(mention.entity);
+    // Keyed by role too: a competitor sharing the brand's name never merges into it.
+    const key = `${mention.isBrand}:${mention.entity}`;
+    const entity = byEntity.get(key);
     if (entity) entity.mentions.push(mention);
-    else byEntity.set(mention.entity, { isBrand: mention.isBrand, mentions: [mention] });
+    else byEntity.set(key, { name: mention.entity, isBrand: mention.isBrand, mentions: [mention] });
   }
-  return [...byEntity]
-    .map(([name, { isBrand, mentions }]) => ({
+  return [...byEntity.values()]
+    .map(({ name, isBrand, mentions }) => ({
       name,
       is_brand: isBrand,
       score: score(mentions),

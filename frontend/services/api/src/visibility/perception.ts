@@ -250,30 +250,45 @@ export async function entitySentiments(db: Database, selection: RunSelection) {
 }
 
 /**
- * The brand's mentions in each of one audit's analyses, or null when the
- * audit was admitted without perception. The analyses are already scoped.
+ * Per perceived audit, the brand's mentions in each of its analyses, read in
+ * one batch. An audit admitted without perception has no entry. The audits
+ * and analyses are already scoped.
  */
-export async function brandMentionsByAnalysis(
+export async function brandMentionsByAudit(
   db: Database,
   input: {
     workspaceId: string;
-    configuration: unknown;
-    analyses: readonly { id: string; entity_assessments: unknown }[];
+    audits: readonly { id: string; configuration: unknown }[];
+    analyses: readonly { id: string; audit_id: string; entity_assessments: unknown }[];
   },
-): Promise<Map<string, Mention[]> | null> {
-  const versions = frozenPerceptionVersions(input.configuration);
-  if (!versions) return null;
+): Promise<Map<string, Map<string, Mention[]>>> {
+  const extractor = new Map(
+    input.audits.flatMap((audit) => {
+      const versions = frozenPerceptionVersions(audit.configuration);
+      return versions ? [[audit.id, versions.extractor_version] as const] : [];
+    }),
+  );
+  const analyses = input.analyses.flatMap((row) => {
+    const version = extractor.get(row.audit_id);
+    return version ? [{ ...row, version }] : [];
+  });
   const perceived = await perceptionsOf(
     db,
     input.workspaceId,
-    new Map(input.analyses.map((row) => [row.id, versions.extractor_version])),
+    new Map(analyses.map((row) => [row.id, row.version])),
   );
+  const byAudit = groupBy(analyses, (row) => row.audit_id);
   return new Map(
-    input.analyses.map((row) => [
-      row.id,
-      mentionsOf(assessmentsSchema.parse(row.entity_assessments), perceived.get(row.id))
-        .map(({ mention }) => mention)
-        .filter((mention) => mention.isBrand),
+    [...extractor.keys()].map((auditId) => [
+      auditId,
+      new Map(
+        (byAudit.get(auditId) ?? []).map((row) => [
+          row.id,
+          mentionsOf(assessmentsSchema.parse(row.entity_assessments), perceived.get(row.id))
+            .map(({ mention }) => mention)
+            .filter((mention) => mention.isBrand),
+        ]),
+      ),
     ]),
   );
 }

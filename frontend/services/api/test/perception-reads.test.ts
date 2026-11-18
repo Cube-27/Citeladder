@@ -283,6 +283,23 @@ describe('GET /visibility/perception', () => {
       });
     const [perceivedOnly, mixed] = [await pool([auditId]), await pool([auditId, unperceived])];
     expect([perceivedOnly.map((entity) => entity.name), mixed]).toEqual([['Acme', 'Rival'], []]);
+    await fixtures.promptScore(tenant, unperceived, {
+      promptIndex: 0,
+      promptText: 'best tools?',
+      composite: 50,
+    });
+    const pooledPrompt = async (ids: string[]) => {
+      const search = new URLSearchParams(ids.map((id) => ['audit_ids', id]));
+      const { body } = await get(
+        tenant,
+        `/api/v1/projects/${tenant.projectId}/visibility/prompts?${search}`,
+      );
+      return (body as unknown as Body[]).map((row) => row.sentiment);
+    };
+    expect([await pooledPrompt([auditId]), await pooledPrompt([auditId, unperceived])]).toEqual([
+      [{ mentions: 1, classified: 1, positive: 0, negative: 1, net_sentiment: -100 }],
+      [null],
+    ]);
   });
 
   it('reads pending before any classification lands, then unavailable with its reason', async () => {
