@@ -412,8 +412,16 @@ function measuredColumnsFor({
 /** No run has measured it: a muted dash, the words in its tooltip and accessible name. */
 const NOT_MEASURED = <Absence state="not_measured" narrow />;
 
-function RateValue({ rate }: Readonly<{ rate: number | null | undefined }>) {
-  return rate == null ? NOT_MEASURED : formatRate(rate);
+/** Measured with no completed answer: unavailable, never "not measured" or zero. */
+const NO_ANSWERS = <Absence state="unavailable" label="No completed answers" narrow />;
+
+/** A rate: unmeasured without a measurement, unavailable when the measurement had no answers. */
+function RateValue({
+  measurement,
+  rate,
+}: Readonly<{ measurement?: PromptMeasurement; rate?: number | null }>) {
+  if (!measurement) return NOT_MEASURED;
+  return rate == null ? NO_ANSWERS : formatRate(rate);
 }
 
 /** A prompt's visibility and its movement, its marks, then the low-priority figures. */
@@ -424,7 +432,7 @@ function MeasuredCells({
   return (
     <>
       <TableCell numeric>
-        <RateValue rate={measurement?.visibilityRate} />
+        <RateValue measurement={measurement} rate={measurement?.visibilityRate} />
       </TableCell>
       {compared ? (
         <TableCell numeric>
@@ -443,7 +451,7 @@ function MeasuredCells({
         )}
       </TableCell>
       <TableCell numeric>
-        <RateValue rate={measurement?.ownedCitationRate} />
+        <RateValue measurement={measurement} rate={measurement?.ownedCitationRate} />
       </TableCell>
       <TableCell>
         {measurement ? (
@@ -467,11 +475,7 @@ function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement
         <AveragePosition measurement={measurement} />
       </TableCell>
       <TableCell numeric>
-        {measurement
-          ? (measured(formatRate(measurement.shareOfVoice)) ?? (
-              <Absence state="none" reason="No tracked brand was named in these answers." />
-            ))
-          : NOT_MEASURED}
+        <ShareOfVoice measurement={measurement} />
       </TableCell>
       <TableCell numeric>
         {measurement?.sentiment ? (
@@ -481,6 +485,17 @@ function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement
         )}
       </TableCell>
     </>
+  );
+}
+
+/** No answers is unavailable; answers naming no tracked brand is none. */
+function ShareOfVoice({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
+  if (!measurement) return NOT_MEASURED;
+  if (measurement.visibilityRate === null) return NO_ANSWERS;
+  return (
+    measured(formatRate(measurement.shareOfVoice)) ?? (
+      <Absence state="none" reason="No tracked brand was named in these answers." />
+    )
   );
 }
 

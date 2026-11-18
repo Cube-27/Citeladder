@@ -325,6 +325,28 @@ it('opens on where the prompt stands: the latest rates and their change', async 
   );
 });
 
+it('reads every rate as unavailable when the latest run had no successful answer', async () => {
+  const base = history(null);
+  getPromptHistory.mockResolvedValue({ ...base, points: base.points.slice(0, 2) });
+  renderScreen();
+
+  const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
+  const state = (label: string) =>
+    figures
+      .getByText(label)
+      .closest('[data-figure-cell]')
+      ?.querySelector('[data-absence]')
+      ?.getAttribute('data-absence');
+  expect(['Visibility', 'Owned citation rate', 'Position'].map(state)).toEqual([
+    'unavailable',
+    'unavailable',
+    'unavailable',
+  ]);
+  expect(figures.getByText('Position').closest('[data-figure-cell]')).toHaveTextContent(
+    'No successful answer',
+  );
+});
+
 it('says an archived prompt is archived and restores it', async () => {
   const user = userEvent.setup();
   const updatePrompt = vi.spyOn(promptsApi, 'updatePrompt').mockResolvedValue({} as never);
@@ -384,7 +406,8 @@ it('reads the market from the address and keeps a run without answers unavailabl
     [
       expect.stringMatching(/^Mar 9, 2026/),
       'No successful answer',
-      expect.stringMatching(/Not measured$/),
+      // No answer to cite from: unavailable, not unmeasured like the run below.
+      expect.stringMatching(/Unavailable$/),
     ],
     [expect.stringMatching(/^Mar 2, 2026/), '50.0%', expect.stringMatching(/Not measured$/)],
   ]);

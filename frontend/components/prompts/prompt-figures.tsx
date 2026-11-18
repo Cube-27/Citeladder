@@ -48,7 +48,10 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
     {
       key: 'owned',
       label: 'Owned citation rate',
-      value: rateValue(point?.owned_citation_rate, NOT_MEASURED),
+      value: rateValue(
+        point?.owned_citation_rate,
+        point?.counts.responses === 0 ? NO_ANSWER : NOT_MEASURED,
+      ),
       sub: 'Answers that cited one of your pages.',
     },
     {
@@ -87,6 +90,8 @@ function PositionValue({
 }: Readonly<{ latest: PromptMetricItem | null; visibility: number | null }>) {
   if (!latest) return NOT_MEASURED;
   if (latest.avg_position != null) return formatPositionExact(latest.avg_position);
+  // No successful answer: nothing was ranked, so the order is not what's missing.
+  if (visibility === null) return NO_ANSWER;
   if (visibility === 0) return <Absence state="none" label="Not named" />;
   return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
 }
@@ -153,9 +158,16 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
   );
 }
 
-function answered({ counts }: Outcome): string {
-  const asked = counts.expected ?? counts.responses + (counts.failed ?? 0);
-  return `${formatCount(counts.responses)}/${formatCount(asked)}`;
+/** Answered of asked; an unrecorded asked count stays unavailable, never derived. */
+function answered({ counts }: Outcome): ReactNode {
+  if (counts.expected === null)
+    return (
+      <>
+        {formatCount(counts.responses)}/
+        <Absence state="unavailable" label="Asked count not recorded" narrow />
+      </>
+    );
+  return `${formatCount(counts.responses)}/${formatCount(counts.expected)}`;
 }
 
 /** An engine whose every answer failed has no states: unavailable, never zero. */
