@@ -1,13 +1,12 @@
 ---
 /**
- * ApiEndpoint — one operation's page body: its description, the scope it
- * needs, its parameters and request body, then the response fields with the
- * success status. Below 1280px the examples follow the text; from 1280px
- * they are a sticky right column under the top bar.
+ * ApiEndpoint — one operation's page body: the endpoint bar (its method and
+ * path), its description, the scope it needs, its parameters and request
+ * body, then the response fields with the success status. The page passes
+ * ApiExamples to ApiPage's `aside`, the column beside it.
  */
 import { LockKeyhole } from 'lucide-react';
 import type { ApiOperation } from '../lib/api-reference';
-import ApiExamples from './ApiExamples.astro';
 import ApiMethod from './ApiMethod.astro';
 import ParamTable from './ParamTable.astro';
 import Prose from '@/components/content/Prose.astro';
@@ -22,8 +21,7 @@ const segments = operation.path.split(/(\{[^}]+\})/).filter(Boolean);
 const responseTitle = response.status ? `Response ${response.status}` : 'Response';
 ---
 
-<div class="cl-docs-endpoint">
-  <div class="cl-docs-endpoint-text">
+<div class="cl-docs-endpoint-text">
     <p class="cl-docs-endpoint-line">
       <ApiMethod method={operation.method} />
       <code class="cl-docs-endpoint-path">
@@ -45,11 +43,15 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
       )
     }
     <Prose variant="docs"><p>{operation.description}</p></Prose>
-    {operation.parameters.map((group) => <ParamTable title={group.title} rows={group.rows} />)}
+    {
+      operation.parameters.map((group) => (
+        <ParamTable title={group.title} rows={group.rows} location={group.location} />
+      ))
+    }
     {
       request &&
         (request.rows.length > 0 ? (
-          <ParamTable title="Request body" rows={request.rows} />
+          <ParamTable title="Request body" rows={request.rows} location="body" />
         ) : (
           <p class="cl-docs-endpoint-body">
             Request body: <TypeLabel parts={request.type} />
@@ -65,19 +67,9 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
         </p>
       )
     }
-  </div>
-  <aside class="cl-docs-endpoint-examples" aria-label="Examples">
-    <ApiExamples operation={operation} />
-  </aside>
 </div>
 
 <style>
-  .cl-docs-endpoint {
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-    min-width: 0;
-  }
   .cl-docs-endpoint-text {
     display: flex;
     flex-direction: column;
@@ -85,12 +77,17 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
     min-width: 0;
     max-width: var(--container-prose);
   }
+  /* The endpoint bar: the method and path in a `line` field, like an input. */
   .cl-docs-endpoint-line {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
+    min-height: var(--control-lg);
     margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-md);
   }
   .cl-docs-endpoint-path {
     color: var(--color-ink);
@@ -128,19 +125,5 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
     text-decoration-color: var(--color-line-control);
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
-  }
-  @media (min-width: 1280px) {
-    .cl-docs-endpoint {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-      align-items: start;
-      gap: 48px;
-    }
-    .cl-docs-endpoint-examples {
-      position: sticky;
-      top: calc(var(--nav-height) + 32px);
-      max-height: calc(100dvh - var(--nav-height) - 64px);
-      overflow-y: auto;
-    }
   }
 </style>

@@ -2,7 +2,8 @@
 /**
  * ApiPage — a generated API page (an endpoint, the endpoint list or a schema)
  * in DocsShell: the resource or kind as the eyebrow over the title and a
- * one-line subtitle. Reference pages take the full column, with no Toc.
+ * one-line subtitle. Reference pages take the full column, with no Toc; an
+ * `aside` (an endpoint's examples) becomes DocsShell's column beside the title.
  */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import DocsShell from './DocsShell.astro';
@@ -23,4 +24,11 @@ const { title, eyebrow, description, subtitle = description, previous, next } = 
 <DocsShell title={title} description={description} wide previous={previous} next={next}>
   <ArticleHeader title={title} eyebrow={eyebrow}>{subtitle}</ArticleHeader>
   <slot />
+  {
+    Astro.slots.has('aside') && (
+      <Fragment slot="aside">
+        <slot name="aside" />
+      </Fragment>
+    )
+  }
 </DocsShell>

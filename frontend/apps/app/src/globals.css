@@ -871,9 +871,14 @@
 
 /* The website and docs are flat on white paper (owner, 2026-11-14): no
    button sheen, press shadow or press nudge, and edges are hairlines. Dark
-   keeps its own paper. */
+   keeps its own paper. The site's page colour is the docs' page too. */
 :root[data-public-surface]:not([data-theme='dark']) {
   --color-paper: #ffffff;
+  --color-site-page: #ffffff;
+}
+
+:root[data-public-surface][data-theme='dark'] {
+  --color-site-page: #000000;
 }
 
 :root[data-public-surface] {
@@ -888,7 +893,6 @@
    blue-violet; panels are wells a shade under the page in light, and a
    neutral shade over the jet-black page in dark. */
 :root[data-marketing-surface] {
-  --color-site-page: #ffffff;
   --color-site-violet: #635bff;
   /* Label chips and icon tiles are neutral grey, never violet. */
   --color-site-chip: #ededed;
@@ -921,7 +925,6 @@
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
-  --color-site-page: #000000;
   --color-site-violet: #8b84ff;
   --color-site-chip: #262626;
   --color-site-chip-ink: #e5e5e5;
@@ -1015,7 +1018,7 @@
 }
 
 /* The app, login, onboarding and the website sit on `paper`; the docs
-   (`data-public-surface` alone on <html>) on `surface`. Wide content scrolls in its
+   (`data-public-surface` alone on <html>) on the site's page colour. Wide content scrolls in its
    owning region; document overflow stays observable. */
 html {
   min-height: 100%;
@@ -1061,7 +1064,7 @@ body {
 
 html[data-public-surface]:not([data-marketing-surface]),
 html[data-public-surface]:not([data-marketing-surface]) body {
-  background: var(--color-surface);
+  background: var(--color-site-page);
 }
 
 /* Type. Each role owns face, size, leading, weight and tracking; ink is

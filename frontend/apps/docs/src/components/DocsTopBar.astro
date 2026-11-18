@@ -1,29 +1,37 @@
 ---
 /**
- * DocsTopBar — the docs header on one 64px sticky `surface` row with a `line`
- * rule: the logo and "Docs", the section tabs (the selected one on
- * `surface-sunken` in `ink`), the search field that opens DocsSearchDialog,
- * the ThemeSwitch and the one filled control, Open app. The search field is
- * 260px, 200px below 1280px; below 900px the tabs, field and Open app move
- * into a menu sheet that overlays the page, and a search and a menu
- * IconButton take their place; below 640px only the logo mark shows.
+ * DocsTopBar — the docs header, sticky on the page colour. Row one (64px):
+ * the logo, the search field that opens DocsSearchDialog centred, then the
+ * website link, the ThemeSwitch and Open app, the one filled control. Row two,
+ * under a `line` hairline: the section tabs with their icons, the current one
+ * in `ink` on the accent underline. Every tab keeps one weight, so selecting
+ * one never moves the others. Below 1280px the field narrows and the website
+ * link leaves; below 900px the tabs row, field and Open app move into a menu
+ * sheet that overlays the page, and a search and a menu IconButton take their
+ * place; below 640px only the logo mark shows.
  */
-import { Menu, X } from 'lucide-react';
+import { BookOpen, Braces, History, Menu, Plug, X } from 'lucide-react';
 import { buttonClasses } from '@/components/ui/button';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { appHref, websiteHref } from '@/lib/config/app-link';
+import { ICONS } from '@/lib/icons';
 import { DocsSearchDialog } from './DocsSearchDialog';
 import DocsSidebar from './DocsSidebar.astro';
 
 const path = Astro.url.pathname;
 const website = websiteHref('/');
 const sections = [
-  { href: '/', label: 'Guides', selected: !/^\/(agent|mcp|api|changelog)(\/|$)/.test(path) },
-  { href: '/agent/', label: 'Agent', selected: path.startsWith('/agent') },
-  { href: '/mcp/', label: 'MCP', selected: path.startsWith('/mcp') },
-  { href: '/api/', label: 'API', selected: path === '/api' || path.startsWith('/api/') },
-  { href: '/changelog/', label: 'Changelog', selected: path.startsWith('/changelog') },
+  {
+    href: '/',
+    label: 'Documentation',
+    icon: BookOpen,
+    selected: !/^\/(agent|mcp|api|changelog)(\/|$)/.test(path),
+  },
+  { href: '/agent/', label: 'Agent', icon: ICONS.agent, selected: path.startsWith('/agent') },
+  { href: '/mcp/', label: 'MCP', icon: Plug, selected: path.startsWith('/mcp') },
+  { href: '/api/', label: 'API', icon: Braces, selected: path === '/api' || path.startsWith('/api/') },
+  { href: '/changelog/', label: 'Changelog', icon: History, selected: path.startsWith('/changelog') },
 ];
 ---
 
@@ -32,28 +40,12 @@ const sections = [
     <a class="cl-docs-bar-home" href="/" aria-label="CiteLadder documentation home">
       <LogoMark size={22} className="cl-docs-bar-logo" />
       <LogoMark size={22} wordmark={false} className="cl-docs-bar-mark" />
-      <span class="cl-docs-bar-label">Docs</span>
     </a>
-    <nav class="cl-docs-bar-tabs" aria-label="Documentation sections">
-      <ul class="cl-docs-bar-tab-list">
-        {
-          sections.map((section) => (
-            <li>
-              <a
-                class:list={['cl-docs-bar-tab', { 'is-on': section.selected }]}
-                href={section.href}
-                aria-current={section.selected ? 'page' : undefined}
-              >
-                {section.label}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
+    <div class="cl-docs-bar-search">
+      <DocsSearchDialog client:idle />
+    </div>
     <div class="cl-docs-bar-end">
       <a class="cl-docs-bar-site" href={website}>{new URL(website).host}</a>
-      <DocsSearchDialog client:idle />
       <ThemeSwitch client:idle />
       <a class={buttonClasses('primary', 'cl-docs-bar-app')} href={appHref('/')}>Open app</a>
       <button
@@ -69,18 +61,36 @@ const sections = [
       </button>
     </div>
   </div>
+  <nav class="cl-docs-bar-tabs" aria-label="Documentation sections">
+    <ul class="cl-docs-bar-tab-list">
+      {
+        sections.map(({ href, label, icon: Icon, selected }) => (
+          <li>
+            <a
+              class="cl-docs-bar-tab focus-ring-inset"
+              href={href}
+              aria-current={selected ? 'page' : undefined}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden />
+              {label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
   <div class="cl-docs-bar-sheet" id="docs-menu" hidden>
     <nav class="cl-docs-bar-sheet-tabs" aria-label="Documentation sections">
-      <ul class="cl-docs-bar-tab-list">
+      <ul class="cl-doc-list">
         {
-          sections.map((section) => (
+          sections.map(({ href, label, selected }) => (
             <li>
               <a
-                class:list={['cl-docs-bar-tab', { 'is-on': section.selected }]}
-                href={section.href}
-                aria-current={section.selected ? 'page' : undefined}
+                class:list={['cl-doc-link focus-ring', { 'is-active': selected }]}
+                href={href}
+                aria-current={selected ? 'page' : undefined}
               >
-                {section.label}
+                {label}
               </a>
             </li>
           ))
@@ -97,23 +107,28 @@ const sections = [
     position: sticky;
     top: 0;
     z-index: var(--z-index-overlay);
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-line);
+    background: var(--color-site-page);
+    /* Hairlines drawn inside the rows, so the bar is exactly `docs-bar-height`
+       and the columns held under it never shift. */
+    box-shadow: inset 0 -1px 0 var(--color-line);
+  }
+  .cl-docs-bar-inner,
+  .cl-docs-bar-tab-list {
+    max-width: var(--container-app);
+    margin: 0 auto;
   }
   .cl-docs-bar-inner {
-    display: flex;
+    display: grid;
+    padding: 0 24px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 24px;
-    max-width: var(--container-app);
     height: var(--nav-height);
-    margin: 0 auto;
-    padding: 0 24px;
   }
   .cl-docs-bar-home {
     display: inline-flex;
-    flex-shrink: 0;
     align-items: center;
-    gap: 12px;
+    justify-self: start;
     margin-left: -4px;
     padding: 4px;
     border-radius: var(--radius-sm);
@@ -123,25 +138,20 @@ const sections = [
   .cl-docs-bar-home :global(.cl-docs-bar-mark) {
     display: none;
   }
-  .cl-docs-bar-label {
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    padding-left: 12px;
-    border-left: 1px solid var(--color-line);
-    color: var(--color-ink);
-    font-size: var(--text-label-lg);
-    line-height: var(--text-label-lg--line-height);
-    font-weight: 500;
+  .cl-docs-bar-search :global([data-docs-search-trigger='field']) {
+    display: flex;
+    width: 360px;
   }
-  .cl-docs-bar-tab-list {
+  .cl-docs-bar-search :global([data-docs-search-trigger='icon']),
+  .cl-docs-bar-end :global(.cl-docs-bar-menu) {
+    display: none;
+  }
+  .cl-docs-bar-end {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 0;
-    list-style: none;
+    justify-self: end;
+    gap: 8px;
   }
-  .cl-docs-bar-tab,
   .cl-docs-bar-site {
     display: inline-flex;
     align-items: center;
@@ -158,29 +168,68 @@ const sections = [
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
-  .cl-docs-bar-tab:hover,
-  .cl-docs-bar-tab.is-on,
   .cl-docs-bar-site:hover {
     background: var(--color-surface-sunken);
     color: var(--color-ink);
   }
-  .cl-docs-bar-end {
+  .cl-docs-bar-tabs {
+    box-shadow: inset 0 1px 0 var(--color-line);
+  }
+  /* Inset by a tab's padding, so the first label lines up with the logo. */
+  .cl-docs-bar-tab-list {
     display: flex;
+    gap: 4px;
+    padding: 0 12px;
+    height: var(--docs-tabs-height);
+    list-style: none;
+  }
+  .cl-docs-bar-tab-list li {
+    display: flex;
+  }
+  /* The page tabs' face (ui/tabs): a control-high hover tile, and the
+     current tab's accent underline on the bar's hairline. */
+  .cl-docs-bar-tab {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-left: auto;
+    padding: 0 12px;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--motion-fast) var(--ease-standard);
   }
-  .cl-docs-bar-end :global([data-docs-search-trigger='field']) {
-    display: flex;
-    width: 260px;
+  .cl-docs-bar-tab::before {
+    position: absolute;
+    inset: 8px 0;
+    z-index: -1;
+    border-radius: var(--radius-sm);
+    content: '';
+    transition: background-color var(--motion-fast) var(--ease-standard);
   }
-  .cl-docs-bar-end :global([data-docs-search-trigger='icon']),
-  .cl-docs-bar-end :global(.cl-docs-bar-menu) {
-    display: none;
+  .cl-docs-bar-tab::after {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    content: '';
   }
-  .cl-docs-bar-end :global(.cl-docs-bar-menu) {
-    width: var(--control-md);
-    padding: 0;
+  .cl-docs-bar-tab:hover {
+    color: var(--color-ink);
+  }
+  .cl-docs-bar-tab:not([aria-current='page']):hover::before {
+    background: var(--color-surface-sunken);
+  }
+  .cl-docs-bar-tab[aria-current='page'] {
+    color: var(--color-ink);
+  }
+  .cl-docs-bar-tab[aria-current='page']::after {
+    background: var(--color-accent);
   }
   .cl-docs-bar-menu :global(.cl-docs-bar-menu-close),
   .cl-docs-bar-menu[aria-expanded='true'] :global(.cl-docs-bar-menu-open) {
@@ -200,8 +249,9 @@ const sections = [
     gap: 16px;
     max-height: calc(100dvh - var(--nav-height));
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px 20px 24px;
-    background: var(--color-surface);
+    background: var(--color-site-page);
     border-top: 1px solid var(--color-line);
     box-shadow: var(--shadow-pop);
   }
@@ -213,8 +263,8 @@ const sections = [
     border-bottom: 1px solid var(--color-line);
   }
   @media (max-width: 1279px) {
-    .cl-docs-bar-end :global([data-docs-search-trigger='field']) {
-      width: 200px;
+    .cl-docs-bar-search :global([data-docs-search-trigger='field']) {
+      width: 280px;
     }
     .cl-docs-bar-site {
       display: none;
@@ -222,17 +272,25 @@ const sections = [
   }
   @media (max-width: 899px) {
     .cl-docs-bar-inner {
-      gap: 16px;
+      display: flex;
+      gap: 8px;
       padding: 0 20px;
     }
+    .cl-docs-bar-home {
+      margin-right: auto;
+    }
     .cl-docs-bar-tabs,
-    .cl-docs-bar-end :global([data-docs-search-trigger='field']),
+    .cl-docs-bar-search :global([data-docs-search-trigger='field']),
     .cl-docs-bar-end :global(.cl-docs-bar-app) {
       display: none;
     }
-    .cl-docs-bar-end :global([data-docs-search-trigger='icon']),
+    .cl-docs-bar-search :global([data-docs-search-trigger='icon']),
     .cl-docs-bar-end :global(.cl-docs-bar-menu) {
       display: inline-flex;
+    }
+    .cl-docs-bar-end :global(.cl-docs-bar-menu) {
+      width: var(--control-md);
+      padding: 0;
     }
   }
   @media (max-width: 639px) {

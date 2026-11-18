@@ -1,5 +1,6 @@
 ---
 import ApiEndpoint from '../../../../components/ApiEndpoint.astro';
+import ApiExamples from '../../../../components/ApiExamples.astro';
 import ApiPage from '../../../../layouts/ApiPage.astro';
 import { API_OPERATIONS } from '../../../../lib/api-reference';
 
@@ -27,4 +28,5 @@ const { operation, previous, next } = Astro.props;
   next={next}
 >
   <ApiEndpoint operation={operation} />
+  <ApiExamples slot="aside" operation={operation} />
 </ApiPage>

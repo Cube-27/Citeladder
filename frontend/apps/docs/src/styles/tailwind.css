@@ -8,6 +8,20 @@
 @source '../../../../components/ui';
 @source '../../../../components/content';
 
+/* The bar is two rows (the logo row and the section tabs) from 900px, one
+   below; the rail, the examples and in-page anchors sit under it. */
+:root[data-public-surface] {
+  --docs-tabs-height: 44px;
+  --docs-bar-height: calc(var(--nav-height) + var(--docs-tabs-height));
+  --marketing-nav-offset: var(--docs-bar-height);
+}
+
+@media (max-width: 899px) {
+  :root[data-public-surface] {
+    --docs-bar-height: var(--nav-height);
+  }
+}
+
 /* Page to page, the docs cross-fade (the browser's default root fade) while
    the sticky top bar holds still; reduced motion swaps pages instantly. */
 @media (prefers-reduced-motion: no-preference) {

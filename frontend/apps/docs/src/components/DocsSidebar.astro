@@ -68,7 +68,7 @@ const sections: Section[] = inApi
                 href={link.href}
                 aria-current={current(link.href) ? 'page' : undefined}
               >
-                {link.method && <ApiMethod method={link.method} compact />}
+                {link.method && <ApiMethod method={link.method} />}
                 <span class="cl-docs-side-text">{link.title}</span>
               </a>
             </li>
