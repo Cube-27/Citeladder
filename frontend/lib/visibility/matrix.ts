@@ -17,8 +17,8 @@ export type MatrixMetric = (typeof MATRIX_METRICS)[number]['value'];
 
 export type CellReading =
   | { kind: 'not_run' }
-  | { kind: 'too_few' }
-  | { kind: 'not_measured' }
+  | { kind: 'too_few'; answers: number }
+  | { kind: 'not_measured'; answers: number }
   | { kind: 'value'; value: number; text: string; answers: number };
 
 const ORDER: readonly MatrixDimension[] = ['engine', 'topic', 'market', 'brand'];
@@ -56,13 +56,13 @@ export function cellReading(cell: MatrixCell | undefined, metric: MatrixMetric):
   const { answers } = cell;
   if (metric === 'sentiment') {
     const reading = sentimentReading(cell.sentiment);
-    if (reading.kind === 'too_few') return { kind: 'too_few' };
+    if (reading.kind === 'too_few') return { kind: 'too_few', answers };
     const net = cell.sentiment?.net_sentiment ?? null;
-    if (reading.kind !== 'value' || net === null) return { kind: 'not_measured' };
+    if (reading.kind !== 'value' || net === null) return { kind: 'not_measured', answers };
     return { kind: 'value', value: net, text: reading.net, answers };
   }
   const value = cell[metric];
-  if (value === null) return { kind: 'not_measured' };
+  if (value === null) return { kind: 'not_measured', answers };
   const text = metric === 'avg_position' ? formatPositionExact(value) : formatRate(value);
   return { kind: 'value', value, text, answers };
 }
@@ -91,7 +91,7 @@ export function matrixCsvRows(
       rowLabels[i] ?? '',
       columnLabels[j] ?? '',
       reading.kind === 'value' ? reading.text : READING_LABELS[reading.kind],
-      reading.kind === 'value' ? reading.answers : '',
+      reading.kind === 'not_run' ? '' : reading.answers,
     ]),
   );
 }

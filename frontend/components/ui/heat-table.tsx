@@ -82,13 +82,13 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
   return (
     <div className={textRole('caption', 'flex items-center gap-2')}>
       <span className="flex-1">{note}</span>
-      Low
+      <span>Low</span>
       <i
         aria-hidden
         className="h-1.5 w-[120px] rounded-full"
         style={{ background: `linear-gradient(90deg, ${heat(0)}, ${heat(1)})` }}
       />
-      High
+      <span>High</span>
     </div>
   );
 }
@@ -166,11 +166,11 @@ export function RankLegend() {
     <div className={textRole('caption', 'flex items-center gap-4')}>
       <span className="inline-flex items-center gap-2">
         <i aria-hidden className="rounded-mark bg-well size-2.5" />
-        Other brands
+        <span>Other brands</span>
       </span>
       <span className="inline-flex items-center gap-2">
         <i aria-hidden className="rounded-mark bg-accent-wash size-2.5" />
-        Your brand
+        <span>Your brand</span>
       </span>
     </div>
   );

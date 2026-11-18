@@ -38,13 +38,28 @@ async function latestRun(db: Database, scope: RunScope, query: Query, own: boole
   return runs.at(-1) ?? null;
 }
 
+/** The selection's market: a named run brings its own (as `selectionRuns` reads it). */
+async function stripMarket(db: Database, scope: RunScope, query: Query) {
+  if (query.selectionMode === 'range' || query.auditId === null) return scope.marketId ?? null;
+  const named = await db
+    .selectFrom('audits')
+    .select('market_id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', query.auditId)
+    .executeTakeFirst();
+  return named ? named.market_id : (scope.marketId ?? null);
+}
+
 export async function getVisibilityMatrix(
   db: Database,
   scope: RunScope,
   query: Query,
 ): Promise<VisibilityMatrix> {
-  const markets = await listMarkets(db, scope);
-  const stripId = scope.marketId ?? null;
+  const [markets, stripId] = await Promise.all([
+    listMarkets(db, scope),
+    stripMarket(db, scope, query),
+  ]);
   const strip = markets.findIndex((market) => market.id === stripId);
   if (strip === -1) throw new AnalysisNotFoundError('Market not found');
   const latest = await Promise.all(
@@ -61,7 +76,7 @@ export async function getVisibilityMatrix(
       .where('project_id', '=', scope.projectId)
       .execute(),
     auditIds.length === 0
-      ? []
+      ? Promise.resolve([])
       : db
           .selectFrom('audit_topic_metrics')
           .select(['audit_id', 'topic_id', 'topic_name', 'metrics'])
@@ -84,7 +99,7 @@ export async function getVisibilityMatrix(
               toAt: null,
               topicId: null,
             })
-          : null,
+          : Promise.resolve(null),
       ),
     ),
     rankingMarks(db, scope),

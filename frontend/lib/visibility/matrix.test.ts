@@ -56,9 +56,9 @@ describe('performance matrix cells', () => {
       cellReading(measured({ avg_position: 2.345 }), 'avg_position'),
     ]).toEqual([
       { kind: 'not_run' },
-      { kind: 'too_few' },
-      { kind: 'not_measured' },
-      { kind: 'not_measured' },
+      { kind: 'too_few', answers: 12 },
+      { kind: 'not_measured', answers: 12 },
+      { kind: 'not_measured', answers: 12 },
       { kind: 'value', value: 40, text: '+40', answers: 12 },
       { kind: 'value', value: 2.345, text: expect.stringMatching(/^2\.3/), answers: 12 },
     ]);
@@ -67,10 +67,12 @@ describe('performance matrix cells', () => {
   it('exports each cell as row, column, value and answers', () => {
     const readings = [
       [cellReading(measured({}), 'mention_rate'), cellReading({ kind: 'not_run' }, 'mention_rate')],
+      [cellReading(measured({ answers: 3 }), 'avg_position')],
     ];
-    expect(matrixCsvRows(readings, ['ChatGPT'], ['Acme', 'Globex'])).toEqual([
+    expect(matrixCsvRows(readings, ['ChatGPT', 'Gemini'], ['Acme', 'Globex'])).toEqual([
       ['ChatGPT', 'Acme', '25.0%', 12],
       ['ChatGPT', 'Globex', 'Not run', ''],
+      ['Gemini', 'Acme', 'Not measured', 3],
     ]);
   });
 });

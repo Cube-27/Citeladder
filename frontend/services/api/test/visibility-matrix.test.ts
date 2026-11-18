@@ -178,7 +178,7 @@ describe('GET /visibility/matrix', () => {
     await fixtures.competitor(tenant.projectId, { name: 'Globex', domains: ['globex.example'] });
     const pricing = await topic(db, tenant.projectId, 'Pricing & plans');
     const onboarding = await topic(db, tenant.projectId, 'Onboarding');
-    await newMarket(tenant);
+    const uk = await newMarket(tenant);
     const whole = slice({
       answers: 7,
       brand: 2,
@@ -261,6 +261,17 @@ describe('GET /visibility/matrix', () => {
       .body as unknown as Matrix;
     expect(narrowed.axes.engine).toEqual([{ logical_engine: 'chatgpt', answers: 4 }]);
     expect(narrowed.grids.market_brand![0]![1]).toMatchObject({ answers: 4, share_of_voice: 0.5 });
+
+    // A named run from another market reads under its own market, not the default one.
+    const ukRun = await run(tenant, { ...gemini, per_engine: { gemini } });
+    await db.updateTable('audits').set({ market_id: uk }).where('id', '=', ukRun).execute();
+    const named = (
+      await get(tenant, route(tenant, '/matrix'), { selection_mode: 'run', audit_id: ukRun })
+    ).body as unknown as Matrix;
+    expect(named.axes.market?.map((m) => [m.label, m.answers])).toEqual([
+      ['United States · English', 7],
+      ['United Kingdom', 1],
+    ]);
   });
 
   it('caps an axis at ten items, the most answered first', async () => {
