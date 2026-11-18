@@ -920,17 +920,10 @@ library of all prompts", choosing "All sets in one library".
 
 ## An absent value is one dash, named by its kind
 
-Every absent value in a value position prints the muted em dash, whatever its
-kind (not measured, unavailable, not applicable, too few…); the kind's word is
-its tooltip and accessible name, so the states stay distinct ([invariant 7](invariants.md#7-unknown-states-remain-distinct)).
-Words stay only for states a reader can act on and for sentence-level empty
-states. `Absence` and `availabilityLabels` (`lib/format.ts`) are the one
-vocabulary owner; [design](design.md) owns the rendering rule.
-
-Source: owner, 18 November 2026: "i have also noticed the error states were
-specifically converted to "-" but it reappeared" and "i really dont like "not
-measured" anywhere it looks ugly and repetitive". This restores #112's rule,
-which #865 deleted.
+An absent value in a value position is the muted em dash whatever its kind,
+with the kind named in its tooltip and accessible name; words stay only for
+states a reader can act on and for sentences. [Design](design.md) owns the
+rendering rule (owner, 2026-11-18).
 
 ## The Actions tree's geometry raises the eager CSS budget
 
