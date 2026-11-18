@@ -3,7 +3,7 @@ title: 'Meet the Agent'
 description: "Work through a question or Action and turn your project's saved evidence into a reviewable deliverable."
 group: 'Improve with Agent'
 order: 200
-updated: '2026-11-10'
+updated: '2026-11-18'
 ---
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
@@ -17,7 +17,7 @@ There are four useful entry points:
 - **New chat:** describe a question and the outcome you want.
 - **Work on this:** start from an Action, with its target and diagnosis attached.
 - **Ask agent:** carry selected references from a supported evidence screen into a new conversation.
-- **Agent panel:** on a Dashboard screen, open the Agent from the top bar to chat beside what you are viewing. On Keyword Research, the rows you are viewing are attached for you; on a Site Health issue, the panel starts with a question about that issue. Choose **Open in Agent** to continue the same chat in the full workspace.
+- **Agent panel:** on a Dashboard screen, open the Agent from the top bar to chat beside what you are viewing. On Keyword research, the rows you are viewing are attached for you; on a Site Health issue, the panel starts with a question about that issue. Choose **Open in Agent** to continue the same chat in the full workspace.
 
 Before sending, inspect the composer's reference chips. Remove anything that should not be part of the task. The Agent resolves those references against the saved data you can access.
 

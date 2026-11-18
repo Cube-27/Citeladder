@@ -134,7 +134,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/agents',
-    updated: '2026-11-06',
+    updated: '2026-11-18',
     title: 'AI SEO Assistant Grounded in Your Evidence | CiteLadder',
     description:
       'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review. It never publishes on its own.',
@@ -163,7 +163,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Ask the Agent from Site Health, Search Demand or Keyword Research and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation. Each step it reads is shown as it works.',
         points: [
           'The evidence travels with the handoff',
-          'One deliverable per conversation',
+          'Several documents in one conversation',
           'Step-by-step reads shown as it works',
         ],
         media: { kind: 'split', screen: 'agent-chat' },
@@ -248,7 +248,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/mcp',
-    updated: '2026-11-11',
+    updated: '2026-11-18',
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
@@ -273,7 +273,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Ask questions grounded in recorded evidence',
-        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, per-product Commerce metrics, search performance and saved Keyword Research datasets. Every answer comes from a dated record.',
+        body: 'Read visibility results and trends by topic, prompts and their past answers, competitors and suggested competitors, perception, fact checks, query fan-outs, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, per-product Commerce metrics, search performance and saved Keyword Research datasets. Every answer comes from a dated record.',
         points: [
           'Interactive visibility and Site Health views in assistants that show apps',
           'Unavailable data is reported as unavailable, never as zero',

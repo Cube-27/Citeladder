@@ -59,7 +59,7 @@ A connection approved with **Allow changes** also lists change tools, marked **C
 
 `review_competitor_suggestion` accepts or rejects one suggestion that `read_competitors` lists with `view: suggestions`. `prepare_update_prompts` activates, archives or files a selection of prompts under one topic as a single change; every prompt must be in the project, or nothing changes. Prompts cannot be deleted over MCP: delete them in CiteLadder.
 
-To generate prompts, the assistant follows the Prompt Builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the ones you agree to with `confirm_topics`, offers your search data with `read_seed_queries`, then runs `generate_prompts` once you agree to the run. Topic previews and generation spend AI credits. Generated prompts wait in **Prompts** for your review; only the ones you accept are tracked.
+To generate prompts, the assistant follows the Prompt builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the ones you agree to with `confirm_topics`, offers your search data with `read_seed_queries`, then runs `generate_prompts` once you agree to the run. Topic previews and generation spend AI credits. Generated prompts wait in the Prompt builder's **Review** step, which the assistant links to; only the ones you track there are measured.
 
 ## Read records and windows precisely
 

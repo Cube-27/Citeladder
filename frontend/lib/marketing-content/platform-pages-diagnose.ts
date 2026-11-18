@@ -4,7 +4,7 @@ import { type PlatformPage } from './platform-page-types';
 export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/site-health',
-    updated: '2026-11-11',
+    updated: '2026-11-18',
     title: 'AEO Website Audit & Technical SEO Checks | CiteLadder',
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding and a recrawl to verify fixes.',
@@ -45,6 +45,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Grouped issues with every affected page',
           'Structured data validated against visible content',
           'Broken internal links, sitemap and hreflang defects',
+          'Site-wide duplicate titles, missing H1s, dead-end pages and HTTP that never redirects to HTTPS',
           'Internal links: inbound links, depth from home and anchor text',
         ],
         media: { kind: 'card' },
@@ -146,7 +147,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/search-demand',
-    updated: '2026-11-06',
+    updated: '2026-11-18',
     title: 'Search Demand & GSC Opportunity Analysis | CiteLadder',
     description:
       'Find the Search Console queries ranking at positions 4 to 15, pages with weak click-through, two pages competing for one query, and queries rising or falling.',
@@ -238,7 +239,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'How is this different from Keyword Research?',
-        a: 'Search Demand uses your own Search Console data. Keyword Research adds external keyword, competitor and backlink research when you need it.',
+        a: 'Search Demand uses your own Search Console data. Keyword Research adds external keyword, competitor and backlink research when you need it. In the app, Search Demand is the first tab of the Keyword research page.',
       },
       {
         q: 'Why is branded demand kept separate?',

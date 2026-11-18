@@ -16,6 +16,79 @@ An assistant connected over MCP with **Allow changes** can now accept or reject 
 
 **For your team:** see the [API changelog](/api/changelog/) and the [MCP tool reference](/mcp/tools/#make-changes).
 
+## November 18, 2026: A Brand section, and AI Visibility split into pages
+
+The sidebar has a new **Brand** group with three pages: **Insights** (how often answers name you and how you rank), **Perception** (how answers describe you, with **Brand** and, for the pilot, **Fact-checking** tabs) and **Competitors**. The old AI Visibility page is now **Sources** under **Tracking**, beside **Prompts** and **Runs**, with **Domains**, **URLs**, **Read, not cited**, **Query fanouts** and **Ads** tabs. Its Trends, Perception and Accuracy tabs moved to the Brand pages.
+
+Under **Search**, the Keywords page is now **Keyword research**. Search Demand is its first tab, **Demand**, followed by **Overview**, **Keywords**, **Organic competitors** (renamed so it is not confused with Brand → Competitors) and **Backlinks**. The **Prompt builder** has its own page instead of a side drawer, opened from **Add prompts**. The command palette also lists Fact-checking, Query fanouts and Prompt builder.
+
+These docs follow the same split: AI Visibility is now [Audits and runs](/runs/), [Insights](/insights/), [Perception](/perception/), [Competitors](/competitors/) and [Sources](/sources/), and Search Demand is part of [Keyword research](/keyword-research/). Old docs addresses redirect.
+
+**For your team:** start from **Brand → Insights**; open **Sources** for citations and **Runs** to launch or schedule audits.
+
+## November 18, 2026: Win rate, sentiment and topics on Insights
+
+**Insights** leads with your rank among tracked brands and the key figures **Visibility**, **Position**, **Share of voice**, **Sentiment** and **Win rate**, the share of answers naming a tracked brand that name you first. Position now shows to one decimal. **Your brand over time** can plot each of them, with markers on the days your prompt set or an engine's model changed or an Action went live. A new **Topic** filter, a **By topic** table and a **Performance matrix** compare any measure across engines, topics, markets and brands, and **Top rankings** lists the leading brands in each. Topics are the ones each run asked under, so moving a prompt never rewrites history. Win rate and topics apply from the next audit.
+
+**For your team:** use the matrix to find the engine and topic where you trail, then export it as CSV for a report.
+
+[Insights](/insights/)
+
+## November 18, 2026: A page for each competitor, and suggestions you can reject
+
+Each tracked competitor opens its own page with its figures beside yours, a trend against you, the sources cited when it is named and the prompts where it was named instead of you. **Suggested competitors** now also finds businesses that answers keep naming, not only cited domains, and **Reject** stops a suggestion from coming back. The competitor table adds position, win rate and sentiment.
+
+**For your team:** review the suggestions on **Competitors** after each audit and reject the ones that are not real competitors.
+
+[Competitors](/competitors/)
+
+## November 18, 2026: Perception breakdowns and fact-check reviews
+
+**Perception → Brand** adds a headline on how often answers criticise you, theme and sentiment charts, a net sentiment trend, a breakdown by theme, topic, engine, prompt and source, and a theme map comparing you with competitors. Shares need at least 20 classified mentions and otherwise read **Too few classified**.
+
+**Fact-checking** (pilot) adds **Claims over time**, an **All claims** list and a **By fact** view. **Change verdict** records your own verdict beside the model's, which is kept and shown on hover, and accuracy counts yours. **Import facts CSV** adds draft facts from a file, and **Export claims CSV** downloads the claims in your selection.
+
+**For your team:** correct a wrong verdict instead of discounting the accuracy figure, and import your fact sheet in one go.
+
+[Perception](/perception/)
+
+## November 18, 2026: Query fanout trends and answer formats
+
+**Sources → Query fanouts** shows each search's share of all searches, its change since the previous comparable run and the tracked brands it names, with **Top**, **Rising** and **Falling** views. Opening an answer now shows its **Answer formats** (shopping, map, comparison or images), its in-text links and which tracked brand it named first. **Read, not cited** is its own tab, listing your pages engines read but did not cite.
+
+**For your team:** watch **Rising** searches to see what engines look up before naming brands in your category.
+
+[Read query fanouts](/sources/#read-query-fanouts)
+
+## November 18, 2026: Bulk prompt actions and every past answer on a prompt's page
+
+Select prompts on **Prompts** to **Activate**, **Archive**, **Assign topic** or **Delete** them together. The table adds **Topic**, **Status** (which replaces the Enabled switch; enable or disable from the row menu), **Share of voice**, **Sentiment** and **Web search**, and a click anywhere on a row opens the prompt. A prompt's page now ends with **Past answers**, every answer it got, newest first, with the brands named (the first-named in bold), your position, citation, web search and answer formats, filterable by period, engine, market, brand, citation and search use.
+
+**For your team:** use bulk **Assign topic** to tidy topics before reading the new topic views.
+
+[Prompts and topics](/prompts/#work-with-the-prompt-table)
+
+## November 18, 2026: More Site Health checks, with advisories beside issues
+
+New checks find invalid JSON-LD, a sitemap that cannot be parsed, a missing H1, dead-end pages, titles and meta descriptions repeated across the site, and a site still served over plain HTTP. Certificate failures are named (expired, self-signed and so on), and answer-first checks also run on articles, guides and comparison pages. They apply from the next crawl. **Issues** now lists advisories with the issues, tagged **Advisory**, with **Advisory** as a severity filter, and advisory rows in **Actions** are marked too. The crawl menu's option is now **Ignore robots.txt**.
+
+**For your team:** run a new crawl to pick up the new checks.
+
+[Site Health](/site-health/#scored-and-advisory-checks)
+
+## November 18, 2026: Topics and new reads over MCP and the API
+
+MCP visibility reads take a topic, and new reads cover prompt metrics, past answers, query fanouts and a single competitor; the interactive view shows trends for more measures. The public API now exposes answers and sends rate-limit headers, and the API reference describes every visibility field and selection parameter, with a new [Metrics and states](/api/metrics/) page. The in-app Agent's skills use the same new reads, by topic, to explain wins, losses and changes.
+
+**For your team:** see the [MCP tool reference](/mcp/tools/) and the [API changelog](/api/changelog/).
+
+## November 18, 2026: Fixes to Brand pages and tables
+
+- A run of only some selected prompts no longer counts as a prompt-set change or replaces a period's pool, and Perception and fact-check trends now cover the whole period.
+- Commerce topics and runs stay out of the Brand pages, and a topic a run never recorded reads **Topic not recorded** instead of **Not run**.
+- Win rate reads **Not measured** for answers collected before it existed, and capped competitor lists say how many rows they show.
+- Tables fit their frame without blank rows, and low-priority columns hide on narrow screens.
+
 ## November 18, 2026: An API section with a page for every endpoint
 
 The docs now have an **API** section beside the guides and MCP. Its overview covers authentication and scopes, pagination, idempotency, rate limits and errors, and every endpoint has its own page with a description, its parameters, the response fields and copyable cURL, JavaScript and Python examples. Each shared schema has a page too. The old single-page reference now redirects to the endpoint list.
@@ -88,7 +161,7 @@ Audits now run several answers at once instead of one at a time, and a Site Heal
 
 **For your team:** expect runs to finish sooner. Brand mention rates can rise slightly where empty answers used to count as "not mentioned"; compare runs from after this change.
 
-[Run a useful audit](/visibility/#run-a-useful-audit)
+[Run a useful audit](/runs/#run-a-useful-audit)
 
 ## November 2, 2026: Action priority reads High, Medium or Low
 
@@ -161,7 +234,7 @@ Measure the same prompts from more than one country and language. Growth plans c
 
 **For your team:** see where your brand is named in each country you sell in, without mixing one market's answers into another's.
 
-[Read about markets](/visibility/#measure-more-than-one-market)
+[Read about markets](/runs/#measure-more-than-one-market)
 
 ## October 10, 2026: Fact-checking pilot
 
@@ -169,7 +242,7 @@ Workspaces in the fact-checking pilot can confirm brand facts (pricing, plans, i
 
 **For your team:** catch answers that quote an old price or a missing integration, and fix the pages behind them.
 
-[Read about checking facts](/visibility/#check-facts-in-answers-pilot)
+[Read about checking facts](/perception/#check-facts-in-answers-pilot)
 
 ## October 10, 2026: MCP moved to api.citeladder.com
 
@@ -218,7 +291,7 @@ Assistants connected with MCP, and the in-app Agent, can read the same numbers w
 
 **For your team:** see which competitors pay to appear in the answers your buyers read, and on which prompts.
 
-[Read Ads in ChatGPT answers](/visibility/#ads-in-chatgpt-answers)
+[Read Ads in ChatGPT answers](/sources/#ads-in-chatgpt-answers)
 
 ## October 10, 2026: AI crawler logs on paid plans, now with Amazon CloudFront
 
@@ -236,7 +309,7 @@ Assistants connected with MCP, and the in-app Agent, can read the same numbers w
 
 **For your team:** check what answers say about you, not only whether they mention you, and read the quotes before acting on a label.
 
-[Read Perception](/visibility/#read-perception)
+[Read Perception](/perception/#read-the-brand-tab)
 
 ## October 10, 2026: Scheduled audits documented
 
@@ -244,7 +317,7 @@ The AI Visibility guide now explains how to schedule audits from **Runs**: repea
 
 **For your team:** schedule the audits you rely on so your baseline keeps measuring without a manual launch.
 
-[Schedule audits](/visibility/#schedule-audits)
+[Schedule audits](/runs/#schedule-audits)
 
 ## October 10, 2026: Connect an assistant in one click
 
@@ -276,7 +349,7 @@ When a published competitor dataset shows a search a competitor ranks for and yo
 
 **For your team:** review keyword gaps alongside your other Actions and declare the work implemented once the page is live.
 
-[Search Intelligence](/search-intelligence/)
+[Search Intelligence](/keyword-research/)
 
 ## October 8, 2026: Prompts, Actions and the Agent
 

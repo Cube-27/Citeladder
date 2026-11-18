@@ -3,7 +3,7 @@ title: 'Understand your evidence'
 description: 'Read dates, coverage and availability before turning a number into a conclusion.'
 group: 'Start here'
 order: 40
-updated: '2026-10-10'
+updated: '2026-11-18'
 ---
 
 CiteLadder shows saved observations. An audit captures a set of answers; a crawl captures website pages; an integration imports a particular provider report. Each describes what was observed under those conditions.
@@ -19,6 +19,8 @@ CiteLadder shows saved observations. An audit captures a set of answers; a crawl
 | Failed                 | The attempt did not complete successfully                 | Inspect the failure and recovery action |
 | Not applicable         | The check does not apply to this case                     | Do not treat it as a failure            |
 | Historical             | The evidence belongs to an earlier observation            | Keep its original date and context      |
+
+Some views add their own states. A topic reads **Not run** when no run in the selection measured it, and **Topic not recorded** when the run measured its prompts before runs recorded topics. **Too few classified** means a sentiment share would rest on fewer than 20 classified mentions, and **Not reported** means the engine does not say whether it searched the web.
 
 A failed AI answer is not an answer that omitted your brand. A missing traffic report is not zero traffic. These distinctions matter most when reporting percentages.
 
@@ -49,6 +51,10 @@ For each finding, capture:
 - **What supports it:** the answer, page or saved record.
 - **What is missing:** coverage, incompatible scope or unresolved evidence.
 - **What comes next:** a review, an Action or a later measurement.
+
+## Read one answer
+
+Opening an answer shows the answer with its evidence: whether it named your brand and which tracked brand it named first, your owned sources, its citations and the searches the engine ran. **Answer formats** lists the rich parts the answer showed, **Shopping**, **Map**, **Comparison** or **Images**, or **None** when it was text only. **In-text links** counts the distinct pages linked from the answer's prose, kept apart from its citations. Both read unavailable for answers collected before they were recorded and not applicable for engines reached through a provider API, which return no layout.
 
 ## Perception quotes
 

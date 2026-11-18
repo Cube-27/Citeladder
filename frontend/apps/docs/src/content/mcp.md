@@ -20,7 +20,7 @@ The hosted endpoint is `https://api.citeladder.com/mcp`. One address works for e
 
 ## What you can read
 
-The server exposes project discovery, business context, prompts and their metrics, visibility results by topic, sources, query fanouts, competitors and their suggestions, answer perception, fact checks, ads in AI answers, Actions, content comparisons, product metrics from Commerce, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Keyword Research datasets.
+The server exposes project discovery, business context, prompts and their metrics, visibility results by topic, sources, query fanouts, competitors and their suggestions, answer perception, fact checks, ads in AI answers, Actions, content comparisons, product metrics from Commerce, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Keyword research datasets.
 
 `read_ai_shelf` returns each product's visibility, appearances, win rate, position, mentioned and catalog price and merchants over a window of days, the same numbers as the [Products table](/commerce/#read-the-products-table); given one product, it returns that product's page.
 
@@ -28,9 +28,9 @@ Use the [tool reference](/mcp/tools/) for the registered catalog and [example re
 
 ## What you can change
 
-With **Allow changes**, in workspaces where you are a Member or above, the assistant can add, rename and delete topics (a deleted topic's prompts stay, without a topic), add and edit prompts, archive prompts, add and remove competitors, launch and cancel audits, create audit schedules, update an Action's status and declare an Action implemented.
+With **Allow changes**, in workspaces where you are a Member or above, the assistant can add, rename and delete topics (a deleted topic's prompts stay, without a topic), add and edit prompts, activate, archive or file a selection of prompts under a topic, add and remove competitors, accept or reject suggested competitors, launch and cancel audits, create audit schedules, update an Action's status and declare an Action implemented.
 
-Small edits, such as renaming a topic or removing a competitor, run when the assistant calls them, after it has asked you. Larger changes (adding or archiving prompts, launching an audit, creating a schedule, declaring an Action implemented) work in two steps: the assistant shows you a preview, such as the prompts to be added or the prompt runs an audit can use, and the change happens only after you agree. Added prompts are active at once. [Access](/mcp/access/#changes-and-confirmation) explains the rules.
+Small edits, such as renaming a topic or removing a competitor, run when the assistant calls them, after it has asked you. Larger changes (adding prompts, changing a selection of prompts, launching an audit, creating a schedule, declaring an Action implemented) work in two steps: the assistant shows you a preview, such as the prompts to be added or the prompt runs an audit can use, and the change happens only after you agree. Added prompts are active at once. [Access](/mcp/access/#changes-and-confirmation) explains the rules.
 
 ## How it differs from the Agent
 
@@ -40,7 +40,7 @@ The Agent reads evidence through the same catalogue of read tools, limited to it
 
 ## What the connection cannot do
 
-MCP cannot make a change you did not allow or confirm. It cannot start a crawl, sync a provider, buy a Keyword Research dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
+MCP cannot make a change you did not allow or confirm. It cannot start a crawl, sync a provider, buy a Keyword research dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
 
 If evidence is stale or unavailable, refresh or acquire it through the appropriate CiteLadder workflow, then ask the client to read again.
 
