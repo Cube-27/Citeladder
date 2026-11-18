@@ -59,6 +59,52 @@ function useWorkspacePolicy(workspaceId: string | null): PolicyState {
     ...policyQueries.workspace(workspaceId ?? ''),
     enabled: workspaceId !== null,
   });
+  const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
+  const { accept, record } = useRecordAcceptance(workspaceId, pendingRevision);
+
+  // The last attempt may be another workspace's, from before a switch.
+  const acceptError = accept.variables?.workspaceId === workspaceId ? accept.error : null;
+  const sessionPredatesTerms = sessionLacksTerms(acceptError);
+  const leave = useSignOutForChangedTerms(sessionPredatesTerms);
+
+  if (workspaceId === null || query.data?.accepted_at) return { kind: 'open' };
+  const failure = blockingFailure({
+    readError: query.error,
+    leaveError: leave.error,
+    acceptError,
+    sessionPredatesTerms,
+  });
+  if (!failure) return { kind: 'pending' };
+  return {
+    kind: 'failed',
+    error: failure,
+    retry: () => {
+      if (query.error) void query.refetch();
+      else if (leave.error) leave.mutate();
+      else if (pendingRevision) record(workspaceId, pendingRevision);
+    },
+    retrying: query.isFetching || accept.isPending || leave.isPending,
+  };
+}
+
+function blockingFailure({
+  readError,
+  leaveError,
+  acceptError,
+  sessionPredatesTerms,
+}: Readonly<{
+  readError: unknown;
+  leaveError: unknown;
+  acceptError: unknown;
+  sessionPredatesTerms: boolean;
+}>): unknown {
+  // Leaving, or re-reading a republished revision, is still loading.
+  const settling = sessionPredatesTerms || revisionChanged(acceptError);
+  return readError ?? leaveError ?? (settling ? null : acceptError);
+}
+
+/** Records the acceptance of a workspace's pending revision, once per workspace and revision. */
+function useRecordAcceptance(workspaceId: string | null, pendingRevision: string | null) {
   const client = useQueryClient();
   const accept = useMutation(policyMutations.accept());
   const { mutate } = accept;
@@ -81,8 +127,7 @@ function useWorkspacePolicy(workspaceId: string | null): PolicyState {
       ),
     [client, mutate],
   );
-  const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
-  // Once per workspace and revision: a refusal stops here rather than retrying in a loop.
+  // A refusal stops here rather than retrying in a loop.
   const recorded = useRef<string | null>(null);
   useEffect(() => {
     if (!workspaceId || !pendingRevision) return;
@@ -91,25 +136,5 @@ function useWorkspacePolicy(workspaceId: string | null): PolicyState {
     recorded.current = attempt;
     record(workspaceId, pendingRevision);
   }, [record, workspaceId, pendingRevision]);
-
-  // The last attempt may be another workspace's, from before a switch.
-  const acceptError = accept.variables?.workspaceId === workspaceId ? accept.error : null;
-  const sessionPredatesTerms = sessionLacksTerms(acceptError);
-  const leave = useSignOutForChangedTerms(sessionPredatesTerms);
-
-  if (workspaceId === null || query.data?.accepted_at) return { kind: 'open' };
-  // Leaving, or re-reading a republished revision, is still loading.
-  const settling = sessionPredatesTerms || revisionChanged(acceptError);
-  const failure = query.error ?? leave.error ?? (settling ? null : acceptError);
-  if (!failure) return { kind: 'pending' };
-  return {
-    kind: 'failed',
-    error: failure,
-    retry: () => {
-      if (query.error) void query.refetch();
-      else if (leave.error) leave.mutate();
-      else if (pendingRevision) record(workspaceId, pendingRevision);
-    },
-    retrying: query.isFetching || accept.isPending || leave.isPending,
-  };
+  return { accept, record };
 }
