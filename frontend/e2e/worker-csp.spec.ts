@@ -28,7 +28,7 @@ test('built app hydrates root, deep links and direct HTML while blocking injecte
     }),
   );
   for (const path of ['/', '/login', '/index.html']) {
-    const response = await page.goto(`https://127.0.0.1:8793${path}`);
+    const response = await page.goto(`http://127.0.0.1:8793${path}`);
     expect(response?.headers()['content-security-policy']).toBeTruthy();
     expect(response?.headers()['cache-control']).toBe('no-cache');
     expect(response?.headers()['x-robots-tag']).toContain('noindex');

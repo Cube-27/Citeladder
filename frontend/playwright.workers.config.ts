@@ -9,7 +9,7 @@ export default defineConfig({
     {
       name: 'app',
       testMatch: 'performance-states.spec.ts',
-      use: { baseURL: 'https://127.0.0.1:8793' },
+      use: { baseURL: 'http://127.0.0.1:8793' },
     },
     {
       name: 'marketing',
@@ -24,10 +24,13 @@ export default defineConfig({
   outputDir: 'test-results/workers',
   use: { ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   webServer: [
+    // The app listens on plain HTTP: wrangler's local TLS listener stopped answering
+    // mid-way through the app's ~80-chunk first load. `--upstream-protocol https`
+    // still hands the Worker https:// URLs; production TLS ends at Cloudflare's edge.
     {
       command:
-        'pnpm exec wrangler dev -c apps/app/wrangler.jsonc --local --ip 127.0.0.1 --port 8793 --local-upstream 127.0.0.1 --local-protocol https --upstream-protocol https --var PUBLIC_APP_HOST:127.0.0.1 --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters',
-      url: 'https://127.0.0.1:8793/health',
+        'pnpm exec wrangler dev -c apps/app/wrangler.jsonc --local --ip 127.0.0.1 --port 8793 --local-upstream 127.0.0.1 --local-protocol http --upstream-protocol https --var PUBLIC_APP_HOST:127.0.0.1 --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters',
+      url: 'http://127.0.0.1:8793/health',
       ignoreHTTPSErrors: true,
     },
     {

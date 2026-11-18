@@ -226,8 +226,8 @@ failing attempt's. Fix the test; never raise the retries.
 For browser enforcement of production Worker CSP, build `pnpm build:app` and
 `pnpm build:marketing` with explicit public origins and the disposable marketing
 analytics ID `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-CONSENTTEST`, then run `pnpm test:workers`
-from `frontend/`. This separate suite starts local HTTPS Workerd on ports
-8793/8794, checks built HTML and hydration, and proves injected inline scripts
+from `frontend/`. This separate suite starts local Workerd on ports
+8793/8794 (each Worker sees `https://` request URLs), checks built HTML and hydration, and proves injected inline scripts
 are blocked. It also runs the existing authenticated Performance and analytics
 consent checks against the built Workers. It uses disposable upstream settings and mocks analytics requests;
 it does not enable or test a live checkout/provider. CI runs it as the

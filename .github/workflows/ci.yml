@@ -348,7 +348,7 @@ jobs:
           retention-days: 7
 
   # Production CSP and analytics consent, enforced by the built app and
-  # marketing Workers under local HTTPS Workerd (playwright.workers.config.ts).
+  # marketing Workers under local Workerd (playwright.workers.config.ts).
   # Built with the accepted public origins, as deployed, plus the disposable
   # analytics ID the consent check asserts.
   workers:
