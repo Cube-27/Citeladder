@@ -219,103 +219,101 @@ function KeywordResearch({ tab, setTab }: Readonly<{ tab: Tab; setTab: (tab: Pag
     </Button>
   ) : undefined;
   return (
-    <>
-      <KeywordResearchFrame
-        actions={
-          <PageActions
-            hasDatasets={!empty}
-            onReview={actions.review}
-            onCost={() => setCostOpen(true)}
-          />
-        }
-        controls={pageControls({
-          data,
+    <KeywordResearchFrame
+      actions={
+        <PageActions
+          hasDatasets={!empty}
+          onReview={actions.review}
+          onCost={() => setCostOpen(true)}
+        />
+      }
+      controls={pageControls({
+        data,
+        tab,
+        datasets,
+        // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
+        collection: empty ? null : collection,
+        onSeed: actions.onSeed,
+        onMatch: actions.onMatch,
+        onExpand: actions.onExpand,
+        savedView: savedViewFilters({
+          scopes,
+          scope: activeScope,
+          markets,
+          market: activeMarket,
           tab,
-          datasets,
-          // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
-          collection: empty ? null : collection,
-          onSeed: actions.onSeed,
-          onMatch: actions.onMatch,
-          onExpand: actions.onExpand,
-          savedView: savedViewFilters({
-            scopes,
-            scope: activeScope,
-            markets,
-            market: activeMarket,
-            tab,
-            onScope: (value) => {
-              setScope(value);
-              setComparison(null);
-            },
-            onMarket: (value) => {
-              setMarket(value);
-              setComparison(null);
-            },
-          }),
-        })}
-      >
-        <Stack gap="workspace" className="min-w-0">
-          <UnavailableNotice data={data} />
-          <RunNotice
-            run={data.latest_run}
-            onCancel={actions.cancel}
-            onReview={actions.analysis}
-            cancelling={cancelMutation.isPending}
+          onScope: (value) => {
+            setScope(value);
+            setComparison(null);
+          },
+          onMarket: (value) => {
+            setMarket(value);
+            setComparison(null);
+          },
+        }),
+      })}
+    >
+      <Stack gap="workspace" className="min-w-0">
+        <UnavailableNotice data={data} />
+        <RunNotice
+          run={data.latest_run}
+          onCancel={actions.cancel}
+          onReview={actions.analysis}
+          cancelling={cancelMutation.isPending}
+        />
+        {empty ? (
+          RESEARCH_TABS.map((value) => (
+            <TabPanel key={value} value={value} className="min-w-0">
+              <NoAnalysisYet tab={value} action={firstRun} />
+            </TabPanel>
+          ))
+        ) : (
+          <ResearchPanels
+            data={data}
+            datasets={datasets}
+            collection={collection}
+            onOpen={openComparison}
+            onSelect={setComparison}
           />
-          {empty ? (
-            RESEARCH_TABS.map((value) => (
-              <TabPanel key={value} value={value} className="min-w-0">
-                <NoAnalysisYet tab={value} action={firstRun} />
-              </TabPanel>
-            ))
-          ) : (
-            <ResearchPanels
-              data={data}
-              datasets={datasets}
-              collection={collection}
-              onOpen={openComparison}
-              onSelect={setComparison}
-            />
-          )}
-          <Drawer
-            open={citationOpen}
-            onOpenChange={setCitationOpen}
-            title="Match Visibility citations"
-            description="Find the sources AI answers cite that already link to your website."
-          >
-            <SearchIntelligenceCitationMatcher
-              key={citationOrigin}
-              datasets={datasets}
-              targetOrigin={citationOrigin}
-              onDerived={() => setCitationOpen(false)}
-            />
-          </Drawer>
-          <CostDetails
-            open={costOpen}
-            onOpenChange={setCostOpen}
-            runs={runsQuery.data}
-            pending={runsQuery.isPending}
-            error={runsQuery.error}
-            onRetry={() => void runsQuery.refetch()}
+        )}
+        <Drawer
+          open={citationOpen}
+          onOpenChange={setCitationOpen}
+          title="Match Visibility citations"
+          description="Find the sources AI answers cite that already link to your website."
+        >
+          <SearchIntelligenceCitationMatcher
+            key={citationOrigin}
+            datasets={datasets}
+            targetOrigin={citationOrigin}
+            onDerived={() => setCitationOpen(false)}
           />
-          <SearchIntelligenceReviewDrawer
-            key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
-            open={drawerOpen}
-            action={action}
-            readiness={data}
-            onOpenChange={setDrawerOpen}
-            onReview={(payload) =>
-              reviewMutation.mutateAsync(payload) as Promise<SearchIntelligenceRun>
-            }
-            onConfirm={async (runId) => {
-              await confirmMutation.mutateAsync(runId);
-              setDrawerOpen(false);
-            }}
-            busy={reviewMutation.isPending || confirmMutation.isPending}
-          />
-        </Stack>
-      </KeywordResearchFrame>
-    </>
+        </Drawer>
+        <CostDetails
+          open={costOpen}
+          onOpenChange={setCostOpen}
+          runs={runsQuery.data}
+          pending={runsQuery.isPending}
+          error={runsQuery.error}
+          onRetry={() => void runsQuery.refetch()}
+        />
+        <SearchIntelligenceReviewDrawer
+          key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
+          open={drawerOpen}
+          action={action}
+          readiness={data}
+          onOpenChange={setDrawerOpen}
+          onReview={(payload) =>
+            reviewMutation.mutateAsync(payload) as Promise<SearchIntelligenceRun>
+          }
+          onConfirm={async (runId) => {
+            await confirmMutation.mutateAsync(runId);
+            setDrawerOpen(false);
+          }}
+          busy={reviewMutation.isPending || confirmMutation.isPending}
+        />
+      </Stack>
+    </KeywordResearchFrame>
   );
 }
 
