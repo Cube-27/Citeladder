@@ -2,6 +2,7 @@ import { CheckCircle2, Quote, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
@@ -65,12 +66,35 @@ function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidenc
   );
 }
 
+/** The tracked business the answer named first (AV-7); untracked names never count. */
+function namedFirst(first: ExecutionEvidence['first_named']) {
+  switch (first.kind) {
+    case 'brand':
+    case 'competitor':
+      return (
+        <Inline gap="tight">
+          <BrandMark name={first.name} placement="inline" />
+          {first.name}
+        </Inline>
+      );
+    case 'none':
+      return 'No tracked brand';
+    case 'unavailable':
+      return 'Unavailable';
+    default: {
+      const unreachable: never = first;
+      return unreachable;
+    }
+  }
+}
+
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
     <FactList
       layout="metrics"
       facts={[
         { label: 'Brand', value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned' },
+        { label: 'Named first', value: namedFirst(evidence.first_named) },
         { label: 'Owned sources', value: evidence.owned_citation_count },
         { label: 'Citations', value: evidence.citation_count },
         {

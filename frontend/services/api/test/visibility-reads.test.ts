@@ -25,9 +25,16 @@ function aggregate(input: {
   owned?: number;
   globex?: number;
   expected?: number;
+  // Answers naming a tracked business, and those naming the brand first.
+  wins?: { answers: number; brand: number };
 }): Record<string, unknown> {
-  const { completed, brand, owned = 0, globex = 0 } = input;
+  const { completed, brand, owned = 0, globex = 0, wins } = input;
+  const tally = wins && {
+    answers: wins.answers,
+    first: { 'Acme Corp': wins.brand, Globex: wins.answers - wins.brand },
+  };
   return {
+    ...(tally && { win_tally: tally, per_topic_win_tally: { Shoes: tally } }),
     total_completed: completed,
     brand_mention_count: brand,
     owned_citation_response_count: owned,
@@ -156,7 +163,13 @@ describe('GET /visibility', () => {
       tenant,
       '2026-03-08T00:00:00Z',
       {
-        ...aggregate({ completed: 4, brand: 3, owned: 2, globex: 1 }),
+        ...aggregate({
+          completed: 4,
+          brand: 3,
+          owned: 2,
+          globex: 1,
+          wins: { answers: 3, brand: 1 },
+        }),
         comparison: aggregate({ completed: 2, brand: 2 }),
       },
       { visibilityScore: 70 },
@@ -197,12 +210,32 @@ describe('GET /visibility', () => {
       website_url: 'https://acme.example',
       visibility_delta: 25,
       gap_count: null,
+      win_count: 1,
+      win_answers: 3,
+      win_rate: 1 / 3,
     });
     expect(globex).toMatchObject({
       name: 'Globex',
       website_url: 'https://globex.example',
       gap_count: 1,
+      win_count: 2,
+      win_answers: 3,
+      win_rate: 2 / 3,
     });
+    expect(body.per_engine).toMatchObject([
+      { logical_engine: 'chatgpt', win_count: 1, win_answers: 3 },
+    ]);
+    expect(body.win_by_topic).toEqual([
+      { topic: 'Shoes', win_count: 1, win_answers: 3, win_rate: 1 / 3 },
+    ]);
+    // The baseline run predates the derivation: unavailable, not zero.
+    const before = await get(tenant, route(tenant), { audit_id: baseline });
+    expect((before.body.rankings as Row[])[0]).toMatchObject({
+      win_count: null,
+      win_answers: null,
+      win_rate: null,
+    });
+    expect(before.body.win_by_topic).toEqual([]);
   });
 
   it("reads a cohort's own aggregate, and a single engine's slice has no stored score", async () => {
@@ -295,12 +328,12 @@ describe('GET /visibility', () => {
     const first = await measuredRun(
       pooled,
       '2026-04-02T00:00:00Z',
-      aggregate({ completed: 4, brand: 2 }),
+      aggregate({ completed: 4, brand: 2, wins: { answers: 3, brand: 1 } }),
     );
     const second = await measuredRun(
       pooled,
       '2026-04-05T00:00:00Z',
-      aggregate({ completed: 4, brand: 4 }),
+      aggregate({ completed: 4, brand: 4, wins: { answers: 4, brand: 4 } }),
     );
 
     const { status, body } = await get(pooled, route(pooled), {
@@ -319,6 +352,15 @@ describe('GET /visibility', () => {
       visibility_score: null,
       coverage: { requested: 8, completed: 8, rate: 1 },
     });
+    // Win counts pool as counts, never as a mean of rates.
+    expect((body.rankings as Row[]).find((row) => row.is_brand)).toMatchObject({
+      win_count: 5,
+      win_answers: 7,
+      win_rate: 5 / 7,
+    });
+    expect(body.win_by_topic).toEqual([
+      { topic: 'Shoes', win_count: 5, win_answers: 7, win_rate: 5 / 7 },
+    ]);
     // Citation totals describe one run, so a pooled period omits them.
     expect(body).not.toHaveProperty('citation_totals');
     expect(body.comparison).toMatchObject({

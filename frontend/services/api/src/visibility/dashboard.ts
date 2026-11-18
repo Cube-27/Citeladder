@@ -27,8 +27,10 @@ import {
   type VisibilityComparison,
 } from './comparison.ts';
 import {
+  brandWins,
   cohortMetrics,
   engineMetrics,
+  topicWins,
   isComplete,
   measurementCounts,
   metricCount,
@@ -247,6 +249,7 @@ function engineRow(engine: string, metrics: Metrics): EngineRow {
     counts: measurementCounts(metrics),
     search_use_rate: metricNumber(metrics.search_use_rate),
     visibility_score: promptPerformance(metrics),
+    ...brandWins(metrics),
   };
 }
 
@@ -312,6 +315,7 @@ async function runView(
       rankings,
       per_engine: engine === null ? engineRows(metrics) : [engineRow(engine, metrics)],
       avg_position: metricNumber(metrics.avg_position),
+      win_by_topic: topicWins([metrics]),
       citation_totals: citationTotals(metrics),
       created_at: wireUtc(run.snapshotCreatedAt),
     },
@@ -396,7 +400,11 @@ function rangeEngines(
         };
       }
       const point = foldBucket(lastOf(engineSources).completedAt, engineSources);
+      const brand = point.rankings.find((row) => row.is_brand);
       return {
+        win_count: brand?.win_count ?? null,
+        win_answers: brand?.win_answers ?? null,
+        win_rate: brand?.win_rate ?? null,
         logical_engine: engine,
         total_completed: point.counts!.responses,
         counts: point.counts,
@@ -540,6 +548,7 @@ async function rangeVisibility(
     visibility_score: null,
     // Pooled like the counts above; the last run's own values would describe one run only.
     avg_position: point.avg_position ?? null,
+    win_by_topic: topicWins(sources.map((source) => source.metrics)),
     model_provenance: point.model_provenance ?? [],
     citation_totals: undefined,
     rankings,

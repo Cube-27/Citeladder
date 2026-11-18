@@ -6,6 +6,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { fanoutProjection } from '../src/analysis/fanout.ts';
+import { firstNamedColumns, type AnswerFirstNamed } from '../src/analysis/win-rate.ts';
 
 import type { Database } from '../src/db/database.ts';
 import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
@@ -49,6 +50,8 @@ export type ExecutionInput = {
     brandFirstOffset?: number | null;
     ownedCited?: boolean;
     avgPosition?: number | null;
+    // Omitted: analysed before the win-rate derivation existed.
+    firstNamed?: AnswerFirstNamed;
     searchUsed?: boolean;
     searchQueryCount?: number;
     score?: Json;
@@ -411,6 +414,7 @@ export class VisibilityFixtures extends Fixtures {
         unintended_domain_cited: false,
         citation_count: citations.length,
         avg_position: spec.avgPosition ?? null,
+        ...(spec.firstNamed && firstNamedColumns(spec.firstNamed)),
         search_used: spec.searchUsed ?? false,
         search_query_count: spec.searchQueryCount ?? 0,
         ...fanoutProjection({

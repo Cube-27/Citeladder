@@ -17,6 +17,7 @@ import { classifySourceDomain, classifySourceOrigin } from './opportunities/sour
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
 import { answerAds, persistAds } from './ads.ts';
+import { firstNamed, firstNamedColumns } from './win-rate.ts';
 
 /** A retrieved URL is never provider-resolved, so it keeps no resolved URL. */
 function retrievedIdentity(url: string) {
@@ -240,6 +241,13 @@ export async function analyzeResponse(
       // Set only when ads apply and the envelope was read: zero ads is then an observation.
       ads_parser_version: ads ? policy.audits.ads_versions.parser_version : null,
       avg_position: score.brand_position,
+      ...firstNamedColumns(
+        firstNamed({
+          brandName: config.brandName,
+          brandOffset: score.brand_first_offset,
+          competitorOffsets: score.competitor_first_offsets,
+        }),
+      ),
       score: JSON.stringify(score),
       entity_assessments: JSON.stringify(assessments),
       retrieval_observed: retrieved !== null,

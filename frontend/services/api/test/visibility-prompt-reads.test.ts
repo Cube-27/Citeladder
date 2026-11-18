@@ -35,6 +35,7 @@ describe('GET /visibility/prompts', () => {
         avgPosition: 1,
         brandMentions: ['Acme Corp'],
         competitorMentions: ['Globex'],
+        firstNamed: { kind: 'brand', name: 'Acme Corp' },
       },
     });
     await fixtures.execution(tenant, {
@@ -45,6 +46,7 @@ describe('GET /visibility/prompts', () => {
         brandMentioned: false,
         score: { competitors_mentioned: ['Globex'] },
         competitorMentions: ['Globex', 'Initech'],
+        firstNamed: { kind: 'competitor', name: 'Globex' },
       },
     });
     await fixtures.execution(tenant, {
@@ -75,6 +77,9 @@ describe('GET /visibility/prompts', () => {
       counts: { responses: 2, expected: 3, failed: 1, not_run: 0, brand_responses: 1 },
       visibility_rate: 0.5,
       avg_position: 1,
+      win_count: 1,
+      win_answers: 2,
+      win_rate: 0.5,
       comparison_status: 'no_baseline',
     });
     // Every brand the answers named, most answers first: competitors count too.

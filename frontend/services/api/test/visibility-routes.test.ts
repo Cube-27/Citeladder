@@ -79,6 +79,7 @@ describe('GET /executions/{execution_id}', () => {
       analysis: {
         brandMentioned: true,
         brandFirstOffset: 4,
+        firstNamed: { kind: 'competitor', name: 'Globex' },
         score: { competitors_mentioned: ['Globex'] },
         createdAt: new Date('2026-03-01T10:20:30.123Z'),
         citations: [
@@ -101,6 +102,7 @@ describe('GET /executions/{execution_id}', () => {
       search_surface_outcome: 'aio_present_no_text',
       brand_mentioned: true,
       brand_first_offset: 4,
+      first_named: { kind: 'competitor', name: 'Globex' },
       competitors_mentioned: ['Globex'],
       // An LLM execution has no observed surface: null, not an empty one.
       search_surface: null,
@@ -116,6 +118,10 @@ describe('GET /executions/{execution_id}', () => {
     const auditId = await fixtures.audit(tenant);
     const { taskId } = await fixtures.execution(tenant, { auditId });
 
+    // Analysed before the win-rate derivation: unavailable, never a guessed winner.
+    expect((await get(tenant, `/api/v1/executions/${taskId}`)).body.first_named).toEqual({
+      kind: 'unavailable',
+    });
     const foreign = await get(outsider, `/api/v1/executions/${taskId}`);
     expect(foreign.status).toBe(404);
     expect(record(foreign.body.error).message).toBe('Execution not found');

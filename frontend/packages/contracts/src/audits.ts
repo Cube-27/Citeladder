@@ -343,6 +343,16 @@ export const surfaceRatesSchema = responseObject({
   competitor_mention_rates: z.array(aioCompetitorRateSchema),
 });
 
+// The tracked business an answer named first (AV-7). `none`: it named no tracked
+// business (not applicable); `unavailable`: analysed before this was derived.
+export const firstNamedSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('brand'), name: z.string() }),
+  responseObject({ kind: z.literal('competitor'), name: z.string() }),
+  responseObject({ kind: z.literal('none') }),
+  responseObject({ kind: z.literal('unavailable') }),
+]);
+export type FirstNamed = z.infer<typeof firstNamedSchema>;
+
 // One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
@@ -381,6 +391,7 @@ export const executionEvidenceSchema = responseObject({
   search_used: z.boolean(),
   search_query_count: z.number().int(),
   avg_position: z.number().nullable(),
+  first_named: firstNamedSchema,
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
   competitors_mentioned: z.array(z.string()),

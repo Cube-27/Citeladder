@@ -9,6 +9,7 @@
 import type { measurementCountsSchema, rankingRowSchema } from '@citeladder/contracts/visibility';
 import type { z } from 'zod';
 
+import { storedWinTally, sumWinCounts, winCounts } from '../analysis/win-rate.ts';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
 
@@ -205,6 +206,7 @@ export function rankingRows(metrics: Metrics): RankingRow[] {
   const counts = storedMentionCounts(metrics);
   const presences = sum(Object.values(counts));
   const positions = metricObject(metrics.average_positions);
+  const wins = storedWinTally(metrics.win_tally);
   const row = (
     name: string,
     isBrand: boolean,
@@ -225,6 +227,7 @@ export function rankingRows(metrics: Metrics): RankingRow[] {
     matched_visibility_delta: null,
     matched_response_count: null,
     avg_position: metricNumber(positions[name]),
+    ...winCounts(wins, name),
   });
   return sortRankings([
     row(
@@ -251,6 +254,28 @@ export function rankingRows(metrics: Metrics): RankingRow[] {
 export function cohortMetrics(stored: unknown, cohort: string): Metrics {
   const metrics = metricObject(stored);
   return cohort === policy.visibility.core_cohort ? metrics : metricObject(metrics[cohort]);
+}
+
+/** The brand's win counts in one aggregate. */
+export function brandWins(metrics: Metrics) {
+  return winCounts(storedWinTally(metrics.win_tally), brandName(metrics));
+}
+
+/** The brand's win counts per frozen topic, summed over `sources`. */
+export function topicWins(sources: readonly Metrics[]) {
+  const byTopic = new Map<string, ReturnType<typeof brandWins>[]>();
+  // A run from before the derivation has no topics to list: every topic is then unavailable.
+  const complete = sources.every((metrics) => metrics.per_topic_win_tally != null);
+  for (const metrics of sources) {
+    for (const [topic, tally] of Object.entries(metricObject(metrics.per_topic_win_tally))) {
+      const parts = byTopic.get(topic) ?? [];
+      parts.push(winCounts(storedWinTally(tally), brandName(metrics)));
+      byTopic.set(topic, parts);
+    }
+  }
+  return [...byTopic]
+    .sort(([left], [right]) => compareText(left, right))
+    .map(([topic, parts]) => ({ topic, ...sumWinCounts(complete ? parts : []) }));
 }
 
 /** One engine's slice of an aggregate, `{}` when that engine was not measured. */

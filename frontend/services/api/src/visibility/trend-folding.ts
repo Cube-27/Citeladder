@@ -6,9 +6,11 @@
  * comparison key and versions), weighting every rate by the responses behind
  * it and never substituting zero for a rate a run did not record.
  */
+import type { WinCounts } from '@citeladder/contracts/visibility';
 import type { visibilityTrendPointSchema } from '@citeladder/contracts/visibility-trends';
 import type { z } from 'zod';
 
+import { storedWinTally, sumWinCounts, winCounts } from '../analysis/win-rate.ts';
 import { buildModelProvenance } from '../analysis/provenance.ts';
 import { DAY_MS } from '../calendar-days.ts';
 import { wireUtc } from '../db/timestamps.ts';
@@ -167,6 +169,7 @@ type EntityFold = {
   // A mean rank averages over the answers that named the entity, so it folds
   // weighted by that count, not by completions.
   position: WeightedRate;
+  wins: WinCounts[];
 };
 
 function sumKnown(
@@ -221,6 +224,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
     mentions: number,
     rates: { mention: number | null; citation: number | null; position: number | null },
     completions: number,
+    wins: WinCounts,
   ) => {
     const entity = entities.get(name) ?? {
       isBrand,
@@ -228,8 +232,10 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
       mentionRate: new WeightedRate(),
       citationRate: new WeightedRate(),
       position: new WeightedRate(),
+      wins: [],
     };
     entity.isBrand ||= isBrand;
+    entity.wins.push(wins);
     entity.mentions += mentions;
     entity.position.add(rates.position, mentions);
     entity.mentionRate.add(rates.mention, completions);
@@ -244,6 +250,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
     ownedRate.add(observedRate(metrics, 'owned_citation_rate'), completions);
     const counts = storedMentionCounts(metrics);
     const positions = metricObject(metrics.average_positions);
+    const wins = storedWinTally(metrics.win_tally);
     const brand = brandName(metrics);
     brandKeys.add(brand);
     addEntity(
@@ -256,6 +263,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
         position: metricNumber(positions[brand]),
       },
       completions,
+      winCounts(wins, brand),
     );
     const mentionRates = metricObject(metrics.competitor_mention_rate);
     const citationRates = metricObject(metrics.competitor_citation_rate);
@@ -270,6 +278,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
           position: metricNumber(positions[name]),
         },
         completions,
+        winCounts(wins, name),
       );
     }
   }
@@ -285,6 +294,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
       share_of_voice: totalMentions > 0 ? (mentionTotals[name] ?? 0) / totalMentions : null,
       mention_count: entity.mentions,
       avg_position: entity.position.value(),
+      ...sumWinCounts(entity.wins),
     })),
   );
   const counts = bucket.map((source) => measurementCounts(source.metrics));
