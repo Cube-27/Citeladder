@@ -10,7 +10,7 @@ import { budget, spendBudget } from '../src/abuse/usage.ts';
 import { importCatalog } from './commerce-support.ts';
 import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
-import { billingAccount, candidate, generationRun, grant } from './prompt-fixtures.ts';
+import { billingAccount, candidate, generationRun, grant, topic } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -50,6 +50,27 @@ it('saves manual prompts disabled and enforces capacity across concurrent reques
   const success = results.find((row) => row.status === 'fulfilled');
   expect(success?.value).toMatchObject({ enabled: false, approved_at: null, target });
   expect(results.find((row) => row.status === 'rejected')?.reason).toMatchObject({ status: 403 });
+});
+
+it('files Commerce prompts under their own topic, never a same-named brand topic', async () => {
+  await grant(db, account, { value: 3 });
+  const brandTopic = await topic(db, scope.projectId, 'trail MASTER');
+  const topicOf = async (text: string) => {
+    const row = await manualBuyerPrompt(db, scope, buyerManualInput.parse({ target, text }));
+    return (
+      await db
+        .selectFrom('prompts')
+        .select('topic_id')
+        .where('id', '=', row.id)
+        .executeTakeFirstOrThrow()
+    ).topic_id;
+  };
+  const beside = await topicOf('Which shoes cushion knees?');
+  await db.updateTable('topics').set({ name: 'Trails' }).where('id', '=', brandTopic).execute();
+  const created = await topicOf('Which shoes grip rain?');
+  const reused = await topicOf('Which shoes dry fastest?');
+  expect([beside, reused]).toEqual([null, created]);
+  expect([created === null, created === brandTopic]).toEqual([false, false]);
 });
 
 it('generates target-bound prompts and fails atomically on unusable or foreign targets', async () => {

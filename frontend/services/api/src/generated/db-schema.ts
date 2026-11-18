@@ -770,6 +770,7 @@ export interface AuditTopicMetrics {
   id: string;
   metrics: Json;
   project_id: string;
+  source_analysis_ids: Json;
   topic_id: string;
   topic_name: string;
   visibility_score: number;

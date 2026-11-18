@@ -102,13 +102,19 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
       : null;
   });
 
+  // A run finalized before AV-5 froze no topic: its topic segments are unknown, not unasked.
+  const unmeasured = (segment: Segment): Exclude<MatrixCell, { kind: 'measured' }> =>
+    segment.topic !== null && runs[segment.market]?.run?.topics.size === 0
+      ? { kind: 'not_recorded' }
+      : { kind: 'not_run' };
+
   const answersOf = (segment: Partial<Segment>) =>
     measured({ market: strip, topic: filters.topic, engine: filters.engine, ...segment })
       ?.answers ?? 0;
 
   function cell(segment: Segment, brand: Brand | null): MatrixCell {
     const found = measured(segment);
-    if (!found) return { kind: 'not_run' };
+    if (!found) return unmeasured(segment);
     const target = brand ?? { name: '', is_brand: true };
     const row = found.rows.find((r) => sameBrand(r, target));
     const entities = sentiments(segment);
@@ -227,22 +233,21 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
   } satisfies Record<MatrixPair, MatrixCell[][]>;
 
   const leaders = (dimension: 'engine' | 'topic' | 'market') =>
-    picks[dimension].map((pick) => {
-      const found = measured({
-        market: strip,
-        topic: filters.topic,
-        engine: filters.engine,
-        ...pick,
-      });
-      if (!found) return [];
-      return found.rows
-        .flatMap((row) =>
-          row.mention_rate === null
-            ? []
-            : [{ name: row.name, is_brand: row.is_brand, mention_rate: row.mention_rate }],
-        )
-        .toSorted((a, b) => b.mention_rate - a.mention_rate || compareText(a.name, b.name))
-        .slice(0, policy.visibility.matrix_leaders);
+    picks[dimension].map((pick): VisibilityMatrix['rankings']['topic'][number] => {
+      const segment = { market: strip, topic: filters.topic, engine: filters.engine, ...pick };
+      const found = measured(segment);
+      if (!found) return unmeasured(segment);
+      return {
+        kind: 'measured',
+        leaders: found.rows
+          .flatMap((row) =>
+            row.mention_rate === null
+              ? []
+              : [{ name: row.name, is_brand: row.is_brand, mention_rate: row.mention_rate }],
+          )
+          .toSorted((a, b) => b.mention_rate - a.mention_rate || compareText(a.name, b.name))
+          .slice(0, policy.visibility.matrix_leaders),
+      };
     });
 
   return {

@@ -20,6 +20,7 @@ import { failureFacts, getLogger } from '../logging.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { bindingTokens } from '../prompts/binding.ts';
+import { brandTopics } from '../prompts/brand-topics.ts';
 import { insertPrompts } from '../prompts/insert.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
@@ -298,18 +299,33 @@ async function commerceSet(trx: Database, scope: CommerceScope, now: Date) {
   );
 }
 
-/** The case-insensitive topic index is the final guard against a racing insert. */
-async function commerceTopic(trx: Database, scope: CommerceScope, name: string, now: Date) {
-  const find = () =>
-    trx
-      .selectFrom('topics')
-      .selectAll()
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where(sql<string>`lower(name)`, '=', name.toLowerCase());
-  const topic = await find().executeTakeFirst();
-  if (topic) return topic;
-  await trx
+/**
+ * The target's Commerce topic, or null when a brand topic holds its name:
+ * names are unique per project, and a Commerce prompt filed under a brand
+ * topic would change that topic's brand metrics.
+ */
+async function commerceTopic(
+  trx: Database,
+  scope: CommerceScope,
+  name: string,
+  now: Date,
+): Promise<string | null> {
+  const named = await trx
+    .selectFrom('topics')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where(sql<string>`lower(name)`, '=', name.toLowerCase())
+    .executeTakeFirst();
+  if (named) {
+    const brand = await brandTopics(trx, scope)
+      .select('topics.id')
+      .where('topics.id', '=', named.id)
+      .executeTakeFirst();
+    return brand ? null : named.id;
+  }
+  // Every topic writer holds the project lock, so the name is still free.
+  const created = await trx
     .insertInto('topics')
     .values({
       id: randomUUID(),
@@ -322,9 +338,9 @@ async function commerceTopic(trx: Database, scope: CommerceScope, name: string, 
       created_at: now,
       updated_at: now,
     })
-    .onConflict((conflict) => conflict.doNothing())
-    .execute();
-  return find().executeTakeFirstOrThrow();
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return created.id;
 }
 
 type Batch = { target: Target; drafts: Draft[]; evidence: Record<string, unknown> | null };
@@ -338,7 +354,7 @@ async function insertBatch(
   scope: CommerceScope,
   owner: {
     set: { id: string; project_id: string; workspace_id: string };
-    topic: string;
+    topic: string | null;
     name: string;
   },
   batch: Batch,
@@ -410,7 +426,7 @@ function persist(
         ...(await /* NOSONAR -- One transaction; ids keep generation order. */ insertBatch(
           trx,
           scope,
-          { set, topic: topic.id, name },
+          { set, topic, name },
           batch,
           now,
         )),

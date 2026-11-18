@@ -13,6 +13,7 @@ import { useMarketVisibility } from '@/lib/visibility/use-market-visibility';
 import { useSurfaceRates } from '@/lib/visibility/use-surface-rates';
 import { refreshVisibility, visibilityQueries } from '@/lib/api/visibility-queries';
 import {
+  brandRuns,
   findActiveRun,
   isEvidenceTab,
   VISIBILITY_TABS,
@@ -407,23 +408,22 @@ function useVisibilityRuns(
   const queryClient = useQueryClient();
   const auditsQuery = useQuery({
     ...runsQueries.list({ workspaceId, projectId }),
-    refetchInterval: (query) => pollAudits(query.state.data?.map((audit) => audit.status)),
+    refetchInterval: (query) =>
+      pollAudits(brandRuns(query.state.data).map((audit) => audit.status)),
   });
+  const audits = useMemo(() => brandRuns(auditsQuery.data), [auditsQuery.data]);
   // The run picker offers the selected market's runs only; markets never pool.
   const runOptions = useMemo(
     () =>
       toRunOptions(
-        (auditsQuery.data ?? []).filter((audit) => audit.market.id === market),
+        audits.filter((audit) => audit.market.id === market),
         timeZone,
       ),
-    [auditsQuery.data, market, timeZone],
+    [audits, market, timeZone],
   );
-  const allRuns = useMemo(
-    () => toRunOptions(auditsQuery.data ?? [], timeZone),
-    [auditsQuery.data, timeZone],
-  );
+  const allRuns = useMemo(() => toRunOptions(audits, timeZone), [audits, timeZone]);
   const hasRuns = allRuns.length > 0;
-  const activeRun = useMemo(() => findActiveRun(auditsQuery.data ?? []), [auditsQuery.data]);
+  const activeRun = useMemo(() => findActiveRun(audits), [audits]);
   // Both halves matter. Keying on the latest run alone missed a project's FIRST
   // run — it stayed one id from queued to completed, so nothing invalidated and
   // the 404 the projection answered with while the snapshot was still being

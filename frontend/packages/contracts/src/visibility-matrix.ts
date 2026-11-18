@@ -36,11 +36,16 @@ const axesSchema = z.object({
   ),
 });
 
-// A segment pair with no answers is `not_run`, never zero. A measured value is
+// A segment pair with no answers is `not_run`, never zero; a topic segment of a
+// run that froze no topic is `not_recorded`. A measured value is
 // null when it does not apply: position when the brand was never named, win
 // rate when no tracked business was, sentiment when the run was not perceived.
-const matrixCellSchema = z.discriminatedUnion('kind', [
+const unmeasured = [
   z.object({ kind: z.literal('not_run') }),
+  z.object({ kind: z.literal('not_recorded') }),
+] as const;
+const matrixCellSchema = z.discriminatedUnion('kind', [
+  ...unmeasured,
   z.object({
     kind: z.literal('measured'),
     answers,
@@ -61,8 +66,14 @@ const leaderSchema = z.object({
   is_brand: z.boolean(),
   mention_rate: z.number(),
 });
-// One list per axis item, at most five brands by mention rate; empty when not run.
-const leaders = z.array(z.array(leaderSchema));
+// One row per axis item: at most five brands by mention rate, in the same
+// states as a cell.
+const leaders = z.array(
+  z.discriminatedUnion('kind', [
+    ...unmeasured,
+    z.object({ kind: z.literal('measured'), leaders: z.array(leaderSchema) }),
+  ]),
+);
 
 export const visibilityMatrixSchema = z.object({
   source_audit_ids: z.array(z.uuid()),

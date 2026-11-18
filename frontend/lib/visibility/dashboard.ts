@@ -117,6 +117,13 @@ export function toRunOptions(
     }));
 }
 
+/** Brand pages read brand runs only: a Commerce run is never a brand selection. */
+export function brandRuns<T extends { audit_scope: 'brand' | 'commerce' }>(
+  audits: readonly T[] | undefined,
+): T[] {
+  return (audits ?? []).filter((audit) => audit.audit_scope === 'brand');
+}
+
 /** A run that is still progressing (queued/running/analyzing/…). */
 export type ActiveRun = {
   id: string;

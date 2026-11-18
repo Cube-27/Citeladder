@@ -8,6 +8,7 @@
 import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 
 import type { Database } from '../db/database.ts';
+import { brandTopics } from '../prompts/brand-topics.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { selectionRuns, type DashboardQuery } from './dashboard.ts';
 import { matrixProjection, type MatrixRun } from './matrix-cells.ts';
@@ -69,12 +70,7 @@ export async function getVisibilityMatrix(
   );
   const auditIds = latest.flatMap((run) => (run ? [run.auditId] : []));
   const [topics, blocks, answers, marks] = await Promise.all([
-    db
-      .selectFrom('topics')
-      .select(['id', 'name'])
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .execute(),
+    brandTopics(db, scope).select(['id', 'name']).execute(),
     auditIds.length === 0
       ? Promise.resolve([])
       : db
