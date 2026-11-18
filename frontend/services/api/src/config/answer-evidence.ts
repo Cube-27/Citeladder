@@ -39,7 +39,6 @@ export const answerEvidence = {
       'to',
       'with',
     ],
-    max_terms_per_audit: 500,
     /** Rows each of Top, Rising and Falling serves. */
     list_limit: 10,
   },

@@ -186,4 +186,27 @@ describe('GET /visibility/fanout-terms', () => {
       (await get(tenant, route(tenant, '/fanout-terms'), { audit_id: counted })).body,
     ).toMatchObject({ kind: 'observed', compared: false, rising: [], falling: [] });
   });
+
+  it('never compares across a run whose engines reported no search text', async () => {
+    const tenant = await fixtures.tenant();
+    await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
+      { engine: 'chatgpt', queries: ['acme pricing'] },
+    ]);
+    const silent = await finalizedRun(tenant, '2026-03-01T00:00:00Z', [
+      { engine: 'claude', queries: [] },
+    ]);
+    expect(
+      (await get(tenant, route(tenant, '/fanout-terms'), { audit_id: silent })).body,
+    ).toMatchObject({ kind: 'observed', total_searches: 0, compared: false, top: [], falling: [] });
+    // The next run compares with February, not with the silent run in between.
+    const next = await finalizedRun(tenant, '2026-04-01T00:00:00Z', [
+      { engine: 'chatgpt', queries: ['acme pricing', 'acme trial'] },
+    ]);
+    const { body } = await get(tenant, route(tenant, '/fanout-terms'), { audit_id: next });
+    expect(body).toMatchObject({
+      compared: true,
+      rising: [{ term: 'trial', change: 0.5 }],
+      falling: [{ term: 'pricing', change: -0.5 }],
+    });
+  });
 });

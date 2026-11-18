@@ -23,7 +23,7 @@
               "type": "chat_gpt_text",
               "rank_group": 1,
               "rank_absolute": 1,
-              "markdown": "Acme has the deepest billing ([acme.example](https://acme.example/agencies?utm_source=chatgpt.com)). Rival is simpler [Rival](https://rival.example/pricing) and [again](https://rival.example/pricing).",
+              "markdown": "Acme has the deepest billing ([acme.example](https://acme.example/agencies?utm_source=chatgpt.com)), see [Acme](https://acme.example/agencies). Rival is simpler [Rival](https://rival.example/pricing) and [again](https://rival.example/pricing).",
               "sources": [{ "url": "https://reviews.example/invoicing", "title": "Review" }]
             },
             {

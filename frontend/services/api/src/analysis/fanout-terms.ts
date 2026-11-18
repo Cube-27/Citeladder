@@ -85,8 +85,8 @@ export function countTerms(input: {
           .map(({ kind, name }) => ({ kind, name })),
       };
     })
-    .sort((a, b) => b.searches - a.searches || compareText(a.term, b.term))
-    .slice(0, rules.max_terms_per_audit);
+    // Every term is kept: a capped list would turn a term past the cap into a new one next run.
+    .sort((a, b) => b.searches - a.searches || compareText(a.term, b.term));
   return { totalSearches: total, terms };
 }
 
@@ -104,7 +104,7 @@ function unreportedEngines(analyses: readonly Selectable<ResponseAnalyses>[]): s
   ].sort(compareText);
 }
 
-/** The newest earlier finalized run of the same project, market and mode that counted terms. */
+/** The newest earlier finalized run of the same project, market and mode that counted searches. */
 async function previousTerms(db: Database, audit: Selectable<Audits>) {
   const row = await db
     .selectFrom('audit_fanout_terms as t')
@@ -114,6 +114,7 @@ async function previousTerms(db: Database, audit: Selectable<Audits>) {
     .where('a.workspace_id', '=', audit.workspace_id)
     .where('t.project_id', '=', audit.project_id)
     .where('t.audit_id', '!=', audit.id)
+    .where('t.total_searches', '>', 0)
     .where('t.analyzer_version', '=', policy.audits.analysis.analyzer_version)
     .where('a.market_id', 'is not distinct from', audit.market_id)
     .where('a.audit_scope', '=', audit.audit_scope)
@@ -134,9 +135,11 @@ export async function persistFanoutTerms(
   config: ScoringConfig,
   at: Date,
 ) {
-  const previous = await previousTerms(db, audit);
+  const queries = analyses.flatMap((a) => a.fanout_queries);
+  // No reported search on either side leaves nothing to compare, never a fall to zero.
+  const previous = queries.length ? await previousTerms(db, audit) : null;
   const { totalSearches, terms } = countTerms({
-    queries: analyses.flatMap((a) => a.fanout_queries),
+    queries,
     config,
     previous: previous?.terms ?? null,
   });
