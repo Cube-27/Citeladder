@@ -288,9 +288,12 @@ function FigureValue({ segment }: FigurePart) {
   }
   const { value } = segment;
   // A formatter's absence word is an absence too, never printed as a value.
-  const word = value == null ? segment.missingLabel : absenceOf(value) ? String(value) : null;
-  if (value == null || word)
-    return <Absence state={absenceOf(word) ?? 'not_measured'} label={word ?? undefined} />;
+  if (value == null) {
+    const state = absenceOf(segment.missingLabel) ?? 'not_measured';
+    return <Absence state={state} label={segment.missingLabel} />;
+  }
+  const absent = absenceOf(value);
+  if (absent) return <Absence state={absent} />;
   if (typeof value === 'string' || typeof value === 'number')
     return <span className={VALUE_TEXT}>{String(value)}</span>;
   return <div className={cn(VALUE_TEXT, 'flex min-w-0 items-center gap-2')}>{value}</div>;

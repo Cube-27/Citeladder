@@ -431,10 +431,10 @@ describe('CiteLadder MCP App', () => {
       await user.click(screen.getByRole('option', { name }));
     };
     await competitor('Globex');
-    await vi.waitFor(() => expect(cells()).toContain('Unavailable'));
-    expect(cells()).not.toContain('Not applicable');
+    await vi.waitFor(() => expect(cells()).toContain('—Unavailable'));
+    expect(cells()).not.toContain('—Not applicable');
     await competitor('Initech');
-    await vi.waitFor(() => expect(cells()).toContain('Not applicable'));
+    await vi.waitFor(() => expect(cells()).toContain('—Not applicable'));
     // Placed on the time axis, the event is also listed in words under the chart.
     const legend = [...document.querySelectorAll('li')].map((item) => item.textContent);
     expect(legend).toContainEqual(
