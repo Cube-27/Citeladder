@@ -174,26 +174,28 @@
 }
 
 /* A disclosure's chevron turns over when open (its own, not a nested one's);
-   its panel eases height and opacity both ways where the browser has
-   `::details-content`, and opens at once elsewhere. */
-.disclosure {
-  interpolate-size: allow-keywords;
-}
+   its panel eases height and opacity both ways where the browser can animate
+   `::details-content` to its auto height, and opens at once elsewhere. */
 .disclosure[open] > summary > svg {
   rotate: -180deg;
 }
-.disclosure::details-content {
-  block-size: 0;
-  opacity: 0;
-  overflow-y: clip;
-  transition:
-    block-size var(--motion-open) var(--ease-quad),
-    opacity var(--motion-open) var(--ease-standard),
-    content-visibility var(--motion-open) allow-discrete;
-}
-.disclosure[open]::details-content {
-  block-size: auto;
-  opacity: 1;
+@supports selector(::details-content) and (interpolate-size: allow-keywords) {
+  .disclosure {
+    interpolate-size: allow-keywords;
+  }
+  .disclosure::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow-y: clip;
+    transition:
+      block-size var(--motion-open) var(--ease-quad),
+      opacity var(--motion-open) var(--ease-standard),
+      content-visibility var(--motion-open) allow-discrete;
+  }
+  .disclosure[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
 }
 
 /* A loading shape: one soft sweep crosses all its blocks (a block
