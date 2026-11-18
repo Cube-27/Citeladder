@@ -209,8 +209,6 @@ export function useSourceTypes(
       params,
     ),
     enabled: scope.enabled && Boolean(queries.activeRunId),
-    placeholderData: (data, previous) =>
-      retainPreviousDataForScope(queries.projectId, data, previous),
   });
   return availableTypes(query.data?.category_totals, scope.dimension);
 }

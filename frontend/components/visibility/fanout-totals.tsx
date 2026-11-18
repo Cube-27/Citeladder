@@ -15,7 +15,7 @@ export type FanoutSummary = Readonly<{
  * filter the evidence table applies, so once they land they describe the
  * population the table draws from.
  */
-export function isSelectionWide(summary: FanoutSummary): boolean {
+function isSelectionWide(summary: FanoutSummary): boolean {
   return summary.distinctQueries !== null && summary.eventCount !== null;
 }
 
