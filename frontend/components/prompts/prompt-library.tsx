@@ -332,7 +332,6 @@ export function PromptLibrary() {
     table: (
       <>
         <PromptBulkBar
-          shown={visible.length}
           selected={selection.selected}
           topics={topics}
           max={limits?.bulk_prompts_max ?? 0}

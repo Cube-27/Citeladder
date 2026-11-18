@@ -22,9 +22,10 @@ const SEARCH_OPTIONS: readonly { value: PromptAnswerSearch; label: string }[] = 
 ];
 
 /**
- * The prompt page's control strip past Market: the engine, which the whole
- * page reads, then the period, brand named, cited and search used, which
- * narrow Past answers. Each lives in the address so a shared link keeps it.
+ * The prompt page's filters: the period as its own chip, then the engine and
+ * market, which the whole page reads, and brand named, cited and search used,
+ * which narrow Past answers, all in All filters. Each lives in the address so
+ * a shared link keeps it.
  */
 export function usePromptAnswerFilters({
   market,
@@ -35,7 +36,8 @@ export function usePromptAnswerFilters({
   marketChoice: FilterDefinition | null;
 }>): Readonly<{
   engine: string | null;
-  definitions: FilterDefinition[];
+  period: FilterDefinition;
+  more: FilterDefinition[];
   answers: PromptAnswerParams;
 }> {
   const catalog = useEngineCatalog();
@@ -50,13 +52,13 @@ export function usePromptAnswerFilters({
   const roster = [project.brand_name, ...project.competitors.map((c) => c.name)];
   return {
     engine,
-    definitions: [
-      rangeFilter({
-        value: period,
-        defaultValue: '90d',
-        options: RANGE_OPTIONS,
-        onChange: setPeriod,
-      }),
+    period: rangeFilter({
+      value: period,
+      defaultValue: '90d',
+      options: RANGE_OPTIONS,
+      onChange: setPeriod,
+    }),
+    more: [
       singleFilter({
         id: 'engine',
         label: 'Engine',

@@ -20,8 +20,8 @@ export function useLatestPromptMetrics(scope: PromptScope) {
  * prompts never hides an earlier result.
  *
  * Keyed by the SOURCE prompt id, because that is what this table's rows are.
- * A prompt no run has measured simply has no entry, which reads as
- * "Not measured" rather than a fabricated zero.
+ * A prompt no run has measured simply has no entry, which reads as a muted
+ * dash named "Not measured" rather than a fabricated zero.
  *
  * Undefined until the first read settles: whether a run exists decides the
  * table's columns, so the table waits for it instead of drawing without the
@@ -53,7 +53,6 @@ function measurementOf(row: PromptMetricItem): PromptMeasurement {
     position: row.avg_position ?? null,
     shareOfVoice: row.share_of_voice ?? null,
     sentiment: row.sentiment ?? null,
-    webSearch: row.web_search,
     mentions: row.mentions,
     brands: row.brands,
     named: row.named ?? [],

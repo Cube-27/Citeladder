@@ -18,17 +18,10 @@ import {
   TableSelectCell,
 } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { StatusMark } from '@/components/ui/status-mark';
 import { Absence } from '@/components/ui/absence';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
-import { SentimentValue, WebSearchValue } from '@/components/visibility/sentiment-value';
-import type {
-  NamedBrand,
-  NetSentiment,
-  Prompt,
-  PromptStatus,
-  WebSearchShare,
-} from '@citeladder/contracts';
+import { SentimentValue } from '@/components/visibility/sentiment-value';
+import type { NamedBrand, NetSentiment, Prompt, PromptStatus } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { ICONS } from '@/lib/icons';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -59,7 +52,6 @@ export type PromptMeasurement = PromptMentions & {
   shareOfVoice: number | null;
   /** Null when the run classified no sentiment (admitted without perception). */
   sentiment: NetSentiment | null;
-  webSearch: WebSearchShare | undefined;
   /** Distinct brands named in the answers; `brands` is the leading few. */
   mentions: number;
   brands: readonly NamedBrand[];
@@ -81,8 +73,8 @@ export type PromptRowActions = Readonly<{
 const PAGE_SIZE = 10;
 
 /**
- * Prompt table (F7). Questions, their topic, measured visibility and status,
- * with a per-row menu (edit, enable or disable, archive or restore when
+ * Prompt table (F7). Questions, their topic and measured visibility, with a
+ * per-row menu (edit, enable or disable, archive or restore when
  * `onSetStatus` is wired, evidence, delete). A click anywhere on a row
  * outside its controls opens the prompt.
  *
@@ -207,9 +199,6 @@ export function PromptTable({
           {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
             <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
           ) : null}
-          <TableCell>
-            <PromptStatusMark prompt={prompt} />
-          </TableCell>
           {actions ? (
             <PromptRowMenu
               prompt={prompt}
@@ -233,9 +222,13 @@ function pageTicked(
   return ticked === pageIds.length ? true : 'indeterminate';
 }
 
-/** The prompt's set, and whether audits skip it for the plan limit. */
+/** The prompt's set, and whether audits skip it: disabled, or beyond the plan limit. */
 function rowCaption(prompt: Prompt, setName: string | undefined): string | undefined {
-  const parts = [setName, prompt.over_plan_limit ? 'Not measured: beyond the plan limit' : ''];
+  const parts = [
+    setName,
+    prompt.enabled || prompt.status === 'archived' ? '' : 'Disabled',
+    prompt.over_plan_limit ? 'Beyond the plan limit' : '',
+  ];
   return parts.filter(Boolean).join(' · ') || undefined;
 }
 
@@ -262,13 +255,6 @@ function TopicName({
       {name}
     </span>
   );
-}
-
-/** Archived, disabled (kept but skipped by audits) or active. */
-function PromptStatusMark({ prompt }: Readonly<{ prompt: Prompt }>) {
-  if (prompt.status === 'archived') return <StatusMark>Archived</StatusMark>;
-  if (!prompt.enabled) return <StatusMark>Disabled</StatusMark>;
-  return <StatusMark tone="positive">Active</StatusMark>;
 }
 
 /** The actions menu of one editable row. */
@@ -328,7 +314,8 @@ function PromptRowMenu({
 
 /**
  * The measured columns are drawn only once a run exists; each hint says
- * exactly what its figure measures. A reader who may not edit gets no menu.
+ * exactly what its figure measures. Archived and disabled are the view tabs
+ * and the Enabled filter, not a column. A reader who may not edit gets no menu.
  */
 function promptColumns(
   measuredColumns: readonly DataTableColumn[],
@@ -338,7 +325,6 @@ function promptColumns(
     { key: 'prompt', label: 'Prompt', kind: 'identity' },
     { key: 'topic', label: 'Topic', width: 'status' },
     ...measuredColumns,
-    { key: 'status', label: 'Status', kind: 'status' },
   ];
   if (editable)
     columns.push({ key: 'actions', label: 'Actions', width: 'control', kind: 'actions' });
@@ -356,13 +342,53 @@ const VISIBILITY_COLUMN: DataTableColumn = {
 const SHELF_HINT =
   'Shopping prompts are measured with the shopping shelf on Shopping, not one prompt at a time, so their figures here are not applicable.';
 
-/** The figures after Visibility, in the order mockup A draws them; the movement follows. */
-const FIGURE_COLUMNS: readonly DataTableColumn[] = [
+/** The visibility's movement since the last run, beside the visibility. */
+const CHANGE_COLUMN: DataTableColumn = {
+  key: 'change',
+  label: 'Change',
+  width: 'figure',
+  kind: 'number',
+};
+
+/**
+ * Each mark column sits beside the figure it explains (the brands named after
+ * Visibility, the cited sites after Citations); the low-priority figures come
+ * last and hide, the last first, where the frame is too narrow.
+ */
+const MEASURED_COLUMNS: readonly DataTableColumn[] = [
+  {
+    key: 'mentions',
+    label: 'Mentions',
+    width: 'status',
+    hint: "The brands named in this prompt's answers: yours and your competitors'.",
+  },
+  {
+    key: 'citations',
+    label: 'Citations',
+    width: 'figure',
+    kind: 'number',
+    hint: "The share of this prompt's answers that cited one of your pages.",
+  },
+  {
+    key: 'sources',
+    label: 'Sources',
+    width: 'status',
+    hint: "The sites this prompt's answers cited, most citations first.",
+  },
+  {
+    key: 'position',
+    label: 'Position',
+    width: 'figure',
+    kind: 'number',
+    priority: 'low',
+    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
+  },
   {
     key: 'sov',
     label: 'Share of voice',
     width: 'short',
     kind: 'number',
+    priority: 'low',
     hint: SHARE_OF_VOICE_HINT,
   },
   {
@@ -373,58 +399,6 @@ const FIGURE_COLUMNS: readonly DataTableColumn[] = [
     priority: 'low',
     hint: "Net sentiment toward your brand in this prompt's answers: positive minus negative mentions, as a share of the classified ones.",
   },
-  {
-    key: 'web_search',
-    label: 'Web search',
-    width: 'figure',
-    kind: 'number',
-    priority: 'low',
-    hint: "The share of this prompt's answers that searched the web, counting only engines that report it.",
-  },
-  {
-    key: 'position',
-    label: 'Position',
-    width: 'figure',
-    kind: 'number',
-    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
-  },
-];
-
-/** The visibility's movement since the last run. */
-const CHANGE_COLUMN: DataTableColumn = {
-  key: 'change',
-  label: 'Change',
-  width: 'figure',
-  kind: 'number',
-};
-
-/**
- * The brands named, owned citations and cited sites come last and hide first
- * (the last first) where the frame is too narrow, then Web search and Sentiment.
- */
-const MARK_COLUMNS: readonly DataTableColumn[] = [
-  {
-    key: 'mentions',
-    label: 'Mentions',
-    width: 'status',
-    priority: 'low',
-    hint: "The brands named in this prompt's answers: yours and your competitors'.",
-  },
-  {
-    key: 'citations',
-    label: 'Citations',
-    width: 'figure',
-    kind: 'number',
-    priority: 'low',
-    hint: "The share of this prompt's answers that cited one of your pages.",
-  },
-  {
-    key: 'sources',
-    label: 'Sources',
-    width: 'status',
-    priority: 'low',
-    hint: "The sites this prompt's answers cited, most citations first.",
-  },
 ];
 
 function measuredColumnsFor({
@@ -432,10 +406,17 @@ function measuredColumnsFor({
   shelf,
 }: Readonly<{ compared: boolean; shelf: boolean }>): readonly DataTableColumn[] {
   const visibility = shelf ? { ...VISIBILITY_COLUMN, hint: SHELF_HINT } : VISIBILITY_COLUMN;
-  return [visibility, ...FIGURE_COLUMNS, ...(compared ? [CHANGE_COLUMN] : []), ...MARK_COLUMNS];
+  return [visibility, ...(compared ? [CHANGE_COLUMN] : []), ...MEASURED_COLUMNS];
 }
 
-/** A prompt's measured figures, its movement since the last run, then its marks. */
+/** No run has measured it: a muted dash, the words in its tooltip and accessible name. */
+const NOT_MEASURED = <Absence state="not_measured" narrow />;
+
+function RateValue({ rate }: Readonly<{ rate: number | null | undefined }>) {
+  return rate == null ? NOT_MEASURED : formatRate(rate);
+}
+
+/** A prompt's visibility and its movement, its marks, then the low-priority figures. */
 function MeasuredCells({
   measurement,
   compared,
@@ -443,9 +424,8 @@ function MeasuredCells({
   return (
     <>
       <TableCell numeric>
-        {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
+        <RateValue rate={measurement?.visibilityRate} />
       </TableCell>
-      <FigureCells measurement={measurement} />
       {compared ? (
         <TableCell numeric>
           <ChangeValue change={measurement?.change} />
@@ -459,11 +439,11 @@ function MeasuredCells({
             answers="this prompt's answers"
           />
         ) : (
-          <Absence state="not_measured" />
+          NOT_MEASURED
         )}
       </TableCell>
       <TableCell numeric>
-        {measurement ? formatRate(measurement.ownedCitationRate) : <Absence state="not_measured" />}
+        <RateValue rate={measurement?.ownedCitationRate} />
       </TableCell>
       <TableCell>
         {measurement ? (
@@ -471,34 +451,34 @@ function MeasuredCells({
             sources={measurement.visibilityRate === null ? null : measurement.sources}
           />
         ) : (
-          <Absence state="not_measured" />
+          NOT_MEASURED
         )}
       </TableCell>
+      <FigureCells measurement={measurement} />
     </>
   );
 }
 
-/** Share of voice, sentiment, web search and average position. */
+/** Average position, share of voice and sentiment. */
 function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
   return (
     <>
       <TableCell numeric>
-        {measurement ? (
-          (measured(formatRate(measurement.shareOfVoice)) ?? (
-            <Absence state="none" reason="No tracked brand was named in these answers." />
-          ))
-        ) : (
-          <Absence state="not_measured" />
-        )}
-      </TableCell>
-      <TableCell numeric>
-        <SentimentValue sentiment={measurement?.sentiment} tooFew="Too few" showCount={false} />
-      </TableCell>
-      <TableCell numeric>
-        <WebSearchValue value={measurement?.webSearch} />
-      </TableCell>
-      <TableCell numeric>
         <AveragePosition measurement={measurement} />
+      </TableCell>
+      <TableCell numeric>
+        {measurement
+          ? (measured(formatRate(measurement.shareOfVoice)) ?? (
+              <Absence state="none" reason="No tracked brand was named in these answers." />
+            ))
+          : NOT_MEASURED}
+      </TableCell>
+      <TableCell numeric>
+        {measurement?.sentiment ? (
+          <SentimentValue sentiment={measurement.sentiment} tooFew="Too few" showCount={false} />
+        ) : (
+          NOT_MEASURED
+        )}
       </TableCell>
     </>
   );
@@ -506,7 +486,7 @@ function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement
 
 /** The average position; never named and an unrecorded order stay apart from no run. */
 function AveragePosition({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
-  if (!measurement) return <Absence state="not_measured" />;
+  if (!measurement) return NOT_MEASURED;
   if (measurement.position === null) {
     if (measurement.visibilityRate === 0) return <Absence state="none" label="Not named" />;
     return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
@@ -540,7 +520,7 @@ const NOT_COMPARED = {
 
 /** The change since the prompt's previous measurement, or why there is none. */
 function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
-  if (change === undefined) return <Absence state="not_measured" />;
+  if (change === undefined) return NOT_MEASURED;
   switch (change.kind) {
     case 'delta':
       return <Delta value={change.points} unit=" pp" />;

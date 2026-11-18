@@ -236,6 +236,9 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
     expect.anything(),
   );
+  // Only the period stays a chip; the four set above live in All filters.
+  expect(screen.getByRole('button', { name: 'All filters (4)' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Period/ })).toBeVisible();
   // The engine is the page's: the chart reads it too.
   expect(getPromptHistory).toHaveBeenCalledWith(
     PROJECT,
@@ -265,29 +268,27 @@ it('charts the prompt over time with declared work marked, and hands off to its 
     `/actions/${EARNED}?project=${PROJECT}`,
   );
 
-  const states = within(screen.getByLabelText('Answers by state'));
+  const states = within(screen.getByRole('group', { name: 'Latest measurement' }));
   const stateCell = (label: string) =>
     states.getByText(label).closest('[data-figure-cell]')?.textContent;
   expect(stateCell('Mentioned and cited')).toMatch(/^Mentioned and cited.*1$/);
-  expect(
-    states.getByRole('button', { name: 'Basis of Mentioned and cited' }),
-  ).toHaveAccessibleDescription('Named you and cited one of your pages.');
+  expect(stateCell('Mentioned only')).toMatch(/^Mentioned only.*0$/);
   expect(stateCell('Neither')).toMatch(/^Neither.*1$/);
-  expect(states.getByRole('button', { name: 'Basis of Neither' })).toHaveAccessibleDescription(
-    'Did not name you or cite your site.',
-  );
-  const gaps = within(screen.getByRole('region', { name: 'Competitors named without you' }));
-  expect(gaps.getByRole('row', { name: /Globex/ })).toHaveTextContent('Globex1ChatGPT API');
-  // An engine whose every answer failed keeps its row and reads as failed.
-  const coverage = within(screen.getByRole('region', { name: 'Engine coverage' }));
+  // Answered of asked, then the answers naming and citing you, summed from the states.
+  const coverage = within(screen.getByRole('table', { name: 'Engine coverage' }));
   const cells = (engine: RegExp) =>
     within(coverage.getByRole('row', { name: engine }))
       .getAllByRole('cell')
+      .slice(1);
+  expect(cells(/ChatGPT API/).map((cell) => cell.textContent)).toEqual(['2/2', '1', '1']);
+  // An engine whose every answer failed keeps its row: unavailable, never zero.
+  const failed = cells(/Gemini API/);
+  expect(failed[0]!.textContent).toBe('0/1');
+  expect(
+    failed
       .slice(1)
-      .map((cell) => cell.textContent);
-  expect(cells(/ChatGPT API/)).toEqual(['2', '0', '1', '0', '0', '1']);
-  const unmeasured = '—Not measured';
-  expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
+      .map((cell) => cell.querySelector('[data-absence]')?.getAttribute('data-absence')),
+  ).toEqual(['unavailable', 'unavailable']);
   expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
     'href',
     `/actions/${ACTION}?project=${PROJECT}`,
@@ -299,16 +300,18 @@ it('opens on where the prompt stands: the latest rates and their change', async 
   // The change is the server's comparison, never worked out from the points.
   getPromptHistory.mockResolvedValue({
     ...base,
-    latest: { ...base.latest!, visibility_delta: 12.5 },
+    latest: { ...base.latest!, visibility_delta: 12.5, avg_position: 1.5 },
   });
   renderScreen();
 
   const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
   const cell = (label: string) =>
     figures.getByText(label).closest('[data-figure-cell]')?.textContent;
-  expect(cell('Visibility')).toMatch(/^Visibility100\.0%.*12\.5 pp/);
-  // The period is the label's hint; the value follows it.
+  expect(cell('Visibility')).toMatch(/^Visibility.*100\.0%.*12\.5 pp/);
+  // The basis is the label's hint; the value follows it.
   expect(cell('Owned citation rate')).toMatch(/^Owned citation rate.*50\.0%$/);
+  // An average position keeps its decimal; it is not a rank.
+  expect(cell('Position')).toMatch(/^Position.*1\.5$/);
   // The run count names the chart's data table, which is not repeated as a figure.
   expect(screen.getByText('Show run data (3)')).toBeVisible();
   // The latest run's date is said once, in the figure hint: the chart and its
@@ -318,7 +321,7 @@ it('opens on where the prompt stands: the latest rates and their change', async 
     .filter((element) => !element.closest('details, [data-chart-frame]'));
   expect(latestDate).toHaveLength(1);
   expect(latestDate[0]!.closest('[data-figure-cell]')).toBe(
-    figures.getByText('Owned citation rate').closest('[data-figure-cell]'),
+    figures.getByText('Visibility').closest('[data-figure-cell]'),
   );
 });
 
@@ -351,19 +354,20 @@ it('reads the market from the address and keeps a run without answers unavailabl
   window.history.replaceState(null, '', `/prompts/${PROMPT}?market=${RUN(7)}`);
   renderScreen(`/prompts/${PROMPT}?market=${RUN(7)}`);
 
-  expect(
-    await screen.findByText(/mentions and citations are unavailable rather than zero/),
-  ).toBeInTheDocument();
+  const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
   expect(getPromptHistory).toHaveBeenCalledWith(
     PROJECT,
     PROMPT,
     { market: RUN(7) },
     expect.anything(),
   );
+  // The latest run had no successful answer: its states are unavailable, not zero.
+  expect(
+    figures.getByText('Neither').closest('[data-figure-cell]')?.querySelector('[data-absence]'),
+  ).toHaveAttribute('data-absence', 'unavailable');
   // With no comparable run the figure prints its value alone, no "Not measured" beside it.
-  const figures = within(screen.getByRole('group', { name: 'Latest measurement' }));
   expect(figures.getByText('Visibility').closest('[data-figure-cell]')?.textContent).toMatch(
-    /^Visibility100\.0%$/,
+    /^Visibility.*100\.0%$/,
   );
   // The run data is collapsed under the chart until the reader opens it.
   await userEvent.setup().click(screen.getByText('Show run data (3)'));
@@ -377,7 +381,11 @@ it('reads the market from the address and keeps a run without answers unavailabl
     );
   expect(runs).toEqual([
     [expect.stringMatching(/^Mar 16, 2026/), '100.0%', '50.0%'],
-    [expect.stringMatching(/^Mar 9, 2026/), 'No successful answer', '—Not measured'],
-    [expect.stringMatching(/^Mar 2, 2026/), '50.0%', '—Not measured'],
+    [
+      expect.stringMatching(/^Mar 9, 2026/),
+      'No successful answer',
+      expect.stringMatching(/Not measured$/),
+    ],
+    [expect.stringMatching(/^Mar 2, 2026/), '50.0%', expect.stringMatching(/Not measured$/)],
   ]);
 });
