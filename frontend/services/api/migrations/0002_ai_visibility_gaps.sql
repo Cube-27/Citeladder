@@ -157,7 +157,7 @@ ALTER TABLE public.response_analyses
     ADD COLUMN in_text_link_count integer,
     ADD CONSTRAINT ck_response_analyses_answer_formats CHECK (
         CASE
-            WHEN answer_format_state = 'observed' THEN answer_formats IS NOT NULL AND in_text_link_count >= 0
+            WHEN answer_format_state = 'observed' THEN answer_formats IS NOT NULL AND in_text_link_count IS NOT NULL AND in_text_link_count >= 0
             WHEN answer_format_state IS NULL OR answer_format_state IN ('unavailable', 'not_applicable')
                 THEN answer_formats IS NULL AND in_text_link_count IS NULL
             ELSE false
