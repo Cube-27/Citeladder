@@ -6,6 +6,8 @@ import {
   formatDisplayDate,
   formatDisplayTimestamp,
   formatPercent,
+  formatStripDay,
+  formatStripTimestamp,
   formatTableTimestamp,
   formatTimeZoneNote,
   isOwnHost,
@@ -87,6 +89,11 @@ describe('dates and times', () => {
       'Times in EDT',
     );
     expect(formatTimeZoneNote('UTC', new Date(at))).toBe('Times in UTC');
+    // A strip's meta: day, month and 24-hour time in the zone, without year or zone.
+    expect(formatStripTimestamp(at, 'Asia/Kolkata')).toBe('14 Nov 17:03');
+    expect(formatStripTimestamp('2026-11-18T00:05:00Z', 'Europe/Paris')).toBe('18 Nov 01:05');
+    expect(formatStripTimestamp(at, 'Not/A_Zone')).toBe('14 Nov 11:33');
+    expect(formatStripDay('2026-10-09')).toBe('9 Oct');
   });
 });
 

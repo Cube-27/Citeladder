@@ -9,7 +9,7 @@
  * (branded / non-branded) breakdown in `VisibilityResponse` yet, so no such
  * control is offered.
  */
-import { availabilityLabel, formatDisplayTimestamp, formatMean, formatPercent } from '@/lib/format';
+import { availabilityLabel, formatMean, formatPercent, formatStripTimestamp } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
@@ -113,7 +113,7 @@ export function toRunOptions(
       id: audit.id,
       status: audit.status,
       completedAt: audit.completed_at,
-      label: formatDisplayTimestamp(audit.completed_at ?? audit.created_at, timeZone),
+      label: formatStripTimestamp(audit.completed_at ?? audit.created_at, timeZone),
     }));
 }
 

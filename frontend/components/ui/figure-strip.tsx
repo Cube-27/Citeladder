@@ -74,7 +74,9 @@ export type FigureSegment = Readonly<
  * FigureStrip — key figures as one flat row: hairlines above and below, thin
  * dividers between cells, no cards, no gaps (globals.css "FigureStrip"). Cells
  * share the width equally; rows come from `figureRows`, and a wrapped row
- * keeps the same dividers. A cell is two lines, 72 tall: the muted label with
+ * keeps the same dividers. On the page itself (not in a card) the strip is
+ * full-bleed across the gutters, its text inset (globals.css). A cell is two
+ * lines, 72 tall: the muted label with
  * its marker and one info hint (caption, basis and comparison joined with
  * " · ") right after it, then the value in body ink with its Delta inline on
  * one baseline. A value at the foot keeps a row's baselines level when a label

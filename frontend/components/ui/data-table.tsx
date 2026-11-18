@@ -100,7 +100,7 @@ export function DataTable({
   title?: string;
   /** One caption line under the title row: what the figures are. */
   description?: ReactNode;
-  /** A view switch at the head's end, centred on the title (a `SegmentedControl`). */
+  /** At the head's end, centred on the title: a view switch, or the table's own actions (Columns, Export). */
   actions?: ReactNode;
   toolbar?: FilterBarProps;
   columns: readonly DataTableColumn[];

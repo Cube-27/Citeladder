@@ -422,7 +422,7 @@
 
   /* Component geometry the components read. Each derives from a system token. */
   /* What sticks under the app's top bar starts below it. */
-  --sticky-header-offset: var(--page-header-band);
+  --sticky-header-offset: var(--masthead-height);
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
@@ -440,12 +440,8 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  /* The app shell's top bar: the sidebar's project switcher cell and
-     the PageHeader are one sticky 56px bar at the top of the window, the
-     `row-app` title row with space-2 above and below and a 1px `line` rule
-     under it. Below it the mode switch is level with the page's tabs or
-     filters. The controls band's rows sit `page-band-gap` apart (tabs →
-     filters → content). */
+  /* The website's product screens' top bar (screen-app.css). The editor
+     workspace's rows sit `page-band-gap` apart. */
   --page-header-band: calc(var(--row-app) + 16px);
   --page-band-gap: 8px;
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
@@ -736,12 +732,14 @@
   --nav-row-height: 32px;
   --table-row-height: 36px;
 
-  /* Anatomy (2.3): masthead 56; `page-pad-block` to the first row, level with
-     the mode switch, and again below it, to the first content or the filter
-     row; 12 from a filter row under tabs to the first card (`PageFrame`); sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
-     buttons when collapsed. Content fills the main column inside a 24 gutter
-     (16 below 900), a reading page centred in `thread`. The current navigation item sits on a 7% ink tile (2.8). */
-  --masthead-height: 56px;
+  /* Anatomy (2.3): the top strips, each closed by a rule across the main
+     column and the same height on every page (`PageFrame`, owner 2026-11-18):
+     masthead 52; tabs 4 above 32 tabs; filters 8 around 32 controls. Then
+     `page-pad-block` to the first content. Sidebar 224 from 1280, 200 from
+     900, a 56 rail of 40px buttons when collapsed. Content fills the main
+     column inside a 24 gutter (16 below 900), a reading page centred in
+     `thread`. The current navigation item sits on a 7% ink tile (2.8). */
+  --masthead-height: 52px;
   --page-tabs-height: 32px;
   --filter-bar-height: 48px;
   --sidebar-width: 224px;
@@ -2115,6 +2113,20 @@ label {
 }
 [data-figure-cell][data-row-start] {
   box-shadow: inset 0 -1px 0 var(--color-rule);
+}
+/* On the page itself (not in a card, slip or dialog) the strip is full-bleed
+   like the strips above it: its rules and dividers run across the gutters,
+   and only the text is inset, the first cell's on the content edge (owner,
+   2026-11-18). */
+[data-page-body]
+  [data-figure-strip]:not(:where(.surface-card *, .surface-slip *, [role='dialog'] *)) {
+  margin-inline: calc(-1 * var(--content-gutter));
+  & > [data-figure-cell] {
+    padding: 12px 24px 12px 20px;
+  }
+  & > [data-figure-cell][data-row-start] {
+    padding-inline-start: var(--content-gutter);
+  }
 }
 /* A label wraps between words only, never mid-word and never cut. */
 [data-figure-cell] dt {
