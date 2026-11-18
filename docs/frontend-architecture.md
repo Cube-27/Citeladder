@@ -144,12 +144,13 @@ onboarding creates a project and after a project edit.
 The SPA preserves the authenticated shell while route content resolves: after
 authentication, QueryState loading and recoverable gate notices render in the
 shell's content pane, and an in-place refresh retains data with scoped progress
-rather than collapsing the surface. Before the session resolves, `ShellFallback`
-(`components/layout/shell-fallback.tsx`) draws the sidebar, route-titled
-masthead and page skeleton from the route manifest. It renders on every path,
-flow routes included, which breaks the rule that a flow route draws only its own
-frame; that is a defect, tracked in
-[engineering guidelines](engineering-guidelines.md#flow-routes-never-draw-the-app-shell).
+rather than collapsing the surface. What is drawn before the page has one owner,
+`FirstFrame` (`components/layout/first-frame.tsx`), driven by the route
+manifest's `shell` flag: a shell route gets the shell and its page skeleton, a
+flow route its plain ground ([design](design.md), "One loading state per page
+load"; [engineering guidelines](engineering-guidelines.md#flow-routes-never-draw-the-app-shell)).
+A workspace gate still answering holds the content slot instead of replacing the
+tree, so a workspace switch keeps the shell mounted.
 
 Pointer or keyboard intent on a destination starts its route chunk and warms its
 primary read under the destination's exact query key; Overview warms its command
