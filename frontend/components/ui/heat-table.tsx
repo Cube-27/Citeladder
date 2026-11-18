@@ -30,7 +30,7 @@ type HeatTableProps = Readonly<{
 }>;
 
 /**
- * HeatTable — a matrix of figures: row labels in a 170px column, then one
+ * HeatTable — a matrix of figures: row labels in a 176px column, then one
  * centred column per item, each cell a heat-tinted value over its basis.
  */
 export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps) {
@@ -38,7 +38,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
     <Table fixed ariaLabelledBy={labelledBy}>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[170px]">{corner}</TableHead>
+          <TableHead className="w-44">{corner}</TableHead>
           {columns.map((column) => (
             <TableHead key={column.key} className="text-center">
               {column.header}
@@ -54,14 +54,14 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
               <td key={columns[index]?.key ?? index} className="p-0.5 text-center">
                 {cell.kind === 'void' ? (
                   <div
-                    className="rounded-mark grid min-h-10 place-content-center"
+                    className="rounded-mark flex min-h-10 flex-col items-center justify-center"
                     style={{ backgroundImage: HATCH }}
                   >
                     <span className={textRole('caption', 'italic')}>{cell.label}</span>
                   </div>
                 ) : (
                   <div
-                    className="rounded-mark grid min-h-10 place-content-center"
+                    className="rounded-mark flex min-h-10 flex-col items-center justify-center"
                     style={{ background: heat(cell.tint) }}
                   >
                     <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
@@ -85,7 +85,7 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
       <span>Low</span>
       <i
         aria-hidden
-        className="h-1.5 w-[120px] rounded-full"
+        className="h-1.5 w-30 rounded-full"
         style={{ background: `linear-gradient(90deg, ${heat(0)}, ${heat(1)})` }}
       />
       <span>High</span>

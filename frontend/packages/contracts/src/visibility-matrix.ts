@@ -8,7 +8,7 @@ import { netSentimentSchema } from './visibility.ts';
 // are the topic each run froze (AV-5); position and win rate count only the
 // tracked roster (AV-7).
 
-export const matrixDimensionSchema = z.enum(['engine', 'topic', 'market', 'brand']);
+const matrixDimensionSchema = z.enum(['engine', 'topic', 'market', 'brand']);
 export type MatrixDimension = z.infer<typeof matrixDimensionSchema>;
 
 const answers = z.number().int();
@@ -39,7 +39,7 @@ const axesSchema = z.object({
 // A segment pair with no answers is `not_run`, never zero. A measured value is
 // null when it does not apply: position when the brand was never named, win
 // rate when no tracked business was, sentiment when the run was not perceived.
-export const matrixCellSchema = z.discriminatedUnion('kind', [
+const matrixCellSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('not_run') }),
   z.object({
     kind: z.literal('measured'),
