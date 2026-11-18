@@ -114,7 +114,10 @@ export function useFittedColumns({
 
   const hiddenSet = new Set(hidden);
   const shown = columns.filter((_, index) => !hiddenSet.has(index));
-  const positions = hidden.map((index) => index + (selection ? 2 : 1));
+  const position = (index: number) => index + (selection ? 2 : 1);
+  const positions = hidden.map(position);
+  const last = shown.at(-1);
+  const end = last && last !== columns.at(-1) ? position(columns.indexOf(last)) : undefined;
   return {
     frameRef,
     shown,
@@ -124,7 +127,7 @@ export function useFittedColumns({
     probe: hasLow ? (
       <>
         <FloorProbe ref={probeRef} columns={columns} selection={selection} />
-        {positions.length ? <style>{hidingRule(scope, positions)}</style> : null}
+        {positions.length ? <style>{hidingRule({ scope, positions, end })}</style> : null}
       </>
     ) : null,
   };
@@ -133,13 +136,21 @@ export function useFittedColumns({
 /**
  * Hides the head and cells at the given 1-based positions in one table. A
  * row with a spanning cell (a state, the reserved space, a full-row note)
- * keeps its cells; it spans the shown columns (`useShownSpan`).
+ * keeps its cells; it spans the shown columns (`useShownSpan`). When the
+ * trailing columns hide, the last shown cell takes the table's end inset,
+ * which `:last-child` would still give the hidden cell.
  */
-function hidingRule(scope: string, positions: readonly number[]): string {
-  const cells = positions.map(
-    (position) => `[data-fit="${scope}"] tr:not(:has(> [colspan])) > :nth-child(${position})`,
-  );
-  return `${cells.join(',')}{display:none}`;
+function hidingRule({
+  scope,
+  positions,
+  end,
+}: Readonly<{ scope: string; positions: readonly number[]; end: number | undefined }>): string {
+  const cell = (position: number) =>
+    `[data-fit="${scope}"] tr:not(:has(> [colspan])) > :nth-child(${position})`;
+  const hide = `${positions.map(cell).join(',')}{display:none}`;
+  return end === undefined
+    ? hide
+    : `${hide}:root:not([data-public-surface]) ${cell(end)}{padding-inline-end:16px}`;
 }
 
 /**
