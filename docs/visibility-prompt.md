@@ -697,7 +697,11 @@ naming the brand. The weighted composite is the per-prompt **prompt score**
 prompt's answers, its competitive component is not applicable and its weight is
 redistributed, rather than scoring as a loss to every rival. Share of voice has
 one definition, mention-level, used by the tile, its change line and trends.
-Brand rank is null when share of voice is null.
+Brand rank is null when share of voice is null. **Win rate** (AV-7) is the
+share of answers naming at least one tracked business that name this one first,
+from each answer's persisted first-named entity (`analysis/win-rate.ts`);
+untracked names never compete. No such answer is not applicable, a run finalized
+before the derivation is unavailable, and pooled selections sum the counts.
 
 Rates use their specified eligible evidence denominators. Pagination cannot
 change totals, and the browser does not recompute aggregate share of voice.

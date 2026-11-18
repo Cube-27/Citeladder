@@ -253,7 +253,6 @@ function promptMetrics(rows: AggregateExecution[], config: ScoringConfig) {
             typeof r.score.brand_position === 'number' ? r.score.brand_position : null,
           ),
         ),
-        win_tally: wins(group, config),
       };
     })
     .sort((a, b) => b.composite_score - a.composite_score || a.prompt_index - b.prompt_index);

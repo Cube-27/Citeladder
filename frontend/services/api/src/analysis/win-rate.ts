@@ -89,13 +89,23 @@ export function storedWinTally(value: unknown): WinTally | null {
   return value === null || value === undefined ? null : winTallySchema.parse(value);
 }
 
+const UNAVAILABLE: WinCounts = { win_count: null, win_answers: null, win_rate: null };
+
+// No answer naming a tracked business is not applicable: no rate, never zero.
+const counted = (count: number, answers: number): WinCounts => ({
+  win_count: count,
+  win_answers: answers,
+  win_rate: answers ? count / answers : null,
+});
+
 /** The brand's win counts over stored answers. */
 export function brandWinCounts(rows: readonly StoredFirstNamed[]): WinCounts {
   const named = rows.map(storedFirstNamed);
-  if (named.some((answer) => answer.kind === 'unavailable')) return winCounts(null, '');
-  const answers = named.filter((answer) => answer.kind !== 'none').length;
-  const count = named.filter((answer) => answer.kind === 'brand').length;
-  return { win_count: count, win_answers: answers, win_rate: answers ? count / answers : null };
+  if (named.some((answer) => answer.kind === 'unavailable')) return UNAVAILABLE;
+  return counted(
+    named.filter((answer) => answer.kind === 'brand').length,
+    named.filter((answer) => answer.kind !== 'none').length,
+  );
 }
 
 /** Summed counts; one unavailable part, or none at all, is unavailable. */
@@ -103,20 +113,13 @@ export function sumWinCounts(parts: readonly WinCounts[]): WinCounts {
   let count = 0;
   let answers = 0;
   for (const part of parts) {
-    if (part.win_count === null || part.win_answers === null) return winCounts(null, '');
+    if (part.win_count === null || part.win_answers === null) return UNAVAILABLE;
     count += part.win_count;
     answers += part.win_answers;
   }
-  if (parts.length === 0) return winCounts(null, '');
-  return { win_count: count, win_answers: answers, win_rate: answers ? count / answers : null };
+  return parts.length ? counted(count, answers) : UNAVAILABLE;
 }
 
 export function winCounts(tally: WinTally | null, name: string): WinCounts {
-  if (tally === null) return { win_count: null, win_answers: null, win_rate: null };
-  const count = tally.first[name] ?? 0;
-  return {
-    win_count: count,
-    win_answers: tally.answers,
-    win_rate: tally.answers ? count / tally.answers : null,
-  };
+  return tally === null ? UNAVAILABLE : counted(tally.first[name] ?? 0, tally.answers);
 }

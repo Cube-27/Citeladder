@@ -126,7 +126,7 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
   );
 }
 
-/** Named first in N of M; no answer naming a tracked brand is not applicable, not zero. */
+/** No answer naming a tracked brand is not applicable, not zero. */
 function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.win_rate != null) return <span>{formatRate(row.win_rate)}</span>;
   return <Absence narrow state={row.win_answers === 0 ? 'not_applicable' : 'unavailable'} />;
