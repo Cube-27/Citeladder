@@ -159,6 +159,8 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
+/** A wide table's sideways steppers are 24 (`min-h-6`, components/ui/scroll-edges.tsx); /billing at 982 shows them. */
+const SCROLL_STEP_HEIGHT = 24;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
@@ -213,16 +215,15 @@ function measure({ route }: { route: string }) {
     // The sidebar's project and account rows, and its group labels (nav rows),
     // are their own roles below.
     if (element.matches('[data-sidebar-ident], [data-sidebar-group-toggle]')) continue;
-    // A checkbox is its own 16px box, a wide table's sideways stepper its own
-    // 24px glyph button (components/ui/scroll-edges.tsx), and a column
-    // header's sort or hint button is the header's label, measured as
-    // `data-table-header.height`.
-    if (
-      element.getAttribute('role') === 'checkbox' ||
-      element.matches('[data-scroll-step]') ||
-      element.closest('th')
-    )
+    // A checkbox is its own 16px box, and a column header's sort or hint
+    // button is the header's label, measured as `data-table-header.height`.
+    if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
+    // A wide table's sideways stepper is its own 24px glyph button
+    // (components/ui/scroll-edges.tsx), measured as `scroll-step.height`.
+    if (element.matches('[data-scroll-step]')) {
+      add('scroll-step.height', element, element.getBoundingClientRect().height);
       continue;
+    }
     // A work tree's level rows and a pressable figure's cell are whole-row
     // targets (components/ui/work-tree.tsx, figure-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
@@ -733,6 +734,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
+  expectOneValue(records, 'scroll-step.height', SCROLL_STEP_HEIGHT);
   expectOneValue(records, 'figure-target.gap', 0);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
