@@ -12,7 +12,7 @@ import type { IconName } from '@/lib/icons';
  * the workspace (reachable with no project at all); `project` works inside the
  * active project.
  */
-export type RouteScope = 'public' | 'workspace' | 'project';
+type RouteScope = 'public' | 'workspace' | 'project';
 
 /**
  * The sidebar's groups. Dashboard mode lists `home`, `brand`, `tracking`,
