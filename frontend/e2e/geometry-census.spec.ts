@@ -100,8 +100,8 @@ const TAG_HEIGHT = 24;
 /** Text controls have one horizontal padding; icon-only controls are square, with none. */
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
-/** A page's tab row (`--page-tabs-height`); section tab rows are one control high. */
-const PAGE_TABS_HEIGHT = 32;
+/** A page's tab row fills its strip (`--page-tabs-height`); section tab rows are one control high. */
+const PAGE_TABS_HEIGHT = 48;
 /** Tabs are text on a hairline with 12 each side and 4 between; segments no padding and 16 between. */
 const TAB_PADDING_X = 12;
 const TAB_GAP = 4;
@@ -119,15 +119,16 @@ const MASTHEAD_HEIGHT = 52;
  */
 const NAV_ROW_HEIGHT = 32;
 /**
- * Masthead, filter strip and tab strip stack flush, each the same height on
+ * Masthead, tab strip and filter strip stack flush, each the same height on
  * every page (owner, 2026-11-18): the filter strip is 8 around its 32
- * controls, the tab strip 4 above 32 tabs. The main column is padded 32 left
- * and right (`--page-pad-inline`); the body starts 16 below the last strip.
+ * controls, the tab strip as high, its tabs filling it. The main column is
+ * padded 32 left and right (`--page-pad-inline`); the body starts 16 below
+ * the last strip.
  */
 const BAND_GAP = 0;
 const PAGE_PAD_INLINE = 32;
-const TABS_STRIP_TOP = 4;
-const TABS_STRIP_HEIGHT = 36;
+const TABS_STRIP_TOP = 0;
+const TABS_STRIP_HEIGHT = 48;
 const FILTER_STRIP_PADDING_Y = 8;
 const FILTER_STRIP_HEIGHT = 48;
 const BODY_TOP_GAP = 16;

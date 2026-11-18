@@ -132,16 +132,17 @@ function StripFrame({
 
 /**
  * One item: the label, and the current item's accent rung on the hairline.
- * A page tab fills the page's tabs row (40), a section tab is one control
- * high (32); both are 44 below 900px or under a coarse pointer, take 12 each
- * side and hover on a 6% tile inset 4 top and bottom. A segment is one
- * control high with no padding.
+ * A page tab fills the page's tab strip (as high as the filter strip, its
+ * label centred), a section tab is one control high (32, 44 below 900px or
+ * under a coarse pointer); both take 12 each side and hover on a 6% tile one
+ * control high less 4 top and bottom. A segment is one control high with no
+ * padding.
  */
 type TabKind = 'page' | 'section' | 'segment';
 
 const TAB_KIND: Record<TabKind, string> = {
-  page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
-  section: 'min-h-[var(--control-md)]',
+  page: 'min-h-[var(--page-tabs-height,var(--control-md))] before:inset-y-[calc((var(--page-tabs-height,var(--control-md))_-_var(--control-md))/2_+_4px)]',
+  section: 'min-h-[var(--control-md)] before:inset-y-1',
   segment: 'min-h-[var(--control-md)]',
 };
 
@@ -155,7 +156,7 @@ function tabFace({
     'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-tint)] disabled:cursor-not-allowed disabled:opacity-60',
     TAB_KIND[kind],
     tab &&
-      'isolate px-3 before:absolute before:inset-x-0 before:inset-y-1 before:-z-10 before:rounded-mark before:content-[""]',
+      'isolate px-3 before:absolute before:inset-x-0 before:-z-10 before:rounded-mark before:content-[""]',
     tab && !selected && 'not-disabled:hover:before:bg-state-hover',
     'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
     selected

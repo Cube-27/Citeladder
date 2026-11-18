@@ -110,7 +110,7 @@ describe('PageFrame', () => {
     ]).toEqual(['narrow', 'narrow', 'full', 'full', 'narrow']);
   });
 
-  it('stacks the masthead, the filter bar band, the page tabs band, then the content', () => {
+  it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
     const choice = (id: string) =>
       choiceFilter({
         id,
@@ -134,14 +134,14 @@ describe('PageFrame', () => {
     );
     const order = [
       screen.getByRole('heading', { level: 1, name: 'Sources' }),
-      screen.getByRole('button', { name: 'Filters' }).closest('[data-page-band]'),
       screen.getByRole('tablist', { name: 'Views' }).closest('[data-page-band]'),
+      screen.getByRole('button', { name: 'Filters' }).closest('[data-page-band]'),
       screen.getByText('Table'),
     ];
     expect(order.map((node) => node?.getAttribute('data-page-band') ?? node?.tagName)).toEqual([
       'H1',
-      'filters',
       'tabs',
+      'filters',
       'P',
     ]);
     order.slice(1).forEach((node, index) => {
