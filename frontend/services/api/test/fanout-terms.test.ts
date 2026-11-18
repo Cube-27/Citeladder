@@ -23,48 +23,59 @@ afterAll(async () => {
 });
 
 describe('search term normalization', () => {
-  it('keeps distinct folded words and drops function words and single letters', () => {
-    expect(searchTerms('Best CRM for the Agencies & Acme-Cloud, CRM 2026 — é')).toEqual([
-      'best',
-      'crm',
-      'agencies',
-      'acme',
-      'cloud',
-      '2026',
-    ]);
+  it('keeps distinct singular words and intent words, drops function words and numbers', () => {
+    expect(
+      searchTerms(
+        'Which best CRM for the Agencies & Acme-Cloud vs CRMs 2026 — é boxes classes SaaS',
+      ),
+    ).toEqual(['best', 'crm', 'agency', 'acme', 'cloud', 'vs', 'box', 'class', 'saas']);
   });
 
-  it('counts a search once per term and matches brands by name or alias', () => {
+  it('counts a search once per term and gives each term the brands it was part of naming', () => {
     const { totalSearches, terms } = countTerms({
-      queries: ['NW pricing pricing', 'acmecloud pricing', 'Northwind trial'],
-      config: scoringConfig(CONFIGURATION),
+      queries: [
+        'NW pricing pricing',
+        'acmecloud pricing',
+        'Harbor & Pine beans vs Ridgeline Roasting Co.',
+        'pine furniture',
+        'acme cloud reviews',
+      ],
+      config: scoringConfig({
+        ...CONFIGURATION,
+        competitors: [
+          ...CONFIGURATION.competitors,
+          { name: 'Harbor & Pine', aliases: [], domains: [] },
+          { name: 'Ridgeline Roasting Co.', aliases: [], domains: [] },
+        ],
+      }),
       previous: null,
     });
-    expect(totalSearches).toBe(3);
+    const acme = [{ kind: 'brand', name: 'Acme Cloud' }];
+    const harbor = [{ kind: 'competitor', name: 'Harbor & Pine' }];
+    const ridgeline = [{ kind: 'competitor', name: 'Ridgeline Roasting Co.' }];
+    const once = (term: string, brands: { kind: string; name: string }[] = []) => ({
+      term,
+      searches: 1,
+      share: 0.2,
+      change: null,
+      brands,
+    });
+    expect(totalSearches).toBe(5);
     expect(terms).toEqual([
-      { term: 'pricing', searches: 2, share: 0.666667, change: null, brands: [] },
-      {
-        term: 'acmecloud',
-        searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'brand', name: 'Acme Cloud' }],
-      },
-      {
-        term: 'northwind',
-        searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'competitor', name: 'Northwind' }],
-      },
-      {
-        term: 'nw',
-        searches: 1,
-        share: 0.333333,
-        change: null,
-        brands: [{ kind: 'competitor', name: 'Northwind' }],
-      },
-      { term: 'trial', searches: 1, share: 0.333333, change: null, brands: [] },
+      { term: 'pine', searches: 2, share: 0.4, change: null, brands: harbor },
+      { term: 'pricing', searches: 2, share: 0.4, change: null, brands: [] },
+      once('acme', acme),
+      once('acmecloud', acme),
+      once('bean'),
+      once('cloud', acme),
+      once('co', ridgeline),
+      once('furniture'),
+      once('harbor', harbor),
+      once('nw', [{ kind: 'competitor', name: 'Northwind' }]),
+      once('review'),
+      once('ridgeline', ridgeline),
+      once('roasting', ridgeline),
+      once('vs'),
     ]);
   });
 });
@@ -148,13 +159,13 @@ describe('GET /visibility/fanout-terms', () => {
         row('pricing', 2, 0.666667, 0.166667),
         acme,
         acmecloud,
-        row('agencies', 1, 0.333333, 0.333333),
+        row('agency', 1, 0.333333, 0.333333),
         nw,
         row('review', 1, 0.333333, 0.333333),
       ],
       rising: [
         acmecloud,
-        row('agencies', 1, 0.333333, 0.333333),
+        row('agency', 1, 0.333333, 0.333333),
         nw,
         row('review', 1, 0.333333, 0.333333),
         row('pricing', 2, 0.666667, 0.166667),

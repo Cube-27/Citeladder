@@ -13,43 +13,86 @@ import type { Audits, ResponseAnalyses } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { answerEvidence } from '../config/answer-evidence.ts';
 import { compareText } from '../text-order.ts';
-import { normalizeText } from './aliases.ts';
+import { entitySpans, type EntityPolicy, tokensOf } from './aliases.ts';
 import type { ScoringConfig } from './scoring.ts';
 
 const rules = answerEvidence.fanout_terms;
 const STOP_WORDS = new Set<string>(rules.stop_words);
+const PLURAL_EXCEPTIONS = new Set<string>(rules.plural_exceptions);
+const NUMBER = /^\p{N}+$/u;
 // Engine states that searched without saying what for: their words are not applicable.
 const UNREPORTED_STATES = new Set(['unavailable', 'count_only']);
 
 export const storedTermsSchema = z.array(fanoutTermSchema);
 export type FanoutTerm = z.infer<typeof fanoutTermSchema>;
-type TrackedBrand = FanoutTerm['brands'][number] & { keys: Set<string> };
+type TrackedBrand = FanoutTerm['brands'][number] & {
+  aliases: readonly string[];
+  matching?: EntityPolicy;
+};
 
-/** A search's distinct normalized words, without function words or single letters. */
-export function searchTerms(query: string): string[] {
-  return [
-    ...new Set(
-      normalizeText(query)
-        .split(' ')
-        .filter(
-          (word) => Array.from(word).length >= rules.min_term_length && !STOP_WORDS.has(word),
-        ),
-    ),
-  ];
+/** An English plural folded to its singular ("agencies" → "agency"); other words unchanged. */
+function foldPlural(word: string): string {
+  if (!/^[a-z]{4,}$/.test(word) || !word.endsWith('s') || PLURAL_EXCEPTIONS.has(word)) return word;
+  if (/(?:ss|us|is)$/.test(word)) return word;
+  if (word.length > 4 && word.endsWith('ies')) return `${word.slice(0, -3)}y`;
+  if (/(?:ss|sh|ch|x|z)es$/.test(word)) return word.slice(0, -2);
+  return word.slice(0, -1);
 }
 
-/** The brand and every competitor, each with its names and aliases as single-word keys. */
+/** Each distinct term of a tokenized search with the token indexes it came from. */
+function termTokens(tokens: readonly string[]): Map<string, number[]> {
+  const terms = new Map<string, number[]>();
+  tokens.forEach((word, index) => {
+    if (Array.from(word).length < rules.min_term_length || NUMBER.test(word)) return;
+    const term = foldPlural(word);
+    if (STOP_WORDS.has(word) || STOP_WORDS.has(term)) return;
+    terms.set(term, [...(terms.get(term) ?? []), index]);
+  });
+  return terms;
+}
+
+/** A search's distinct terms: folded words without function words, numbers or single letters. */
+export function searchTerms(query: string): string[] {
+  return [...termTokens(tokensOf(query)).keys()];
+}
+
+/** The brand and every competitor, with the names, aliases and matching policy that name it. */
 function trackedBrands(config: ScoringConfig): TrackedBrand[] {
-  const keys = (names: readonly string[]) =>
-    new Set(names.map((name) => normalizeText(name).replaceAll(' ', '')).filter(Boolean));
   return [
-    { kind: 'brand' as const, name: config.brandName, keys: keys(config.brandAliases) },
+    {
+      kind: 'brand' as const,
+      name: config.brandName,
+      aliases: config.brandAliases,
+      matching: config.brandMatching,
+    },
     ...config.competitors.map((c) => ({
       kind: 'competitor' as const,
       name: c.name,
-      keys: keys(c.aliases),
+      aliases: c.aliases,
+      matching: c.matching,
     })),
-  ].filter((brand) => brand.name && brand.keys.size);
+  ].filter((brand) => brand.name && brand.aliases.length);
+}
+
+/**
+ * Per term, the indexes of the tracked brands it was part of a name of, in
+ * any search: "harbor" and "pine" in "harbor & pine beans" name Harbor & Pine,
+ * "beans" names nothing.
+ */
+function termBrands(queries: readonly string[], brands: readonly TrackedBrand[]) {
+  const named = new Map<string, Set<number>>();
+  for (const query of queries) {
+    const tokens = tokensOf(query);
+    const terms = termTokens(tokens);
+    brands.forEach((brand, brandIndex) => {
+      const spans = entitySpans(tokens, brand.aliases, brand.matching);
+      if (!spans.length) return;
+      for (const [term, indexes] of terms)
+        if (indexes.some((i) => spans.some((span) => i >= span.start && i < span.end)))
+          named.set(term, (named.get(term) ?? new Set()).add(brandIndex));
+    });
+  }
+  return named;
 }
 
 const round = (value: number) => Math.round(value * 1e6) / 1e6;
@@ -71,7 +114,8 @@ export function countTerms(input: {
   if (input.previous)
     for (const [term, share] of previous) if (share > 0 && !counts.has(term)) counts.set(term, 0);
   const total = input.queries.length,
-    brands = trackedBrands(input.config);
+    brands = trackedBrands(input.config),
+    named = termBrands(input.queries, brands);
   const terms = [...counts]
     .map(([term, searches]) => {
       const share = total ? round(searches / total) : 0;
@@ -81,7 +125,7 @@ export function countTerms(input: {
         share,
         change: input.previous ? round(share - (previous.get(term) ?? 0)) : null,
         brands: brands
-          .filter((brand) => brand.keys.has(term))
+          .filter((_, index) => named.get(term)?.has(index))
           .map(({ kind, name }) => ({ kind, name })),
       };
     })

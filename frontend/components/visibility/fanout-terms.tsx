@@ -45,7 +45,13 @@ export function FanoutTerms({
   scope,
   enabled,
 }: Readonly<{
-  scope: Readonly<{ audit_id?: string; audit_ids?: string[]; cohort?: string }>;
+  scope: Readonly<{
+    audit_id?: string;
+    audit_ids?: string[];
+    cohort?: string;
+    engine?: string;
+    topic?: string;
+  }>;
   enabled: boolean;
 }>) {
   const projectScope = useProjectScope();
@@ -65,7 +71,12 @@ export function FanoutTerms({
   return (
     <DataTable
       title="Search terms"
-      description="Words engines searched for while answering"
+      description={
+        // Terms are counted per run, so an engine or topic filter cannot narrow them.
+        scope.engine || scope.topic
+          ? 'Words engines searched for while answering, across all engines and topics in this run'
+          : 'Words engines searched for while answering'
+      }
       actions={
         <SegmentedControl
           ariaLabel="Search terms view"

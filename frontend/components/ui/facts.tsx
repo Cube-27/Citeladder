@@ -36,11 +36,8 @@ export type Fact = Readonly<{
  *   `record` — a record's metrics in a drawer: every row ruled, 40 high (56
  *              with a note under the value), the name in `ink` over 40% and
  *              the value after it, with the row's source link at its end.
- *   `metrics` — a record's key metrics in one compact row (an answer's brand,
- *              sources, citations and searches): the label over a one-line
- *              `figure`, four across, two by two only in a pane under 36rem.
  */
-export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns' | 'record' | 'metrics';
+export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns' | 'record';
 
 const LIST = {
   // In the app rows are ruled only past four (`data-ruled`); the website rules every row.
@@ -49,7 +46,6 @@ const LIST = {
   spread: 'grid gap-2',
   columns: 'grid gap-3 desktop:grid-flow-col desktop:auto-cols-fr',
   record: 'divide-rule grid min-w-0 divide-y',
-  metrics: 'grid grid-cols-2 gap-x-6 gap-y-3 @min-[36rem]:grid-cols-4',
 } as const;
 
 const ROW = {
@@ -62,7 +58,6 @@ const ROW = {
   columns: 'grid min-w-0 gap-1',
   record:
     'grid min-h-10 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-3 py-2 has-[[data-fact-note]]:min-h-14',
-  metrics: 'grid min-w-0 gap-1',
 } as const;
 
 const TERM = {
@@ -71,7 +66,6 @@ const TERM = {
   spread: textRole('body', 'text-ink-2'),
   columns: textRole('body', 'text-ink-2'),
   record: textRole('body', 'text-ink min-w-0'),
-  metrics: textRole('body', 'text-ink-2 min-w-0 truncate'),
 } as const;
 
 const DETAIL = {
@@ -85,7 +79,6 @@ const DETAIL = {
     'flex min-h-[var(--tag-height)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
   record: 'flex min-w-0 items-center justify-between gap-3',
-  metrics: textRole('figure', 'flex min-w-0'),
 } as const;
 
 /** A ruled list draws lines between its rows only past this many (app). */
@@ -102,7 +95,6 @@ const ONE_LINE: Record<FactLayout, string | null> = {
   spread: null,
   columns: 'min-w-0',
   record: null,
-  metrics: 'min-w-0',
 };
 
 function factKey(fact: Fact, index: number) {
@@ -123,7 +115,7 @@ export function FactList({
   /** Names the list when nothing visible does. */
   label?: string;
 }>) {
-  const list = (
+  return (
     <dl
       aria-label={label}
       data-fact-list={layout}
@@ -148,8 +140,6 @@ export function FactList({
       ) : null}
     </dl>
   );
-  // Metrics count their columns from the pane's width (a dialog), not the viewport's.
-  return layout === 'metrics' ? <div className="@container min-w-0">{list}</div> : list;
 }
 
 function FactValue({ fact, layout }: Readonly<{ fact: Fact; layout: FactLayout }>) {

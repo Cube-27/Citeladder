@@ -14,7 +14,7 @@ const LABELS = {
 export function AnswerFormatTags({ formats }: Readonly<{ formats: AnswerFormats }>) {
   switch (formats.kind) {
     case 'observed':
-      if (!formats.formats.length) return <Absence state="none" label="Text only" />;
+      if (!formats.formats.length) return <Absence state="none" label="None" />;
       return (
         <Inline as="span" gap="tight">
           {formats.formats.map((format) => (
