@@ -2247,8 +2247,8 @@ label {
 }
 
 /* Every body row tints on hover as one piece: the tint is on the cells, so
-   the pinned first cell's opaque fill takes it too. Blank filler rows and a
-   state row do not answer the pointer. */
+   the pinned first cell's opaque fill takes it too. A reserved page's blank
+   space and a state row do not answer the pointer. */
 :root:not([data-public-surface]) .table-frame tbody > tr:not([data-table-state], [aria-hidden='true']):hover > * {
   background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }

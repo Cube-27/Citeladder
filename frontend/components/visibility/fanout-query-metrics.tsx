@@ -43,7 +43,7 @@ const MOVED_LIMIT = 10;
 export const METRIC_COLUMNS: readonly DataTableColumn[] = [
   { key: 'share', label: 'Share', width: 'figure', kind: 'number' },
   { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
-  { key: 'brands', label: 'Brands matched', kind: 'identity', width: 'lead' },
+  { key: 'brands', label: 'Brands matched', width: 'name' },
 ];
 
 /**

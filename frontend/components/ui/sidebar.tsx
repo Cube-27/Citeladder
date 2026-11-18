@@ -195,13 +195,14 @@ const CURRENT_TILE = 'bg-[var(--nav-current-fill)] text-ink before:bg-accent';
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 
 /**
- * A row's face: 32 tall (44 in the drawer below 900px), `label` type, the
- * icon and the label 8 apart, radius 6. Labels never wrap: one that cannot
- * fit (WCAG text spacing) ends in an ellipsis and the row's tooltip shows it.
+ * A row's face: 32 tall (44 in the drawer below 900px), `label` type at the
+ * regular weight (owner, 2026-11-18), the icon and the label 8 apart, radius
+ * 6. Labels never wrap: one that cannot fit (WCAG text spacing) ends in an
+ * ellipsis and the row's tooltip shows it.
  */
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
-    'focus-ring type-label rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
+    'focus-ring type-label rounded-control relative flex font-normal h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
     'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
     active ? CURRENT_TILE : AT_REST,
     className,

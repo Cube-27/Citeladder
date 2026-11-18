@@ -712,8 +712,10 @@ describe('PerformanceScreen table interactions', () => {
     expect(await within(table).findByText('query 11')).toBeVisible();
     expect(within(table).queryByText('query 1')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
-    // Two rows of data, padded to the full page the first page took.
-    expect(within(table).getAllByRole('row', { hidden: true })).toHaveLength(11);
+    // Two rows of data, then the rest of the first page's height as one blank space.
+    const rows = within(table).getAllByRole('row', { hidden: true });
+    expect(rows).toHaveLength(4);
+    expect(rows[3]?.style.getPropertyValue('--data-table-rows')).toBe('8');
   });
 
   it('starts from the first page when the sorted metric is hidden', async () => {

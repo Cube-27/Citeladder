@@ -43,8 +43,9 @@ const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
 
 /**
  * Each metric column's width role; the product name takes what is left. The
- * four ranking figures are the priority columns and fit beside the pinned name
- * at 982; prices and merchants come last and are what scrolls.
+ * four ranking figures fit beside the pinned name at 982; prices and
+ * merchants come last and are what scrolls. None is `priority: 'low'`: the
+ * reader picks the columns, so a chosen column never hides for room.
  */
 const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
   visibility: 'shortMetric',
@@ -55,12 +56,6 @@ const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
   catalog_price: 'figure',
   merchants: 'category',
 };
-
-const LOW_PRIORITY: ReadonlySet<ProductColumnKey> = new Set([
-  'mentioned_price',
-  'catalog_price',
-  'merchants',
-]);
 
 /**
  * A metric as the Value atom prints it, its note beneath. Nothing in scope to
@@ -189,7 +184,6 @@ export function ProductsTable({
         hint: column.hint,
         width: COLUMN_WIDTHS[column.key],
         kind: column.key === 'merchants' ? 'text' : 'number',
-        ...(LOW_PRIORITY.has(column.key) ? { priority: 'low' } : {}),
         ...(sortKey
           ? {
               sort: {
@@ -209,7 +203,6 @@ export function ProductsTable({
             width: 'name',
             kind: 'actions',
             hideLabel: true,
-            priority: 'low',
           } satisfies DataTableColumn,
         ]
       : []),

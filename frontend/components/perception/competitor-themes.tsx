@@ -16,6 +16,9 @@ import { themeAssociation, type ThemeCell } from '@/lib/visibility/theme-associa
 
 const TITLE = 'How AI describes competitors';
 
+/** Themes past these may hide, the last first, when the table has no room for them. */
+const SHOWN_THEMES = 4;
+
 /**
  * Brand → Perception: each tracked brand's share of mentions raising each
  * theme (AV-6). Counts only: competitor quotes are never shown.
@@ -25,12 +28,13 @@ export function CompetitorThemes({
 }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
   const map = themeAssociation(entities);
   const columns: readonly DataTableColumn[] = [
-    { key: 'brand', label: 'Brand', width: 'lead' },
-    ...map.themes.map((theme): DataTableColumn => ({
+    { key: 'brand', label: 'Brand' },
+    ...map.themes.map((theme, index): DataTableColumn => ({
       key: theme,
       label: themeLabel(theme),
       kind: 'number',
       width: 'figure',
+      ...(index >= SHOWN_THEMES ? { priority: 'low' } : {}),
     })),
   ];
   return (

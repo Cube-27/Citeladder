@@ -205,18 +205,18 @@ describe('PromptTable pagination', () => {
     expect(columns.slice(0, 10)).toEqual([
       'Prompt',
       'Visibility',
-      expect.stringMatching(/^Share of voice/),
-      expect.stringMatching(/^Sentiment/),
-      expect.stringMatching(/^Web search/),
+      'Change',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
       expect.stringMatching(/^Sources/),
       expect.stringMatching(/^Position/),
-      'Change',
+      expect.stringMatching(/^Share of voice/),
+      expect.stringMatching(/^Sentiment/),
+      expect.stringMatching(/^Web search/),
     ]);
     const cells = within(row!).getAllByRole('cell');
     const unnamedCells = within(unnamedRow!).getAllByRole('cell');
-    expect(cells.slice(1, 5).map((cell) => cell.textContent)).toEqual([
+    expect([1, 7, 8, 9].map((index) => cells[index]!.textContent)).toEqual([
       '50.0%',
       '40.0%',
       '+50',
@@ -224,24 +224,24 @@ describe('PromptTable pagination', () => {
     ]);
     // Measured zero share, too few classified, and no engine reporting search
     // are three different readings, none of them a zero sentiment or 0% search.
-    expect(unnamedCells.slice(2, 5).map((cell) => cell.textContent)).toEqual([
+    expect(unnamedCells.slice(7, 10).map((cell) => cell.textContent)).toEqual([
       '0.0%',
       'Too few',
       'Not available',
     ]);
     // Three marks, each named for a screen reader, then the fourth as overflow.
-    expect(cells[5]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
-    expect(cells[6]!.textContent).toBe('25.0%');
-    expect(cells[8]!.textContent).toBe('#2');
+    expect(cells[3]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
+    expect(cells[4]!.textContent).toBe('25.0%');
+    expect(cells[6]!.textContent).toBe('#2');
     // Measured, and no brand named: zero, not the "not measured" mark.
-    expect(unnamedCells[5]!.textContent).toBe('None');
+    expect(unnamedCells[3]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
-    expect(cells[9]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(cells[2]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_applicable',
     );
-    expect(unnamedCells[9]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(unnamedCells[2]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'unavailable',
     );

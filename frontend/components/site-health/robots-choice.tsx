@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
-import { Icon } from '@/components/ui/icon';
-import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
+import { MenuItem } from '@/components/ui/menu';
+import { SPLIT_ACTION_JOIN, SplitButton } from '@/components/ui/split-button';
 import { Tooltip } from '@/components/ui/tooltip';
 
 /** A page fetched although robots.txt excludes it, because its crawl ignored robots.txt. */
@@ -70,30 +68,22 @@ export function StartCrawlControl({
       onClick={() => onStart()}
       pending={pending}
       pendingLabel="Starting…"
+      style={SPLIT_ACTION_JOIN}
     />
   );
-  // One split button: the action and its options share an edge and a height.
   return (
     <>
-      <span data-split-button="" className="inline-flex">
-        {note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
-        <Menu>
-          <MenuTrigger asChild>
-            <Button variant="secondary" disabled={pending} aria-label="More crawl options">
-              <Icon icon={ChevronDown} />
-            </Button>
-          </MenuTrigger>
-          <MenuContent align="end">
-            {note ? (
-              <MenuItem onSelect={() => onStart('respect')}>
-                Run new crawl respecting robots.txt
-              </MenuItem>
-            ) : (
-              <MenuItem onSelect={askToIgnore}>Run new crawl ignoring robots.txt…</MenuItem>
-            )}
-          </MenuContent>
-        </Menu>
-      </span>
+      <SplitButton
+        action={note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
+        menuLabel="More crawl options"
+        disabled={pending}
+      >
+        {note ? (
+          <MenuItem onSelect={() => onStart('respect')}>Respect robots.txt</MenuItem>
+        ) : (
+          <MenuItem onSelect={askToIgnore}>Ignore robots.txt</MenuItem>
+        )}
+      </SplitButton>
       <ConfirmDialog request={confirm} onCancel={() => setConfirm(null)} />
     </>
   );

@@ -25,7 +25,7 @@ const FACTS = [
 
 // Below `desktop` the three fact columns fold into a caption under the offering.
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'offering', label: 'Offering', kind: 'identity', width: 'lead' },
+  { key: 'offering', label: 'Offering', kind: 'identity' },
   ...FACTS.map((fact) => ({ key: fact.key, label: fact.label, desktopOnly: true })),
 ];
 
