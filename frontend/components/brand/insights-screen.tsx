@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PerformanceMatrix } from '@/components/brand/performance-matrix';
 import { TopRankings } from '@/components/brand/top-rankings';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { SectionStack } from '@/components/ui/section';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
@@ -38,7 +38,9 @@ export function InsightsScreen() {
   const { search } = useLocation();
   const projectHref = useProjectHref();
   return (
-    <ReportPage filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}>
+    <ReportPage
+      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
+    >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
         <SelectionPageStateBlock state={state} queries={queries} />

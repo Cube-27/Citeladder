@@ -15,7 +15,7 @@ export type FanoutSummary = Readonly<{
  * filter the evidence table applies, so once they land they describe the
  * population the table draws from.
  */
-export function isSelectionWide(summary: FanoutSummary): boolean {
+function isSelectionWide(summary: FanoutSummary): boolean {
   return summary.distinctQueries !== null && summary.eventCount !== null;
 }
 
@@ -26,43 +26,6 @@ export function isSelectionWide(summary: FanoutSummary): boolean {
  */
 export function selectionMatchedQueries(summary: FanoutSummary): number | null {
   return isSelectionWide(summary) ? summary.matchedQueries : null;
-}
-
-/**
- * Compact totals beside the grouping control, and the scope they describe.
- *
- * They come from the server's aggregation over the COMPLETE selection, so they
- * hold still while the reader pages and types. They used to be derived from
- * whichever evidence window happened to be loaded and shown under these same
- * labels, so they moved on every page.
- *
- * Until the server's figures land they come from the loaded window instead and the caption
- * changes with them. Selection labels over page numbers is the exact fault
- * this block was written to remove.
- */
-export function FanoutCounts({
-  summary,
-  fallback,
-  selectionWide,
-}: Readonly<{
-  summary: FanoutSummary;
-  fallback: { distinct: number; occurrences: number };
-  selectionWide: boolean;
-}>) {
-  const distinct = selectionWide ? (summary.distinctQueries ?? 0) : fallback.distinct;
-  const occurrences = selectionWide ? (summary.eventCount ?? 0) : fallback.occurrences;
-  const scope = selectionWide ? 'across the selected run set' : 'in the searches shown below';
-  return (
-    <span
-      className={textRole('body', 'text-ink-2 whitespace-nowrap')}
-      aria-label={`${distinct} distinct searches and ${occurrences} total occurrences ${scope}`}
-      title={scope}
-    >
-      <span className="text-ink tabular-nums">{distinct}</span>{' '}
-      {distinct === 1 ? 'search' : 'searches'} ·{' '}
-      <span className="text-ink tabular-nums">{occurrences}</span> occurrences
-    </span>
-  );
 }
 
 /** How many searches the typed filter matches across the whole run set. */

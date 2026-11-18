@@ -1,6 +1,5 @@
 import { Download } from 'lucide-react';
 
-import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
@@ -35,10 +34,10 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * The table's toolbar, above whichever table is showing: search, the filters
- * (domain, type, standing), then Export at the end.
+ * The table's toolbar, above whichever table is showing: search, then Export
+ * at the end. Its filters (type, standing, domain) are in the page's All filters.
  *
- * Export writes the rows AS SHOWN — after the filter, the search and the sort.
+ * Export writes the rows AS SHOWN — after the filters, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
  * one on screen, and a reader who had narrowed to one type would have no way to
  * tell until they opened the file.
@@ -49,14 +48,12 @@ export function sourceTableToolbar({
   onSearch,
   rows,
   domain,
-  filters,
 }: Readonly<{
   dimension: 'domain' | 'url';
   search: string;
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
   domain: string | null;
-  filters?: readonly FilterDefinition[];
 }>): FilterBarProps {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -107,7 +104,6 @@ export function sourceTableToolbar({
         aria-label={dimension === 'url' ? 'Search URLs' : 'Search domains'}
       />
     ),
-    filters,
     actions: (
       <Button variant="secondary" onClick={onExport} disabled={rows.length === 0}>
         <Icon icon={Download} />

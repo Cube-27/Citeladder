@@ -8,12 +8,13 @@ const filterName = (label: string, value?: string) =>
 
 /**
  * Finds one filter as a reader does, named with its value ("Topic: All
- * topics"): its row inside All filters, or, where the list has only that
- * filter, its own trigger in the control row.
+ * topics"): its own trigger in the control row (a lone filter, or a page's
+ * Measurement and Period), or its row inside All filters.
  */
 export async function openFilterRow(user: User, label: string, value?: string) {
   const all = screen.queryByRole('button', { name: /^All filters/ });
-  if (!all) return screen.findByRole('button', { name: filterName(label, value) });
+  const own = screen.queryByRole('button', { name: filterName(label, value) });
+  if (own || !all) return own ?? screen.findByRole('button', { name: filterName(label, value) });
   await user.click(all);
   return screen.findByRole('menuitem', { name: filterName(label, value) });
 }

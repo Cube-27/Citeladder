@@ -9,7 +9,7 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -55,7 +55,7 @@ export function CompetitorScreen() {
       crumb={
         <Breadcrumb parts={[{ label: 'Competitors', href: '/competitors' }, { label: name }]} />
       }
-      filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}
+      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
