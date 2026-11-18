@@ -10604,8 +10604,8 @@
             }
           }
         ],
-        "summary": "Get AI crawl coverage",
-        "description": "Returns which of the site’s pages AI bots reached and which they did not, for a date range.",
+        "summary": "Get AI traffic coverage",
+        "description": "Returns how completely each log source collected AI traffic over a date range: coverage per reporting date with batch and heartbeat counts, and each source’s collection state. Per-page requests are in the AI traffic pages list.",
         "x-citeladder-scope": "read"
       }
     },

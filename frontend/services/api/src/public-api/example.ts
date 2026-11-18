@@ -60,7 +60,8 @@ function fixedValue(node: JsonSchema): { value: unknown } | undefined {
 }
 
 function numberExample(node: JsonSchema): number {
-  return typeof node.minimum === 'number' && node.minimum > 0 ? node.minimum : 1;
+  const preferred = typeof node.minimum === 'number' && node.minimum > 0 ? node.minimum : 1;
+  return typeof node.maximum === 'number' ? Math.min(preferred, node.maximum) : preferred;
 }
 
 /** A request names only what it must, or one field when nothing is required. */
@@ -73,15 +74,23 @@ function shownProperties(node: JsonSchema, io: ExampleContext['io']) {
   );
 }
 
-function objectExample(node: JsonSchema, io: ExampleContext['io'], walk: Walk, depth: number) {
-  const shown = shownProperties(node, io);
+function resolved(node: JsonSchema, components: ExampleContext['components']): JsonSchema {
+  return typeof node.$ref === 'string' && node.$ref.startsWith(REF_PREFIX)
+    ? (components[node.$ref.slice(REF_PREFIX.length)] ?? node)
+    : node;
+}
+
+function objectExample(node: JsonSchema, context: ExampleContext, walk: Walk, depth: number) {
+  const shown = shownProperties(node, context.io);
   if (shown.length === 0 && typeof node.additionalProperties === 'object')
     return { example: walk(node.additionalProperties as JsonSchema, depth + 1, 'example') };
   // A response shows an unknown as null, never as a made-up value.
   return Object.fromEntries(
     shown.map(([name, property]) => [
       name,
-      io === 'output' && nullable(property) ? null : walk(property, depth + 1, name),
+      context.io === 'output' && nullable(resolved(property, context.components))
+        ? null
+        : walk(property, depth + 1, name),
     ]),
   );
 }
@@ -100,7 +109,7 @@ function typedExample(
   if (type === 'integer' || type === 'number') return numberExample(node);
   if (type === 'boolean') return true;
   if (type === 'array') return node.items ? [walk(node.items as JsonSchema, depth + 1, key)] : [];
-  if (type === 'object') return objectExample(node, context.io, walk, depth);
+  if (type === 'object') return objectExample(node, context, walk, depth);
   return null;
 }
 
@@ -109,10 +118,9 @@ export function exampleOf(schema: JsonSchema, context: ExampleContext): unknown 
   const nextId = () => fakeUuid((counter += 1));
   const walk: Walk = (node, depth, key) => {
     if (depth > MAX_DEPTH) return null;
-    if (typeof node.$ref === 'string' && node.$ref.startsWith(REF_PREFIX)) {
-      const target = context.components[node.$ref.slice(REF_PREFIX.length)];
-      return target ? walk(target, depth + 1, key) : null;
-    }
+    const target = resolved(node, context.components);
+    if (target !== node) return walk(target, depth + 1, key);
+    if (typeof node.$ref === 'string') return null;
     const fixed = fixedValue(node);
     if (fixed) return fixed.value;
     const variants = variantsOf(node);

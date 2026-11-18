@@ -14,8 +14,10 @@ const components = {
       site_url: { type: 'string' },
       error_message: { anyOf: [{ type: 'string' }, { type: 'null' }] },
       rate: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+      count: { $ref: '#/components/schemas/MaybeCount' },
     },
   },
+  MaybeCount: { type: ['integer', 'null'] },
 };
 
 it('shows a response with unknown values as null and a request with only what it must send', () => {
@@ -26,6 +28,7 @@ it('shows a response with unknown values as null and a request with only what it
     site_url: 'https://example.com/page',
     error_message: null,
     rate: null,
+    count: null,
   });
   expect(exampleOf(schema, { components, io: 'input' })).toEqual({
     id: '00000000-0000-4000-8000-000000000001',

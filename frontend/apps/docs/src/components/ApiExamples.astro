@@ -38,6 +38,7 @@ const responseExample =
               role="tab"
               class="cl-docs-lang-tab"
               aria-selected={index === 0 ? 'true' : 'false'}
+              id={`api-lang-${snippet.id}`}
               aria-controls="api-request-panel"
               data-api-lang={snippet.id}
               tabindex={index === 0 ? 0 : -1}
@@ -49,7 +50,7 @@ const responseExample =
       </div>
       <ApiCopyButton />
     </figcaption>
-    <pre class="cl-code-pre" role="tabpanel" id="api-request-panel" tabindex="0"><code
+    <pre class="cl-code-pre" role="tabpanel" id="api-request-panel" aria-labelledby={`api-lang-${snippets[0]?.id}`} tabindex="0"><code
         >{snippets[0]?.code}</code
       ></pre>
   </figure>
@@ -120,6 +121,7 @@ const responseExample =
         tab.setAttribute('aria-selected', String(on));
         tab.tabIndex = on ? 0 : -1;
       }
+      code?.parentElement?.setAttribute('aria-labelledby', selected.id);
       if (code) code.textContent = snippets[selected.dataset.apiLang ?? ''] ?? '';
     };
     for (const [index, tab] of tabs.entries()) {

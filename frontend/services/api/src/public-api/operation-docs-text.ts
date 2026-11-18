@@ -36,7 +36,7 @@ GET /site-crawls/{crawl_id}/issues | List Site Health issues | Lists the issue g
 GET /site-crawls/{crawl_id}/issues/{group_id} | Get a Site Health issue | Returns one issue group of a crawl with the pages it affects and the evidence for each.
 GET /ai-traffic/overview | Get AI traffic overview | Returns visits from AI bots and assistants over a date range, split by purpose and verification status.
 GET /ai-traffic/pages | List AI traffic pages | Lists the pages AI bots requested, with request counts, for a date range and filters.
-GET /ai-traffic/coverage | Get AI crawl coverage | Returns which of the site’s pages AI bots reached and which they did not, for a date range.
+GET /ai-traffic/coverage | Get AI traffic coverage | Returns how completely each log source collected AI traffic over a date range: coverage per reporting date with batch and heartbeat counts, and each source’s collection state. Per-page requests are in the AI traffic pages list.
 GET /performance | Get performance | Returns search performance for a date range, optionally compared with another range, as a series and a selected snapshot.
 GET /performance/table | Get the performance table | Returns the rows behind a performance snapshot for one dimension, one page at a time, optionally compared with another snapshot.
 GET /search-intelligence/runs | List search intelligence runs | Lists the project’s search intelligence runs, newest first.
