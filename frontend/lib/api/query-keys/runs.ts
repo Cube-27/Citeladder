@@ -73,5 +73,8 @@ export const visibilityKeys = {
   latestPerPrompt: (scope: ProjectScope) => visibility.read('prompts', scope, 'latest-per-prompt'),
   promptHistory: (scope: ProjectScope, promptId: string, filters: ListFilters = {}) =>
     visibility.read('prompt-history', scope, promptId, filters),
+  // Under visibility so a finished run refreshes it with every other measured read.
+  promptAnswers: (scope: ProjectScope, promptId: string, filters: ListFilters = {}) =>
+    visibility.read('prompt-answers', scope, promptId, filters),
   competitorSuggestions: (scope: ProjectScope) => visibility.read('competitor-suggestions', scope),
 };

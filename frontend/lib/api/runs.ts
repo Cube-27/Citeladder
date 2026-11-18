@@ -29,6 +29,23 @@ import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import { startInteractiveWork } from './interactive-work';
 import type { Audit, AuditSchedule, Execution, ExecutionEvidence } from '@citeladder/contracts';
+import {
+  promptAnswerPageSchema,
+  type PromptAnswerPage,
+  type PromptAnswerSearch,
+} from '@citeladder/contracts/visibility-prompt-answers';
+
+/** The prompt page's Past answers filters; omitted reads unfiltered. */
+export type PromptAnswerParams = Readonly<{
+  market?: string;
+  engine?: string;
+  from?: string;
+  brand?: string;
+  cited?: boolean;
+  search?: PromptAnswerSearch;
+  cursor?: string;
+  limit?: number;
+}>;
 
 const auditListSchema = z.array(auditSchema);
 const executionListSchema = z.array(executionSchema);
@@ -109,6 +126,20 @@ export const runsApi = {
     const res = await apiClient.get<ExecutionEvidence>(`/executions/${executionId}`, options);
     return strictValidate(executionEvidenceSchema, res, 'runs.getExecution');
   },
+  /** Every successful answer one prompt got across runs, newest first, a page at a time. */
+  listPromptExecutions: async (
+    scope: ProjectScope,
+    promptId: string,
+    params: PromptAnswerParams,
+    options?: ApiRequestOptions,
+  ) => {
+    const path = withQuery(
+      `/projects/${scope.projectId}/prompts/${promptId}/executions`,
+      definedQuery(params),
+    );
+    const res = await apiClient.get<PromptAnswerPage>(path, options);
+    return strictValidate(promptAnswerPageSchema, res, 'runs.listPromptExecutions');
+  },
   /** Fetch an export through the authenticated client so workspace scope is explicit. */
   downloadExport: (auditId: string, format: 'csv' | 'md', options: ApiRequestOptions) =>
     apiClient.getBlob(`/audits/${auditId}/export.${format}`, options),
@@ -165,6 +196,12 @@ export const runsQueries = {
       queryFn: executionId
         ? ({ signal }) => runsApi.getExecution(executionId, { signal, workspaceId })
         : skipToken,
+    }),
+  promptExecutions: (scope: ProjectScope, promptId: string, params: PromptAnswerParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.promptAnswers(scope, promptId, params),
+      queryFn: ({ signal }) =>
+        runsApi.listPromptExecutions(scope, promptId, params, { signal, ...scoped(scope) }),
     }),
 };
 

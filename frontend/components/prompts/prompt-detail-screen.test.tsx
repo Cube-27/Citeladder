@@ -35,6 +35,8 @@ vi.mock('@/lib/project/project-context', () => {
 });
 
 import { promptsApi } from '@/lib/api/prompts';
+import { runsApi } from '@/lib/api/runs';
+import type { PromptAnswer } from '@citeladder/contracts';
 import { PromptDetailScreen } from './prompt-detail-screen';
 
 const counts = (responses: number, failed = 0) => ({
@@ -161,9 +163,68 @@ function renderScreen(path = `/prompts/${PROMPT}`) {
   );
 }
 
+const listPromptExecutions = vi.spyOn(runsApi, 'listPromptExecutions');
+
 beforeEach(() => {
   getPromptHistory.mockReset();
+  listPromptExecutions
+    .mockReset()
+    .mockResolvedValue({ market_id: null, items: [], next_cursor: null });
   window.history.replaceState(null, '', '/');
+});
+
+const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => ({
+  execution_id: RUN(n),
+  audit_id: RUN(1),
+  run_at: '2026-03-16T00:00:00Z',
+  logical_engine: 'claude',
+  brands: [],
+  brand_mentioned: n === 1,
+  position: n === 1 ? 2 : null,
+  cited: n === 1,
+  search,
+});
+
+it('reads Past answers under the strip filters, keeping an unreported search apart from no', async () => {
+  getPromptHistory.mockResolvedValue(history(null));
+  listPromptExecutions.mockResolvedValue({
+    market_id: null,
+    next_cursor: null,
+    items: [pastAnswer(1, 'used'), pastAnswer(2, 'not_used'), pastAnswer(3, 'not_reported')],
+  });
+  const path = `/prompts/${PROMPT}?engine=claude&period=all&brand=Globex&cited=cited&search=used`;
+  window.history.replaceState(null, '', path);
+  renderScreen(path);
+
+  const table = await screen.findByRole('table', { name: 'Past answers' });
+  await waitFor(() => expect(within(table).getAllByRole('row')).toHaveLength(4));
+  const rows = within(table)
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) =>
+      within(row)
+        .getAllByRole('cell')
+        .slice(4)
+        .map((cell) => cell.textContent),
+    );
+  expect(rows).toEqual([
+    ['#2', 'Cited', 'Yes'],
+    ['Not named', '–Not cited', 'No'],
+    ['Not named', '–Not cited', 'Not reported'],
+  ]);
+  expect(listPromptExecutions).toHaveBeenCalledWith(
+    expect.objectContaining({ projectId: PROJECT }),
+    PROMPT,
+    { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
+    expect.anything(),
+  );
+  // The engine is the page's: the chart reads it too.
+  expect(getPromptHistory).toHaveBeenCalledWith(
+    PROJECT,
+    PROMPT,
+    { engine: 'claude' },
+    expect.anything(),
+  );
 });
 
 it('charts the prompt over time with declared work marked, and hands off to its Action', async () => {

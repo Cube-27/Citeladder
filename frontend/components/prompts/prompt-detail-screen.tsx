@@ -37,7 +37,9 @@ import {
   ownedCitationValues,
 } from '@/lib/prompts/history';
 
+import { usePromptAnswerFilters } from './prompt-answer-filters';
 import { PromptAnswerStates } from './prompt-answer-states';
+import { PromptPastAnswers } from './prompt-past-answers';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
@@ -50,16 +52,18 @@ export function PromptDetailScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const [market, setMarket] = useUrlState('market', optionalStringUrlCodec);
   const markets = useProjectMarkets(projectId, workspaceId);
+  // A single market has nothing to choose, so the strip does not offer one.
+  const marketChoice = marketFilter({ markets, market, onChangeMarket: setMarket });
+  const answerFilters = usePromptAnswerFilters({ market, marketChoice });
   const query = useQuery({
     ...visibilityQueries.promptHistory({ workspaceId, projectId }, promptId, {
       market: market ?? undefined,
+      engine: answerFilters.engine ?? undefined,
     }),
     enabled: Boolean(promptId),
   });
-  // A single market has nothing to choose, so the row is not drawn empty.
-  const marketChoice = marketFilter({ markets, market, onChangeMarket: setMarket });
 
-  const filters = marketChoice ? <FilterBar filters={[marketChoice]} /> : undefined;
+  const filters = <FilterBar filters={answerFilters.definitions} />;
   if (query.isError)
     return (
       <RecordPage back={BACK} filters={filters}>
@@ -98,6 +102,14 @@ export function PromptDetailScreen() {
       <HistoryCard history={history} />
       <Implementations history={history} />
       <PromptAnswerStates latest={history.latest} />
+      <PromptPastAnswers
+        // A new filter set starts again at the newest answer.
+        key={JSON.stringify(answerFilters.answers)}
+        promptId={history.prompt.id}
+        promptText={history.prompt.text}
+        params={answerFilters.answers}
+        markets={markets}
+      />
     </RecordPage>
   );
 }

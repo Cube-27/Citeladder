@@ -1,22 +1,32 @@
 /**
- * `executions`: one execution's persisted analysis and citation evidence.
+ * `executions`: one execution's persisted analysis and citation evidence, and
+ * every successful execution one tracked prompt got across runs.
  *
  * `execution_id` is the
- * execution (`AuditTask`) id from `GET /audits/{id}/executions`; the read is
- * workspace-scoped and projection-only.
+ * execution (`AuditTask`) id from `GET /audits/{id}/executions` or the
+ * prompt's list; both reads are workspace-scoped and projection-only.
  */
 import { executionEvidenceSchema } from '@citeladder/contracts/audits';
+import {
+  promptAnswerPageSchema,
+  promptAnswerSearchSchema,
+} from '@citeladder/contracts/visibility-prompt-answers';
 
-import { notFound } from '../errors.ts';
-import { AnalysisNotFoundError } from '../visibility/selection.ts';
+import { policy } from '../config.ts';
+import { ApiError, notFound } from '../errors.ts';
+import { InvalidCursorError } from '../http/keyset-cursor.ts';
+import { AnalysisNotFoundError, TrendQueryError } from '../visibility/selection.ts';
 import { getExecutionEvidence } from '../visibility/execution.ts';
+import { getPromptAnswers } from '../visibility/prompt-answers.ts';
 import { defineGetRoute } from './define.ts';
+
+const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 
 export const executionRoutes = [
   defineGetRoute({
     family: 'executions',
     path: '/api/v1/executions/{execution_id}',
-    params: { path: { execution_id: { scalar: { kind: 'uuid' }, required: true } }, query: {} },
+    params: { path: { execution_id: uuid }, query: {} },
     response: executionEvidenceSchema,
     async handle({ c, db }, { path }) {
       try {
@@ -26,6 +36,54 @@ export const executionRoutes = [
         });
       } catch (error) {
         if (error instanceof AnalysisNotFoundError) throw notFound('Execution');
+        throw error;
+      }
+    },
+  }),
+  defineGetRoute({
+    family: 'executions',
+    authorize: 'active-project',
+    path: '/api/v1/projects/{project_id}/prompts/{prompt_id}/executions',
+    params: {
+      path: { project_id: uuid, prompt_id: uuid },
+      query: {
+        // Omitted: the project's default market.
+        market: { scalar: { kind: 'uuid' } },
+        engine: { scalar: { kind: 'str' } },
+        from_at: { scalar: { kind: 'datetime' }, alias: 'from' },
+        to_at: { scalar: { kind: 'datetime' }, alias: 'to' },
+        brand: { scalar: { kind: 'str', maxLength: 255 } },
+        cited: { scalar: { kind: 'bool' } },
+        search: { scalar: { kind: 'literal', values: promptAnswerSearchSchema.options } },
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.visibility.prompt_answers_max_limit },
+          default: policy.visibility.prompt_answers_page_size,
+        },
+      },
+    },
+    response: promptAnswerPageSchema,
+    async handle({ c, db }, { path, query }) {
+      const scope = {
+        workspaceId: c.get('workspace').workspaceId,
+        projectId: path.project_id,
+        marketId: query.market,
+      };
+      try {
+        return await getPromptAnswers(db, scope, {
+          promptId: path.prompt_id,
+          logicalEngine: query.engine,
+          fromAt: query.from_at,
+          toAt: query.to_at,
+          brand: query.brand,
+          cited: query.cited,
+          search: query.search,
+          cursor: query.cursor,
+          limit: query.limit,
+        });
+      } catch (error) {
+        if (error instanceof TrendQueryError || error instanceof InvalidCursorError)
+          throw new ApiError(422, error.message);
         throw error;
       }
     },
