@@ -87,7 +87,12 @@ export async function getVisibilityTopics(
     sources.set(block.topic_id, [...(sources.get(block.topic_id) ?? []), source]);
   }
   const recorded = new Set(blocks.map((block) => block.audit_id));
-  const unasked = runs.some((run) => !recorded.has(run.auditId)) ? 'not_recorded' : 'not_run';
+  const unasked = runs.some(
+    (run) =>
+      !recorded.has(run.auditId) && trendSource(run, query.logicalEngine, query.cohort) !== null,
+  )
+    ? 'not_recorded'
+    : 'not_run';
   const current = new Map(topics.map((topic) => [topic.id, topic.name]));
   const items = [...new Set([...current.keys(), ...frozenNames.keys()])]
     .map((topicId): VisibilityTopicRow => {

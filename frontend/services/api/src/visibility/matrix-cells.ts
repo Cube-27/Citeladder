@@ -102,9 +102,11 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
       : null;
   });
 
-  // A run finalized before AV-5 froze no topic: its topic segments are unknown, not unasked.
+  // A run finalized before AV-5 froze no topic: the topic segments it measured are unknown, not unasked.
   const unmeasured = (segment: Segment): Exclude<MatrixCell, { kind: 'measured' }> =>
-    segment.topic !== null && runs[segment.market]?.run?.topics.size === 0
+    segment.topic !== null &&
+    runs[segment.market]?.run?.topics.size === 0 &&
+    measured({ ...segment, topic: null }) !== null
       ? { kind: 'not_recorded' }
       : { kind: 'not_run' };
 

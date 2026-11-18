@@ -246,6 +246,12 @@ describe('topic dimension', () => {
       [{ kind: 'not_recorded' }],
     ]);
     expect(matrix.rankings.engine.map((row) => row.kind)).toEqual(['measured']);
+    // An engine that run never asked is not run, whatever it froze.
+    expect(await rows('/topics?engine=gemini')).toEqual([['Pricing', 'not_run']]);
+    const gemini = (await read(t, t.projectId, '/matrix?engine=gemini')).json as unknown as {
+      grids: { topic_market: unknown[][] };
+    };
+    expect(gemini.grids.topic_market).toEqual([[{ kind: 'not_run' }]]);
 
     // Filed now: the next run records Pricing; only the run that froze no topic leaves Onboarding unknown.
     await db
