@@ -664,7 +664,7 @@ describe('AI Traffic state and navigation', () => {
     expect(
       await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    // Past two filters the window stays its own trigger; the rest share All filters.
+    // The window is the row's calendar chip; the rest share Filters.
     expect(screen.getByRole('button', { name: /^Period:/ })).toBeVisible();
     await openFilterOptions(user, 'Status code');
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
@@ -675,7 +675,7 @@ describe('AI Traffic state and navigation', () => {
     fireEvent.change(statusField, { target: { value: '404' } });
     expect(statusRow()).toHaveAccessibleName('Status code: 404');
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'Filters (1)' })).toHaveAttribute(
       'data-active',
     );
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -699,7 +699,7 @@ describe('AI Traffic state and navigation', () => {
       target: { value: '/page' },
     });
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'All filters (2)' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'Filters (2)' })).toHaveAttribute(
       'data-active',
     );
     // Pages sort from their column headers, like every other table.

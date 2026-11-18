@@ -162,6 +162,10 @@ how to add or change an entry.
   `@citeladder/contracts/comparison-reason`). `comparable` and `matched_subset`
   show a change ("8 of 12 answers comparable"); every other status shows none and
   says why. Owner, 2026-11-02 and 2026-11-15.
+- **The period chip may show only its icon.** At its default the period or
+  measurement filter is an icon chip like the other frequent filters; the data
+  window stays in sight as the filter row's end text ("Latest run · 18 Nov
+  09:12"), not as the chip's value. Owner, 2026-11-18.
 
 ## Site Health and data
 

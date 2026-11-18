@@ -12,7 +12,7 @@ import { CollectionViewControl, collectionFilters } from './search-intelligence-
 import type { SearchCollection } from './search-intelligence-collection-state';
 
 /**
- * The saved scope and market, first in the control row's All filters. They
+ * The saved scope and market, first in the control row's Filters. They
  * pick which saved result the tab reads, so they count as no filter.
  */
 export function savedViewFilters({

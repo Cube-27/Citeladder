@@ -6,7 +6,7 @@ import type { ComponentProps } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Topic } from '@citeladder/contracts';
 
-import { AllFilters } from '@/components/ui/all-filters';
+import { FiltersMenu } from '@/components/ui/filters-menu';
 import { chooseFilterOption, openFilterOptions } from '@/test/all-filters';
 
 import { AddTopicDialog, ManageTopicsDialog, topicFilter } from './topic-controls';
@@ -35,7 +35,7 @@ const child = makeTopic({
 
 function renderFilter(props: Partial<Parameters<typeof topicFilter>[0]> = {}) {
   return render(
-    <AllFilters
+    <FiltersMenu
       filters={[
         topicFilter({
           topics: [child, parent],
@@ -99,7 +99,7 @@ describe('topicFilter', () => {
     const onSelect = vi.fn();
     renderFilter({ selectedTopicId: parent.id, onSelect });
 
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
     await chooseFilterOption(user, 'Topic', 'All topics');
     expect(onSelect).toHaveBeenCalledWith(null);
   });

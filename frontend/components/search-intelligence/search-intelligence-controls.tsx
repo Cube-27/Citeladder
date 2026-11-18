@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 
-import { choiceFilter, menuFieldKeys, type FilterDefinition } from '@/components/ui/all-filters';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { menuFieldKeys } from '@/components/ui/filter-options';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -112,7 +113,8 @@ export function keywordFilters({
       label: 'Min. search volume',
       valueLabel: minVolume || 'Any volume',
       isDefault: minVolume === '',
-      defaultIsEvery: true,
+      defaultLabel: 'Any volume',
+      reset: () => setMinVolume(''),
       content: (
         <Input
           aria-label="Minimum search volume"
@@ -135,7 +137,6 @@ export function keywordFilters({
       label: 'Intent',
       value: intent || 'any',
       defaultValue: 'any',
-      defaultIsEvery: true,
       groups: [{ options: INTENT_OPTIONS }],
       onChange: (value) => setIntent(value === 'any' ? '' : value),
     }),

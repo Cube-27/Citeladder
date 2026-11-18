@@ -195,7 +195,7 @@ type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
 /**
  * The page browser's toolbar, in the table's own header row because it scopes
  * this table alone: the Monitored / All discovered / Errors (failed or
- * blocked) view, All filters (page kind), then Export at the end. Both choices are
+ * blocked) view, the page-kind chip, then Export at the end. Both choices are
  * server-backed and live in the address.
  */
 function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined): FilterBarProps {

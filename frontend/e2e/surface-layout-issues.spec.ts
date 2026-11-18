@@ -109,8 +109,8 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
     tabs: page.getByRole('radiogroup', { name: 'Issue type' }),
     filters: table.locator('[data-filter-bar]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
-    pageKind: table.locator('[data-filter-bar]').getByRole('button', { name: /^Page kind/ }),
-    severity: table.locator('[data-filter-bar]').getByRole('button', { name: /^Severity/ }),
+    // Severity and Page kind live in Filters, whose count (like a chip's value)
+    // widens it once set: only what follows it moves (owner, 2026-11-18).
     summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').first(),
@@ -162,8 +162,15 @@ for (const width of [1280, 1600])
         if (moved(box, next)) shifts.push(`${step}: ${name} ${print(box)} -> ${print(next)}`);
       }
     };
+    const openFilter = async (filter: RegExp) => {
+      await table
+        .locator('[data-filter-bar]')
+        .getByRole('button', { name: /^Filters/ })
+        .click();
+      await page.getByRole('menuitem', { name: filter }).click();
+    };
     const choose = async (filter: RegExp, option: string) => {
-      await table.locator('[data-filter-bar]').getByRole('button', { name: filter }).click();
+      await openFilter(filter);
       await page.getByRole('menuitemradio', { name: option }).click();
     };
 
@@ -194,10 +201,7 @@ for (const width of [1280, 1600])
     await expect(table.getByRole('button', { name: 'Next page' })).toBeEnabled();
     await check('Severity all');
 
-    await table
-      .locator('[data-filter-bar]')
-      .getByRole('button', { name: /^Page kind/ })
-      .click();
+    await openFilter(/^Page kind/);
     await page.getByRole('menuitemradio').nth(1).click();
     await expect.poll(() => new URL(page.url()).searchParams.get('page_kind')).not.toBeNull();
     await check('Page kind');

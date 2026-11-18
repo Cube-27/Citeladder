@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { AllFilters, choiceFilter } from './all-filters';
+import { choiceFilter } from './all-filters';
+import { FiltersMenu } from './filters-menu';
 
 const PROMPTS = Array.from({ length: 12 }, (_, index) => ({
   value: `p${index + 1}`,
@@ -16,7 +17,7 @@ function Page() {
   const [prompt, setPrompt] = useState('every');
   return (
     <>
-      <AllFilters
+      <FiltersMenu
         filters={[
           choiceFilter({
             id: 'surface',
@@ -50,7 +51,7 @@ function Page() {
   );
 }
 
-describe('AllFilters', () => {
+describe('FiltersMenu', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -58,7 +59,7 @@ describe('AllFilters', () => {
   it('lists each filter with its value, checks the selected option and counts what is set', async () => {
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(screen.getByRole('button', { name: 'All filters' }));
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
     const [surface, prompt, ...rest] = screen.getAllByRole('menuitem');
     expect(surface).toHaveAccessibleName('Surface: All surfaces');
     expect(prompt).toHaveAccessibleName('Prompt: Every prompt');
@@ -70,15 +71,20 @@ describe('AllFilters', () => {
     await user.keyboard('{ArrowRight}{ArrowDown}{ArrowDown}{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('gemini every');
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'All filters (1)' }));
-    expect(screen.getByRole('menuitem', { name: 'Surface: Gemini' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Filters (1)' }));
+    const set = screen.getByRole('menuitem', { name: 'Surface: Gemini' });
+    set.focus();
+    await user.keyboard('{ArrowRight}');
+    (await screen.findByRole('menuitem', { name: 'Reset to all surfaces' })).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('selection')).toHaveTextContent('all every');
   });
 
   it('searches a long list and picks from it with the keyboard alone', async () => {
     const user = userEvent.setup();
     render(<Page />);
-    screen.getByRole('button', { name: 'All filters' }).focus();
+    screen.getByRole('button', { name: 'Filters' }).focus();
     await user.keyboard('{Enter}');
     await user.keyboard('{ArrowDown}{ArrowDown}{ArrowRight}');
 
@@ -93,7 +99,10 @@ describe('AllFilters', () => {
     ]);
     await user.keyboard('1{ArrowDown}');
     expect(screen.getByRole('menuitemradio', { name: 'Prompt number 11' })).toHaveFocus();
-    await user.keyboard('{Enter}');
+    // Up from the first result returns to the search, to refine it.
+    await user.keyboard('{ArrowUp}');
+    expect(search).toHaveFocus();
+    await user.keyboard('{ArrowDown}{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('all p11');
   });
@@ -103,7 +112,7 @@ describe('AllFilters', () => {
       const [folder, setFolder] = useState('');
       return (
         <>
-          <AllFilters
+          <FiltersMenu
             filters={[
               {
                 kind: 'custom',
@@ -111,6 +120,8 @@ describe('AllFilters', () => {
                 label: 'Folder',
                 valueLabel: folder || 'Any folder',
                 isDefault: !folder,
+                defaultLabel: 'Any folder',
+                reset: () => setFolder(''),
                 content: (
                   <input
                     aria-label="Folder"
@@ -128,7 +139,7 @@ describe('AllFilters', () => {
     }
     const user = userEvent.setup();
     render(<FolderPage />);
-    screen.getByRole('button', { name: 'All filters' }).focus();
+    screen.getByRole('button', { name: 'Filters' }).focus();
     await user.keyboard('{Enter}{ArrowDown}{ArrowRight}');
 
     expect(screen.getByRole('textbox', { name: 'Folder' })).toHaveFocus();
@@ -145,7 +156,7 @@ describe('AllFilters', () => {
     }));
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(screen.getByRole('button', { name: 'All filters' }));
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     expect(screen.getAllByRole('menu')).toHaveLength(1);
     expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
@@ -154,7 +165,7 @@ describe('AllFilters', () => {
       'Gemini',
     ]);
 
-    await user.click(screen.getByRole('menuitem', { name: 'All filters' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Filters' }));
     expect(screen.getByRole('menuitem', { name: 'Prompt: Every prompt' })).toBeVisible();
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'ChatGPT' }));
@@ -164,7 +175,7 @@ describe('AllFilters', () => {
   it('draws nothing for a page with no filters', () => {
     render(
       <>
-        <AllFilters filters={[]} />
+        <FiltersMenu filters={[]} />
         <button type="button">Other</button>
       </>,
     );

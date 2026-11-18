@@ -6,16 +6,11 @@ import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-no
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import type { FilterDefinition } from '@/components/ui/all-filters';
+import { DefaultHint } from '@/components/ui/filter-options';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { TreeItem, TreeItemForm, TreeList } from '@/components/ui/list-row';
-import {
-  MenuItem,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-} from '@/components/ui/menu';
+import { MenuItem, MenuRadioGroup, MenuRadioItem, MenuSeparator } from '@/components/ui/menu';
 import { Select } from '@/components/ui/select';
 import { ControlCount } from '@/components/ui/tabs';
 import type { Topic } from '@citeladder/contracts';
@@ -33,10 +28,10 @@ const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try a
 const ALL_TOPICS = '';
 
 /**
- * The Topic filter, first in the prompt library's All filters (owner,
- * 2026-11-06: it replaced the topics side panel so the table keeps the page's
- * width). "All topics", then every topic with its active-prompt count, a
- * subtopic named with its parent; the submenu ends with "Add topic" and
+ * The Topic filter, the prompt library's folder chip (owner, 2026-11-06: it
+ * replaced the topics side panel so the table keeps the page's width). "All
+ * topics", then every topic with its active-prompt count, a subtopic named
+ * with its parent; the menu ends with "Add topic" and
  * "Manage topics…", which open the dialogs below. Selection filters the table.
  */
 export function topicFilter({
@@ -58,15 +53,19 @@ export function topicFilter({
     kind: 'custom',
     id: 'topic',
     label: 'Topic',
+    icon: 'topic',
     valueLabel: selected?.label ?? 'All topics',
     isDefault: selectedTopicId === null,
-    defaultIsEvery: true,
+    defaultLabel: 'All topics',
+    reset: () => onSelect(null),
     content: (
       <>
-        <MenuLabel>Topic</MenuLabel>
         <MenuRadioGroup value={selectedTopicId ?? ALL_TOPICS}>
           <MenuRadioItem value={ALL_TOPICS} onSelect={() => onSelect(null)}>
-            All topics
+            <span className="flex min-w-0 items-center">
+              All topics
+              <DefaultHint />
+            </span>
           </MenuRadioItem>
           {ordered.map(({ topic, label }) => (
             <MenuRadioItem key={topic.id} value={topic.id} onSelect={() => onSelect(topic.id)}>

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
-import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
+import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -178,13 +178,4 @@ function StateSum({
   const states = outcome.answer_states;
   if (!states) return <Absence state="unavailable" label="No answer" />;
   return formatCount(keys.reduce((total, key) => total + states[key], 0));
-}
-
-/** The mark of an engine's family; a surface without one shows its name alone. */
-function engineMarkKey(engine: string): EngineKey | null {
-  if (engine.startsWith('chatgpt')) return 'chatgpt';
-  if (engine.startsWith('gemini')) return 'gemini';
-  if (engine === 'claude') return 'claude';
-  if (engine === 'google_ai_overview') return 'google';
-  return null;
 }

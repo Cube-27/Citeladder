@@ -8,7 +8,7 @@ const OPTIONS = [
 
 /**
  * The page-kind filter (site-health v2 P1) shared by the pages inventory and
- * the issues list, as one entry of their All filters menu; its empty option
+ * the issues list, a chip or an entry in Filters; its empty option
  * clears the filter (all page kinds).
  */
 export function pageKindFilter({
@@ -20,7 +20,6 @@ export function pageKindFilter({
     label: 'Page kind',
     value,
     defaultValue: '',
-    defaultIsEvery: true,
     groups: [{ options: OPTIONS }],
     onChange,
   });

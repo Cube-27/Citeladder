@@ -18,7 +18,7 @@ type DomainChoice = Readonly<{
 const ALL = 'all';
 
 /**
- * The Sources table's filters, for the page's All filters menu, in the order
+ * The Sources table's filters, for the page's Filters menu, in the order
  * they keep: type first, then the two that only mean something for pages
  * (standing, which the Read, not cited tab does not offer, and the publisher,
  * which the Domains tab and a domain's own page do not offer).
@@ -55,7 +55,6 @@ function typeFilter(urls: boolean, { value, options, onChange }: TypeChoice): Fi
     label: urls ? 'URL type' : 'Domain type',
     value: value ?? ALL,
     defaultValue: ALL,
-    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -78,7 +77,6 @@ function standingFilter({ gapOnly, onChange }: StandingChoice): FilterDefinition
     label: 'Standing',
     value: gapOnly ? 'gap' : ALL,
     defaultValue: ALL,
-    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -98,7 +96,6 @@ function domainFilter({ value, options, onChange }: DomainChoice): FilterDefinit
     label: 'Domain',
     value: value ?? ALL,
     defaultValue: ALL,
-    defaultIsEvery: true,
     groups: [
       {
         options: [

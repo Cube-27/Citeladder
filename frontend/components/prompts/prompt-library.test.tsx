@@ -198,7 +198,7 @@ describe('PromptLibrary never filled', () => {
     );
     expect(screen.queryByRole('textbox', { name: 'Search prompts' })).toBeNull();
     expect(screen.queryByRole('radio', { name: /Active/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
   });
 });
 
@@ -469,7 +469,7 @@ describe('PromptLibrary topic filter', () => {
 
     const table = await screen.findByRole('table', { name: 'Prompts' });
     expect(within(table).getByText('Best road shoes?')).toBeVisible();
-    await screen.findByRole('button', { name: 'All filters' });
+    await screen.findByRole('button', { name: 'Topic: All topics' });
     await chooseFilterOption(user, 'Topic', /^Trail/);
 
     await waitFor(() => expect(within(table).getByText('Best trail shoes?')).toBeVisible());

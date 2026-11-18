@@ -10,9 +10,9 @@ import {
   type StatusChoice,
 } from '@/components/agent/use-action-filters';
 import type { ActionsView } from '@/components/agent/use-actions-page';
-import { AllFilters } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
-import { FilterBar, FilterChoice, FilterTrigger } from '@/components/ui/filter-bar';
+import { FilterBar, FilterChoice } from '@/components/ui/filter-bar';
+import { FilterTrigger } from '@/components/ui/filter-chip';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import {
@@ -36,9 +36,9 @@ const WORK_PROMPT =
   'Help me work through my open actions, starting with what blocks AI from reading my site.';
 
 /**
- * The Actions page's one control row: which statuses show, All filters and
- * what the tree groups by on the left; Create action and Accept all on the
- * right. Every trigger is sized to its widest value, so a choice moves nothing.
+ * The Actions page's one control row: which statuses show and what the tree
+ * groups by, then Filters (impact, source) on the left; Create action and
+ * Accept all on the right.
  */
 export function ActionsToolbar({
   scope,
@@ -55,12 +55,11 @@ export function ActionsToolbar({
             defaultValue="all"
             options={STATUS_OPTIONS}
             onChange={view.setStatus}
-            fit
           />
-          <AllFilters filters={view.definitions} />
           <GroupByMenu view={view} />
         </Inline>
       }
+      filters={view.definitions}
       actions={
         <>
           <CreateMenu />
@@ -76,12 +75,7 @@ function GroupByMenu({ view }: Readonly<{ view: ActionsView }>) {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <FilterTrigger
-          label="Group by"
-          value={current?.label}
-          active={view.groupBy !== 'goal'}
-          sizeTo={GROUP_BY_OPTIONS.map((option) => option.label)}
-        />
+        <FilterTrigger label="Group by" value={current?.label} active={view.groupBy !== 'goal'} />
       </MenuTrigger>
       <MenuContent>
         <MenuLabel>Group by</MenuLabel>

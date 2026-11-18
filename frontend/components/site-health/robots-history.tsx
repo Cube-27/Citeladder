@@ -5,7 +5,8 @@ import { FileText } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter } from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
+import { FilterChip } from '@/components/ui/filter-chip';
+import { Inline, Stack } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -70,28 +71,35 @@ export function RobotsHistory({
       : [];
   });
   const choose = (side: Side, value: string) => setSelection({ ...selected, [side]: value });
-  // The two observations to compare, in All filters; one observation has nothing to compare.
+  // The two observations to compare, each its own chip leading the row (they
+  // choose what the diff shows, so never behind Filters); one observation has
+  // nothing to compare.
   const toolbar: FilterBarProps = {
-    filters:
-      versions.length < 2
-        ? []
-        : (['before', 'after'] as const).map((side) =>
-            choiceFilter({
-              id: side,
-              label: side === 'before' ? 'Before' : 'After',
-              value: selected[side],
-              defaultValue: '',
-              groups: [
-                {
-                  options: [
-                    { value: '', label: `Select ${side} observation` },
-                    ...versions.map(({ value, label }) => ({ value, label })),
-                  ],
-                },
-              ],
-              onChange: (value) => choose(side, value),
-            }),
-          ),
+    view:
+      versions.length < 2 ? undefined : (
+        <Inline className="flex-wrap">
+          {(['before', 'after'] as const).map((side) => (
+            <FilterChip
+              key={side}
+              filter={choiceFilter({
+                id: side,
+                label: side === 'before' ? 'Before' : 'After',
+                value: selected[side],
+                defaultValue: '',
+                groups: [
+                  {
+                    options: [
+                      { value: '', label: `Select ${side} observation` },
+                      ...versions.map(({ value, label }) => ({ value, label })),
+                    ],
+                  },
+                ],
+                onChange: (value) => choose(side, value),
+              })}
+            />
+          ))}
+        </Inline>
+      ),
   };
   return (
     <Stack>

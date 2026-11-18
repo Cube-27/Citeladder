@@ -111,7 +111,6 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
                 label: 'Purpose',
                 value: purpose,
                 defaultValue: 'all',
-                defaultIsEvery: true,
                 groups: [
                   {
                     options: [

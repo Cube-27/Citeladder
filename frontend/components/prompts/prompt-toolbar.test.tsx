@@ -70,7 +70,7 @@ describe('promptFilterControls', () => {
 });
 
 describe('promptFilterControls filters', () => {
-  it('offers Enabled and Branded as one choice each, marking a chosen one', async () => {
+  it('offers Enabled and Branded as one choice each, marking a chosen one, and clears both at once', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [filters, setFilters] = useState(emptyFilters);
@@ -88,9 +88,19 @@ describe('promptFilterControls filters', () => {
     }
 
     render(<Harness />);
+    // Branded is the row's tag chip; Enabled lives in Filters.
     await chooseFilterOption(user, 'Branded', 'Branded only');
-    await user.keyboard('{Escape}');
     expect(await openFilterRow(user, 'Branded', 'Branded only')).toHaveAttribute('data-active');
-    expect(await openFilterRow(user, 'Enabled', 'All')).not.toHaveAttribute('data-active');
+    expect(await openFilterRow(user, 'Enabled', 'All prompts')).toBeVisible();
+    await user.keyboard('{Escape}');
+    await chooseFilterOption(user, 'Enabled', 'Disabled only');
+    expect(screen.getByRole('button', { name: 'Remove Enabled filter' })).toBeVisible();
+
+    // Both resets land, though each patches the filters in the same tick.
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByRole('button', { name: 'Branded: All prompts' })).not.toHaveAttribute(
+      'data-active',
+    );
+    expect(screen.queryByRole('button', { name: 'Remove Enabled filter' })).toBeNull();
   });
 });

@@ -282,7 +282,7 @@ function Ga4Workspace({
 
 /**
  * The page's control row: the range is its most used control, so it leads as
- * the view; the chart interval waits in All filters while there is a chart,
+ * the view; the chart interval is a chip while there is a chart,
  * and the window it covers closes the row.
  */
 function performanceControls({

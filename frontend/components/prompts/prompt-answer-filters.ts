@@ -1,5 +1,6 @@
 import type { PromptAnswerSearch } from '@citeladder/contracts';
 import { rangeFilter, singleFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { engineOptionMark } from '@/components/ui/engine-mark';
 import type { PromptAnswerParams } from '@/lib/api/runs';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -56,9 +57,14 @@ export function usePromptAnswerFilters({
       singleFilter({
         id: 'engine',
         label: 'Engine',
+        icon: 'engines',
         allLabel: 'All engines',
         value: engine,
-        options: catalog.order.map((key) => ({ value: key, label: catalog.label(key) })),
+        options: catalog.order.map((key) => ({
+          value: key,
+          label: catalog.label(key),
+          mark: engineOptionMark(key),
+        })),
         onChange: setEngine,
       }),
       ...(marketChoice ? [marketChoice] : []),

@@ -269,8 +269,9 @@ vertical gap.
    900px, the back link on a record, the page title, then search, secondary
    actions, at most one primary action and Ask agent.
 2. **Page tabs** (32, optional).
-3. **Filter bar** (48, optional): view, search, **All filters**, then at the
-   row's end the count or a live note and one action (Export, Columns).
+3. **Filter bar** (48, optional): view, search, filter chips, **Filters** and
+   the chips of what is set in it, Clear, then at the row's end the data
+   window, the count or a live note and one action (Export, Columns).
 4. **Sections**, 24 below the chrome and 32 apart.
 
 Order is by likelihood of use: the most likely action comes first, left to
@@ -303,8 +304,8 @@ grids measure the column instead of the viewport (`column-split`,
 and empty states keep their footprint: a table with views (`reserveRows`) keeps
 its tallest view's height (plain space, never blank rows) and its pager in
 every view and state, a section that appears after a read or a condition
-reserves its settled height from the first frame, a filter trigger and
-a count hold their widest value's width, and a pending button keeps its
+reserves its settled height from the first frame, a count holds its widest
+value's width, and a pending button keeps its
 label's box. A page the window scrolls ends in `--page-end-space` (a third of
 the viewport), so content shrinking near the bottom never pulls the scroll.
 
@@ -404,9 +405,18 @@ its own spacing, size or radius on them.
 - **Tabs and segments** are text on a hairline; the current one carries the
   accent mark. A count follows the label in brackets, in the mono face:
   "All signals (107)".
-- **All filters:** one menu listing each filter with its value; options open in
-  a submenu. The button counts the filters changed from their defaults. It
-  appears only for two or more filters; a lone filter is its own trigger.
+- **Filter chips** (owner, 2026-11-18): a chip is sized to its value and
+  prints the value only; the filter's name is its tooltip and its menu's
+  heading, the menu marks the default option and offers "Reset to …" once
+  set. Its width follows its value, so the row is left-aligned and nothing
+  else moves. The five frequent filters (period or measurement, engines,
+  market, branded prompts, topic) are icon chips, icon only at their
+  default; a row shows at most four, in the page's order
+  (`components/ui/filter-bar.tsx`). The rest share **Filters**: a count of
+  those set, a list of name and value with a submenu each, and each set one
+  after the button as a removable value chip; a lone other filter is its own
+  chip. **Clear** appears once anything is set. While the period chip shows
+  only its icon, the data window is the row's end text.
 - **Tables** (DataTable): a column is declared once with its kind, which sets
   the head's and the cells' alignment, face, format and truncation together.
   Heads are `caption-strong` in sentence case, numerals tabular and

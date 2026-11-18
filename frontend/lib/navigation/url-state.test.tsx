@@ -11,6 +11,7 @@ import {
 import { AppScrollRestoration } from '@/components/layout/app-scroll-restoration';
 
 import {
+  batchUrlWrites,
   optionalStringUrlCodec,
   readUrlState,
   setUrlParams,
@@ -188,6 +189,46 @@ describe('router registration', () => {
     scrollTo.mockRestore();
     Reflect.deleteProperty(window, 'scrollY');
     router.dispose();
+  });
+
+  it('lands every write of a batch through the router, as one history entry', async () => {
+    window.history.replaceState(null, '', '/issues?project=p1&severity=low&kind=faq');
+    const router = createMemoryRouter([{ path: '/issues', element: <Probe /> }], {
+      initialEntries: ['/issues?project=p1&severity=low&kind=faq'],
+    });
+    setUrlStateRouter(router);
+    const navigate = vi.spyOn(router, 'navigate');
+    render(<RouterProvider router={router} />);
+
+    // A row's Clear: each filter resets itself in the same tick.
+    batchUrlWrites(() => {
+      setUrlParams({ severity: null });
+      setUrlParams({ kind: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('project=p1'));
+    expect(navigate).toHaveBeenCalledOnce();
+    // One entry: Back returns to every filter as it was.
+    await act(() => router.navigate(-1));
+    expect(screen.getByTestId('search').textContent).toBe('project=p1&severity=low&kind=faq');
+    router.dispose();
+  });
+
+  it('replaces the entry for a batch whose every write replaces', () => {
+    window.history.replaceState(null, '', '/actions?impact=high&source=seo');
+    const push = vi.spyOn(window.history, 'pushState');
+    batchUrlWrites(() => {
+      setUrlParams({ impact: null }, 'replace');
+      setUrlParams({ source: null }, 'replace');
+    });
+    expect(window.location.search).toBe('');
+    expect(push).not.toHaveBeenCalled();
+    batchUrlWrites(() => {
+      setUrlParams({ impact: 'low' }, 'replace');
+      setUrlParams({ source: 'aeo' });
+    });
+    expect(push).toHaveBeenCalledOnce();
+    push.mockRestore();
   });
 
   it('falls back to history when nothing has registered a router', () => {
