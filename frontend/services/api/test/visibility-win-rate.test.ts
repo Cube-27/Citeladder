@@ -1,8 +1,8 @@
 /**
  * Win rate (AV-7) on GET /visibility, against the real PostgreSQL schema: per
- * brand, engine and frozen topic, unavailable before the derivation, and
- * pooled over a period as counts. Workspace isolation of the route is in
- * visibility-reads.test.ts.
+ * brand and engine, unavailable before the derivation, and pooled over a
+ * period as counts. Per frozen topic it is in visibility-topics.test.ts.
+ * Workspace isolation of the route is in visibility-reads.test.ts.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -22,7 +22,7 @@ function aggregate(wins?: { answers: number; brand: number }): Record<string, un
     first: { 'Acme Corp': wins.brand, Globex: wins.answers - wins.brand },
   };
   return {
-    ...(tally && { win_tally: tally, per_topic_win_tally: { Shoes: tally } }),
+    ...(tally && { win_tally: tally }),
     total_completed: 4,
     brand_mention_count: 2,
     owned_citation_response_count: 0,
@@ -37,7 +37,7 @@ function aggregate(wins?: { answers: number; brand: number }): Record<string, un
 }
 
 describe('GET /visibility win rate', () => {
-  it('serves counts per brand, engine and topic, and unavailable before the derivation', async () => {
+  it('serves counts per brand and engine, and unavailable before the derivation', async () => {
     const tenant = await fixtures.tenant();
     await fixtures.brand(tenant.projectId, 'Acme Corp', true);
     await fixtures.competitor(tenant.projectId, { name: 'Globex', domains: ['globex.example'] });
@@ -55,9 +55,6 @@ describe('GET /visibility win rate', () => {
     expect(body.per_engine).toMatchObject([
       { logical_engine: 'chatgpt', win_count: 1, win_answers: 3, win_rate: 1 / 3 },
     ]);
-    expect(body.win_by_topic).toEqual([
-      { topic: 'Shoes', win_count: 1, win_answers: 3, win_rate: 1 / 3 },
-    ]);
 
     // Finalized before the derivation: unavailable, never zero.
     const old = await get(tenant, route(tenant), { audit_id: before });
@@ -66,7 +63,6 @@ describe('GET /visibility win rate', () => {
       win_answers: null,
       win_rate: null,
     });
-    expect(old.body.win_by_topic).toBeNull();
   });
 
   it('pools a period as summed counts, never a mean of rates', async () => {
@@ -85,8 +81,5 @@ describe('GET /visibility win rate', () => {
       win_answers: 7,
       win_rate: 5 / 7,
     });
-    expect(body.win_by_topic).toEqual([
-      { topic: 'Shoes', win_count: 5, win_answers: 7, win_rate: 5 / 7 },
-    ]);
   });
 });

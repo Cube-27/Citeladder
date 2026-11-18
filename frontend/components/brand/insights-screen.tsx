@@ -13,6 +13,7 @@ import {
 } from '@/components/visibility/selection-page';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
 import { VisibilityByMarket } from '@/components/visibility/visibility-by-market';
+import { VisibilityByTopic } from '@/components/visibility/visibility-by-topic';
 import { BrandTrend, InsightsLede } from '@/components/visibility/visibility-trends';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import {
@@ -45,6 +46,11 @@ export function InsightsScreen() {
               <SectionStack aria-busy={queries.visibilityQuery.isFetching}>
                 <InsightsLede selected={selected} />
                 <BrandTrend query={queries.trendQuery} selected={selected} />
+                <VisibilityByTopic
+                  query={queries.topicsQuery}
+                  topic={filters.topic}
+                  onSelectTopic={filters.setTopic}
+                />
                 <EngineComparison
                   visibility={selected}
                   filter={filters.engine}

@@ -12,7 +12,7 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count, hostOf, pathOf, sinceLabel } from '@/lib/visibility/sources';
-import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { topicSelectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
 import type { visibilitySourceNearMissesSchema } from '@citeladder/contracts/visibility-evidence';
 
 type NearMisses = z.infer<typeof visibilitySourceNearMissesSchema>;
@@ -23,7 +23,7 @@ export function useSourceNearMisses(
   queries: SourceQueries,
   input: { enabled: boolean; limit: number },
 ) {
-  const params = { ...selectionParams(filters, queries), limit: input.limit };
+  const params = { ...topicSelectionParams(filters, queries), limit: input.limit };
   const enabled = input.enabled && Boolean(queries.activeRunId);
   return useQuery({
     ...visibilityQueries.sourceNearMisses(

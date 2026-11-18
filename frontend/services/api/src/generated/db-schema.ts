@@ -549,6 +549,7 @@ export interface AuditAnswerAggregates {
   logical_engine: string;
   project_id: string;
   prompt_keys: string[];
+  topic_id: string | null;
   workspace_id: string;
 }
 
@@ -602,6 +603,8 @@ export interface AuditPromptSnapshots {
   prompt_intent: string;
   text: string;
   theme: string;
+  topic_id: string | null;
+  topic_name: string | null;
   workspace_id: string;
 }
 
@@ -679,6 +682,7 @@ export interface AuditSourceAggregates {
   prompt_keys: string[];
   source_class: string | null;
   source_taxonomy_version: string | null;
+  topic_id: string | null;
   url_hash: string | null;
   urls: string[];
   workspace_id: string;
@@ -730,6 +734,19 @@ export interface AuditTasks {
   transport_model: string;
   transport_provider: string;
   updated_at: Timestamp;
+  workspace_id: string;
+}
+
+export interface AuditTopicMetrics {
+  analyzer_version: string;
+  audit_id: string;
+  created_at: Timestamp;
+  id: string;
+  metrics: Json;
+  project_id: string;
+  topic_id: string;
+  topic_name: string;
+  visibility_score: number;
   workspace_id: string;
 }
 
@@ -3676,6 +3693,7 @@ export interface DB {
   audit_schedules: AuditSchedules;
   audit_source_aggregates: AuditSourceAggregates;
   audit_tasks: AuditTasks;
+  audit_topic_metrics: AuditTopicMetrics;
   audits: Audits;
   auth_challenges: AuthChallenges;
   billing_accounts: BillingAccounts;

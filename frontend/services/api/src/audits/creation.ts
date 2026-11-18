@@ -238,6 +238,9 @@ async function persistSnapshots(
     prompt_index: index,
     text: prompt.text,
     theme: prompt.theme,
+    // Frozen only with its name, so a run's topic always has one to show.
+    topic_id: prompt.topic_name === null ? null : prompt.topic_id,
+    topic_name: prompt.topic_name,
     intent: prompt.intent,
     buyer_stage: prompt.buyer_stage,
     prompt_intent: prompt.prompt_intent,

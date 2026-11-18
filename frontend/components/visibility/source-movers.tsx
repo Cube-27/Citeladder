@@ -14,7 +14,7 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { pathOf, percent } from '@/lib/visibility/sources';
-import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { topicSelectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
 import type { visibilitySourceMoversSchema } from '@citeladder/contracts/visibility-evidence';
 
 type Movers = z.infer<typeof visibilitySourceMoversSchema>;
@@ -36,7 +36,7 @@ export function useSourceMovers(
   const comparison = queries.visibilityQuery.data?.comparison;
   const baseline = comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined;
   const params = {
-    ...selectionParams(filters, queries),
+    ...topicSelectionParams(filters, queries),
     baseline_audit_ids: baseline,
     dimension,
     limit: MOVER_ROWS,

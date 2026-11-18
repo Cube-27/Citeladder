@@ -9,7 +9,7 @@
 import type { measurementCountsSchema, rankingRowSchema } from '@citeladder/contracts/visibility';
 import type { z } from 'zod';
 
-import { storedWinTally, sumWinCounts, winCounts } from '../analysis/win-rate.ts';
+import { storedWinTally, winCounts } from '../analysis/win-rate.ts';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
 
@@ -259,22 +259,6 @@ export function cohortMetrics(stored: unknown, cohort: string): Metrics {
 /** The brand's win counts in one aggregate. */
 export function brandWins(metrics: Metrics) {
   return winCounts(storedWinTally(metrics.win_tally), brandName(metrics));
-}
-
-/** The brand's win counts per frozen topic over `sources`; null if any predates the derivation. */
-export function topicWins(sources: readonly Metrics[]) {
-  if (sources.some((metrics) => metrics.per_topic_win_tally == null)) return null;
-  const byTopic = new Map<string, ReturnType<typeof brandWins>[]>();
-  for (const metrics of sources) {
-    for (const [topic, tally] of Object.entries(metricObject(metrics.per_topic_win_tally))) {
-      const parts = byTopic.get(topic) ?? [];
-      parts.push(winCounts(storedWinTally(tally), brandName(metrics)));
-      byTopic.set(topic, parts);
-    }
-  }
-  return [...byTopic]
-    .sort(([left], [right]) => compareText(left, right))
-    .map(([topic, parts]) => ({ topic, ...sumWinCounts(parts) }));
 }
 
 /** One engine's slice of an aggregate, `{}` when that engine was not measured. */

@@ -152,11 +152,16 @@ export function useVisibilityFilters() {
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
+  // A project topic id: answers to prompts filed under it when their run froze them.
+  const [topic, setTopic] = useUrlState('topic', optionalStringUrlCodec, {
+    clearKeys: pageKeys,
+  });
   const [competitor] = useUrlState('competitor', optionalStringUrlCodec);
   const [domain] = useUrlState('domain', optionalStringUrlCodec);
   const [url] = useUrlState('url', optionalStringUrlCodec);
   const isFiltered =
     engine !== 'all' ||
+    topic !== null ||
     promptId !== null ||
     cohort !== 'core' ||
     outcome !== null ||
@@ -184,6 +189,8 @@ export function useVisibilityFilters() {
     setMarket,
     outcome,
     setOutcome,
+    topic,
+    setTopic,
     competitor,
     domain,
     url,
@@ -276,14 +283,22 @@ export function useVisibilityQueries(
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
+  const topic = filters.topic ?? undefined;
   const trendParams = {
     market: filters.market ?? undefined,
     engine,
+    topic,
     from,
     to: filters.toAt ?? undefined,
     granularity: filters.granularity,
     cohort: filters.cohort,
   };
+  const { topic: _topic, baseline_id: _baseline, ...topicParams } = selectedParams;
+  const topicsQuery = useQuery({
+    ...visibilityQueries.topics(requestScope, topicParams),
+    enabled: insights,
+    placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
+  });
   const trendOptions = visibilityQueries.trends(requestScope, trendParams);
   const trendQuery = useQuery({
     ...trendOptions,
@@ -337,6 +352,8 @@ export function useVisibilityQueries(
     selectedRunIds,
     visibilityQuery,
     trendQuery,
+    topicsQuery,
+    topic,
     evidenceQuery,
     surfaceRatesQuery,
     // Null unless the surface filter names an observed surface, which is what
@@ -349,6 +366,7 @@ export function useVisibilityQueries(
       audit_id: evidenceParams.audit_id,
       audit_ids: evidenceParams.audit_ids,
       engine: evidenceParams.engine,
+      topic: evidenceParams.topic,
       cohort: evidenceParams.cohort,
     },
     evidenceScopeNarrowed: isEvidenceScopeNarrowed(evidenceParams),
@@ -431,6 +449,7 @@ function selectionParams(
     market: filters.market ?? undefined,
     cohort: filters.cohort,
     engine,
+    topic: filters.topic ?? undefined,
     baseline_id: filters.baselineId ?? undefined,
     selection_mode: selectionModeParam(filters),
     from: filters.selectionMode === 'range' ? from : undefined,
@@ -463,6 +482,7 @@ function evidenceSelectionParams(
     audit_id: selectedRunIds ? undefined : (activeRunId ?? undefined),
     audit_ids: selectedRunIds,
     engine,
+    topic: filters.topic ?? undefined,
     cohort: filters.cohort,
     prompt_id: filters.promptId ?? undefined,
     limit: EVIDENCE_LIMIT,

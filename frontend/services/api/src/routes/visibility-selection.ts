@@ -3,6 +3,7 @@
  * parameters, the `RunSelection` they decode to, and the translation of the
  * readers' selection errors into responses.
  */
+import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
@@ -28,6 +29,19 @@ export const WINDOW = {
   from_at: { scalar: { kind: 'datetime' }, alias: 'from' },
   to_at: { scalar: { kind: 'datetime' }, alias: 'to' },
 } as const satisfies ParamSpecs;
+/** Answers to prompts filed under this project topic when their run froze them. */
+export const TOPIC = { topic: { scalar: { kind: 'uuid' } } } as const satisfies ParamSpecs;
+export const LIMIT = {
+  scalar: { kind: 'int', ge: 1, le: policy.visibility.evidence_max_limit },
+  default: policy.visibility.evidence_default_limit,
+} as const;
+export const BASELINE_RUNS = { scalar: { kind: 'uuid' }, list: true } as const;
+// `citations.url` is unbounded text, so this cap decides which pages have a
+// detail view at all: the practical ceiling a query string survives.
+export const MAX_URL_LENGTH = 8192;
+
+/** Every route here reads the path project inside the active workspace. */
+export const family = { family: 'visibility', authorize: 'active-project' } as const;
 
 /**
  * A selection with nothing measured yet and one whose metrics are still being
@@ -69,14 +83,15 @@ type SelectionQuery = {
   cohort: string;
   from_at: RunSelection['fromAt'];
   to_at: RunSelection['toAt'];
+  topic?: string | null;
 };
 
-/** A project's runs in the requested market (omitted: the default). */
-export const marketScope = (workspaceId: string, projectId: string, marketId: string | null) => ({
-  workspaceId,
-  projectId,
-  marketId,
-});
+/** A project's runs in the requested market (omitted: the default) and topic. */
+export const marketScope = (
+  workspaceId: string,
+  projectId: string,
+  query: { market: string | null; topic?: string | null },
+) => ({ workspaceId, projectId, marketId: query.market, topicId: query.topic ?? null });
 
 export function runSelection(
   workspaceId: string,
@@ -93,6 +108,7 @@ export function runSelection(
     cohort: query.cohort,
     fromAt: query.from_at,
     toAt: query.to_at,
+    topicId: query.topic ?? null,
   };
 }
 

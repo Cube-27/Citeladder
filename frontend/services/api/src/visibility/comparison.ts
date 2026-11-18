@@ -98,6 +98,8 @@ export async function compareSelection(
     toAt: null,
     auditId: persisted.baseline_audit_id,
   });
+  // The baseline run asked nothing in the selected topic: there is nothing to compare.
+  if (previous === undefined && scope.topicId) return emptyComparison();
   const comparison =
     key !== null && previous !== undefined
       ? await candidateComparison(db, current, previous, selector, key)
@@ -441,6 +443,7 @@ export async function competitorGaps(
     auditIds: readonly string[];
     cohort: string;
     engine: string | null;
+    topicId?: string | null;
   },
 ): Promise<Map<string, number>> {
   if (input.auditIds.length === 0) return new Map();
@@ -453,6 +456,18 @@ export async function competitorGaps(
     .where('ra.brand_mentioned', '=', false)
     .where('ra.cohort', 'in', [...selectedCohorts(input.cohort)]);
   if (input.engine) query = query.where('ra.logical_engine', '=', input.engine);
+  if (input.topicId) {
+    const topicId = input.topicId;
+    query = query.where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom('audit_tasks as task')
+          .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.id', 'task.prompt_snapshot_id')
+          .select('task.id')
+          .whereRef('task.id', '=', 'ra.task_id')
+          .where('snapshot.topic_id', '=', topicId),
+      ),
+    );
+  }
   const rows = await query.groupBy('mention.competitor_name').execute();
   return new Map(rows.map((row) => [row.competitor_name, Number(row.gaps)]));
 }

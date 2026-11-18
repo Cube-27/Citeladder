@@ -30,7 +30,6 @@ import {
   brandWins,
   cohortMetrics,
   engineMetrics,
-  topicWins,
   isComplete,
   measurementCounts,
   metricCount,
@@ -116,6 +115,7 @@ export async function getVisibility(
       auditIds: [run.auditId],
       cohort: query.cohort,
       engine: query.logicalEngine,
+      topicId: scope.topicId,
     }),
   ]);
   applyRankingComparison(view.response.rankings, comparison, gaps);
@@ -223,21 +223,42 @@ async function selectedRun(
     .executeTakeFirst();
   if (snapshot === undefined)
     throw new AnalysisNotFoundError('Metrics not available for audit', 'metrics_pending');
+  const topicId = scope.topicId;
+  const measured = topicId
+    ? await topicBlock(db, { workspaceId: scope.workspaceId, auditId: audit.id, topicId })
+    : snapshot;
   const routes = await engineSnapshots(db, scope.workspaceId, [audit.id]);
   return {
-    snapshotId: snapshot.id,
+    snapshotId: measured.id,
     auditId: audit.id,
     auditStatus: audit.status,
     analyzerVersion: snapshot.analyzer_version,
     scoringRuleVersion: snapshot.scoring_rule_version,
-    visibilityScore: snapshot.visibility_score,
-    metrics: snapshot.metrics,
+    visibilityScore: measured.visibility_score,
+    metrics: measured.metrics,
     snapshotCreatedAt: snapshot.created_at,
     configuration: audit.configuration,
     completedAt: audit.completed_at,
     marketId: audit.market_id,
     provenance: modelProvenanceFor(routes.get(audit.id) ?? [], audit.configuration),
   };
+}
+
+/** The run's block for the scope's topic; a run that asked no prompt under it measured nothing there. */
+async function topicBlock(
+  db: Database,
+  key: { workspaceId: string; auditId: string; topicId: string },
+) {
+  const block = await db
+    .selectFrom('audit_topic_metrics')
+    .select(['id', 'visibility_score', 'metrics'])
+    .where('workspace_id', '=', key.workspaceId)
+    .where('audit_id', '=', key.auditId)
+    .where('topic_id', '=', key.topicId)
+    .executeTakeFirst();
+  if (block === undefined)
+    throw new AnalysisNotFoundError('The run asked no prompt in this topic', 'not_measured');
+  return block;
 }
 
 function engineRow(engine: string, metrics: Metrics): EngineRow {
@@ -315,7 +336,6 @@ async function runView(
       rankings,
       per_engine: engine === null ? engineRows(metrics) : [engineRow(engine, metrics)],
       avg_position: metricNumber(metrics.avg_position),
-      win_by_topic: topicWins([metrics]),
       citation_totals: citationTotals(metrics),
       created_at: wireUtc(run.snapshotCreatedAt),
     },
@@ -331,7 +351,7 @@ function configurationGroup(source: TrendSource): string {
 
 function rangeGroups(
   runs: readonly MeasuredRun[],
-  query: DashboardQuery,
+  query: Pick<DashboardQuery, 'logicalEngine' | 'cohort' | 'configurationKey'>,
 ): {
   groups: Map<string, NonEmpty<TrendSource>>;
   key: string;
@@ -491,17 +511,50 @@ function asRankingRow(row: TrendPoint['rankings'][number]): RankingRow {
   };
 }
 
-async function rangeVisibility(
-  db: Database,
-  scope: RunScope,
-  query: DashboardQuery,
-): Promise<VisibilityResponse> {
+function rangeWindow(query: Pick<DashboardQuery, 'fromAt' | 'toAt'>) {
   const fromAt = query.fromAt && toUtc(query.fromAt);
   const toAt = query.toAt ? toUtc(query.toAt) : fromEpochMicros(BigInt(Date.now()) * 1000n);
   // An open period ends now, so it cannot start later than now.
   if (fromAt && epochMicros(fromAt) > epochMicros(toAt)) {
     throw new TrendQueryError("'from' must not be after 'to'");
   }
+  return { fromAt, toAt };
+}
+
+/**
+ * The whole runs a dashboard selection reads: the selected run, or the
+ * range's chosen configuration. A breakdown of the selection reads these.
+ */
+export async function selectionRuns(
+  db: Database,
+  requested: RunScope,
+  query: Omit<DashboardQuery, 'baselineId'>,
+): Promise<MeasuredRun[]> {
+  validateEngineAndRange(query);
+  validateCohort(query.cohort);
+  const scope = { ...requested, topicId: null };
+  if (query.selectionMode === 'range') {
+    const runs = await loadMeasuredRuns(db, scope, rangeWindow(query));
+    const selected = new Set(rangeGroups(runs, query).sources.map((source) => source.auditId));
+    return runs.filter((run) => selected.has(run.auditId));
+  }
+  if (query.selectionMode === 'run' && query.auditId === null) {
+    throw new TrendQueryError('A specific run selection requires audit_id');
+  }
+  const run = await selectedRun(db, scope, query.auditId);
+  return loadMeasuredRuns(
+    db,
+    { ...scope, marketId: run.marketId },
+    { fromAt: null, toAt: null, auditId: run.auditId },
+  );
+}
+
+async function rangeVisibility(
+  db: Database,
+  scope: RunScope,
+  query: DashboardQuery,
+): Promise<VisibilityResponse> {
+  const { fromAt, toAt } = rangeWindow(query);
   const runs = await loadMeasuredRuns(db, scope, { fromAt, toAt });
   const { groups, key, sources } = rangeGroups(runs, query);
   const latest = lastOf(sources);
@@ -520,6 +573,7 @@ async function rangeVisibility(
     auditIds: sourceAuditIds,
     cohort: query.cohort,
     engine: query.logicalEngine,
+    topicId: scope.topicId,
   });
   applyRankingComparison(rankings, comparison, gaps);
   return {
@@ -548,7 +602,6 @@ async function rangeVisibility(
     visibility_score: null,
     // Pooled like the counts above; the last run's own values would describe one run only.
     avg_position: point.avg_position ?? null,
-    win_by_topic: topicWins(sources.map((source) => source.metrics)),
     model_provenance: point.model_provenance ?? [],
     citation_totals: undefined,
     rankings,

@@ -6,7 +6,7 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import {
   selectionEnabled,
-  selectionParams,
+  topicSelectionParams,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
@@ -31,7 +31,7 @@ export function mergedAdPages(
  * reads nothing rather than keeping the previous selection.
  */
 export function useAds(filters: Pick<SourceFilters, 'engine' | 'cohort'>, queries: SourceQueries) {
-  const params = selectionParams(filters, queries);
+  const params = topicSelectionParams(filters, queries);
   const { projectId } = queries;
   const enabled = selectionEnabled(queries);
   const query = useInfiniteQuery({

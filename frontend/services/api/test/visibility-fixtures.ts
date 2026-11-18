@@ -78,6 +78,7 @@ export type ExecutionInput = {
 };
 
 const TABLES_BY_WORKSPACE = [
+  'audit_topic_metrics',
   'audit_source_aggregates',
   'audit_answer_aggregates',
   'opportunities',

@@ -39,6 +39,7 @@ import {
 } from '@citeladder/contracts/fact-checking';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
+import { visibilityTopicsSchema } from '@citeladder/contracts/visibility-topics';
 import { definedQuery, withQuery } from './shared';
 import type {
   ObservedCompetitor,
@@ -63,6 +64,8 @@ type VisibilityTrendParams = {
   cohort?: VisibilityCohortParam;
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
+  /** A project topic: answers to prompts filed under it when their run froze them. */
+  topic?: string;
   /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
   from?: string;
   /** Inclusive UTC upper bound (ISO 8601) for the completion window. */
@@ -91,6 +94,7 @@ type VisibilityEvidenceParams = {
   prompt_id?: string;
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
+  topic?: string;
   /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
   from?: string;
   /** Inclusive UTC upper bound (ISO 8601) for the completion window. */
@@ -106,6 +110,7 @@ export type ProjectVisibilityParams = {
   market?: string;
   cohort?: VisibilityCohortParam;
   engine?: string;
+  topic?: string;
   baseline_id?: string;
   selection_mode?: string;
   from?: string;
@@ -177,6 +182,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       cursor?: string;
     },
@@ -194,6 +200,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       cursor?: string;
       query?: string;
@@ -213,6 +220,7 @@ export const visibilityApi = {
       audit_ids?: string[];
       baseline_audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       domain?: string;
       source_type?: string;
@@ -260,6 +268,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       domain?: string;
       url?: string;
@@ -280,6 +289,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       limit?: number;
     },
@@ -302,6 +312,7 @@ export const visibilityApi = {
       audit_ids?: string[];
       baseline_audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
       dimension?: 'domain' | 'url';
       limit?: number;
@@ -321,6 +332,7 @@ export const visibilityApi = {
       audit_id?: string;
       audit_ids?: string[];
       engine?: string;
+      topic?: string;
       cohort?: string;
     },
     options?: ApiRequestOptions,
@@ -342,6 +354,16 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilityMarketsSchema, result, 'visibility.getMarketVisibility');
+  },
+  /** The selection's By topic breakdown: one row per project topic, frozen per run. */
+  getVisibilityTopics: async (
+    projectId: string,
+    params: Omit<ProjectVisibilityParams, 'baseline_id' | 'topic'>,
+    options?: ApiRequestOptions,
+  ) => {
+    const path = withQuery(`/projects/${projectId}/visibility/topics`, definedQuery(params));
+    const res = await apiClient.get(path, options);
+    return strictValidate(visibilityTopicsSchema, res, 'visibility.getVisibilityTopics');
   },
   getProjectVisibility: async (
     projectId: string,

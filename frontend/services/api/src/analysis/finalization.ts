@@ -1,21 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
-import type { Audits, AuditTasks } from '../generated/db-schema.ts';
+import type { Audits } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { record, numberRecord } from '../db/json.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
 import { scoringConfig } from './scoring.ts';
-import { aggregateRun, promptTrend, type Aggregate, type AggregateExecution } from './aggregate.ts';
+import { promptTrend, type Aggregate, type AggregateExecution } from './aggregate.ts';
 import { frozenComparisonKey } from './comparison.ts';
 import { storedFirstNamed } from './win-rate.ts';
 import { persistObservedCompetitors } from './observed-competitors.ts';
-import { round } from '../numbers.ts';
+import { persistTopicMetrics, runAggregate, type ScopedTask } from './run-metrics.ts';
 import { compareText } from '../text-order.ts';
 import { persistSourceAggregates } from '../visibility/source-aggregates.ts';
 
-/** A run task with its prompt snapshot's cohort. */
-export type ScopedTask = Selectable<AuditTasks> & { cohort: string };
 /** Derives one successful answer inside the caller's transaction. */
 type DeriveAnswer = (
   db: Database,
@@ -23,53 +21,6 @@ type DeriveAnswer = (
   audit: Selectable<Audits>,
   artifactId: string,
 ) => Promise<void>;
-function coverage(tasks: ScopedTask[], completed: number) {
-  const succeeded = tasks.filter((t) => t.status === 'succeeded').length;
-  return {
-    requested: tasks.length,
-    completed,
-    failed: tasks.filter((t) => t.status === 'failed').length,
-    not_run: tasks.filter((t) => !['succeeded', 'failed'].includes(t.status)).length,
-    unavailable: Math.max(0, succeeded - completed),
-    rate: tasks.length ? completed / tasks.length : null,
-  };
-}
-function cohortMetrics(
-  rows: AggregateExecution[],
-  tasks: ScopedTask[],
-  config: ReturnType<typeof scoringConfig>,
-  cohorts: readonly string[],
-  name: string,
-  engines: string[],
-) {
-  const eligible = rows.filter((r) => cohorts.includes(r.cohort)),
-    eligibleTasks = tasks.filter((t) => cohorts.includes(t.cohort));
-  const aggregate = aggregateRun(eligible, config);
-  return {
-    ...aggregate,
-    cohort: name,
-    coverage: coverage(eligibleTasks, aggregate.total_completed),
-    per_engine: Object.fromEntries(
-      engines.map((engine) => {
-        const value = aggregateRun(
-          eligible.filter((r) => r.logical_engine === engine),
-          config,
-        );
-        return [
-          engine,
-          {
-            ...value,
-            coverage: coverage(
-              eligibleTasks.filter((t) => t.logical_engine === engine),
-              value.total_completed,
-            ),
-          },
-        ];
-      }),
-    ),
-  };
-}
-
 type OwnedPage = { url_hash: string; canonical_url: string | null; citation_ids: string[] };
 /**
  * The run's owned citations per cited page, for the AI Traffic Pages and URL
@@ -188,44 +139,12 @@ export async function deriveRunMetrics(
   });
   const config = scoringConfig(audit.configuration),
     engines = [...new Set(tasks.map((t) => t.logical_engine))].sort(compareText);
-  const organic = cohortMetrics(
+  const { metrics, visibility, organic, comparison, diagnostic } = runAggregate({
     rows,
     tasks,
     config,
-    policy.visibility.organic_cohorts,
-    'market_visibility',
     engines,
-  );
-  const comparison = cohortMetrics(rows, tasks, config, ['comparison'], 'comparison', engines);
-  const diagnostic: Aggregate & { cohort: string; coverage: ReturnType<typeof coverage> } = {
-    ...aggregateRun(
-      rows.filter((r) => r.cohort === 'brand_diagnostic'),
-      config,
-    ),
-    cohort: 'brand_diagnostic',
-    coverage: coverage(
-      tasks.filter((t) => t.cohort === 'brand_diagnostic'),
-      rows.filter((r) => r.cohort === 'brand_diagnostic').length,
-    ),
-  };
-  // Unbranded and branded prompts together: its own block, never a blend of
-  // the other two, so its rates are counted over the answers they share.
-  const all = cohortMetrics(
-    rows,
-    tasks,
-    config,
-    policy.visibility.all_cohorts,
-    policy.visibility.all_cohort,
-    engines,
-  );
-  const metrics = { ...organic, comparison, brand_diagnostic: diagnostic, all };
-  const visibility = organic.per_prompt.length
-    ? round(
-        organic.per_prompt.reduce((sum, p) => sum + p.composite_score, 0) /
-          organic.per_prompt.length,
-        2,
-      )
-    : 0;
+  });
   const versions = policy.audits.analysis;
   // The run's owned-citation fact for AI Traffic: the exact citation rows,
   // all cohorts, so readers select it and never count citations themselves.
@@ -256,6 +175,7 @@ export async function deriveRunMetrics(
   // The run's Sources facts, beside its metric snapshot, so the Sources
   // table reads them instead of re-joining answers and citations.
   await persistSourceAggregates(trx, { workspaceId, auditId, at });
+  await persistTopicMetrics(trx, audit, { rows, tasks, snapshots, config, engines, at });
   await persistPromptMetrics(
     trx,
     audit,

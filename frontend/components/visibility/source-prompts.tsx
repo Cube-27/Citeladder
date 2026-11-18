@@ -65,6 +65,7 @@ export function SourcePrompts({
     audit_id: queries.selectedRunIds ? undefined : (queries.activeRunId ?? undefined),
     audit_ids: queries.selectedRunIds,
     engine: filters.engine === 'all' ? undefined : filters.engine,
+    topic: queries.topic,
     cohort: filters.cohort,
     domain: domain ?? undefined,
     url: url ?? undefined,
