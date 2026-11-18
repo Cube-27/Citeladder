@@ -11,13 +11,16 @@ import { cn } from '@/lib/utils';
  * variants so the shell's loading state does not carry them on boot.
  */
 
-/** One placeholder: a `well` block, radius 4, at least 12 high. */
+/**
+ * One placeholder: a `well` block, radius 4, at least 12 high. Inside a
+ * shape one sweep crosses every block (`skeleton-sweep`, ui-motion.css).
+ */
 export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
   return (
     <span
       aria-hidden
       data-skeleton-block=""
-      className={cn('skeleton-block bg-well block h-3 min-h-3 rounded-sm', className)}
+      className={cn('skeleton-sweep bg-well block h-3 min-h-3 rounded-sm', className)}
     />
   );
 }
@@ -47,8 +50,16 @@ const CHART_HEIGHT: Record<ChartHeight, string> = {
   lg: 'h-[var(--chart-height-lg)]',
 };
 
-/** A loading shape's blocks, without a frame of its own. */
+/** A loading shape's blocks under one sweep, without a frame of its own. */
 export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
+  return (
+    <div className="skeleton-sweep grid min-w-0">
+      <ShapeBody shape={shape} />
+    </div>
+  );
+}
+
+function ShapeBody({ shape }: Readonly<{ shape: LoadingShape }>) {
   switch (shape.kind) {
     case 'table':
       return <TableBlocks columns={shape.columns} desktopOnly={shape.desktopOnly} />;
@@ -104,7 +115,7 @@ function TitleBlock() {
 /** A widget's frame as it loads: its title's line over its body's shape. */
 export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
-    <div className={frameClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
+    <div className={frameClasses('skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]')}>
       <span className="flex h-6 items-center">
         <TitleBlock />
       </span>
@@ -234,7 +245,7 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
 /** A block at a named radius: cn() does not merge the named radii over SkeletonBlock's rounded-sm. */
 function RoundBlock({ className }: Readonly<{ className: string }>) {
   return (
-    <span aria-hidden data-skeleton-block="" className={cn('skeleton-block bg-well', className)} />
+    <span aria-hidden data-skeleton-block="" className={cn('skeleton-sweep bg-well', className)} />
   );
 }
 

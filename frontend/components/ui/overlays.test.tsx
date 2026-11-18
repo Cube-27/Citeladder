@@ -399,7 +399,7 @@ describe('ToastProvider', () => {
     clock.mockRestore();
   });
 
-  it('shows at most three notifications, dropping the oldest, and runs an action', async () => {
+  it('shows at most three notifications, dropping the oldest, with the newest in front, and runs an action', async () => {
     const user = userEvent.setup();
     const onUndo = vi.fn();
 
@@ -432,9 +432,17 @@ describe('ToastProvider', () => {
     fireEvent.animationEnd(screen.getByText('Run queued').closest('li')!);
     expect(screen.queryByText('Run queued')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(3);
+    const toast = (title: string) => screen.getByText(title).closest('li')!;
+    const inFront = () =>
+      ['Crawl started', 'Prompt saved', 'Prompt deleted'].filter((title) =>
+        toast(title).hasAttribute('data-front'),
+      );
+    expect(inFront()).toEqual(['Prompt deleted']);
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(onUndo).toHaveBeenCalledTimes(1);
+    // The action closes its toast, so the next newest comes to the front.
+    expect(inFront()).toEqual(['Prompt saved']);
   });
 });
 

@@ -20,9 +20,11 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
     .getByRole('status', { name: 'Loading the Overview' });
   try {
     await expect(indicator).toBeVisible();
-    // Its skeleton blocks shimmer; still blocks would read as stuck.
+    // A sweep crosses its skeleton blocks; still blocks would read as stuck.
+    // The first block (the meta line) stands outside a shape, so it sweeps alone.
     const block = page.locator('[data-skeleton="overview"] [data-skeleton-block]').first();
-    const shimmer = () => block.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    const shimmer = () =>
+      block.evaluate((element) => getComputedStyle(element, '::after').backgroundPosition);
     const initial = await shimmer();
     await expect.poll(shimmer).not.toBe(initial);
   } finally {
