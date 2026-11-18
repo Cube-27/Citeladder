@@ -216,10 +216,11 @@ export const SOURCE_SORT_CODEC: UrlCodec<DimensionSort | null> = {
       sort: { column: match[3], direction: match[2] ? 'desc' : 'asc' },
     };
   },
-  serialize: (value) =>
-    value
-      ? `${value.dimension}:${value.sort.direction === 'desc' ? '-' : ''}${value.sort.column}`
-      : null,
+  serialize: (value) => {
+    if (!value) return null;
+    const sign = value.sort.direction === 'desc' ? '-' : '';
+    return `${value.dimension}:${sign}${value.sort.column}`;
+  },
 };
 
 /**

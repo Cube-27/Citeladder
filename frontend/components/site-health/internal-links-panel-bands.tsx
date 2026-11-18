@@ -36,6 +36,8 @@ export function useLinkParams() {
         if (value) next.set(key, value);
         else next.delete(key);
         if (key === 'analysis') next.delete('link');
+        // A new search or status lists other links: their first page.
+        if (key === 'links_q' || key === 'links_status') next.delete('links_page');
         return next;
       },
       { replace: history === 'replace' },
