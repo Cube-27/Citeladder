@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { promptsMutations, promptsQueries } from '@/lib/api/prompts';
+import { promptsMutations } from '@/lib/api/prompts';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
@@ -195,10 +195,6 @@ export function PromptLibrary() {
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
   const measurements = useLatestPromptMeasurements(scope);
   const evidence = usePromptEvidence();
-  const pendingCandidates = useQuery({
-    ...promptsQueries.candidates(scope, promptSet?.id ?? null),
-    enabled: Boolean(promptSet) && canWrite,
-  });
 
   // Every descriptor refreshes the library's reads; these add the screen's own reaction.
   const closeForm = () => {
@@ -366,7 +362,7 @@ export function PromptLibrary() {
           />
         ) : null}
         <ToggleFailure toggle={toggle.mutation} />
-        <PendingReviewNotice count={pendingCandidates.data?.length ?? 0} hidden={!canWrite} />
+        <PendingReviewNotice scope={scope} promptSet={promptSet} hidden={!canWrite} />
 
         <TopicDialogs
           dialog={topicDialog}

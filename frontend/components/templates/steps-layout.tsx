@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable } from '@/components/ui/pressable';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
 
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
@@ -39,7 +40,7 @@ export function StepsLayout<T extends string>({
 }>) {
   const index = steps.findIndex((step) => step.value === current);
   return (
-    <div className="flex min-h-[calc(100dvh-var(--masthead-height)-var(--page-pad-block))] min-w-0 flex-1 flex-col">
+    <div className="flex min-h-[calc(100dvh-var(--route-chrome-height))] min-w-0 flex-1 flex-col">
       <div className="desktop:grid-cols-[220px_minmax(0,1fr)] grid min-w-0 flex-1 content-start items-start gap-[var(--content-gutter)]">
         <nav aria-label={label} className="flex min-w-0 flex-col">
           <ol className="flex min-w-0 flex-col gap-1">
@@ -86,7 +87,12 @@ function StepRow<T extends string>({
         aria-hidden
         className={textRole(
           'caption',
-          'grid size-5 shrink-0 place-items-center rounded-full border border-current',
+          cn(
+            'grid size-5 shrink-0 place-items-center rounded-full',
+            done && 'bg-positive-wash text-positive',
+            position === current && 'bg-ink text-on-ink',
+            position > current && 'bg-well text-ink-2',
+          ),
         )}
       >
         {done ? <Check className="size-3" /> : position + 1}

@@ -690,7 +690,7 @@ describe('DashboardScreen', () => {
     const setup = within(screen.getByRole('region', { name: 'Track prompts again' }));
     expect(setup.getByRole('link', { name: 'Add prompts' })).toHaveAttribute(
       'href',
-      '/prompts?project=00000000-0000-4000-8000-000000000001',
+      '/prompts/build?project=00000000-0000-4000-8000-000000000001',
     );
     // A measured project keeps its widgets beside the card.
     expect(screen.getByRole('region', { name: 'Project state' })).toBeVisible();

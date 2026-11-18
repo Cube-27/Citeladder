@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
@@ -9,7 +10,9 @@ import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow, TableSelectCell } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
-import type { PromptCandidate, Topic } from '@citeladder/contracts';
+import type { PromptCandidate, PromptSet, Topic } from '@citeladder/contracts';
+import { promptsQueries } from '@/lib/api/prompts';
+import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { Notice } from '@/components/ui/notice';
@@ -203,9 +206,15 @@ export function CandidateReviewPanel({
 
 /** Library prompt that suggestions are waiting, linking to the Prompt builder's review step. */
 export function PendingReviewNotice({
-  count,
+  scope,
+  promptSet,
   hidden,
-}: Readonly<{ count: number; hidden: boolean }>) {
+}: Readonly<{ scope: ProjectScope; promptSet: PromptSet | null; hidden: boolean }>) {
+  const pending = useQuery({
+    ...promptsQueries.candidates(scope, promptSet?.id ?? null),
+    enabled: !hidden,
+  });
+  const count = pending.data?.length ?? 0;
   if (!count || hidden) return null;
   return (
     <Notice tone="info">
