@@ -15,33 +15,41 @@ const DARK = ":root[data-theme='dark']";
 
 const readContract = (root) => JSON.parse(readFileSync(join(root, CONTRACT), 'utf8'));
 
-/** `rgba(17,17,17,0.08)` and `rgb(17 17 17 / 8%)` alike, as comparable text. */
-function normalColour(value) {
-  const text = String(value).trim().toLowerCase();
-  const legacy = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(text);
-  if (legacy) {
-    const alpha = legacy[4] === undefined ? '' : ` / ${Math.round(Number(legacy[4]) * 100)}%`;
-    return `rgb(${legacy[1]} ${legacy[2]} ${legacy[3]}${alpha})`;
-  }
-  return text.replaceAll(/\s+/g, ' ');
+/** A colour or shadow value as comparable text: lower case, spacing collapsed. */
+const normalColour = (value) => String(value).trim().toLowerCase().replaceAll(/\s+/g, ' ');
+const normalShadow = (value) => normalColour(value).replaceAll(/\s*,\s*/g, ', ');
+
+/** The system's `{name}` references, whole or inside a relative colour, as the repo's aliases. */
+const contractColour = (value) =>
+  normalColour(value.replaceAll(/\{([\w-]+)\}/g, (_, name) => `var(--color-${name})`));
+
+/**
+ * Colour literals the stylesheets no longer write: every colour is
+ * `oklch()`, a relative `oklch(from …)` or a `color-mix(in oklch, …)`.
+ */
+const NOTATION_CSS = ['apps/app/src/globals.css', 'apps/app/src/ui-motion.css'];
+const LEGACY_COLOUR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|color-mix\(\s*in\s+srgb\b/i;
+
+/**
+ * Each declaration in a token stylesheet that writes a colour in a legacy notation.
+ * @public — also imported by the scripts/frontend fixture tests.
+ */
+export function colourNotationFindings(css) {
+  const findings = [];
+  postcss.parse(css).walkDecls((decl) => {
+    if (LEGACY_COLOUR.test(decl.value))
+      findings.push(`line ${decl.source.start.line}: ${decl.prop}: ${decl.value} must be oklch`);
+  });
+  return findings;
 }
 
-/** A shadow value as comparable text: colours normalised, spacing collapsed. */
-function normalShadow(value) {
-  return String(value)
-    .replaceAll(/rgba?\([^)]*\)/gi, (colour) => normalColour(colour))
-    .replaceAll(/#1{6}/gi, 'var(--color-ink)')
-    .split(',')
-    .map((layer) => layer.replaceAll(/\s+/g, ' ').trim())
-    .join(', ')
-    .toLowerCase();
+export function colourNotationViolations(root) {
+  return NOTATION_CSS.flatMap((file) =>
+    colourNotationFindings(readFileSync(join(root, ...file.split('/')), 'utf8')).map(
+      (finding) => `${file}: ${finding}`,
+    ),
+  );
 }
-
-/** The system's `{name}` reference as the repo's alias. */
-const contractColour = (value) => {
-  const reference = /^\{([\w-]+)\}$/.exec(value);
-  return reference ? `var(--color-${reference[1]})` : normalColour(value);
-};
 
 /** Every declaration in `@theme`, `:root` and the dark block, by scope. */
 function declarationsByScope(css) {

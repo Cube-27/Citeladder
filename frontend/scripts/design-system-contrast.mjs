@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import { composite, contrastRatio, isHex, separation } from './design-system-color.mjs';
+import {
+  composite,
+  contrastRatio,
+  formatColour,
+  isHex,
+  parseColour,
+  separation,
+} from './design-system-color.mjs';
 
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LIGHT = ':root';
@@ -200,26 +207,26 @@ export function paletteDeclarations(source, selector) {
   );
   return new Map([
     ...declarations('@theme'),
+    ...declarations('@theme inline'),
     ...declarations(LIGHT),
     ...layers.flatMap((layer) => declarations(layer)),
   ]);
 }
 
 /**
- * An opaque `rgb(r g b)` as `#rrggbb`. A translucent `rgb(r g b / a%)` stays
- * as written: `composite` lays it on the surface beneath it.
+ * A colour literal as `#rrggbb` when opaque and `rgb(r g b / a%)` when
+ * translucent, which `composite` lays on the surface beneath it. Any other
+ * value stays as written.
  */
 function hexOf(value) {
-  if (isHex(value)) return value.toLowerCase();
-  const rgb = /^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)$/.exec(value ?? '');
-  if (!rgb) return value;
-  const channels = [rgb[1], rgb[2], rgb[3]].map((channel) =>
-    Number(channel).toString(16).padStart(2, '0'),
-  );
-  return `#${channels.join('')}`;
+  const colour = parseColour(value);
+  return colour ? formatColour(colour) : value;
 }
 
-/** Resolve `var()` aliases for every token a scope sees. */
+/** `oklch(from var(--token) l c h / a)`: the token's colour at a new alpha. */
+const RELATIVE = /^oklch\(\s*from\s+var\((--[\w-]+)\)\s+l\s+c\s+h\s*(?:\/\s*([\d.]+)%\s*)?\)$/;
+
+/** Resolve `var()` aliases and relative colours for every token a scope sees. */
 export function resolvePalette(source, selector) {
   const values = paletteDeclarations(source, selector);
   const resolve = (token, seen = new Set()) => {
@@ -227,7 +234,13 @@ export function resolvePalette(source, selector) {
     seen.add(token);
     const value = values.get(token);
     const alias = value?.match(/^var\((--[\w-]+)\)$/)?.[1];
-    return alias ? resolve(alias, seen) : hexOf(value);
+    if (alias) return resolve(alias, seen);
+    const relative = RELATIVE.exec(value ?? '');
+    if (!relative) return hexOf(value);
+    const base = parseColour(resolve(relative[1], seen));
+    if (!base) return undefined;
+    const alpha = relative[2] === undefined ? base.alpha : Number(relative[2]) / 100;
+    return formatColour({ rgb: base.rgb, alpha });
   };
   return new Map([...values.keys()].map((token) => [token, resolve(token)]));
 }

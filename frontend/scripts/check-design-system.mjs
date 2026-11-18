@@ -32,7 +32,7 @@ import {
 } from './design-system-stylesheet-checks.mjs';
 import { styleAssertionViolations } from './design-system-test-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
-import { tokenContractViolations } from './design-system-contract.mjs';
+import { colourNotationViolations, tokenContractViolations } from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
@@ -160,6 +160,7 @@ for (const [path, ratcheted] of [
 violations.push(
   ...brandTokenViolations(lightPalette),
   ...tokenContractViolations(root),
+  ...colourNotationViolations(root),
   ...tokenAuditViolations(root),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),

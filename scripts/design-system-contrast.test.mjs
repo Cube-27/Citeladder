@@ -6,6 +6,7 @@ import {
   contrastRoles,
   paletteDeclarations,
   paletteViolations,
+  resolvePalette,
 } from '../frontend/scripts/design-system-contrast.mjs';
 
 /**
@@ -151,6 +152,27 @@ test('a translucent soft is composited onto the surface before measuring', () =>
     violations.some((violation) =>
       violation.includes('--color-positive on --color-positive-soft is 1.'),
     ),
+  );
+});
+
+test('oklch literals and relative colours resolve to the sRGB they render', () => {
+  const source = [
+    '@theme { --color-ink: oklch(17.8% 0 0); --color-hover: oklch(from var(--color-ink) l c h / 6%); }',
+    '@theme inline { --color-mark: var(--color-accent); }',
+    ':root { --color-accent: oklch(63.4% 0.1973 37.5); --color-rule: oklch(21% 0.01 268 / 11%); }',
+    ":root[data-theme='dark'] { --color-ink: oklch(96.7% 0 0); }",
+  ].join('\n');
+  const light = resolvePalette(source, ':root');
+  assert.deepEqual(
+    ['--color-ink', '--color-hover', '--color-mark', '--color-rule'].map((token) =>
+      light.get(token),
+    ),
+    ['#111111', 'rgb(17 17 17 / 6%)', '#e8501a', 'rgb(22 24 29 / 11%)'],
+  );
+  // The relative colour follows the ink the scope rebinds.
+  assert.equal(
+    resolvePalette(source, ":root[data-theme='dark']").get('--color-hover'),
+    'rgb(244 244 244 / 6%)',
   );
 });
 

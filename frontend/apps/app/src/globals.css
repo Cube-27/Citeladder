@@ -79,47 +79,45 @@
      a heading. Status hues appear only in badges, deltas, callouts and errors,
      always beside an arrow, icon or word. Dark values are below. */
   --color-*: initial;
-  --color-paper: #f4f4f4;
-  --color-surface: #ffffff;
-  --color-surface-sunken: #ececec;
-  /* The system's sidebar role; the app paints its sidebar with `chrome`. */
-  --color-sidebar: var(--color-paper);
+  --color-paper: oklch(96.7% 0 0);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-sunken: oklch(94.3% 0 0);
   /* States: an ink overlay over whatever fill is beneath, so hover,
      pressed and selected read the same on paper, surface and sunken and
      never share one fill. Applied with the `overlay-*` utilities below. */
-  --color-state-hover: rgb(17 17 17 / 6%);
-  --color-state-pressed: rgb(17 17 17 / 8%);
-  --color-state-selected: rgb(17 17 17 / 10%);
+  --color-state-hover: oklch(from var(--color-ink) l c h / 6%);
+  --color-state-pressed: oklch(from var(--color-ink) l c h / 8%);
+  --color-state-selected: oklch(from var(--color-ink) l c h / 10%);
   /* Soft tints the website's editorial illustrations draw with; never text,
      a button, a card or a page fill. */
-  --color-stage-sky: #d2e2f8;
-  --color-stage-mint: #cdeedf;
-  --color-stage-lilac: #dfd6f7;
-  --color-stage-peach: #fcdac6;
-  --color-line: #e5e5e5;
-  --color-line-strong: #d4d4d4;
-  --color-line-control: #858585;
-  --color-ink: #111111;
-  --color-ink-hover: #2a2a2a;
-  --color-ink-secondary: #525252;
+  --color-stage-sky: oklch(90.8% 0.035 256);
+  --color-stage-mint: oklch(92.1% 0.04 166);
+  --color-stage-lilac: oklch(89.3% 0.046 298);
+  --color-stage-peach: oklch(91.2% 0.0465 52);
+  --color-line: oklch(92.2% 0 0);
+  --color-line-strong: oklch(87% 0 0);
+  --color-line-control: oklch(61.7% 0 0);
+  --color-ink: oklch(17.8% 0 0);
+  --color-ink-hover: oklch(28.5% 0 0);
+  --color-ink-secondary: oklch(43.9% 0 0);
   /* One grey on every surface: muted is the secondary ink. */
   --color-ink-muted: var(--color-ink-secondary);
-  --color-on-ink: #ffffff;
-  --color-accent: #e8501a;
-  --color-accent-ink: #b53a0c;
-  --color-accent-soft: #ffe6da;
+  --color-on-ink: oklch(100% 0 0);
+  --color-accent: oklch(63.4% 0.1973 37.5);
+  --color-accent-ink: oklch(52.3% 0.1667 37.5);
+  --color-accent-soft: oklch(94.2% 0.032 47);
   --color-focus: var(--color-ink);
-  --color-positive: #0b6e69;
-  --color-positive-soft: #d6f2ef;
-  --color-negative: #c4122f;
-  --color-negative-soft: #ffe2e6;
-  --color-warning: #8a5000;
-  --color-warning-soft: #fff0d1;
-  --color-info: #1f5fbf;
-  --color-info-soft: #e3edfc;
-  --color-data-other: #c2c2c2;
-  --color-scrim: rgb(17 17 17 / 32%);
-  --color-chart-grid: #ececec;
+  --color-positive: oklch(48.7% 0.0817 189.2);
+  --color-positive-soft: oklch(94% 0.0295 189);
+  --color-negative: oklch(52.36% 0.2032 21.9);
+  --color-negative-soft: oklch(93.8% 0.032 8);
+  --color-warning: oklch(48.8% 0.1102 64.2);
+  --color-warning-soft: oklch(95.9% 0.0436 85);
+  --color-info: oklch(50.2% 0.164 258.98);
+  --color-info-soft: oklch(94.3% 0.023 258);
+  --color-data-other: oklch(81.4% 0 0);
+  --color-scrim: oklch(from var(--color-ink) l c h / 32%);
+  --color-chart-grid: oklch(94.3% 0 0);
   /* The app's roles (paper and ink with one mark). On
      the website and docs each aliases the website role it stands for, so a
      shared atom drawn with them looks as it always did there; the app binds
@@ -145,19 +143,18 @@
      the paper; the app binds its value below. */
   --color-chrome: var(--color-paper);
   /* Data: you are the accent, rivals one to four in rank order (ink, then
-     cool hues only), a fifth and later are `data-other`. */
-  --color-data-you: var(--color-accent);
+     cool hues only), a fifth and later are `data-other`; you is below. */
   --color-data-rival-1: var(--color-ink);
-  --color-data-rival-2: #2f6f9f;
-  --color-data-rival-3: #4b3a8a;
-  --color-data-rival-4: #1f7d73;
+  --color-data-rival-2: oklch(52.3% 0.1 244);
+  --color-data-rival-3: oklch(41% 0.128 289.3);
+  --color-data-rival-4: oklch(53.4% 0.0855 184.4);
   /* Real third-party marks drawn in code (the Google sign-in button, the
      engine logos). They are identity, never state or decoration, and appear
      only inside those marks. */
-  --color-brand-google-blue: #4285f4;
-  --color-brand-google-green: #34a853;
-  --color-brand-google-yellow: #fbbc05;
-  --color-brand-google-red: #ea4335;
+  --color-brand-google-blue: oklch(63% 0.18 260);
+  --color-brand-google-green: oklch(64.8% 0.1603 148.5);
+  --color-brand-google-yellow: oklch(83.04% 0.1698 84);
+  --color-brand-google-red: oklch(62.6% 0.206 29);
 
   /* Type. Each role owns size, leading, weight and tracking; on the website
      and docs the display roles (display-*, title, title-sm, stat) pair with
@@ -373,6 +370,14 @@
   --z-index-toast: 60;
 }
 
+/* Aliases no scope rebinds, inlined into their utilities. The others stay in
+   `@theme`: the app rebinds them, or a website band rebinds the ink they read. */
+@theme inline {
+  /* The system's sidebar role; the app paints its sidebar with `chrome`. */
+  --color-sidebar: var(--color-paper);
+  --color-data-you: var(--color-accent);
+}
+
 :root {
   color-scheme: light;
 
@@ -384,14 +389,15 @@
      bound in its own block below); edge is the faint smudge under a field's
      soft edge. The website and docs draw their borderless edges with the
      ring inside xs and pop. Never two shadows on nested surfaces. */
-  --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
+  --shadow-edge: 0 1px 2px oklch(17.8% 0 0 / 5%);
   /* Under a labelled control's soft edge (a secondary button, an operable tag). */
-  --shadow-control: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
+  --shadow-control: 0 1px 2px oklch(21% 0.034 263 / 6%);
+  --shadow-xs: 0 0 0 1px oklch(17.8% 0 0 / 8%), 0 1px 2px oklch(17.8% 0 0 / 6%);
   --shadow-pop:
-    0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
-    0 16px 40px -8px rgb(17 17 17 / 14%);
-  --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
+    0 0 0 1px oklch(17.8% 0 0 / 8%), 0 2px 6px oklch(17.8% 0 0 / 6%),
+    0 16px 40px -8px oklch(17.8% 0 0 / 14%);
+  --shadow-sheet:
+    0 1px 2px oklch(21.8% 0.006 92 / 6%), 0 12px 32px -8px oklch(21.8% 0.006 92 / 18%);
 
   /* Controls. Every interactive row in one view uses one height: 32,
      28 compact, 48 for website calls to action. `row-app` is the app's
@@ -456,42 +462,39 @@
    removed here. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-paper: #0a0a0a;
-  --color-surface: #151515;
-  --color-surface-sunken: #1e1e1e;
-  --color-state-hover: rgb(244 244 244 / 6%);
-  --color-state-pressed: rgb(244 244 244 / 8%);
-  --color-state-selected: rgb(244 244 244 / 10%);
-  --color-stage-sky: #13223d;
-  --color-stage-mint: #0f2a26;
-  --color-stage-lilac: #231b3d;
-  --color-stage-peach: #2f1b22;
-  --color-line: #2a2a2a;
-  --color-line-strong: #3a3a3a;
-  --color-line-control: #747474;
-  --color-ink: #f4f4f4;
-  --color-ink-hover: #d6d6d6;
-  --color-ink-secondary: #a6a6a6;
-  --color-on-ink: #111111;
-  --color-accent: #ff6a33;
-  --color-accent-ink: #ff9466;
-  --color-accent-soft: #3b1a0c;
-  --color-positive: #4fd1c5;
-  --color-positive-soft: #0e2e2b;
-  --color-negative: #ff7387;
-  --color-negative-soft: #3d0e16;
-  --color-warning: #f5b84a;
-  --color-warning-soft: #3a2a0a;
-  --color-info: #7fb0ff;
-  --color-info-soft: #14243d;
-  --color-data-other: #4a4a4a;
-  --color-scrim: rgb(0 0 0 / 64%);
-  --color-chart-grid: #262626;
-  --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
-  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
-  --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
+  --color-paper: oklch(14.5% 0 0);
+  --color-surface: oklch(19.6% 0 0);
+  --color-surface-sunken: oklch(23.5% 0 0);
+  --color-stage-sky: oklch(25.4% 0.055 261);
+  --color-stage-mint: oklch(26.2% 0.034 183);
+  --color-stage-lilac: oklch(25% 0.063 292);
+  --color-stage-peach: oklch(25% 0.0336 357.2);
+  --color-line: oklch(28.5% 0 0);
+  --color-line-strong: oklch(34.8% 0 0);
+  --color-line-control: oklch(56% 0 0);
+  --color-ink: oklch(96.7% 0 0);
+  --color-ink-hover: oklch(87.6% 0 0);
+  --color-ink-secondary: oklch(72.5% 0 0);
+  --color-on-ink: oklch(17.8% 0 0);
+  --color-accent: oklch(70.3% 0.194 39.3);
+  --color-accent-ink: oklch(77% 0.1428 43.5);
+  --color-accent-soft: oklch(26.2% 0.057 43);
+  --color-positive: oklch(78.6% 0.1143 186.6);
+  --color-positive-soft: oklch(27.6% 0.0378 187);
+  --color-negative: oklch(72.8% 0.171 13.6);
+  --color-negative-soft: oklch(24.8% 0.073 14);
+  --color-warning: oklch(82% 0.142 79);
+  --color-warning-soft: oklch(29.7% 0.052 81);
+  --color-info: oklch(75.5% 0.126 259.6);
+  --color-info-soft: oklch(26% 0.052 259);
+  --color-data-other: oklch(41% 0 0);
+  --color-scrim: oklch(0% 0 0 / 64%);
+  --color-chart-grid: oklch(26.9% 0 0);
+  --shadow-edge: 0 1px 2px oklch(0% 0 0 / 40%);
+  --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
+  --shadow-xs: 0 0 0 1px oklch(100% 0 0 / 8%), 0 1px 2px oklch(0% 0 0 / 50%);
+  --shadow-pop: 0 0 0 1px oklch(100% 0 0 / 10%), 0 16px 40px oklch(0% 0 0 / 60%);
+  --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
 /* The app's dark: designed, not inverted. Linear's near-blacks (sampled
@@ -502,51 +505,51 @@
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps lighter than the one beneath, so a surface reads by its
      fill alone, with no edge and no shadow. */
-  --color-ground: #121213;
-  --color-chrome: #161617;
-  --color-surface: #1a1a1b;
-  --color-raised: #1f1f21;
-  --color-well: #232325;
+  --color-ground: oklch(18.3% 0.002 286);
+  --color-chrome: oklch(20% 0.002 286);
+  --color-surface: oklch(21.8% 0.002 286);
+  --color-raised: oklch(24% 0.004 286);
+  --color-well: oklch(25.7% 0.004 286);
   --color-control-fill: var(--color-well);
-  --color-rule: #252526;
-  --color-control-edge: #2f3033;
+  --color-rule: oklch(26.5% 0.002 286);
+  --color-control-edge: oklch(31% 0.0055 271);
   /* Field, checkbox and radio edges: quiet like Linear's, a step past
      control-edge so an unchecked ring still shows on a surface. */
-  --color-control-line: #3a3b40;
-  --color-chart-grid: #2a2a2c;
-  --color-ink: #e3e3e3;
-  --color-ink-2: #b0b0b0;
-  --color-ink-hover: #c8c8c8;
-  --color-on-ink: #121213;
-  --color-accent: #ff6a33;
-  --color-accent-text: #ff8a5c;
+  --color-control-line: oklch(35.3% 0.009 277);
+  --color-chart-grid: oklch(28.6% 0.004 286);
+  --color-ink: oklch(91.6% 0 0);
+  --color-ink-2: oklch(75.7% 0 0);
+  --color-ink-hover: oklch(83.3% 0 0);
+  --color-on-ink: oklch(18.3% 0.002 286);
+  --color-accent: oklch(70.3% 0.194 39.3);
+  --color-accent-text: oklch(75.3% 0.155 41.6);
   /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: #3a2218;
-  --color-positive: #63e17b;
-  --color-positive-wash: #15291d;
-  --color-negative: #ff7f96;
-  --color-negative-wash: #33181e;
-  --color-warning: #f0b849;
-  --color-warning-wash: #2e2511;
-  --color-info: #8fb1ff;
-  --color-info-wash: #1a2540;
-  --color-data-rival-2: #6fb3e8;
-  --color-data-rival-3: #997bf0;
-  --color-data-rival-4: #4fc4b5;
-  --color-data-other: #8f8f8f;
-  /* On these darker grounds a smaller step reads: selected over the chrome
-     lands on the well (#232325), hover one step short of it. */
-  --color-state-hover: rgb(255 255 255 / 4%);
-  --color-state-pressed: rgb(255 255 255 / 8%);
-  --color-state-selected: rgb(255 255 255 / 6%);
-  --color-scrim: rgb(0 0 0 / 60%);
+  --color-accent-wash: oklch(28% 0.041 43);
+  --color-positive: oklch(81.4% 0.18 147.6);
+  --color-positive-wash: oklch(26% 0.035 157);
+  --color-negative: oklch(74.8% 0.157 10.3);
+  --color-negative-wash: oklch(25% 0.044 7);
+  --color-warning: oklch(81.4% 0.14 81.3);
+  --color-warning-wash: oklch(27% 0.0354 86);
+  --color-info: oklch(76.6% 0.119 265.7);
+  --color-info-wash: oklch(27% 0.0529 266);
+  --color-data-rival-2: oklch(74.2% 0.1035 243.3);
+  --color-data-rival-3: oklch(66.3% 0.169 293);
+  --color-data-rival-4: oklch(75% 0.1072 183.6);
+  --color-data-other: oklch(65% 0 0);
+  /* On these darker grounds a smaller step of white reads: selected over the
+     chrome lands on the well, hover one step short of it. */
+  --color-state-hover: oklch(100% 0 0 / 4%);
+  --color-state-pressed: oklch(100% 0 0 / 8%);
+  --color-state-selected: oklch(100% 0 0 / 6%);
+  --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
-  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
   /* Black barely shows on a near-black ground, so an overlay also reads by a
      lit top edge (inset: a child that fills the top would cover it). */
-  --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 5%), 0 4px 12px rgb(0 0 0 / 0.3);
-  --shadow-sheet: inset 0 1px 0 rgb(255 255 255 / 5%), 0 16px 40px rgb(0 0 0 / 0.45);
+  --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
+  --shadow-sheet: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 16px 40px oklch(0% 0 0 / 45%);
 
   /* Light text on a dark ground reads heavier, so every weight drops by 50.
      The type roles read --weight-*; the size utilities the app uses read these. */
@@ -644,47 +647,46 @@
   text-wrap: pretty;
   --table-ground: var(--color-ground);
   /* Layers (2.4): ground, chrome, card, inset, overlay; each a fill step. */
-  --color-ground: #f5f6f8;
-  --color-chrome: #fbfbfc;
-  --color-surface: #ffffff;
-  --color-well: #f1f2f5;
-  --color-raised: #ffffff;
-  --color-rule: rgb(22 24 29 / 11%);
-  --color-control-line: #c4c8d0;
+  --color-ground: oklch(97.3% 0.003 265);
+  --color-chrome: oklch(98.8% 0.0013 286);
+  --color-surface: oklch(100% 0 0);
+  --color-well: oklch(96.1% 0.004 271);
+  --color-raised: oklch(100% 0 0);
+  --color-rule: oklch(21% 0.01 268 / 11%);
+  --color-control-line: oklch(83.2% 0.012 265);
   --field-focus-edge: var(--color-control-line);
   --fg: 0 0 6px 3px var(--color-state-pressed);
   /* The soft edge of a labelled button and of a search or filter control: its
      words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
      fields, checkboxes, radios and switches keep `control-line`. */
-  --color-control-edge: #d5d8df;
-  --color-ink: #16181d;
-  --color-ink-2: #565c69;
+  --color-control-edge: oklch(88.2% 0.01 267);
+  --color-ink: oklch(21% 0.01 268);
+  --color-ink-2: oklch(47.4% 0.022 266);
   /* The primary button's hover: its ink fill one step lighter. */
-  --color-ink-hover: #2f333b;
-  --color-on-ink: #ffffff;
-  --color-accent: #e8501a;
-  --color-accent-text: #b83c0e;
-  --color-accent-wash: #fdeae1;
+  --color-ink-hover: oklch(32% 0.015 264);
+  --color-on-ink: oklch(100% 0 0);
+  --color-accent: oklch(63.4% 0.1973 37.5);
+  --color-accent-text: oklch(53.1% 0.168 37.6);
+  --color-accent-wash: oklch(95% 0.024 47);
   /* Off the table's #17713f, and rival 3 off #6d55b8 (dark: #5fd08a, #a996ee):
      those failed the colour-vision separation from negative and rival 2
      (scripts/design-system-contrast.mjs). */
-  --color-positive: #186c3f;
-  --color-positive-wash: #e3f4ea;
-  --color-negative: #c22445;
-  --color-negative-wash: #fce8ec;
-  --color-warning: #8a5a00;
-  --color-warning-wash: #fdf1cf;
-  --color-info: #2558c9;
-  --color-info-wash: #e6edfc;
-  --color-data-rival-2: #2f6fb0;
-  --color-data-rival-3: #5733a8;
-  --color-data-rival-4: #17807a;
-  --color-data-other: #838995;
-  /* Hover 6%, pressed 10%, selected 7% ink over the fill beneath. */
-  --color-state-hover: rgb(22 24 29 / 6%);
-  --color-state-pressed: rgb(22 24 29 / 10%);
-  --color-state-selected: rgb(22 24 29 / 7%);
-  --color-scrim: rgb(22 24 29 / 45%);
+  --color-positive: oklch(47.1% 0.1065 154.6);
+  --color-positive-wash: oklch(95.2% 0.022 160);
+  --color-negative: oklch(53.3% 0.191 16);
+  --color-negative-wash: oklch(94.8% 0.022 4);
+  --color-warning: oklch(50.8% 0.108 73.3);
+  --color-warning-wash: oklch(95.9% 0.046 91);
+  --color-info: oklch(49.7% 0.184 263);
+  --color-info-wash: oklch(94.5% 0.022 266);
+  --color-data-rival-2: oklch(53.2% 0.1214 251.5);
+  --color-data-rival-3: oklch(43.6% 0.176 291.5);
+  --color-data-rival-4: oklch(54.3% 0.0889 188.8);
+  --color-data-other: oklch(63% 0.0193 264.4);
+  /* Hover 6% (the system's), pressed 10%, selected 7% ink over the fill beneath. */
+  --color-state-pressed: oklch(from var(--color-ink) l c h / 10%);
+  --color-state-selected: oklch(from var(--color-ink) l c h / 7%);
+  --color-scrim: oklch(from var(--color-ink) l c h / 45%);
   --color-chart-grid: var(--color-rule);
   /* The website's role names, held to the app's roles so a shared rule that
      still names one renders in the app's palette. App code never uses them. */
@@ -723,10 +725,10 @@
   --radius-card: 8px;
   --radius-overlay: 12px;
   /* One resting shadow: a control rests at a card's lift. */
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
   --shadow-control: var(--shadow-card);
-  --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-sheet: 0 16px 40px rgb(16 24 40 / 0.18);
+  --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
+  --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
   /* The accent mark ("you, here"). */
   --mark-width: 2px;
 
@@ -751,7 +753,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  --nav-current-fill: color-mix(in oklch, var(--color-ink) 7%, transparent);
   /* What a Thread page leaves for its own scrolling region: the masthead (as
      drawn: below `rail` its actions take a second row, `Masthead`), the
      `page-pad-block` above the first content and the main column's foot. */
@@ -813,17 +815,17 @@
    list, never a tinted tray); a list holding keyboard focus drops the fade
    so the ring is never masked. */
 [data-sidebar-scroll][data-fade-bottom] {
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent);
 }
 [data-sidebar-scroll][data-fade-top] {
-  mask-image: linear-gradient(to top, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to top, black calc(100% - 32px), transparent);
 }
 [data-sidebar-scroll][data-fade-top][data-fade-bottom] {
   mask-image: linear-gradient(
     to bottom,
     transparent,
-    #000 32px,
-    #000 calc(100% - 32px),
+    black 32px,
+    black calc(100% - 32px),
     transparent
   );
 }
@@ -886,12 +888,12 @@
    button sheen, press shadow or press nudge, and edges are hairlines. Dark
    keeps its own paper. The site's page colour is the docs' page too. */
 :root[data-public-surface]:not([data-theme='dark']) {
-  --color-paper: #ffffff;
-  --color-site-page: #ffffff;
+  --color-paper: oklch(100% 0 0);
+  --color-site-page: oklch(100% 0 0);
 }
 
 :root[data-public-surface][data-theme='dark'] {
-  --color-site-page: #000000;
+  --color-site-page: oklch(0% 0 0);
 }
 
 :root[data-public-surface] {
@@ -906,58 +908,58 @@
    blue-violet; panels are wells a shade under the page in light, and a
    neutral shade over the jet-black page in dark. */
 :root[data-marketing-surface] {
-  --color-site-violet: #635bff;
+  --color-site-violet: oklch(57.8% 0.235 278.3);
   /* Label chips and icon tiles are neutral grey, never violet. */
-  --color-site-chip: #ededed;
-  --color-site-chip-ink: #262626;
-  --color-site-guide: rgb(66 71 112 / 16%);
-  --color-site-rule-from: rgb(99 91 255 / 60%);
-  --color-site-rule-to: rgb(232 80 26 / 55%);
-  --color-site-well: #f5f5fa;
-  --color-site-well-shade: rgb(30 27 75 / 7%);
-  --color-site-well-edge: rgb(30 27 75 / 7%);
-  --color-site-vignette: rgb(79 70 229 / 9%);
-  --color-spot-from: #e4e1ff;
-  --color-spot-to: #f3f1ff;
-  --color-spot-glow: rgb(99 91 255 / 40%);
-  --color-spot-halo: rgb(99 91 255 / 30%);
-  --color-spot-warm: rgb(255 120 60 / 30%);
-  --color-spot-vignette: rgb(49 40 140 / 10%);
-  --color-site-band-from: #3c5468;
-  --color-site-band-mid: #262d5e;
-  --color-site-band-to: #150f1e;
-  --color-site-band-mist: #a7b9c0;
-  --color-site-band-slate: rgb(96 118 140 / 55%);
-  --color-site-band-blue: rgb(58 70 150 / 60%);
-  --color-site-band-scrim: rgb(21 24 60 / 60%);
-  --color-site-band-ink: #ffffff;
-  --color-site-band-ink-hover: #e6e4ff;
-  --color-site-band-ink-secondary: #c9c6f0;
-  --color-site-band-on-ink: #111111;
-  --color-site-band-soft: rgb(255 255 255 / 14%);
+  --color-site-chip: oklch(94.6% 0 0);
+  --color-site-chip-ink: oklch(26.9% 0 0);
+  --color-site-guide: oklch(41.2% 0.069 278 / 16%);
+  --color-site-rule-from: oklch(57.8% 0.235 278.3 / 60%);
+  --color-site-rule-to: oklch(63.4% 0.1973 37.5 / 55%);
+  --color-site-well: oklch(97.2% 0.0066 286);
+  --color-site-well-shade: oklch(25.7% 0.086 281 / 7%);
+  --color-site-well-edge: oklch(25.7% 0.086 281 / 7%);
+  --color-site-vignette: oklch(51% 0.23 277 / 9%);
+  --color-spot-from: oklch(92.1% 0.041 290);
+  --color-spot-to: oklch(96.4% 0.019 293);
+  --color-spot-glow: oklch(57.8% 0.235 278.3 / 40%);
+  --color-spot-halo: oklch(57.8% 0.235 278.3 / 30%);
+  --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
+  --color-spot-vignette: oklch(35.9% 0.158 279 / 10%);
+  --color-site-band-from: oklch(43.5% 0.044 244);
+  --color-site-band-mid: oklch(32% 0.0867 274.3);
+  --color-site-band-to: oklch(18.4% 0.031 302);
+  --color-site-band-mist: oklch(77.4% 0.022 223);
+  --color-site-band-slate: oklch(55.6% 0.043 249 / 55%);
+  --color-site-band-blue: oklch(43% 0.13 273.21 / 60%);
+  --color-site-band-scrim: oklch(23% 0.068 276 / 60%);
+  --color-site-band-ink: oklch(100% 0 0);
+  --color-site-band-ink-hover: oklch(92.9% 0.036 289);
+  --color-site-band-ink-secondary: oklch(84.3% 0.058 288);
+  --color-site-band-on-ink: oklch(17.8% 0 0);
+  --color-site-band-soft: oklch(100% 0 0 / 14%);
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
-  --color-site-violet: #8b84ff;
-  --color-site-chip: #262626;
-  --color-site-chip-ink: #e5e5e5;
-  --color-site-guide: rgb(255 255 255 / 9%);
-  --color-site-rule-from: rgb(139 132 255 / 60%);
-  --color-site-rule-to: rgb(255 106 51 / 55%);
-  --color-site-well: #121212;
-  --color-site-well-shade: rgb(0 0 0 / 55%);
-  --color-site-well-edge: rgb(255 255 255 / 6%);
-  --color-site-vignette: rgb(139 132 255 / 11%);
-  --color-spot-from: #1d1950;
-  --color-spot-to: #0b0a1d;
-  --color-spot-glow: rgb(118 108 255 / 60%);
-  --color-spot-halo: rgb(118 108 255 / 36%);
-  --color-spot-warm: rgb(255 106 51 / 30%);
-  --color-spot-vignette: rgb(0 0 0 / 55%);
-  --color-site-band-from: #31465a;
-  --color-site-band-mid: #20264f;
-  --color-site-band-to: #110c18;
-  --color-site-band-mist: #7f949e;
+  --color-site-violet: oklch(67.7% 0.177 283.2);
+  --color-site-chip: oklch(26.9% 0 0);
+  --color-site-chip-ink: oklch(92.2% 0 0);
+  --color-site-guide: oklch(100% 0 0 / 9%);
+  --color-site-rule-from: oklch(67.7% 0.177 283.2 / 60%);
+  --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
+  --color-site-well: oklch(18.2% 0 0);
+  --color-site-well-shade: oklch(0% 0 0 / 55%);
+  --color-site-well-edge: oklch(100% 0 0 / 6%);
+  --color-site-vignette: oklch(67.7% 0.177 283.2 / 11%);
+  --color-spot-from: oklch(25.7% 0.097 280.3);
+  --color-spot-to: oklch(15.8% 0.04 283);
+  --color-spot-glow: oklch(62% 0.211 281.3 / 60%);
+  --color-spot-halo: oklch(62% 0.211 281.3 / 36%);
+  --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
+  --color-spot-vignette: oklch(0% 0 0 / 55%);
+  --color-site-band-from: oklch(38.5% 0.043 248);
+  --color-site-band-mid: oklch(28.7% 0.075 274.4);
+  --color-site-band-to: oklch(16.7% 0.026 303);
+  --color-site-band-mist: oklch(65.3% 0.028 228);
 }
 
 /* A secondary (outline) button's edge is the control line, at least 3:1 on
@@ -1003,7 +1005,7 @@
 }
 
 *:hover {
-  scrollbar-color: color-mix(in srgb, var(--color-ink-muted) 35%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -1023,11 +1025,11 @@
 }
 
 *:hover::-webkit-scrollbar-thumb {
-  background-color: color-mix(in srgb, var(--color-ink-muted) 35%, transparent);
+  background-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--color-ink-muted) 50%, transparent);
+  background-color: color-mix(in oklch, var(--color-ink-muted) 50%, transparent);
 }
 
 /* The app, login, onboarding and the website sit on `paper`; the docs
@@ -1039,7 +1041,7 @@ html {
   /* Reserve the scrollbar track always, so short pages and long pages line up
      and locking body scroll for a modal doesn't shift layout sideways. */
   scrollbar-gutter: stable;
-  scrollbar-color: color-mix(in srgb, var(--color-ink-muted) 35%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent) transparent;
   scrollbar-width: thin;
 }
 
@@ -1697,7 +1699,7 @@ a.focus-ring:active .type-caption {
   background-image: none;
   border-color: var(--color-control-edge);
   box-shadow: none;
-  color: color-mix(in srgb, var(--color-ink-2) 60%, transparent);
+  color: color-mix(in oklch, var(--color-ink-2) 60%, transparent);
 }
 
 :disabled:focus-visible,
@@ -2205,15 +2207,15 @@ label {
 
 /* Input and search: hover tints the field's own fill (`--field-fill`) 4% ink. */
 :root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
-  background-color: color-mix(in srgb, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
+  background-color: color-mix(in oklch, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
 }
 
 /* The switch's thumb, lifted when on (HeroUI's checked shadow). */
 [role='switch'][aria-checked='true'] > span {
   box-shadow:
-    0 0 5px rgb(0 0 0 / 2%),
-    0 2px 10px rgb(0 0 0 / 6%),
-    0 0 1px rgb(0 0 0 / 30%);
+    0 0 5px oklch(0% 0 0 / 2%),
+    0 2px 10px oklch(0% 0 0 / 6%),
+    0 0 1px oklch(0% 0 0 / 30%);
 }
 
 /* Checkbox: the ink fill grows from 70% under the check (checkbox.tsx draws

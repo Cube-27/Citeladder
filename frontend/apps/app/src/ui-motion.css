@@ -213,7 +213,7 @@
     background: linear-gradient(
         90deg,
         transparent,
-        color-mix(in srgb, var(--color-surface) 55%, transparent),
+        color-mix(in oklch, var(--color-surface) 55%, transparent),
         transparent
       )
       no-repeat -100% 0 / 50% 100%;
