@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 
@@ -102,6 +102,14 @@ describe('RunsTable', () => {
       'aria-sort',
       'descending',
     );
+    // The sort is in the address, so a reload keeps it.
+    expect(window.location.search).toBe('?sort=-failed');
+    cleanup();
+    renderTable([
+      audit(1, { failed_count: 0 }),
+      audit(2, { failed_count: 7, created_at: '2026-07-01T00:00:00Z' }),
+    ]);
+    expect(runLinks()[0]).toHaveAttribute('href', `/runs/${audit(2).id}`);
   });
 
   it('returns to the first page when the sort changes', async () => {
@@ -109,8 +117,10 @@ describe('RunsTable', () => {
     const rows = Array.from({ length: 25 }, (_, i) => audit(i + 1, { failed_count: i }));
     renderTable(rows);
     await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(window.location.search).toBe('?page=2');
 
     await user.click(screen.getByRole('button', { name: /Failed/ }));
+    expect(window.location.search).toBe('?sort=-failed');
 
     // The most failures lead the first page, not the eleventh of the new order.
     expect(runLinks()[0]).toHaveAttribute('href', `/runs/${rows[24]!.id}`);

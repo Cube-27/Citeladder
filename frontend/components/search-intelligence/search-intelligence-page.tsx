@@ -60,7 +60,7 @@ const TAB_CODEC = stringUrlCodec(
   'demand' as PageTab,
 );
 /** Demand's own address keys, dropped when the reader leaves its tab. */
-const DEMAND_KEYS = ['view', 'signal'];
+const DEMAND_KEYS = ['view', 'signal', 'page', 'page_size'];
 /**
  * The research scopes and markets the saved datasets offer, the chosen ones
  * (or the first offered), and the datasets they select. The server already

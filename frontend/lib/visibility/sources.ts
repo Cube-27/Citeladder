@@ -8,6 +8,7 @@
  */
 import type { z } from 'zod';
 import { formatCount, formatMean, percentText } from '@/lib/format';
+import type { UrlCodec } from '@/lib/navigation/url-state';
 
 import type {
   visibilitySourceSeriesSchema,
@@ -201,6 +202,24 @@ const SORT_VALUES: Record<string, (item: SourceItem) => number | string> = {
   citation_rate: (item) => item.citation_rate ?? -1,
   mentions: (item) => item.mentions,
   last_cited_at: (item) => (item.last_cited_at ? Date.parse(item.last_cited_at) : -1),
+};
+
+/** A sort in the address with the table it sorts: `domain:-responses` is Domains by answers, most first. */
+export type DimensionSort = Readonly<{ dimension: 'domain' | 'url'; sort: NonNullable<SortState> }>;
+
+export const SOURCE_SORT_CODEC: UrlCodec<DimensionSort | null> = {
+  parse: (raw) => {
+    const match = /^(domain|url):(-?)([a-z_]+)$/u.exec(raw ?? '');
+    if (!match?.[1] || !match[3] || !Object.hasOwn(SORT_VALUES, match[3])) return null;
+    return {
+      dimension: match[1] === 'domain' ? 'domain' : 'url',
+      sort: { column: match[3], direction: match[2] ? 'desc' : 'asc' },
+    };
+  },
+  serialize: (value) =>
+    value
+      ? `${value.dimension}:${value.sort.direction === 'desc' ? '-' : ''}${value.sort.column}`
+      : null,
 };
 
 /**

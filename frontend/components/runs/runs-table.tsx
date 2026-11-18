@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Play } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -13,6 +13,7 @@ import { marketLabel } from '@citeladder/contracts/markets';
 import { formatCount, formatDisplayTime } from '@/lib/format';
 import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { sortUrlCodec, useUrlState, type UrlSort } from '@/lib/navigation/url-state';
 
 /** A launch's per-market runs arrive together; later rows point back to the first. */
 const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
@@ -20,9 +21,13 @@ const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
 
 /** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
+const PAGE_KEYS = ['page'] as const;
 
-type SortKey = 'created' | 'requested' | 'completed' | 'failed';
-type Sort = Readonly<{ key: SortKey; descending: boolean }>;
+const SORT_KEYS = ['created', 'requested', 'completed', 'failed'] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+type Sort = UrlSort<SortKey>;
+/** Newest first, the default, is left out of the address. */
+const SORT_CODEC = sortUrlCodec(SORT_KEYS, { key: 'created', descending: true });
 
 const SORT_VALUE: Record<SortKey, (audit: Audit) => number> = {
   created: (audit) => Date.parse(audit.created_at),
@@ -86,18 +91,16 @@ export function RunsTable({
   emptyHeading: string;
 }>) {
   const timeZone = useDisplayTimeZone();
-  const [sort, setSort] = useState<Sort>({ key: 'created', descending: true });
+  // A new sort starts on the first page: one address write sets one and drops the other.
+  const [sort, setSort] = useUrlState('sort', SORT_CODEC, { clearKeys: PAGE_KEYS });
   const sorted = sortAudits(audits, sort);
   const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, {
     pageSize: PAGE_SIZE,
+    urlKey: PAGE_KEYS[0],
   });
   const pagedAudits = sorted.slice(from - 1, to);
-  const onSort = (key: SortKey) => {
-    setSort((current) =>
-      current.key === key ? { key, descending: !current.descending } : { key, descending: true },
-    );
-    setPage(1);
-  };
+  const onSort = (key: SortKey) =>
+    setSort(sort.key === key ? { key, descending: !sort.descending } : { key, descending: true });
 
   return (
     <TitledSection

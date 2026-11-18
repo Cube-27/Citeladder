@@ -129,7 +129,7 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
   const outcomes = latest?.outcomes ?? [];
   if (!outcomes.length) return null;
   return (
-    <DataTable title="Engine coverage" columns={ENGINE_COLUMNS}>
+    <DataTable title="Engine coverage" columns={ENGINE_COLUMNS} rowLines={2}>
       {outcomes.map((outcome) => {
         const mark = engineMarkKey(outcome.logical_engine);
         return (

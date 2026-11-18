@@ -27,6 +27,7 @@ export function FactsTable({ query }: Readonly<{ query: UseQueryResult<AccuracyF
     <DataTable
       label="Claims by fact"
       columns={COLUMNS}
+      rowLines={2}
       rowCount={facts.length}
       state={tableState(query, facts)}
       busy={{ active: query.isFetching && query.isPlaceholderData, label: 'Updating facts' }}

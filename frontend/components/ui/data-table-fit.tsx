@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import {
-  columnFloor,
+  fitFloor,
   isFlexible,
   SELECT_WIDTH,
   withEdges,
@@ -154,7 +154,7 @@ function hidingRule({
 }
 
 /**
- * One zero-height box per column at its CSS floor, the select column first;
+ * One zero-height box per column at the width the fit keeps for it (`fitFloor`), the select column first;
  * a `desktopOnly` column measures zero where the narrow layout drops it.
  */
 function FloorProbe({
@@ -177,7 +177,7 @@ function FloorProbe({
         <div
           key={column.key}
           className={column.desktopOnly ? 'desktop:block hidden' : undefined}
-          style={{ width: columnFloor(column, edge) }}
+          style={{ width: fitFloor(column, edge) }}
         />
       ))}
     </div>

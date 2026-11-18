@@ -354,6 +354,7 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
   const { page, setPage, pageCount, from, to } = useTablePage(unit, {
     pageSize: PAGE_SIZE,
     resetKey: `${grouping}\u0000${needle}`,
+    urlKey: 'fanout_page',
   });
   const paged = grouped
     ? visible.slice(from - 1, to)

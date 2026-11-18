@@ -78,7 +78,12 @@ export function CompetitorSuggestions({
         {rejectMutation.isError ? (
           <Notice tone="negative">Could not reject that suggestion. Try again.</Notice>
         ) : null}
-        <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
+        <DataTable
+          label={TITLE}
+          columns={columns(canWrite)}
+          rowLines={2}
+          state={tableState(suggestionsQuery)}
+        >
           {rows.map((candidate) => (
             <TableRow key={candidate.id}>
               <TableCell>

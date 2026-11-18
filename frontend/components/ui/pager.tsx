@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
   type TablePageSize,
 } from '@/lib/config/tables';
 import { formatCount } from '@/lib/format';
+import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { cn } from '@/lib/utils';
 
 /**
@@ -200,17 +201,34 @@ export function Pager({
  * clamps into range instead of resetting, so a background refetch never yanks
  * the reader back to page 1. A new `resetKey` (the reader's filter or search)
  * goes back to page 1.
+ *
+ * With `urlKey` the page lives in the address like the filters, so reload and
+ * Back return to it; the address keeps the asked page while the rows load.
  */
 export function useTablePage(
   total: number,
-  { pageSize, resetKey }: Readonly<{ pageSize: number; resetKey?: string }>,
+  {
+    pageSize,
+    resetKey,
+    urlKey,
+  }: Readonly<{ pageSize: number; resetKey?: string; urlKey?: string }>,
 ) {
-  const [page, setPage] = useState(1);
+  const [localPage, setLocalPage] = useState(1);
+  const [urlPage, setUrlPage] = useUrlState(urlKey ?? '', PAGE_CODEC);
+  const page = urlKey ? urlPage : localPage;
+  const setPage: (page: number) => void = urlKey ? setUrlPage : setLocalPage;
   const [pagedKey, setPagedKey] = useState(resetKey);
   if (pagedKey !== resetKey) {
     setPagedKey(resetKey);
-    setPage(1);
+    setLocalPage(1);
   }
+  // The address is written after render, before paint: a new filter replaces the page.
+  const lastKey = useRef(resetKey);
+  useLayoutEffect(() => {
+    if (lastKey.current === resetKey) return;
+    lastKey.current = resetKey;
+    if (urlKey) setUrlPage(1, 'replace');
+  }, [resetKey, urlKey, setUrlPage]);
   const safePageSize = Math.max(1, pageSize);
   const pageCount = Math.max(1, Math.ceil(total / safePageSize));
   const safePage = Math.max(1, Math.min(page, pageCount));
@@ -219,15 +237,45 @@ export function useTablePage(
   return { page: safePage, setPage, pageCount, from, to };
 }
 
-/** {@link useTablePage} with the reader's rows-per-page choice, which goes back to page 1. */
-export function useResizableTablePage(total: number, resetKey?: string) {
-  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
-  const pagination = useTablePage(total, { pageSize, resetKey });
+/** A page number in the address; page 1, the default, is left out. */
+const PAGE_CODEC: UrlCodec<number> = {
+  parse: (raw) => {
+    const page = Number(raw);
+    return Number.isSafeInteger(page) && page > 1 ? page : 1;
+  },
+  serialize: (page) => (page > 1 ? String(page) : null),
+};
+
+const PAGE_SIZE_CODEC: UrlCodec<TablePageSize> = {
+  parse: (raw) => {
+    const size = Number(raw);
+    return isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE;
+  },
+  serialize: (size) => (size === TABLE_DEFAULT_PAGE_SIZE ? null : String(size)),
+};
+
+/**
+ * {@link useTablePage} with the reader's rows-per-page choice, which goes back
+ * to page 1. With `urlKey` the choice is in the address too (`<urlKey>_size`).
+ */
+export function useResizableTablePage(
+  total: number,
+  { resetKey, urlKey }: Readonly<{ resetKey?: string; urlKey?: string }> = {},
+) {
+  const [localSize, setLocalSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  // One address write: the new size drops the page.
+  const [urlSize, setUrlSize] = useUrlState(urlKey ? `${urlKey}_size` : '', PAGE_SIZE_CODEC, {
+    clearKeys: urlKey ? [urlKey] : [],
+  });
+  const pageSize = urlKey ? urlSize : localSize;
+  const pagination = useTablePage(total, { pageSize, resetKey, urlKey });
   const { setPage } = pagination;
   const pageSizeControl: PagerPageSize = {
     value: pageSize,
     onChange: (size) => {
-      setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
+      const next = isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE;
+      if (urlKey) return setUrlSize(next);
+      setLocalSize(next);
       setPage(1);
     },
   };

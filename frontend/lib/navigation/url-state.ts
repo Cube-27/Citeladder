@@ -255,6 +255,24 @@ export function stringUrlCodec<T extends string>(allowed: readonly T[], fallback
   };
 }
 
+export type UrlSort<K extends string> = Readonly<{ key: K; descending: boolean }>;
+
+/** A table's sort as `key` or `-key` (descending); the table's default sort is left out. */
+export function sortUrlCodec<K extends string>(
+  keys: readonly K[],
+  fallback: UrlSort<K>,
+): UrlCodec<UrlSort<K>> {
+  const encode = (sort: UrlSort<K>) => `${sort.descending ? '-' : ''}${sort.key}`;
+  return {
+    parse: (raw) => {
+      const descending = raw?.startsWith('-') ?? false;
+      const key = descending ? raw?.slice(1) : raw;
+      return isOneOf(keys, key) ? { key, descending } : fallback;
+    },
+    serialize: (sort) => (encode(sort) === encode(fallback) ? null : encode(sort)),
+  };
+}
+
 export const optionalStringUrlCodec: UrlCodec<string | null> = {
   parse: (raw) => raw,
   serialize: (value) => value,

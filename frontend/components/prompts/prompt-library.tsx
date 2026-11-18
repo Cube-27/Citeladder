@@ -110,6 +110,8 @@ function awaitingFirstLoad(
 }
 
 const promptStatusCodec = stringUrlCodec<PromptStatus>(['active', 'archived'], 'active');
+/** The prompt table's page (`PromptTable`). */
+const PAGE_KEYS = ['page'];
 
 /** The library's body: the failed first read, the empty library, or the table. */
 function libraryBodyFor({
@@ -195,7 +197,10 @@ export function PromptLibrary() {
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
-  const [statusFilter, setStatusFilter] = useUrlState('status', promptStatusCodec);
+  // Another status tab lists other prompts: it opens on their first page.
+  const [statusFilter, setStatusFilter] = useUrlState('status', promptStatusCodec, {
+    clearKeys: PAGE_KEYS,
+  });
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);

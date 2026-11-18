@@ -287,7 +287,7 @@ function SourceDiagnostics({
   onSetup: (id: string) => void;
 }>) {
   return (
-    <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS}>
+    <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS} rowLines={2}>
       {items.map((s) => (
         <TableRow key={s.id}>
           <TableCell>

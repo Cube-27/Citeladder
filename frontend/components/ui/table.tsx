@@ -266,14 +266,18 @@ export function TableCellLines({
   secondary,
   secondaryTooltip,
   title = false,
+  wrap = false,
 }: Readonly<{
   primary: ReactNode;
   secondary?: ReactNode;
   /** The caption's tooltip when it is cut, e.g. the full URL behind a path. */
   secondaryTooltip?: ReactNode;
   title?: boolean;
+  /** Text read whole (a prompt): with no caption, the value takes both lines of a two-line row. */
+  wrap?: boolean;
 }>) {
-  const titleLines = useContext(TableTitleLinesContext);
+  const context = useContext(TableTitleLinesContext);
+  const titleLines = wrap && !secondary ? 2 : context;
   return (
     // The title and its caption are one fact: 4 apart.
     <span data-cell-lines="" className="grid min-w-0 gap-1">

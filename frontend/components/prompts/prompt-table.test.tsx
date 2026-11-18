@@ -268,7 +268,7 @@ describe('PromptTable pagination', () => {
   it('pages through rows with the page indicator and ghost buttons', async () => {
     const user = userEvent.setup();
     const prompts = Array.from({ length: 12 }, (_, i) => makePrompt(i + 1));
-    renderTable(prompts);
+    const view = renderTable(prompts);
 
     const table = screen.getByRole('table');
     // Page 1 shows the first 10 rows with the mono page indicator.
@@ -294,9 +294,16 @@ describe('PromptTable pagination', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    // The page is in the address, so a reload opens on it.
+    expect(window.location.search).toBe('?page=2');
+    view.unmount();
+    renderTable(prompts);
+    const reloaded = screen.getByRole('table');
+    expect(within(reloaded).getByText('Prompt number 11')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Previous page' }));
-    expect(within(table).getByText('Prompt number 1')).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(within(reloaded).getByText('Prompt number 1')).toBeInTheDocument();
     expect(
       screen.getByText(
         (_, el) =>

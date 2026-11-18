@@ -16,6 +16,7 @@ import {
   readUrlState,
   setUrlParams,
   setUrlStateRouter,
+  sortUrlCodec,
   stringUrlCodec,
   subscribeToUrlState,
 } from './url-state';
@@ -30,6 +31,18 @@ describe('URL state codecs', () => {
     expect(codec.parse('unknown')).toBe('overview');
     expect(codec.serialize('overview')).toBeNull();
     expect(codec.serialize('issues')).toBe('issues');
+  });
+
+  it('reads a sort as a key with a leading minus for descending, leaving out the default', () => {
+    const codec = sortUrlCodec(['created', 'failed'] as const, {
+      key: 'created',
+      descending: true,
+    });
+    expect(codec.parse('-failed')).toEqual({ key: 'failed', descending: true });
+    expect(codec.parse('failed')).toEqual({ key: 'failed', descending: false });
+    expect(codec.parse('-unknown')).toEqual({ key: 'created', descending: true });
+    expect(codec.serialize({ key: 'created', descending: false })).toBe('created');
+    expect(codec.serialize({ key: 'created', descending: true })).toBeNull();
   });
 
   it('round-trips optional selected IDs', () => {
