@@ -77,6 +77,7 @@ async function pilotConfiguration(owner: Tenant) {
     brand_name: 'Acme',
     brand_aliases: [],
     competitors: [{ name: 'Rival', domains: [], aliases: [] }],
+    country_code: 'US',
     language_code: 'en',
     // Frozen with the fake gateway's model, as admission freezes the deployment's.
     perception: admittedPerceptionVersions({ auditScope: 'brand', factCheck, model: 'test' }),
@@ -430,6 +431,12 @@ describe('claim extraction and verification', () => {
       ],
     });
 
+    // The export names the market the run froze, not the project's current default.
+    await db
+      .updateTable('projects')
+      .set({ country_code: 'GB' })
+      .where('id', '=', tenant.projectId)
+      .execute();
     const csv = await app.request(
       `/api/v1/projects/${tenant.projectId}/visibility/accuracy/claims/export?audit_id=${auditId}`,
       {

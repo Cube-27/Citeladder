@@ -15,8 +15,10 @@ import {
   type AccuracyResponse,
   type ExecutionClaim,
 } from '@citeladder/contracts/fact-checking';
+import { marketLabel } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
+import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcTextOf, wireUtc } from '../db/timestamps.ts';
@@ -291,7 +293,14 @@ async function selectionAnswers(
     factChecked,
     auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
     frozenRevisionIds: rows.flatMap((row) => row.frozen.factCheck.facts.map((f) => f.revision_id)),
-    marketOf: new Map(rows.map((row) => [row.audit_id, row.market_id])),
+    marketOf: new Map(
+      rows.map((row) => {
+        const { country_code = '', language_code = '' } = readFrozenConfiguration(
+          row.configuration,
+        );
+        return [row.audit_id, { id: row.market_id, country_code, language_code }];
+      }),
+    ),
   };
 }
 
@@ -397,15 +406,22 @@ export async function accuracyClaimRows(
     )
     .sort(claimOrder);
   assertExportBound(claims.length, settings.claims_export_max_rows);
-  const markets = new Map(
+  // An additional market keeps its own label while it exists; the default market
+  // and a deleted one read as the country and language the run froze.
+  const labels = new Map(
     (await listMarkets(db, selection)).map((market) => [market.id, market.label]),
   );
+  const marketName = (auditId: string) => {
+    const market = marketOf.get(auditId);
+    if (!market) return '';
+    return (market.id !== null && labels.get(market.id)) || marketLabel(market);
+  };
   return claims.map(({ answer, claim }) => ({
     claim: claim.claim,
     facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
     verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
     engine: answer.logicalEngine,
-    market: markets.get(marketOf.get(answer.auditId) ?? null) ?? '',
+    market: marketName(answer.auditId),
     run_date: answer.observedAt,
     prompt: answer.prompt,
   }));

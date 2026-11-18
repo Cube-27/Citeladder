@@ -42,12 +42,27 @@ export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
 }
 
 /**
- * The By fact view and the claims export for the same selection. `pilot` is
- * false off the Fact-checking tab too, so the Brand tab reads neither.
+ * The By fact view and the claims export for the same selection, on the
+ * Fact-checking tab only. By fact is read once this selection's accuracy has
+ * settled, the only state that draws it, so it never keeps mid-check counts.
  */
-export function useFactViews({ filters, queries, pilot }: AccuracyInput) {
+export function useFactViews({
+  filters,
+  queries,
+  accuracy,
+  open,
+}: Readonly<{
+  filters: AccuracyInput['filters'];
+  queries: SourceQueries;
+  accuracy: Pick<ReturnType<typeof useAccuracy>, 'data' | 'isPlaceholderData'>;
+  open: boolean;
+}>) {
   const params = selectionParams(filters, queries);
-  const enabled = pilot && selectionEnabled(queries);
+  const enabled =
+    open &&
+    accuracy.data?.state === 'value' &&
+    !accuracy.isPlaceholderData &&
+    selectionEnabled(queries);
   const scope = { workspaceId: queries.workspaceId, projectId: queries.projectId };
   const facts = useQuery({
     ...visibilityQueries.accuracyFacts(scope, params),
