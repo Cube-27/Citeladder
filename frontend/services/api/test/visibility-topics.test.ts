@@ -7,6 +7,7 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { loadComparisonCells } from '../src/visibility/comparison.ts';
 import { finalizedRuns } from './finalized-runs.ts';
 import { prompt, topic } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -115,6 +116,30 @@ describe('topic dimension', () => {
       await responses(`&topic=${pricing}`),
       await responses(`&topic=${security}`),
     ]).toEqual([12, 9, 3]);
+
+    // A matched-subset comparison keeps only the selected topic's answers.
+    const audits = await db
+      .selectFrom('audits')
+      .select(['id', 'configuration'])
+      .where('id', 'in', [first, second])
+      .execute();
+    const run = (id: string) => ({
+      auditId: id,
+      workspaceId: t.workspaceId,
+      configuration: audits.find((audit) => audit.id === id)?.configuration,
+    });
+    const cellCounts = async (topicId: string | null) => {
+      const cells = await loadComparisonCells(
+        db,
+        { current: run(second), previous: run(first) },
+        { cohort: 'core', engine: null, topicId },
+      );
+      return [cells.get(second)?.size, cells.get(first)?.size];
+    };
+    expect([await cellCounts(null), await cellCounts(security)]).toEqual([
+      [6, 6],
+      [0, 3],
+    ]);
   });
 
   it("reads only the reader's workspace, whatever topic it names", async () => {

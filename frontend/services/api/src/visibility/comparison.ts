@@ -66,7 +66,8 @@ export type SelectedRun = {
   metrics: Metrics;
 };
 
-type Selector = { cohort: string; engine: string | null };
+/** `topicId` narrows matched cells to the topic each run froze (AV-5). */
+type Selector = { cohort: string; engine: string | null; topicId?: string | null };
 
 /** The frozen context two runs must share before any cell can be matched. */
 const panelFreeKey = (configuration: unknown) =>
@@ -84,8 +85,9 @@ export async function compareSelection(
   db: Database,
   scope: RunScope,
   current: SelectedRun,
-  selector: Selector & { baselineId: string | null },
+  requested: Selector & { baselineId: string | null },
 ): Promise<VisibilityComparison> {
+  const selector = { ...requested, topicId: scope.topicId ?? null };
   if (selector.baselineId) return walkBaseline(db, scope, current, selector);
   if (current.completedAt === null) return emptyComparison();
   const persisted = await persistedBaseline(db, current, selector);
@@ -275,6 +277,7 @@ export async function loadComparisonCells(
     .where('ra.audit_id', 'in', [current.auditId, previous.auditId])
     .where('ra.cohort', 'in', [...selectedCohorts(selector.cohort)]);
   if (selector.engine) query = query.where('ra.logical_engine', '=', selector.engine);
+  if (selector.topicId) query = query.where('prompt.topic_id', '=', selector.topicId);
   const cells = new Map<string, Map<string, ComparisonCell>>([
     [current.auditId, new Map()],
     [previous.auditId, new Map()],
