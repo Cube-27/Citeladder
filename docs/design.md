@@ -270,22 +270,28 @@ inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
 1. **Masthead** (52, sticky): the menu button below 900px, the back link on
    a record, the page title, then search, secondary actions, at most one
    primary action and Ask agent.
-2. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
+2. **Tab strip** (optional): as high as the filter strip (owner,
+   2026-11-18), the tabs filling it with their labels centred, so the
+   current tab's underline sits on the strip's rule. Tabs come before
+   filters because a tab changes the filters and the strip above it must
+   not change (owner, 2026-11-18).
+3. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
    view (Prompts' Active | Archived), search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
    count or a live note), cut before the strip wraps, and one action.
-3. **Tab strip** (optional): 4 above 32 tabs; the current tab's underline
-   sits on the strip's rule.
-4. **Sections**, 16 below the strips, a `rule` between neighbours with 32 on
-   each side (owner, 2026-11-18): across the main column between stacked
-   sections, down the row between a grid's side-by-side sections. A
-   FigureStrip on the page itself is full-bleed like the strips, its first
-   text on the content edge.
+4. **Sections**, 16 below the strips, a `rule` between neighbouring page
+   sections with 32 on each side (owner, 2026-11-18): one across the main
+   column between stacked sections, one down each column gap of a grid's
+   row of sections, never a second. Only a `Section` or a grid of them on
+   the page counts; lists grouped inside a page (Actions' status groups)
+   and sections inside a section or card draw none. A FigureStrip on the
+   page itself is full-bleed like the strips, its first text on the content
+   edge.
 
-The sidebar's Dashboard | Agent row under its 52 switcher cell is as high as
-the page's first strip, the switch centred, so its rule continues that
-strip's rule on one line.
+The sidebar's Dashboard | Agent row under its 52 switcher cell is one strip
+high, the switch centred, so its rule continues the page's first strip's
+rule on one line on every page.
 
 Order is by likelihood of use: the most likely action comes first, left to
 right and top to bottom. A control sits in the row of the thing it acts on:

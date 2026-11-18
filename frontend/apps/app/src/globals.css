@@ -734,19 +734,16 @@
 
   /* Anatomy (2.3): the top strips, each closed by a rule across the main
      column and the same height on every page (`PageFrame`, owner 2026-11-18):
-     masthead 52; filters 8 around 32 controls; tabs 4 above 32 tabs. Then
+     masthead 52; tabs, then filters, each 8 + one control + 8 (owner,
+     2026-11-18: one row height), the tabs filling theirs. Then
      `page-pad-block` to the first content. Sidebar 224 from 1280, 200 from
      900, a 56 rail of 40px buttons when collapsed. Content fills the main
      column inside a 32 gutter (24 on flow, setup and auth pages; 16 below
      900), a reading page centred in
      `thread`. The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 52px;
-  --page-tabs-height: 32px;
+  --page-tabs-height: calc(var(--control-md) + 16px);
   --filter-bar-height: 48px;
-  /* The page's first strip under the masthead; the sidebar's Dashboard |
-     Agent row takes its height so their rules meet on one line (owner,
-     2026-11-18). Rebound below when the first strip is the tab strip. */
-  --first-strip-height: var(--filter-bar-height);
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
@@ -798,16 +795,13 @@
     --page-pad-inline: 32px;
   }
 }
-:root:has([data-page-band='tabs']):not(:has([data-page-band='filters'])) {
-  --first-strip-height: calc(var(--page-tabs-height) + 4px);
-}
-/* The labelled sidebar's Dashboard | Agent row: the first strip's height, the
-   switch centred, its rule on the strip's line (owner, 2026-11-18). */
+/* The labelled sidebar's Dashboard | Agent row: a strip's height, the switch
+   centred, its rule on the page's first strip's line (owner, 2026-11-18). */
 [data-sidebar-mode-row]:where([data-sidebar-state='expanded'] *, [data-nav-drawer] *) {
   position: relative;
   display: grid;
   align-content: center;
-  height: var(--first-strip-height);
+  height: var(--filter-bar-height);
   padding-top: 0;
   &::before {
     content: '';
@@ -825,7 +819,6 @@
     --control-sm: 44px;
     --control-md: 44px;
     --control-md-padding: 16px;
-    --page-tabs-height: 44px;
     --nav-row-height: 44px;
     --table-row-height: 44px;
   }
@@ -1647,20 +1640,22 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] .surface-section [data-form-field] {
     max-width: var(--container-form);
   }
-  /* Section dividers (owner, 2026-11-18): on the page a `rule` separates
-     sections, 32 either side. Stacked, it spans the main column like the
-     strips; between a halves or main-aside grid's two columns it runs down
-     the row. A block after one ending on a figure strip keeps that strip's
-     rule. Zero specificity, so the column rule below wins. */
+  /* Section dividers (owner, 2026-11-18): a `rule` separates page sections,
+     32 either side. A page section is a section, or a grid of them, placed
+     straight in the page body, a tab panel or a container that spaces
+     sections (`data-rhythm-gap`), and not inside another section or a card; a list
+     grouped in a plain wrapper (Actions' status groups) is not one. Stacked,
+     the rule spans the main column like the strips; in a grid's row of
+     columns one runs down each column gap, that row only. A block after one
+     ending on a figure strip keeps that strip's rule. Zero specificity, so
+     the column rules below win. */
   :where(
-    [data-page-body]
-      :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
-      + :is(section, [data-app-grid]:has(> section)):not(
-        [data-app-grid] > *,
-        .surface-card *,
-        .surface-slip *
-      ),
-    [data-page-body] [data-app-grid]:has(> section) > * + *
+    :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
+      > :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
+      + :is(section, [data-app-grid]:has(> section)):not(:is(section, .surface-card, .surface-slip) *),
+    :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
+      > [data-app-grid]:has(> section):not(:is(section, .surface-card, .surface-slip) *)
+      > * + *
   ) {
     position: relative;
     padding-top: var(--page-section-gap);
@@ -1673,24 +1668,40 @@ a.focus-ring:active .type-caption {
       background: var(--color-rule);
     }
   }
-  [data-page-body] [data-app-grid]:has(> section) {
+  :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
+    > [data-app-grid]:has(> section):not(:is(section, .surface-card, .surface-slip) *) {
     --grid-gap-y: var(--page-section-gap);
     & > * {
       --grid-gap-x: initial;
       --grid-gap-y: initial;
     }
-  }
-  /* `column-wide` (the page body is always in the main column). */
-  @container main (min-width: 954px) {
-    [data-page-body] :is([data-app-grid='halves'], [data-app-grid='main-aside']):has(> section) {
-      --grid-gap-x: calc(2 * var(--page-section-gap));
-      & > :nth-child(2) {
-        padding-top: 0;
+    /* In columns (`column-split` for pair and thirds, `column-wide` for
+       halves and main-aside; the page body is always in the main column) the
+       first row's later cells draw the column rule instead, from their top. */
+    @container main (min-width: 688px) {
+      &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
+        --grid-gap-x: calc(2 * var(--page-section-gap));
+        & > :nth-child(-n + 3):not(:first-child, [data-app-grid='pair'] > :nth-child(3)) {
+          padding-top: 0;
+          &::before {
+            inset: 0 auto 0 calc(-1 * var(--page-section-gap));
+            width: 1px;
+            height: auto;
+          }
+        }
       }
-      & > :nth-child(even)::before {
-        inset: 0 auto 0 calc(-1 * var(--page-section-gap));
-        width: 1px;
-        height: auto;
+    }
+    @container main (min-width: 954px) {
+      &:is([data-app-grid='halves'], [data-app-grid='main-aside']) {
+        --grid-gap-x: calc(2 * var(--page-section-gap));
+        & > :nth-child(2) {
+          padding-top: 0;
+          &::before {
+            inset: 0 auto 0 calc(-1 * var(--page-section-gap));
+            width: 1px;
+            height: auto;
+          }
+        }
       }
     }
   }
