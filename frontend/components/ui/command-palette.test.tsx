@@ -182,7 +182,7 @@ describe('CommandPalette', () => {
   it('lists every nav destination and every project', async () => {
     await open();
     // Layer destinations, plus both projects.
-    expect(screen.getByRole('option', { name: /demand/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /keywords/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /site/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /acme/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /orbit/i })).toBeInTheDocument();
@@ -217,8 +217,8 @@ describe('CommandPalette', () => {
 
   it('navigates to the highlighted route on Enter', async () => {
     const user = await open();
-    await user.keyboard('demand{Enter}');
-    expect(screen.getByTestId('location')).toHaveTextContent('/demand?project=p1');
+    await user.keyboard('keywords{Enter}');
+    expect(screen.getByTestId('location')).toHaveTextContent('/search-intelligence?project=p1');
   });
 
   it('keeps workspace commands out of project scope', async () => {

@@ -26,10 +26,6 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
   '/projects': prefetchOverview,
   '/site': prefetchSiteHealth,
   '/issues': prefetchIssues,
-  '/demand': async (client, scope) => {
-    const { demandQueries } = await import('@/lib/api/demand');
-    warmQuery(client, demandQueries.latest(scope));
-  },
   '/performance': async (client, scope) => {
     // The landing view, built from the screen's own defaults: the latest
     // persisted snapshot, daily buckets, no comparison.
@@ -40,9 +36,9 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     warmQuery(client, performanceQueries.dashboard(scope, INITIAL_DASHBOARD_PARAMS));
   },
   '/search-intelligence': async (client, scope) => {
-    // Readiness gates the whole screen: nothing below the tabs draws without it.
-    const { searchIntelligenceQueries } = await import('@/lib/api/search-intelligence');
-    warmQuery(client, searchIntelligenceQueries.readiness(scope));
+    // The page opens on Demand, which draws from the latest snapshot alone.
+    const { demandQueries } = await import('@/lib/api/demand');
+    warmQuery(client, demandQueries.latest(scope));
   },
   '/products': async (client, scope) => {
     const [{ commerceQueries }, { DEFAULT_PRODUCT_FILTERS, productSearch }] = await Promise.all([

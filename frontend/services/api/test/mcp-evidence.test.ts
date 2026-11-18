@@ -694,6 +694,9 @@ it('exposes published dataset aggregates without treating them as backlink edges
   });
   const fetched = await fetchRecord(db, principal, `citeladder://search_row/${rowId}`, origin);
   expect(record(fetched)).toMatchObject({ id: rowId, project_id: tenant.projectId, backlinks: 0 });
+  expect(fetched.url).toBe(
+    `${origin}/search-intelligence?tab=overview&project=${tenant.projectId}`,
+  );
   await db
     .updateTable('search_intelligence_datasets')
     .set({ status: 'collecting' })

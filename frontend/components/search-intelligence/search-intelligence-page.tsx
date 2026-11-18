@@ -4,6 +4,7 @@ import { Layers, Play, Receipt, RefreshCw, Settings2 } from 'lucide-react';
 
 import type { ReactNode } from 'react';
 
+import { DemandProjection } from '@/components/demand/demand-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
@@ -43,17 +44,23 @@ import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 const TABS = [
+  { value: 'demand', label: 'Demand' },
   { value: 'overview', label: 'Overview' },
   { value: 'keywords', label: 'Keywords' },
-  { value: 'competitors', label: 'Competitors' },
+  { value: 'competitors', label: 'Organic competitors' },
   { value: 'backlinks', label: 'Backlinks' },
 ] as const;
-type Tab = (typeof TABS)[number]['value'];
-const SEARCH_INTELLIGENCE_TABS = { items: TABS, ariaLabel: 'Keyword Research views' };
+type PageTab = (typeof TABS)[number]['value'];
+/** The tabs read from saved Keyword Research datasets; Demand reads Search Console. */
+type Tab = Exclude<PageTab, 'demand'>;
+const RESEARCH_TABS = TABS.flatMap(({ value }) => (value === 'demand' ? [] : [value]));
+const TAB_ROW = <TabRow items={TABS} ariaLabel="Keywords views" />;
 const TAB_CODEC = stringUrlCodec(
   TABS.map(({ value }) => value),
-  'overview' as Tab,
+  'demand' as PageTab,
 );
+/** Demand's own address keys, dropped when the reader leaves its tab. */
+const DEMAND_KEYS = ['view', 'signal'];
 /**
  * The research scopes and markets the saved datasets offer, the chosen ones
  * (or the first offered), and the datasets they select. The server already
@@ -96,16 +103,47 @@ function selectDatasets(
   return { scopes, activeScope, markets, activeMarket, datasets };
 }
 
+/**
+ * The Keywords page: Search demand on its first tab, then Keyword Research's
+ * saved datasets. Each reads its own owner, so neither gates the other.
+ */
 export function SearchIntelligencePage() {
+  const [tab, setTab] = useUrlState('tab', TAB_CODEC, { clearKeys: DEMAND_KEYS });
+  const view = useSavedView();
+  return (
+    <TabsRoot value={tab} onValueChange={setTab}>
+      {tab === 'demand' ? (
+        <DemandProjection tabs={TAB_ROW} />
+      ) : (
+        <KeywordResearch tab={tab} setTab={setTab} view={view} />
+      )}
+    </TabsRoot>
+  );
+}
+
+/** The saved scope, market and comparison chosen, held above the tabs so a visit to Demand keeps them. */
+function useSavedView() {
+  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
+  const [market, setMarket] = useState('');
+  const [scope, setScope] = useState('');
+  return { comparison, setComparison, market, setMarket, scope, setScope };
+}
+
+function KeywordResearch({
+  tab,
+  setTab,
+  view,
+}: Readonly<{
+  tab: Tab;
+  setTab: (tab: PageTab) => void;
+  view: ReturnType<typeof useSavedView>;
+}>) {
   const { workspaceId, projectId } = useProjectScope();
-  const [tab, setTab] = useUrlState('tab', TAB_CODEC);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
   const [citationOrigin, setCitationOrigin] = useState<string>();
-  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
-  const [market, setMarket] = useState('');
-  const [scope, setScope] = useState('');
+  const { comparison, setComparison, market, setMarket, scope, setScope } = view;
   const [action, setAction] = useState<SearchReviewAction>('analysis');
   const requestScope = { workspaceId, projectId };
   const readiness = useQuery({
@@ -151,48 +189,40 @@ export function SearchIntelligencePage() {
   // tab's first card, so the work starts on the same line before and after.
   if (readiness.isPending)
     return (
-      <TabsRoot value={tab} onValueChange={setTab}>
-        <KeywordResearchFrame controls={RESERVED_CONTROLS}>
-          <ResearchLoading tab={tab} />
-        </KeywordResearchFrame>
-      </TabsRoot>
+      <KeywordResearchFrame controls={RESERVED_CONTROLS}>
+        <ResearchLoading tab={tab} />
+      </KeywordResearchFrame>
     );
   // A failed read keeps the tab row, so the page does not lose its place.
   if (readiness.isError)
     return (
-      <TabsRoot value={tab} onValueChange={setTab}>
-        <KeywordResearchFrame>
-          <StateBlock
-            kind="error"
-            {...readErrorProps(readiness)}
-            fallback="Keyword Research could not be loaded."
-            title="Keyword Research could not be loaded"
-          />
-        </KeywordResearchFrame>
-      </TabsRoot>
+      <KeywordResearchFrame>
+        <StateBlock
+          kind="error"
+          {...readErrorProps(readiness)}
+          fallback="Keyword Research could not be loaded."
+          title="Keyword Research could not be loaded"
+        />
+      </KeywordResearchFrame>
     );
   const data = readiness.data;
   if (!data.connected && !data.datasets.length)
     return (
-      <TabsRoot value={tab} onValueChange={setTab}>
-        <KeywordResearchFrame>
-          <NotConnected funded={data.credential_mode === 'funded'} tab={tab} />
-        </KeywordResearchFrame>
-      </TabsRoot>
+      <KeywordResearchFrame>
+        <NotConnected funded={data.credential_mode === 'funded'} tab={tab} />
+      </KeywordResearchFrame>
     );
   if (!data.owned_targets.length)
     return (
-      <TabsRoot value={tab} onValueChange={setTab}>
-        <KeywordResearchFrame>
-          <StateBlock
-            kind="empty"
-            icon={Settings2}
-            heading="Add your website address"
-            description="Keyword Research needs the project’s homepage address."
-            action={<TextLink href="/projects">Edit the project</TextLink>}
-          />
-        </KeywordResearchFrame>
-      </TabsRoot>
+      <KeywordResearchFrame>
+        <StateBlock
+          kind="empty"
+          icon={Settings2}
+          heading="Add your website address"
+          description="Keyword Research needs the project’s homepage address."
+          action={<TextLink href="/projects">Edit the project</TextLink>}
+        />
+      </KeywordResearchFrame>
     );
   // Before the first analysis every tab is empty and its state holds the
   // first-analysis action, so the masthead does not repeat it.
@@ -204,103 +234,101 @@ export function SearchIntelligencePage() {
     </Button>
   ) : undefined;
   return (
-    <TabsRoot value={tab} onValueChange={setTab}>
-      <KeywordResearchFrame
-        actions={
-          <PageActions
-            hasDatasets={!empty}
-            onReview={actions.review}
-            onCost={() => setCostOpen(true)}
-          />
-        }
-        controls={pageControls({
-          data,
+    <KeywordResearchFrame
+      actions={
+        <PageActions
+          hasDatasets={!empty}
+          onReview={actions.review}
+          onCost={() => setCostOpen(true)}
+        />
+      }
+      controls={pageControls({
+        data,
+        tab,
+        datasets,
+        // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
+        collection: empty ? null : collection,
+        onSeed: actions.onSeed,
+        onMatch: actions.onMatch,
+        onExpand: actions.onExpand,
+        savedView: savedViewFilters({
+          scopes,
+          scope: activeScope,
+          markets,
+          market: activeMarket,
           tab,
-          datasets,
-          // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
-          collection: empty ? null : collection,
-          onSeed: actions.onSeed,
-          onMatch: actions.onMatch,
-          onExpand: actions.onExpand,
-          savedView: savedViewFilters({
-            scopes,
-            scope: activeScope,
-            markets,
-            market: activeMarket,
-            tab,
-            onScope: (value) => {
-              setScope(value);
-              setComparison(null);
-            },
-            onMarket: (value) => {
-              setMarket(value);
-              setComparison(null);
-            },
-          }),
-        })}
-      >
-        <Stack gap="workspace" className="min-w-0">
-          <UnavailableNotice data={data} />
-          <RunNotice
-            run={data.latest_run}
-            onCancel={actions.cancel}
-            onReview={actions.analysis}
-            cancelling={cancelMutation.isPending}
+          onScope: (value) => {
+            setScope(value);
+            setComparison(null);
+          },
+          onMarket: (value) => {
+            setMarket(value);
+            setComparison(null);
+          },
+        }),
+      })}
+    >
+      <Stack gap="workspace" className="min-w-0">
+        <UnavailableNotice data={data} />
+        <RunNotice
+          run={data.latest_run}
+          onCancel={actions.cancel}
+          onReview={actions.analysis}
+          cancelling={cancelMutation.isPending}
+        />
+        {empty ? (
+          RESEARCH_TABS.map((value) => (
+            <TabPanel key={value} value={value} className="min-w-0">
+              <NoAnalysisYet tab={value} action={firstRun} />
+            </TabPanel>
+          ))
+        ) : (
+          <ResearchPanels
+            data={data}
+            datasets={datasets}
+            collection={collection}
+            onOpen={openComparison}
+            onSelect={setComparison}
           />
-          {empty ? (
-            TABS.map(({ value }) => (
-              <TabPanel key={value} value={value} className="min-w-0">
-                <NoAnalysisYet tab={value} action={firstRun} />
-              </TabPanel>
-            ))
-          ) : (
-            <ResearchPanels
-              data={data}
-              datasets={datasets}
-              collection={collection}
-              onOpen={openComparison}
-              onSelect={setComparison}
-            />
-          )}
-          <Drawer
-            open={citationOpen}
-            onOpenChange={setCitationOpen}
-            title="Match Visibility citations"
-            description="Find the sources AI answers cite that already link to your website."
-          >
-            <SearchIntelligenceCitationMatcher
-              key={citationOrigin}
-              datasets={datasets}
-              targetOrigin={citationOrigin}
-              onDerived={() => setCitationOpen(false)}
-            />
-          </Drawer>
-          <CostDetails
-            open={costOpen}
-            onOpenChange={setCostOpen}
-            runs={runsQuery.data}
-            pending={runsQuery.isPending}
-            error={runsQuery.error}
-            onRetry={() => void runsQuery.refetch()}
+        )}
+        <Drawer
+          open={citationOpen}
+          onOpenChange={setCitationOpen}
+          title="Match Visibility citations"
+          description="Find the sources AI answers cite that already link to your website."
+        >
+          <SearchIntelligenceCitationMatcher
+            key={citationOrigin}
+            datasets={datasets}
+            targetOrigin={citationOrigin}
+            onDerived={() => setCitationOpen(false)}
           />
-          <SearchIntelligenceReviewDrawer
-            key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
-            open={drawerOpen}
-            action={action}
-            readiness={data}
-            onOpenChange={setDrawerOpen}
-            onReview={(payload) =>
-              reviewMutation.mutateAsync(payload) as Promise<SearchIntelligenceRun>
-            }
-            onConfirm={async (runId) => {
-              await confirmMutation.mutateAsync(runId);
-              setDrawerOpen(false);
-            }}
-            busy={reviewMutation.isPending || confirmMutation.isPending}
-          />
-        </Stack>
-      </KeywordResearchFrame>
-    </TabsRoot>
+        </Drawer>
+        <CostDetails
+          open={costOpen}
+          onOpenChange={setCostOpen}
+          runs={runsQuery.data}
+          pending={runsQuery.isPending}
+          error={runsQuery.error}
+          onRetry={() => void runsQuery.refetch()}
+        />
+        <SearchIntelligenceReviewDrawer
+          key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
+          open={drawerOpen}
+          action={action}
+          readiness={data}
+          onOpenChange={setDrawerOpen}
+          onReview={(payload) =>
+            reviewMutation.mutateAsync(payload) as Promise<SearchIntelligenceRun>
+          }
+          onConfirm={async (runId) => {
+            await confirmMutation.mutateAsync(runId);
+            setDrawerOpen(false);
+          }}
+          busy={reviewMutation.isPending || confirmMutation.isPending}
+        />
+      </Stack>
+    </KeywordResearchFrame>
   );
 }
 
@@ -317,7 +345,7 @@ function KeywordResearchFrame({
   return (
     <ReportPage
       actions={actions}
-      tabs={<TabRow {...SEARCH_INTELLIGENCE_TABS} />}
+      tabs={TAB_ROW}
       filters={controls ? <FilterBar {...controls} /> : undefined}
     >
       {children}
@@ -394,7 +422,7 @@ function ResearchPanels({
           onOpen={onOpen}
         />
       </TabPanel>
-      {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
+      {RESEARCH_TABS.filter((value) => value !== 'overview').map((value) => (
         <TabPanel key={value} value={value} className="min-w-0">
           {collection?.tab === value ? (
             <SearchIntelligenceCollection

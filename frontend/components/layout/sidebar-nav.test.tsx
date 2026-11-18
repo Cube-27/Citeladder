@@ -202,7 +202,7 @@ describe('station navigation', () => {
     searchParams = new URLSearchParams('tab=pages');
     render(<SidebarNav />).unmount();
 
-    pathname = '/demand';
+    pathname = '/search-intelligence';
     searchParams = new URLSearchParams();
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
