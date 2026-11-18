@@ -1,16 +1,39 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+import type { Visibility } from '@citeladder/contracts';
 import type { MatrixAxes, MatrixDimension } from '@citeladder/contracts/visibility-matrix';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { AxisItemLabel } from '@/components/ui/heat-table';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
 import { YouTag } from '@/components/ui/table';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
+/** Items an axis shows at most. */
+const AXIS_LIMIT = 10;
+/** A pending axis the selection cannot count (topics, markets) reserves this many. */
+const UNCOUNTED_AXIS = 5;
+
+/**
+ * How many items a pending axis will draw, from the selection already on
+ * screen, so the skeleton holds the loaded table's height.
+ */
+export function pendingAxisLength(selected: Visibility, dimension: MatrixDimension): number {
+  const known =
+    dimension === 'engine'
+      ? selected.per_engine.length
+      : dimension === 'brand'
+        ? selected.rankings.length
+        : UNCOUNTED_AXIS;
+  return Math.min(AXIS_LIMIT, Math.max(1, known));
+}
+
 /** The read failed or is loading: the card's body says so instead of a table. */
-export function matrixBodyState(query: UseQueryResult<unknown>, what: string): ReactNode {
+export function matrixBodyState(
+  query: UseQueryResult<unknown>,
+  what: string,
+  pending: ReactNode,
+): ReactNode {
   if (query.isError)
     return (
       <Notice
@@ -20,7 +43,7 @@ export function matrixBodyState(query: UseQueryResult<unknown>, what: string): R
         fallback="Check your connection and try again."
       />
     );
-  if (query.isPending) return <StateBlock kind="loading" label={`Loading the ${what}…`} />;
+  if (query.isPending) return pending;
   return null;
 }
 

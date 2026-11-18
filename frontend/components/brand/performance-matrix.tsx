@@ -1,8 +1,14 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
+import type { Visibility } from '@citeladder/contracts';
 import type { MatrixDimension, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Button } from '@/components/ui/button';
-import { HeatScale, HeatTable, type HeatValue } from '@/components/ui/heat-table';
+import {
+  GridTableSkeleton,
+  HeatScale,
+  HeatTable,
+  type HeatValue,
+} from '@/components/ui/heat-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
@@ -24,7 +30,7 @@ import {
   READING_LABELS,
   type CellReading,
 } from '@/lib/visibility/matrix';
-import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
+import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -47,7 +53,8 @@ const dimensionLabel = (dimension: MatrixDimension) =>
  */
 export function PerformanceMatrix({
   query,
-}: Readonly<{ query: UseQueryResult<VisibilityMatrix> }>) {
+  selected,
+}: Readonly<{ query: UseQueryResult<VisibilityMatrix>; selected: Visibility }>) {
   const [metric, setMetric] = useUrlState('matrix_metric', metricCodec);
   const [rows, setRows] = useUrlState('matrix_rows', rowsCodec);
   const [linkedColumns, setColumns] = useUrlState('matrix_columns', columnsCodec);
@@ -93,7 +100,16 @@ export function PerformanceMatrix({
       : { kind: 'void', label: READING_LABELS[reading.kind] };
 
   function body() {
-    const state = matrixBodyState(query, 'matrix');
+    const state = matrixBodyState(
+      query,
+      'matrix',
+      <GridTableSkeleton
+        label="Loading the matrix…"
+        variant="heat"
+        rows={pendingAxisLength(selected, rows)}
+        columns={pendingAxisLength(selected, columns)}
+      />,
+    );
     if (state || !data) return state;
     if ((rows === 'topic' || columns === 'topic') && noTopicsRecorded(data.rankings.topic))
       return (

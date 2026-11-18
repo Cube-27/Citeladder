@@ -10,7 +10,6 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
-import { FilterBar, pageStripFilters } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -19,6 +18,7 @@ import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
+  selectionPageFilterBar,
   selectionPageState,
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
@@ -65,7 +65,7 @@ export function CompetitorScreen() {
           ]}
         />
       }
-      filters={state === null ? <FilterBar {...pageStripFilters(pageFilters)} /> : undefined}
+      filters={selectionPageFilterBar(state, pageFilters)}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (

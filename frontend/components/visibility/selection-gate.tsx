@@ -34,11 +34,15 @@ function isMeasured(data: Visibility | null): data is Visibility {
  */
 export function SelectionGate({
   query,
+  pending,
   children,
 }: Readonly<{
   query: UseQueryResult<Visibility | null, unknown>;
+  /** The loaded view's footprint while the read is pending; key figures by default. */
+  pending?: ReactNode;
   children: (selected: Visibility) => ReactNode;
 }>) {
+  if (query.isPending && pending) return pending;
   // Metrics not written yet is the normal state for the seconds after a run
   // ends; reporting it as an error told readers their results were lost.
   if (query.status === 'error' && isMetricsPending(query.error)) {

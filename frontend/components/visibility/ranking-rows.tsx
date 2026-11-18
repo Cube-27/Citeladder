@@ -20,10 +20,12 @@ import {
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
+import { TextLineSkeleton } from '@/components/ui/loading-parts';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
 
 const TITLE = 'You and your competitors';
+const FOOTER = 'How often each brand is named, across the same answers.';
 
 const SENTIMENT_HINT =
   'Net sentiment: positive minus negative mentions, as a share of the classified mentions of each brand, from −100 to +100.';
@@ -70,7 +72,7 @@ export function RankingRowsTable({
                 heading: 'No measured responses in this selection',
               }
         }
-        footer="How often each brand is named, across the same answers."
+        footer={FOOTER}
       >
         {ordered.map((row) => {
           // A matched-subset delta is the same measurement over the cells both
@@ -160,6 +162,25 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
 function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.win_rate != null) return <span>{formatRate(row.win_rate)}</span>;
   return <Absence state={winRateAbsence(row)} />;
+}
+
+/**
+ * The table while the selection is read: its title, a caption line and one
+ * block row per brand the project tracks, so what follows stays put.
+ */
+export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
+  return (
+    <TitledSection title={TITLE} description={<TextLineSkeleton text="body" width="long" />}>
+      <DataTable
+        label={TITLE}
+        columns={rankingColumns({ anyPosition: true, anySentiment: true })}
+        minWidth="md"
+        pageSize={brands}
+        state={{ kind: 'loading', label: 'Loading the rankings…' }}
+        footer={FOOTER}
+      />
+    </TitledSection>
+  );
 }
 
 function rankingColumns({

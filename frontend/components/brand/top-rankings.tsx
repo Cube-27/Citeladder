@@ -1,9 +1,10 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
+import type { Visibility } from '@citeladder/contracts';
 import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { RankLegend, RankTable } from '@/components/ui/heat-table';
+import { GridTableSkeleton, RankLegend, RankTable } from '@/components/ui/heat-table';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
@@ -12,7 +13,9 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { StateBlock } from '@/components/ui/state-block';
 import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
-import { AxisLabel, matrixBodyState, useAxisText } from './matrix-parts';
+import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
+
+const PLACES = 5;
 
 const byCodec = stringUrlCodec(
   RANKING_DIMENSIONS.map((option) => option.value),
@@ -25,7 +28,10 @@ const byCodec = stringUrlCodec(
  * asked reads "Not run", one whose topic the run never recorded is left out;
  * your brand's chip takes the accent wash.
  */
-export function TopRankings({ query }: Readonly<{ query: UseQueryResult<VisibilityMatrix> }>) {
+export function TopRankings({
+  query,
+  selected,
+}: Readonly<{ query: UseQueryResult<VisibilityMatrix>; selected: Visibility }>) {
   const [by, setBy] = useUrlState('rankings_by', byCodec);
   const axisText = useAxisText();
   const data = query.data;
@@ -68,7 +74,7 @@ export function TopRankings({ query }: Readonly<{ query: UseQueryResult<Visibili
       <RankTable
         labelledBy="insights-rankings"
         corner={MATRIX_DIMENSIONS.find((option) => option.value === by)?.label ?? by}
-        places={5}
+        places={PLACES}
         rows={rows}
       />
     );
@@ -89,7 +95,16 @@ export function TopRankings({ query }: Readonly<{ query: UseQueryResult<Visibili
         <SectionDescription>Leading brands in each segment, by visibility</SectionDescription>
       </SectionHeader>
       <Stack>
-        {matrixBodyState(query, 'rankings') ?? body()}
+        {matrixBodyState(
+          query,
+          'rankings',
+          <GridTableSkeleton
+            label="Loading the rankings…"
+            variant="rank"
+            rows={pendingAxisLength(selected, by)}
+            columns={PLACES}
+          />,
+        ) ?? body()}
         <RankLegend />
       </Stack>
     </Section>

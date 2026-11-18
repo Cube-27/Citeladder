@@ -204,8 +204,12 @@ export function CandidateReviewPanel({
   );
 }
 
-/** Library prompt that suggestions are waiting, linking to the Prompt builder's review step. */
-export function PendingReviewNotice({
+/**
+ * How many generated prompts wait for review, and whether that is known yet.
+ * The library holds its first paint until it is, so the notice never lands
+ * above a table already on screen and pushes it down.
+ */
+export function usePendingReview({
   scope,
   promptSet,
   hidden,
@@ -214,8 +218,16 @@ export function PendingReviewNotice({
     ...promptsQueries.candidates(scope, promptSet?.id ?? null),
     enabled: !hidden,
   });
-  const count = pending.data?.length ?? 0;
-  if (!count || hidden) return null;
+  return {
+    count: hidden ? 0 : (pending.data?.length ?? 0),
+    // No set, no candidates read: a disabled or skipped read stays pending.
+    settled: hidden || promptSet === null || !pending.isPending,
+  };
+}
+
+/** Library prompt that suggestions are waiting, linking to the Prompt builder's review step. */
+export function PendingReviewNotice({ count }: Readonly<{ count: number }>) {
+  if (!count) return null;
   return (
     <Notice tone="info">
       <Inline as="span" className="flex-wrap justify-between">

@@ -35,6 +35,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, ProjectSummary, Workspace } from '@citeladder/contracts';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
 import {
+  preloadRouteReads,
   prefetchProjectShell,
   prefetchRoute,
   type ProjectScope,
@@ -391,6 +392,9 @@ async function capturePricingSelection(url: URL) {
 export async function bootstrapPrivateRoutes({ request }: { request: Request }) {
   const client = getAppQueryClient();
   const url = new URL(request.url);
+  // The screen's read modules download beside the session round, whatever
+  // the loader goes on to learn, so no read waits a module download after it.
+  preloadRouteReads(url.pathname);
   await capturePricingSelection(url);
 
   // `me` and the membership list need only the session cookie — the tree's own
@@ -438,6 +442,12 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
   // The address gains the project it is already showing. This was an effect
   // that fired a frame after landing, so the URL visibly rewrote itself.
   if (decision === 'ready' && projectRequired && activeProjectId && !requestedProjectId) {
+    // The selected project is listed, so authorized: its full view and the
+    // screen's reads start now, in the list's next round, and the redirected
+    // load joins them. After sign-in nothing is remembered to guess from, and
+    // waiting for the redirect put its full view a round before any screen read.
+    void client.prefetchQuery(projectQueries.detail(activeProjectId));
+    void warmProject(client, url, { projectId: activeProjectId, workspaceId });
     throw redirect(
       `${projectDestination(url.pathname, url.searchParams, activeProjectId)}${url.hash}`,
     );

@@ -258,7 +258,13 @@ type TrendBodyProps = Readonly<{
 function TrendBody({ query, ...chart }: TrendBodyProps) {
   // No data yet is loading, never an empty chart; retained data stays while it refetches.
   if (query.isPending)
-    return <StateBlock kind="loading" label="Loading the history…" shape={{ kind: 'chart' }} />;
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading the history…"
+        shape={{ kind: 'chart', keyed: true }}
+      />
+    );
   if (query.isError)
     return (
       <Notice

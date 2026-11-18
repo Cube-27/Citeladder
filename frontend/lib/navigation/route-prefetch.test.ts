@@ -13,6 +13,12 @@ import {
 
 import { siteHealthDashboardSchema } from '@citeladder/contracts/site-health';
 
+import {
+  AGENT_NAV_ITEMS,
+  DASHBOARD_GROUPS,
+  FOOT_NAV_ITEMS,
+  NEW_CHAT_ITEM,
+} from '@/components/layout/nav-items';
 import { actionsQueries, DEFAULT_ACTION_TREE } from '@/lib/api/actions';
 import { agentQueries } from '@/lib/api/agent';
 import { commerceQueries } from '@/lib/api/commerce';
@@ -365,5 +371,50 @@ describe('prefetchRoute', () => {
 
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(callsAfterFailure);
     expect(query?.state.status).toBe('error');
+  });
+
+  describe('every sidebar destination', () => {
+    /** Each request path the warm sends, every answer a 404 the warm must survive. */
+    function recordRequests() {
+      const paths: string[] = [];
+      const listener = ({ request }: { request: Request }) => {
+        paths.push(new URL(request.url).pathname);
+      };
+      mswServer.use(
+        http.all('*', () => HttpResponse.json({ error: { message: 'not here' } }, { status: 404 })),
+      );
+      mswServer.events.on('request:start', listener);
+      return { paths, stop: () => mswServer.events.removeListener('request:start', listener) };
+    }
+
+    it('warms Settings’ always-mounted panels and the tab the address opens', async () => {
+      const requests = recordRequests();
+      await prefetchRoute(client, '/settings?tab=integrations', PROJECT);
+      await vi.waitFor(() =>
+        expect([...new Set(requests.paths)].sort()).toEqual([
+          '/api/v1/auth/security',
+          '/api/v1/integrations',
+          '/api/v1/provider-catalog',
+          '/api/v1/provider-connections',
+          '/api/v1/provider-connections/states',
+        ]),
+      );
+      requests.stop();
+    });
+
+    it.each(
+      [
+        ...DASHBOARD_GROUPS.flatMap((group) => group.items),
+        NEW_CHAT_ITEM,
+        ...AGENT_NAV_ITEMS,
+        ...FOOT_NAV_ITEMS,
+      ].map((item) => item.href),
+    )('warms a read for %s', async (href) => {
+      const requests = recordRequests();
+      expect(client.getQueryCache().getAll()).toHaveLength(0);
+      await prefetchRoute(client, href, PROJECT);
+      expect(client.getQueryCache().getAll().length).toBeGreaterThan(0);
+      requests.stop();
+    });
   });
 });
