@@ -208,6 +208,9 @@ describe('router registration', () => {
 
     await waitFor(() => expect(screen.getByTestId('search')).toHaveTextContent(/^project=p1$/));
     expect(navigate).toHaveBeenCalledOnce();
+    // One entry: Back returns to every filter as it was.
+    await act(() => router.navigate(-1));
+    expect(screen.getByTestId('search')).toHaveTextContent(/^project=p1&severity=low&kind=faq$/);
     router.dispose();
   });
 

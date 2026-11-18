@@ -4,7 +4,7 @@ import { ChevronLeft, ListFilter } from 'lucide-react';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { FilterOptions, focusFieldOnEntry, isSearchable } from '@/components/ui/filter-options';
+import { FilterOptions, focusFieldOnEntry } from '@/components/ui/filter-options';
 import {
   Menu,
   MenuContent,
@@ -145,19 +145,8 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
 }
 
 function FilterSubmenu({ filter }: Readonly<{ filter: FilterDefinition }>) {
-  const searchable = filter.kind === 'choice' && isSearchable(filter);
   return (
-    <MenuSubContent
-      onFocus={focusFieldOnEntry}
-      onKeyDown={(event) => {
-        // Up from the first option goes back to the search box.
-        if (!searchable || event.key !== 'ArrowUp') return;
-        const first = event.currentTarget.querySelector('[role="menuitemradio"]');
-        if (event.target !== first) return;
-        event.preventDefault();
-        event.currentTarget.querySelector('input')?.focus();
-      }}
-    >
+    <MenuSubContent onFocus={focusFieldOnEntry}>
       <FilterOptions filter={filter} />
     </MenuSubContent>
   );

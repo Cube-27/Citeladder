@@ -156,9 +156,11 @@ let pendingUrl: URL | null = null;
  * Runs several URL writes (a row's Clear resetting each filter) as one: each
  * write edits the composed address and it commits once, with one history
  * entry. A router commits a beat after it is asked, so separate writes in one
- * tick would each start from the address before the others.
+ * tick would each start from the address before the others. `run` is
+ * synchronous (typed to refuse a promise): a write after an await would land
+ * after the commit.
  */
-export function batchUrlWrites(run: () => void, history: UrlHistory = 'push'): void {
+export function batchUrlWrites(run: () => undefined, history: UrlHistory = 'push'): void {
   if (pendingUrl) {
     run();
     return;

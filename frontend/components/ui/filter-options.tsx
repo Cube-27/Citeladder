@@ -15,7 +15,7 @@ const SEARCH_FROM = 10;
 
 type ChoiceFilter = Extract<FilterDefinition, { kind: 'choice' }>;
 
-export function isSearchable(filter: ChoiceFilter): boolean {
+function isSearchable(filter: ChoiceFilter): boolean {
   const total = filter.groups.reduce((sum, group) => sum + group.options.length, 0);
   return filter.searchable ?? total > SEARCH_FROM;
 }
@@ -76,7 +76,10 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
           />
         </div>
       ) : null}
-      <MenuRadioGroup value={filter.value}>
+      <MenuRadioGroup
+        value={filter.value}
+        onKeyDown={isSearchable(filter) ? backToSearch : undefined}
+      >
         {groups.map((group, index) => (
           <Fragment key={group.label ?? `group-${index}`}>
             {index > 0 ? <MenuSeparator /> : null}
@@ -144,6 +147,15 @@ export function menuFieldKeys(event: KeyboardEvent<HTMLInputElement>): boolean {
   if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return false;
   event.stopPropagation();
   return true;
+}
+
+/** Up from the first option goes back to the search box, wherever the options are drawn. */
+function backToSearch(event: KeyboardEvent<HTMLDivElement>) {
+  if (event.key !== 'ArrowUp') return;
+  const first = event.currentTarget.querySelector('[role="menuitemradio"]');
+  if (event.target !== first) return;
+  event.preventDefault();
+  event.currentTarget.closest('[role="menu"]')?.querySelector('input')?.focus();
 }
 
 /** The search box's keys stay with it; Down moves to the first option. */

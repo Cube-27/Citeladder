@@ -99,7 +99,10 @@ describe('FiltersMenu', () => {
     ]);
     await user.keyboard('1{ArrowDown}');
     expect(screen.getByRole('menuitemradio', { name: 'Prompt number 11' })).toHaveFocus();
-    await user.keyboard('{Enter}');
+    // Up from the first result returns to the search, to refine it.
+    await user.keyboard('{ArrowUp}');
+    expect(search).toHaveFocus();
+    await user.keyboard('{ArrowDown}{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('all p11');
   });

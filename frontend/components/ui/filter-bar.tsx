@@ -126,7 +126,11 @@ export function FilterBar({ view, search, filters = [], status, actions }: Filte
         <div className="flex shrink-0">
           <Button
             variant="quiet"
-            onClick={() => batchUrlWrites(() => set.forEach((filter) => filter.reset()))}
+            onClick={() =>
+              batchUrlWrites(() => {
+                for (const filter of set) filter.reset();
+              })
+            }
           >
             <Icon icon={X} />
             Clear
