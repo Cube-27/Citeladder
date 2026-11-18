@@ -3,7 +3,7 @@ title: 'AI Visibility'
 description: 'See how your brand and competitors appear in the answers your project measures.'
 group: 'Measure and understand'
 order: 110
-updated: '2026-10-11'
+updated: '2026-11-18'
 ---
 
 Use AI Visibility to investigate brand presence across a defined set of prompts and engines. Start with the selected run and filters, then move from the summary into the answer evidence.
@@ -42,6 +42,10 @@ Trends reports four measures. Keep them separate:
 | Average position    | Where your brand tends to appear among the brands you track, counted only in answers that name you |
 
 A citation is not a brand mention, and a mention is not an endorsement. Average position ranks you among your tracked brands, not within the whole answer. Measures a run cannot support remain unavailable rather than zero.
+
+## Compare segments on Insights
+
+**Brand → Insights** has a **Performance matrix**: pick a measure (mention rate, share of voice, average position, win rate or net sentiment) and two of engine, topic, market and brand, up to 10 of each. It reads each market's latest run in your selection, and a topic is the one the run asked under, even if the prompt has moved since. A cell reads **Not run** when that segment was not measured, **Too few** when net sentiment has too few classified mentions, and **Not measured** when the measure does not apply, such as a position for a brand no answer named. **Export CSV** downloads the matrix as shown. **Top rankings** lists the five tracked brands named most often in each topic, engine or market.
 
 ## Read Perception
 

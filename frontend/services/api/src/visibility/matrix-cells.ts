@@ -59,19 +59,48 @@ const byAnswers = <T extends { answers: number }>(items: T[], name: (item: T) =>
     .toSorted((a, b) => b.answers - a.answers || compareText(name(a), name(b)))
     .slice(0, policy.visibility.matrix_axis_limit);
 
+/** Computes each segment once: every brand on an axis reads the same segment. */
+function perSegment<T>(compute: (segment: Segment) => T) {
+  const seen = new Map<string, { value: T }>();
+  return (segment: Segment) => {
+    const key = JSON.stringify([segment.market, segment.topic, segment.engine]);
+    let entry = seen.get(key);
+    if (!entry) {
+      entry = { value: compute(segment) };
+      seen.set(key, entry);
+    }
+    return entry.value;
+  };
+}
+
 export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'source_audit_ids'> {
   const { runs, strip, filters } = input;
 
-  function measured(segment: Segment): { metrics: Metrics; answers: number } | null {
-    const run = runs[segment.market]?.run;
-    if (!run) return null;
-    const block = segment.topic === null ? run.metrics : run.topics.get(segment.topic)?.metrics;
-    if (block === undefined) return null;
-    const cohort = cohortMetrics(block, filters.cohort);
-    const metrics = segment.engine === null ? cohort : engineMetrics(cohort, segment.engine);
-    const answers = metricCount(metrics.total_completed);
-    return answers ? { metrics, answers } : null;
-  }
+  const measured = perSegment(
+    (segment): { metrics: Metrics; answers: number; rows: RankingRow[] } | null => {
+      const run = runs[segment.market]?.run;
+      if (!run) return null;
+      const block = segment.topic === null ? run.metrics : run.topics.get(segment.topic)?.metrics;
+      if (block === undefined) return null;
+      const cohort = cohortMetrics(block, filters.cohort);
+      const metrics = segment.engine === null ? cohort : engineMetrics(cohort, segment.engine);
+      const answers = metricCount(metrics.total_completed);
+      return answers ? { metrics, answers, rows: rankingRows(metrics) } : null;
+    },
+  );
+
+  const sentiments = perSegment((segment) => {
+    const answers = runs[segment.market]?.run?.answers;
+    return answers
+      ? sentimentsOf(
+          answers.filter(
+            (a) =>
+              (segment.engine === null || a.logicalEngine === segment.engine) &&
+              (segment.topic === null || a.topicId === segment.topic),
+          ),
+        )
+      : null;
+  });
 
   const answersOf = (segment: Partial<Segment>) =>
     measured({ market: strip, topic: filters.topic, engine: filters.engine, ...segment })
@@ -81,19 +110,8 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
     const found = measured(segment);
     if (!found) return { kind: 'not_run' };
     const target = brand ?? { name: '', is_brand: true };
-    const row: RankingRow | undefined = rankingRows(found.metrics).find((r) =>
-      sameBrand(r, target),
-    );
-    const answers = runs[segment.market]?.run?.answers;
-    const entities =
-      answers &&
-      sentimentsOf(
-        answers.filter(
-          (a) =>
-            (segment.engine === null || a.logicalEngine === segment.engine) &&
-            (segment.topic === null || a.topicId === segment.topic),
-        ),
-      );
+    const row = found.rows.find((r) => sameBrand(r, target));
+    const entities = sentiments(segment);
     return {
       kind: 'measured',
       answers: found.answers,
@@ -217,7 +235,7 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
         ...pick,
       });
       if (!found) return [];
-      return rankingRows(found.metrics)
+      return found.rows
         .flatMap((row) =>
           row.mention_rate === null
             ? []
