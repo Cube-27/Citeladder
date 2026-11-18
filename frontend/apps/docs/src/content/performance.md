@@ -3,7 +3,7 @@ title: 'Performance and integrations'
 description: 'Connect the right properties and interpret saved search and analytics reports.'
 group: 'Measure and understand'
 order: 140
-updated: '2026-10-10'
+updated: '2026-11-18'
 ---
 
 Performance brings imported provider evidence into your project. Connecting an account and choosing a project property are separate steps. The account grants access, and the mapping selects which property this project reads.
@@ -32,7 +32,7 @@ Do not interpret a missing headline as zero or reconstruct it from a partial que
 
 Compare compatible periods, then inspect the relevant dimension. A query-level observation and a page-level observation are not automatically evidence for a specific query-page pair.
 
-For that relationship, use the saved query-page evidence in [Search Demand](/demand/).
+For that relationship, use the saved query-page evidence on the [Demand tab of Keyword research](/keyword-research/#demand-start-with-the-signals-evidence).
 
 ## Fix a connection problem
 

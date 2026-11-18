@@ -145,7 +145,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/ai-visibility',
-    updated: '2026-11-06',
+    updated: '2026-11-18',
     title: 'AI Visibility Tracking & Brand Monitoring | CiteLadder',
     description:
       'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews, with every result tied to its recorded answer.',
@@ -161,7 +161,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Competitors side by side',
-        body: 'Visibility, average position, share of voice and citations for you and every brand you track.',
+        body: 'Visibility, average position, share of voice, win rate and sentiment for you and every brand you track, with a page for each competitor.',
       },
       {
         title: 'The answer behind every score',
@@ -171,7 +171,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Start from the questions your buyers ask',
-        body: 'The Prompt Builder suggests short buyer questions from your offerings, your topics and the mix you choose, across awareness, consideration and decision. Each suggestion passes a quality check before you see it. If Search Console or keyword research is connected, suggestions follow the way your buyers already search. You can also import a CSV or write your own. Nothing is tracked until you accept it.',
+        body: 'The Prompt builder suggests short buyer questions from your offerings, your topics and the mix you choose, across awareness, consideration and decision. Each suggestion passes a quality check before you see it. If Search Console or keyword research is connected, suggestions follow the way your buyers already search. You can also import a CSV or write your own. Nothing is tracked until you accept it.',
         points: [
           'Suggestions grouped by topic and buyer stage',
           'Unbranded discovery prompts never name you or a competitor',
@@ -198,6 +198,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Mention, position and citation per answer',
           'Engine and collection date on every record',
           'Query fan-out where the engine returns it',
+          'Every past answer to a prompt on the prompt’s own page',
           'Missing data shown as missing, never zero',
         ],
         media: { kind: 'split', screen: 'answer' },
@@ -208,6 +209,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         points: [
           'Net sentiment from −100 to +100, with classified counts',
           'Positive and negative themes with verbatim quotes',
+          'Sentiment by theme, topic, engine and prompt',
           'Sources cited beside criticism',
           'Included with visibility tracking, no extra credits',
         ],

@@ -3,7 +3,7 @@ title: 'Your first project'
 description: 'Create a useful baseline, inspect one finding, and choose a concrete next step.'
 group: 'Start here'
 order: 20
-updated: '2026-11-03'
+updated: '2026-11-18'
 ---
 
 You will need access to a CiteLadder workspace, your website address and a clear idea of the market you serve. Available runs and features depend on your workspace's access and allowances.
@@ -12,13 +12,13 @@ You will need access to a CiteLadder workspace, your website address and a clear
 
 Create a project from your website. Review the business category, buyer type, market, owned domains and suggested competitors before confirming.
 
-Suggestions are a starting point. Remove companies that do not compete for your actual buyers and correct ambiguous names or domains. Review inferred positioning, audience and offerings in your project as well; discovered text is not automatically a confirmed company fact.
+Suggestions are a starting point; later audits add more on [Competitors](/competitors/#review-suggested-competitors), where you accept or reject them. Remove companies that do not compete for your actual buyers and correct ambiguous names or domains. Review inferred positioning, audience and offerings in your project as well; discovered text is not automatically a confirmed company fact.
 
 **You are ready to continue when:** the project describes your business and intended audience accurately.
 
 ## 2. Choose your prompts
 
-A new project starts with no prompts. Open **Prompts** and use the **Prompt Builder** to confirm your offerings and topics and choose the mix of questions, or add your own. Generated questions arrive as candidates: read them as if you were a potential customer and accept the ones worth measuring. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
+A new project starts with no prompts. Open **Prompts** and choose **Add prompts → Prompt builder** to confirm your offerings and topics and choose the mix of questions, or add your own. Generated questions arrive as candidates: read them as if you were a potential customer and accept the ones worth measuring. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
 
 For a fictional scheduling product, a useful discovery question might be "Which scheduling tools work well for a small consultancy?" A question such as "How does Example Scheduler handle reminders?" answers a different, brand-specific question.
 
@@ -26,7 +26,7 @@ See [Prompts and topics](/prompts/) before expanding the portfolio.
 
 ## 3. Collect the baseline you need
 
-For AI search, start an audit with the prompts, engines and repetitions you intend to measure. Review its estimate and confirm the run. Check **Runs** for completion and failures, and [schedule the audit](/visibility/#schedule-audits) there to repeat it.
+For AI search, start an audit with the prompts, engines and repetitions you intend to measure. Review its estimate and confirm the run. Check **Runs** for completion and failures, and [schedule the audit](/runs/#schedule-audits) there to repeat it. Results appear on **Insights**, **Perception**, **Competitors** and **Sources**.
 
 For website evidence, open **Site Health** and choose **Run new crawl**. Creating a project does not automatically start its first crawl.
 

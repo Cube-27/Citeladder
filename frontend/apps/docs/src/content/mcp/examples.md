@@ -3,7 +3,7 @@ title: 'Example requests'
 description: 'Give your assistant a concrete question, a bounded scope and a standard for evidence.'
 group: 'Connect with MCP'
 order: 330
-updated: '2026-10-11'
+updated: '2026-11-18'
 ---
 
 Start by selecting a project. These requests are examples you can adapt to the saved data available in your workspace.
@@ -33,7 +33,7 @@ after I say yes.
 
 The assistant prepares the change and shows which prompts would be added, any it dropped and why, and your prompt slots afterwards. Reply yes and it confirms; the prompts are active at once.
 
-## Review an AI Visibility audit
+## Review an AI visibility audit
 
 ```text
 Read the latest completed visibility audit for this project.
@@ -44,6 +44,28 @@ or coverage limits that affect interpretation.
 ```
 
 Use this when you need a report that can be checked against the actual answers.
+
+## Compare topics and win rate
+
+```text
+Read the latest visibility results for this project by topic.
+For each topic, show visibility, share of voice, average position and
+win rate, and say which topics have too few answers to compare.
+Then list the prompts in our weakest topic that a competitor wins.
+```
+
+Topics are the ones each run asked its prompts under, so a prompt moved to another topic later still counts under its old topic in earlier runs.
+
+## Check the facts answers state (pilot)
+
+```text
+Read the fact checks for the latest run. List the contradicted claims
+with the fact each contradicts and the engine that said it.
+Then show which of our facts were raised least often.
+Do not treat inconclusive or not-covered claims as errors.
+```
+
+Fact-checking reads return nothing outside the fact-checking pilot.
 
 ## Investigate cited sources
 
@@ -78,10 +100,10 @@ without reconstructing missing headline totals from dimension rows.
 
 If the requested windows do not exist, have the client report what is available before proceeding.
 
-## Explore Keyword Research
+## Explore Keyword research
 
 ```text
-List saved Keyword Research datasets, including target, market,
+List saved Keyword research datasets, including target, market,
 scope, acquisition time and coverage.
 Wait for me to choose a dataset before reading its rows.
 Do not acquire or refresh data.

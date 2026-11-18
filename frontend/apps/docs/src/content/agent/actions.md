@@ -3,7 +3,7 @@ title: 'Actions and measurement'
 description: 'Choose one target, review its supporting findings, and follow the work through to later evidence.'
 group: 'Improve with Agent'
 order: 210
-updated: '2026-11-16'
+updated: '2026-11-18'
 ---
 
 An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action. Site Health issues are not Actions: the Actions list shows them, but you fix and track them in [Site Health **Issues**](/site-health/).
@@ -21,7 +21,7 @@ Open **Actions** in the sidebar. It lists everything you can act on across CiteL
 | Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                   |
 | Improve your products   | Products and categories                                                                                                                                              |
 
-Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**New**, **In progress**, **Done** or **Declined**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; any other row opens the Action's detail.
+Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**New**, **In progress**, **Done** or **Declined**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; a row from a Site Health advisory is marked **Advisory**. Any other row opens the Action's detail.
 
 Every page that the Sources URL table shows as a **Gap** becomes a "Get mentioned elsewhere" Action after its next refresh, whatever kind of page it is.
 
@@ -87,7 +87,7 @@ The declaration keeps the target, baseline and expected checks tied to that impl
 - an internal-link check by the next crawl that reads the page;
 - a prompt by the next visibility run;
 - Search Console clicks per day on the page or query by each synced window that starts after the go-live day;
-- a keyword gap by whether your site now appears for that search, in Search Console or in a later Keyword Research dataset.
+- a keyword gap by whether your site now appears for that search, in Search Console or in a later Keyword research dataset.
 
 Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
 

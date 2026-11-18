@@ -3,7 +3,7 @@ title: 'Welcome to CiteLadder'
 description: 'Understand where your brand appears, find the evidence behind it, and turn what you learn into better work.'
 group: 'Start here'
 order: 10
-updated: '2026-11-10'
+updated: '2026-11-18'
 ---
 
 CiteLadder brings AI search visibility, website health and connected search data into one project. Use it to answer three questions: **Where are we showing up? What should we improve? Did the change appear in later measurements?**
@@ -15,7 +15,9 @@ These guides take you from your first project to an evidence-backed improvement.
 | What you want to do                               | Where to go                                    |
 | ------------------------------------------------- | ---------------------------------------------- |
 | Set up a brand and collect a first baseline       | [Your first project](/quickstart/)             |
-| See how AI answers describe or cite your brand    | [AI Visibility](/visibility/)                  |
+| See how often AI answers name your brand          | [Insights](/insights/)                         |
+| See how AI answers describe your brand            | [Perception](/perception/)                     |
+| See which pages AI answers cite                   | [Sources and citations](/sources/)             |
 | Find technical and content issues on your website | [Site Health](/site-health/)                   |
 | Understand demand and traffic from search         | [Performance and integrations](/performance/)  |
 | Find content angles AI answers cite others for    | [Content optimization](/content-optimization/) |

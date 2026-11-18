@@ -3,7 +3,7 @@ title: 'Content optimization'
 description: 'See the content angles AI answers cite competitor and publisher pages for, then improve the page that covers each one or plan a new page.'
 group: 'Improve with Agent'
 order: 215
-updated: '2026-11-16'
+updated: '2026-11-18'
 ---
 
 Content optimization finds content you could improve or create. It starts from the pages AI answers cite: when answers to your tracked prompts cite competitor and publisher content pages on an angle, and no page of yours is cited for it, CiteLadder opens an Action.
@@ -14,7 +14,7 @@ These Actions are listed with all your other work on [Actions](/agent/actions/) 
 
 After a visibility run or a Site Health crawl finishes, CiteLadder refreshes your content angles:
 
-1. It collects the titles and addresses of competitor and publisher pages cited in successful answers to your tracked prompts, from your default market's visibility runs in the 30 days up to the newest one. These are the citations [AI Visibility](/visibility/) counts. Answers with no tracked prompt are not read. Your own pages, user-generated content, social networks, directories and marketplaces are left out.
+1. It collects the titles and addresses of competitor and publisher pages cited in successful answers to your tracked prompts, from your default market's visibility runs in the 30 days up to the newest one. These are the citations [Sources](/sources/) counts. Answers with no tracked prompt are not read. Your own pages, user-generated content, social networks, directories and marketplaces are left out.
 2. It groups the pages by the topic of the prompt they were cited for, and a model gathers similar content pages into angles and names each one. Only content pages count: articles, guides, how-tos, comparisons, listicles, reviews and case studies. Product pages, category and collection listings, home pages, and search or tag pages are left out.
 3. For each angle, a model picks at most one of your content pages from a shortlist of pages that share its wording, or none. Content pages are the pages your latest crawl classified as an article, guide, how-to, listicle, comparison, alternative, or case study or review.
 

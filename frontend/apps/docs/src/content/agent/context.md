@@ -3,7 +3,7 @@ title: 'Give the Agent context'
 description: 'Keep company facts, audience and writing requirements clear before starting work.'
 group: 'Improve with Agent'
 order: 240
-updated: '2026-11-01'
+updated: '2026-11-18'
 ---
 
 Open **Agent → Context** to review the company facts and the project's Agent instructions. Good context helps the Agent produce work that fits your business without inventing missing details.
@@ -12,7 +12,7 @@ Open **Agent → Context** to review the company facts and the project's Agent i
 
 Confirm the products or services you offer, intended audience, positioning and relevant market facts. Correct outdated or inferred information before relying on it in generated work.
 
-The **Business map** tab shows the buyers, buying situations and other details that steer prompt generation. You edit them in the Prompt Builder on **Prompts**; **Edit in Prompt Builder** opens it. In the fact-checking pilot, **Brand facts** is a tab of its own.
+The **Business map** tab shows the buyers, buying situations and other details that steer prompt generation. You edit them in the Prompt builder; **Edit in Prompt builder** opens it. The **Competitors** tab holds the competitors you track, which **Edit competitors** on Brand → Competitors also opens. In the fact-checking pilot, **Brand facts** is a tab of its own: the statements answers are checked against, which you can also import on [Perception → Fact-checking](/perception/#check-facts-in-answers-pilot).
 
 A crawl can capture what a website says; that does not automatically make every captured claim a reviewed company fact.
 
