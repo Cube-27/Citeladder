@@ -132,26 +132,24 @@ function NativeButton({
       disabled={props.disabled || pending}
       className={buttonClasses(variant, cn(pending && 'pointer-events-none', className), size)}
     >
-      {/* Busy never narrows the button: the idle label keeps its cell
+      {/* Busy keeps the button's width: the idle label keeps its box
           (hidden) and the live rung with the label, or the pending verb,
-          shares it. That label is what assistive technology hears. */}
-      <span className="inline-grid items-center justify-items-center">
-        <span
-          aria-hidden={pending || undefined}
-          className={cn(
-            'col-start-1 row-start-1 inline-flex items-center gap-2',
-            pending && 'invisible',
-          )}
-        >
-          {children}
-        </span>
-        {pending ? (
-          <span className="col-start-1 row-start-1 inline-flex items-center gap-2">
-            <Spinner />
+          is laid over it, using the side padding for the rung, so nothing
+          beside the button moves. That label is what assistive technology hears. */}
+      <span
+        aria-hidden={pending || undefined}
+        className={cn('inline-flex items-center gap-2', pending && 'invisible')}
+      >
+        {children}
+      </span>
+      {pending ? (
+        <span className="absolute inset-0 inline-flex items-center justify-center gap-1 overflow-hidden">
+          <Spinner />
+          <span className="inline-flex min-w-0 items-center gap-2 truncate">
             {pendingLabel ?? children}
           </span>
-        ) : null}
-      </span>
+        </span>
+      ) : null}
     </button>
   );
 }

@@ -2454,7 +2454,13 @@ label {
   transition-timing-function: var(--ease-smooth);
 }
 :root:not([data-public-surface])
-  .field-hover:hover:not(:focus-visible, :focus-within, :disabled, [aria-disabled='true']) {
+  .field-hover:hover:not(
+    :focus-visible,
+    :focus-within,
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled]
+  ) {
   background-color: color-mix(
     in srgb,
     var(--color-ink) 4%,

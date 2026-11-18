@@ -30,7 +30,8 @@ const TAB_STRIP =
 /** Past the edge fade, so the cue never covers the item it reveals. */
 const REVEAL_PADDING = 32;
 
-const SELECTED_ITEM = '[aria-selected="true"], [aria-checked="true"]';
+/** The strip's own current choice, never a control inside a hint beside it. */
+const SELECTED_ITEM = '.tab-face:is([aria-selected="true"], [aria-checked="true"])';
 
 /**
  * Keeps the strip's current item in view, on mount and on every selection:
@@ -52,29 +53,52 @@ function useRevealSelected(selected: string | null) {
 
 /**
  * Places the strip's one accent underline (`TabMark`) under its current
- * item, and again whenever the strip or that item resizes; globals.css
- * slides it there. Without a current item each item draws its own.
+ * item, and again whenever any item resizes (a count before it grows) or
+ * the items or selection change; globals.css slides it there. Without a
+ * current item each item draws its own.
  */
 function useTabMark(strip: RefObject<HTMLDivElement | null>, selected: string | null) {
   useLayoutEffect(() => {
     const list = strip.current;
-    const item = list?.querySelector<HTMLElement>(SELECTED_ITEM);
-    if (!list || !item) {
-      list?.removeAttribute('data-tab-mark-ready');
-      return;
-    }
-    const place = () => {
-      list.style.setProperty('--tab-mark-x', `${item.offsetLeft}px`);
-      list.style.setProperty('--tab-mark-w', `${item.offsetWidth}px`);
-      list.setAttribute('data-tab-mark-ready', '');
-    };
-    place();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(place);
-    observer.observe(list);
-    observer.observe(item);
-    return () => observer.disconnect();
+    return list ? followTabMark(list) : undefined;
   }, [strip, selected]);
+}
+
+function placeTabMark(list: HTMLElement) {
+  const item = list.querySelector<HTMLElement>(SELECTED_ITEM);
+  if (!item) {
+    delete list.dataset.tabMarkReady;
+    return;
+  }
+  list.style.setProperty('--tab-mark-x', `${item.offsetLeft}px`);
+  list.style.setProperty('--tab-mark-w', `${item.offsetWidth}px`);
+  list.dataset.tabMarkReady = '';
+}
+
+/** Places the mark now and on every later resize or item change; returns the cleanup. */
+function followTabMark(list: HTMLElement): (() => void) | undefined {
+  placeTabMark(list);
+  if (typeof ResizeObserver === 'undefined') return undefined;
+  const resize = new ResizeObserver(() => placeTabMark(list));
+  const watch = () => {
+    resize.disconnect();
+    resize.observe(list);
+    for (const item of list.querySelectorAll('.tab-face')) resize.observe(item);
+  };
+  watch();
+  const mutation = new MutationObserver(() => {
+    watch();
+    placeTabMark(list);
+  });
+  mutation.observe(list, {
+    subtree: true,
+    childList: true,
+    attributeFilter: ['aria-selected', 'aria-checked'],
+  });
+  return () => {
+    resize.disconnect();
+    mutation.disconnect();
+  };
 }
 
 /** The strip's sliding underline; a direct child of the strip. */

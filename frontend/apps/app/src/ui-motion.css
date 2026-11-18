@@ -44,9 +44,16 @@
   animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
 
-/* A menu or select list grows from 96% at its anchor's corner. */
+/* A menu or select list grows from 96% at its anchor's corner. The exit has
+   its own name: Presence waits only for an animation unlike the entrance. */
 @keyframes popup-grow {
   from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+@keyframes popup-shrink {
+  to {
     opacity: 0;
     scale: 0.96;
   }
@@ -58,7 +65,7 @@
   animation: popup-grow var(--motion-tint) var(--ease-fluid);
 }
 .menu-panel[data-state='closed'] {
-  animation: popup-grow var(--motion-snap) var(--ease-exit) reverse both;
+  animation: popup-shrink var(--motion-snap) var(--ease-exit) both;
 }
 
 /* The selection dock slides up into place as a selection starts. */

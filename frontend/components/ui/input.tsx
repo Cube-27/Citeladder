@@ -104,6 +104,7 @@ export function Input({
 
   return (
     <div
+      data-disabled={props.disabled || String(props['aria-disabled']) === 'true' || undefined}
       className={cn(
         'focus-frame flex items-center gap-2',
         TYPED_FIELD_BOX[edge],
