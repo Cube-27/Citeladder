@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  analyticsAppPath,
   analyticsResultSchema,
   analyticsSelectionSchema,
   mcpActionsSchema,
@@ -185,10 +186,7 @@ export function createController(host: Host) {
     try {
       const { selection: resolved, data } = await readSelection(host, selection);
       if (epoch !== generation) return;
-      const application = new URL(
-        resolved.view === 'site_health' ? '/site' : '/visibility',
-        links.application,
-      );
+      const application = new URL(analyticsAppPath(resolved.view), links.application);
       application.searchParams.set('project', resolved.project_id);
       set({
         result: analyticsResultSchema.parse({

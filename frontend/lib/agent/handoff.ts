@@ -306,7 +306,7 @@ const CHIPS: readonly [
     'search_intelligence_reference',
     (c) =>
       c.search_intelligence_reference &&
-      pluralCount(c.search_intelligence_reference.row_ids.length, 'Keywords row'),
+      pluralCount(c.search_intelligence_reference.row_ids.length, 'Keyword research row'),
   ],
 ];
 
@@ -327,7 +327,7 @@ export const CHAT_ORIGIN_LABELS = {
   page: 'Page',
   recommendation: 'Recommendation',
   demand: 'Demand signal',
-  keyword_research: 'Keywords',
+  keyword_research: 'Keyword research',
   prompts: 'Prompts',
   action: 'Action',
   chat: 'Chat',

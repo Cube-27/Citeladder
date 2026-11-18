@@ -146,7 +146,7 @@ it('pins the Visibility review to canonical measures and source-to-answer eviden
   const rendered = await read('render_visibility', { view: 'overview' });
   const handoff = new URL((rendered.links as { application: string }).application);
   expect([handoff.pathname, handoff.searchParams.get('project')]).toEqual([
-    '/visibility',
+    '/insights',
     tenant.projectId,
   ]);
   const canonical = await getVisibility(

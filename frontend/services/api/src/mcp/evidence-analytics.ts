@@ -1,8 +1,9 @@
 /** Visibility reads compose the canonical visibility owners; they own no metrics. */
-import type {
-  AnalyticsSelection,
-  McpVisibilityResults,
-  McpVisibilitySources,
+import {
+  analyticsAppPath,
+  type AnalyticsSelection,
+  type McpVisibilityResults,
+  type McpVisibilitySources,
 } from '@citeladder/contracts/mcp-app';
 import { visibilitySchema } from '@citeladder/contracts/visibility';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
@@ -434,11 +435,7 @@ export async function renderAnalytics(
     selection: resolved,
     evidence,
     links: {
-      application: appLink(
-        origin,
-        view === 'site_health' ? '/site' : '/visibility',
-        scope.projectId,
-      ),
+      application: appLink(origin, analyticsAppPath(view), scope.projectId),
       onboarding: `${origin}/onboarding`,
     },
   };

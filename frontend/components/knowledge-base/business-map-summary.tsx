@@ -151,7 +151,7 @@ export function BusinessMapSummary({
     <Button asChild variant="secondary">
       <ProjectLink href={PROMPT_BUILDER_HREF}>
         <Icon icon={Pencil} />
-        Edit in Prompt Builder
+        Edit in Prompt builder
       </ProjectLink>
     </Button>
   );

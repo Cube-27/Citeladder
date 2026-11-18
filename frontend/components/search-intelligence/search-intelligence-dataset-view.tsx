@@ -169,8 +169,8 @@ function rowsHandoff(
   const [first] = rows;
   const subject =
     rows.length === 1 && first
-      ? `the Keywords row for "${first.keyword || first.url || first.domain}"`
-      : `these ${rows.length} ${title ?? 'Keywords'} rows`;
+      ? `the Keyword research row for "${first.keyword || first.url || first.domain}"`
+      : `these ${rows.length} ${title ?? 'Keyword research'} rows`;
   return {
     searchIntelligence: { datasetId, rowIds: rows.map((row) => row.id) },
     prompt: `Help me act on ${subject}.`,

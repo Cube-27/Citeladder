@@ -76,7 +76,7 @@ export function BuilderStepActions({
             )
           }
         >
-          {business.dirty ? 'Save and continue' : 'Continue'}
+          Next
           <Icon icon={ArrowRight} />
         </Button>
       );
@@ -96,7 +96,7 @@ export function BuilderStepActions({
               )
             }
           >
-            {topics.pending ? 'Confirm topics' : 'Continue'}
+            {topics.pending ? 'Confirm topics' : 'Next'}
             <Icon icon={topics.pending ? Check : ArrowRight} />
           </Button>
         </>

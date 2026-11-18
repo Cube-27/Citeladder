@@ -176,7 +176,7 @@ it('tells a Member who may not add the login who can, without sending them to se
 it('never sends a managed workspace to provider settings it does not have', async () => {
   renderPage({ ...readiness, credential_mode: 'funded', connected: false, connection_id: null });
   expect(
-    await screen.findByRole('heading', { name: 'Keywords is unavailable' }),
+    await screen.findByRole('heading', { name: 'Keyword research is unavailable' }),
   ).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Open provider settings' })).toBeNull();
 });

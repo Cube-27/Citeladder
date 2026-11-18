@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertCircle,
+  BadgeCheck,
   BookOpen,
   Bot,
   ChartLine,
@@ -21,6 +22,7 @@ import {
   Package,
   Plug,
   Radar,
+  Search,
   SquarePen,
   Settings,
   ShieldCheck,
@@ -74,6 +76,9 @@ export const ICONS = {
   visibility: Gauge,
   insights: ChartLine,
   perception: MessageSquareQuote,
+  factChecking: BadgeCheck,
+  queryFanouts: Search,
+  promptBuilder: Sparkles,
   competitors: Swords,
   // The answer engines themselves (the surfaces a run asks).
   analytics: Bot,

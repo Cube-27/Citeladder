@@ -182,7 +182,7 @@ describe('CommandPalette', () => {
   it('lists every nav destination and every project', async () => {
     await open();
     // Layer destinations, plus both projects.
-    expect(screen.getByRole('option', { name: /keywords/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /keyword research/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /site/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /acme/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /orbit/i })).toBeInTheDocument();
@@ -217,8 +217,25 @@ describe('CommandPalette', () => {
 
   it('navigates to the highlighted route on Enter', async () => {
     const user = await open();
-    await user.keyboard('keywords{Enter}');
+    await user.keyboard('keyword research{Enter}');
     expect(screen.getByTestId('location')).toHaveTextContent('/search-intelligence?project=p1');
+  });
+
+  it('deep-links the palette-only tabs and pages under their sidebar group', async () => {
+    const user = await open();
+    const visits = [
+      ['Fact-checking', 'Brand', '/perception?tab=fact-checking&project=p1'],
+      ['Query fanouts', 'Tracking', '/visibility?tab=query-fanout&project=p1'],
+      ['Prompt builder', 'Tracking', '/prompts/build?project=p1'],
+    ] as const;
+    for (const [label, group, href] of visits) {
+      if (!screen.queryByRole('listbox')) {
+        await user.click(screen.getByRole('button', { name: /search or jump to/i }));
+      }
+      const section = await screen.findByRole('group', { name: group });
+      await user.click(within(section).getByRole('option', { name: label }));
+      expect(screen.getByTestId('location')).toHaveTextContent(href);
+    }
   });
 
   it('keeps workspace commands out of project scope', async () => {

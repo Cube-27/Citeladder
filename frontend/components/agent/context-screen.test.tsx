@@ -517,7 +517,7 @@ describe('Business map', () => {
       expect.stringContaining('/prompts/build?offering=Golf+practice+net'),
     );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(within(map).getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
+    expect(within(map).getByRole('link', { name: 'Edit in Prompt builder' })).toHaveAttribute(
       'href',
       expect.stringContaining('/prompts/build'),
     );

@@ -23,8 +23,8 @@ const own = (path: string) => (field: Field) => (field('id') ? `${path}/${field(
 const KEYWORD_RESEARCH = '/search-intelligence?tab=overview';
 
 export const RECORD_KINDS = {
-  project: { label: 'Project', screen: '/visibility' },
-  prompt: { label: 'Prompt', screen: '/prompts' },
+  project: { label: 'Project', screen: '/projects' },
+  prompt: { label: 'Prompt', screen: '/prompts', page: own('/prompts') },
   opportunity: {
     label: 'Recommendation',
     screen: '/actions',
@@ -47,16 +47,16 @@ export const RECORD_KINDS = {
         ? `/site/crawls/${field('crawl_id')}/pages/${field('site_url_id')}`
         : null,
   },
-  site_issue: { label: 'Site Health issue', screen: '/site' },
+  site_issue: { label: 'Site Health issue', screen: '/issues' },
   site_link: { label: 'Internal link', screen: '/site' },
   traffic_snapshot: { label: 'Traffic snapshot', screen: '/performance' },
   demand_snapshot: { label: 'Demand snapshot', screen: '/search-intelligence' },
   query_snapshot: { label: 'Search Console snapshot', screen: '/performance' },
   query_row: { label: 'Search Console query', screen: '/performance' },
-  // The Keywords page opens on Demand; keyword records open its Overview.
-  search_run: { label: 'Keywords run', screen: KEYWORD_RESEARCH },
-  search_dataset: { label: 'Keywords dataset', screen: KEYWORD_RESEARCH },
-  search_row: { label: 'Keywords row', screen: KEYWORD_RESEARCH },
+  // The Keyword research page opens on Demand; keyword records open its Overview.
+  search_run: { label: 'Keyword research run', screen: KEYWORD_RESEARCH },
+  search_dataset: { label: 'Keyword research dataset', screen: KEYWORD_RESEARCH },
+  search_row: { label: 'Keyword research row', screen: KEYWORD_RESEARCH },
 } as const satisfies Record<string, RecordKind>;
 
 export type RecordKindName = keyof typeof RECORD_KINDS;

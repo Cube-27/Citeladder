@@ -295,11 +295,14 @@ export function SourcesPanel({
         />
       )}
 
-      {/* The table leads; the usage over time and the type mix explain it below. */}
-      <AppGrid layout="main-aside">
-        <UsageCard dimension={dimension} query={seriesQuery} />
-        <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
-      </AppGrid>
+      {/* The table leads; the usage over time and the type mix explain it below.
+          Both chart citations, which near misses by definition are not. */}
+      {readNotCited ? null : (
+        <AppGrid layout="main-aside">
+          <UsageCard dimension={dimension} query={seriesQuery} />
+          <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
+        </AppGrid>
+      )}
       {domain ? null : (
         <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
       )}

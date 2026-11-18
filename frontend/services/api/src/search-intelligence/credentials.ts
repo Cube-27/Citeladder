@@ -61,7 +61,7 @@ export async function reviewConnection(
   if (mode === 'funded') {
     const connection = await platformConnection(db);
     if (!connection)
-      throw new ApiError(422, 'Keywords is unavailable right now', {
+      throw new ApiError(422, 'Keyword research is unavailable right now', {
         code: asApiErrorCode('dataforseo_connection_required'),
       });
     return { connection, source: 'platform' };

@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
+import { renderHook } from '@testing-library/react';
 
-import { visibilityEvidenceHref } from './use-visibility-dashboard';
+import { useCanonicalSourcesTab, visibilityEvidenceHref } from './use-visibility-dashboard';
 
 describe('visibilityEvidenceHref', () => {
   it('keeps the shared selection, drops the Brand page and evidence keys, and applies the slice', () => {
@@ -16,5 +17,23 @@ describe('visibilityEvidenceHref', () => {
       engine: 'gemini',
     });
     expect(href.startsWith('/visibility?')).toBe(true);
+  });
+});
+
+describe('useCanonicalSourcesTab', () => {
+  it('replaces a removed tab with the default and keeps a known one', () => {
+    const push = vi.spyOn(window.history, 'pushState');
+    window.history.replaceState(null, '', '/visibility?project=p-1&tab=trends&run=r-1');
+    const { unmount } = renderHook(() => useCanonicalSourcesTab());
+    expect(`${window.location.pathname}${window.location.search}`).toBe(
+      '/visibility?project=p-1&run=r-1',
+    );
+    unmount();
+
+    window.history.replaceState(null, '', '/visibility?project=p-1&tab=ads');
+    renderHook(() => useCanonicalSourcesTab());
+    expect(window.location.search).toBe('?project=p-1&tab=ads');
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
   });
 });

@@ -78,7 +78,7 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
   if (active !== undefined)
     throw conflict(
       asApiErrorCode('acquisition_in_progress'),
-      'Another Keywords analysis is already active',
+      'Another Keyword research analysis is already active',
     );
 }
 

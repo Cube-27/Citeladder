@@ -579,7 +579,7 @@ export async function deleteProject(db: Database, scope: ProjectScope) {
     if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
       throw new ApiError(
         409,
-        'Wait for running audits, crawls, Agent replies and Keywords analyses to finish',
+        'Wait for running audits, crawls, Agent replies and Keyword research analyses to finish',
         {
           code: 'project_work_running',
         },

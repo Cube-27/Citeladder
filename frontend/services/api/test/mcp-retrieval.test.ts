@@ -30,7 +30,7 @@ it('links each record to the app screen that shows it, relative for internal rea
     observedAt: null,
     origin: 'https://app.test',
   });
-  expect(prompt.url).toBe(`https://app.test/prompts?project=${id}`);
+  expect(prompt.url).toBe(`https://app.test/prompts/${id}?project=${id}`);
 });
 
 it.each([mcpPolicy.max_document_bytes, 12000])(

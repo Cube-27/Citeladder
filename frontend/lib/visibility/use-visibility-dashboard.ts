@@ -108,6 +108,18 @@ export function visibilityEvidenceHref(
   return `/visibility?${params.toString()}`;
 }
 
+/**
+ * Sources only: a removed or mistyped `tab` names nothing, so the address is
+ * replaced with the default tab. Other pages reading these filters own `tab`.
+ */
+export function useCanonicalSourcesTab(): void {
+  const [rawTab] = useUrlState('tab', optionalStringUrlCodec);
+  const unknown = rawTab !== null && tabCodec.parse(rawTab) !== rawTab;
+  useEffect(() => {
+    if (unknown) setUrlParams({ tab: null }, 'replace');
+  }, [unknown]);
+}
+
 export function useVisibilityFilters() {
   const [activeTab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: sourceKeys });
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {

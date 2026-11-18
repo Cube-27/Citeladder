@@ -1,12 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
-import {
-  DASHBOARD_SIDEBAR_GROUPS,
-  MODE_HOMES,
-  navDestinations,
-  type NavDestination,
-} from '@/lib/navigation/app-routes';
+import { DASHBOARD_SIDEBAR_GROUPS, MODE_HOMES, navDestinations } from '@/lib/navigation/app-routes';
+import type { NavDestination } from '@/lib/navigation/route-types';
 
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
 export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
@@ -87,9 +83,12 @@ export function resolveCommandGroups({ managed = false }: { managed?: boolean } 
     (item) => !managed || !item.hiddenWhenManaged,
   );
   return [
-    ...DASHBOARD_GROUPS.map(({ title, items }) => ({
+    ...DASHBOARD_GROUPS.map(({ group, title, items }) => ({
       title,
-      items: items.filter((item) => !AGENT_HREFS.has(item.href)),
+      items: [
+        ...items.filter((item) => !AGENT_HREFS.has(item.href)),
+        ...navItems(`palette:${group}`),
+      ],
     })),
     { title: 'Agent', items: [NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS] },
     { title: 'Settings', items: settings },

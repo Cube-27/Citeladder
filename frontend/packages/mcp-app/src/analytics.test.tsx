@@ -397,7 +397,7 @@ describe('CiteLadder MCP App', () => {
     const pending = controller.fetchAnswer(`citeladder://visibility_result/${audit}`);
     await controller.select({ project_id: foreign });
     expect(controller.getSnapshot().result!.links.application).toBe(
-      `https://app.example.test/visibility?project=${foreign}`,
+      `https://app.example.test/insights?project=${foreign}`,
     );
     fail(new Error('old fetch timed out'));
     await pending;
@@ -443,7 +443,7 @@ describe('CiteLadder MCP App', () => {
     const tab = screen.getByRole('tab', { name: 'Overview' });
     tab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Insights' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Sources' })).toBeDisabled();
     expect(screen.getByText('No measured runs in this window.')).toBeInTheDocument();
   });

@@ -166,7 +166,7 @@ describe('PromptBuilder', () => {
     ).toEqual([OFFERING]);
     expect(screen.queryByRole('group', { name: 'Service areas' })).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Add to Buyer roles' }), 'Parent{Enter}');
-    await user.click(screen.getByRole('button', { name: /Save and continue/ }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(sent.profile).toEqual({ buyer_roles: ['Club coach', 'Parent'] }));
     expect(await screen.findByRole('button', { name: 'Suggest topics' })).toBeVisible();
     // The step is in the address, so a reload or Back keeps it; the done step reopens.
@@ -253,9 +253,7 @@ describe('PromptBuilder', () => {
     await user.click(screen.getByRole('button', { name: /Confirm topics/ }));
     await user.click(screen.getByRole('button', { name: /About your business/ }));
     release();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Save and continue|^Continue/ })).toBeEnabled(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
     expect(window.location.search).toBe('');
   });
 
