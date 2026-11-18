@@ -14,8 +14,9 @@ import {
 const PAGING = { clearKeys: ['source_cursor', 'source_offset', 'source_as_of'] };
 
 /**
- * Which source table the tab shows, if any: the inventory, or a domain's URLs.
- * A URL's own page and a domain's Prompts view list no table.
+ * Which filtered source table the tab shows, if any: the inventory, or a
+ * domain's URLs. A URL's own page and a domain's Prompts view list no table,
+ * and the Read, not cited list reads neither type nor publisher.
  */
 function useSourceTableScope(view: VisibilityView) {
   const [url] = useUrlState('source_url', optionalStringUrlCodec);
@@ -23,15 +24,9 @@ function useSourceTableScope(view: VisibilityView) {
   const [domainView] = useUrlState('source_view', optionalStringUrlCodec);
   const sourcesTab = view === 'domains' || view === 'urls' || view === 'read-not-cited';
   if (!sourcesTab || url) return null;
-  if (domain)
-    return domainView === 'prompts'
-      ? null
-      : { dimension: 'url' as const, domain, readNotCited: false };
-  return {
-    dimension: view === 'domains' ? ('domain' as const) : ('url' as const),
-    domain: null,
-    readNotCited: view === 'read-not-cited',
-  };
+  if (domain) return domainView === 'prompts' ? null : { dimension: 'url' as const, domain };
+  if (view === 'read-not-cited') return null;
+  return { dimension: view === 'domains' ? ('domain' as const) : ('url' as const), domain: null };
 }
 
 /**
@@ -67,7 +62,7 @@ export function useTableFilters({
   return sourceTableFilters({
     dimension,
     type: { value: sourceType, options: types, onChange: setSourceType },
-    standing: scope.readNotCited ? null : { gapOnly: standing === 'gap', onChange: setStanding },
+    standing: { gapOnly: standing === 'gap', onChange: setStanding },
     domain: scope.domain ? null : { value: picked, options: domainOptions, onChange: setPicked },
   });
 }
