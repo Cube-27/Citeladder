@@ -8,13 +8,14 @@
  * describes a row, with the allowed values and the default under it. Named
  * API schemas link to their entry. Columns are fixed, so rows never reflow.
  */
+import type { ApiOperation } from '../lib/api-reference';
 import { schemaHref, type ReferenceRow } from '../lib/json-schema';
 
 interface Props {
   title: string;
   rows: readonly ReferenceRow[];
-  /** Where an API request carries the rows (path, query, header or body). */
-  location?: string;
+  /** Where an API request carries the rows. */
+  location?: ApiOperation['parameters'][number]['location'] | 'body';
 }
 const { title, rows, location } = Astro.props;
 const described = rows.some((row) => row.description || row.values.length || row.defaultValue);

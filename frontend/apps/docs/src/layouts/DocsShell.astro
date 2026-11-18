@@ -131,6 +131,10 @@ const contact = websiteHref('/contact');
     padding-bottom: 24px;
     overscroll-behavior: contain;
   }
+  /* Prose anchors clear both bar rows, not only the logo row (prose.css). */
+  .cl-docs-shell :global(.cl-prose :is(h2, h3, h4)) {
+    scroll-margin-top: calc(var(--docs-bar-height) + 32px);
+  }
   .cl-docs-page,
   .cl-docs-page-main,
   .cl-docs-page-body,
