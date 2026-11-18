@@ -201,3 +201,10 @@ ALTER TABLE ONLY public.audit_fanout_terms
 -- Append-only like the baseline observation tables: the app role inserts
 -- untracked names and never rewrites or removes them (cascades run as owner).
 REVOKE UPDATE, DELETE ON public.answer_untracked_names FROM citeladder_app;
+
+-- MCP bulk prompt changes (P8): one prepared kind, update_prompts, activates,
+-- archives or refiles a selection. archive_prompts stays allowed for rows
+-- prepared before it; no code prepares or confirms it any more.
+ALTER TABLE public.mcp_confirmations
+    DROP CONSTRAINT ck_mcp_confirmations_kind,
+    ADD CONSTRAINT ck_mcp_confirmations_kind CHECK (((kind)::text = ANY (ARRAY[('add_prompts'::character varying)::text, ('archive_prompts'::character varying)::text, ('update_prompts'::character varying)::text, ('launch_audit'::character varying)::text, ('schedule'::character varying)::text, ('declare_implemented'::character varying)::text])));
