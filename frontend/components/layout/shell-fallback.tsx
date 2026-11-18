@@ -107,9 +107,7 @@ function PlaceholderSidebar() {
     const buttons: readonly RailFace[] =
       mode === 'agent'
         ? [NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS, { label: 'Chats', icon: MessagesSquare }]
-        : DASHBOARD_GROUPS.flatMap((group): readonly RailFace[] =>
-            group.title ? [{ label: group.title, icon: group.icon }] : group.items,
-          );
+        : DASHBOARD_GROUPS.map((group) => ({ label: group.title, icon: group.icon }));
     nav = (
       <SidebarRailList label="Navigation">
         {buttons.map(({ label, icon: Icon }) => (

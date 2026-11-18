@@ -36,8 +36,7 @@ export type SidebarGroup =
   | 'foot';
 
 /**
- * Dashboard mode's groups in order, with their labels (null draws the rows
- * ungrouped). Each group answers one question: how AI sees the brand, what is
+ * Dashboard mode's groups in order, with their labels. Each group answers one question: how AI sees the brand, what is
  * measured and what AI reads, the brand's own site, classic search, products.
  */
 export const DASHBOARD_SIDEBAR_GROUPS = [
@@ -47,7 +46,7 @@ export const DASHBOARD_SIDEBAR_GROUPS = [
   { group: 'website', title: 'Website' },
   { group: 'search', title: 'Search' },
   { group: 'commerce', title: 'Commerce' },
-] as const satisfies readonly { group: SidebarGroup; title: string | null }[];
+] as const satisfies readonly { group: SidebarGroup; title: string }[];
 
 /**
  * Where a nav entry is listed: a sidebar group (the command palette lists the

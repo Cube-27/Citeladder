@@ -13,7 +13,7 @@ export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
 
 type DashboardGroup = (typeof DASHBOARD_SIDEBAR_GROUPS)[number];
 
-/** A Dashboard group: its label (null draws the rows ungrouped) and its rail glyph. */
+/** A Dashboard group: its label and its rail glyph. */
 export type NavGroup = Readonly<
   DashboardGroup & {
     /** The collapsed rail's one button for the group. */
@@ -88,7 +88,7 @@ export function resolveCommandGroups({ managed = false }: { managed?: boolean } 
   );
   return [
     ...DASHBOARD_GROUPS.map(({ title, items }) => ({
-      title: title ?? 'Overview',
+      title,
       items: items.filter((item) => !AGENT_HREFS.has(item.href)),
     })),
     { title: 'Agent', items: [NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS] },
