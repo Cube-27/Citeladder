@@ -363,7 +363,7 @@ export function statusLabel(status: string): string {
 
 /**
  * Format a 0–100 score for display. Null (not yet analysed) and NaN render the
- * `Not measured` placeholder — an error/blocked row is NEVER shown as 0.
+ * not-measured placeholder (an Absence dash) — an error/blocked row is NEVER shown as 0.
  *
  * WHOLE NUMBERS. A score is the share of checks a page passed, and the decimal
  * is an artefact of the division, not a measurement: 88.9 and 89 say the same

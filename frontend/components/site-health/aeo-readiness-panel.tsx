@@ -40,7 +40,7 @@ type DimensionState =
   | 'Needs work'
   | 'Nearly there'
   | 'Passing'
-  | 'Not measured'
+  | 'No score'
   | 'Not applicable'
   | 'Excluded';
 
@@ -56,7 +56,7 @@ type DimensionState =
 function dimensionState(dimension: ReadinessDimension): DimensionState {
   if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
   if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
-  if (dimension.score === null) return 'Not measured';
+  if (dimension.score === null) return 'No score';
   // Round prioritization bands for display. Passing below still requires an
   // actual perfect score over a complete measurement.
   const band = scoreBand(Math.round(dimension.score));
@@ -107,12 +107,12 @@ const DIMENSION_TONES: Record<DimensionState, StatusTone> = {
   'Needs work': 'warning',
   'Nearly there': 'info',
   Passing: 'positive',
-  'Not measured': 'neutral',
+  'No score': 'neutral',
   'Not applicable': 'neutral',
   Excluded: 'neutral',
 };
 
-type CheckState = 'Incomplete' | 'Needs work' | 'Passing' | 'Did not apply' | 'Not measured';
+type CheckState = 'Incomplete' | 'Needs work' | 'Passing' | 'Did not apply' | 'Not checked';
 
 /** A check's state in the same tones as the pillar bands it rolls up into. */
 const CHECK_TONES: Record<CheckState, StatusTone> = {
@@ -120,7 +120,7 @@ const CHECK_TONES: Record<CheckState, StatusTone> = {
   'Needs work': 'warning',
   Passing: 'positive',
   'Did not apply': 'neutral',
-  'Not measured': 'neutral',
+  'Not checked': 'neutral',
 };
 
 export function AeoReadinessPanel({
@@ -307,7 +307,7 @@ function checkState(check: ReadinessCheck): CheckState {
   if (check.missing_count > 0 || check.partial_count > 0) return 'Needs work';
   if (check.satisfied_count > 0) return 'Passing';
   if (check.not_applicable_count > 0) return 'Did not apply';
-  return 'Not measured';
+  return 'Not checked';
 }
 
 /** Says whether the list is the whole set or only its worst rows. */

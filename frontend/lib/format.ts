@@ -81,6 +81,9 @@ export function formatMean(value: number): string {
  */
 export const MISSING_MARK = '–';
 
+/** The muted em dash Not measured prints instead of its word, anywhere (owner 2026-11-18). */
+export const NOT_MEASURED_MARK = '—';
+
 export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: string }[] = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },

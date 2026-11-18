@@ -236,7 +236,7 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
   const latest = referrals.referral_volume.at(-1);
   // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
-  const share = formatPercent(referrals.referral_share.at(-1)?.value ?? null);
+  const share = sharePhrase(referrals);
   const unsynced = referralSetup(ga4);
   const reported = referrals.referral_volume.length > 0;
   const label = 'AI referral sessions';
@@ -252,7 +252,7 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
     sub:
       reported || referrals.window_end !== null ? (
         <>
-          {reported ? `${share} of sessions · GA4 · Synced` : null}
+          {reported ? `${share}GA4 · Synced` : null}
           {referrals.window_end === null ? null : (
             // A report day is a calendar date, not an instant: it reads the same in every zone.
             <>
@@ -263,6 +263,12 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
         </>
       ) : undefined,
   };
+}
+
+/** The latest day's share of sessions as a lead-in, or nothing when it was not measured. */
+function sharePhrase(referrals: Overview['referrals']): string {
+  const value = referrals.referral_share.at(-1)?.value ?? null;
+  return value === null ? '' : `${formatPercent(value)} of sessions · `;
 }
 
 /** Which absence a referral figure is before GA4 has synced, by GA4's step. */

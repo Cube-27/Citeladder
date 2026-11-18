@@ -7,27 +7,28 @@ import {
 } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
+import { Absence } from '@/components/ui/absence';
 import { Delta } from '@/components/ui/delta';
 import {
   cellWidth,
   FIGURE_MIN_WIDTH,
-  figureRowSizes,
+  figureRowCells,
   useStripWidth,
 } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { TextLink } from '@/components/ui/text-link';
-import { Value } from '@/components/ui/value';
+import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type FigureValue =
   | {
       value: ReactNode;
       score?: undefined;
-      /** An icon tile beside the figure; give one to every figure of a strip or to none. */
+      /** A glyph before the label; give one to every figure of a strip or to none. */
       icon?: LucideIcon;
     }
-  /** A 0–100 score: a ScoreRing with its number inside, named by `label`. */
+  /** A 0–100 score: its number after a small ScoreRing, named by `label`. */
   | {
       score: Readonly<{ value: number; label: string; unit?: '%' }>;
       value?: undefined;
@@ -52,10 +53,10 @@ export type FigureSegment = Readonly<
     label: ReactNode;
     /** The card's title already names the figure: the label stays only as the `dt`, visually hidden. */
     labelHidden?: boolean;
-    /** The absence's word. Defaults to "Not measured". */
+    /** The absence's word, for its accessible name and tooltip. Defaults to "Not measured". */
     missingLabel?: string;
     loading?: boolean;
-    /** A small mark at the end of the label line (series key, info hint). */
+    /** A small mark after the label (series key, info hint). */
     marker?: ReactNode;
     /** The period the value covers, e.g. "Last 30 days"; opens the figure's hint. */
     caption?: ReactNode;
@@ -70,21 +71,22 @@ export type FigureSegment = Readonly<
 >;
 
 /**
- * FigureStrip — key figures as metric cards on the ground, 16 apart; inside a
- * card they are cells with no edges (globals.css "r3 a2 figures"). Rows come
- * from `figureRows`. A card is two rows: the label with its marker and one
- * info hint (caption, basis and comparison joined with " · "), then the value
- * with its Delta at the card's foot, so a row's values share one baseline
- * when a label wraps; 84 tall. An icon tile sits centred at the left of both
- * rows. A score's ScoreRing does too, its label and Delta beside it (96);
- * under 240px the label takes the first row and the ring and Delta the second.
- * A score is only ever a ring, never a bar. A figure with `action` makes its
- * label the link.
+ * FigureStrip — key figures as one flat row: hairlines above and below, thin
+ * dividers between cells, no cards, no gaps (globals.css "FigureStrip"). Cells
+ * share the width equally; rows come from `figureRows`, and a wrapped row
+ * keeps the same dividers. A cell is two lines, 72 tall: the muted label with
+ * its marker and one info hint (caption, basis and comparison joined with
+ * " · ") right after it, then the value in body ink with its Delta inline on
+ * one baseline. A value at the foot keeps a row's baselines level when a label
+ * wraps. A score's value is its number after a 20px ScoreRing (never a bar). A
+ * named value (a model, a brand) carries its own logo; a sentiment its dot.
+ * A figure with `action` makes its label the link.
  *
- * A figure with `onSelect` is pressable: the whole card is the target, named
- * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`).
+ * A figure with `onSelect` is pressable: the whole cell is the target, named
+ * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`) and fills
+ * the cell with the well.
  *
- * `subLine` shows each figure's `sub` as a visible third row instead of in
+ * `subLine` shows each figure's `sub` as a visible third line instead of in
  * its hint; every cell keeps the line, so values still share a baseline.
  */
 export function FigureStrip({
@@ -102,11 +104,7 @@ export function FigureStrip({
   subLine?: boolean;
 }>) {
   const { ref, width } = useStripWidth<HTMLDivElement>();
-  const sizes = figureRowSizes({
-    count: segments.length,
-    width,
-    lead: segments.some((segment) => segment.score || segment.icon),
-  });
+  const cells = figureRowCells({ count: segments.length, width });
   return (
     <div ref={ref} data-figure-strip-frame="" className="grid min-w-0 gap-4">
       {lead ? <div data-figure-lead="">{lead}</div> : null}
@@ -115,17 +113,18 @@ export function FigureStrip({
         aria-label={label}
         data-testid={testId}
         data-figure-strip=""
-        className="flex min-w-0 flex-wrap gap-4"
+        className="flex min-w-0 flex-wrap"
       >
         {segments.map((segment, index) => {
-          const rowSize = sizes[index] ?? 1;
+          const { size, rowStart } = cells[index] ?? { size: 1, rowStart: true };
           return (
             <FigureCell
               key={segment.key}
               segment={segment}
               subLine={subLine}
-              rowSize={rowSize}
-              narrow={cellWidth(width, rowSize) < FIGURE_MIN_WIDTH}
+              rowSize={size}
+              rowStart={rowStart}
+              narrow={cellWidth(width, size) < FIGURE_MIN_WIDTH}
             />
           );
         })}
@@ -138,46 +137,42 @@ function FigureCell({
   segment,
   subLine,
   rowSize,
+  rowStart,
   narrow,
-}: Readonly<{ segment: FigureSegment; subLine: boolean; rowSize: number; narrow: boolean }>) {
+}: Readonly<{
+  segment: FigureSegment;
+  subLine: boolean;
+  rowSize: number;
+  rowStart: boolean;
+  narrow: boolean;
+}>) {
   const pressable = Boolean(segment.onSelect);
-  let leadKind: 'score' | 'icon' | undefined;
-  if (segment.score) leadKind = 'score';
-  else if (segment.icon) leadKind = 'icon';
-  const parts = (
-    <>
-      <FigureLabel segment={segment} subLine={subLine} />
-      <FigureLead segment={segment} />
-      <FigureValueLine segment={segment} subLine={subLine} />
-      {subLine ? <FigureSub segment={segment} /> : null}
-    </>
-  );
   return (
     <div
       data-figure-cell=""
-      data-row-size={rowSize}
-      data-figure-kind={leadKind}
+      data-row-start={rowStart || undefined}
+      data-sub-line={subLine || undefined}
       // A narrow row's labels may take two lines, so every label in it reserves two.
       data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
       // The cell's share of its row: `flex-basis` in globals.css reads `--row`.
       style={{ '--row': rowSize } as CSSProperties}
-      className={cn('relative min-w-0', pressable && 'hover:overlay-hover active:overlay-pressed')}
-    >
-      {leadKind === 'score' ? (
-        // The cell is the size container; its layout lives one level in.
-        <div data-figure-score-body="">{parts}</div>
-      ) : (
-        parts
+      className={cn(
+        'relative min-w-0',
+        pressable && !segment.selected && 'hover:overlay-hover active:overlay-pressed',
       )}
+    >
+      <FigureLabel segment={segment} subLine={subLine} />
+      <FigureValueLine segment={segment} subLine={subLine} />
+      {subLine ? <FigureSub segment={segment} /> : null}
       {pressable ? (
         <button
           type="button"
           onClick={segment.onSelect}
           aria-label={segment.actionLabel}
           aria-pressed={segment.selected}
-          className="focus-ring rounded-control absolute inset-0"
+          className="focus-ring absolute inset-0"
         />
       ) : null}
     </div>
@@ -186,18 +181,12 @@ function FigureCell({
 
 type FigurePart = Readonly<{ segment: FigureSegment; subLine?: boolean }>;
 
-/** A loading block in the `well`, standing in for text or a ring. */
-function Block({ className, ring = false }: Readonly<{ className: string; ring?: boolean }>) {
-  return (
-    <span
-      aria-hidden
-      data-figure-block={ring ? 'ring' : 'text'}
-      className={cn('bg-well block', className)}
-    />
-  );
+/** A loading block in the `well`, standing in for text. */
+function Block({ className }: Readonly<{ className: string }>) {
+  return <span aria-hidden data-figure-block="" className={cn('bg-well block', className)} />;
 }
 
-/** Row 1: the label (or its link), wrapping between words but never cut, then its marker and hint. */
+/** Line 1: the label (or its link), wrapping between words but never cut, then its marker and hint. */
 function FigureLabel({ segment, subLine }: FigurePart) {
   if (segment.labelHidden) return <dt className="sr-only">{segment.label}</dt>;
   let text: ReactNode;
@@ -216,9 +205,11 @@ function FigureLabel({ segment, subLine }: FigurePart) {
     );
   else text = <span className="min-w-0">{segment.label}</span>;
   const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
+  const Glyph = segment.icon;
   return (
-    <dt className="type-body text-ink-2 mb-1 flex min-w-0 items-start justify-between gap-2">
-      <span className="flex min-w-0 items-center gap-2 self-center">{text}</span>
+    <dt className="type-body text-ink-2 flex min-w-0 items-center gap-2">
+      {Glyph ? <Glyph aria-hidden className="size-4 shrink-0" /> : null}
+      {text}
       {segment.marker || hint ? (
         <span className={cn('flex shrink-0 items-center gap-2', pressableLayer(segment))}>
           {segment.marker}
@@ -229,55 +220,20 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   );
 }
 
-/** Controls inside a pressable figure sit above its whole-card button. */
+/** Controls inside a pressable figure sit above its whole-cell button. */
 function pressableLayer(segment: FigureSegment) {
   return segment.onSelect ? 'relative z-10' : undefined;
 }
 
-/** The icon tile or the score's ring, at the card's left. */
-function FigureLead({ segment }: FigurePart) {
-  if (segment.score) {
-    return (
-      <dd data-figure-lead-slot="">
-        {segment.loading ? (
-          <Block ring className="size-16" />
-        ) : (
-          <ScoreRing
-            value={segment.score.value}
-            label={segment.score.label}
-            unit={segment.score.unit}
-            tone="auto"
-          />
-        )}
-      </dd>
-    );
-  }
-  if (!segment.icon) return null;
-  const Glyph = segment.icon;
-  return (
-    <dd aria-hidden data-figure-lead-slot="" data-icon-tile="">
-      <Glyph className="text-ink-2 size-5" />
-    </dd>
-  );
-}
-
 /**
- * Row 2: the value (or its absence's word) and its Delta on one baseline; a
- * score's ring holds its value, so the row is its Delta alone. A figure whose
- * label is hidden carries its hint here.
+ * Line 2: the value (or its absence) and its Delta on one baseline; a score's
+ * number follows its ring. A figure whose label is hidden carries its hint here.
  */
 function FigureValueLine({ segment, subLine }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
-  if (segment.score && !delta) return null;
   return (
-    <dd
-      data-figure-value=""
-      className={cn(
-        'flex min-w-0 items-baseline gap-2 whitespace-nowrap',
-        !segment.score && 'min-h-[var(--text-figure--line-height)]',
-      )}
-    >
-      {segment.score ? null : <FigureValue segment={segment} />}
+    <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
+      <FigureValue segment={segment} />
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
@@ -289,13 +245,13 @@ function FigureValueLine({ segment, subLine }: FigurePart) {
 }
 
 /**
- * Row 3 with `subLine`: the basis, one line. Grid auto-placement puts it under
- * the value; an empty one keeps its height so the row's values align.
+ * Line 3 with `subLine`: the basis, one line. An empty one keeps its height so
+ * the row's values align.
  */
 function FigureSub({ segment }: FigurePart) {
   return (
     <dd className="type-caption text-ink-2 min-w-0 truncate">
-      {segment.sub && !segment.loading ? segment.sub : ' '}
+      {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );
 }
@@ -308,22 +264,35 @@ function reportsChange(delta: ReactNode): boolean {
   return true;
 }
 
+const VALUE_TEXT = 'type-heading text-ink tabular-nums';
+
 function FigureValue({ segment }: FigurePart) {
-  const { value } = segment;
   if (segment.loading)
     return (
-      <span className="flex min-h-[var(--text-figure--line-height)] items-center">
+      <span className="flex items-center self-center">
         <span className="sr-only">Loading</span>
-        <Block className="h-6 w-16" />
+        <Block className="h-4 w-16" />
       </span>
     );
-  if (value == null)
+  if (segment.score) {
+    const { value, label, unit } = segment.score;
     return (
-      <Value text="figure" value={null} absentLabel={segment.missingLabel ?? 'Not measured'} />
+      <span className="flex min-w-0 items-center gap-2 self-center">
+        <ScoreRing value={value} label={label} unit={unit} tone="auto" size="inline" />
+        <span aria-hidden className={VALUE_TEXT}>
+          {Math.max(0, Math.min(100, Math.round(value)))}
+          {unit}
+        </span>
+      </span>
     );
+  }
+  const { value } = segment;
+  // A formatter's not-measured word is an absence too, never printed as a value.
+  if (value == null || value === availabilityLabel('not_measured'))
+    return <Absence state="not_measured" label={segment.missingLabel} />;
   if (typeof value === 'string' || typeof value === 'number')
-    return <span className="type-figure text-ink tabular-nums">{String(value)}</span>;
-  return <div className="type-figure text-ink min-w-0">{value}</div>;
+    return <span className={VALUE_TEXT}>{String(value)}</span>;
+  return <div className={cn(VALUE_TEXT, 'flex min-w-0 items-center gap-2')}>{value}</div>;
 }
 
 /** The caption, basis (unless shown as a line) and comparison joined with " · " in one hint. */

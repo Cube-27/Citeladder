@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { CompetitorSources, NamedInsteadOfYou } from '@/components/brand/competitor-focus-cards';
 import { CompetitorTrend } from '@/components/brand/competitor-trend';
 import { ReportPage } from '@/components/templates/report-page';
+import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -178,7 +179,7 @@ function FocusFigures({
       key: figure.key,
       label: figure.label,
       ...(theirs ? figure.read(theirs) : plain(null)),
-      sub: `You: ${mine.value ?? (mine.missingLabel ?? 'Not measured').toLowerCase()}`,
+      sub: <>You: {mine.value ?? <Absence state="not_measured" label={mine.missingLabel} />}</>,
     };
   });
   return <FigureStrip label={`${name} against you`} segments={segments} subLine />;

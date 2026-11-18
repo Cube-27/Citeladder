@@ -1,7 +1,8 @@
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import { numericMetric, signalDefinition } from '@/lib/demand/signals';
-import { availabilityLabel, formatCount, formatMean, formatPercent } from '@/lib/format';
+import { formatCount, formatMean, formatPercent } from '@/lib/format';
+import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -85,7 +86,7 @@ function queryRelevance(signal: DemandSignal): QueryRelevance | null {
 }
 
 function coverageLabel(value: number | undefined) {
-  return typeof value === 'number' ? formatPercent(value) : availabilityLabel('not_measured');
+  return typeof value === 'number' ? formatPercent(value) : <Absence state="not_measured" />;
 }
 
 function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) {

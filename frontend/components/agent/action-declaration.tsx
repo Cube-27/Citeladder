@@ -244,7 +244,7 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
               <span className={textRole('caption')}>
                 {leg
                   ? `Measured by ${measurementLegLabel(leg)?.toLowerCase() ?? 'the next reading'}.`
-                  : 'Not measured automatically: no reading isolates this change.'}
+                  : 'No automatic check: no reading isolates this change.'}
               </span>
             </Stack>
           );

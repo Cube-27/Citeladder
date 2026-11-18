@@ -10,6 +10,7 @@ import {
   type ThHTMLAttributes,
 } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClampText, UrlCutParts, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
@@ -17,7 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
+import { availabilityLabel, formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -215,14 +216,20 @@ const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
     // Padding 8 and 8: the row hairline is drawn inside the row (globals.css "r2 data").
     'text-body-sm text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
-    // A value never wraps: "Not measured" split over two lines read as two values.
+    // A value never wraps: a word split over two lines reads as two values.
     // Tabular figures, so a right-aligned column lines up place by place.
     numeric && 'whitespace-nowrap text-right tabular-nums',
     desktopOnly && desktopOnlyClasses,
   );
 
+/** A formatter's not-measured word prints as the Absence mark, not the word. */
+function CellContent({ children, numeric }: Readonly<{ children: ReactNode; numeric?: boolean }>) {
+  if (children === availabilityLabel('not_measured')) return <Absence state="not_measured" />;
+  return !numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children;
+}
+
 /**
- * A missing figure (which renders the `Not measured` placeholder) reads muted;
+ * A missing figure (which renders the Absence mark) reads muted;
  * a measured one keeps the cell's ink. A score is a figure, not a state, so it
  * never takes a band colour.
  */
@@ -256,7 +263,7 @@ export function TableCell({
         className,
       )}
     >
-      {!numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children}
+      <CellContent numeric={numeric}>{children}</CellContent>
     </td>
   );
 }

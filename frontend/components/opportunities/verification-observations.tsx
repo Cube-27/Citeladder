@@ -57,7 +57,7 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
 function GapChanges({ result }: Readonly<{ result: VerificationResult | undefined }>) {
   const changes = result?.gap_changes;
   if (!changes || typeof changes !== 'object' || !('state' in changes)) return null;
-  if (changes.state === 'not_run') return <p>Gap comparison: not measured yet</p>;
+  if (changes.state === 'not_run') return <p>Gap comparison: no reading yet</p>;
   if (changes.state !== 'available') return <p>Gap comparison: not available</p>;
   const count = (key: string) => {
     const value = key in changes ? changes[key as keyof typeof changes] : null;

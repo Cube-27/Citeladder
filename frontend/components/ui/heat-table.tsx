@@ -8,8 +8,10 @@ import {
   TableRow,
   TableRowHeader,
 } from '@/components/ui/table';
+import { Absence } from '@/components/ui/absence';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** A heat tint from 0 (low) to 1 (high): the accent washed in up to half strength, as `HeatValue`. */
@@ -57,7 +59,13 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     className="rounded-mark flex min-h-10 flex-col items-center justify-center"
                     style={{ backgroundImage: HATCH }}
                   >
-                    <i className={textRole('caption')}>{cell.label}</i>
+                    <i className={textRole('caption')}>
+                      {cell.label === availabilityLabel('not_measured') ? (
+                        <Absence state="not_measured" />
+                      ) : (
+                        cell.label
+                      )}
+                    </i>
                   </div>
                 ) : (
                   <div

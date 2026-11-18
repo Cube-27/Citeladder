@@ -69,10 +69,10 @@ describe('screenState with StateBlock', () => {
     expect(await screen.findByText('12 pages crawled')).toBeVisible();
   });
 
-  it('says "Not measured yet", not zero, when the answer holds no measurement', async () => {
+  it('says "No measurements yet", not zero, when the answer holds no measurement', async () => {
     renderScreen(() => Promise.resolve({ crawled_pages: null }));
 
-    expect(await screen.findByRole('heading', { name: 'Not measured yet' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'No measurements yet' })).toBeVisible();
     expect(screen.getByText('Coverage appears after the first crawl finishes.')).toBeVisible();
     expect(screen.queryByText(/pages crawled/)).not.toBeInTheDocument();
   });
@@ -81,7 +81,7 @@ describe('screenState with StateBlock', () => {
     renderScreen(() => Promise.resolve({ crawled_pages: 0 }));
 
     expect(await screen.findByText('0 pages crawled')).toBeVisible();
-    expect(screen.queryByText('Not measured yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No measurements yet')).not.toBeInTheDocument();
   });
 
   it('reports a failed refetch instead of the stale answer', async () => {

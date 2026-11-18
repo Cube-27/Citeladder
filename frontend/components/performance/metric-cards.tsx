@@ -1,5 +1,6 @@
 import { SERIES_FILL, SERIES_STROKE } from '@/components/ui/step-chart-parts';
 import { cn } from '@/lib/utils';
+import { Absence } from '@/components/ui/absence';
 import { InfoHint } from '@/components/ui/info-hint';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
@@ -171,7 +172,11 @@ function ga4ComparisonLabel(
 ) {
   if (comparison.evidence_state === 'not_run') return `${compareLabel} — not imported`;
   if (value === null || value === undefined)
-    return `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`;
+    return (
+      <>
+        {compareLabel}: <Absence state="not_measured" />
+      </>
+    );
   return `${compareLabel}: ${formatCount(value)}`;
 }
 

@@ -29,15 +29,18 @@ const RING_STROKE = {
   negative: 'stroke-negative',
 } as const satisfies Record<ScoreFill, string>;
 
-/** The one size: 64px with a 5px stroke, room for "100" in the 24px figure. */
-const SIZE = 64;
-const STROKE = 5;
+/** `figure`: 64px, room for "100" in the 24px figure; `inline`: 20px, a mark on a text line. */
+const RING = {
+  figure: { size: 64, stroke: 5, box: 'size-16' },
+  inline: { size: 20, stroke: 3, box: 'size-5' },
+} as const;
 
 /**
  * ScoreRing — a 0–100 score as a ring, the app's only score graphic (never a
- * bar, meter or rungs): 64px with the number at its centre in the `figure`
- * role. A `rule` track; the arc is `ink`, or banded with `tone="auto"` where
- * several scores are compared and in metric cards. It has no other size and
+ * bar, meter or rungs). At `figure` size (64px) the number sits at its centre
+ * in the `figure` role; at `inline` size (20px, a FigureStrip value) the ring
+ * is a mark and the caller prints the number beside it. A `rule` track; the
+ * arc is `ink`, or banded with `tone="auto"` where scores are compared. It
  * draws no percent sign; `unit="%"` names a share as one for assistive tech.
  */
 export function ScoreRing({
@@ -45,6 +48,7 @@ export function ScoreRing({
   label,
   tone = 'ink',
   unit,
+  size = 'figure',
 }: Readonly<{
   /** Score 0–100. */
   value: number;
@@ -53,8 +57,10 @@ export function ScoreRing({
   tone?: ScoreTone;
   /** A share out of 100 rather than a score. */
   unit?: '%';
+  size?: keyof typeof RING;
 }>) {
   const score = clampScore(value);
+  const { size: SIZE, stroke: STROKE, box } = RING[size];
   const centre = SIZE / 2;
   const radius = centre - STROKE / 2;
   const circumference = 2 * Math.PI * radius;
@@ -63,7 +69,7 @@ export function ScoreRing({
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The ring and its numeral are one generated image; <img> cannot hold them.
       role="img" // NOSONAR -- the ring and its numeral are one generated image
       aria-label={unit ? `${label}: ${score}%` : `${label}: ${score} out of 100`}
-      className="relative inline-grid size-16 shrink-0 place-items-center"
+      className={cn('relative inline-grid shrink-0 place-items-center self-center', box)}
     >
       <svg
         width={SIZE}
@@ -94,9 +100,11 @@ export function ScoreRing({
           />
         ) : null}
       </svg>
-      <span aria-hidden className="type-figure relative">
-        {score}
-      </span>
+      {size === 'figure' ? (
+        <span aria-hidden className="type-figure relative">
+          {score}
+        </span>
+      ) : null}
     </div>
   );
 }

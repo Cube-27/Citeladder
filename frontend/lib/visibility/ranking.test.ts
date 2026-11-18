@@ -62,14 +62,14 @@ describe('Insights headline', () => {
       'keeps tracked but unmeasured competitors apart from none tracked',
       [row('You', 0.3, true), row('Ghost', null)],
       {
-        headline: "Your competitors' visibility is not measured in this selection",
+        headline: 'No visibility readings for your competitors in this selection',
         sub: null,
       },
     ],
     [
       'keeps an unmeasured brand apart from a zero',
       [row('Leader', 0.4), row('You', null, true)],
-      { headline: 'Your AI visibility is not measured in this selection', sub: null },
+      { headline: 'No AI visibility readings for you in this selection', sub: null },
     ],
   ])('%s', (_, rows, expected) => {
     expect(headline(rows)).toEqual(expected);

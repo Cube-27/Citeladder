@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
-import { figureRowSizes, useStripWidth } from '@/components/ui/figure-rows';
+import { figureRowCells, useStripWidth } from '@/components/ui/figure-rows';
 import { slipClasses } from '@/components/ui/slip';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
@@ -176,23 +176,27 @@ export function TableBlocks({
 }
 
 /**
- * Metric cards in FigureStrip's rows (`figureRows`) and cells, so they take
- * its card on the ground and its edgeless cell inside a card (globals.css):
- * a 12px label block at 40% on the label's line over a 24×56 value block on
- * the value's, 84 tall as a card.
+ * FigureStrip's row (`figureRows`) and cells, with its lines and dividers
+ * (globals.css): a 12px label block at 40% on the label's 20px line over a
+ * 16×56 value block on the value's 24px line, 72 tall.
  */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   const { ref, width } = useStripWidth<HTMLSpanElement>();
-  const sizes = figureRowSizes({ count, width });
+  const cells = figureRowCells({ count, width });
   return (
-    <span ref={ref} className="flex min-w-0 flex-wrap gap-4">
-      {sizes.map((size, index) => (
-        <span key={index} data-figure-cell="" style={{ '--row': size } as CSSProperties}>
-          <span className="mb-1 flex h-5 items-center">
+    <span ref={ref} data-figure-strip="" className="flex min-w-0 flex-wrap">
+      {cells.map(({ size, rowStart }, index) => (
+        <span
+          key={index}
+          data-figure-cell=""
+          data-row-start={rowStart || undefined}
+          style={{ '--row': size } as CSSProperties}
+        >
+          <span className="flex h-5 items-center">
             <SkeletonBlock className="w-2/5" />
           </span>
-          <span className="flex min-h-[var(--text-figure--line-height)] items-center">
-            <SkeletonBlock className="h-6 w-14" />
+          <span data-figure-value="" className="flex items-center">
+            <SkeletonBlock className="h-4 w-14" />
           </span>
         </span>
       ))}

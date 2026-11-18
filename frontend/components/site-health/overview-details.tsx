@@ -37,7 +37,7 @@ import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 const MEASUREMENT_LABELS: Record<string, string> = {
   measured: 'Measured',
   limited_evidence: 'Limited evidence',
-  not_measured: 'Not measured',
+  not_measured: 'Not checked',
   excluded: 'Excluded',
   not_applicable: 'Not applicable',
 };
@@ -46,11 +46,24 @@ function measurementLabel(state: string): string {
   return MEASUREMENT_LABELS[state] ?? statusLabel(state);
 }
 
-/** Why a pillar has no score: no check applies to the site, or how far it was measured. */
-function unscoredLabel(dimension: SiteHealthOverview['aeo_dimensions'][number]): string {
-  if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
-  if (dimension.reason === 'measured_at_site_scope') return 'Site-scoped evidence';
-  return measurementLabel(dimension.dimension_measurement_state);
+/**
+ * Why a pillar has no score: no check applies to the site, or how far it was
+ * measured; one never measured is the Absence dash.
+ */
+function Unscored({
+  dimension,
+}: Readonly<{ dimension: SiteHealthOverview['aeo_dimensions'][number] }>) {
+  let label: string;
+  if (dimension.dimension_applicability === 'not_applicable') label = 'Not applicable';
+  else if (dimension.reason === 'measured_at_site_scope') label = 'Site-scoped evidence';
+  else if (dimension.dimension_measurement_state === 'not_measured')
+    return <Absence state="not_measured" />;
+  else label = measurementLabel(dimension.dimension_measurement_state);
+  return (
+    <ClampText lines={1} className="type-caption">
+      {label}
+    </ClampText>
+  );
 }
 
 export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>) {
@@ -113,9 +126,7 @@ function DimensionLedger({
           {/* The number only; a pillar with no score says why. */}
           <TableCell numeric>
             {dimension.score === null ? (
-              <ClampText lines={1} className="type-caption">
-                {unscoredLabel(dimension)}
-              </ClampText>
+              <Unscored dimension={dimension} />
             ) : (
               formatScore(dimension.score)
             )}

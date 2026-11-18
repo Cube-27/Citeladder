@@ -7,7 +7,7 @@ import { pageKindLabel } from '@/lib/site-health/page-kinds';
  * inventory), affected-URL rows, and the per-URL detail header. Reuses the
  * design-system neutral `Badge` — no new colour family. An unclassified page
  * (no completed analysis yet, or a projection that does not carry the field)
- * renders the `Not measured` placeholder, never a guessed type.
+ * renders the not-measured Absence dash, never a guessed type.
  *
  * `className` exists so a table can tune layout without creating a second
  * page-kind treatment; the shared badge owns the 12px compact label size.

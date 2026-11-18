@@ -298,7 +298,7 @@ const MOVEMENT_STATE_LABEL: Record<string, string> = {
   observed_zero: 'compared (zero after)',
   unavailable: 'not available',
   non_comparable: 'not comparable',
-  not_run: 'not measured yet',
+  not_run: 'no reading yet',
 };
 
 export function movementStateLabel(state: string): string {

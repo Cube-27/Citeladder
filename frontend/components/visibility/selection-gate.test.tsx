@@ -54,7 +54,7 @@ describe('SelectionGate', () => {
 
     expect(await screen.findByText("Couldn't load the selected measurement")).toBeVisible();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
-    expect(screen.queryByText('Not measured yet')).toBeNull();
+    expect(screen.queryByText('No measurements yet')).toBeNull();
   });
 
   it('says results are being prepared while a finished run is still written, with no retry', async () => {
@@ -81,7 +81,7 @@ describe('SelectionGate', () => {
   it('says nothing is measured yet for a selection with no measured run', async () => {
     render(<Gate answer={() => Promise.resolve(null)} />);
 
-    expect(await screen.findByText('Not measured yet')).toBeVisible();
+    expect(await screen.findByText('No measurements yet')).toBeVisible();
     expect(
       screen.getByText('Results appear here once a run in this selection finishes measuring.'),
     ).toBeVisible();
@@ -99,7 +99,7 @@ describe('SelectionGate', () => {
       />,
     );
 
-    expect(await screen.findByText('Not measured yet')).toBeVisible();
+    expect(await screen.findByText('No measurements yet')).toBeVisible();
     expect(screen.queryByText(/Measured run/u)).toBeNull();
   });
 
@@ -113,7 +113,7 @@ describe('SelectionGate', () => {
     );
 
     expect(await screen.findByText(`Measured run ${RUN_ID}`)).toBeVisible();
-    expect(screen.queryByText('Not measured yet')).toBeNull();
+    expect(screen.queryByText('No measurements yet')).toBeNull();
   });
 });
 

@@ -39,6 +39,7 @@ import { readOverviewLayout } from './overview-layout.ts';
 const ROWS = policy.projects.overview_report_list_rows;
 const COHORT = policy.visibility.core_cohort;
 const NO_COMPARISON = 'No comparison yet';
+const NO_READING = 'No value';
 
 type View = ReportContext['view'];
 type Action = View['actions'][number];
@@ -83,13 +84,13 @@ function percentStat(view: View, label: string, metric: Metric, meaning: string)
   return {
     label,
     value: figure(metric.value, '%'),
-    note: metric.value === null ? 'Not measured' : note(view, meaning, change),
+    note: metric.value === null ? NO_READING : note(view, meaning, change),
   };
 }
 
 function rankStat({ view, brands }: ReportContext): Stat {
   const { value, delta } = view.state.brand_rank;
-  if (value === null) return { label: 'Brand rank', value: MISSING, note: 'Not measured' };
+  if (value === null) return { label: 'Brand rank', value: MISSING, note: NO_READING };
   // A lower rank is better, so a negative change is a gain.
   let change: string | null = null;
   if (delta !== null && delta !== 0)

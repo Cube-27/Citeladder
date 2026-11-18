@@ -588,7 +588,7 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     await userEvent.setup().click(screen.getByText('Technical details'));
-    expect(screen.getByText('Internal links not measured for this page.')).toBeVisible();
+    expect(screen.getByText("Internal links weren't counted for this page.")).toBeVisible();
   });
 
   it('lists every issue once, worst first, each row opening its fix, and advisories apart', async () => {
