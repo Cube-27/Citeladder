@@ -34,15 +34,60 @@ export function sentimentReading(
   if (!sentiment) return { kind: 'not_measured' };
   if (sentiment.mentions === 0) return { kind: 'no_mentions' };
   const { classified, mentions } = sentiment;
-  const net = formatNet(sentiment.net_sentiment);
-  if (classified < minimum || net === null)
-    return { kind: 'too_few', classified, mentions, minimum };
-  return { kind: 'value', net, classified, mentions };
+  const reading = netReading(sentiment.net_sentiment, classified, minimum);
+  if (reading.kind === 'too_few') return { kind: 'too_few', classified, mentions, minimum };
+  return { kind: 'value', net: reading.text, classified, mentions };
 }
 
 /** A 0–1 share as a whole percentage, or null. */
 export function formatShare(value: number | null): string | null {
   return measured(formatPercent(value));
+}
+
+/**
+ * A share or net value computed over `basis` counted items (classified
+ * mentions, or answers for Recommended): too few below the minimum, never a
+ * figure from a handful. Every perception figure outside a table row reads
+ * through this, so one minimum governs them all.
+ */
+export type GatedReading =
+  | { kind: 'too_few'; basis: number; minimum: number }
+  | { kind: 'value'; text: string };
+
+function meetsMinimum(basis: number, minimum: number): boolean {
+  return basis >= Math.max(1, minimum);
+}
+
+function gated(text: string | null, basis: number, minimum: number): GatedReading {
+  if (!meetsMinimum(basis, minimum) || text === null) return { kind: 'too_few', basis, minimum };
+  return { kind: 'value', text };
+}
+
+export function shareReading(
+  share: number | null | undefined,
+  basis: number,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+): GatedReading {
+  return gated(formatShare(share ?? null), basis, minimum);
+}
+
+export function netReading(
+  net: number | null | undefined,
+  basis: number,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+): GatedReading {
+  return gated(formatNet(net ?? null), basis, minimum);
+}
+
+/** A gated reading as a figure's value and absence word, "Too few <noun>" below the minimum. */
+export function gatedFigure(
+  reading: GatedReading,
+  noun = 'classified',
+): { value: string | null; missingLabel: string } {
+  return {
+    value: reading.kind === 'value' ? reading.text : null,
+    missingLabel: `Too few ${noun}`,
+  };
 }
 
 const THEME_LABELS: Record<string, string> = {
@@ -116,9 +161,13 @@ const UNAVAILABLE_SHORT: Record<NonNullable<PerceptionResponse['reason']>, strin
 type Score = PerceptionResponse['entities'][number]['score'];
 type Theme = PerceptionResponse['themes'][number];
 
-/** The Brand tab's headline, from the brand's own classified mentions. */
-export function negativeHeadline(score: Score | null | undefined): string | null {
-  if (!score || score.negative_share === null) return null;
+/** The Brand tab's headline, from the brand's own classified mentions; null below the minimum. */
+export function negativeHeadline(
+  score: Score | null | undefined,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+): string | null {
+  if (!score || score.negative_share === null || !meetsMinimum(score.classified, minimum))
+    return null;
   if (score.negative === 0) return 'AI says nothing negative about you in classified mentions';
   return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of classified mentions`;
 }
@@ -155,15 +204,16 @@ export function themeNegativeShare(theme: Pick<Theme, 'negative' | 'positive'>):
 
 /**
  * Net sentiment per run for the trend chart. A point whose versions differ
- * from the one before breaks the line; one with nothing classified is a gap.
+ * from the one before breaks the line; one under the classified minimum is a gap.
  */
 export function sentimentTrend(
   trend: PerceptionResponse['trend'],
   formatDate: (iso: string) => string,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
 ) {
   return trend.map((point, index) => ({
     label: formatDate(point.completed_at),
-    value: point.score.net_sentiment,
+    value: meetsMinimum(point.score.classified, minimum) ? point.score.net_sentiment : null,
     timestamp: Date.parse(point.completed_at),
     breakBefore: index > 0 && !point.comparable,
   }));
@@ -191,7 +241,7 @@ export function breakdownRow(
 ): BreakdownRow {
   const { score, coverage } = row;
   const counts = { classified: score.classified, mentions: coverage.mentions };
-  if (score.classified < Math.max(1, minimum))
+  if (!meetsMinimum(score.classified, minimum))
     return { kind: 'too_few', ...counts, needed: minimum };
   // `mixed` counts in the denominator only, so the three shares need not sum to one.
   return {

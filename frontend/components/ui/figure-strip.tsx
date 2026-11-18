@@ -60,7 +60,7 @@ export type FigureSegment = Readonly<
     /** The period the value covers, e.g. "Last 30 days"; opens the figure's hint. */
     caption?: ReactNode;
     delta?: ReactNode;
-    /** The basis, in the figure's hint. */
+    /** The basis: in the figure's hint, or under the value when the strip has `subLine`. */
     sub?: ReactNode;
     /** A second window's own value, in the figure's hint (never a ratio). */
     comparison?: Readonly<{ label: ReactNode; value: string | null }>;
@@ -83,18 +83,23 @@ export type FigureSegment = Readonly<
  *
  * A figure with `onSelect` is pressable: the whole card is the target, named
  * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`).
+ *
+ * `subLine` shows each figure's `sub` as a visible third row instead of in
+ * its hint; every cell keeps the line, so values still share a baseline.
  */
 export function FigureStrip({
   segments,
   label,
   testId,
   lead,
+  subLine = false,
 }: Readonly<{
   segments: readonly FigureSegment[];
   /** Accessible name for the group, when the section heading does not give one. */
   label?: string;
   testId?: string;
   lead?: ReactNode;
+  subLine?: boolean;
 }>) {
   const { ref, width } = useStripWidth<HTMLDivElement>();
   const sizes = figureRowSizes({
@@ -118,6 +123,7 @@ export function FigureStrip({
             <FigureCell
               key={segment.key}
               segment={segment}
+              subLine={subLine}
               rowSize={rowSize}
               narrow={cellWidth(width, rowSize) < FIGURE_MIN_WIDTH}
             />
@@ -130,18 +136,24 @@ export function FigureStrip({
 
 function FigureCell({
   segment,
+  subLine,
   rowSize,
   narrow,
-}: Readonly<{ segment: FigureSegment; rowSize: number; narrow: boolean }>) {
+}: Readonly<{ segment: FigureSegment; subLine: boolean; rowSize: number; narrow: boolean }>) {
   const pressable = Boolean(segment.onSelect);
   let leadKind: 'score' | 'icon' | undefined;
   if (segment.score) leadKind = 'score';
   else if (segment.icon) leadKind = 'icon';
   const parts = (
     <>
-      <FigureLabel segment={segment} />
+      <FigureLabel segment={segment} subLine={subLine} />
       <FigureLead segment={segment} />
-      <FigureValueLine segment={segment} />
+      <FigureValueLine segment={segment} subLine={subLine} />
+      {subLine ? (
+        <dd data-figure-sub="" className="type-caption text-ink-2 min-w-0 truncate">
+          {segment.sub && !segment.loading ? segment.sub : ' '}
+        </dd>
+      ) : null}
     </>
   );
   return (
@@ -176,7 +188,7 @@ function FigureCell({
   );
 }
 
-type FigurePart = Readonly<{ segment: FigureSegment }>;
+type FigurePart = Readonly<{ segment: FigureSegment; subLine?: boolean }>;
 
 /** A loading block in the `well`, standing in for text or a ring. */
 function Block({ className, ring = false }: Readonly<{ className: string; ring?: boolean }>) {
@@ -190,7 +202,7 @@ function Block({ className, ring = false }: Readonly<{ className: string; ring?:
 }
 
 /** Row 1: the label (or its link), wrapping between words but never cut, then its marker and hint. */
-function FigureLabel({ segment }: FigurePart) {
+function FigureLabel({ segment, subLine }: FigurePart) {
   if (segment.labelHidden) return <dt className="sr-only">{segment.label}</dt>;
   let text: ReactNode;
   if (segment.loading)
@@ -207,7 +219,7 @@ function FigureLabel({ segment }: FigurePart) {
       </span>
     );
   else text = <span className="min-w-0">{segment.label}</span>;
-  const hint = segment.loading ? null : <FigureHint segment={segment} />;
+  const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
   return (
     <dt className="type-body text-ink-2 mb-1 flex min-w-0 items-start justify-between gap-2">
       <span className="flex min-w-0 items-center gap-2 self-center">{text}</span>
@@ -258,7 +270,7 @@ function FigureLead({ segment }: FigurePart) {
  * score's ring holds its value, so the row is its Delta alone. A figure whose
  * label is hidden carries its hint here.
  */
-function FigureValueLine({ segment }: FigurePart) {
+function FigureValueLine({ segment, subLine }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
   if (segment.score && !delta) return null;
   return (
@@ -273,7 +285,7 @@ function FigureValueLine({ segment }: FigurePart) {
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
-          <FigureHint segment={segment} />
+          <FigureHint segment={segment} subLine={subLine} />
         </span>
       ) : null}
     </dd>
@@ -306,11 +318,11 @@ function FigureValue({ segment }: FigurePart) {
   return <div className="type-figure text-ink min-w-0">{value}</div>;
 }
 
-/** The caption, basis and comparison joined with " · " in one hint. */
-function FigureHint({ segment }: FigurePart) {
+/** The caption, basis (unless shown as a line) and comparison joined with " · " in one hint. */
+function FigureHint({ segment, subLine }: FigurePart) {
   const parts = [
     { key: 'caption', node: segment.caption },
-    { key: 'sub', node: segment.sub },
+    { key: 'sub', node: subLine ? null : segment.sub },
     { key: 'comparison', node: comparisonText(segment) },
   ].filter((part) => Boolean(part.node));
   if (!parts.length) return null;

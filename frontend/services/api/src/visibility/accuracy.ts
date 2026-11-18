@@ -54,6 +54,8 @@ import {
 } from '../perception/fact-metrics.ts';
 import { isNamed } from '../perception/passages.ts';
 import { editedMark, newestOverrides } from '../perception/verdict-overrides.ts';
+import { engineLabel } from '../config/providers.ts';
+import { requireFlag } from '../entitlements/access.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { compareText } from '../text-order.ts';
@@ -433,7 +435,7 @@ export async function accuracyClaimRows(
   selection: RunSelection,
   filters: ClaimFilters,
 ): Promise<Record<(typeof CLAIM_EXPORT_COLUMNS)[number], string>[]> {
-  if (!(await factCheckingEnabled(db, selection.workspaceId))) return [];
+  await requireFlag(db, selection.workspaceId, 'fact_checking');
   const { answers, marketOf } = await selectionAnswers(db, selection, { citations: false });
   const keep = claimFilter(filters);
   const claims = answers
@@ -458,17 +460,20 @@ export async function accuracyClaimRows(
     if (!market) return '';
     return (market.id !== null && labels.get(market.id)) || marketLabel(market);
   };
-  return claims.map(({ answer, claim }) => ({
-    claim: claim.claim,
-    facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
-    verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
-    // Filled only when a person changed the verdict (AV-12).
-    model_verdict: claim.edited?.model_verdict ?? '',
-    engine: answer.logicalEngine,
-    market: marketName(answer.auditId),
-    run_date: answer.observedAt,
-    prompt: answer.prompt,
-  }));
+  return claims.map(({ answer, claim }) => {
+    const verdict = claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind;
+    return {
+      claim: claim.claim,
+      facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
+      verdict,
+      // The model's own verdict on every row; it differs only where a person changed it (AV-12).
+      model_verdict: claim.edited?.model_verdict ?? verdict,
+      engine: engineLabel(answer.logicalEngine),
+      market: marketName(answer.auditId),
+      run_date: answer.observedAt,
+      prompt: answer.prompt,
+    };
+  });
 }
 
 export async function getAccuracyClaims(

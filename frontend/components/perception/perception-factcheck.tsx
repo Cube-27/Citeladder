@@ -41,6 +41,7 @@ export function PerceptionFactChecking({
         <AccuracyView
           data={data}
           lede={<FactCheckingLede data={data} exporting={views.exporting} />}
+          stateActions={<FactActions claims={false} exporting={views.exporting} />}
           trend={<ClaimsOverTime trend={data.trend} />}
           allClaims={<ClaimsTable views={views} />}
           byFact={<FactsTable query={views.facts} />}
@@ -59,8 +60,6 @@ function FactCheckingLede({
   data,
   exporting,
 }: Readonly<{ data: AccuracyResponse; exporting: FactViews['exporting'] }>) {
-  const { notify } = useToast();
-  const [importing, setImporting] = useState(false);
   const latest = data.trend.at(-1)?.completed_at;
   return (
     <Inline className="items-start justify-between">
@@ -81,15 +80,29 @@ function FactCheckingLede({
           Correct them at the pages AI reads, not in the answer itself.
         </p>
       </Stack>
-      <Inline gap="item" className="shrink-0">
-        <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
-          Edit facts
-        </ProjectLink>
-        <Button variant="secondary" onClick={() => setImporting(true)}>
-          <Icon icon={Upload} />
-          Import facts CSV
-        </Button>
-        <FactsImportDialog open={importing} onOpenChange={setImporting} />
+      <FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />
+    </Inline>
+  );
+}
+
+/** Edit and import facts always; export only when there are claims to export. */
+function FactActions({
+  claims,
+  exporting,
+}: Readonly<{ claims: boolean; exporting: FactViews['exporting'] }>) {
+  const { notify } = useToast();
+  const [importing, setImporting] = useState(false);
+  return (
+    <Inline gap="item" className="shrink-0">
+      <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
+        Edit facts
+      </ProjectLink>
+      <Button variant="secondary" onClick={() => setImporting(true)}>
+        <Icon icon={Upload} />
+        Import facts CSV
+      </Button>
+      <FactsImportDialog open={importing} onOpenChange={setImporting} />
+      {claims ? (
         <Button
           variant="secondary"
           pending={exporting.isPending}
@@ -105,7 +118,7 @@ function FactCheckingLede({
           <Icon icon={Download} />
           Export claims CSV
         </Button>
-      </Inline>
+      ) : null}
     </Inline>
   );
 }

@@ -65,7 +65,7 @@ export function VerdictDialog({
       description={`“${claim.quote}”. The model's verdict stays on record beside yours.`}
       footer={
         <>
-          <Button variant="quiet" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button

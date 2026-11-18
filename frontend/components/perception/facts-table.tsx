@@ -4,8 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { Absence } from '@/components/ui/absence';
 import { DataTable } from '@/components/ui/data-table';
 import type { DataTableColumn } from '@/components/ui/data-table-columns';
-import { TableCell, TableRow, TableTime } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TableCell, TableCellLines, TableRow, TableTime } from '@/components/ui/table';
 import { VERDICT_LABELS } from '@/lib/visibility/accuracy';
 
 const COLUMNS = [
@@ -63,10 +62,7 @@ function FactRow({ fact }: Readonly<{ fact: AccuracyFact }>) {
   return (
     <TableRow>
       <TableCell>
-        <span className="block min-w-0 truncate" title={fact.statement}>
-          {fact.statement}{' '}
-          <span className={textRole('caption', 'text-ink-2')}>· revision {fact.revision}</span>
-        </span>
+        <TableCellLines primary={fact.statement} secondary={`Revision ${fact.revision}`} />
       </TableCell>
       <FactCounts counts={fact.counts} />
     </TableRow>

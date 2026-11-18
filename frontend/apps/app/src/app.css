@@ -9,7 +9,8 @@
  *
  * The list below is what the app can actually reach. Adding a directory the app
  * imports from and forgetting it here fails SILENTLY — the class is just absent
- * — so `e2e/design-repair.spec.ts` is the guard that matters.
+ * — so `appSourceViolations` in scripts/design-system-source-checks.mjs fails
+ * the design-system check when an imported directory is missing.
  */
 /* Both imports come first: CSS drops an `@import` that follows another
    at-rule, and putting the `@source` list above this one silently shipped a
@@ -23,6 +24,7 @@
 @source '../../../components/analytics';
 @source '../../../components/auth';
 @source '../../../components/billing';
+@source '../../../components/brand';
 @source '../../../components/demand';
 @source '../../../components/integrations';
 @source '../../../components/knowledge-base';
@@ -30,6 +32,7 @@
 @source '../../../components/mcp';
 @source '../../../components/onboarding';
 @source '../../../components/opportunities';
+@source '../../../components/perception';
 @source '../../../components/performance';
 @source '../../../components/products';
 @source '../../../components/providers';

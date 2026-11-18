@@ -2323,6 +2323,11 @@ label {
   grid-column: -2;
   align-self: end;
 }
+/* A strip with `subLine` adds a third row: the basis, one line, under the value. */
+[data-figure-cell] > [data-figure-sub] {
+  grid-row: 3;
+  grid-column: -2;
+}
 /* An absent value is its word at body size on the value's 28px line. */
 [data-figure-value] [data-absence] {
   font-size: var(--text-body-sm);

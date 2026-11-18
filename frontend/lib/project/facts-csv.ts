@@ -62,7 +62,12 @@ function parseRow(
   const statement = cell(columns.statement);
   const sourceUrl = cell(columns.source_url);
   const errors: string[] = [];
-  if (!topic) errors.push(rawTopic ? `Unknown topic "${rawTopic}".` : 'Topic is required.');
+  if (!topic)
+    errors.push(
+      rawTopic
+        ? `Unknown topic "${rawTopic}". Use one of: ${factTopicSchema.options.join(', ')}.`
+        : 'Topic is required.',
+    );
   if (!statement) errors.push('Statement is required.');
   if (sourceUrl && !isHttpUrl(sourceUrl))
     errors.push('Source URL must be an http or https address.');

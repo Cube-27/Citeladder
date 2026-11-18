@@ -432,7 +432,7 @@ export const visibilityMarketRowSchema = responseObject({
   measured_at: z.string().nullable(),
   mention_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),
-  net_sentiment: z.number().nullable(),
+  sentiment: netSentimentSchema.nullable(),
   // Movement in points against that market's previous comparable run.
   comparison_status: z.string().nullable(),
   mention_rate_delta: z.number().nullable(),

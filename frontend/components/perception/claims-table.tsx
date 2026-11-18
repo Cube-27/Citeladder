@@ -1,5 +1,6 @@
 import type { AccuracyClaim, AccuracyClaimPage } from '@citeladder/contracts/fact-checking';
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
+import { PenLine } from 'lucide-react';
 import { useState } from 'react';
 
 import { VerdictChip } from '@/components/runs/evidence-claims';
@@ -7,6 +8,7 @@ import { VerdictDialog } from '@/components/perception/verdict-dialog';
 import { Absence } from '@/components/ui/absence';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { Icon } from '@/components/ui/icon';
 import type { DataTableColumn } from '@/components/ui/data-table-columns';
 import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -23,7 +25,7 @@ type Query = UseInfiniteQueryResult<InfiniteData<AccuracyClaimPage>>;
 
 const COLUMNS = [
   { key: 'claim', label: 'Claim', kind: 'identity' },
-  { key: 'engine', label: 'Engine', width: 'short' },
+  { key: 'engine', label: 'Engine', width: 'metric' },
   { key: 'fact', label: 'Checked against' },
   { key: 'verdict', label: 'Verdict', width: 'category' },
   { key: 'actions', label: 'Actions', kind: 'actions' },
@@ -129,6 +131,7 @@ function ClaimRow({ claim, onChange }: Readonly<{ claim: AccuracyClaim; onChange
         <Inline className="flex-nowrap justify-end">
           {claim.verdict_id ? (
             <Button variant="quiet" onClick={onChange}>
+              <Icon icon={PenLine} />
               Change verdict
             </Button>
           ) : null}

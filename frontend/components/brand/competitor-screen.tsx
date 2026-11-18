@@ -23,7 +23,7 @@ import {
 import { ApiError } from '@/lib/api/errors';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { formatNet } from '@/lib/visibility/perception';
+import { gatedFigure, netReading } from '@/lib/visibility/perception';
 import { selectionEnabled, topicSelectionParams } from '@/lib/visibility/use-source-analysis';
 import {
   useVisibilityFilters,
@@ -118,25 +118,39 @@ function CompetitorBody({
   );
 }
 
-type Figure = { key: string; label: string; read: (row: RankingRow) => string | null };
+type Reading = { value: string | null; missingLabel?: string };
+type Figure = { key: string; label: string; read: (row: RankingRow) => Reading };
+
+const plain = (value: string | null): Reading => ({ value });
 
 const FIGURES: readonly Figure[] = [
-  { key: 'visibility', label: 'Visibility', read: (row) => measured(formatRate(row.mention_rate)) },
+  {
+    key: 'visibility',
+    label: 'Visibility',
+    read: (row) => plain(measured(formatRate(row.mention_rate))),
+  },
   {
     key: 'sov',
     label: 'Share of voice',
-    read: (row) => measured(formatRate(row.share_of_voice)),
+    read: (row) => plain(measured(formatRate(row.share_of_voice))),
   },
   {
     key: 'position',
     label: 'Position',
-    read: (row) => measured(formatPositionExact(row.avg_position)),
+    read: (row) => plain(measured(formatPositionExact(row.avg_position))),
   },
-  { key: 'win', label: 'Win rate', read: (row) => measured(formatRate(row.win_rate ?? null)) },
+  {
+    key: 'win',
+    label: 'Win rate',
+    read: (row) => plain(measured(formatRate(row.win_rate ?? null))),
+  },
   {
     key: 'sentiment',
     label: 'Sentiment',
-    read: (row) => formatNet(row.sentiment?.net_sentiment ?? null),
+    read: ({ sentiment }) =>
+      sentiment
+        ? gatedFigure(netReading(sentiment.net_sentiment, sentiment.classified))
+        : plain(null),
   },
 ];
 
@@ -147,11 +161,14 @@ function FocusFigures({
 }: Readonly<{ name: string; rankings: readonly RankingRow[] }>) {
   const theirs = rankings.find((row) => !row.is_brand && row.name === name);
   const yours = rankings.find((row) => row.is_brand);
-  const segments = FIGURES.map((figure): FigureSegment => ({
-    key: figure.key,
-    label: figure.label,
-    value: theirs ? figure.read(theirs) : null,
-    sub: `You: ${(yours && figure.read(yours)) ?? 'not measured'}`,
-  }));
-  return <FigureStrip label={`${name} against you`} segments={segments} />;
+  const segments = FIGURES.map((figure): FigureSegment => {
+    const mine = yours ? figure.read(yours) : plain(null);
+    return {
+      key: figure.key,
+      label: figure.label,
+      ...(theirs ? figure.read(theirs) : plain(null)),
+      sub: `You: ${mine.value ?? (mine.missingLabel ?? 'Not measured').toLowerCase()}`,
+    };
+  });
+  return <FigureStrip label={`${name} against you`} segments={segments} subLine />;
 }
