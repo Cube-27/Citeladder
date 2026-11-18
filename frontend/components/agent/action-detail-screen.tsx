@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom';
 import { ActionDock } from '@/components/agent/action-dock';
 import { ActionFacts } from '@/components/agent/action-facts';
 import {
-  BackLink,
   Checklist,
   Labelled,
   PageHeading,
@@ -34,8 +33,8 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 const BACK_CRUMB = [{ label: 'Actions', href: '/actions' }, { label: 'Action' }] as const;
 
 /**
- * One Action's page (plan v3): the trail to its goal and grouping, the way
- * back, its title, Overview with Copy as prompt, the Details card, why it
+ * One Action's page (plan v3): the trail to its goal and grouping, its
+ * title, Overview with Copy as prompt, the Details card, why it
  * matters, what to do, an issue group's URLs, and the dock. One detail read;
  * a status decision moves it in place and the URL pages append below.
  */
@@ -48,10 +47,7 @@ export function ActionDetailScreen() {
   });
   const fallback = (body: ReactNode) => (
     <PageFrame title="Action" crumb={<Breadcrumb parts={BACK_CRUMB} />} fitted>
-      <ReadingColumn>
-        <BackLink href="/actions">Back to actions</BackLink>
-        {body}
-      </ReadingColumn>
+      <ReadingColumn>{body}</ReadingColumn>
     </PageFrame>
   );
   if (query.isError)
@@ -107,12 +103,6 @@ function ActionPage({
       fitted
     >
       <ReadingColumn>
-        <BackLink
-          href="/actions"
-          state={{ status: from.status, goal: from.goal, grouping: from.grouping }}
-        >
-          Back to actions
-        </BackLink>
         <PageHeading>{title}</PageHeading>
         <Labelled title="Overview" caption={suggested}>
           <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>

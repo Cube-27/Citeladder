@@ -87,7 +87,7 @@ export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly Overv
               (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
             )}
           >
-            <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} />
+            <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} framed={widget.size !== 'full'} />
           </div>
         ))}
       </AppGrid>

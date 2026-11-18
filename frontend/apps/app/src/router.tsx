@@ -7,7 +7,8 @@ import { APP_ROUTES, HOME_PATH } from '@/lib/navigation/app-routes';
 import type { AppRouteRecord } from '@/lib/navigation/route-types';
 import { registerRouteChunk } from '@/lib/navigation/route-chunks';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
-import { NotFoundScreen, RouteError, ScreenError, ShellRouteError } from './route-error';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
+import { RouteError, ScreenError, ShellRouteError } from './route-error';
 import { ApplicationRouteLayout, PrivateRouteLayout } from './private-routes';
 
 /**

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArchiveRestore } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsMutations } from '@/lib/api/prompts';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -48,6 +50,8 @@ export function PromptDetailScreen() {
   });
 
   const filters = <FilterBar filters={answerFilters.definitions} />;
+  // Deleted, or another workspace's: nothing to filter and nothing failed.
+  if (httpErrorStatus(query.error) === 404) return <NotFoundScreen />;
   if (query.isError)
     return (
       <RecordPage back={BACK} filters={filters}>

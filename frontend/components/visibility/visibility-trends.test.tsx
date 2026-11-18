@@ -139,4 +139,18 @@ describe('Your brand over time', () => {
     // Each brand's mark sits in its key entry.
     expect(container.querySelectorAll('ul[aria-hidden] li [data-brand-mark]')).toHaveLength(3);
   });
+
+  it('keys each line at the figures precision, not a rounded whole percent', () => {
+    const { container } = render(
+      <BrandTrend
+        query={loaded([point('2026-11-01T00:00:00Z', 0.31), point('2026-11-03T00:00:00Z', 0.025)])}
+        selected={selected}
+      />,
+    );
+    // Each key entry is the brand's mark initial, its name, then its latest value.
+    const key = [...container.querySelectorAll('ul[aria-hidden] li')].map(
+      (item) => item.textContent,
+    );
+    expect(key).toEqual(['AYou2.5%', 'KKmart Australia60.0%', 'TTarget Australia—']);
+  });
 });

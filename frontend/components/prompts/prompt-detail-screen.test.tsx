@@ -34,6 +34,7 @@ vi.mock('@/lib/project/project-context', () => {
   };
 });
 
+import { ApiError } from '@/lib/api/errors';
 import { promptsApi } from '@/lib/api/prompts';
 import { runsApi } from '@/lib/api/runs';
 import type { PromptAnswer } from '@citeladder/contracts';
@@ -198,6 +199,19 @@ const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => 
   cited: n === 1,
   search,
   answer_formats: ANSWER_FORMATS[n - 1] ?? { kind: 'not_applicable' },
+});
+
+it('shows the not-found state for a prompt the API cannot find, and an error for any other failure', async () => {
+  getPromptHistory.mockRejectedValueOnce(new ApiError('Prompt not found', 404, '{}'));
+  const notFound = renderScreen();
+  expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+  expect(screen.queryByText("Couldn't load this prompt")).toBeNull();
+  notFound.unmount();
+
+  getPromptHistory.mockRejectedValueOnce(new ApiError('Server error', 500, '{}'));
+  renderScreen();
+  expect(await screen.findByText("Couldn't load this prompt")).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Page not found' })).toBeNull();
 });
 
 it('reads Past answers under the strip filters, keeping an unreported search apart from no', async () => {

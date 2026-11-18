@@ -3,7 +3,7 @@ import { useCallback, useEffect } from 'react';
 
 import { useOptionalProjectContext, useProjectContext } from '@/lib/project/project-context';
 import { isAppRoute } from '@/lib/navigation/app-route';
-import { projectSwitchPathname } from '@/lib/navigation/app-routes';
+import { projectSwitchPathname, workspaceSwitchPathname } from '@/lib/navigation/app-routes';
 
 const PROJECT_PARAM = 'project';
 const WORKSPACE_PARAM = 'workspace';
@@ -222,8 +222,10 @@ export function useSelectProject() {
  * project does not exist in the new one, and carrying it over would produce
  * exactly the contradictory pair the provider has to reject.
  *
- * A deliberate switch to a DIFFERENT workspace pushes one history entry;
- * selecting the one already active does nothing.
+ * A deliberate switch to a DIFFERENT workspace pushes one history entry and,
+ * with no destination, stays on the same page minus the outgoing workspace's
+ * record ids, as a project switch does; selecting the one already active does
+ * nothing.
  */
 export function useSelectWorkspace() {
   const router = useNavigate();
@@ -233,10 +235,13 @@ export function useSelectWorkspace() {
 
   return useCallback(
     (workspaceId: string, destination?: string) => {
-      const samePage = destination === undefined || destination === pathname;
-      if (workspaceId === activeWorkspaceId && samePage) return;
+      const switching = workspaceId !== activeWorkspaceId;
+      if (!switching && (destination === undefined || destination === pathname)) return;
       setActiveWorkspaceId(workspaceId);
-      router(workspaceDestination(destination ?? pathname, searchParams, workspaceId));
+      const landing = destination ?? (switching ? workspaceSwitchPathname(pathname) : pathname);
+      const params =
+        destination === undefined && switching ? projectSwitchParams(searchParams) : searchParams;
+      router(workspaceDestination(landing, params, workspaceId));
     },
     [activeWorkspaceId, pathname, router, searchParams, setActiveWorkspaceId],
   );

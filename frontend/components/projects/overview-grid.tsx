@@ -8,6 +8,8 @@ import { FloatingToolbar } from '@/components/ui/workspace';
 import { loneHalves, moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
 import { cn } from '@/lib/utils';
 
+import { WidgetFramedContext } from './widget-frame';
+
 /**
  * The Overview's two-column grid. Half widgets share a row and its height;
  * full widgets span it. While editing, each widget carries its controls in an
@@ -39,7 +41,7 @@ export function OverviewGrid({
             (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
           )}
         >
-          {render(widget)}
+          <WidgetFramedContext value={widget.size !== 'full'}>{render(widget)}</WidgetFramedContext>
           {editing ? (
             <WidgetControls
               widget={widget}

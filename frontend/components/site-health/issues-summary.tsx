@@ -112,7 +112,7 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
     <Section aria-labelledby={titleId}>
       <SectionHeader actions={breakdown}>
         <h2 id={titleId} className={textRole('figure')}>
-          {issueTypesLabel(total)}
+          {issueTypesLabel(total, summary.advisory_issue_type_count)}
         </h2>
         <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
@@ -127,9 +127,11 @@ const SEVERITIES = [
   { key: 'low', label: 'Low', stroke: 'stroke-data-other' },
 ] as const;
 
-function issueTypesLabel(total: number): string {
-  if (total === 0) return 'No issue types to fix';
-  return pluralCount(total, 'issue type');
+/** The defect types, then the advisory types the tabs also list (owner, 2026-11-18). */
+function issueTypesLabel(total: number, advisories: number): string {
+  const defects = total === 0 ? 'No issue types to fix' : pluralCount(total, 'issue type');
+  if (advisories === 0) return defects;
+  return `${defects} · ${formatCount(advisories)} ${advisories === 1 ? 'advisory' : 'advisories'}`;
 }
 
 /** How many are high severity, and how many pages the issue types reach. */

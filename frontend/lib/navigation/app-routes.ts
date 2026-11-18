@@ -591,6 +591,15 @@ export function projectSwitchPathname(pathname: string): string {
   return findAppRoute(pathname)?.collection ?? pathname;
 }
 
+/**
+ * Where a workspace switch lands: the same page with its record ids dropped,
+ * as a project switch does, or Overview for a path no screen owns
+ * (owner, 2026-11-18).
+ */
+export function workspaceSwitchPathname(pathname: string): string {
+  return findAppRoute(pathname) ? projectSwitchPathname(pathname) : HOME_PATH;
+}
+
 /** Every entry listed at a placement, in manifest order (`listedLast` entries after). */
 export function navDestinations(placement: NavPlacement): readonly NavDestination[] {
   const entries = ROUTES.flatMap((route) =>

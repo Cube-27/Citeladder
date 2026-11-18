@@ -87,7 +87,10 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findByRole('heading', { name: '47 issue types' })).toBeInTheDocument();
+    // Defect types first, then the advisory types the tabs also list.
+    expect(
+      await screen.findByRole('heading', { name: '47 issue types · 2 advisories' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('12 high severity · 50 pages affected')).toBeInTheDocument();
     // Each severity reads as its count; the ring beside them is decorative.
     const severities = screen.getByRole('group', { name: 'Issue types by severity' });

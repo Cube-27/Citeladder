@@ -13,9 +13,15 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const setActiveProjectId = vi.fn();
+const setActiveWorkspaceId = vi.fn();
 let activeProjectId: string | null = null;
 vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ activeProjectId, setActiveProjectId }),
+  useProjectContext: () => ({
+    activeProjectId,
+    setActiveProjectId,
+    activeWorkspaceId: WORKSPACE,
+    setActiveWorkspaceId,
+  }),
 }));
 
 import {
@@ -23,6 +29,7 @@ import {
   projectDestination,
   scopedNavigationDestination,
   useSelectProject,
+  useSelectWorkspace,
   workspaceDestination,
 } from './project-destination';
 
@@ -249,5 +256,36 @@ describe('useSelectProject', () => {
     act(() => result.current(PROJECT_2, { destination: '/settings' }));
 
     expect(navigate).toHaveBeenCalledWith(`/settings?project=${PROJECT_2}`);
+  });
+});
+
+describe('useSelectWorkspace', () => {
+  const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const switchFrom = (path: string, params: Record<string, string> = {}) => {
+    pathname = path;
+    search = new URLSearchParams(params);
+    navigate.mockClear();
+    const { result } = renderHook(() => useSelectWorkspace());
+    act(() => result.current(OTHER));
+    return navigate.mock.calls.at(-1)?.[0];
+  };
+
+  it('stays on the page, dropping record ids, and lands on Overview from a path no screen owns', () => {
+    expect(switchFrom('/insights', { project: PROJECT_1, tab: 'trend', run: 'r1' })).toBe(
+      `/insights?tab=trend&workspace=${OTHER}`,
+    );
+    expect(switchFrom(`/prompts/${PROJECT_2}`)).toBe(`/prompts?workspace=${OTHER}`);
+    expect(switchFrom('/settings')).toBe(`/settings?workspace=${OTHER}`);
+    expect(switchFrom('/no-such-page')).toBe(`/projects?workspace=${OTHER}`);
+    expect(switchFrom(`/prompts/${PROJECT_2}/extra`)).toBe(`/projects?workspace=${OTHER}`);
+  });
+
+  it('does nothing when the active workspace is picked again', () => {
+    pathname = '/insights';
+    const { result } = renderHook(() => useSelectWorkspace());
+    act(() => result.current(WORKSPACE));
+    expect(navigate).not.toHaveBeenCalled();
+    act(() => result.current(OTHER));
+    expect(navigate).toHaveBeenCalledWith(`/insights?workspace=${OTHER}`);
   });
 });
