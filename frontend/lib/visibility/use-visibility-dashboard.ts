@@ -191,7 +191,6 @@ export function useVisibilityFilters() {
     fromAt,
     toAt,
     isFiltered,
-    isTrendFiltered: engine !== 'all' || range !== 'all' || cohort !== 'core',
     clearEvidenceFilters: () =>
       setUrlParams({
         engine: null,
