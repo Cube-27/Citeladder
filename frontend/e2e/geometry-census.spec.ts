@@ -119,13 +119,13 @@ const MASTHEAD_HEIGHT = 52;
  */
 const NAV_ROW_HEIGHT = 32;
 /**
- * Masthead, tab strip and filter strip stack flush, each the same height on
- * every page (owner, 2026-11-18): the tab strip is 4 above 32 tabs, the
- * filter strip 8 around its 32 controls. The main column is padded 24 left
+ * Masthead, filter strip and tab strip stack flush, each the same height on
+ * every page (owner, 2026-11-18): the filter strip is 8 around its 32
+ * controls, the tab strip 4 above 32 tabs. The main column is padded 32 left
  * and right (`--page-pad-inline`); the body starts 16 below the last strip.
  */
 const BAND_GAP = 0;
-const PAGE_PAD_INLINE = 24;
+const PAGE_PAD_INLINE = 32;
 const TABS_STRIP_TOP = 4;
 const TABS_STRIP_HEIGHT = 36;
 const FILTER_STRIP_PADDING_Y = 8;

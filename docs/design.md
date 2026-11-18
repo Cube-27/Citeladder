@@ -254,8 +254,8 @@ roles, so a page passes a role and never a number:
 | 8     | controls that act together (`compact-gap`)                                  |
 | 12    | control and cell padding across                                             |
 | 16    | inside a slip, sheet or figure cell; form rows; a section head and its body |
-| 24    | the gutter from 900px (16 below); the grid gap; the chrome and the content  |
-| 32    | sections (`page-section-gap`)                                               |
+| 24    | flow, setup and auth gutters from 900px; the chrome and the content         |
+| 32    | the main column's gutter from 900px (16 below); sections and their rule     |
 | 48    | blocks on a flow page                                                       |
 
 The space inside a group is at most half the space to the next group. The
@@ -270,15 +270,22 @@ inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
 1. **Masthead** (52, sticky): the menu button below 900px, the back link on
    a record, the page title, then search, secondary actions, at most one
    primary action and Ask agent.
-2. **Tab strip** (optional): 4 above 32 tabs; the current tab's underline
-   sits on the strip's rule.
-3. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
+2. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
    view (Prompts' Active | Archived), search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
    count or a live note), cut before the strip wraps, and one action.
-4. **Sections**, 16 below the strips and 32 apart. A FigureStrip on the page
-   itself is full-bleed like the strips, its first text on the content edge.
+3. **Tab strip** (optional): 4 above 32 tabs; the current tab's underline
+   sits on the strip's rule.
+4. **Sections**, 16 below the strips, a `rule` between neighbours with 32 on
+   each side (owner, 2026-11-18): across the main column between stacked
+   sections, down the row between a grid's side-by-side sections. A
+   FigureStrip on the page itself is full-bleed like the strips, its first
+   text on the content edge.
+
+The sidebar's Dashboard | Agent row under its 52 switcher cell is as high as
+the page's first strip, the switch centred, so its rule continues that
+strip's rule on one line.
 
 Order is by likelihood of use: the most likely action comes first, left to
 right and top to bottom. A control sits in the row of the thing it acts on:
@@ -332,10 +339,9 @@ screen stays rendered while it refreshes.
   the signed-in shell the page is one surface: the ground and `surface` are
   one colour in both themes. The page header and the filter row each close
   on a hairline; the lede is text; sections are a heading, a one-line
-  description and their content straight on the surface, 32 apart, with no
-  box, padding box or divider around them. Settings groups are rows divided
-  by a faint `rule`. An empty state, a figure row and an explainer are never
-  boxed.
+  description and their content straight on the surface, with no box or
+  padding box around them; a `rule` divides neighbouring sections (Page
+  anatomy). An empty state, a figure row and an explainer are never boxed.
 - **What keeps a container.** A **Frame** (a `rule` edge at `rounded-card`,
   no fill, no shadow) holds a table, a plotted chart (its key inside), an
   Overview widget or a box of rows; a table's title, tabs, filters and
