@@ -11,7 +11,12 @@ import type { Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import type { Audits, AuditPromptSnapshots, AuditTasks } from '../generated/db-schema.ts';
+import type {
+  Audits,
+  AuditPromptSnapshots,
+  AuditTasks,
+  ResponseAnalyses,
+} from '../generated/db-schema.ts';
 import { round } from '../numbers.ts';
 import { aggregateRun, type Aggregate, type AggregateExecution } from './aggregate.ts';
 import type { scoringConfig } from './scoring.ts';
@@ -102,12 +107,21 @@ export function runAggregate(answers: Answers) {
   return { metrics, visibility, organic, comparison, diagnostic };
 }
 
-/** One row per topic the run's prompts were filed under, with the name it froze. */
+/**
+ * One row per topic a brand run's prompts were filed under, with the name it
+ * froze and the analyses it counts. Topics are brand-only, so a Commerce run
+ * writes none.
+ */
 export async function persistTopicMetrics(
   db: Database,
   audit: Selectable<Audits>,
-  input: Answers & { snapshots: Selectable<AuditPromptSnapshots>[]; at: Date },
+  input: Answers & {
+    snapshots: Selectable<AuditPromptSnapshots>[];
+    analyses: Pick<Selectable<ResponseAnalyses>, 'id' | 'prompt_index'>[];
+    at: Date;
+  },
 ): Promise<void> {
+  if (audit.audit_scope !== 'brand') return;
   const names = new Map<string, string>();
   for (const snapshot of input.snapshots) {
     if (snapshot.topic_id !== null && snapshot.topic_name !== null)
@@ -131,6 +145,11 @@ export async function persistTopicMetrics(
       topic_name: topicName,
       visibility_score: visibility,
       metrics: JSON.stringify(metrics),
+      source_analysis_ids: JSON.stringify(
+        input.analyses
+          .filter((analysis) => topicByIndex.get(analysis.prompt_index) === topicId)
+          .map((analysis) => analysis.id),
+      ),
       analyzer_version: policy.audits.analysis.analyzer_version,
       created_at: input.at,
     };

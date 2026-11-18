@@ -17,6 +17,7 @@ export type MatrixMetric = (typeof MATRIX_METRICS)[number]['value'];
 
 export type CellReading =
   | { kind: 'not_run' }
+  | { kind: 'not_recorded' }
   | { kind: 'too_few'; answers: number }
   | { kind: 'not_measured'; answers: number }
   | { kind: 'value'; value: number; text: string; answers: number };
@@ -52,7 +53,8 @@ function pairKey(first: MatrixDimension, second: MatrixDimension): MatrixPair {
 }
 
 export function cellReading(cell: MatrixCell | undefined, metric: MatrixMetric): CellReading {
-  if (!cell || cell.kind === 'not_run') return { kind: 'not_run' };
+  if (!cell) return { kind: 'not_run' };
+  if (cell.kind !== 'measured') return { kind: cell.kind };
   const { answers } = cell;
   if (metric === 'sentiment') {
     const reading = sentimentReading(cell.sentiment);
@@ -91,13 +93,14 @@ export function matrixCsvRows(
       rowLabels[i] ?? '',
       columnLabels[j] ?? '',
       reading.kind === 'value' ? reading.text : READING_LABELS[reading.kind],
-      reading.kind === 'not_run' ? '' : reading.answers,
+      'answers' in reading ? reading.answers : '',
     ]),
   );
 }
 
 export const READING_LABELS = {
   not_run: 'Not run',
+  not_recorded: 'Topic not recorded for this run',
   too_few: 'Too few',
   not_measured: 'Not measured',
 } as const;

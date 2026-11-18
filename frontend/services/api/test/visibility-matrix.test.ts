@@ -95,6 +95,7 @@ async function topicBlock(tenant: Tenant, auditId: string, topicId: string, metr
       topic_name: 'Pricing',
       visibility_score: 0,
       metrics: JSON.stringify(metrics),
+      source_analysis_ids: '[]',
       analyzer_version: 'test',
       created_at: new Date(),
     })
@@ -168,7 +169,7 @@ async function perceived(
 type Matrix = {
   axes: Record<string, Record<string, unknown>[]>;
   grids: Record<string, Record<string, unknown>[][]>;
-  rankings: Record<string, Record<string, unknown>[][]>;
+  rankings: Record<string, Record<string, unknown>[]>;
 };
 
 describe('GET /visibility/matrix', () => {
@@ -250,11 +251,14 @@ describe('GET /visibility/matrix', () => {
       ['not_run', 'not_run'],
     ]);
     expect(grids.engine_market![0]!.map((c) => c.kind)).toEqual(['measured', 'not_run']);
-    expect(rankings.engine![1]).toEqual([
-      { name: 'Globex', is_brand: false, mention_rate: 0.5 },
-      { name: 'Acme Corp', is_brand: true, mention_rate: 0 },
-    ]);
-    expect(rankings.topic![1]).toEqual([]);
+    expect(rankings.engine![1]).toEqual({
+      kind: 'measured',
+      leaders: [
+        { name: 'Globex', is_brand: false, mention_rate: 0.5 },
+        { name: 'Acme Corp', is_brand: true, mention_rate: 0 },
+      ],
+    });
+    expect(rankings.topic![1]).toEqual({ kind: 'not_run' });
 
     // The engine filter narrows its axis and every other cell to that engine.
     const narrowed = (await get(tenant, route(tenant, '/matrix'), { engine: 'chatgpt' }))

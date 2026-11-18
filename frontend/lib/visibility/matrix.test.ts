@@ -67,12 +67,16 @@ describe('performance matrix cells', () => {
   it('exports each cell as row, column, value and answers', () => {
     const readings = [
       [cellReading(measured({}), 'mention_rate'), cellReading({ kind: 'not_run' }, 'mention_rate')],
-      [cellReading(measured({ answers: 3 }), 'avg_position')],
+      [
+        cellReading(measured({ answers: 3 }), 'avg_position'),
+        cellReading({ kind: 'not_recorded' }, 'avg_position'),
+      ],
     ];
     expect(matrixCsvRows(readings, ['ChatGPT', 'Gemini'], ['Acme', 'Globex'])).toEqual([
       ['ChatGPT', 'Acme', '25.0%', 12],
       ['ChatGPT', 'Globex', 'Not run', ''],
       ['Gemini', 'Acme', 'Not measured', 3],
+      ['Gemini', 'Globex', 'Topic not recorded for this run', ''],
     ]);
   });
 });

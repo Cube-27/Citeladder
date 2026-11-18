@@ -4,10 +4,15 @@
  * topic later never moves past answers, and every topic-filtered read serves
  * those frozen groups inside the reader's workspace.
  */
+import { randomUUID } from 'node:crypto';
+
 import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
+import { persistTopicMetrics } from '../src/analysis/run-metrics.ts';
+import { scoringConfig } from '../src/analysis/scoring.ts';
 import { createApp } from '../src/app.ts';
+import { strings } from '../src/db/json.ts';
 import { loadComparisonCells } from '../src/visibility/comparison.ts';
 import { runSetComparisonStatus } from '../src/visibility/run-sets.ts';
 import { finalizedRuns } from './finalized-runs.ts';
@@ -26,7 +31,11 @@ afterAll(async () => {
 });
 
 async function read(t: Tenant, projectId: string, path: string) {
-  const response = await app.request(`/api/v1/projects/${projectId}/visibility${path}`, {
+  return get(t, `/api/v1/projects/${projectId}/visibility${path}`);
+}
+
+async function get(t: Tenant, url: string) {
+  const response = await app.request(url, {
     headers: {
       cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
     },
@@ -191,6 +200,119 @@ describe('topic dimension', () => {
       ['measured'],
       ['no_run'],
     ]);
+  });
+
+  it('keeps Commerce topics out of brand reads and a run that froze no topic apart from not run', async () => {
+    const t = await tenant();
+    const pricing = await topic(db, t.projectId, 'Pricing');
+    const grinders = await topic(db, t.projectId, 'Grinders');
+    const bound = await prompt(db, t.setId, 'Which grinder is quietest?', {
+      topicId: grinders,
+      status: 'archived',
+    });
+    await db
+      .insertInto('commerce_prompt_targets')
+      .values({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        prompt_id: bound,
+        target_kind: 'product',
+        target_id: randomUUID(),
+        template_version: 'test',
+        approved_at: null,
+        created_at: new Date(),
+      })
+      .execute();
+    // The road prompt is unfiled, so the run freezes no topic, as runs before AV-5 did.
+    const unrecorded = await finalizedRun(t, ['https://review.example/a']);
+    const rows = async (path: string) =>
+      ((await read(t, t.projectId, path)).json.items as { name: string; kind: string }[]).map(
+        (row) => [row.name, row.kind],
+      );
+    expect(await rows('/topics')).toEqual([['Pricing', 'not_recorded']]);
+    const topicList = (await get(t, `/api/v1/projects/${t.projectId}/topics`)).json;
+    expect((topicList as unknown as { name: string }[]).map((row) => row.name)).toEqual([
+      'Pricing',
+    ]);
+    const matrix = (await read(t, t.projectId, '/matrix')).json as unknown as {
+      axes: { topic: { name: string }[] };
+      grids: { topic_market: unknown[][] };
+      rankings: { topic: unknown[]; engine: { kind: string }[] };
+    };
+    expect(matrix.axes.topic.map((item) => item.name)).toEqual(['Pricing']);
+    expect([matrix.grids.topic_market, matrix.rankings.topic]).toEqual([
+      [[{ kind: 'not_recorded' }]],
+      [{ kind: 'not_recorded' }],
+    ]);
+    expect(matrix.rankings.engine.map((row) => row.kind)).toEqual(['measured']);
+    // An engine that run never asked is not run, whatever it froze.
+    expect(await rows('/topics?engine=gemini')).toEqual([['Pricing', 'not_run']]);
+    const gemini = (await read(t, t.projectId, '/matrix?engine=gemini')).json as unknown as {
+      grids: { topic_market: unknown[][] };
+    };
+    expect(gemini.grids.topic_market).toEqual([[{ kind: 'not_run' }]]);
+
+    // Filed now: the next run records Pricing; only the run that froze no topic leaves Onboarding unknown.
+    await db
+      .updateTable('prompts')
+      .set({ topic_id: pricing })
+      .where('id', '=', t.promptId)
+      .execute();
+    await topic(db, t.projectId, 'Onboarding');
+    const recorded = await finalizedRun(t, ['https://review.example/a']);
+    expect(await rows('/topics')).toEqual([
+      ['Onboarding', 'not_run'],
+      ['Pricing', 'measured'],
+    ]);
+    expect(await rows('/topics?selection_mode=range')).toEqual([
+      ['Onboarding', 'not_recorded'],
+      ['Pricing', 'measured'],
+    ]);
+
+    // The block keeps the exact analyses it counts (invariant 5).
+    const analyses = await db
+      .selectFrom('response_analyses')
+      .select('id')
+      .where('audit_id', '=', recorded)
+      .execute();
+    const blocks = () =>
+      db
+        .selectFrom('audit_topic_metrics')
+        .select(['audit_id', 'topic_id', 'source_analysis_ids'])
+        .where('audit_id', 'in', [unrecorded, recorded])
+        .execute();
+    const stored = await blocks();
+    expect(stored.map((block) => [block.audit_id, block.topic_id])).toEqual([[recorded, pricing]]);
+    expect(analyses).toHaveLength(3);
+    expect(strings(stored[0]?.source_analysis_ids).toSorted()).toEqual(
+      analyses.map((row) => row.id).toSorted(),
+    );
+
+    // A Commerce run writes no topic blocks; the same input for the brand run writes its one.
+    const audit = await db
+      .selectFrom('audits')
+      .selectAll()
+      .where('id', '=', recorded)
+      .executeTakeFirstOrThrow();
+    const input = {
+      rows: [],
+      tasks: [],
+      config: scoringConfig(audit.configuration),
+      engines: [],
+      snapshots: await db
+        .selectFrom('audit_prompt_snapshots')
+        .selectAll()
+        .where('audit_id', '=', recorded)
+        .execute(),
+      analyses: [],
+      at: new Date(),
+    };
+    await db.deleteFrom('audit_topic_metrics').where('audit_id', '=', recorded).execute();
+    await persistTopicMetrics(db, { ...audit, audit_scope: 'commerce' }, input);
+    const afterCommerce = (await blocks()).length;
+    await persistTopicMetrics(db, audit, input);
+    expect([afterCommerce, (await blocks()).length]).toEqual([0, 1]);
   });
 
   it("reads only the reader's workspace, whatever topic it names", async () => {

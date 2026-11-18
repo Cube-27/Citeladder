@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { Visibility } from '@citeladder/contracts';
 import {
   PLACEHOLDER,
+  brandRuns,
   findActiveRun,
   formatRate,
   formatScore,
@@ -62,18 +63,25 @@ describe('visibility dashboard helpers', () => {
     expect(isDashboardStatus('running')).toBe(false);
   });
 
-  it('finds the newest non-terminal run as the active run', () => {
-    expect(
-      findActiveRun([
-        {
-          id: AUDIT_A,
-          status: 'completed',
-          created_at: '2026-07-10T00:00:00Z',
-        },
-        { id: AUDIT_B, status: 'running', created_at: '2026-07-12T00:00:00Z' },
-        { id: AUDIT_C, status: 'queued', created_at: '2026-07-14T00:00:00Z' },
-      ]),
-    ).toEqual({ id: AUDIT_C, status: 'queued', createdAt: '2026-07-14T00:00:00Z' });
+  it('finds the newest non-terminal brand run as the active run', () => {
+    const runs = [
+      { id: AUDIT_A, status: 'completed', created_at: '2026-07-10T00:00:00Z' },
+      { id: AUDIT_B, status: 'running', created_at: '2026-07-12T00:00:00Z' },
+      { id: AUDIT_C, status: 'queued', created_at: '2026-07-14T00:00:00Z' },
+    ] as const;
+    expect(findActiveRun(runs)).toEqual({
+      id: AUDIT_C,
+      status: 'queued',
+      createdAt: '2026-07-14T00:00:00Z',
+    });
+    // A newer Commerce run is neither the active run nor a run option on brand pages.
+    const scoped = runs.map((run) => ({
+      ...run,
+      completed_at: null,
+      audit_scope: run.id === AUDIT_C ? ('commerce' as const) : ('brand' as const),
+    }));
+    expect(findActiveRun(brandRuns(scoped))?.id).toBe(AUDIT_B);
+    expect(toRunOptions(brandRuns(scoped)).map((option) => option.id)).toEqual([AUDIT_A]);
   });
 
   it('returns null when every run is terminal', () => {

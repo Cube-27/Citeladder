@@ -27,6 +27,7 @@ import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { requireProject } from '../projects/access.ts';
 import type { ProjectScope } from '../projects/brand-profile.ts';
+import { brandTopics } from './brand-topics.ts';
 import { topicLinks } from './generation-plan.ts';
 import { acquireProjectLock } from './locks.ts';
 import { topicView, type TopicRow, type TopicView } from './views.ts';
@@ -157,17 +158,10 @@ async function writing<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
-/** The scope's project topics. */
+/** The scope's project topics; Commerce's topics stay out of brand lists. */
 export async function listTopics(db: Database, scope: ProjectScope): Promise<TopicView[]> {
   const [topics, counts] = await Promise.all([
-    db
-      .selectFrom('topics')
-      .selectAll()
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .orderBy('name')
-      .orderBy('id')
-      .execute(),
+    brandTopics(db, scope).selectAll().orderBy('name').orderBy('id').execute(),
     activeCounts(db, scope),
   ]);
   return topics.map((topic) => topicView(topic, counts.get(topic.id) ?? 0));

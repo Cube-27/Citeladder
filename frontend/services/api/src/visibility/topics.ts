@@ -5,12 +5,14 @@
  * Reads the per-topic blocks audit finalization persisted
  * (`analysis/run-metrics.ts`) and folds them as the trend folds whole runs; it
  * never re-reads answers or refiles prompts. A topic the selected runs never
- * asked reads `not_run`, never zero.
+ * asked reads `not_run`, never zero; while a selected run froze no topic (one
+ * finalized before AV-5), an unmeasured topic reads `not_recorded` instead.
  */
 import type { VisibilityTopicRow, VisibilityTopics } from '@citeladder/contracts/visibility-topics';
 
 import type { Database } from '../db/database.ts';
 import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
+import { brandTopics } from '../prompts/brand-topics.ts';
 import { compareText } from '../text-order.ts';
 import { selectionRuns, type DashboardQuery } from './dashboard.ts';
 import { trendSource, type RunScope, type TrendSource } from './runs.ts';
@@ -45,12 +47,7 @@ export async function getVisibilityTopics(
 ): Promise<VisibilityTopics> {
   const runs = await selectionRuns(db, scope, query);
   const [topics, blocks] = await Promise.all([
-    db
-      .selectFrom('topics')
-      .select(['id', 'name'])
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .execute(),
+    brandTopics(db, scope).select(['id', 'name']).execute(),
     runs.length === 0
       ? []
       : db
@@ -89,6 +86,13 @@ export async function getVisibilityTopics(
     if (source === null) continue;
     sources.set(block.topic_id, [...(sources.get(block.topic_id) ?? []), source]);
   }
+  const recorded = new Set(blocks.map((block) => block.audit_id));
+  const unasked = runs.some(
+    (run) =>
+      !recorded.has(run.auditId) && trendSource(run, query.logicalEngine, query.cohort) !== null,
+  )
+    ? 'not_recorded'
+    : 'not_run';
   const current = new Map(topics.map((topic) => [topic.id, topic.name]));
   const items = [...new Set([...current.keys(), ...frozenNames.keys()])]
     .map((topicId): VisibilityTopicRow => {
@@ -103,7 +107,7 @@ export async function getVisibilityTopics(
       const measured = (sources.get(topicId) ?? []).toSorted(
         (left, right) => (runIndex.get(left.auditId) ?? 0) - (runIndex.get(right.auditId) ?? 0),
       );
-      if (!isNonEmpty(measured)) return { kind: 'not_run', ...identity };
+      if (!isNonEmpty(measured)) return { kind: unasked, ...identity };
       return { kind: 'measured', ...identity, ...measuredValues(measured) };
     })
     .sort((left, right) => compareText(left.name, right.name));

@@ -176,7 +176,15 @@ export async function deriveRunMetrics(
   // The run's Sources facts, beside its metric snapshot, so the Sources
   // table reads them instead of re-joining answers and citations.
   await persistSourceAggregates(trx, { workspaceId, auditId, at });
-  await persistTopicMetrics(trx, audit, { rows, tasks, snapshots, config, engines, at });
+  await persistTopicMetrics(trx, audit, {
+    rows,
+    tasks,
+    snapshots,
+    analyses,
+    config,
+    engines,
+    at,
+  });
   await persistPromptMetrics(
     trx,
     audit,
