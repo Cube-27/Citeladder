@@ -23,7 +23,7 @@ import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { notYetMeasuredMessage, SourcesView, SiteHealthView } from './evidence-views';
 import { day, moment, rate } from './format';
-import { isRate, isTrendMetric, trendValue, type TrendMetric } from './trend-metrics';
+import { isRate, isTrendMetric, trendGap, trendValue, type TrendMetric } from './trend-metrics';
 
 const views = [
   { value: 'overview', label: 'Overview' },
@@ -152,10 +152,14 @@ function Trends({
       ),
     ),
   ];
-  const value = (point: (typeof points)[number]) =>
-    trendValue(point, metric, selection.competitor ?? null);
+  const competitor = selection.competitor ?? null;
+  const value = (point: (typeof points)[number]) => trendValue(point, metric, competitor);
   const shown = (measured: number | null) =>
     isRate(metric) ? rate(measured) : (measured?.toFixed(1) ?? 'Unavailable');
+  const cell = (point: (typeof points)[number]) => {
+    const measured = value(point);
+    return measured === null ? trendGap(point, metric, competitor) : shown(measured);
+  };
   const events = toTrendEvents(points, { timeZone: 'UTC', engineLabel: (key) => key });
   return (
     <div className="space-y-4">
@@ -214,7 +218,7 @@ function Trends({
           {points.map((point) => (
             <TableRow key={point.source_snapshot_ids.join(',')}>
               <TableCell>{moment(point.completed_at)}</TableCell>
-              <TableCell>{shown(value(point))}</TableCell>
+              <TableCell>{cell(point)}</TableCell>
               <TableCell>
                 {point.counts?.state ?? 'unknown'} · {point.transport_model ?? 'mixed / unknown'} ·
                 retrieval {String(point.retrieval_enabled)}

@@ -30,6 +30,19 @@ function rowValue(row: Row | undefined, metric: TrendMetric): number | null {
   }
 }
 
+const rowOf = (point: VisibilityTrendPoint, competitor: string | null) =>
+  point.rankings.find((row) => (competitor ? row.name === competitor : row.is_brand));
+
+/** Why a point has no value: a win rate over no answer naming a tracked brand is not applicable. */
+export const trendGap = (
+  point: VisibilityTrendPoint,
+  metric: TrendMetric,
+  competitor: string | null,
+) =>
+  metric === 'win_rate' && rowOf(point, competitor)?.win_answers === 0
+    ? 'Not applicable'
+    : 'Unavailable';
+
 /**
  * One point's persisted value for the metric: the brand's own headline fields,
  * or a named competitor's ranking row. Null is unmeasured, never zero.
@@ -39,11 +52,7 @@ export function trendValue(
   metric: TrendMetric,
   competitor: string | null,
 ): number | null {
-  if (competitor)
-    return rowValue(
-      point.rankings.find((row) => row.name === competitor),
-      metric,
-    );
+  if (competitor) return rowValue(rowOf(point, competitor), metric);
   switch (metric) {
     case 'brand_mention_rate':
       return point.brand_mention_rate;
@@ -54,10 +63,7 @@ export function trendValue(
     case 'avg_position':
       return point.avg_position;
     case 'win_rate':
-      return rowValue(
-        point.rankings.find((row) => row.is_brand),
-        metric,
-      );
+      return rowValue(rowOf(point, null), metric);
     default: {
       const unhandled: never = metric;
       return unhandled;

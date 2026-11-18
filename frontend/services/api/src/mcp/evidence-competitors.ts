@@ -42,7 +42,7 @@ export async function competitorsRead(
       try {
         focus = await getCompetitorFocus(read.db, run.selection, name);
       } catch (error) {
-        return notYetMeasured(error, Boolean(args.audit_id), Boolean(args.topic_id));
+        return notYetMeasured(error, Boolean(args.audit_id));
       }
       if (focus === null)
         throw new McpInputError(`No tracked competitor is named "${name}"; view list names them`);

@@ -1,9 +1,11 @@
 /** Per-prompt and fanout reads compose the visibility owners; they own no metrics. */
 import { policy } from '../config.ts';
+import { parseUuid } from '../http/uuid.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
 import { getPromptAnswers } from '../visibility/prompt-answers.ts';
 import { getPromptHistory } from '../visibility/prompt-history.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
+import { latestBrandRunId } from '../visibility/selection.ts';
 import { mcpPolicy } from './config.ts';
 import { decodeCursor, encodeCursor, pagination, reference, unavailable } from './data.ts';
 import { notYetMeasured, oneRun, type Page, type Selection } from './evidence-analytics.ts';
@@ -18,13 +20,26 @@ type PromptMetricsArgs = Selection &
 
 const resultUri = (taskId: string) => `citeladder://visibility_result/${taskId}`;
 
+/** Where a list page starts: the cursor names its run, so a run finishing between pages cannot shift them. */
+function listStart(args: PromptMetricsArgs): { auditId: string | null; offset: number } {
+  if (!args.cursor) return { auditId: args.audit_id ?? null, offset: 0 };
+  const [run, at] = decodeCursor(args.cursor, 2);
+  const offset = Number(at);
+  if (parseUuid(run) === null || !Number.isSafeInteger(offset) || offset < 0)
+    throw new McpInputError('cursor is invalid');
+  if (args.audit_id && run !== args.audit_id)
+    throw new McpInputError('cursor belongs to another run');
+  return { auditId: run ?? null, offset };
+}
+
 /** One run's prompt scores, paged here: the owner returns the run's whole list. */
 async function promptList(read: ProjectRead, args: PromptMetricsArgs): Promise<Evidence> {
   const scope = { ...read.scope, marketId: args.market_id ?? null };
+  const { auditId, offset } = listStart(args);
   let items: Awaited<ReturnType<typeof getPromptMetrics>>;
   try {
     items = await getPromptMetrics(read.db, scope, {
-      auditId: args.audit_id ?? null,
+      auditId,
       auditIds: null,
       baselineAuditIds: null,
       baselineId: args.baseline_id ?? null,
@@ -32,13 +47,22 @@ async function promptList(read: ProjectRead, args: PromptMetricsArgs): Promise<E
       cohort: args.cohort,
     });
   } catch (error) {
-    return notYetMeasured(error, Boolean(args.audit_id || args.baseline_id));
+    return notYetMeasured(error, Boolean(auditId || args.baseline_id));
   }
+  const runId = auditId ?? items[0]?.audit_id ?? (await latestBrandRunId(read.db, scope));
   // The owner reads no run yet as an empty list; here it is not a run without prompts.
-  if (!items.length && !args.audit_id) return unavailable('no_completed_run');
-  const offset = args.cursor ? Number(decodeCursor(args.cursor, 1)[0]) : 0;
-  if (!Number.isSafeInteger(offset) || offset < 0) throw new McpInputError('cursor is invalid');
-  const end = offset + (args.limit ?? mcpPolicy.default_list_limit);
+  if (runId === null) return unavailable('no_completed_run');
+  return listPage({ runId, items, offset, limit: args.limit ?? mcpPolicy.default_list_limit });
+}
+
+function listPage(input: {
+  runId: string;
+  items: Awaited<ReturnType<typeof getPromptMetrics>>;
+  offset: number;
+  limit: number;
+}): Evidence {
+  const { runId, items, offset } = input;
+  const end = offset + input.limit;
   const page = items.slice(offset, end).map((item) => ({
     ...item,
     record_uri: item.prompt_id ? `citeladder://prompt/${item.prompt_id}` : null,
@@ -46,12 +70,14 @@ async function promptList(read: ProjectRead, args: PromptMetricsArgs): Promise<E
   return {
     state: 'available',
     view: 'list',
-    audit_id: items[0]?.audit_id ?? args.audit_id ?? null,
+    audit_id: runId,
     items: page,
-    pagination: pagination(page, end < items.length ? encodeCursor(end) : null, items.length),
-    artifact_refs: [...new Set(items.map((item) => item.audit_id))].map((id) =>
-      reference('audit', id),
+    pagination: pagination(
+      page,
+      end < items.length ? encodeCursor(runId, end) : null,
+      items.length,
     ),
+    artifact_refs: items.length ? [reference('audit', runId)] : [],
   };
 }
 
@@ -149,6 +175,6 @@ export async function queryFanoutsRead(
       artifact_refs: auditId ? [reference('audit', auditId)] : [],
     };
   } catch (error) {
-    return notYetMeasured(error, Boolean(args.audit_id), Boolean(args.topic_id));
+    return notYetMeasured(error, Boolean(args.audit_id));
   }
 }

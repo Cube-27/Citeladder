@@ -53,9 +53,15 @@ const reader =
 it('filters by a topic of this project only, and tells an unasked topic apart from no run', async () => {
   const tenant = await fixtures.tenant();
   const read = reader(tenant);
+  const own = await topic(db, tenant.projectId, 'Pricing');
+  for (const name of ['read_visibility_overview', 'read_visibility_results'])
+    expect(await read(name, { topic_id: own })).toEqual({
+      state: 'unavailable',
+      reason: 'no_completed_run',
+      artifact_refs: [],
+    });
   const auditId = await fixtures.audit(tenant);
   await fixtures.metricSnapshot(tenant, auditId, { metrics: { total_completed: 1 } });
-  const own = await topic(db, tenant.projectId, 'Pricing');
   expect(await read('read_visibility_overview', { topic_id: own })).toMatchObject({
     state: 'unavailable',
     reason: 'topic_not_measured',
@@ -93,24 +99,22 @@ it("pages one run's prompt scores strongest first, never another workspace's", a
     state: 'unavailable',
     reason: 'no_completed_run',
   });
+  // A score needs the frozen prompt its run asked.
+  const scored = async (
+    owner: Tenant,
+    auditId: string,
+    score: { promptIndex: number; promptText: string; composite: number },
+  ) => {
+    const { promptIndex, promptText } = score;
+    await fixtures.execution(owner, { auditId, promptIndex, promptText, analysis: {} });
+    await fixtures.promptScore(owner, auditId, score);
+  };
   const auditId = await fixtures.audit(tenant);
-  await fixtures.promptScore(tenant, auditId, {
-    promptIndex: 0,
-    promptText: 'best crm',
-    composite: 40,
-  });
-  await fixtures.promptScore(tenant, auditId, {
-    promptIndex: 1,
-    promptText: 'cheap crm',
-    composite: 80,
-  });
+  await scored(tenant, auditId, { promptIndex: 0, promptText: 'best crm', composite: 40 });
+  await scored(tenant, auditId, { promptIndex: 1, promptText: 'cheap crm', composite: 80 });
   const foreign = await fixtures.tenant();
   const theirs = await fixtures.audit(foreign);
-  await fixtures.promptScore(foreign, theirs, {
-    promptIndex: 0,
-    promptText: 'rival',
-    composite: 99,
-  });
+  await scored(foreign, theirs, { promptIndex: 0, promptText: 'rival', composite: 99 });
   const first = await read('read_prompt_metrics', { limit: 1 });
   expect(first).toMatchObject({
     state: 'available',
@@ -121,7 +125,11 @@ it("pages one run's prompt scores strongest first, never another workspace's", a
     artifact_refs: [{ kind: 'audit', id: auditId }],
   });
   const cursor = (first.pagination as { next_cursor: string }).next_cursor;
+  // A run finishing between pages does not shift them: the cursor keeps its run.
+  const newer = await fixtures.audit(tenant, { completedAt: new Date(Date.now() + 60_000) });
+  await scored(tenant, newer, { promptIndex: 0, promptText: 'new', composite: 99 });
   expect(await read('read_prompt_metrics', { limit: 1, cursor })).toMatchObject({
+    audit_id: auditId,
     items: [{ prompt_text: 'best crm', composite_score: 40 }],
     pagination: { has_more: false, next_cursor: null },
   });

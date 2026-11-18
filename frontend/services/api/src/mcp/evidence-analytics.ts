@@ -263,13 +263,8 @@ type OverviewArgs = Selection & {
   view?: 'summary' | 'topics' | 'matrix';
 };
 
-/**
- * The dashboard projection for one run, with that run's status and progress;
- * or the same selection per topic (`topics`) or per topic and market (`matrix`).
- */
-export async function visibilityOverview(read: ProjectRead, args: OverviewArgs): Promise<Evidence> {
-  const { db, scope } = read;
-  const query = {
+const dashboardQuery = (args: Selection) =>
+  ({
     auditId: args.audit_id ?? null,
     logicalEngine: args.engine ?? null,
     selectionMode: args.audit_id ? 'run' : 'latest',
@@ -277,8 +272,17 @@ export async function visibilityOverview(read: ProjectRead, args: OverviewArgs):
     toAt: null,
     configurationKey: null,
     cohort: args.cohort,
-  } as const;
+  }) as const;
+
+/**
+ * The dashboard projection for one run, with that run's status and progress;
+ * or the same selection per topic (`topics`) or per topic and market (`matrix`).
+ */
+export async function visibilityOverview(read: ProjectRead, args: OverviewArgs): Promise<Evidence> {
+  const { db, scope } = read;
+  const query = dashboardQuery(args);
   const named = Boolean(args.audit_id || args.baseline_id);
+  let topicInRun = false;
   try {
     await requireTopic(read, args.topic_id);
     if (args.view === 'topics' || args.view === 'matrix') {
@@ -295,6 +299,9 @@ export async function visibilityOverview(read: ProjectRead, args: OverviewArgs):
       };
     }
     if (args.baseline_id) await authorizeRunSet(db, scope, [args.baseline_id]);
+    // A missing topic block means "topic not asked" only once a run exists.
+    if (args.topic_id && !named) await scopedSelection(db, runs(scope, args));
+    topicInRun = Boolean(args.topic_id);
     const projection = visibilitySchema.parse(
       await getRankedVisibility(db, inMarket(scope, args), {
         ...query,
@@ -321,7 +328,7 @@ export async function visibilityOverview(read: ProjectRead, args: OverviewArgs):
       artifact_refs: [reference('audit', projection.audit_id)],
     };
   } catch (error) {
-    return notYetMeasured(error, named, Boolean(args.topic_id));
+    return notYetMeasured(error, named, topicInRun);
   }
 }
 
@@ -334,8 +341,7 @@ export async function oneRun(
   try {
     return { kind: 'run', selection: await scopedSelection(read.db, runs(read.scope, args)) };
   } catch (error) {
-    const named = Boolean(args.audit_id);
-    return { kind: 'none', evidence: notYetMeasured(error, named, Boolean(args.topic_id)) };
+    return { kind: 'none', evidence: notYetMeasured(error, Boolean(args.audit_id)) };
   }
 }
 

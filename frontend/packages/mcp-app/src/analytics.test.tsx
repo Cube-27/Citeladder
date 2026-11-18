@@ -372,6 +372,16 @@ describe('CiteLadder MCP App', () => {
                 is_brand: false,
                 share_of_voice: 0.75,
                 avg_position: 1,
+                win_answers: null,
+                win_rate: null,
+              },
+              {
+                ...row,
+                name: 'Initech',
+                is_brand: false,
+                share_of_voice: 0,
+                avg_position: null,
+                win_answers: 0,
                 win_rate: null,
               },
             ],
@@ -407,10 +417,16 @@ describe('CiteLadder MCP App', () => {
     expect(cells()).toContain('1.5');
     await pick('Win rate');
     expect(cells()).toContain('40.0%');
-    // A competitor's unmeasured win rate is unavailable, never zero.
-    await user.click(screen.getByRole('combobox', { name: 'Competitor' }));
-    await user.click(screen.getByRole('option', { name: 'Globex' }));
+    // An unmeasured win rate is unavailable; one over no qualifying answer is not applicable.
+    const competitor = async (name: string) => {
+      await user.click(screen.getByRole('combobox', { name: 'Competitor' }));
+      await user.click(screen.getByRole('option', { name }));
+    };
+    await competitor('Globex');
     await vi.waitFor(() => expect(cells()).toContain('Unavailable'));
+    expect(cells()).not.toContain('Not applicable');
+    await competitor('Initech');
+    await vi.waitFor(() => expect(cells()).toContain('Not applicable'));
     expect(shownText()).toContain('Action live: Publish the pricing page');
   });
   it('tells an empty Actions list apart from an unavailable read', async () => {
