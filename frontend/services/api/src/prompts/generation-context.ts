@@ -18,6 +18,7 @@ import {
   wantedTopics,
   type GenerationInput,
 } from './generation-input.ts';
+import { brandTopics } from './brand-topics.ts';
 import { acquireProjectLock } from './locks.ts';
 import { loadObservedQueries } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
@@ -305,11 +306,8 @@ export function generationContext(
       .where('project_id', '=', project.id)
       .where('workspace_id', '=', workspaceId)
       .executeTakeFirst();
-    const topics = await trx
-      .selectFrom('topics')
+    const topics = await brandTopics(trx, { workspaceId, projectId: project.id })
       .select(topicColumns)
-      .where('project_id', '=', project.id)
-      .where('workspace_id', '=', workspaceId)
       .orderBy('created_at')
       .orderBy('id')
       .execute();

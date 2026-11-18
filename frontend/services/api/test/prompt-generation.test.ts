@@ -15,6 +15,7 @@ import {
   billingAccount,
   echoDependencies,
   grant,
+  prompt,
   promptSet,
   topic,
   type DraftRequest,
@@ -453,6 +454,41 @@ describe('prompt generation at the PostgreSQL boundary', () => {
         .where('project_id', '=', other.projectId)
         .execute(),
     ).toEqual([]);
+  });
+  it('drafts for brand topics only: a Commerce topic is neither the default nor selectable', async () => {
+    const shoes = await selectedTopic();
+    const grinders = await topic(db, tenant.projectId, 'Grinders');
+    const bound = await prompt(db, setId, 'Which grinder is quietest?', {
+      topicId: grinders,
+      status: 'archived',
+    });
+    await db
+      .insertInto('commerce_prompt_targets')
+      .values({
+        id: randomUUID(),
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        prompt_id: bound,
+        target_kind: 'product',
+        target_id: randomUUID(),
+        template_version: 'test',
+        approved_at: null,
+        created_at: new Date(),
+      })
+      .execute();
+    const deps = dependencies();
+    await expect(
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        generationInput.parse({ count: 2, topic_ids: [grinders] }),
+        deps,
+      ),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+    const result = await generate(deps);
+    expect(result.candidates.map((row) => row.topic_id)).toEqual([shoes, shoes]);
   });
   it('refuses a comparison share without competitors before recovering any topic', async () => {
     const { other, otherSet } = await topiclessProject({ category_terms: ['running shoes'] }, [
