@@ -3,13 +3,12 @@ import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { Audits, ResponseAnalyses } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
+import type { ProjectScope } from '../projects/brand-profile.ts';
 import { compareText } from '../text-order.ts';
 import { domainMatches, normalizeDomain } from './domains.ts';
 import type { ScoringConfig } from './scoring.ts';
 
 const CITED = 'cited_domain';
-
-type ProjectScope = { workspaceId: string; projectId: string };
 
 /** The project's suggestion rows, of every audit and status. */
 export function suggestionRows(db: Database, scope: ProjectScope) {
@@ -22,12 +21,13 @@ export function suggestionRows(db: Database, scope: ProjectScope) {
 /** The engines the audit asked, the "of M" beside a candidate's engine count. */
 export async function auditEngineTotal(
   db: Database,
-  scope: { workspaceId: string; auditId: string },
+  scope: ProjectScope & { auditId: string },
 ): Promise<number> {
   const row = await db
     .selectFrom('audit_tasks')
     .select((eb) => eb.fn.count<string>('logical_engine').distinct().as('engines'))
     .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
     .where('audit_id', '=', scope.auditId)
     .executeTakeFirstOrThrow();
   return Number(row.engines);
@@ -112,10 +112,7 @@ export async function persistObservedCompetitors(
     )
     .slice(0, rules.max_candidates_per_audit);
   if (!qualified.length) return;
-  const engineTotal = await auditEngineTotal(db, {
-    workspaceId: audit.workspace_id,
-    auditId: audit.id,
-  });
+  const engineTotal = await auditEngineTotal(db, { ...scope, auditId: audit.id });
   await db
     .insertInto('observed_entity_candidates')
     .values(

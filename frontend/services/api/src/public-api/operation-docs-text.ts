@@ -58,7 +58,7 @@ DELETE /topics/{topic_id} | Delete a topic | Deletes a topic. Its prompts are ke
 POST /competitors | Add a competitor | Starts tracking a competitor by name, aliases and domains, and returns it.{key}
 PATCH /competitors/{competitor_id} | Update a competitor | Changes a competitor’s name, aliases or domains. Send only the fields to change.
 DELETE /competitors/{competitor_id} | Remove a competitor | Stops tracking a competitor. Answers already recorded keep what they found.
-POST /competitor-suggestions/{candidate_id}/accept | Accept a competitor suggestion | Turns a suggested company into a tracked competitor and returns the competitor.{key}
+POST /competitor-suggestions/{candidate_id}/accept | Accept a competitor suggestion | Turns a suggested company into a tracked competitor and returns the competitor. A suggestion already rejected answers 409.{key}
 POST /competitor-suggestions/{candidate_id}/reject | Reject a competitor suggestion | Dismisses a suggested company and returns the suggestion as rejected. Later audits never suggest that domain or name again. A suggestion already accepted answers 409.{key}
 POST /audits | Launch an audit | Queues an audit of a prompt set, or of chosen prompts, on the engines you name, and returns the created audits. Each recorded answer spends one prompt run; set max_attempts to cap the spend, and estimate first with the estimate operation.{key}
 POST /audits/{audit_id}/cancel | Cancel an audit | Stops an audit that has not finished and returns it. Answers already recorded are kept.{key}

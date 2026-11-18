@@ -1,7 +1,8 @@
 import { useMutation, type UseQueryResult } from '@tanstack/react-query';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -110,6 +111,7 @@ export function CompetitorSuggestions({
                     disabled={deciding}
                     aria-label={`Reject ${candidate.name} as a competitor`}
                   >
+                    <Icon icon={X} />
                     Reject
                   </Button>
                 </TableActionsCell>

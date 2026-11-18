@@ -138,9 +138,12 @@ export function acceptSuggestion(
   return db.transaction().execute(async (trx) => {
     await lockProject(trx, decision);
     const candidate = await lockedCandidate(trx, decision, candidateId);
+    if (candidate.status === REJECTED)
+      throw new ApiError(409, 'This suggestion was rejected; add the competitor instead');
     const competitors = await trx
       .selectFrom('competitors')
       .select(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
+      .where('workspace_id', '=', decision.workspaceId)
       .where('project_id', '=', decision.projectId)
       .orderBy('created_at')
       .orderBy('id')
@@ -189,6 +192,8 @@ export function rejectSuggestion(
   candidateId: string,
 ): Promise<Suggestion> {
   return db.transaction().execute(async (trx) => {
+    // The project lock first, as accept takes it: both update every row of a key.
+    await lockProject(trx, decision);
     const candidate = await lockedCandidate(trx, decision, candidateId);
     if (candidate.status === ACCEPTED)
       throw new ApiError(409, 'This suggestion was accepted; remove the competitor instead');

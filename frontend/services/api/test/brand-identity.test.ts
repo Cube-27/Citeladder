@@ -658,6 +658,40 @@ describe('competitor suggestions', () => {
     expect([one.status, two.status]).toEqual([200, 200]);
     expect(one.body.id).toBe(two.body.id);
   });
+
+  it('settles a concurrent accept and reject of one domain on one decision', async () => {
+    const older = await suggestion({
+      name: 'Pied',
+      domain: 'pied.example',
+      auditId: await fixtures.audit(t),
+    });
+    const latest = await suggestion({
+      name: 'Pied',
+      domain: 'pied.example',
+      auditId: await fixtures.audit(t),
+    });
+    const statuses = await Promise.all([
+      call(`/competitor-suggestions/${older}/accept`, { method: 'POST' }).then((r) => r.status),
+      call(`/competitor-suggestions/${latest}/reject`, { method: 'POST' }).then((r) => r.status),
+    ]);
+    const rows = await db
+      .selectFrom('observed_entity_candidates')
+      .select('status')
+      .where('id', 'in', [older, latest])
+      .execute();
+    const tracked = await db
+      .selectFrom('competitors')
+      .select('name')
+      .where('project_id', '=', t.projectId)
+      .execute();
+    // Whichever ran first decided both rows, and the other is refused.
+    expect(new Set(rows.map((row) => row.status)).size).toBe(1);
+    expect({ statuses, tracked }).toEqual(
+      rows[0]!.status === 'accepted'
+        ? { statuses: [200, 409], tracked: [{ name: 'Pied' }] }
+        : { statuses: [409, 200], tracked: [] },
+    );
+  });
 });
 
 describe('logos', () => {

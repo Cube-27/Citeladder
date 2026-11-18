@@ -15064,7 +15064,7 @@
           }
         ],
         "summary": "Accept a competitor suggestion",
-        "description": "Turns a suggested company into a tracked competitor and returns the competitor. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
+        "description": "Turns a suggested company into a tracked competitor and returns the competitor. A suggestion already rejected answers 409. Send an Idempotency-Key header so a retry within 24 hours never runs it twice.",
         "x-citeladder-scope": "competitors:write"
       }
     },
