@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aggregateRun, promptTrend, type AggregateExecution } from '../src/analysis/aggregate.ts';
 import { scoringConfig, scoreExecution } from '../src/analysis/scoring.ts';
-import { firstNamed, winCounts } from '../src/analysis/win-rate.ts';
+import { firstNamed, winCounts, winTally } from '../src/analysis/win-rate.ts';
 const config = scoringConfig({
   brand_name: 'Acme',
   owned_domains: ['acme.example'],
@@ -121,6 +121,10 @@ describe('versioned audit aggregates', () => {
     const stale = { ...execution('Acme'), first_named: { kind: 'unavailable' as const } };
     expect(aggregateRun([execution('Acme'), stale], config).win_tally).toBeNull();
     expect(winCounts(null, 'Acme')).toEqual({ win_count: null, win_answers: null, win_rate: null });
+    // A tracked name that is also an Object.prototype key counts like any other.
+    const shadow = winTally([{ kind: 'competitor', name: 'constructor' }], 'Acme');
+    expect(shadow).toEqual({ answers: 1, first: { constructor: 1 } });
+    expect(winCounts(metrics.win_tally, 'constructor')).toMatchObject({ win_count: 0 });
   });
   it('averages search queries over the answers that exposed them, unknown when none did', () => {
     const metrics = aggregateRun(

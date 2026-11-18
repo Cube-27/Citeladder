@@ -57,6 +57,10 @@ const winTallySchema = z.object({
 export type WinTally = z.infer<typeof winTallySchema>;
 
 /** The tally over a set of answers, keyed like share of voice; null when any is unavailable. */
+// Own keys only: a tracked name such as "constructor" must not read Object.prototype.
+const ownCount = (first: WinTally['first'], name: string) =>
+  Object.hasOwn(first, name) ? first[name]! : 0;
+
 export function winTally(answers: readonly FirstNamed[], brandKey: string): WinTally | null {
   const first: Record<string, number> = {};
   let counted = 0;
@@ -78,7 +82,7 @@ export function winTally(answers: readonly FirstNamed[], brandKey: string): WinT
         throw new Error(`unknown first-named kind: ${JSON.stringify(unreachable)}`);
       }
     }
-    first[key] = (first[key] ?? 0) + 1;
+    first[key] = ownCount(first, key) + 1;
     counted++;
   }
   return { answers: counted, first };
@@ -121,5 +125,5 @@ export function sumWinCounts(parts: readonly WinCounts[]): WinCounts {
 }
 
 export function winCounts(tally: WinTally | null, name: string): WinCounts {
-  return tally === null ? UNAVAILABLE : counted(tally.first[name] ?? 0, tally.answers);
+  return tally === null ? UNAVAILABLE : counted(ownCount(tally.first, name), tally.answers);
 }
