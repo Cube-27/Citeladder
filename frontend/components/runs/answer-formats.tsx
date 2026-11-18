@@ -23,12 +23,7 @@ export function AnswerFormatTags({ formats }: Readonly<{ formats: AnswerFormats 
         </Inline>
       );
     case 'not_applicable':
-      return (
-        <Absence
-          state="not_applicable"
-          reason="Only answers read from the engine's own page show formats."
-        />
-      );
+      return <Absence state="not_applicable" reason="This engine doesn't report answer formats." />;
     case 'unavailable':
       return <Absence state="unavailable" reason="This answer's stored page could not be read." />;
     default: {

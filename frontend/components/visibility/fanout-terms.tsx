@@ -145,12 +145,12 @@ function termsState(
         return empty('No searches reported', 'No engine reported a search in this run.');
       if (view !== 'top' && !data.compared)
         return empty('Nothing to compare yet', 'Changes show once an earlier run counted terms.');
-      if (!data[view].length)
-        return empty(
-          view === 'rising' ? 'No term rose' : 'No term fell',
-          'Every term kept its share of searches since the previous run.',
-        );
-      return undefined;
+      if (data[view].length) return undefined;
+      if (view === 'top')
+        return empty('No terms counted', 'This run’s searches held only short or common words.');
+      return view === 'rising'
+        ? empty('No term rose', 'No term gained share of searches since the previous run.')
+        : empty('No term fell', 'No term lost share of searches since the previous run.');
     default: {
       const unreachable: never = data;
       return unreachable;

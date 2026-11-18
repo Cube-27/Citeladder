@@ -107,7 +107,10 @@ export function storedAnswerFormats(row: {
       };
     case 'not_applicable':
       return { kind: 'not_applicable' };
-    default:
+    case 'unavailable':
+    case null:
       return { kind: 'unavailable' };
+    default:
+      throw new Error(`Unknown answer format state: ${row.answer_format_state}`);
   }
 }

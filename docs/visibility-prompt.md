@@ -626,7 +626,12 @@ AI Overview expose no retrieval and stay not available, never zero. Provider
 brand entities remain raw supplementary evidence, and nothing records
 query-to-source associations. Query Fanouts uses
 only returned query text, distinguishing unavailable evidence from an explicitly
-empty query list. Neither state claims that no search occurred. Accepted scraper
+empty query list. Neither state claims that no search occurred. Its search terms
+are a per-run fact finalization writes (`audit_fanout_terms`, every cohort's
+returned queries, share change against the previous run that counted terms); a
+run finalized without them reads unavailable. Answer formats and in-text links
+settle on the response analysis from the scraper envelope; non-scraper engines
+are not applicable. Accepted scraper
 submissions use their frozen recovery window even after the ordinary run deadline;
 new submissions and API tasks remain subject to that deadline. Recovery listing
 calls share a separate account-wide rate limit across both scraper products.

@@ -124,13 +124,14 @@ describe('answer formats at analysis', () => {
     ]);
   });
 
-  it('reads an answer analysed before formats existed as unavailable', () => {
-    expect(
+  it('reads an answer analysed before formats existed as unavailable, never an unknown state', () => {
+    const stored = (state: string | null) =>
       storedAnswerFormats({
-        answer_format_state: null,
+        answer_format_state: state,
         answer_formats: null,
         in_text_link_count: null,
-      }),
-    ).toEqual({ kind: 'unavailable' });
+      });
+    expect(stored(null)).toEqual({ kind: 'unavailable' });
+    expect(() => stored('partial')).toThrow('Unknown answer format state: partial');
   });
 });
