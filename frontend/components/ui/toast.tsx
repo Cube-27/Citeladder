@@ -50,11 +50,14 @@ function useToastHeights() {
   const measure = useCallback(
     (id: number) => (node: HTMLDivElement | null) => {
       const frame = node?.parentElement;
-      if (!node || !frame || typeof ResizeObserver === 'undefined') return;
-      const observer = new ResizeObserver(() => {
+      if (!node || !frame) return;
+      const record = () => {
         const height = node.offsetHeight + frame.offsetHeight - frame.clientHeight;
         setHeights((current) => (current[id] === height ? current : { ...current, [id]: height }));
-      });
+      };
+      record();
+      if (typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(record);
       observer.observe(node);
       return () => observer.disconnect();
     },
