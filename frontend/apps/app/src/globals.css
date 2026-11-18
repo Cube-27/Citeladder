@@ -1207,13 +1207,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
-  .type-delta {
-    font-family: var(--font-mono);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: var(--weight-regular);
-    letter-spacing: 0;
-  }
   .type-eyebrow {
     font-family: var(--font-mono);
     font-size: var(--text-eyebrow);
@@ -1799,56 +1792,6 @@ samp {
   font-synthesis: none;
 }
 
-@keyframes drawer-overlay-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes drawer-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(var(--drawer-offset, 100%));
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes drawer-panel-out {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(var(--drawer-offset, 100%));
-  }
-}
-
-.drawer-overlay[data-state="open"] {
-  animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
-}
-
-.drawer-overlay[data-state="closed"] {
-  animation: drawer-overlay-out var(--motion-close) var(--ease-exit) both;
-}
-
-.drawer-panel[data-state="open"] {
-  animation: drawer-panel-in var(--motion-open) var(--ease-standard) both;
-}
-
-.drawer-panel[data-state="closed"] {
-  animation: drawer-panel-out var(--motion-close) var(--ease-exit) both;
-}
-
-.drawer-panel[data-side="left"] {
-  --drawer-offset: -100%;
-}
 
 /* The live rung: one accent rung pulsing its opacity. */
 @keyframes live-rung {

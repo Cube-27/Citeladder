@@ -170,7 +170,6 @@ typography:
   type-caption: { fontSize: 12px, lineHeight: 16px }
   type-control: { fontSize: 14px, lineHeight: 20px }
   type-data-sm: { fontSize: 12px, lineHeight: 16px }
-  type-delta: { fontSize: 12px, lineHeight: 16px }
   type-display: { fontSize: 28px, lineHeight: 36px }
   type-eyebrow: { fontSize: 12px, lineHeight: 16px }
   type-figure: { fontSize: 24px, lineHeight: 32px }

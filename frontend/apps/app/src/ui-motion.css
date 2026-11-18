@@ -72,37 +72,26 @@
   --popup-from: 100% 0;
 }
 
-@keyframes modal-overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Dialogs and drawers on the same pair: scrims fade, a dialog grows from
+   98.5% (centred by its own translate), a drawer slides in from its side. */
+:is(.dialog-overlay, .drawer-overlay) {
+  --popup-from: 0;
 }
-
-@keyframes modal-panel-in {
-  from {
-    opacity: 0;
-    scale: 0.985;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-  }
+.dialog-panel {
+  --popup-from: -50% 0;
+  --popup-scale: 0.985;
 }
-
-.dialog-overlay[data-state='open'] {
-  animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
+.drawer-panel {
+  --popup-from: 100% 0;
 }
-.dialog-overlay[data-state='closed'] {
-  animation: modal-overlay-in var(--motion-close) var(--ease-exit) reverse both;
+.drawer-panel[data-side='left'] {
+  --popup-from: -100% 0;
 }
-.dialog-panel[data-state='open'] {
-  animation: modal-panel-in var(--motion-open) var(--ease-standard) both;
+:is(.dialog-overlay, .dialog-panel, .drawer-overlay, .drawer-panel)[data-state='open'] {
+  animation: popup-in var(--motion-open) var(--ease-standard) both;
 }
-.dialog-panel[data-state='closed'] {
-  animation: modal-panel-in var(--motion-close) var(--ease-exit) reverse both;
+:is(.dialog-overlay, .dialog-panel, .drawer-overlay, .drawer-panel)[data-state='closed'] {
+  animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
 
 /* The sidebar's content fades in as its column eases to the rail or back.
