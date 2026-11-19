@@ -79,8 +79,10 @@ describe('application route recovery', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Finish session' }));
     const shell = screen.getByRole('region', { name: 'Application shell' });
-    // The wait is the route's own frame: its titled identity band and one box.
-    expect(await screen.findByRole('status', { name: 'Loading…' })).toBeInTheDocument();
+    // The wait is the route's own frame: its titled identity band and the Issues summary.
+    expect(
+      await screen.findByRole('status', { name: 'Loading the issue summary' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Issues' })).toBeInTheDocument();
     await act(async () => finish({ IssuesScreen: () => <p>Issue catalog</p> }));
     expect(await screen.findByText('Issue catalog')).toBeInTheDocument();

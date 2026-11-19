@@ -12,7 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
-import { SkeletonBlock } from '@/components/ui/skeleton-block';
+import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -41,15 +41,6 @@ function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> =
       : 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
   );
 }
-
-/**
- * A pressable row's own geometry: 12 across and 8 down, its parts 12 apart,
- * at least one control tall (44 below 900px or under a coarse pointer). It
- * bleeds 12 past its list on both sides, so its text starts on the card's
- * own padding and only the hover fill reaches past it.
- */
-const pressableRowClasses =
-  'focus-ring -mx-3 flex min-h-[var(--control-md)] w-[calc(100%+24px)] min-w-0 items-center gap-3 px-3 py-2 text-start';
 
 /**
  * One choice in a list where pressing the row IS the commit (a property to
@@ -153,23 +144,6 @@ export function OpenRow({
 }
 
 /** A ruled list of `DisclosureRow`s. */
-/** An `OpenRow` with a caption while its read is pending: the row's geometry, blocks for text. */
-export function OpenRowSkeleton() {
-  return (
-    <span aria-hidden className={cn(pressableRowClasses, 'pointer-events-none')}>
-      <span className="grid min-w-0 flex-1 gap-1">
-        <span className={textRole('body', 'flex h-lh items-center')}>
-          <SkeletonBlock className="w-2/5" />
-        </span>
-        <span className="type-caption flex h-lh items-center">
-          <SkeletonBlock className="w-3/5" />
-        </span>
-      </span>
-      <Icon icon={ChevronRight} className="text-ink-2 shrink-0 opacity-0" />
-    </span>
-  );
-}
-
 export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) {
   return <ul className="divide-rule grid min-w-0 divide-y">{children}</ul>;
 }

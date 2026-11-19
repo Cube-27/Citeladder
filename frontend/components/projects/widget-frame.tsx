@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SectionDescription } from '@/components/ui/section';
-import { StateHeadingLevelContext } from '@/components/ui/state-block';
+import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 

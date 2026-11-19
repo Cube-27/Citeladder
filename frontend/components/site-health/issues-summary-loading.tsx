@@ -1,5 +1,5 @@
 import { Stack } from '@/components/ui/layout';
-import { OpenRowSkeleton } from '@/components/ui/list-row';
+import { OpenRowSkeleton } from '@/components/ui/open-row-skeleton';
 import { SectionHeaderSkeleton } from '@/components/ui/loading-parts';
 import { Section } from '@/components/ui/section';
 import { SkeletonFrame } from '@/components/ui/skeleton-block';
