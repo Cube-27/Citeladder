@@ -197,7 +197,7 @@ describe('PromptLibrary never filled', () => {
       'Add an active prompt to launch a run.',
     );
     expect(screen.queryByRole('textbox', { name: 'Search prompts' })).toBeNull();
-    expect(screen.queryByRole('radio', { name: /Active/ })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Active/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
   });
 });

@@ -139,7 +139,9 @@ colors:
   neutral near-blacks (values in `globals.css`; owner's table reference,
   2026-11-19), each layer at least 1.05 lighter than the one beneath.
   The shell keeps our structure: the chrome is lighter than the ground,
-  never a darker frame around an inset page.
+  never a darker frame around an inset page. In the shell, cards, table bodies
+  and control fills take the page's ground in both themes (owner, 2026-11-19);
+  overlays keep their lighter fills.
 - **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
   (light 6% and 10%, dark 4% and 8%); selected is the `well` tint plus a
   mark that is not colour (the checked control, a check glyph).

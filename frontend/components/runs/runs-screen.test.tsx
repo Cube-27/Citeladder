@@ -64,7 +64,7 @@ it('opens on the status a deep link names', async () => {
   const table = within(await screen.findByRole('table', { name: 'All runs' }));
   expect(table.getByRole('link', { name: 'Brand audit · Jul 30, 2026' })).toBeVisible();
   expect(table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026' })).not.toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: /Failed/ })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('tab', { name: /Failed/ })).toHaveAttribute('aria-selected', 'true');
 });
 
 it.each([
@@ -99,6 +99,6 @@ it.each([
     // A schedule needs an active prompt; until one exists the card is not offered.
     if (schedules) await screen.findByRole('heading', { name: 'Scheduled audits' });
     else expect(screen.queryByRole('heading', { name: 'Scheduled audits' })).toBeNull();
-    expect(screen.queryByRole('radio', { name: /Completed/ })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Completed/ })).toBeNull();
   },
 );
