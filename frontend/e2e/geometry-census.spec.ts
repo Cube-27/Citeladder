@@ -429,7 +429,7 @@ function measure({ route }: { route: string }) {
   }
   // The page never scrolls sideways; a wide table scrolls inside its own frame.
   const root = document.documentElement;
-  add('page.overflow-x', root, root.scrollWidth - root.clientWidth);
+  add('page.overflow-x', root, Math.max(0, root.scrollWidth - root.clientWidth));
   return records;
 }
 
@@ -596,7 +596,7 @@ const MEMBERS = [
   },
 ];
 
-/** A Search Console connection, so Settings draws its integration slips. */
+/** A Search Console connection, so Settings draws a connected integration. */
 const CONNECTIONS = [
   {
     id: '55555555-5555-4555-8555-555555555551',
@@ -716,11 +716,10 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
     { route: '/settings?tab=connections' },
     { route: '/billing' },
     {
-      // A connection, so neighbouring slips are measured, not assumed.
+      // A connection, so the provider sections draw a connected integration.
       route: '/settings?tab=integrations',
-      label: '/settings integrations (cards)',
+      label: '/settings integrations (connected)',
       stubs: [[/\/api\/v1\/integrations(\?.*)?$/, CONNECTIONS]],
-      required: ['slip.gap'],
     },
     {
       // The member roster: a DataTable whose header row holds its search.
