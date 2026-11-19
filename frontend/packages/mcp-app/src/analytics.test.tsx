@@ -421,7 +421,7 @@ describe('CiteLadder MCP App', () => {
     };
     await pick('Share of voice');
     expect(cells()).toContain('25.0%');
-    await pick('Average position');
+    await pick('Position');
     expect(cells()).toContain('1.5');
     await pick('Win rate');
     expect(cells()).toContain('40.0%');

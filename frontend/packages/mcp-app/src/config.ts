@@ -5,11 +5,4 @@ export const appPolicy = {
   pageSize: 50,
   maxResultBytes: 1_000_000,
   requestTimeoutMs: 30_000,
-  metrics: [
-    { value: 'brand_mention_rate', label: 'Brand mention rate' },
-    { value: 'owned_citation_rate', label: 'Owned citation rate' },
-    { value: 'share_of_voice', label: 'Share of voice' },
-    { value: 'avg_position', label: 'Average position' },
-    { value: 'win_rate', label: 'Win rate' },
-  ],
 } as const;
