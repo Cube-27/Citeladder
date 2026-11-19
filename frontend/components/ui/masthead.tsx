@@ -86,8 +86,8 @@ export function Masthead({
               tabIndex={cut ? 0 : undefined}
               className={textRole(
                 'title',
-                // One line at every width, never under 112px; the fold keeps it min(360px, 40%) (`rowDeficit`).
-                cn('not-rail:w-0 not-rail:flex-1 min-w-28 truncate', cut && 'focus-ring'),
+                // One line ending in an ellipsis at every width, never under 112px; the fold keeps it min(360px, 40%) (`rowDeficit`).
+                cn('w-0 min-w-28 flex-1 truncate', cut && 'focus-ring'),
               )}
             >
               {title}
@@ -152,6 +152,8 @@ function useIsCut(ref: RefObject<HTMLElement | null>, text: string) {
     if (!node) return;
     const update = () => setCut(isTextCut(node));
     update();
+    // The title's box no longer resizes with its text, so a face that loads late is re-measured here.
+    void document.fonts?.ready.then(update);
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => observer.disconnect();
