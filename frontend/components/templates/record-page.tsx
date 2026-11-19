@@ -1,14 +1,14 @@
 import { useEffect, type ReactNode } from 'react';
 
-import { PageFrame, PageSections, type PageBack, type PageFrameSlots } from './page-frame';
+import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
 
 /** The action bar's height and a gutter above and below it. */
 const BAR_CLEARANCE = 'calc(var(--filter-bar-height) + 2 * var(--content-gutter))';
 
 /**
- * Record: the masthead with the back link and the record's own name, the
- * identity card (its facts and status), the cards, with an optional aside
- * beside them from a split-width column, and an optional action bar: a
+ * Record: the masthead's trail to its collection, the record's name as the
+ * h1, the identity card (its facts and status), the cards, with an optional
+ * aside beside them from a split-width column, and an optional action bar: a
  * `raised` bar with `shadow-pop` at the foot of the main column, one row at
  * every width (the caller folds lower-priority actions into a "More" menu),
  * the primary last. It sits in the flow under the cards and sticks to the
@@ -22,9 +22,8 @@ export function RecordPage({
   actionBar,
   children,
   ...slots
-}: Omit<PageFrameSlots, 'back'> &
+}: PageFrameSlots &
   Readonly<{
-    back: PageBack;
     /** True while the record refetches: marks the body `aria-busy`. */
     busy?: boolean;
     /** The record's FactList and StatusMark, full width above the sections. */

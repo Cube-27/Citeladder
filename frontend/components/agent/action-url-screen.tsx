@@ -2,16 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { useLocation, useParams } from 'react-router-dom';
 
-import {
-  BackLink,
-  DetailsFacts,
-  Labelled,
-  PageHeading,
-  ReadingColumn,
-} from '@/components/ui/reading-page';
+import { DetailsFacts, Labelled, ReadingColumn } from '@/components/ui/reading-page';
 import { Impact } from '@/components/agent/actions-rows';
 import { PageFrame } from '@/components/templates/page-frame';
-import { Breadcrumb, type Crumb } from '@/components/ui/breadcrumb';
+import type { Crumb } from '@/components/ui/breadcrumb';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
@@ -33,7 +27,7 @@ type UrlActions = Awaited<ReturnType<typeof actionsApi.urlActions>>;
 
 /**
  * One URL's page (plan v3): the trail (through the Action it was opened
- * from, if any), the way back, the path, its Details and every Action on it,
+ * from, if any), the path as the h1, its Details and every Action on it,
  * then "Fix this URL with Agent". One read of the URL's Actions.
  */
 export function ActionUrlScreen() {
@@ -58,30 +52,20 @@ export function ActionUrlScreen() {
         fallback="This URL could not be loaded."
       />
     );
-  else if (query.data) body = <UrlBody path={path} data={query.data} />;
+  else if (query.data) body = <UrlBody data={query.data} />;
   return (
-    <PageFrame
-      title={path}
-      crumb={<Breadcrumb parts={[...trail(from), { label: pathTail(path) }]} />}
-      fitted
-    >
-      <ReadingColumn>
-        <BackLink href={from ? `/actions/${from.id}` : '/actions'}>
-          {from ? `Back to ${from.title}` : 'Back to actions'}
-        </BackLink>
-        {body}
-      </ReadingColumn>
+    <PageFrame title={path} trail={trail(from)} crumb={{ label: pathTail(path) }} fitted>
+      <ReadingColumn>{body}</ReadingColumn>
       <UrlDock siteUrlId={siteUrlId} unreadable={query.isError} />
     </PageFrame>
   );
 }
 
-function UrlBody({ path, data }: Readonly<{ path: string; data: UrlActions }>) {
+function UrlBody({ data }: Readonly<{ data: UrlActions }>) {
   const timeZone = useDisplayTimeZone();
   const open = data.items.filter((item) => item.status === 'open' || item.status === 'in_progress');
   return (
     <>
-      <PageHeading path>{path}</PageHeading>
       <DetailsFacts
         facts={[
           {

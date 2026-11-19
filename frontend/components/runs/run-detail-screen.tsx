@@ -66,7 +66,6 @@ export function RunDetailScreen() {
   return (
     <RecordPage
       title={title}
-      back={{ href: '/runs', label: 'Back to runs', projectId: audit?.project_id }}
       actions={
         audit ? (
           <RunActions

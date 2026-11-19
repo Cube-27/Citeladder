@@ -106,8 +106,13 @@ describe('The page workspace', () => {
     renderChat();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Actions › acme.test/pricing' }),
+      await screen.findByRole('heading', { level: 1, name: 'acme.test/pricing' }),
     ).toBeVisible();
+    expect(
+      within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Actions']);
     expect(screen.getByRole('textbox', { name: 'Page content (Markdown)' })).toHaveTextContent(
       'Our plans start at ten dollars.',
     );

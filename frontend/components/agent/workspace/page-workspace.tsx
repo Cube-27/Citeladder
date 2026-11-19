@@ -90,15 +90,16 @@ function lockedReason(canEdit: boolean, runActive: boolean, editing: boolean): s
   return editing ? 'Save or discard your edits to the page first.' : null;
 }
 
-/** The header: the page named under Actions, and the way back to its Action. */
+/** The header: the page named under Actions, through its Action when it has one. */
 function workspaceHeader(detail: AgentChatDetail, output: AgentOutput) {
   const label = output.target_label ?? detail.chat.target_label ?? output.latest_revision.title;
   const actionId = detail.chat.action_id;
   return {
-    title: `Actions › ${shortUrlTitle(label)}`,
-    back: actionId
-      ? { href: `/actions/${actionId}`, label: 'Back to the Action' }
-      : { href: '/actions', label: 'Back to Actions' },
+    title: shortUrlTitle(label),
+    trail: [
+      { label: 'Actions', href: '/actions' },
+      ...(actionId ? [{ label: 'Action', href: `/actions/${actionId}` }] : []),
+    ],
   };
 }
 
@@ -225,7 +226,7 @@ export function PageWorkspace({
   return (
     <WorkbenchPage
       title={header.title}
-      back={header.back}
+      trail={header.trail}
       actions={
         <>
           <WorkspaceDeclaration

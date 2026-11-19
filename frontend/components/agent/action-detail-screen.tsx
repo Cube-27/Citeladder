@@ -7,7 +7,6 @@ import { ActionFacts } from '@/components/agent/action-facts';
 import {
   Checklist,
   Labelled,
-  PageHeading,
   Prose,
   ReadingColumn,
   ReadingTools,
@@ -17,7 +16,6 @@ import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { DeveloperTicketButton } from '@/components/agent/developer-ticket';
 import { PageFrame } from '@/components/templates/page-frame';
-import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -29,8 +27,6 @@ import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-
-const BACK_CRUMB = [{ label: 'Actions', href: '/actions' }, { label: 'Action' }] as const;
 
 /**
  * One Action's page (plan v3): the trail to its goal and grouping, its
@@ -46,7 +42,7 @@ export function ActionDetailScreen() {
     enabled: Boolean(actionId),
   });
   const fallback = (body: ReactNode) => (
-    <PageFrame title="Action" crumb={<Breadcrumb parts={BACK_CRUMB} />} fitted>
+    <PageFrame fitted>
       <ReadingColumn>{body}</ReadingColumn>
     </PageFrame>
   );
@@ -97,13 +93,8 @@ function ActionPage({
       return next;
     });
   return (
-    <PageFrame
-      title={title}
-      crumb={<Breadcrumb parts={[...listCrumbs(from), { label: title }]} />}
-      fitted
-    >
+    <PageFrame title={title} trail={listCrumbs(from)} fitted>
       <ReadingColumn>
-        <PageHeading>{title}</PageHeading>
         <Labelled title="Overview" caption={suggested}>
           <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>
         </Labelled>

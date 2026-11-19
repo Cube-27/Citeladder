@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ArrowLeft } from 'lucide-react';
 
-import { buttonClasses } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
-import { ProjectLink } from '@/components/ui/project-link';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -26,8 +22,8 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
  * Masthead: the head of every shell page, 56 tall on `chrome`, sticky with a
  * rule under it, one row at every width, across the whole main column. From
  * the left, at the page's own start (`--page-start`, so a narrow page's title
- * lines up with its content): the menu button below 900px and a record
- * page's back link (`lead`), the page title in `title` type; at the right the
+ * lines up with its content): the menu button below 900px (`lead`), then the
+ * page title in `title` type or a record page's breadcrumb (`crumb`); at the right the
  * page's secondary actions, its one primary action (`actions`, the primary
  * inside `MastheadPrimary`), then the search trigger and "Ask agent" (`end`)
  * on the column's right edge on every page (owner, 2026-11-19), each with its
@@ -50,7 +46,7 @@ export function Masthead({
   crumb,
 }: Readonly<{
   title: string;
-  /** Before the title: the menu button, a record's back link. */
+  /** Before the title: the sidebar toggle or the menu button. */
   lead?: ReactNode;
   /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */
   crumb?: ReactNode;
@@ -116,30 +112,6 @@ export function Masthead({
         <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
       </div>
     </header>
-  );
-}
-
-/**
- * A record page's way back to its collection, before the title: the quiet
- * arrow link, named for where it goes ("Back to runs"), scoped to the active
- * project (or `projectId`) like any app link.
- */
-export function MastheadBack({
-  href,
-  label,
-  projectId,
-}: Readonly<{ href: string; label: string; projectId?: string | null }>) {
-  return (
-    <Tooltip content={label} describe={false}>
-      <ProjectLink
-        href={href}
-        projectId={projectId}
-        aria-label={label}
-        className={cn(buttonClasses('quiet'), 'w-[var(--control-md)] shrink-0 gap-0 px-0')}
-      >
-        <Icon icon={ArrowLeft} />
-      </ProjectLink>
-    </Tooltip>
   );
 }
 

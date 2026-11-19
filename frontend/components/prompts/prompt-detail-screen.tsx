@@ -27,8 +27,6 @@ import { PromptEngineCoverage, PromptKeyFigures } from './prompt-figures';
 import { PromptPastAnswers } from './prompt-past-answers';
 import { PromptImplementations, PromptTrend } from './prompt-trend';
 
-const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
-
 /**
  * /prompts/:promptId — one prompt in one market: its key figures once, every
  * past answer, then its trend, engine coverage and implementations.
@@ -54,7 +52,7 @@ export function PromptDetailScreen() {
   if (httpErrorStatus(query.error) === 404) return <NotFoundScreen />;
   if (query.isError)
     return (
-      <RecordPage back={BACK} filters={filters}>
+      <RecordPage filters={filters}>
         <StateBlock
           kind="error"
           {...readErrorProps(query)}
@@ -65,7 +63,7 @@ export function PromptDetailScreen() {
     );
   if (!query.data)
     return (
-      <RecordPage back={BACK} filters={filters}>
+      <RecordPage filters={filters}>
         <StateBlock
           kind="loading"
           label="Loading this prompt…"
@@ -78,7 +76,6 @@ export function PromptDetailScreen() {
   return (
     <RecordPage
       title={history.prompt.text}
-      back={BACK}
       actions={actionId ? <ActionHandoff actionId={actionId} /> : undefined}
       filters={filters}
       identity={

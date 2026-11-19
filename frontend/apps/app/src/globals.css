@@ -752,11 +752,12 @@
   --rail-button: 40px;
   --nav-current-fill: color-mix(in oklch, var(--color-ink) 7%, transparent);
   /* What a Thread page leaves for its own scrolling region: the masthead (as
-     drawn: below `rail` its actions take a second row, `Masthead`), the
-     `page-pad-block` above the first content and the main column's foot. */
+     drawn: below `rail` its actions take a second row, `Masthead`), a record
+     page's h1 (`PageFrame`), the `page-pad-block` above the first content and
+     the main column's foot. */
   --route-chrome-height: calc(
-    var(--masthead-block-size, var(--masthead-height)) + var(--page-pad-block) +
-      var(--page-section-gap)
+    var(--masthead-block-size, var(--masthead-height)) +
+      var(--page-heading-block-size, 0px) + var(--page-pad-block) + var(--page-section-gap)
   );
   /* No shell cap: a page fills the main column, so collapsing the sidebar
      grows it. A reading page's `thread` column (`PageFrame`) and the measures

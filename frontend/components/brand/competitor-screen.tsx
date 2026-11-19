@@ -7,7 +7,6 @@ import { CompetitorTrend } from '@/components/brand/competitor-trend';
 import { ReportPage } from '@/components/templates/report-page';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -54,18 +53,10 @@ export function CompetitorScreen() {
   return (
     <ReportPage
       title={name}
-      crumb={
-        <Breadcrumb
-          heading
-          parts={[
-            { label: 'Competitors', href: '/competitors' },
-            {
-              label: name,
-              mark: <RankedBrandMark name={name} rows={queries.visibilityQuery.data?.rankings} />,
-            },
-          ]}
-        />
-      }
+      crumb={{
+        label: name,
+        mark: <RankedBrandMark name={name} rows={queries.visibilityQuery.data?.rankings} />,
+      }}
       filters={selectionPageFilterBar(state, pageFilters)}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}

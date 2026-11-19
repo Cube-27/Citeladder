@@ -4,7 +4,6 @@ import { useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/templates/page-frame';
-import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { StateBlock } from '@/components/ui/state-block';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import type { Topic } from '@citeladder/contracts';
@@ -20,8 +19,6 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { PromptBuilder } from './prompt-builder';
 
-const CRUMBS = [{ label: 'Prompts', href: PROMPTS_HREF }, { label: 'Prompt builder' }];
-
 /**
  * `/prompts/build`: the Prompt builder as its own page under Prompts. It owns
  * the generate request and the candidates read; tracking the accepted
@@ -30,7 +27,7 @@ const CRUMBS = [{ label: 'Prompts', href: PROMPTS_HREF }, { label: 'Prompt build
 export function PromptBuilderPage() {
   const canWrite = useWorkspaceCapability('write');
   return (
-    <PageFrame crumb={<Breadcrumb parts={CRUMBS} />} fitted>
+    <PageFrame fitted>
       {canWrite ? (
         <BuilderForProject />
       ) : (

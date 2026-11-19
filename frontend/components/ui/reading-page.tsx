@@ -1,53 +1,21 @@
 import { useId, useState, type ReactNode } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { ClampText } from '@/components/ui/clamp-text';
-import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 
 /**
- * A record's reading page (the Actions v3 Action and URL pages): one centred
- * prose column with a quiet way back, the h1, labelled sections and a
- * Details card. Its frame is `fitted`: the column holds the page's end space
+ * A record's reading page (the Actions v3 Action and URL pages): one prose
+ * column (the route is `compact`) of labelled sections and a Details card,
+ * under the frame's h1. Its frame is `fitted`: the column holds the page's end space
  * itself and is at least the window's height, so a dock after it stays at the
  * window's foot however short the page and however far it is scrolled.
  */
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[var(--container-prose)] min-w-0 flex-col pb-[var(--page-end-space)]">
+    <div className="flex min-h-dvh w-full min-w-0 flex-col pb-[var(--page-end-space)]">
       {children}
     </div>
   );
-}
-
-export function BackLink({
-  href,
-  state,
-  children,
-}: Readonly<{ href: string; state?: unknown; children: string }>) {
-  return (
-    <ProjectLink
-      href={href}
-      state={state}
-      className={textRole(
-        'body',
-        'text-ink-2 hover:text-ink focus-ring self-start truncate rounded-sm',
-      )}
-    >
-      ← {children}
-    </ProjectLink>
-  );
-}
-
-/** The page's h1: a record's name, or (`path`) an address on one line, cut with the whole in a tooltip. */
-export function PageHeading({ children, path }: Readonly<{ children: string; path?: boolean }>) {
-  if (path)
-    return (
-      <h1 className={textRole('title', 'mt-3 min-w-0')}>
-        <ClampText>{children}</ClampText>
-      </h1>
-    );
-  return <h1 className={textRole('display', 'mt-3 break-words')}>{children}</h1>;
 }
 
 /** The row of ways to take the record elsewhere, under its overview. */

@@ -10,6 +10,7 @@ import {
   projectSwitchPathname,
   resolveTitle,
 } from './app-routes';
+import { routeTrail } from './route-trail';
 
 describe('app route manifest', () => {
   it('titles a page by its own route, else by the section it sits below', () => {
@@ -42,6 +43,16 @@ describe('app route manifest', () => {
     expect(projectSwitchPathname('/actions/a1')).toBe('/actions');
     expect(projectSwitchPathname('/site/crawls/c1/pages/p1')).toBe('/site');
     expect(projectSwitchPathname('/performance')).toBe('/performance');
+  });
+
+  it('trails a record page to its collection, and a top-level page or a chat nowhere', () => {
+    expect(routeTrail('/runs/r1')).toEqual([{ label: 'Runs', href: '/runs' }]);
+    expect(routeTrail('/site/crawls/c1/pages/p1')).toEqual([
+      { label: 'Site health', href: '/site' },
+    ]);
+    expect(routeTrail('/prompts/build')).toEqual([{ label: 'Prompts', href: '/prompts' }]);
+    expect(routeTrail('/runs')).toEqual([]);
+    expect(routeTrail('/agent/chats/c1')).toEqual([]);
   });
 
   it('marks exactly the routes the app host serves as credential links', () => {

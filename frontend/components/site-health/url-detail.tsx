@@ -18,7 +18,7 @@ import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
+import { PAGE_DETAIL_TRAIL, UrlDetailView } from './url-detail-view';
 import { RecordPage } from '@/components/templates/record-page';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -81,7 +81,7 @@ export function UrlDetail({
 
   if (detailQuery.isLoading)
     return (
-      <RecordPage back={PAGE_DETAIL_BACK}>
+      <RecordPage trail={PAGE_DETAIL_TRAIL}>
         <StateBlock
           kind="loading"
           label="Loading page detail…"
@@ -91,7 +91,7 @@ export function UrlDetail({
     );
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <RecordPage back={PAGE_DETAIL_BACK}>
+      <RecordPage trail={PAGE_DETAIL_TRAIL}>
         <StateBlock
           kind="error"
           {...readErrorProps(detailQuery)}
