@@ -225,6 +225,56 @@ describe('An issue-group Action page', () => {
   });
 });
 
+const declared = (checks: unknown[]) => ({
+  id: '77777777-7777-4777-8777-777777777777',
+  action_id: ACTION,
+  output_revision_id: null,
+  member_opportunity_ids: [FINDING],
+  opportunity_snapshot_id: null,
+  resolved_before_snapshot_id: null,
+  target_site_url_ids: [],
+  target_external_url: null,
+  declared_implemented_at: NOW,
+  deployed_by: null,
+  deployment_reference: null,
+  expected_checks: [],
+  state: 'observed',
+  limitations: [],
+  verification_events: [],
+  legs: [],
+  checks,
+  measured_until: NOW,
+  created_at: NOW,
+});
+const metCheck = {
+  index: 0,
+  kind: 'site_rule',
+  leg: 'next_crawl',
+  state: 'met',
+  reason: null,
+  observed_at: NOW,
+  source_kind: 'site_crawl',
+  source_id: null,
+  subject: 'Missing structured data',
+};
+
+describe('A Done Action’s status', () => {
+  it.each([
+    // The status fact is the word, then the measurement Tag when there is one.
+    ['Done', 'with no check', []],
+    ['DoneVerified', 'with a passing check', [metCheck]],
+  ] as const)('reads %j %s', async (status, _, checks) => {
+    serve(
+      { ...action, status: 'done', measurement: 'verified' },
+      { declaration: declared([...checks]) },
+    );
+    renderDetail();
+
+    const details = await screen.findByRole('region', { name: 'Details' });
+    expect(within(details).getAllByRole('definition').at(0)?.textContent).toBe(status);
+  });
+});
+
 describe('An Action page’s dock', () => {
   it.each([
     ['open', ['Decline', 'Accept']],

@@ -3,7 +3,6 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImpactBars } from '@/components/ui/impact-bars';
-import { textRole } from '@/components/ui/typography';
 import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
 import { groupingParams, type GroupingRef, type TreeGrouping } from '@/lib/agent/action-tree';
@@ -45,7 +44,7 @@ const IMPACT_LEVEL = { high: 3, medium: 2, low: 1 } as const;
 
 /** An Action's impact as three bars and a word; an unscored one says so. */
 export function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
-  if (!band) return <span className={textRole('caption')}>Not scored</span>;
+  if (!band) return <span>Not scored</span>;
   return <ImpactBars level={IMPACT_LEVEL[band]}>{IMPACT_LABEL[band]}</ImpactBars>;
 }
 

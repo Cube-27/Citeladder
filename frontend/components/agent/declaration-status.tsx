@@ -9,7 +9,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole, type TextRole } from '@/components/ui/typography';
 import {
   checkKindLabel,
   checkKindNote,
@@ -80,6 +80,7 @@ export function DeclarationStatus({
   shownRevision,
   workspaceId,
   focusOnMount = false,
+  titleRole = 'subheading',
 }: Readonly<{
   declaration: ActionDeclaration;
   /** The revision on screen, when shown beside an output. */
@@ -87,6 +88,8 @@ export function DeclarationStatus({
   workspaceId: string;
   /** Move focus here: the dialog that declared it just closed with its trigger gone. */
   focusOnMount?: boolean;
+  /** The Measurement title's role: a reading page passes its section-title role. */
+  titleRole?: TextRole;
 }>) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -104,7 +107,7 @@ export function DeclarationStatus({
         {revisionNote(declaration.output_revision_id, shownRevision)}
       </p>
       <Deployment declaration={declaration} />
-      <h3 ref={heading} tabIndex={-1} className={textRole('subheading', 'focus-ring w-fit')}>
+      <h3 ref={heading} tabIndex={-1} className={textRole(titleRole, 'focus-ring w-fit')}>
         Measurement
       </h3>
       <Measurement declaration={declaration} />
