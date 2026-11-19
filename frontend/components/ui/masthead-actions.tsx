@@ -136,21 +136,6 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
 
   return (
     <>
-      {more === 'none' ? null : (
-        <MoreMenu
-          id={moreId}
-          trigger={more === 'always' ? undefined : 'rail:hidden'}
-          read={() =>
-            foldedEntries(
-              [
-                { box: foldedSlot, inRow: false },
-                { box: group, inRow: groupInRow() },
-              ],
-              menus,
-            )
-          }
-        />
-      )}
       <span ref={setFoldedSlot} data-masthead-folded-primary="" data-folded-by={moreId} hidden />
       <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
         <MenuFold.Provider value={menus}>
@@ -166,6 +151,22 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
           </FoldedAlways.Provider>
         </MenuFold.Provider>
       </MastheadPrimarySlot.Provider>
+      {/* After the secondary actions left in the row, before the primary. */}
+      {more === 'none' ? null : (
+        <MoreMenu
+          id={moreId}
+          trigger={more === 'always' ? undefined : 'rail:hidden'}
+          read={() =>
+            foldedEntries(
+              [
+                { box: foldedSlot, inRow: false },
+                { box: group, inRow: groupInRow() },
+              ],
+              menus,
+            )
+          }
+        />
+      )}
     </>
   );
 }
