@@ -1,5 +1,3 @@
-import { textRole } from '@/components/ui/typography';
-
 /** Bar left edges and heights in a 13×12 box, lowest first. */
 const BARS = [
   { x: 0, height: 5 },
@@ -8,13 +6,13 @@ const BARS = [
 ] as const;
 
 /**
- * A row's impact in a table cell: three rising bars, as many filled as the
- * level, then its word. Quieter than a priority StatusMark, for dense rows
- * where every row carries one.
+ * A row's impact: three rising bars, as many filled as the level, then its
+ * word. Quieter than a priority StatusMark, for dense rows where every row
+ * carries one. Its word takes the text role of the cell or fact it sits in.
  */
 export function ImpactBars({ level, children }: Readonly<{ level: 1 | 2 | 3; children: string }>) {
   return (
-    <span className={textRole('caption', 'inline-flex items-center gap-2 whitespace-nowrap')}>
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
       <svg aria-hidden width={13} height={12} viewBox="0 0 13 12" className="shrink-0">
         {BARS.map((bar, index) => (
           <rect

@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { textRole } from '@/components/ui/typography';
+import { textRole, type TextRole } from '@/components/ui/typography';
 
 /**
  * A record's reading page (the Actions v3 Action and URL pages): labelled
@@ -23,7 +23,10 @@ export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="mt-3 flex flex-wrap gap-2">{children}</div>;
 }
 
-/** A section under a small grey label ("Overview", "What to do"). */
+/** Every section title on a reading page, Details and nested ones included. */
+export const READING_SECTION_TITLE = 'label' satisfies TextRole;
+
+/** A section under its title ("Overview", "What to do"). */
 export function Labelled({
   title,
   caption,
@@ -37,7 +40,7 @@ export function Labelled({
   const id = useId();
   return (
     <section aria-labelledby={id} className="mt-6 flex min-w-0 flex-col gap-2">
-      <h2 id={id} className={textRole('caption', 'text-ink-2')}>
+      <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
         {title}
       </h2>
       {children}
@@ -57,7 +60,7 @@ export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] 
   const id = useId();
   return (
     <section aria-labelledby={id} className="mt-8 flex flex-col gap-3">
-      <h2 id={id} className={textRole('label')}>
+      <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
         Details
       </h2>
       <dl className="flex flex-col gap-3">

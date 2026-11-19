@@ -19,15 +19,23 @@ const TONE: Record<ActionStatus, StateDotTone> = {
   dismissed: 'declined',
 };
 
-/** A status as its ring and word; Done carries its measurement badge too. */
+/**
+ * A status as its ring and word. Done carries its measurement badge only when
+ * a check measures it: with none, or findings resolved before go-live, the
+ * body says nothing is verified, so the badge must not say Verified.
+ */
 function StatusValue({
   action,
-}: Readonly<{ action: Pick<ActionDetail, 'status' | 'measurement'> }>) {
+}: Readonly<{ action: Pick<ActionDetail, 'status' | 'measurement' | 'declaration'> }>) {
+  const checked =
+    !!action.declaration &&
+    !action.declaration.resolved_before_snapshot_id &&
+    action.declaration.checks.length > 0;
   return (
     <>
       <StateDot tone={TONE[action.status]} />
       {ACTION_STATUS_LABEL[action.status]}
-      {action.status === 'done' && action.measurement ? (
+      {action.status === 'done' && action.measurement && checked ? (
         <Tag>{ACTION_MEASUREMENT_LABEL[action.measurement]}</Tag>
       ) : null}
     </>

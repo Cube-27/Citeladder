@@ -98,7 +98,7 @@ export function WorkRow({
         <span className={textRole('caption', 'block truncate')}>{caption}</span>
       </td>
       <td className={cn(WIDE, textRole('caption', 'truncate tabular-nums'))}>{scope}</td>
-      <td className="flex">{impact}</td>
+      <td className={textRole('caption', 'flex')}>{impact}</td>
       <td className={cn(WIDE, textRole('caption', 'truncate'))}>{source}</td>
     </tr>
   );
