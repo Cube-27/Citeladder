@@ -120,12 +120,13 @@ export function TableRow({
   highlight,
   ...props
 }: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
-  // The app tints every row's cells on hover and selection (globals.css "r2
-  // data"); the website keeps its row-level tint on pressable rows.
+  // The app tints a pressable row's cells on hover, and every row's on
+  // selection (globals.css); the website keeps its row-level tint.
   const pressable = props.onClick !== undefined;
   return (
     <tr
       {...props}
+      data-pressable={pressable || undefined}
       className={cn(
         'h-[var(--table-row-height)] transition-colors duration-[var(--motion-fast)]',
         // Hover and selected are two states: a selected row takes the

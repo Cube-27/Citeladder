@@ -252,7 +252,7 @@ export function AuthShowcase() {
             <section
               key={slide.id}
               className={cn(
-                'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition duration-[var(--motion-open)] motion-reduce:transition-none',
+                'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition-opacity duration-[var(--motion-open)] motion-reduce:transition-none',
                 current ? 'visible' : 'invisible',
               )}
               style={current ? SHOWN : HIDDEN}

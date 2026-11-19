@@ -144,7 +144,10 @@ export function SearchableSelect({
           role="listbox"
           aria-label={ariaLabel}
           data-open="true"
-          className={cn(MENU_PANEL, 'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto')}
+          className={cn(
+            MENU_PANEL,
+            'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto [--popup-origin:top]',
+          )}
         >
           {filtered.map((option, index) => (
             <li key={option.value} role="none">

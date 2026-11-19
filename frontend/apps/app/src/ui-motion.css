@@ -6,7 +6,8 @@
    content mounted only while an animation runs. Each moves from
    `--popup-from` (a tooltip a 2px rise, the dock 8px up)
    and grows from `--popup-scale` (a menu, select list or info hint from 96%
-   at its anchor), over --motion-tint (a menu over --motion-open). */
+   at its anchor; a list without Radix from its `--popup-origin` edge), over
+   --motion-open, and leaves over --motion-close (owner: 200 in, 160 out). */
 .tooltip-panel {
   --popup-from: 0 -4px;
 }
@@ -16,7 +17,7 @@
 :is(.menu-panel, .popover-panel)[class] {
   --popup-from: 0;
   --popup-scale: 0.96;
-  transform-origin: var(--radix-popper-transform-origin);
+  transform-origin: var(--radix-popper-transform-origin, var(--popup-origin, center));
 }
 @keyframes popup-in {
   from {
@@ -32,33 +33,25 @@
     scale: var(--popup-scale, 1);
   }
 }
-.tooltip-panel[data-state$='open'] {
-  animation: popup-in var(--motion-tint) var(--ease-standard);
-}
-/* A menu or select list opens over --motion-open and closes over
-   --motion-close (owner: 200 in, 160 out). */
-.menu-panel:is([data-state$='open'], [data-open]) {
+:is(.tooltip-panel[data-state$='open'], .menu-panel:is([data-state$='open'], [data-open])) {
   animation: popup-in var(--motion-open) var(--ease-standard);
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
   animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
-.popover-panel[data-state='closed'] {
-  animation-duration: var(--motion-overlay-exit);
-}
 /* The dock is centred by its own translate, so it rises from there. */
 [data-selection-dock] {
   --popup-from: -50% 8px;
-  animation: popup-in var(--motion-tint) var(--ease-standard);
+  animation: popup-in var(--motion-open) var(--ease-standard);
 }
 
 /* Toasts stack newest in front (toast.tsx sets each one's index, list offset
    and measured height): older ones peek 8px apart at 96% and 92% with their
-   content hidden, and the stack opens into a list while hovered or focused.
-   A toast drops in 16px on the fluid curve and rises 10px as it fades out. */
+   content hidden, and the stack opens into a list while focused, or hovered
+   by a fine pointer. A toast drops in 16px on the fluid curve and rises 10px
+   as it fades out; it moves by translate, scale and opacity only. */
 .toast-stack {
   height: calc(var(--front-height) + (var(--toast-count) - 1) * 8px);
-  transition: height var(--motion-toast) var(--ease-fluid);
 }
 .toast-panel {
   --toast-y: calc(var(--toast-index) * 8px);
@@ -73,31 +66,44 @@
   translate: 0 var(--toast-y);
   scale: var(--toast-scale);
   transform-origin: top;
-  transition-property: translate, scale, height;
-  transition-duration: var(--motion-toast);
+  transition-property: translate, scale;
+  transition-duration: var(--motion-open);
   transition-timing-function: var(--ease-fluid);
 }
 .toast-panel:not([data-front]) {
   height: var(--front-height, auto);
 }
 .toast-panel > * {
-  transition: opacity var(--motion-tint) var(--ease-fluid);
+  transition: opacity var(--motion-fast) var(--ease-fluid);
 }
-.toast-stack:not(:hover, :focus-within) .toast-panel:not([data-front]) > * {
+.toast-stack .toast-panel:not([data-front]) > * {
   opacity: 0;
 }
-.toast-stack:is(:hover, :focus-within) .toast-panel {
+.toast-stack:focus-within .toast-panel {
   --toast-y: var(--toast-offset);
   --toast-scale: 1;
   height: var(--toast-height, auto);
+  & > * {
+    opacity: 1;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .toast-stack:hover .toast-panel {
+    --toast-y: var(--toast-offset);
+    --toast-scale: 1;
+    height: var(--toast-height, auto);
+    & > * {
+      opacity: 1;
+    }
+  }
 }
 .toast-panel[data-state='open'] {
   --popup-from: 0 -16px;
-  animation: popup-in var(--motion-toast) var(--ease-fluid);
+  animation: popup-in var(--motion-open) var(--ease-fluid);
 }
 .toast-panel[data-state='closed'] {
   z-index: 0;
-  animation: popup-out var(--motion-overlay) var(--ease-fluid) both;
+  animation: popup-out var(--motion-close) var(--ease-fluid) both;
 }
 
 /* A swipe moves the toast 1:1, eases back on cancel (Radix clears both
@@ -114,7 +120,7 @@
 
 /* A dialog (the palette too) rises 6px from 98.5% on HeroUI's ease-out-quad
    and fades out to 99%; it is centred by its own translate. Its scrim fades
-   in over --motion-tint and out with it. */
+   in and out with it. */
 :is(.dialog-overlay, .drawer-overlay) {
   --popup-from: 0;
 }
@@ -123,21 +129,21 @@
   --popup-scale: 0.985;
 }
 .dialog-overlay[data-state='open'] {
-  animation: popup-in var(--motion-tint) var(--ease-standard) both;
+  animation: popup-in var(--motion-open) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--motion-overlay) var(--ease-quad) both;
+  animation: popup-in var(--motion-open) var(--ease-quad) both;
 }
 .dialog-panel[data-state='closed'] {
   --popup-from: -50% 0;
   --popup-scale: 0.99;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--motion-overlay-exit) var(--ease-exit) both;
+  animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
 
-/* A drawer only slides, solid all the way, on the fluid curve (in over
-   --motion-overlay, out over --motion-open); its scrim fades on the same. */
+/* A drawer only slides, solid all the way, on the fluid curve; its scrim
+   fades on the same. */
 .drawer-panel {
   --popup-from: 100% 0;
 }
@@ -155,21 +161,25 @@
   }
 }
 .drawer-overlay[data-state='open'] {
-  animation: popup-in var(--motion-overlay) var(--ease-fluid) both;
+  animation: popup-in var(--motion-open) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='open'] {
-  animation: slide-in var(--motion-overlay) var(--ease-fluid) both;
+  animation: slide-in var(--motion-open) var(--ease-fluid) both;
 }
 .drawer-overlay[data-state='closed'] {
-  animation: popup-out var(--motion-open) var(--ease-fluid) both;
+  animation: popup-out var(--motion-close) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='closed'] {
-  animation: slide-out var(--motion-open) var(--ease-fluid) both;
+  animation: slide-out var(--motion-close) var(--ease-fluid) both;
 }
 
-/* A disclosure's chevron turns over when open (its own, not a nested one's);
-   its panel eases height and opacity both ways where the browser can animate
-   `::details-content` to its auto height, and opens at once elsewhere. */
+/* A disclosure's chevron turns over when open (its own, not a nested one's),
+   on its panel's timing; its panel eases height and opacity both ways where
+   the browser can animate `::details-content` to its auto height, and opens
+   at once elsewhere. */
+.disclosure > summary > svg {
+  transition: rotate var(--motion-open) var(--ease-quad);
+}
 .disclosure[open] > summary > svg {
   rotate: -180deg;
 }
@@ -192,25 +202,28 @@
   }
 }
 
-/* A loading shape: one soft sweep crosses all its blocks (a block
-   outside a shape sweeps alone); none under reduced motion. */
+/* A loading shape: one soft band of light crosses all its blocks (a block
+   outside a shape sweeps alone), moved by transform; none under reduced
+   motion. */
 @media (prefers-reduced-motion: no-preference) {
   .skeleton-sweep {
     position: relative;
+    overflow: clip;
   }
   .skeleton-sweep::after {
     content: '';
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
+    inset-block: 0;
+    left: 0;
+    width: 50%;
     pointer-events: none;
     background: linear-gradient(
-        90deg,
-        transparent,
-        color-mix(in oklch, var(--color-surface) 55%, transparent),
-        transparent
-      )
-      no-repeat -100% 0 / 50% 100%;
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--color-surface) 55%, transparent),
+      transparent
+    );
+    translate: -100% 0;
     animation: skeleton-sweep var(--motion-sweep) var(--ease-sweep) infinite;
   }
   .skeleton-sweep .skeleton-sweep::after {
@@ -219,7 +232,7 @@
 }
 @keyframes skeleton-sweep {
   to {
-    background-position: 200% 0;
+    translate: 200% 0;
   }
 }
 
