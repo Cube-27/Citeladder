@@ -102,7 +102,6 @@ export function ReviewStep({
     <>
       <ChecklistField
         label="Your websites"
-        help="Auto-verified from your domain."
         count={domains.length > 0 ? `${selectedDomains} of ${domains.length}` : undefined}
         note={domainNote}
         empty="No websites were found."
@@ -116,10 +115,9 @@ export function ReviewStep({
 
       <ChecklistField
         label="Competitors"
-        help="Pick the brands to compare against in every answer."
         count={`${selectedCompetitors} of ${maximumCompetitors ?? '…'}`}
         note={competitorNote}
-        empty="No competitors were confirmed. Add the companies you lose deals to."
+        empty="No competitors were confirmed."
         items={competitors.map((competitor) => competitorItem(competitor, competitorLimitReached))}
         onToggle={(id) => onToggleCompetitor(indexOf(id))}
         editor={editor}

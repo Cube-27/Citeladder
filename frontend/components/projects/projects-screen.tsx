@@ -84,9 +84,7 @@ export function ProjectsScreen() {
           icon={FolderOpen}
           heading="No projects yet"
           description={
-            mayCreate
-              ? 'Add project to start tracking how AI answers describe your brand.'
-              : 'Ask the workspace owner or an admin to add a project.'
+            mayCreate ? undefined : 'Ask the workspace owner or an admin to add a project.'
           }
         />
       </ReportPage>

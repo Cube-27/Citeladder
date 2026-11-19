@@ -11,11 +11,7 @@ export function BillingCountryInput({
   setCountry,
 }: Readonly<{ country: string; setCountry: (country: string) => void }>) {
   return (
-    <Field
-      label="Billing country"
-      hint="Two-letter ISO code. The server resolves currency, tax and the exact amount from it."
-      className={wellClasses()}
-    >
+    <Field label="Billing country" hint="Two-letter ISO code" className={wellClasses()}>
       {(field) => (
         <Input
           {...field}

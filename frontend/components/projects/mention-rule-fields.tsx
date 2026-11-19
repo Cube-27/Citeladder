@@ -79,10 +79,7 @@ export function MentionRuleFields({
           )}
         </Field>
       ) : null}
-      <Field
-        label="Never counts inside"
-        hint="Comma separated. Phrases where the name is an ordinary word."
-      >
+      <Field label="Never counts inside" hint="Comma separated">
         {(props) => (
           <Input
             {...props}

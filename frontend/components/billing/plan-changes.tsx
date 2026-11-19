@@ -143,7 +143,6 @@ export function PlanChanges({
             if (!open) setDowngradeTo(null);
           }}
           title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
-          description="The downgrade takes effect at your next renewal."
           footer={
             <>
               <Button variant="quiet" onClick={() => setDowngradeTo(null)}>

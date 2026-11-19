@@ -374,8 +374,6 @@ function SearchConsoleSetup() {
       unconnected={{
         icon: Search,
         heading: 'Connect Search Console to see search demand',
-        description:
-          'Demand shows the queries people search around your offerings, with clicks and impressions, once Search Console is connected.',
       }}
       whenReady={
         <DemandEmpty>

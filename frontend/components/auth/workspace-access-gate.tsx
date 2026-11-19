@@ -240,11 +240,7 @@ function AccessEnded({
           </>
         }
       >
-        <p>
-          {canRestore
-            ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
-            : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
-        </p>
+        <p>Your data is retained.</p>
         {activeWorkspaceId && canRestore ? (
           <LazyIsland
             loading={<StateBlock kind="loading" shape={{ kind: 'list' }} />}

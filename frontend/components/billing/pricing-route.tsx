@@ -249,10 +249,6 @@ function SelectedPurchase({
           details={details}
           setDetails={setDetails}
         />
-        <p className={textRole('body', 'text-ink-2')}>
-          The server resolves the current amount and tax for your billing country. Review its quote
-          before continuing to payment.
-        </p>
         <PurchaseButton
           canBuy={canBuy}
           workspaceId={workspaceId}
@@ -407,7 +403,7 @@ function PricingState({
           kind="empty"
           headingLevel={2}
           heading={currentPlan.kind === 'plan' ? 'Change plan' : 'Choose a plan'}
-          description={`${currentPlanSentence(workspaceName, currentPlan)}Compare plans on the public pricing page.`}
+          description={currentPlanSentence(workspaceName, currentPlan).trim() || undefined}
           action={
             <Button asChild>
               <a href={websitePricing}>View public pricing</a>

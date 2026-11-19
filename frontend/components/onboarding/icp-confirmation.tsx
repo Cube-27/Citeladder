@@ -81,11 +81,7 @@ export function IcpCategory({
   const [isOther, setIsOther] = useState(() => !choices.includes(profile.category));
 
   return (
-    <FieldGroup
-      label="What you sell"
-      help="Your competitors and tracked questions are built from this."
-      note={note}
-    >
+    <FieldGroup label="What you sell" note={note}>
       <Stack gap="compact">
         <RadioGroup
           ariaLabel="What you sell"

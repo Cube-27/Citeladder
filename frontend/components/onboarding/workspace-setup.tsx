@@ -76,7 +76,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
       <SetupStep
         width="narrow"
         title="Set up your workspace"
-        help="Your projects and team live here. Your trial starts when you create it."
+        help="Your trial starts when you create it."
         next={
           <Button
             variant="primary"

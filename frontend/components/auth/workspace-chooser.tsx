@@ -83,9 +83,7 @@ function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
       kicker={null}
       barEnd={<UserMenuTrigger presenter="compact" />}
     >
-      <FlowBlock title="Choose a workspace" sub="You can switch between workspaces at any time.">
-        {children}
-      </FlowBlock>
+      <FlowBlock title="Choose a workspace">{children}</FlowBlock>
     </FlowPage>
   );
 }

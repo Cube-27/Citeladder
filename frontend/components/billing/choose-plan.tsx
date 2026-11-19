@@ -62,9 +62,9 @@ const MODES = [
   { value: 'funded', label: 'Managed' },
 ] as const satisfies readonly { value: CredentialMode; label: string }[];
 
-const MODE_NOTE: Record<CredentialMode, string> = {
+const MODE_NOTE: Record<CredentialMode, string | null> = {
   byok: 'Audits run on your own provider keys, billed by those providers directly.',
-  funded: 'CiteLadder supplies the AI engine and search keys; you manage no provider accounts.',
+  funded: null,
 };
 
 /**
@@ -94,7 +94,6 @@ export function ChoosePlan({
           kind="empty"
           icon={MessageSquare}
           heading="Self-serve plans are not open yet"
-          description="To start a plan now, contact us and we will set it up for this workspace."
           action={
             <Button asChild>
               <ExternalHttpLink
@@ -115,10 +114,7 @@ export function ChoosePlan({
     <Section id="choose-plan" aria-labelledby="choose-plan-title">
       <SectionHeader>
         <SectionTitle id="choose-plan-title">Choose a plan</SectionTitle>
-        <SectionDescription>
-          Your billing country sets the currency and tax; you review the exact quote before paying.{' '}
-          {MODE_NOTE[mode]}
-        </SectionDescription>
+        {MODE_NOTE[mode] ? <SectionDescription>{MODE_NOTE[mode]}</SectionDescription> : null}
       </SectionHeader>
       <Stack as={SectionContent} gap="workspace">
         <SegmentedControl

@@ -248,7 +248,7 @@ function SourceRow({
         }
       />
     );
-  const status = `Connected. Choose the ${source.noun} for this project.`;
+  const status = 'Connected';
   if (!canManage)
     return (
       <RowFrame Icon={source.Icon} title={source.label} status={status}>
@@ -305,14 +305,12 @@ function unconnectedFamilies({
 /** Nothing connected yet: the page's empty state, with each family's Connect. */
 function UnconnectedState({
   heading,
-  description,
   icon,
   families,
   canManage,
   startConnect,
 }: Readonly<{
   heading: string;
-  description: string;
   icon?: LucideIcon;
   families: readonly GrantFamily[];
   canManage: boolean;
@@ -333,15 +331,7 @@ function UnconnectedState({
     ) : (
       <span className="type-caption">Ask a workspace owner or admin to connect it.</span>
     );
-  return (
-    <StateBlock
-      kind="empty"
-      icon={icon}
-      heading={heading}
-      description={description}
-      action={action}
-    />
-  );
+  return <StateBlock kind="empty" icon={icon} heading={heading} action={action} />;
 }
 
 /**
@@ -373,7 +363,7 @@ export function DataSourceSetup({
    * The page's own empty state while no source is connected at all: the first
    * family's Connect leads, a second family's is the quiet supporting action.
    */
-  unconnected?: Readonly<{ heading: string; description: string; icon?: LucideIcon }>;
+  unconnected?: Readonly<{ heading: string; icon?: LucideIcon }>;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const canManage = useWorkspaceCapability('manage_credentials');

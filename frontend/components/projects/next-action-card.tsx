@@ -23,37 +23,15 @@ const RECOMMENDED = { status: 'Action recommended', tone: 'warning' } as const;
  */
 const NEXT_ACTION_COPY: Record<
   CommandCenter['next_action']['kind'],
-  { status: string; tone: StatusTone; link: string; reason: string | null }
+  { status: string; tone: StatusTone; link: string }
 > = {
-  // The Action's title and evidence already say why it is next.
-  opportunity: { ...RECOMMENDED, link: ACTIONS.openAction.label, reason: null },
-  connect: {
-    ...RECOMMENDED,
-    link: 'Open Integrations',
-    reason: 'Search Console or GA4 data sharpens which Actions matter.',
-  },
-  crawl: {
-    ...RECOMMENDED,
-    link: 'Open Site health',
-    reason: 'A crawl finds the page issues behind later Actions.',
-  },
-  configure_prompts: {
-    ...RECOMMENDED,
-    link: ACTIONS.addPrompts.label,
-    reason: 'Track the questions buyers ask to start measuring.',
-  },
-  audit: {
-    ...RECOMMENDED,
-    link: 'Open Runs',
-    reason: 'A run measures how answer engines cite you.',
-  },
-  audit_running: { status: 'In progress', tone: 'info', link: 'View progress', reason: null },
-  monitor: {
-    status: 'Up to date',
-    tone: 'positive',
-    link: 'View trends',
-    reason: 'The next run shows whether visibility moves.',
-  },
+  opportunity: { ...RECOMMENDED, link: ACTIONS.openAction.label },
+  connect: { ...RECOMMENDED, link: 'Open Integrations' },
+  crawl: { ...RECOMMENDED, link: 'Open Site health' },
+  configure_prompts: { ...RECOMMENDED, link: ACTIONS.addPrompts.label },
+  audit: { ...RECOMMENDED, link: 'Open Runs' },
+  audit_running: { status: 'In progress', tone: 'info', link: 'View progress' },
+  monitor: { status: 'Up to date', tone: 'positive', link: 'View trends' },
 };
 
 /**
@@ -108,7 +86,6 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
       status={<StatusMark tone={copy.tone}>{copy.status}</StatusMark>}
     >
       <p className={textRole('label')}>{step.title}</p>
-      {copy.reason ? <p className={textRole('body', 'text-ink-2')}>{copy.reason}</p> : null}
       {nextActionEvidence(data)}
       <div>
         {step.kind === 'opportunity' && !listOnly ? (
