@@ -80,25 +80,46 @@ const MARKETS: ProjectMarket[] = [
 const TOPICS = [{ id: 't1', name: 'Pricing' }];
 
 describe('useVisibilityFilterMenu', () => {
-  it('keeps the row as it is when the period is pooled, with Group by in Filters', async () => {
-    const row = ['Engines: All engines', 'Prompts: Unbranded'];
-    const props = { topics: TOPICS, onChangeTopic: vi.fn() };
-    const { unmount } = renderRow({ selectionMode: 'run', ...props });
-    expect(rowChips()).toEqual(['Measurement: Latest run', ...row]);
-    // With one market hidden, Topic still waits in Filters rather than taking its place.
-    expect(await filtersMenu()).toEqual(['Topic: All topics']);
+  it('gives each filter its own chip while the row has room, and Filters only to two or more', async () => {
+    const topics = { topics: TOPICS, onChangeTopic: vi.fn() };
+    const markets = { markets: MARKETS, onChangeMarket: vi.fn() };
+    const { unmount } = renderRow({ selectionMode: 'run', ...topics });
+    // One market hides its filter, so Topic takes the room it leaves.
+    expect(rowChips()).toEqual([
+      'Measurement: Latest run',
+      'Engines: All engines',
+      'Prompts: Unbranded',
+      'Topic: All topics',
+    ]);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
     unmount();
 
-    renderRow({ selectionMode: 'range', range: '30d', ...props });
-    expect(rowChips()).toEqual(['Measurement: Last 30 days', ...row]);
-    expect(await filtersMenu()).toEqual(['Topic: All topics', 'Group by: Per run']);
+    const pooled = renderRow({ selectionMode: 'range', range: '30d', ...topics });
+    expect(rowChips()).toEqual([
+      'Measurement: Last 30 days',
+      'Engines: All engines',
+      'Prompts: Unbranded',
+      'Topic: All topics',
+      'Group by: Per run',
+    ]);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    pooled.unmount();
+
+    renderRow({ view: 'competitor', selectionMode: 'range', range: '30d', ...topics, ...markets });
+    expect(rowChips()).toEqual([
+      'Measurement: Last 30 days',
+      'Engines: All engines',
+      'Market: United States',
+      'Topic: All topics',
+    ]);
+    expect(await filtersMenu()).toEqual(['Prompts: Unbranded', 'Group by: Per run']);
   });
 
-  it('keeps each page’s four icon filters in the row and the rest in Filters', async () => {
+  it('draws a fifth filter left alone as its own chip rather than a one-entry Filters', () => {
+    const markets = { markets: MARKETS, onChangeMarket: vi.fn() };
     const { unmount } = renderRow({
       selectionMode: 'run',
-      markets: MARKETS,
-      onChangeMarket: vi.fn(),
+      ...markets,
       topics: TOPICS,
       topic: 't1',
       onChangeTopic: vi.fn(),
@@ -108,30 +129,36 @@ describe('useVisibilityFilterMenu', () => {
       'Engines: All engines',
       'Market: United States',
       'Prompts: Unbranded',
+      'Topic: Pricing',
     ]);
-    // Topic waits in Filters; set, it follows as a removable value chip.
-    expect(screen.getByRole('button', { name: 'Remove Topic filter' })).toBeVisible();
-    expect(await filtersMenu()).toEqual(['Topic: Pricing']);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
     unmount();
+
+    const perception = renderRow({ view: 'perception', selectionMode: 'run', cohort: 'all' });
+    expect(rowChips()).toEqual([
+      'Measurement: Latest run',
+      'Engines: All engines',
+      'Prompts: All prompts',
+    ]);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    perception.unmount();
 
     renderRow({
       view: 'competitors',
       selectionMode: 'run',
       cohort: 'all',
-      markets: MARKETS,
-      onChangeMarket: vi.fn(),
+      ...markets,
       topics: TOPICS,
       onChangeTopic: vi.fn(),
     });
-    // Competitors read by topic; the prompt cohort moves behind Filters.
     expect(rowChips()).toEqual([
       'Measurement: Latest run',
       'Engines: All engines',
       'Market: United States',
       'Topic: All topics',
+      'Prompts: All prompts',
     ]);
-    expect(screen.getByRole('button', { name: 'Remove Prompts filter' })).toBeVisible();
-    expect(await filtersMenu()).toEqual(['Prompts: All prompts']);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
   });
 
   it('lists the prompt and answer outcome in Filters only where answers are shown', async () => {
