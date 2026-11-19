@@ -72,7 +72,9 @@ function AnswerLoading() {
 function flagOf(code: string): string | null {
   const upper = code.trim().toUpperCase();
   if (!/^[A-Z]{2}$/u.test(upper)) return null;
-  return String.fromCodePoint(...[...upper].map((letter) => 0x1f1a5 + letter.charCodeAt(0)));
+  return String.fromCodePoint(
+    ...[...upper].map((letter) => 0x1f1a5 + (letter.codePointAt(0) ?? 0)),
+  );
 }
 
 function MarketChip({ auditId }: Readonly<{ auditId: string }>) {

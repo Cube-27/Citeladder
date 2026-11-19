@@ -193,9 +193,14 @@ function useAnswerFanout(evidence: ExecutionEvidence, promptId: string | undefin
   return item ? { kind: 'found', item } : { kind: 'missing' };
 }
 
+const searchCount = (count: number) => (count === 1 ? '1 search' : `${count} searches`);
+
 function withheld(count: number): string {
-  const searches = count === 1 ? '1 search' : `${count} searches`;
-  return `${searches} ran; the engine did not expose their wording.`;
+  return `${searchCount(count)} ran; the engine did not expose their wording.`;
+}
+
+function unread(count: number): string {
+  return `${searchCount(count)} ran; their wording is unavailable.`;
 }
 
 function FanoutBody({
@@ -203,9 +208,10 @@ function FanoutBody({
   evidence,
 }: Readonly<{ read: FanoutRead; evidence: ExecutionEvidence }>) {
   if (read.kind === 'loading') return <Skeleton lines={2} />;
+  // Without the fanout row only the count is known, not whether the engine withheld the words.
   if (read.kind === 'missing')
     return evidence.search_query_count > 0 ? (
-      <p className="type-caption text-ink-2">{withheld(evidence.search_query_count)}</p>
+      <p className="type-caption text-ink-2">{unread(evidence.search_query_count)}</p>
     ) : (
       <p className="type-caption text-ink-2">Search queries are unavailable for this answer.</p>
     );

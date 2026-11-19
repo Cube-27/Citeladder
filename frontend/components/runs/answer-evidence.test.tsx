@@ -232,17 +232,30 @@ describe('Answer transcript', () => {
     expect(section?.textContent).toBe('Links—Unavailable');
   });
 
-  it('says when no searches ran, apart from when their wording is unavailable', async () => {
+  it('says when no searches ran, apart from withheld wording and wording never read', async () => {
     serveSearches({ state: 'no_search', search_events: [] });
     const { unmount } = renderAnswer({});
     expect(
       await screen.findByText('The engine ran no searches for this answer.'),
     ).toBeInTheDocument();
     unmount();
+    serveSearches({
+      state: 'no_exposed_queries',
+      search_events: [
+        { sequence: 0, query: '' },
+        { sequence: 1, query: '' },
+      ],
+    });
+    const { unmount: second } = renderAnswer({ search_used: true, search_query_count: 3 });
+    expect(
+      await screen.findByText('2 searches ran; the engine did not expose their wording.'),
+    ).toBeInTheDocument();
+    second();
+    // No fanout row: the count is known, not why the words are missing.
     serveSearches(null);
     renderAnswer({ search_used: true, search_query_count: 3 });
     expect(
-      await screen.findByText('3 searches ran; the engine did not expose their wording.'),
+      await screen.findByText('3 searches ran; their wording is unavailable.'),
     ).toBeInTheDocument();
   });
 });
