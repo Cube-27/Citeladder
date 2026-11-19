@@ -177,6 +177,7 @@ describe('Answer dialog', () => {
       logical_engine: 'chatgpt',
       transport_provider: 'openai',
       transport_model: 'gpt-4',
+      retrieval_enabled: true,
       search_used: true,
       search_query_count: 1,
       query_text_available: true,

@@ -193,7 +193,7 @@ const pastAnswer = (n: number, search: PromptAnswer['search']): PromptAnswer => 
         ]
       : [],
   // The stored value wins: Acme is listed second yet was stored as named first.
-  first_named: n === 1 ? { kind: 'brand', name: 'Acme' } : { kind: 'unavailable' },
+  first_named: n === 1 ? { kind: 'brand', name: 'Acme' } : { kind: 'none' },
   brand_mentioned: n === 1,
   position: n === 1 ? 2 : null,
   cited: n === 1,
