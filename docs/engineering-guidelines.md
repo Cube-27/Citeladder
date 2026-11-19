@@ -157,10 +157,7 @@ renders it. Don't default it with `?? 0`, `|| 0` or `?? false`, and don't
 sort or compare it as zero. The states themselves are
 [invariant 7](invariants.md#7-unknown-states-remain-distinct).
 **Why:** #770, #775 and #793 each removed unknown-as-zero from a group of
-screens, and #863 removed it again ("Shopping zeros"). About 30 `?? 0`
-defaults on measured fields remain, for example
-`components/visibility/visibility-trends.tsx:186` ("Named first in 0 of N"
-for an unmeasured brand).
+screens, and #863 removed it again ("Shopping zeros").
 **Check:** `?? 0`, `|| 0`, `Number(x ?? …)` or `?? false` on an API field
 that is a count, rate, score or share.
 
@@ -185,10 +182,10 @@ differs from the code's divisor.
 **Rule:** A query key or request param never holds a value computed from the
 current time. Key on the preset (`'90d'`) and resolve the bound on the
 server, or round it to a stable boundary.
-**Why:** `rangeToFrom` (`lib/visibility/trends.ts:49`) puts a
-millisecond-precise `from` into the trends read. Every mount makes a new key,
-a refetch and a prefetch that warms nothing. #971 moved that read onto
-Insights and Competitors, which made it a hot path.
+**Why:** `rangeToFrom` (`lib/visibility/trends.ts`) once put a
+millisecond-precise `from` into the trends read, so every mount made a new
+key, a refetch and a prefetch that warmed nothing, on the Insights and
+Competitors hot path. It now starts the UTC day.
 **Check:** `new Date()` or `Date.now()` on a path that reaches a `queryKey`,
 a `queryFn` param or a prefetcher.
 

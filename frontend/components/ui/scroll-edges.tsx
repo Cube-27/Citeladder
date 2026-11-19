@@ -61,7 +61,7 @@ const STEP_SHARE = 0.8;
 /**
  * One sideways-scrolling region's state: the ref for the scrolling element,
  * its props, which edges hide more, and the step. The fade is a mask on the
- * content (globals.css "r3 data"); the steppers sit wherever the owner puts
+ * content (data-table.css); the steppers sit wherever the owner puts
  * them, never over the content. `start={false}` drops the leading fade where a
  * pinned column already marks that edge; the steppers still step back.
  */

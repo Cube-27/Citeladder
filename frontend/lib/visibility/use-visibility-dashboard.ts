@@ -493,14 +493,7 @@ function selectionParams(
   };
 }
 
-/**
- * Whether the evidence table is narrowed past what the summary endpoints take.
- *
- * They accept the run/engine/cohort scope and nothing else, while the evidence
- * read also narrows by prompt, outcome, competitor, domain and URL. With one of
- * those active a server-side total describes a LARGER population than the
- * table, so a tab must stop presenting it as the table's own.
- */
+/** The evidence read's params: the run scope, engine and every active evidence filter. */
 function evidenceSelectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
   activeRunId: string | null,
