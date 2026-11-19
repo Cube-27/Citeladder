@@ -151,7 +151,7 @@ When told to search. Share of answers whose searches returned at least one page 
 - Which language apps use AI to have real conversations with you? (feature-led)
 - App that focuses on pronunciation with speech recognition feedback? (feature-led)
 - Language apps that work offline for travel without wifi? (feature-led)
-- Compare the most popular language apps — which is worth paying for? (comparison shortlist)
+- Compare the most popular language apps, which is worth paying for? (comparison shortlist)
 - Gamified language apps vs audio-based courses, which ones should I shortlist? (comparison shortlist)
 
 ## Frequently asked questions

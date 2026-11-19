@@ -26,7 +26,7 @@ describe('contact mail', () => {
       from: 'CiteLadder Website <notifications@citeladder.com>',
       to: 'contact@citeladder.com',
       replyTo: 'ada@example.com',
-      subject: 'CiteLadder enquiry — <Ada>',
+      subject: 'CiteLadder enquiry from <Ada>',
     });
     expect(mail.html).toContain(
       '&lt;script&gt;bad&lt;/script&gt; &amp; &quot;quoted&quot;<br>Second line',

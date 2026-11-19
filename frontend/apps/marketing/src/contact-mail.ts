@@ -37,7 +37,7 @@ export function contactEmail(submission: ContactSubmission) {
     from: CONTACT_SENDER,
     to: CONTACT_EMAIL,
     replyTo: submission.email,
-    subject: `CiteLadder enquiry — ${submission.name}`,
+    subject: `CiteLadder enquiry from ${submission.name}`,
     text: `New CiteLadder enquiry\n\n${textFields}`,
     html: `<h1>New CiteLadder enquiry</h1>${htmlFields}`,
   };

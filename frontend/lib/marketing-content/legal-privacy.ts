@@ -17,16 +17,16 @@ ${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadd
 This Policy covers the CiteLadder website, hosted application, account administration, purchases, support and data processed through CiteLadder features. For our own account, billing, security and support purposes we decide why and how personal data is processed. For personal data processed on a customer’s instructions, we act on behalf of that customer.
 
 ## information | Information we process
-- Account and workspace — name, work email, authentication identifiers, organisation, roles, invitations and settings, used for sign-in, administration and permissions.
-- Billing and tax — billing name, address and country, tax identifiers, plan, transaction references, invoices and payment or refund status, used for payments, entitlements, accounting, tax and disputes.
-- Project configuration — domains, brand and competitor information, prompts, markets, languages and selected providers, used to configure analysis and monitoring.
-- Website evidence — URLs, publicly accessible page content, technical metadata, extracted facts, links, crawl results and provenance, used for Site Health, reports and comparison.
-- AI and content — prompts, relevant project context, instructions, generated responses and drafts, citations and execution metadata, used for requested AI assistance and visibility measurement.
-- Connected sources — selected properties, encrypted credentials, search and analytics data, imported payloads and sync history, used for authorised integrations and analysis.
-- Server logs you send us — if you connect AI crawler logs, your CDN or server sends request records for your site. We use the client IP address only while processing a record, to verify that a crawler is genuine, and do not store it. We store the crawler identity, the time, the response status and the page path without its query string (URLs that look like secrets are redacted). Detailed request records are deleted after 90 days; daily summaries are kept as project data under this policy’s retention terms.
-- Usage and security — IP address, timestamps, device and browser information, requests, errors and operational events, used for security, abuse prevention and reliability.
-- Support — messages and any details you choose to provide, used to help you and handle complaints.
-- Cookies and browser storage — described in our Cookie Policy at /cookies.
+- Account and workspace:name, work email, authentication identifiers, organisation, roles, invitations and settings, used for sign-in, administration and permissions.
+- Billing and tax:billing name, address and country, tax identifiers, plan, transaction references, invoices and payment or refund status, used for payments, entitlements, accounting, tax and disputes.
+- Project configuration:domains, brand and competitor information, prompts, markets, languages and selected providers, used to configure analysis and monitoring.
+- Website evidence:URLs, publicly accessible page content, technical metadata, extracted facts, links, crawl results and provenance, used for Site Health, reports and comparison.
+- AI and content:prompts, relevant project context, instructions, generated responses and drafts, citations and execution metadata, used for requested AI assistance and visibility measurement.
+- Connected sources:selected properties, encrypted credentials, search and analytics data, imported payloads and sync history, used for authorised integrations and analysis.
+- Server logs you send us:if you connect AI crawler logs, your CDN or server sends request records for your site. We use the client IP address only while processing a record, to verify that a crawler is genuine, and do not store it. We store the crawler identity, the time, the response status and the page path without its query string (URLs that look like secrets are redacted). Detailed request records are deleted after 90 days; daily summaries are kept as project data under this policy’s retention terms.
+- Usage and security:IP address, timestamps, device and browser information, requests, errors and operational events, used for security, abuse prevention and reliability.
+- Support:messages and any details you choose to provide, used to help you and handle complaints.
+- Cookies and browser storage:described in our Cookie Policy at /cookies.
 
 ## payment-and-public-data | Payment details and public information
 CiteLadder does not store complete payment-card numbers, card security codes or payment-authentication secrets. Razorpay, our payment processor, handles those details.
@@ -56,11 +56,11 @@ We may also disclose information to advisers or authorities where necessary and 
 
 ## assistants | AI assistant connections (MCP)
 You can connect an AI assistant to CiteLadder through our MCP server, including as an assistant plugin. The assistant registers itself with a self-declared name and its return address, and you sign in to CiteLadder and approve which workspaces it may use and whether it may make changes.
-- Data we collect — the assistant’s registration, your account and the workspaces you approved, the access you granted, when you connected and when the connection was last used. We process each request the assistant sends to answer it and do not keep it, except a change prepared for your confirmation. Access tokens are stored only as keyed hashes.
-- Purpose — to authenticate the assistant, answer its requests from the saved records of the workspaces you approved, make a change only after you confirm its preview, limit request rates and keep the connection secure.
-- Recipients — the assistant receives only the data its requests return within the access you granted; its provider handles that data under its own terms, as described above. We do not sell this data or use it to train models.
-- Retention — an assistant registration never used to connect may be deleted after 24 hours. A prepared change expires after ten minutes if you do not confirm it. A connection lasts until it is revoked, and must be approved again at least every 180 days. Records of ended connections, used approvals and confirmed changes are kept for 180 days for security and audit, then deleted. Each change made through a connection is also recorded in the workspace’s security log.
-- Your controls — remove a connection at any time in Settings → MCP connections or from your assistant; it stops working at its next request. Workspace Owners and Admins can remove connections to their workspace. Changes are offered only if you tick Allow changes, and each one is shown for you to confirm first.
+- Data we collect:the assistant’s registration, your account and the workspaces you approved, the access you granted, when you connected and when the connection was last used. We process each request the assistant sends to answer it and do not keep it, except a change prepared for your confirmation. Access tokens are stored only as keyed hashes.
+- Purpose:to authenticate the assistant, answer its requests from the saved records of the workspaces you approved, make a change only after you confirm its preview, limit request rates and keep the connection secure.
+- Recipients:the assistant receives only the data its requests return within the access you granted; its provider handles that data under its own terms, as described above. We do not sell this data or use it to train models.
+- Retention:an assistant registration never used to connect may be deleted after 24 hours. A prepared change expires after ten minutes if you do not confirm it. A connection lasts until it is revoked, and must be approved again at least every 180 days. Records of ended connections, used approvals and confirmed changes are kept for 180 days for security and audit, then deleted. Each change made through a connection is also recorded in the workspace’s security log.
+- Your controls:remove a connection at any time in Settings → MCP connections or from your assistant; it stops working at its next request. Workspace Owners and Admins can remove connections to their workspace. Changes are offered only if you tick Allow changes, and each one is shown for you to confirm first.
 
 ## retention | Retention, export and deletion
 We retain project data, including Agent conversations, while your workspace has access to the Service and until you delete it. Cancelling a subscription does not immediately delete your workspace or its history.
