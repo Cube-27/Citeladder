@@ -73,9 +73,7 @@ export function InternalLinkReview({
                 {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}
               </p>
             ) : (
-              <p className="type-caption">
-                This saved suggestion has no captured placement. Run a new analysis to check it.
-              </p>
+              <p className="type-caption">No captured placement.</p>
             )}
           </Stack>
           <PageSummary heading="Add a link to" page={link.target} />
@@ -89,8 +87,8 @@ export function InternalLinkReview({
             )}
             <p className="type-caption">
               {link.target.contextual_inbound === null
-                ? "Existing contextual links to the destination weren't counted."
-                : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}
+                ? 'Contextual inbound links not counted'
+                : `${formatCount(link.target.contextual_inbound)} contextual inbound links`}
             </p>
           </Stack>
           {/* One primary: the ready-to-paste link. Its parts are secondary. */}

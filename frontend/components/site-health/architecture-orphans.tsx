@@ -18,7 +18,7 @@ import { type FigureSegment } from '@/components/ui/figure-strip';
 // Scope, in the metric's own words. The count is a fact about the pages this
 // crawl fetched; it is not the stronger claim that nothing anywhere links to
 // them, which stays behind the coverage-gated rule.
-const ORPHAN_SCOPE_NOTE = 'not linked from any page this crawl fetched';
+const ORPHAN_SCOPE_NOTE = 'within this crawl';
 
 /** The orphan count as a `StatRow` segment of the Internal linking row. */
 export function orphanSegment({

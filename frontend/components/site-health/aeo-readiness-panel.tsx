@@ -150,10 +150,7 @@ export function AeoReadinessPanel({
     );
   if (!readiness.data || readiness.data.crawl_id === null) {
     return (
-      <Notice tone="info">
-        {readiness.data?.limitations[0] ??
-          'AEO readiness appears once a crawl has finished analyzing pages.'}
-      </Notice>
+      <Notice tone="info">{readiness.data?.limitations[0] ?? 'No analyzed crawl yet.'}</Notice>
     );
   }
 
@@ -196,9 +193,6 @@ function ReadinessLedger({
               >
                 <ClampText lines={1} className={textRole('emphasis')}>
                   {dimension.label}
-                </ClampText>
-                <ClampText lines={1} className="type-caption">
-                  {dimension.description}
                 </ClampText>
               </Pressable>
             </TableCell>
@@ -252,7 +246,6 @@ function DimensionDrawer({
       open={Boolean(dimension)}
       onOpenChange={(open) => (open ? undefined : onClose())}
       title={dimension ? `${dimension.label} evidence` : ''}
-      description={dimension?.description ?? ''}
       closeLabel="Close evidence"
     >
       {dimension ? (
@@ -291,7 +284,7 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
         <StatusMark tone={CHECK_TONES[state]}>{state}</StatusMark>
       </Inline>
       <p className={textRole('body', check.remediation ? 'text-ink' : 'text-ink-2')}>
-        {check.remediation || 'No remediation guidance is recorded for this check.'}
+        {check.remediation || '—'}
       </p>
       <p className="type-caption tabular-nums">
         {check.satisfied_count} satisfied · {check.partial_count} partial · {check.missing_count}{' '}
@@ -310,12 +303,9 @@ function checkState(check: ReadinessCheck): CheckState {
 }
 
 /** Says whether the list is the whole set or only its worst rows. */
-function failingPagesCaption(shown: number, total: number): string {
-  if (total === 0) return 'No failing pages were recorded.';
-  if (shown < total) {
-    return `Showing ${formatCount(shown)} of ${formatCount(total)} pages affected, worst first.`;
-  }
-  return `${pluralCount(total, 'page')} failed at least one check, worst first.`;
+function failingPagesCaption(shown: number, total: number): string | undefined {
+  if (total === 0) return '—';
+  return shown < total ? `Worst ${formatCount(shown)} of ${formatCount(total)}` : undefined;
 }
 
 function FailingPages({

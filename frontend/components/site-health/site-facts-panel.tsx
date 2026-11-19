@@ -87,16 +87,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
         {/* Each disclosure is its own target, a workspace gap from the next
             group, so a summary never touches the filter above it. */}
         <Stack gap="workspace" className="min-w-0">
-          {unknown ? (
-            <Notice tone="warning">
-              robots.txt could not be read. Root access and robots policy are unknown.
-            </Notice>
-          ) : null}
-          {view.robots.status === 'not_found' ? (
-            <Notice tone="info">
-              No robots.txt was found. No robots rules restrict these known URLs.
-            </Notice>
-          ) : null}
+          {unknown ? <Notice tone="warning">robots.txt could not be read.</Notice> : null}
           <Disclosure title={crawlerSummary(view)}>
             <CrawlerTable
               view={view}
@@ -209,7 +200,7 @@ function CrawlerTable({
 function PolicySample({ bot }: Readonly<{ bot: CrawlerBot }>) {
   const sample =
     bot.policy === 'unknown'
-      ? 'No complete policy sample is available.'
+      ? 'Unknown'
       : `${formatCount(bot.disallowed_url_count)} of ${formatCount(bot.evaluated_url_count)} known URLs disallowed`;
   // One line per crawler: the sample truncates in a narrow column and keeps its full text.
   return (

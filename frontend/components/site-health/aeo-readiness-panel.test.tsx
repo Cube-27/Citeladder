@@ -148,13 +148,12 @@ function stubReadiness(overrides: Record<string, unknown> = {}) {
 }
 
 describe('AEO readiness', () => {
-  it('renders all seven dimensions with a plain-language description', async () => {
+  it('renders all seven dimensions', async () => {
     stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await screen.findByRole('heading', { name: 'Readiness dimensions' });
     for (const [, label] of DIMENSIONS) expect(screen.getByText(label)).toBeInTheDocument();
-    expect(screen.getByText(/what answerability means in one sentence/i)).toBeInTheDocument();
   });
 
   it('counts pages that need work, never a bare evaluation total', async () => {
@@ -208,19 +207,6 @@ describe('AEO readiness', () => {
     trigger.focus();
     await user.keyboard('{Enter}');
     expect(await screen.findByRole('dialog', { name: 'Answerability evidence' })).toBeVisible();
-  });
-
-  it('uses singular grammar when one checked page needs work', async () => {
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, index === 0);
-        return index === 0 ? { ...base, checked_page_count: 1, failing_page_count: 1 } : base;
-      }),
-    });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getByText('1 page failed at least one check, worst first.')).toBeInTheDocument();
   });
 
   it('names checks by their catalog title and never by a rule id', async () => {
@@ -331,7 +317,7 @@ describe('AEO readiness', () => {
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getByText(/Showing 2 of 140 pages affected/)).toBeInTheDocument();
+    expect(screen.getByText('Worst 2 of 140')).toBeInTheDocument();
   });
 
   it('shows the persisted empty state rather than an empty grid', async () => {

@@ -369,11 +369,7 @@ describe('OverviewPanel', () => {
 
     expect(await screen.findByRole('heading', { name: 'Score change' })).toBeVisible();
     expect(screen.getAllByText('Scored cohort composition changed.')).toHaveLength(1);
-    expect(
-      screen.getByText(
-        'Added page kinds: Product. Score movement is not split into quality versus cohort effects.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Added page kinds: Product.')).toBeInTheDocument();
   });
 
   it('opens HTTP Web fundamentals evidence without browser-only checks', async () => {

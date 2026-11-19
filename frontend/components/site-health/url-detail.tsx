@@ -209,9 +209,7 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
       kind: 'empty',
       icon: History,
       headingLevel: 3,
-      heading: current.current_analysis_finalized
-        ? 'No resolved issues for this page'
-        : 'Resolved issues are known once this page’s current analysis finishes',
+      heading: current.current_analysis_finalized ? 'No resolved issues' : 'Analysis not finished',
     }),
     fixedPageSize: HISTORY_LIMIT,
   });

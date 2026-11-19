@@ -12,7 +12,6 @@ import { crawlFailureCopy, dashboardRunNotice } from '@/lib/site-health/run-noti
 import {
   canShowDiscoveredTotal,
   discoveryProgressLabel,
-  isDiscoveryProvisional,
   isDiscoveryTerminal,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
@@ -233,16 +232,13 @@ function DiscoveryStrip({
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
 }>) {
-  const provisional = isDiscoveryProvisional(crawl);
   const showTotal = canShowDiscoveredTotal(entitlement, crawl);
   // Neutral capability, not a plan name: `sample` means the server picks a
   // bounded sample; full mode uses the crawl's automatic admission allowance.
   const sampleMode = crawl.sample_mode;
   let narration: string;
   if (cancelPending) {
-    narration = 'Stopping crawl: finishing the page in flight';
-  } else if (provisional) {
-    narration = `${discoveryProgressLabel(crawl)}. Scanning continues in the background`;
+    narration = 'Stopping crawl…';
   } else {
     narration = discoveryProgressLabel(crawl);
   }
@@ -262,8 +258,8 @@ function DiscoveryStrip({
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {sampleMode ? (
         <p className="type-body text-ink-2">
-          We&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample of your
-          site. Choosing which pages to monitor needs a monitored-URL allowance.
+          {entitlement.sample_url_limit}-page sample. Choosing pages needs a monitored-URL
+          allowance.
         </p>
       ) : null}
     </ProgressRow>
@@ -289,17 +285,16 @@ function AnalysisStrip({
 type ProgressCount = { label: string; value: number | null };
 
 function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
-  if (cancelPending) return 'Cancelling: finishing the page in flight and stopping';
+  if (cancelPending) return 'Cancelling…';
   if (crawl.counters.activity.state === 'waiting') {
     return crawl.counters.activity.reason === 'host_gate'
-      ? 'Waiting for the site host gate while the worker lease stays healthy'
-      : 'Waiting for the next persisted retry window';
+      ? 'Waiting for the site host'
+      : 'Waiting to retry';
   }
-  if (crawl.counters.activity.state === 'stalled')
-    return 'Worker lease expired. Recovery is pending.';
+  if (crawl.counters.activity.state === 'stalled') return 'Stalled. Recovery is pending.';
   return !crawl.sample_mode && !isDiscoveryTerminal(crawl.discovery_status)
-    ? 'Auditing monitored pages while discovery re-scans the site in the background'
-    : 'Auditing monitored pages for Web fundamentals and AEO issues';
+    ? 'Auditing monitored pages; discovery is re-scanning'
+    : 'Auditing monitored pages';
 }
 
 function analysisCounts(crawl: SiteCrawl): ProgressCount[] {

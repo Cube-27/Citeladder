@@ -127,7 +127,7 @@ describe('StatusStrip — analysis activity', () => {
       }),
     });
 
-    expect(screen.getByText(/Waiting for the site host gate/i)).toBeInTheDocument();
+    expect(screen.getByText('Waiting for the site host')).toBeInTheDocument();
   });
 
   it('prefers the cancelling narration over the link-check copy', () => {
@@ -159,7 +159,7 @@ describe('StatusStrip — lifecycle content', () => {
 
     expect(screen.getByText('Pages discovered')).toBeInTheDocument();
     expect(screen.queryByText('Sample pages discovered')).not.toBeInTheDocument();
-    expect(screen.queryByText(/page sample of your site/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/-page sample/)).not.toBeInTheDocument();
   });
 
   it('narrates discovery with provisional Starter copy while scanning', () => {

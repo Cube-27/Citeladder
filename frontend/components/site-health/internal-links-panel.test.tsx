@@ -278,11 +278,7 @@ describe('Internal links', () => {
   it('tells "nothing to compare" apart from "checked and nothing qualified"', async () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(read(analysis()))));
     renderPanel();
-    expect(
-      await screen.findByText(
-        '30 page pairs were checked and none qualified for a contextual link.',
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('30 page pairs checked, none qualified')).toBeInTheDocument();
   });
 
   it('pages suggestions with rows per page and opens the review drawer', async () => {

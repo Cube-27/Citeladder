@@ -66,7 +66,7 @@ export function InternalLinksCard({
   return (
     <Stack gap="workspace" className="min-w-0">
       <p className={textRole('caption')}>
-        {`Modelled over ${pluralCount(links.source_page_count, 'page')} crawled${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
+        {`${pluralCount(links.source_page_count, 'page')} crawled${links.observed_crawl_incomplete ? ' · incomplete or sampled crawl' : ''}`}
       </p>
       <FactList layout="ruled" label="Internal link measurements" facts={metrics} />
       <AppGrid layout="halves">
