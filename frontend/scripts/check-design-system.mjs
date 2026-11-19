@@ -29,6 +29,7 @@ import {
   landingThemeViolations,
   productContractViolations,
   websiteContractViolations,
+  websiteStyleViolations,
 } from './design-system-stylesheet-checks.mjs';
 import { styleAssertionViolations } from './design-system-test-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
@@ -82,7 +83,17 @@ for (const path of files(root)) {
   if (!sourceExtensions.has(extension) && extension !== '.astro') continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path);
-  if (extension === '.astro') continue;
+  if (extension === '.astro') {
+    // An Astro component's `<style>` blocks answer to the stylesheet rules.
+    const styles = [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((match) => match[1])
+      .join('\n');
+    if (/(?<![\w-])#[0-9a-f]{3,8}(?![\w-])/i.test(styles))
+      violations.push(`${label}: raw color outside apps/app/src/globals.css`);
+    if (/^(?:apps\/marketing|components\/marketing)\//.test(label))
+      violations.push(...websiteStyleViolations(styles, label));
+    continue;
+  }
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   if (
     path !== tokenOwner &&

@@ -39,8 +39,9 @@
   line-height: var(--text-title-sm--line-height);
 }
 
+/* Two lines held, so the plans' prices line up. */
 .cl-plan-desc {
-  min-height: 52px;
+  min-height: calc(2 * var(--text-body--line-height));
   margin: 0;
   color: var(--color-ink-secondary);
   font-size: var(--text-body);

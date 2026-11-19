@@ -15,15 +15,33 @@ const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
 const APP_LIGHT = ':root:not([data-public-surface])';
 const APP_DARK = ":root[data-theme='dark']:not([data-public-surface])";
+const PUBLIC = ':root[data-public-surface]';
+const PUBLIC_LIGHT = ":root[data-public-surface]:not([data-theme='dark'])";
+const PUBLIC_DARK = ":root[data-public-surface][data-theme='dark']";
+const MARKETING_LIGHT = ':root[data-marketing-surface]';
+const MARKETING_DARK = ":root[data-marketing-surface][data-theme='dark']";
 /**
  * Each palette the product renders, as the rule blocks that build it in
- * cascade order: the website's two themes, then the app's two, which rebind
- * on top. The app's light block follows the system dark at the
- * same specificity, so it sits under the app's dark block in the app's dark.
+ * cascade order: the system's two themes, the marketing site's two (the
+ * public paper and the site's own effects palette on top), then the app's
+ * two, which rebind on top. The app's light block follows the system dark at
+ * the same specificity, so it sits under the app's dark block in the app's dark.
  */
 const SCOPES = [
   { name: LIGHT, layers: [LIGHT], website: true },
   { name: DARK, layers: [DARK], website: true },
+  {
+    name: MARKETING_LIGHT,
+    layers: [PUBLIC_LIGHT, PUBLIC, MARKETING_LIGHT],
+    website: true,
+    marketing: true,
+  },
+  {
+    name: MARKETING_DARK,
+    layers: [DARK, PUBLIC_DARK, PUBLIC, MARKETING_LIGHT, MARKETING_DARK],
+    website: true,
+    marketing: true,
+  },
   { name: APP_LIGHT, layers: [APP_LIGHT], website: false },
   { name: APP_DARK, layers: [DARK, APP_LIGHT, APP_DARK], website: false },
 ];
@@ -84,6 +102,27 @@ const CONTRAST_PAIRS = [
   // The website's control marks; the app's field edges are quieter by design.
   { inks: [color('line-control')], surfaces: GROUNDS, minimum: 3, websiteOnly: true },
 ];
+
+/*
+ * The marketing site's own palette, held on its two scopes only: copy on the
+ * page and in its wells, an eyebrow chip's ink, the closing band's copy on
+ * every stop of its gradient, and the grey marks at 3:1.
+ */
+const MARKETING_PAIRS = [
+  {
+    inks: ['ink', 'ink-secondary', 'ink-muted'].map(color),
+    surfaces: ['site-page', 'site-well'].map(color),
+    minimum: 4.5,
+  },
+  { inks: [color('site-chip-ink')], surfaces: [color('site-chip')], minimum: 4.5 },
+  {
+    inks: [color('ink'), color('site-band-ink-secondary')],
+    surfaces: ['site-band-from', 'site-band-mid', 'site-band-to'].map(color),
+    minimum: 4.5,
+  },
+  { inks: [color('site-mark')], surfaces: [color('site-page')], minimum: 3 },
+].map((row) => ({ ...row, marketingOnly: true }));
+CONTRAST_PAIRS.push(...MARKETING_PAIRS);
 
 /*
  * The app's palette, held on the app's scopes only:
@@ -281,9 +320,12 @@ function rowViolations(palette, { scope, cssLabel }, row) {
   });
 }
 
-function contrastViolations(palette, { name: scope, website }, cssLabel) {
+function contrastViolations(palette, { name: scope, website, marketing = false }, cssLabel) {
   return CONTRAST_PAIRS.filter(
-    (row) => (website || !row.websiteOnly) && (!website || !row.appOnly),
+    (row) =>
+      (website || !row.websiteOnly) &&
+      (!website || !row.appOnly) &&
+      (marketing || !row.marketingOnly),
   ).flatMap((row) => rowViolations(palette, { scope, cssLabel }, row));
 }
 

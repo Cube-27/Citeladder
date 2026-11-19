@@ -134,5 +134,5 @@
 /* The stage's own rules are translucent, so the tint runs through them. */
 
 .cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {
-  border-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  border-color: color-mix(in oklch, var(--color-ink) 10%, transparent);
 }
