@@ -101,7 +101,12 @@ export function ConnectStrip({
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
         <MenuTrigger asChild>
           <span className="group inline-flex shrink-0">
-            <Button asChild variant={inApp ? 'secondary' : 'primary'}>
+            {/* On the website both buttons take the page's call-to-action height. */}
+            <Button
+              asChild
+              variant={inApp ? 'secondary' : 'primary'}
+              className={cn(!inApp && 'marketing-cta-button')}
+            >
               <a
                 ref={link}
                 href={primary.href}
@@ -163,6 +168,7 @@ export function ConnectStrip({
         <CopyButton
           value={MCP_SERVER_URL}
           variant={inApp ? 'secondary' : 'quiet'}
+          className={cn(!inApp && 'marketing-cta-button')}
           copiedLabel="MCP URL copied"
         >
           Copy

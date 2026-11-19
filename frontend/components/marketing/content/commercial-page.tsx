@@ -40,8 +40,8 @@ export function CommercialEntryPage({
         lead={page.introduction}
         actions={
           <>
-            <DemoButtonLink size="marketing" />
-            <ButtonLink href={page.secondary.href} variant="soft" size="marketing">
+            <DemoButtonLink />
+            <ButtonLink href={page.secondary.href} variant="soft">
               {page.secondary.label}
             </ButtonLink>
           </>
@@ -94,11 +94,7 @@ export function CommercialEntryPage({
       </PageSection>
 
       <PageSection label="Get started">
-        <CtaBand
-          title={page.closingHeading}
-          lead={page.closing}
-          actions={<DemoButtonLink size="marketing" />}
-        />
+        <CtaBand title={page.closingHeading} lead={page.closing} actions={<DemoButtonLink />} />
       </PageSection>
     </>
   );

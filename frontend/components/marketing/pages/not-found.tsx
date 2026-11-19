@@ -21,10 +21,8 @@ export function NotFoundPage({ links }: Readonly<{ links: readonly Link[] }>) {
         lead="It may have moved, or the link may be wrong. Try one of these pages instead."
         actions={
           <>
-            <ButtonLink href="/" size="marketing">
-              Home
-            </ButtonLink>
-            <ButtonLink href="/contact" variant="soft" size="marketing">
+            <ButtonLink href="/">Home</ButtonLink>
+            <ButtonLink href="/contact" variant="soft">
               Contact
             </ButtonLink>
           </>

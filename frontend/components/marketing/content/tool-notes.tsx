@@ -1,5 +1,4 @@
 import { Fragment } from 'react';
-import { ArrowRight } from 'lucide-react';
 
 import { FREE_TOOLS, TOOL_GUIDES } from '@/lib/marketing-content/tools';
 
@@ -76,11 +75,7 @@ export function SiteHealthCta() {
       <CtaBand
         title="Need evidence across your whole website?"
         lead="Site Health inspects captured page evidence across your site before you choose a fix."
-        actions={
-          <ButtonLink href="/platform/site-health" size="marketing">
-            Explore Site Health <ArrowRight aria-hidden />
-          </ButtonLink>
-        }
+        actions={<ButtonLink href="/platform/site-health">Explore Site Health</ButtonLink>}
       />
     </PageSection>
   );
