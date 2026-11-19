@@ -1758,11 +1758,12 @@ a.focus-ring:active .type-caption {
 }
 
 /* One primary per view (STA-03): an empty state on the page that offers an
-   action draws its main (secondary) button with the ink fill, and the
-   masthead's primary takes the secondary face while it shows (StateBlock,
-   MastheadPrimary). Both attributes are app-only; the disabled rule below
-   outranks these, so a disabled button keeps the one disabled look. */
-[data-state-offer] [data-button-variant='secondary'] {
+   action draws its main (first, secondary) button with the ink fill; the
+   buttons after it keep the secondary face. The masthead's primary takes the
+   secondary face while it shows (StateBlock, MastheadPrimary). Both
+   attributes are app-only; the disabled rule below outranks these, so a
+   disabled button keeps the one disabled look. */
+[data-state-offer] [data-button-variant='secondary']:first-child {
   background-color: var(--color-ink);
   border-color: var(--color-ink);
   color: var(--color-on-ink);

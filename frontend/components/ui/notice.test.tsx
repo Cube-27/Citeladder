@@ -14,16 +14,16 @@ describe('Notice kind="read"', () => {
     render(
       <Notice
         kind="read"
-        error={new ApiError('Temporarily unavailable', 503, '', 'request-123')}
+        error={new ApiError('Internal Server Error', 500, '', 'request-123')}
         title="Couldn't load the data"
         fallback="The request failed or timed out."
         onRetry={onRetry}
       />,
     );
 
-    // Words first: the subject, what to do, the status text; the reference is a copy control.
+    // The subject and the notice's own sentence, never the status text; the reference is a copy control.
     expect(screen.getByRole('alert')).toHaveTextContent(
-      "Error: Couldn't load the dataRetry in a moment.Temporarily unavailableRetryCopy reference",
+      "Error: Couldn't load the dataThe request failed or timed out.RetryCopy reference",
     );
     expect(screen.queryByText(/request-123/u)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Retry' }));

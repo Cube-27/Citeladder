@@ -101,7 +101,7 @@ export function ActionDock({
       {second === 'declare' ? declare : slot(second, SECOND)}
       <ProjectLink href={agentHref} className={buttonClasses('primary', DOCK_SLOT.primary)}>
         <Icon icon={Sparkles} />
-        {agentLabel}
+        <span className={DOCK_SLOT.primaryLabel}>{agentLabel}</span>
       </ProjectLink>
       {markImplemented.dialog}
     </PageDock>

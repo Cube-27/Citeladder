@@ -171,9 +171,10 @@ function ControlRow({ lead, search, filters = [], status, actions }: Omit<Filter
             </span>
           ) : null}
           {status === undefined ? null : (
+            // A block, not a flex row: `truncate` only cuts a block's own inline text.
             <output
               aria-live="polite"
-              className="type-caption flex min-w-0 shrink items-center gap-2 truncate empty:hidden"
+              className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
             >
               {status}
             </output>

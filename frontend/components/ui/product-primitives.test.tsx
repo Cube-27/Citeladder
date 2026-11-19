@@ -551,7 +551,7 @@ describe('StateBlock', () => {
       />,
     );
     expect(screen.getByText("Couldn't load the issues")).toBeVisible();
-    expect(screen.getByText('Temporarily unavailable')).toBeVisible();
+    expect(screen.getByText('The request failed or timed out.')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
