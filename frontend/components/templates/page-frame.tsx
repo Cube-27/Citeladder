@@ -139,8 +139,14 @@ function PageStrips({
         </div>
       ) : null}
       {actionsIn === 'filters' || filters ? (
-        <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center gap-2 py-2')}>
-          {filters ? <div className="flex min-w-0 flex-1 items-center">{filters}</div> : null}
+        // Below `rail` the filter bar stacks full width, so the actions take the next line.
+        <div
+          data-page-band="filters"
+          className={cn(STRIP_RULE, 'not-rail:flex-wrap flex items-center gap-2 py-2')}
+        >
+          {filters ? (
+            <div className="not-rail:basis-full flex min-w-0 flex-1 items-center">{filters}</div>
+          ) : null}
           {actionsIn === 'filters' ? rowActions : null}
         </div>
       ) : null}

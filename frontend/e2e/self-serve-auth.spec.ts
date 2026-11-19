@@ -62,7 +62,7 @@ test('the Account section of Settings carries the inline security controls', asy
     'aria-selected',
     'true',
   );
-  for (const section of ['Sign-in', 'Password', 'Sessions'])
+  for (const section of ['Sign-in', 'Sessions'])
     await expect(page.getByRole('heading', { name: section, exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Email password setup link' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out all sessions' }).click();

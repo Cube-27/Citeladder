@@ -108,7 +108,12 @@ export function FilterBar({ view, search, filters = [], status, actions }: Filte
       className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
-      {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
+      {/* Breaks lines at 200px and grows to 256, so a full strip wraps later. */}
+      {search ? (
+        <div className="rail:max-w-64 rail:min-w-[200px] rail:grow rail:basis-[200px] min-w-0">
+          {search}
+        </div>
+      ) : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />
