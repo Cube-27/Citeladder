@@ -269,14 +269,15 @@ describe('Answer transcript', () => {
 
 describe('Search evidence', () => {
   it('keeps a search the engine never reported apart from one it did not run', () => {
-    const searches = () =>
-      screen.getByText('Searches', { selector: 'dt' }).nextElementSibling?.textContent;
+    const searchCheck = () =>
+      screen.getByText('Grounded with search').nextElementSibling?.textContent;
     const { unmount } = renderAnswer({ search: 'not_used' });
-    expect(searches()).toBe('Not used');
-    expect(screen.getByText('The engine ran no web search')).toBeInTheDocument();
+    expect(searchCheck()).toBe('The engine ran no web search');
     unmount();
     renderAnswer({ search: 'not_reported' });
-    expect(searches()).toBe('—Not reported');
+    expect(searchCheck()).toBe(
+      'Not reported: this engine does not say whether it searched the web',
+    );
   });
 });
 

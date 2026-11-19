@@ -3,47 +3,21 @@ import { Inline } from '@/components/ui/layout';
 import type { ModelProvenance } from '@citeladder/contracts';
 
 /**
- * The measurement conditions behind a figure: model and retrieval.
- *
- * Two shapes, deliberately distinct:
- *
- *   - a SINGULAR surface (one execution) names the one exact model that
- *     produced it;
- *   - an AGGREGATE spanning several models says "Multiple models" and lists
- *     them, and never elects one to stand in for the rest. Picking a
- *     representative model would attribute every number in the aggregate to a
- *     model that produced only some of them.
- *
- * `null` retrieval means the run predates the frozen policy block. That is
- * "unrecorded", not "off", so it renders as neither.
+ * The models behind a run's figures. One model is named; several say
+ * "Multiple models" and list them, never electing one to stand in for the
+ * rest, which would attribute every number to a model that produced only some.
  */
 export function MeasurementContext({
-  retrieval,
-  model,
   provenance,
-  className,
-}: Readonly<{
-  retrieval?: boolean | null;
-  /** The exact model, for a singular-model surface. */
-  model?: string | null;
-  /** Every measured route, for an aggregate surface. */
-  provenance?: readonly ModelProvenance[];
-  className?: string;
-}>) {
-  const models = provenance ? distinctModels(provenance) : [];
-  const aggregate = models.length > 1;
-
+}: Readonly<{ provenance: readonly ModelProvenance[] }>) {
+  const models = distinctModels(provenance);
   return (
-    <div className={className} data-measurement-context>
+    <div data-measurement-context>
       <Inline as="span" className="flex-wrap">
-        {aggregate ? (
+        {models.length > 1 ? (
           <Tag title={models.join(', ')}>Multiple models ({models.length})</Tag>
         ) : (
-          <ModelBadge model={model ?? models[0] ?? null} />
-        )}
-
-        {retrieval === null || retrieval === undefined ? null : (
-          <Tag>{retrieval ? 'Retrieval on' : 'Retrieval off'}</Tag>
+          <ModelBadge model={models[0] ?? null} />
         )}
       </Inline>
     </div>
