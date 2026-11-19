@@ -141,7 +141,7 @@ export function DataTable({
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   useFlexibleColumnCheck({ columns, title, label });
   const replacing = replacingState(state);
-  const steppers = scroll.scrolls ? <ScrollSteppers state={scroll} /> : null;
+  const steppers = <ScrollSteppers state={scroll} />;
   const note = tableNote(footer, parts.zoned);
   const footed = Boolean(paging.pager ?? note);
   return (
@@ -546,7 +546,10 @@ function TitleRow({
           <FilterBar {...toolbar} />
         </div>
       ) : null}
-      {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+      {/* Hidden while the table fits, so an empty slot takes no gap beside the toolbar. */}
+      {steppers ? (
+        <div className={cn('empty:hidden', !toolbar && 'rail:ms-auto')}>{steppers}</div>
+      ) : null}
     </div>
   );
 }
