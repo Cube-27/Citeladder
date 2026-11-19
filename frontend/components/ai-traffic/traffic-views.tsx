@@ -36,12 +36,13 @@ const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'purpose', label: 'Purpose', width: 'category', priority: 'low' },
   { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
   { key: 'pages', label: 'Path-level pages', width: 'metric', kind: 'number' },
-  { key: 'last-seen', label: 'Last observed', width: 'date', kind: 'date' },
+  { key: 'last-seen', label: 'Last observed', width: 'date', kind: 'date', priority: 'low' },
   { key: 'status', label: 'Status and verification' },
   { key: 'breakdown', label: 'Folder and resource breakdown', priority: 'low' },
 ];
 const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'day', label: 'Day', kind: 'date' },
+  // A day without a time: the date floor, not the date-time role.
+  { key: 'day', label: 'Day', kind: 'date', width: 'category' },
   { key: 'source', label: 'Source', width: 'name' },
   { key: 'coverage', label: 'Coverage' },
   {
@@ -51,7 +52,7 @@ const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
     kind: 'number',
     priority: 'low',
   },
-  { key: 'gap', label: 'Longest receipt gap', width: 'metric', kind: 'number' },
+  { key: 'gap', label: 'Longest receipt gap', width: 'metric', kind: 'number', priority: 'low' },
 ];
 
 const ACTIVITY_COLUMNS: readonly DataTableColumn[] = [
@@ -60,7 +61,7 @@ const ACTIVITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'path', label: 'Host and path' },
   { key: 'resource', label: 'Resource', width: 'status', priority: 'low' },
   { key: 'status', label: 'Status', width: 'figure', kind: 'number' },
-  { key: 'verification', label: 'Verification' },
+  { key: 'verification', label: 'Verification', priority: 'low' },
 ];
 export function TrafficOverview({
   data,

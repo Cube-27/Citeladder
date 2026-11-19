@@ -28,18 +28,19 @@ import { formatCount, formatMean, formatPercent } from '@/lib/format';
 /**
  * The row itself is the Inspect target, and the evidence drawer it opens
  * holds the hand-off (Open Action or Ask agent), so the row carries no
- * control column and every priority column fits the main column at 982.
+ * control column.
  * The rank is the signal's place in the whole snapshot, so it holds when a
- * filter hides the signals above it; as the low-priority tail it may scroll.
+ * filter hides the signals above it. At 982 the fit hides the rank, then the
+ * clicks (the CTR and impressions still carry them).
  */
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Query or page', kind: 'identity' },
   { key: 'signal', label: 'Signal', kind: 'status', width: 'category' },
   { key: 'impressions', label: 'Impressions', kind: 'number', width: 'figure' },
-  { key: 'clicks', label: 'Clicks', kind: 'number', width: 'control' },
+  { key: 'clicks', label: 'Clicks', kind: 'number', width: 'control', priority: 'low' },
   { key: 'ctr', label: 'CTR', kind: 'number', width: 'control' },
   { key: 'position', label: 'Position', kind: 'number', width: 'control' },
-  { key: 'rank', label: 'Rank', kind: 'number', width: 'index' },
+  { key: 'rank', label: 'Rank', kind: 'number', width: 'index', priority: 'low' },
   { key: 'open', label: 'Inspect', kind: 'actions', width: 'index' },
 ];
 

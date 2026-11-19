@@ -194,6 +194,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/site/crawls/:crawlId/pages/:siteUrlId',
+    width: 'narrow',
     title: 'Page detail',
     collection: '/site',
     screen: screens.pageDetail,

@@ -76,10 +76,9 @@ function pagesColumns(
           }
         : undefined,
     },
-    // The priority columns fit the main column at 982; the last audit is the
-    // low-priority tail and scrolls in the frame when it does not.
+    // At 982 the fit hides the last audit, then the page kind.
     // The longest page kind ("Case Study / Review") fits on one line.
-    { key: 'type', label: 'Type', kind: 'status', width: 'category' },
+    { key: 'type', label: 'Type', kind: 'status', width: 'category', priority: 'low' },
     { key: 'issues', label: 'Issues', kind: 'number', width: 'figure' },
     { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'figure' },
     { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'figure' },

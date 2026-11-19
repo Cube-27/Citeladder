@@ -111,8 +111,8 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   expect(row).toHaveTextContent(
     'CI exportcl_live_Ab12Cd34… · Created by ana@example.test · Created Oct 1, 2026',
   );
-  // The state is the Status column's mark, not caption text.
-  expect(row).toHaveTextContent('Activeread, audits:runAcmeNot used yet');
+  // The state is the Status column's mark, its last use the caption under it.
+  expect(row).toHaveTextContent('ActiveNot used yetread, audits:runAcme');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 50,200 keys in use')).toBeInTheDocument();
 });

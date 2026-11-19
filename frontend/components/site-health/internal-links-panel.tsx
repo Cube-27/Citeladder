@@ -212,7 +212,7 @@ function LinksBody({
 const LINK_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source page', kind: 'identity' },
   { key: 'target', label: 'Add link to', kind: 'text' },
-  { key: 'anchor', label: 'Anchor text', kind: 'text', width: 'name' },
+  { key: 'anchor', label: 'Anchor text', kind: 'text', width: 'name', priority: 'low' },
   { key: 'action', label: 'Action', kind: 'status' },
   { key: 'review', label: 'Review', kind: 'actions', width: 'button', hideLabel: true },
 ];
