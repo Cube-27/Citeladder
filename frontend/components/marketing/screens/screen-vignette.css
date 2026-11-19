@@ -273,8 +273,7 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  /* Half the 8px dot: a circle. */
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   transform: translate(-50%, -50%);
 }
 

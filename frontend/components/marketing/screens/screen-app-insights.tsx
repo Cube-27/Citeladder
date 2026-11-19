@@ -60,21 +60,9 @@ const FIGURES: readonly FigureSegment[] = [
     value: percent(OWN.visibility),
     delta: <ScreenDelta change={OWN.change} />,
   },
-  {
-    key: 'sentiment',
-    label: 'Sentiment',
-    value: sentimentValue(OWN.sentiment),
-    delta: `${OWN.sentiment.classified} of ${OWN.mentions} classified`,
-  },
+  { key: 'sentiment', label: 'Sentiment', value: sentimentValue(OWN.sentiment) },
   { key: 'position', label: 'Position', value: OWN.position.toFixed(1) },
-  {
-    key: 'win_rate',
-    label: 'Win rate',
-    value: winRate(OWN),
-    delta: (
-      <span className={textRole('caption')}>{`Named first in ${OWN.wins} of ${WIN_ANSWERS}`}</span>
-    ),
-  },
+  { key: 'win_rate', label: 'Win rate', value: winRate(OWN) },
   {
     key: 'sov',
     label: 'Share of voice',

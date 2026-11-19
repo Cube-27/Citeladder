@@ -442,9 +442,9 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  /* The website's product screens' top bar (screen-app.css). The editor
-     workspace's rows sit `page-band-gap` apart. */
-  --page-header-band: calc(var(--row-app) + 16px);
+  /* The website's product screens' top bar (screen-app.css), the app's
+     48 masthead. The editor workspace's rows sit `page-band-gap` apart. */
+  --page-header-band: 48px;
   --page-band-gap: 8px;
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
