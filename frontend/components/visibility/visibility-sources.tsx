@@ -153,6 +153,7 @@ export function SourcesPanel({
     dimension,
     domain: activeDomain,
     sourceType,
+    enabled: !readNotCited,
   });
   const nearMissQuery = useSourceNearMisses(filters, queries, {
     enabled: readNotCited,
