@@ -30,6 +30,7 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import type { RowSelectionState } from '@/lib/prompts/selection';
 
 import { CitedDomainMarks } from './cited-domain-marks';
+import { NO_ANSWERS, NOT_MEASURED, positionAbsence } from './prompt-figures';
 import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
 
 /**
@@ -64,7 +65,7 @@ export type PromptRowActions = Readonly<{
   onEdit: (prompt: Prompt) => void;
   onDelete: (prompt: Prompt) => void;
   onToggleEnabled: (prompt: Prompt) => void;
-  onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
+  onSetStatus: (prompt: Prompt, status: PromptStatus) => void;
 }>;
 
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
@@ -80,8 +81,7 @@ function emptyState(rows: number, onClearFilters?: () => void): DataTableState |
 
 /**
  * Prompt table (F7). Questions, their topic and measured visibility, with a
- * per-row menu (edit, enable or disable, archive or restore when
- * `onSetStatus` is wired, delete). A click anywhere on a row outside its
+ * per-row menu (edit, enable or disable, archive or restore, delete). A click anywhere on a row outside its
  * controls opens the latest run's answer to the prompt, or the prompt's
  * history when no run has measured it.
  *
@@ -103,8 +103,11 @@ export function PromptTable({
   selection,
   onClearFilters,
   onOpenAnswer,
+  resetKey,
 }: Readonly<{
   prompts: Prompt[];
+  /** The search, topic and filters: a change opens the first page. */
+  resetKey?: string;
   /** Set while search, topic or filters hide rows the tab has: an empty table offers to clear them. */
   onClearFilters?: () => void;
   /** Opens the answer the latest run got for a measured prompt. */
@@ -124,16 +127,17 @@ export function PromptTable({
 }>) {
   // With no run there is nothing measured for ANY prompt, so the columns are
   // not drawn at all rather than filling with placeholders.
-  const measured = Boolean(measurements?.size);
+  const hasRun = Boolean(measurements?.size);
   // After a first run every change is "first measurement": the column would
   // be a column of the same mark, so it waits for a run that can compare.
   const compared = [...(measurements?.values() ?? [])].some(
     (measurement) => measurement.change.kind !== 'first',
   );
   const shelf = prompts.some((prompt) => commerceSetIds?.has(prompt.prompt_set_id));
-  const measuredColumns = measured ? measuredColumnsFor({ compared, shelf }) : [];
+  const measuredColumns = hasRun ? measuredColumnsFor({ compared, shelf }) : [];
   const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, {
     pageSize: PAGE_SIZE,
+    resetKey,
     urlKey: 'page',
   });
   const pagedPrompts = prompts.slice(from - 1, to);
@@ -197,10 +201,10 @@ export function PromptTable({
             <TableCell>
               <TopicName topicId={prompt.topic_id} names={topicNames} />
             </TableCell>
-            {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
+            {hasRun && commerceSetIds?.has(prompt.prompt_set_id) ? (
               <ShelfMeasuredCells columns={measuredColumns} />
             ) : null}
-            {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
+            {hasRun && !commerceSetIds?.has(prompt.prompt_set_id) ? (
               <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
             ) : null}
             {actions ? <PromptRowMenu prompt={prompt} actions={actions} /> : null}
@@ -293,7 +297,7 @@ function PromptRowMenu({
           <IconButton icon={MoreHorizontal} label="Prompt actions" />
         </MenuTrigger>
         <MenuContent align="end">
-          {onSetStatus && prompt.status === 'archived' ? (
+          {prompt.status === 'archived' ? (
             <MenuItem icon={<Icon icon={Check} />} onSelect={() => onSetStatus(prompt, 'active')}>
               Restore
             </MenuItem>
@@ -307,14 +311,14 @@ function PromptRowMenu({
               {prompt.enabled ? 'Disable' : 'Enable'}
             </MenuItem>
           )}
-          {onSetStatus && prompt.status !== 'archived' ? (
+          {prompt.status === 'archived' ? null : (
             <MenuItem
               icon={<Icon icon={Archive} />}
               onSelect={() => onSetStatus(prompt, 'archived')}
             >
               Archive
             </MenuItem>
-          ) : null}
+          )}
           <MenuSeparator />
           <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onDelete(prompt)}>
             Delete
@@ -423,12 +427,6 @@ function measuredColumnsFor({
   return [visibility, ...(compared ? [CHANGE_COLUMN] : []), ...MEASURED_COLUMNS];
 }
 
-/** No run has measured it: Absence prints the muted dash, its words in the tooltip and name. */
-const NOT_MEASURED = <Absence state="not_measured" />;
-
-/** Measured with no completed answer: unavailable, never "not measured" or zero. */
-const NO_ANSWERS = <Absence state="unavailable" label="No completed answers" />;
-
 /** A rate: unmeasured without a measurement, unavailable when the measurement had no answers. */
 function RateValue({
   measurement,
@@ -516,10 +514,7 @@ function ShareOfVoice({ measurement }: Readonly<{ measurement?: PromptMeasuremen
 /** The average position; never named and an unrecorded order stay apart from no run. */
 function AveragePosition({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
   if (!measurement) return NOT_MEASURED;
-  if (measurement.position === null) {
-    if (measurement.visibilityRate === 0) return <Absence state="none" label="Not named" />;
-    return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
-  }
+  if (measurement.position === null) return positionAbsence(measurement.visibilityRate);
   const position = formatPositionExact(measurement.position);
   return <span title={`Average of ${position} across this prompt's answers`}>{position}</span>;
 }

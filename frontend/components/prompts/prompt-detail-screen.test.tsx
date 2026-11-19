@@ -364,7 +364,7 @@ it('reads every rate as unavailable when the latest run had no successful answer
     'unavailable',
   ]);
   expect(figures.getByText('Position').closest('[data-figure-cell]')).toHaveTextContent(
-    'No successful answer',
+    'No answers',
   );
 });
 
@@ -429,9 +429,9 @@ it('reads the market from the address and keeps a run without answers unavailabl
     [expect.stringMatching(/^Mar 16, 2026/), '100.0%', '50.0%'],
     [
       expect.stringMatching(/^Mar 9, 2026/),
-      '—No successful answer',
+      '—No answers',
       // No answer to cite from: unavailable, not unmeasured like the run below.
-      expect.stringMatching(/Unavailable$/),
+      '—No answers',
     ],
     [expect.stringMatching(/^Mar 2, 2026/), '50.0%', expect.stringMatching(/Not measured$/)],
   ]);

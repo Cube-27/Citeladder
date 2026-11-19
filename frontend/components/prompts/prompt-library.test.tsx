@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { makeProject } from '@/test/fixtures/project';
 import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
+import { ToastProvider } from '@/components/ui/toast';
 import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 import { renderWithProviders, selectionAs } from '@/test/render';
 
@@ -164,20 +165,104 @@ describe('PromptLibrary first load', () => {
     expect(new Set(read)).toEqual(new Set([ANSWER]));
   });
 
-  it('draws the prompt rows without measured columns when the figures cannot be read', async () => {
+  it("says the figures read failed rather than drawing 'no run', and retries it", async () => {
+    let fail = true;
     libraryReads(async () =>
-      HttpResponse.json({ detail: 'Not allowed.', code: 'forbidden' }, { status: 403 }),
+      fail
+        ? HttpResponse.json({ detail: 'Down.', code: 'unavailable' }, { status: 503 })
+        : HttpResponse.json([metric(0.5)]),
     );
-
+    const user = userEvent.setup();
     renderLibrary();
 
     const table = await screen.findByRole('table', { name: 'Prompts' });
     expect(within(table).getByText(prompt.text)).toBeVisible();
-    expect(
-      within(table)
-        .getAllByRole('columnheader')
-        .map((head) => head.textContent),
-    ).toEqual(['', 'Prompt', 'Topic', 'Actions']);
+    expect(screen.getByText("Couldn't load the prompts' latest figures")).toBeVisible();
+
+    fail = false;
+    await user.click(screen.getByRole('button', { name: /Retry/ }));
+    const row = await within(table).findByRole('row', {
+      name: new RegExp(prompt.text.slice(0, 20)),
+    });
+    expect(await within(row).findByText('50.0%')).toBeVisible();
+    expect(screen.queryByText("Couldn't load the prompts' latest figures")).toBeNull();
+  });
+});
+
+describe('PromptLibrary paging', () => {
+  it('opens the first page when a search narrows the list', async () => {
+    const many = Array.from({ length: 12 }, (_, index) =>
+      makePrompt({
+        id: `66666666-6666-4666-8666-6666666667${String(index).padStart(2, '0')}`,
+        text: index === 0 ? 'Best trail boots?' : `Best road shoes ${index}?`,
+      }),
+    );
+    const pagedSet = makeSet(many);
+    const pagedProject = makeProject({ prompt_sets: [pagedSet] });
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([pagedSet]))),
+      http.get(`/api/v1/prompt-sets/${pagedSet.id}/candidates`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${pagedProject.id}/topics`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${pagedProject.id}/visibility/prompts`, () =>
+        HttpResponse.json([]),
+      ),
+    );
+    window.history.replaceState(null, '', `/projects/${pagedProject.id}/prompts?page=2`);
+    const user = userEvent.setup();
+    renderWithProviders(<PromptLibrary />, {
+      projectSelection: {
+        projects: [pagedProject],
+        activeProject: pagedProject,
+        activeProjectId: pagedProject.id,
+        status: 'ready',
+      },
+    });
+
+    const table = await screen.findByRole('table', { name: 'Prompts' });
+    expect(within(table).queryByText('Best trail boots?')).toBeNull();
+    await user.type(screen.getByRole('searchbox', { name: 'Search prompts' }), 'boots');
+
+    expect(await within(table).findByText('Best trail boots?')).toBeVisible();
+    expect(new URLSearchParams(window.location.search).has('page')).toBe(false);
+    window.history.replaceState(null, '', '/');
+  });
+});
+
+describe('PromptLibrary row changes', () => {
+  it.each([
+    ['Archive', 'patch', "Couldn't archive this prompt"],
+    ['Delete', 'delete', "Couldn't delete this prompt"],
+  ] as const)('reports a failed %s', async (item, method, message) => {
+    libraryReads(async () => HttpResponse.json([]));
+    mswServer.use(
+      http[method](`/api/v1/prompts/${prompt.id}`, () =>
+        HttpResponse.json({ error: { message: 'down' } }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ToastProvider>
+        <PromptLibrary />
+      </ToastProvider>,
+      {
+        projectSelection: {
+          projects: [project],
+          activeProject: project,
+          activeProjectId: project.id,
+          status: 'ready',
+        },
+      },
+    );
+
+    const table = await screen.findByRole('table', { name: 'Prompts' });
+    await user.click(within(table).getByRole('button', { name: 'Prompt actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: item }));
+    if (item === 'Delete')
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: /Delete/ }),
+      );
+
+    expect(await screen.findByText(message)).toBeVisible();
   });
 });
 

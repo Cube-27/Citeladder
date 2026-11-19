@@ -27,7 +27,12 @@ const TOPIC_ID = '22222222-2222-4222-8222-222222222222';
 
 const ANSWER = { auditId: '33333333-3333-4333-8333-333333333333', promptIndex: 0 };
 
-const NO_OP_ACTIONS = { onEdit: () => {}, onDelete: () => {}, onToggleEnabled: () => {} };
+const NO_OP_ACTIONS = {
+  onEdit: () => {},
+  onDelete: () => {},
+  onToggleEnabled: () => {},
+  onSetStatus: () => {},
+};
 
 function Pathname() {
   return <output data-testid="pathname">{useLocation().pathname}</output>;
