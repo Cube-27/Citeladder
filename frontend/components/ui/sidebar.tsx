@@ -252,14 +252,14 @@ export function sidebarRailButtonClasses(current: boolean) {
 }
 
 /**
- * The Dashboard | Agent switch, the Segmented look: a `well` track 32 tall
- * (44 in the drawer) with the current segment raised on `surface`. In the
+ * The Dashboard | Agent switch, the Segmented look: a `well` track one control
+ * tall with the current segment raised on `surface`. In the
  * rail it is two stacked rail buttons, the current one on the tile without the mark.
  */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-well rounded-control flex h-[var(--nav-row-height)] p-0.5';
+    : 'bg-well rounded-control flex h-[var(--control-md)] p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {

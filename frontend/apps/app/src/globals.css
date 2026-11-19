@@ -725,10 +725,11 @@
   /* The accent mark ("you, here"). */
   --mark-width: 2px;
 
-  /* Density (2.2): controls 32, and 44 on flow pages; below 900px or under a
-     coarse pointer every control is 44 (block below); tags 24; every target
-     at least 24. Navigation rows 32 on a 34 pitch (44 in the drawer). Table
-     header 32, body rows 36. */
+  /* Density (2.2): controls 28 (owner, 2026-11-19), and 44 on flow pages;
+     below 900px or under a coarse pointer every control is 44 (block below);
+     tags 24; every target at least 24. Navigation rows 32 on a 34 pitch (44
+     in the drawer). Table header one control, body rows 36. */
+  --control-md: 28px;
   --control-lg: 44px;
   --control-coarse: 44px;
   --nav-row-height: 32px;
@@ -736,16 +737,16 @@
 
   /* Anatomy (2.3): the top strips, each closed by a rule across the main
      column and the same height on every page (`PageFrame`, owner 2026-11-18):
-     masthead 52; tabs, then filters, each 8 + one control + 8 (owner,
-     2026-11-18: one row height), the tabs filling theirs. Then
+     masthead 48; tabs, then filters, each 8 + one control + 8 (owner,
+     2026-11-18: one row height; 2026-11-19: 48 and 44), the tabs filling theirs. Then
      `page-pad-block` to the first content. Sidebar 224 from 1280, 200 from
      900, a 56 rail of 40px buttons when collapsed. Content fills the main
      column inside a 32 gutter (24 on flow, setup and auth pages; 16 below
      900), a reading page centred in
      `thread`. The current navigation item sits on a 7% ink tile (2.8). */
-  --masthead-height: 52px;
+  --masthead-height: 48px;
   --page-tabs-height: calc(var(--control-md) + 16px);
-  --filter-bar-height: 48px;
+  --filter-bar-height: 44px;
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
@@ -823,6 +824,7 @@
     --control-md-padding: 16px;
     --nav-row-height: 44px;
     --table-row-height: 44px;
+    --filter-bar-height: 48px;
   }
 }
 

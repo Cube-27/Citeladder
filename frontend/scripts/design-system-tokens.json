@@ -877,7 +877,7 @@
       {
         "name": "control-md",
         "value": "32px",
-        "usage": "App buttons, inputs, selects, the tab track, sidebar rows; navbar and docs top-bar buttons. 32, GitHub-style density; website CTAs stay control-lg."
+        "usage": "App buttons, inputs, selects, the tab track, sidebar rows; navbar and docs top-bar buttons. 32 on the website, 28 in the app (owner, 2026-11-19); website CTAs stay control-lg."
       },
       {
         "name": "row-app",
