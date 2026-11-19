@@ -90,6 +90,12 @@ export const readFrozenSearchRequest = (value: unknown) => readFields(searchRequ
 export const askedWholeSet = (configuration: unknown) =>
   configurationShape.prompt_selection.parse(record(configuration).prompt_selection) === 'set';
 
+/** The retrieval state a run froze in its measurement policy; every frozen run records it. */
+export const auditFrozenRetrievalEnabled = (configuration: unknown) =>
+  measurementShape.retrieval_enabled.parse(
+    record(record(configuration).measurement_policy).retrieval_enabled,
+  );
+
 /** A stored configuration's typed fields; anything missing or malformed is unavailable. */
 export function readFrozenConfiguration(value: unknown): FrozenConfiguration {
   const { measurement_policy: _measurement, ...fields } = configurationShape;

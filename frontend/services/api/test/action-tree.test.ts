@@ -323,6 +323,17 @@ describe('the Actions tree', () => {
         ...values,
         id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
       });
+    const cohort = (rule: string) =>
+      JSON.stringify({
+        rule_id: rule,
+        rule_label: rule,
+        finding_class: 'defect',
+        crawl_id: 'c',
+        group_id: 'g',
+        page_count: 0,
+        whole_site: false,
+        pages: [],
+      });
     const prompts = Array.from({ length: 23 }, (_, index) =>
       row(index, {
         group_key: `prompt:${index}`,
@@ -344,14 +355,7 @@ describe('the Actions tree', () => {
           priority_score: 40.4,
           goal: 'read_site',
           goal_grouping: 'seo',
-          cohort: JSON.stringify({
-            rule_id: 'a',
-            rule_label: 'a',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('a'),
         }),
         row(31, {
           group_key: 'issue-family:b',
@@ -360,14 +364,7 @@ describe('the Actions tree', () => {
           priority_score: 10,
           goal: 'read_site',
           goal_grouping: 'seo',
-          cohort: JSON.stringify({
-            rule_id: 'b',
-            rule_label: 'b',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('b'),
         }),
         row(32, {
           group_key: 'issue-family:c',
@@ -377,14 +374,7 @@ describe('the Actions tree', () => {
           goal: 'read_site',
           goal_grouping: 'aeo',
           status: 'dismissed',
-          cohort: JSON.stringify({
-            rule_id: 'c',
-            rule_label: 'c',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('c'),
         }),
         row(33, {
           group_key: 'page:old',

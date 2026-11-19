@@ -36,29 +36,27 @@ export function TopRankings({
   const data = query.data;
   const segments = data ? axisText(data.axes, by) : [];
   const rows = data
-    ? segments.flatMap((text, i) => {
+    ? segments.map((text, i) => {
         const ranking = data.rankings[by][i];
-        return [
-          {
-            key: `${by}-${i}`,
-            header: <AxisLabel axes={data.axes} dimension={by} index={i} text={text} />,
-            chips: (ranking?.kind === 'measured' ? ranking.leaders : []).map((leader) => ({
-              key: `${leader.is_brand}:${leader.name}`,
-              mark: (
-                <BrandMark
-                  name={leader.name}
-                  logoUrl={leader.logo_url}
-                  websiteUrl={leader.website_url}
-                  placement="inline"
-                />
-              ),
-              name: leader.name,
-              detail: formatRate(leader.mention_rate),
-              own: leader.is_brand,
-            })),
-            empty: <Absence state="not_run" label={READING_LABELS.not_run} />,
-          },
-        ];
+        return {
+          key: `${by}-${i}`,
+          header: <AxisLabel axes={data.axes} dimension={by} index={i} text={text} />,
+          chips: (ranking?.kind === 'measured' ? ranking.leaders : []).map((leader) => ({
+            key: `${leader.is_brand}:${leader.name}`,
+            mark: (
+              <BrandMark
+                name={leader.name}
+                logoUrl={leader.logo_url}
+                websiteUrl={leader.website_url}
+                placement="inline"
+              />
+            ),
+            name: leader.name,
+            detail: formatRate(leader.mention_rate),
+            own: leader.is_brand,
+          })),
+          empty: <Absence state="not_run" label={READING_LABELS.not_run} />,
+        };
       })
     : [];
   function body() {

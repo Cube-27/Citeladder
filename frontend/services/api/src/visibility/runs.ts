@@ -9,12 +9,12 @@
 import { sql } from 'kysely';
 
 import { frozenComparisonKey } from '../analysis/comparison.ts';
+import { modelProvenanceFor, type ModelProvenance } from '../analysis/provenance.ts';
 import {
+  askedWholeSet,
   auditFrozenRetrievalEnabled,
-  modelProvenanceFor,
-  type ModelProvenance,
-} from '../analysis/provenance.ts';
-import { askedWholeSet, readFrozenConfiguration } from '../audits/frozen-configuration.ts';
+  readFrozenConfiguration,
+} from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { storedInstant, timestamptz, utcTextOf } from '../db/timestamps.ts';

@@ -94,15 +94,13 @@ export const siteIssueEvidenceSchema = z.object({
 export const issueFamilyCohortSchema = z.object({
   rule_id: z.string(),
   rule_label: z.string(),
-  // Evidence is append-only: cohorts stored before advisories and site-level
-  // rules became Actions are web defects naming their pages.
-  finding_class: z.string().default('defect'),
+  finding_class: z.string(),
   crawl_id: z.string(),
   group_id: z.string(),
   page_count: z.number().int(),
   // A site-level rule whose evidence names no page: the whole site. `pages`
   // then holds only the page the finding is filed on, which no list shows.
-  whole_site: z.boolean().default(false),
+  whole_site: z.boolean(),
   pages: z.array(z.object({ site_url_id: z.string(), url: z.string() })),
 });
 export type IssueFamilyCohort = z.infer<typeof issueFamilyCohortSchema>;

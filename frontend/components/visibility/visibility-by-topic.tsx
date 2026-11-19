@@ -101,10 +101,7 @@ export function VisibilityByTopic({
               // A dash in every value position, the reason in each one's name.
               VALUE_KEYS.map((key) => (
                 <TableCell key={key} numeric>
-                  <Absence
-                    state={row.kind === 'not_run' ? 'not_run' : 'unavailable'}
-                    label={READING_LABELS[row.kind]}
-                  />
+                  <Absence state="not_run" label={READING_LABELS.not_run} />
                 </TableCell>
               ))
             )}

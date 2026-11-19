@@ -5,8 +5,7 @@
  * route snapshot, then the audit's frozen measurement policy. Live
  * configuration is never consulted.
  */
-import { z } from 'zod';
-
+import { auditFrozenRetrievalEnabled } from '../audits/frozen-configuration.ts';
 import { logicalEngines } from '../config/providers.ts';
 import { compareText } from '../text-order.ts';
 
@@ -23,15 +22,6 @@ function frozenRetrievalEnabled(...snapshots: unknown[]): boolean | null {
     }
   }
   return null;
-}
-
-const frozenPolicy = z.looseObject({
-  measurement_policy: z.looseObject({ retrieval_enabled: z.boolean() }),
-});
-
-/** The retrieval state frozen in an audit's measurement-policy block; every frozen run has one. */
-export function auditFrozenRetrievalEnabled(configuration: unknown): boolean {
-  return frozenPolicy.parse(configuration).measurement_policy.retrieval_enabled;
 }
 
 export function executionFrozenProvenance(input: {

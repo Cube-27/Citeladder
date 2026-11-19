@@ -979,7 +979,6 @@
                     "type": "string"
                   },
                   "finding_class": {
-                    "default": "defect",
                     "type": "string"
                   },
                   "crawl_id": {
@@ -994,7 +993,6 @@
                     "maximum": 9007199254740991
                   },
                   "whole_site": {
-                    "default": false,
                     "type": "boolean"
                   },
                   "crawl_completed_at": {

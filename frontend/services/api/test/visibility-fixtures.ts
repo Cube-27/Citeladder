@@ -10,6 +10,7 @@ import type { FirstNamed } from '@citeladder/contracts/audits';
 import { firstNamedColumns } from '../src/analysis/win-rate.ts';
 
 import type { Database } from '../src/db/database.ts';
+import { record } from '../src/db/json.ts';
 import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
 import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts';
 import { asOwner, Fixtures } from './support.ts';
@@ -20,9 +21,6 @@ const firstNamedFixture = (first: FirstNamed | undefined) =>
   firstNamedColumns(first ?? { kind: 'none' });
 
 export type Json = Parameters<typeof JSON.stringify>[0];
-
-const asObject = (value: Json | undefined): Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
 export type Tenant = { userId: string; workspaceId: string; projectId: string };
 
@@ -243,7 +241,7 @@ export class VisibilityFixtures extends Fixtures {
         configuration: JSON.stringify({
           prompt_selection: 'set',
           measurement_policy: { retrieval_enabled: true },
-          ...asObject(options.configuration),
+          ...record(options.configuration),
         }),
         completed_at: options.completedAt === undefined ? now() : options.completedAt,
         created_at: now(),
