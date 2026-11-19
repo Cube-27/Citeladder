@@ -30,7 +30,7 @@ export function HintedTableHead({
       <Tooltip content={hint}>
         <button
           type="button"
-          className="focus-ring rounded-mark inline-flex min-h-6 cursor-default items-center"
+          className="focus-ring rounded-mark inline-flex min-h-[var(--control-sm)] cursor-default items-center"
         >
           {label}
         </button>
@@ -90,7 +90,7 @@ export function SortableTableHead({
       type="button"
       onClick={onSort}
       className={cn(
-        'focus-ring inline-flex min-h-6 w-full flex-col justify-center gap-0.5 rounded-mark transition-colors',
+        'focus-ring inline-flex min-h-[var(--control-sm)] w-full flex-col justify-center rounded-mark transition-colors',
         align.column,
         !active && 'hover:text-ink',
       )}

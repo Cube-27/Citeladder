@@ -160,8 +160,8 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
-/** A wide table's pair of sideways steppers are 24 (`min-h-6`, components/ui/scroll-edges.tsx); /billing at 982 shows them. */
-const SCROLL_STEP_HEIGHT = 24;
+/** A wide table's pair of sideways steppers are one small control, 28 (components/ui/scroll-edges.tsx); /billing at 982 shows them. */
+const SCROLL_STEP_HEIGHT = 28;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
@@ -217,7 +217,7 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
-    // A wide table's pair of sideways steppers are 24px glyph buttons
+    // A wide table's pair of sideways steppers are 28px glyph buttons
     // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
     // `scroll-step.height`; a tab row's edge steppers are 28 controls.
     if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {

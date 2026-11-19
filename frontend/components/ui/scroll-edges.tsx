@@ -183,7 +183,7 @@ function ScrollStep({
       aria-label={side === 'start' ? 'Scroll back' : 'Scroll forward'}
       onClick={onStep}
       className={cn(
-        'text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-6 min-w-6 shrink-0 place-items-center transition-colors duration-[var(--motion-fast)] disabled:opacity-60',
+        'text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-[var(--control-sm)] min-w-[var(--control-sm)] shrink-0 place-items-center transition-colors duration-[var(--motion-fast)] disabled:opacity-60',
         className,
       )}
     >

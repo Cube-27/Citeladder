@@ -236,10 +236,9 @@
   --text-code: 0.8125rem;
   --text-code--line-height: 1.375rem;
   --text-code--font-weight: 400;
-  /* The app's roles beyond the shared names. Eight
-     sizes only: 12, 13, 14, 16, 20, 24, 28, 40. The app rebinds `title`
-     and `heading` to its own values below; its `body` role reads
-     `body-sm`, which is 14/20 everywhere. */
+  /* The app's roles beyond the shared names. The app rebinds `title`,
+     `heading`, `display`, `data` and `code` to its six sizes below; its
+     `body` role reads `body-sm`, which is 14/20 everywhere. */
   --text-display: 1.75rem;
   --text-display--line-height: 2.25rem;
   --text-display--font-weight: 500;
@@ -687,9 +686,10 @@
   --color-warning-soft: var(--color-warning-wash);
   --color-info-soft: var(--color-info-wash);
 
-  /* Type (2.1): eight sizes (12 13 14 16 20 24 28 32), one line height each;
-     weights 400 and 500, never 600. Numbers are the sans face's tabular
-     numerals. The page title is the display face at 20/28 400. */
+  /* Type (2.1): six sizes (12 14 16 20 24 32), one line height each (owner,
+     2026-11-19: no 13, no 28); weights 400 and 500, never 600. Numbers are
+     the sans face's tabular numerals. The page title is the display face at
+     20/28 400. */
   --text-title: 1.25rem;
   --text-title--line-height: 1.75rem;
   --text-heading: 1rem;
@@ -698,8 +698,12 @@
   --text-figure-xl--line-height: 2.5rem;
   --text-figure: 1.25rem;
   --text-figure--line-height: 1.75rem;
-  --text-code: 0.8125rem;
-  --text-code--line-height: 1.25rem;
+  --text-code: 0.75rem;
+  --text-code--line-height: 1rem;
+  --text-data: 0.75rem;
+  --text-data--line-height: 1rem;
+  --text-display: 1.5rem;
+  --text-display--line-height: 2rem;
 
   /* Shape (2.4): four radii plus round. Marks, tags, kbd chips and menu items
      4; controls and wells 6; cards and menus 8; dialogs and drawers 12; round
@@ -1894,7 +1898,7 @@ samp {
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-ink);
-  padding: 0.5rem 0.875rem;
+  padding: 8px 12px;
   font-size: var(--text-label);
   font-weight: var(--weight-medium);
   box-shadow: var(--shadow-pop);
@@ -2191,7 +2195,7 @@ label {
   [data-figure-strip]:not(:where(.surface-card *, .surface-slip *, [role='dialog'] *)) {
   margin-inline: calc(-1 * var(--content-gutter));
   & > [data-figure-cell] {
-    padding: 12px 24px 12px 20px;
+    padding: 12px 24px;
   }
   & > [data-figure-cell][data-row-start] {
     padding-inline-start: var(--content-gutter);

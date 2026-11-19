@@ -27,13 +27,13 @@ const fieldClasses = cn(
 /**
  * Inside the Agent composer the composer is the box and draws the one focus
  * boundary (its `focus-frame`): the field drops its edge, fill, resize
- * handle, resting height and focus treatment. It starts one line tall and
- * grows with its text to `maxRows` lines (its 4px padding and 1px edge on
- * top), then scrolls inside. `field-sizing` does the growing where the
- * browser has it; elsewhere the layout effect below measures.
+ * handle, resting height and focus treatment. It starts one control tall
+ * (one line inside 4px padding) and grows with its text to `maxRows` lines,
+ * then scrolls inside. `field-sizing` does the growing where the browser has
+ * it; elsewhere the layout effect below measures.
  */
 const composerClasses =
-  'field-sizing-content min-h-0 resize-none border-transparent bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem+2px)]';
+  'field-sizing-content min-h-[var(--control-md)] resize-none border-0 bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
 
 /** Chrome 123, Safari 26.2 and Firefox 152 size the field to its text themselves. */
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
