@@ -77,6 +77,11 @@ const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
  * utilities no other app page uses to the eager CSS.
  */
 const MONO: CSSProperties = { filter: 'saturate(0)' };
+
+const THEMES = [
+  { theme: 'light', suffix: '' },
+  { theme: 'dark', suffix: '-dark' },
+] as const;
 const SHOWN: CSSProperties = { opacity: 1 };
 const HIDDEN: CSSProperties = { opacity: 0 };
 
@@ -90,23 +95,28 @@ function ShotPicture({
     Object.entries(place).map(([edge, percent]) => [edge, `${percent}%`]),
   );
   return (
-    <picture className={cn('absolute block', over && 'z-10')} style={style}>
-      <source type="image/avif" srcSet={`/auth/${shot.file}.avif`} />
-      {/* Lazy: the panel is hidden below `desktop:`, so phones never fetch it.
-          Grayscale: the panel is black and white; the captures predate the
-          system's palette. Flat: a hairline edge, no shadow. */}
-      <img
-        src={`/auth/${shot.file}.webp`}
-        width={shot.width}
-        height={shot.height}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        fetchPriority={upcoming ? 'low' : 'auto'}
-        className="border-rule rounded-card block h-auto w-full border"
-        style={MONO}
-      />
-    </picture>
+    <div className={cn('absolute', over && 'z-10')} style={style}>
+      {/* The `-dark` files are the same drawings recoloured to the dark palette. */}
+      {THEMES.map(({ theme, suffix }) => (
+        <picture key={theme} data-theme-art={theme} className="block">
+          <source type="image/avif" srcSet={`/auth/${shot.file}${suffix}.avif`} />
+          {/* Lazy: the panel is hidden below `desktop:`, so phones never fetch it.
+              Grayscale: the panel is black and white; the captures predate the
+              system's palette. Flat: a hairline edge, no shadow. */}
+          <img
+            src={`/auth/${shot.file}${suffix}.webp`}
+            width={shot.width}
+            height={shot.height}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            fetchPriority={upcoming ? 'low' : 'auto'}
+            className="border-rule rounded-card block h-auto w-full border"
+            style={MONO}
+          />
+        </picture>
+      ))}
+    </div>
   );
 }
 

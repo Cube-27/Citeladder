@@ -118,6 +118,7 @@ colors:
   state-selected: 'rgb(17 17 17 / 10%)' # dark 'rgb(244 244 244 / 10%)'
   surface: '#ffffff' # dark '#151515'
   surface-sunken: '#ececec' # dark '#1e1e1e'
+  thumb: '#ffffff' # dark '#151515'
   warning: '#8a5000' # dark '#f5b84a'
   warning-soft: '#fff0d1' # dark '#3a2a0a'
   warning-wash: '#fff0d1' # dark '#3a2a0a'
