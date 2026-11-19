@@ -48,9 +48,7 @@ export function Switch({
         aria-hidden
         className={cn(
           'ms-0.5 h-4 w-5.5 rounded-full transition-transform duration-[var(--motion-slide)] ease-[var(--ease-fluid)]',
-          checked
-            ? 'bg-on-ink translate-x-3.5'
-            : 'bg-surface shadow-control [[data-theme=dark]_&]:bg-ink-2',
+          checked ? 'bg-on-ink translate-x-3.5' : 'bg-thumb shadow-control',
         )}
       />
     </button>

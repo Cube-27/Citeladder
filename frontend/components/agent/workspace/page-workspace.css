@@ -6,7 +6,7 @@
    `.page-editor .cm-editor`, because CodeMirror injects its base theme
    (monospace, its own padding, a dotted focus outline) as unlayered rules at
    run time. Imported by the page workspace, so it loads with the chat route,
-   not on boot; its colours and the text field's inset ring stay in globals.css. */
+   not on boot; the text field's inset ring stays in globals.css. */
 .page-editor {
   min-height: 100%;
 }
@@ -60,11 +60,19 @@
   font-style: italic;
 }
 .page-editor .cm-editor .page-editor-link {
+  color: var(--color-accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .page-editor .cm-editor .page-editor-suggestion {
   border-bottom-width: 2px;
   border-bottom-style: solid;
+  border-color: var(--color-info);
+  background: var(--color-info-wash);
+  color: var(--color-ink);
   cursor: pointer;
+}
+.page-editor .cm-editor .page-editor-suggestion-needs_input {
+  border-color: var(--color-warning);
+  background: var(--color-warning-wash);
 }

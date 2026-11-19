@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 /** A heat tint from 0 (low) to 1 (high): the accent washed in up to half strength, as `HeatValue`. */
 const heat = (place: number) =>
-  `color-mix(in srgb, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-surface))`;
+  `color-mix(in oklch, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-surface))`;
 const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px)';
 
 export type HeatValue =
@@ -71,7 +71,8 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     style={{ background: heat(cell.tint) }}
                   >
                     <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
-                    <span className={textRole('caption')}>{cell.detail}</span>
+                    {/* Ink: ink-2 falls under 4.5:1 on the strongest tint in both themes. */}
+                    <span className={textRole('caption', 'text-ink')}>{cell.detail}</span>
                   </div>
                 )}
               </td>

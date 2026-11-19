@@ -342,6 +342,14 @@
         "usage": "The fill of a labelled control: secondary and danger buttons, selects, search and filter fields, operable tags. The website aliases the surface; the app's dark binds the well."
       },
       {
+        "name": "thumb",
+        "value": {
+          "light": "{surface}",
+          "dark": "{surface}"
+        },
+        "usage": "An off switch's thumb. The surface; the app's dark binds ink-2, so the thumb reads on its dark track."
+      },
+      {
         "name": "ink-2",
         "value": {
           "light": "{ink-secondary}",
