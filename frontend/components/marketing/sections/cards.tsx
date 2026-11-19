@@ -36,10 +36,10 @@ export function RelatedCards({
       {items.map((item) => (
         <li key={item.href}>
           <a href={item.href} className="cl-related-row focus-ring">
-            <span className="cl-related-head">
+            <div className="cl-related-head">
               {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
               <h3 className="cl-related-title">{item.title}</h3>
-            </span>{' '}
+            </div>{' '}
             {item.body && <span className="cl-related-text">{item.body}</span>}
             {item.linkLabel && <span className="sr-only"> {item.linkLabel}</span>}
             <ArrowRight aria-hidden className="cl-related-arrow size-5" />

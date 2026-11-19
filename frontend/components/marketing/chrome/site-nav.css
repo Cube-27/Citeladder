@@ -353,17 +353,6 @@
   background: var(--color-surface-sunken);
 }
 
-.cl-navbar-sheet:not([hidden]) {
-  animation: cl-panel-in var(--motion-menu) var(--ease-standard);
-}
-
-@keyframes cl-panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 /* The mobile sheet: the whole screen under the bar, on the page colour, its
    rows on the page gutters, one hairline under each; the page behind it
    stops scrolling. */
@@ -381,6 +370,19 @@
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--site-page);
+  /* The shared open/close motion: in over --motion-open, out over --motion-close. */
+  --cl-sheet-shift: -4px;
+  transition:
+    opacity var(--motion-open) var(--ease-standard),
+    translate var(--motion-open) var(--ease-standard),
+    display var(--motion-open) allow-discrete;
+}
+
+@starting-style {
+  .cl-navbar-sheet:not([hidden]) {
+    opacity: 0;
+    translate: 0 var(--cl-sheet-shift);
+  }
 }
 
 :root:has(#mobile-menu:not([hidden])) {
@@ -400,6 +402,11 @@
 
 .cl-navbar-sheet[hidden] {
   display: none;
+  opacity: 0;
+  translate: 0 var(--cl-sheet-shift);
+  pointer-events: none;
+  transition-duration: var(--motion-close);
+  transition-timing-function: var(--ease-exit);
 }
 
 .cl-sheet-row {
@@ -471,7 +478,7 @@
   margin-bottom: 16px;
   padding: 0 12px;
   border-radius: var(--radius-md);
-  background: var(--color-paper);
+  background: var(--tint-neutral);
 }
 
 .cl-sheet-foot {
@@ -517,8 +524,8 @@
     transition: none;
   }
 
-  .cl-navbar-sheet:not([hidden]) {
-    animation: none;
+  .cl-navbar-sheet {
+    --cl-sheet-shift: 0;
   }
 
   /* Under reduced motion: fades only, no slide, blur, scale or stagger. */
