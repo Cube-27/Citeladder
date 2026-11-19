@@ -12,7 +12,7 @@ import {
   useDisplayTimeZone,
   useTimeZonePreference,
 } from '@/lib/display-timezone';
-import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type Choice = 'auto' | 'UTC' | 'custom';
 
@@ -61,11 +61,11 @@ export function TimeZoneSetting() {
     <Section aria-labelledby="settings-timezone-title">
       <SectionHeader>
         <SectionTitle id="settings-timezone-title">Display timezone</SectionTitle>
-        <SectionDescription>{`Timestamps currently display in ${displayZone}.`}</SectionDescription>
       </SectionHeader>
       <Stack gap="item">
         <SettingRow
           label="Timezone"
+          description={`Timestamps currently display in ${displayZone}.`}
           action={
             <Select
               value={choice}

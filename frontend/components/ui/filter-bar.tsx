@@ -81,8 +81,8 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
 }
 
 /**
- * FilterBar — the control row at the top of every list and report page, in
- * one order on every page: the view, the search, the filter chips, Filters
+ * FilterBar — the control rows at the top of every list and report page, in
+ * one order on every page: the view on its own first row, then the search, the filter chips, Filters
  * and the chips of the filters set in it, Clear once anything is set, then
  * the data window, the count and the action at the row's end. Every control
  * is 32px and 8 apart. The
@@ -97,7 +97,19 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
-export function FilterBar({ view, search, filters = [], status, actions }: FilterBarProps) {
+export function FilterBar({ view, ...row }: FilterBarProps) {
+  if (!view) return <ControlRow {...row} />;
+  // The view leads on a row of its own; search and filters are the second row (owner, 2026-11-19).
+  const second = row.search || row.filters?.length || row.status !== undefined || row.actions;
+  return (
+    <div data-filter-bar-rows="" className="grid w-full min-w-0 gap-2">
+      <div className="flex max-w-full min-w-0">{view}</div>
+      {second ? <ControlRow {...row} /> : null}
+    </div>
+  );
+}
+
+function ControlRow({ search, filters = [], status, actions }: Omit<FilterBarProps, 'view'>) {
   const { chips, menu } = placeFilters(filters);
   const set = filters.filter((filter) => !filter.isDefault);
   const windowLabel = dataWindow(chips);
@@ -107,7 +119,6 @@ export function FilterBar({ view, search, filters = [], status, actions }: Filte
       aria-label="Search and filters"
       className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
-      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">

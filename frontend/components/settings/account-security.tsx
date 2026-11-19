@@ -15,12 +15,12 @@ import { restartAt } from '@/lib/auth/account-transition';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { PasswordField } from '@/components/ui/password-field';
-import { Inline, Stack } from '@/components/ui/layout';
+import { PasswordInput } from '@/components/ui/password-field';
+import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
-import { SettingRow } from '@/components/ui/setting-row';
+import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -33,9 +33,9 @@ function SecurityIdentity({
     <>
       <SettingRow
         label="Sign in with"
-        description={methods.length ? methods.join(' or ') : 'No sign-in method yet'}
+        value={methods.length ? methods.join(' or ') : 'No sign-in method yet'}
       />
-      <SettingRow label="Email" description={data.email_verified ? 'Verified' : 'Not verified'} />
+      <SettingRow label="Email" value={data.email_verified ? 'Verified' : 'Not verified'} />
     </>
   );
 }
@@ -77,30 +77,50 @@ function PasswordForm({ form }: Readonly<{ form: ReturnType<typeof usePasswordFo
   } = form.fields;
   return (
     <form noValidate onSubmit={(event) => void form.submit(event)}>
-      <Stack gap="workspace">
-        <PasswordField
-          label="Current password"
-          autoComplete="current-password"
-          placeholder="Current password"
-          error={errors.current?.message}
-          inputProps={register('current')}
-        />
-        <PasswordField
-          label="New password"
-          autoComplete="new-password"
-          placeholder={passwordHint}
-          error={errors.password?.message}
-          inputProps={register('password')}
-        />
-        <Inline className="flex-wrap">
+      <SettingRows>
+        <SettingRow label="Password" description="Changing it signs you out everywhere." />
+        {PASSWORD_INPUTS.map((input) => (
+          <SettingField
+            key={input.name}
+            label={input.label}
+            required
+            error={errors[input.name]?.message}
+          >
+            {(control) => (
+              <PasswordInput
+                label={input.label}
+                autoComplete={input.autoComplete}
+                placeholder={input.placeholder}
+                inputProps={register(input.name)}
+                control={control}
+              />
+            )}
+          </SettingField>
+        ))}
+        <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={form.change.isPending}>
             Change password and sign out
           </Button>
-        </Inline>
-      </Stack>
+        </div>
+      </SettingRows>
     </form>
   );
 }
+
+const PASSWORD_INPUTS = [
+  {
+    name: 'current',
+    label: 'Current password',
+    autoComplete: 'current-password',
+    placeholder: 'Current password',
+  },
+  {
+    name: 'password',
+    label: 'New password',
+    autoComplete: 'new-password',
+    placeholder: passwordHint,
+  },
+] as const;
 
 function usePasswordForm() {
   const client = useQueryClient();
@@ -169,38 +189,40 @@ export default function AccountSecurity() {
           <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
         </SectionHeader>
         <Stack gap="workspace">
-          <SignInMethods security={security} />
-          <SettingRow
-            label="Password"
-            description="Changing it signs you out everywhere."
-            action={
-              hasPassword ? null : (
-                <Button
-                  variant="secondary"
-                  disabled={!security.data || setup.isPending}
-                  onClick={() => setup.mutate()}
-                >
-                  Email password setup link
-                </Button>
-              )
-            }
-          >
-            {hasPassword ? <PasswordForm form={passwordForm} /> : null}
-          </SettingRow>
-          {canLinkGoogle ? (
-            <SettingRow
-              label="Google sign-in"
-              description="Enter your current password above, then connect Google."
-              action={
-                <ActionButton
-                  action="connectGoogle"
-                  type="button"
-                  disabled={!current || link.isPending}
-                  onClick={() => link.mutate()}
-                />
-              }
-            />
-          ) : null}
+          <SettingRows>
+            <SignInMethods security={security} />
+            {hasPassword ? (
+              <PasswordForm form={passwordForm} />
+            ) : (
+              <SettingRow
+                label="Password"
+                description="Changing it signs you out everywhere."
+                action={
+                  <Button
+                    variant="secondary"
+                    disabled={!security.data || setup.isPending}
+                    onClick={() => setup.mutate()}
+                  >
+                    Email password setup link
+                  </Button>
+                }
+              />
+            )}
+            {canLinkGoogle ? (
+              <SettingRow
+                label="Google sign-in"
+                description="Enter your current password above, then connect Google."
+                action={
+                  <ActionButton
+                    action="connectGoogle"
+                    type="button"
+                    disabled={!current || link.isPending}
+                    onClick={() => link.mutate()}
+                  />
+                }
+              />
+            ) : null}
+          </SettingRows>
           {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
         </Stack>
@@ -209,7 +231,7 @@ export default function AccountSecurity() {
         <SectionHeader>
           <SectionTitle id="settings-sessions-title">Sessions</SectionTitle>
         </SectionHeader>
-        <Stack gap="workspace">
+        <SettingRows>
           <SettingRow
             label="Sign out all sessions"
             description="Sign out every device, including this one."
@@ -228,7 +250,7 @@ export default function AccountSecurity() {
               </Button>
             }
           />
-        </Stack>
+        </SettingRows>
       </Section>
       <Dialog
         open={confirm === 'sign-out'}

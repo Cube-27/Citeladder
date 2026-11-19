@@ -16,13 +16,13 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Tabs and Segmented: text with one underline. The strip is one row that
+ * Tabs: text with one underline (the Segmented switch is a pill on a track, below). The strip is one row that
  * scrolls sideways inside itself (its scrollbar hidden) when its items
  * overflow, with no hairline of its own (owner, 2026-11-19: only the current
  * item's underline; a page strip's band draws the strip rule); each item is
  * `body` in `ink-2`, and the current one is `ink` at `label` weight with the
  * 2px accent underline ("you are here"), sliding from item to item. One face
- * for page tabs, in-section tabs and the Segmented view switch.
+ * for page tabs and in-section tabs.
  */
 const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
@@ -135,15 +135,15 @@ function StripFrame({
  * A page tab fills the page's tab strip (as high as the filter strip, its
  * label centred), a section tab is one control high (32, 44 below 900px or
  * under a coarse pointer); both take 12 each side and hover on a 6% tile one
- * control high less 4 top and bottom. A segment is one control high with no
- * padding.
+ * control high less 4 top and bottom. A segment is a pill 4 less than a control,
+ * so its track is one control high.
  */
 type TabKind = 'page' | 'section' | 'segment';
 
 const TAB_KIND: Record<TabKind, string> = {
   page: 'min-h-[var(--page-tabs-height,var(--control-md))] before:inset-y-[calc((var(--page-tabs-height,var(--control-md))_-_var(--control-md))/2_+_4px)]',
   section: 'min-h-[var(--control-md)] before:inset-y-1',
-  segment: 'min-h-[var(--control-md)]',
+  segment: 'min-h-[calc(var(--control-md)_-_4px)] rounded-control px-3',
 };
 
 function tabFace({
@@ -158,10 +158,16 @@ function tabFace({
     tab &&
       'isolate px-3 before:absolute before:inset-x-0 before:-z-10 before:rounded-mark before:content-[""]',
     tab && !selected && 'not-disabled:hover:before:bg-state-hover',
-    'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
-    selected
-      ? 'text-ink after:bg-accent font-medium'
-      : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent',
+    tab
+      ? [
+          'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
+          selected
+            ? 'text-ink after:bg-accent font-medium'
+            : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent',
+        ]
+      : selected
+        ? 'bg-surface text-ink shadow-card font-medium'
+        : 'text-ink-2 not-disabled:hover:text-ink',
     className,
   );
 }
@@ -435,8 +441,8 @@ export type SegmentedOption<T extends string> = Readonly<{
 
 /**
  * SegmentedControl — a view switch for two to four exclusive views with no
- * panel (a date range, a metric, a filter), in the Tabs face: the current
- * segment carries the accent underline. Radiogroup semantics: one tab stop at
+ * panel (a date range, a metric, a filter): segments on a `well` track, the
+ * current one a raised `surface` pill with no underline (owner, 2026-11-19). Radiogroup semantics: one tab stop at
  * the checked option; the arrow keys move focus and selection, wrapping at
  * both ends, Home and End go to the first and last, and PageUp and PageDown
  * keep the browser's page scroll.
@@ -469,7 +475,6 @@ export function SegmentedControl<T extends string>({
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   const strip = useRevealSelected(value);
-  useTabMark(strip, value);
   // With an off-list `value` nothing is checked; fall back to the first option
   // so the group stays reachable by keyboard.
   const selectedIndex = options.findIndex((option) => option.value === value);
@@ -494,7 +499,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'gap-4', className)}
+          className={cn(TAB_STRIP, 'bg-well rounded-card gap-0.5 p-0.5', className)}
         >
           {/* A nested flex row, NOT `display: contents`: some browsers drop a
           contents box from the accessibility tree, costing the group its name. */}
@@ -503,7 +508,7 @@ export function SegmentedControl<T extends string>({
             role="radiogroup"
             aria-label={ariaLabel}
             aria-describedby={describedBy}
-            className="flex shrink-0 items-stretch gap-4"
+            className="flex shrink-0 items-stretch gap-0.5"
           >
             {options.map((option, index) => {
               const selected = option.value === value;
@@ -554,7 +559,6 @@ export function SegmentedControl<T extends string>({
             })}
           </div>
           {trailing}
-          <TabMark />
         </div>
       )}
     </StripFrame>

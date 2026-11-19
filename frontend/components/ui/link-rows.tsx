@@ -3,12 +3,12 @@ import { ChevronRight } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { FRAME_FACE } from '@/components/ui/slip';
+import { ROWS_PANEL, ROWS_SHELL } from '@/components/ui/work-rows';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * Rows that each open a page, in one light frame: 48px each on fixed
+ * Rows that each open a page, in the table shell with no head row: 48px each on fixed
  * columns (an optional tick, the name, two 96px facts, a chevron), so no row
  * moves another; a "Show more" (`WorkRowsMore`) closes the box.
  */
@@ -20,11 +20,13 @@ export function LinkRows({
   more,
 }: Readonly<{ label: string; children: ReactNode; more?: ReactNode }>) {
   return (
-    <div className={cn(FRAME_FACE, 'overflow-hidden')}>
-      <ul aria-label={label} className="divide-rule divide-y">
-        {children}
-      </ul>
-      {more}
+    <div className={cn(ROWS_SHELL, 'pt-[var(--table-inset)]')}>
+      <div className={ROWS_PANEL}>
+        <ul aria-label={label} className="divide-rule divide-y">
+          {children}
+        </ul>
+        {more}
+      </div>
     </div>
   );
 }

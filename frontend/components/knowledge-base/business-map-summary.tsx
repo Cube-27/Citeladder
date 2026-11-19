@@ -6,11 +6,9 @@ import { z } from 'zod';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { ChipList, type ChipItem } from '@/components/ui/chip-input';
-import { DraftSheet } from '@/components/ui/draft-sheet';
-import { FactList, type Fact } from '@/components/ui/facts';
+import { SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile } from '@citeladder/contracts';
@@ -59,76 +57,51 @@ function businessModelField(profile: BrandProfile, suggested: boolean): MapField
   };
 }
 
-const allSuggested = (field: MapField) =>
-  field.items.length > 0 && field.items.every((item) => item.suggested);
-
-/**
- * A field's chips. A field that is wholly suggested is named once in its
- * group's head, so its chips drop the per-chip word; a field mixing confirmed
- * and suggested entries keeps it, so the two stay told apart.
- */
+/** A field's chips at the row's end, a suggested entry marked as one; none shows its absence. */
 function fieldValue(field: MapField) {
   if (field.items.length === 0 && field.absent) return field.absent;
-  const whole = allSuggested(field);
+  if (field.items.length === 0) return <Absence state="none" />;
   return (
-    <ChipList
-      items={field.items.map((item) => ({
-        value: item.value,
-        suggested: !whole && item.suggested,
-      }))}
-    />
+    <div className="flex justify-end [&>ul]:justify-end">
+      <ChipList label={field.label} items={field.items} />
+    </div>
   );
 }
 
-/** What a draft group's head says once: which fields discovery suggested. */
-function suggestionNote(fields: readonly MapField[]) {
-  const whole = fields.filter(allSuggested).map((field) => field.label);
-  const mixed = fields.some(
-    (field) => !allSuggested(field) && field.items.some((item) => item.suggested),
-  );
-  const named = whole.length
-    ? `Suggested by discovery and not yet confirmed: ${whole.join(', ')}.`
-    : 'Suggested by discovery and not yet confirmed.';
-  return mixed ? `${named} Entries marked Suggested are too.` : named;
-}
+const hasSuggestion = (fields: readonly MapField[]) =>
+  fields.some((field) => field.items.some((item) => item.suggested));
 
 /**
- * One group of the map as a card: plain once every value is confirmed, a
- * draft while any value is a suggestion (law 1), with the word said once.
+ * The map's details as setting rows: each field's name at the left and its
+ * entries at the right. An entry discovery suggested and no person has
+ * confirmed carries the word Suggested; the section says so once.
  */
 function MapGroup({
   title,
   description,
-  label,
   fields,
   action,
 }: Readonly<{
   title: string;
-  description?: string;
-  /** Names the fact list when the title does not. */
-  label?: string;
+  description: string;
   fields: readonly MapField[];
   action?: ReactNode;
 }>) {
-  const facts: Fact[] = fields.map((field) => ({ label: field.label, value: fieldValue(field) }));
-  const list = <FactList layout="ruled" label={label} facts={facts} />;
-  if (fields.some((field) => field.items.some((item) => item.suggested)))
-    return (
-      <DraftSheet title={title} state="draft" actions={action}>
-        <p className={textRole('caption', 'max-w-[72ch]')}>
-          {description ? `${description} ` : ''}
-          {suggestionNote(fields)}
-        </p>
-        {list}
-      </DraftSheet>
-    );
   return (
-    <Section aria-label={title}>
+    <Section aria-labelledby="business-map">
       <SectionHeader actions={action}>
-        <SectionTitle>{title}</SectionTitle>
-        {description ? <SectionDescription>{description}</SectionDescription> : null}
+        <SectionTitle id="business-map">{title}</SectionTitle>
+        <SectionDescription>
+          {hasSuggestion(fields)
+            ? `${description} Entries marked Suggested came from discovery and are not yet confirmed.`
+            : description}
+        </SectionDescription>
       </SectionHeader>
-      {list}
+      <SettingRows label="Business details">
+        {fields.map((field) => (
+          <SettingRow key={field.label} label={field.label} value={fieldValue(field)} />
+        ))}
+      </SettingRows>
     </Section>
   );
 }
@@ -180,11 +153,10 @@ export function BusinessMapSummary({
       <MapGroup
         title="Business map"
         description="These details steer prompt generation."
-        label="Business details"
         fields={details}
         action={edit}
       />
-      <OfferingsTable maps={draft.maps} action={edit} />
+      <OfferingsTable maps={draft.maps} />
     </Stack>
   );
 }

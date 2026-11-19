@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import { type ComponentProps, useState } from 'react';
 
-import { Field } from '@/components/ui/field';
+import { Field, type ControlProps } from '@/components/ui/field';
 import { FieldEndButton, Input } from '@/components/ui/input';
 
 type PasswordInputProps = Omit<
@@ -17,34 +17,39 @@ export type PasswordFieldProps = Readonly<{
   placeholder: string;
 }>;
 
-/** A labelled password field with a reveal control at its end. */
-export function PasswordField({
+/** A password input with a reveal control at its end, for a field that labels it. */
+export function PasswordInput({
   label,
-  error,
   inputProps,
   autoComplete,
   placeholder,
-}: PasswordFieldProps) {
+  control,
+}: Omit<PasswordFieldProps, 'error'> & Readonly<{ control: ControlProps }>) {
   const [visible, setVisible] = useState(false);
   return (
-    <Field label={label} required error={error}>
-      {(props) => (
-        <Input
-          {...props}
-          {...inputProps}
-          type={visible ? 'text' : 'password'}
-          autoComplete={autoComplete}
-          placeholder={placeholder}
-          endContentFlush
-          endContent={
-            <FieldEndButton
-              icon={visible ? EyeOff : Eye}
-              label={`${visible ? 'Hide' : 'Show'} ${label}`}
-              onClick={() => setVisible((current) => !current)}
-            />
-          }
+    <Input
+      {...control}
+      {...inputProps}
+      type={visible ? 'text' : 'password'}
+      autoComplete={autoComplete}
+      placeholder={placeholder}
+      endContentFlush
+      endContent={
+        <FieldEndButton
+          icon={visible ? EyeOff : Eye}
+          label={`${visible ? 'Hide' : 'Show'} ${label}`}
+          onClick={() => setVisible((current) => !current)}
         />
-      )}
+      }
+    />
+  );
+}
+
+/** A labelled password field with a reveal control at its end. */
+export function PasswordField({ error, ...props }: PasswordFieldProps) {
+  return (
+    <Field label={props.label} required error={error}>
+      {(control) => <PasswordInput {...props} control={control} />}
     </Field>
   );
 }

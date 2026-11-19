@@ -115,13 +115,7 @@ describe('Context layout', () => {
       within(tabs)
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
-    ).toEqual([
-      'Company',
-      'Audience & Offerings',
-      'Business map',
-      'Competitors',
-      'Agent instructions',
-    ]);
+    ).toEqual(['Company', 'Audience', 'Business map', 'Competitors', 'Instructions']);
     // The instructions are a tab of their own, not a section under every tab.
     expect(screen.queryByRole('textbox', { name: 'Agent instructions' })).not.toBeInTheDocument();
   });
@@ -157,7 +151,7 @@ describe('Context layout', () => {
     expect(screen.queryByText(/^No company facts yet/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
     expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Agent instructions' }));
+    await user.click(screen.getByRole('tab', { name: 'Instructions' }));
     const idleInstructions = await screen.findByRole('button', { name: 'Save instructions' });
     expect(idleInstructions).toHaveAttribute('aria-disabled', 'true');
     expect(idleInstructions).toHaveAccessibleDescription('No changes to save');
@@ -199,10 +193,10 @@ describe('Context layout', () => {
         .map((tab) => tab.textContent);
     expect(labels()).toEqual([
       'Company',
-      'Audience & Offerings',
+      'Audience',
       'Business map',
       'Competitors',
-      'Agent instructions',
+      'Instructions',
     ]);
     // The fixed tabs are usable before the gate answers.
     expect(await screen.findByLabelText('Description')).toBeVisible();
@@ -210,10 +204,10 @@ describe('Context layout', () => {
     expect(await within(tabs).findByRole('tab', { name: 'Brand facts' })).toBeVisible();
     expect(labels()).toEqual([
       'Company',
-      'Audience & Offerings',
+      'Audience',
       'Business map',
       'Competitors',
-      'Agent instructions',
+      'Instructions',
       'Brand facts',
     ]);
   });
@@ -282,7 +276,7 @@ describe('Company facts', () => {
       await screen.findByLabelText('Description'),
       'A value-focused family retailer.',
     );
-    await user.click(screen.getByRole('tab', { name: 'Audience & Offerings' }));
+    await user.click(screen.getByRole('tab', { name: 'Audience' }));
     await user.type(screen.getByLabelText('Add to Products and services'), 'Clothing');
     await user.click(screen.getByRole('tab', { name: 'Company' }));
     expect(screen.getByLabelText('Description')).toHaveValue('A value-focused family retailer.');
@@ -350,10 +344,11 @@ describe('Company facts', () => {
     });
     const category = await screen.findByLabelText(/what you sell/i);
     expect(category).toHaveValue('feed software');
-    expect(screen.getByRole('radio', { name: 'Businesses' })).toBeChecked();
+    expect(screen.getByLabelText('Who buys it')).toHaveTextContent('Businesses');
     await user.clear(category);
     await user.type(category, 'product feed management platform');
-    await user.click(screen.getByRole('radio', { name: 'Worldwide' }));
+    await user.click(screen.getByLabelText('Where they buy it'));
+    await user.click(screen.getByRole('option', { name: 'Worldwide' }));
     await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
     // Untouched facets and fields are not resubmitted, so they are not marked reviewed.
     await waitFor(() =>
@@ -405,7 +400,7 @@ describe('Company facts', () => {
 });
 
 describe('Competitors', () => {
-  it('lists tracked competitors as marked chips and opens their editor', async () => {
+  it('lists tracked competitors one row each and opens their editor', async () => {
     const user = userEvent.setup({ delay: null });
     const withCompetitors = makeProject({
       competitors: [
@@ -427,14 +422,15 @@ describe('Competitors', () => {
     });
     renderContext({ activeProject: withCompetitors, tab: 'competitors' });
 
-    const tracked = await screen.findByRole('list', { name: 'Tracked competitors' });
-    // Contoso has no cached logo, so its mark falls back to its first letter.
-    expect(
-      within(tracked)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Northstar', 'CContoso']);
-    expect(within(tracked).getAllByRole('listitem')[0]?.querySelector('img')).toHaveAttribute(
+    const tracked = await screen.findByRole('group', { name: 'Tracked competitors' });
+    const rows = [...tracked.querySelectorAll('[data-setting-row]')];
+    // Contoso has no cached logo, so its mark falls back to its first letter;
+    // each row ends in the competitor's domains.
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'Northstar—Not set',
+      'CContosocontoso.test',
+    ]);
+    expect(rows[0]?.querySelector('img')).toHaveAttribute(
       'src',
       'https://assets.test/northstar.png',
     );
@@ -494,16 +490,15 @@ describe('Business map', () => {
       within(roles)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Club coach', 'Parent']);
+    ).toEqual(['Club coachSuggested', 'ParentSuggested']);
     expect(details).toHaveTextContent('Business modelProducts sold direct');
-    // Discovery's roles make the group a draft that names them once.
+    // Discovery's roles are marked Suggested, and the section says what that means once.
     const map = screen.getByRole('region', { name: 'Business map' });
-    expect(map).toHaveAttribute('data-draft', 'true');
-    expect(map).toHaveTextContent('Suggested by discovery and not yet confirmed: Buyer roles.');
+    expect(map).toHaveTextContent('Entries marked Suggested came from discovery');
     // Every offering is one row of one table; a wholly suggested list says so once.
     const offerings = screen.getByRole('region', { name: 'Offerings' });
-    expect(offerings).toHaveAttribute('data-draft', 'true');
     expect(offerings).toHaveTextContent('1 offering. Who buys each one');
+    expect(offerings).toHaveTextContent('Entries marked suggested came from discovery');
     const [, row] = within(within(offerings).getByRole('table')).getAllByRole('row');
     if (!row) throw new Error('The offering renders as a row');
     expect(
@@ -542,8 +537,10 @@ describe('Business map', () => {
     expect(await screen.findByLabelText('Business details')).toHaveTextContent(
       'Business model—Not set',
     );
-    // Nothing suggested: the group is a plain card, not a draft.
-    expect(screen.getByRole('region', { name: 'Business map' })).not.toHaveAttribute('data-draft');
+    // Nothing suggested: no suggestion note.
+    expect(screen.getByRole('region', { name: 'Business map' })).not.toHaveTextContent(
+      'Entries marked Suggested',
+    );
   });
 });
 
@@ -568,7 +565,7 @@ describe('Agent instruction drafts', () => {
       target: { value: 'Plain, warm tone.' },
     });
     await user.click(screen.getByRole('tab', { name: 'Competitors' }));
-    await user.click(screen.getByRole('tab', { name: 'Agent instructions' }));
+    await user.click(screen.getByRole('tab', { name: 'Instructions' }));
     expect(screen.getByRole('textbox', { name: 'Agent instructions' })).toHaveValue(
       'Plain, warm tone.',
     );

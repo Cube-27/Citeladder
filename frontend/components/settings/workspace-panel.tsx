@@ -7,7 +7,7 @@ import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { SettingRow } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -46,26 +46,29 @@ export function WorkspacePanel() {
           <SectionTitle id="workspace-panel-title">{activeWorkspace.name}</SectionTitle>
         </SectionHeader>
         <Stack gap="workspace">
-          <SettingRow
-            label={`Your role: ${roleLabel(activeWorkspace.role)}`}
-            description={ROLE_SUMMARY[activeWorkspace.role]}
-          />
-          <SettingRow
-            label="Leave workspace"
-            description={
-              isOwner
-                ? 'To leave, first make another member the owner.'
-                : `You lose access to ${activeWorkspace.name} and its projects immediately.`
-            }
-            action={
-              isOwner ? null : (
-                <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
-                  <Icon icon={LogOut} />
-                  Leave workspace
-                </Button>
-              )
-            }
-          />
+          <SettingRows>
+            <SettingRow
+              label="Your role"
+              description={ROLE_SUMMARY[activeWorkspace.role]}
+              value={roleLabel(activeWorkspace.role)}
+            />
+            <SettingRow
+              label="Leave workspace"
+              description={
+                isOwner
+                  ? 'To leave, first make another member the owner.'
+                  : `You lose access to ${activeWorkspace.name} and its projects immediately.`
+              }
+              action={
+                isOwner ? null : (
+                  <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
+                    <Icon icon={LogOut} />
+                    Leave workspace
+                  </Button>
+                )
+              }
+            />
+          </SettingRows>
           {leave.isError ? (
             <Notice
               kind="mutation"

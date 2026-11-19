@@ -4,7 +4,7 @@ import { CircleAlert } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
-type ControlProps = {
+export type ControlProps = {
   id: string;
   required?: boolean;
   'aria-invalid'?: boolean;
@@ -66,7 +66,7 @@ export function Field({
   );
 }
 
-function FieldFoot({
+export function FieldFoot({
   id,
   hint,
   error,
