@@ -81,18 +81,11 @@ const CATEGORY_DERIVED = ['category_terms', 'category_aliases', 'category_option
 export type BrandProfileUpdate = z.infer<typeof brandProfileUpdate>;
 
 const contractProvenance = brandProfileSchema.shape.sources.shape.description.unwrap();
-// Rows written before the onboarding writer carried the reviewer keys store
-// provenance entries without them; absent there means no reviewer and no
-// review time, so null is their truthful reading, not a fabricated one.
-const storedProvenance = contractProvenance.extend({
-  reviewed_by: contractProvenance.shape.reviewed_by.default(null),
-  reviewed_at: contractProvenance.shape.reviewed_at.default(null),
-});
-const storedSources = z.record(z.string(), storedProvenance);
+const storedSources = z.record(z.string(), contractProvenance);
 // Review times are stored as ISO text; the view renders them as ISO instants.
 const viewedSources = z.record(
   z.string(),
-  storedProvenance.transform((entry) => ({
+  contractProvenance.transform((entry) => ({
     ...entry,
     reviewed_at: entry.reviewed_at === null ? null : new Date(entry.reviewed_at).toISOString(),
   })),

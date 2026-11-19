@@ -35,9 +35,7 @@ const FOUND_BY = {
 function seenIn(candidate: ObservedCompetitor): string {
   switch (candidate.kind) {
     case 'cited_domain':
-      return candidate.citation_count === null
-        ? pluralCount(candidate.prompt_count, 'prompt')
-        : pluralCount(candidate.citation_count, 'citation');
+      return pluralCount(candidate.citation_count, 'citation');
     case 'named_in_answers':
       return pluralCount(candidate.prompt_count, 'prompt');
     default: {
@@ -48,7 +46,7 @@ function seenIn(candidate: ObservedCompetitor): string {
 }
 
 const engines = ({ engine_count: count, engine_total: total }: ObservedCompetitor) =>
-  total === null ? formatCount(count) : `${formatCount(count)} of ${formatCount(total)}`;
+  `${formatCount(count)} of ${formatCount(total)}`;
 
 /**
  * Competitors the runs observed but the project does not yet track: a domain

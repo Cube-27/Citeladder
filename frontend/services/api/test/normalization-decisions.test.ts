@@ -15,13 +15,14 @@ import { epochMicros, parseDatetime } from '../src/http/datetimes.ts';
 import { RequestValidationError, validateParams } from '../src/http/params.ts';
 
 describe('recorded evidence normalization', () => {
-  it('does not turn an unknown retrieval flag into false', () => {
+  it('never turns a malformed retrieval flag into false, and fails without a frozen policy', () => {
     const input = {
       requestSnapshot: { retrieval_enabled: 'false' },
       routeSnapshot: null,
-      auditConfiguration: null,
+      auditConfiguration: { measurement_policy: { retrieval_enabled: true } },
     };
-    expect(executionFrozenProvenance(input)).toBeNull();
+    expect(executionFrozenProvenance(input)).toBe(true);
+    expect(() => executionFrozenProvenance({ ...input, auditConfiguration: null })).toThrow();
     expect(
       executionFrozenProvenance({ ...input, requestSnapshot: { retrieval_enabled: false } }),
     ).toBe(false);

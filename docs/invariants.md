@@ -245,7 +245,8 @@ The schema is `frontend/services/api/migrations/0001_baseline.sql` followed by
 numbered forward migrations (`0002_<name>.sql`, …, no gaps). Every schema change
 is a new file that applies cleanly to the existing production schema and rows;
 an applied file, the baseline included, never changes, and production never
-needs a reset to take a schema change. The migrate CLI (`pnpm migrate`) applies
+needs a reset to take a schema change. The only exceptions are owner-authorized
+baseline refolds with an owner-run reset ([decisions](decisions.md#platform-and-schema)). The migrate CLI (`pnpm migrate`) applies
 pending files in order in one transaction under an advisory lock and records each
 SHA-256 in `schema_migrations`; a changed applied file, a recorded version the
 release lacks, a skipped version or unledgered tables fail the migrate job.

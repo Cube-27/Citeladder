@@ -78,7 +78,7 @@ export function markOf(identities: ReadonlyMap<string, BrandIdentity>, name: str
   return { logo_url: identity?.logo_url ?? null, website_url: identity?.website ?? null };
 }
 
-/** The stored first-named business with its mark; none and unavailable stay as they are. */
+/** The stored first-named business with its mark; none stays as it is. */
 export function markFirstNamed(first: FirstNamed, identities: ReadonlyMap<string, BrandIdentity>) {
   return first.kind === 'brand' || first.kind === 'competitor'
     ? { ...first, ...markOf(identities, first.name) }

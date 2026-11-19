@@ -14,7 +14,7 @@ import type { RecordScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { recordStatus } from './action-status.ts';
-import { actionItem, matchingActions, NOT_LEFTOVER_ACTION, requireAction } from './actions.ts';
+import { actionItem, matchingActions, requireAction } from './actions.ts';
 import type { Scope } from './sources.ts';
 
 const a = policy.opportunity.actions;
@@ -82,8 +82,7 @@ export async function bulkUpdateActionStatus(
       : trx
           .selectFrom('actions')
           .where('workspace_id', '=', scope.workspaceId)
-          .where('project_id', '=', scope.projectId)
-          .where(NOT_LEFTOVER_ACTION);
+          .where('project_id', '=', scope.projectId);
     const locked = await reach
       .selectAll()
       .where('id', 'in', candidates)

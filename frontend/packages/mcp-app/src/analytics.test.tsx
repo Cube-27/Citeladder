@@ -366,6 +366,7 @@ describe('CiteLadder MCP App', () => {
           owned_citation_rate: 0,
           sov: { mention: 0.25 },
           avg_position: 1.5,
+          retrieval_enabled: true,
           rankings: [
             {
               ...row,

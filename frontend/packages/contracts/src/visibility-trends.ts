@@ -71,7 +71,7 @@ export const visibilityTrendPointSchema = responseObject({
   // the client must never recombine points across these. `transport_model` is
   // null when the point spans several models — see `model_provenance`.
   transport_model: z.string().nullable().default(null),
-  retrieval_enabled: z.boolean().nullable().default(null),
+  retrieval_enabled: z.boolean(),
   model_provenance: z.array(modelProvenanceSchema).default([]),
   // Provenance (invariant 4): every source snapshot this point folds.
   source_snapshot_ids: z.array(uuid()),

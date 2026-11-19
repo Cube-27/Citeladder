@@ -43,10 +43,7 @@ const bool = (value: unknown) => {
   if (value === null || value === undefined) return '';
   return value ? 'True' : 'False';
 };
-const retrievalLabel = (enabled: boolean | null) => {
-  if (enabled === null) return 'retrieval unrecorded';
-  return enabled ? 'retrieval on' : 'retrieval off';
-};
+const retrievalLabel = (enabled: boolean) => (enabled ? 'retrieval on' : 'retrieval off');
 const benchmarkModeLabels: Record<string, string> = {
   consumer_like: 'exact visible prompt; no system instruction',
   controlled_localized: 'visible prompt plus disclosed market/language context',

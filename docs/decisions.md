@@ -13,10 +13,12 @@ how to add or change an entry.
 - **Schema changes are forward migrations.** From `0002_<name>.sql` on, never a
   reset or an edited applied file; [invariant 17](invariants.md#17-schema-changes-are-forward-migrations)
   has the mechanics; production is never reset for a schema change. Owner,
-  2026-11-04. On 2026-11-17 the owner folded 0001–0049 into a new
-  `0001_baseline.sql`, deployed only after the owner's own one-time reset of
-  each database. That reset is owner-run, never agent-run, and not a change to
-  this rule.
+  2026-11-04. Two owner-authorized exceptions refolded the baseline in place,
+  each deployed only after the owner's own reset of every database: 0001–0049
+  into `0001_baseline.sql` (owner, 2026-11-17), and `0002_ai_visibility_gaps`
+  into a strict `0001_baseline.sql` with its existing-data branches removed
+  (owner, 2026-11-19). Forward migrations from `0002` apply again after each.
+  A reset is owner-run, never agent-run.
 - **Access is looked up once per request** and never cached across requests, so
   removing a member, revoking a grant or ending a trial bites on the next
   request. Workers keep their own bounded reuse. Owner, 2026-11-02.

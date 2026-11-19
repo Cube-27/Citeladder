@@ -42,11 +42,7 @@ export async function queryBrands(
         .where('audit_id', 'in', auditIds)
         .execute()
     : [];
-  // Rows written before queries were counted whole (word terms) read as not counted.
-  const counted = rows.flatMap((row) => {
-    const parsed = storedQueriesSchema.safeParse(row.terms);
-    return parsed.success ? [parsed.data] : [];
-  });
+  const counted = rows.map((row) => storedQueriesSchema.parse(row.terms));
   if (!counted.length) return () => null;
   const named = new Map<string, Map<string, { kind: 'brand' | 'competitor'; name: string }>>();
   for (const entry of counted.flat()) {

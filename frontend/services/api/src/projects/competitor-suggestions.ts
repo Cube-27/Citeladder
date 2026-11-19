@@ -57,7 +57,7 @@ function view(row: Row): Suggestion {
     created_at: row.created_at.toISOString(),
   };
   if (row.kind === 'named_in_answers') return { ...shared, kind: 'named_in_answers' };
-  if (row.kind === 'cited_domain' && row.domain !== null)
+  if (row.kind === 'cited_domain' && row.domain !== null && row.citation_count !== null)
     return {
       ...shared,
       kind: 'cited_domain',

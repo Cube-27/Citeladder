@@ -1,8 +1,7 @@
 /**
  * The Actions page's data (plan v3) against real PostgreSQL: issue-group
  * Actions for defects and advisories only, each filed under its goal and
- * grouping with its URLs in `action_urls`; leftover findings of retired rules;
- * the tree, grouping-page and URL reads, each workspace-authorized.
+ * grouping with its URLs in `action_urls`; the tree, grouping-page and URL reads, each workspace-authorized.
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -18,7 +17,7 @@ import { createApp } from '../src/app.ts';
 import type { Database } from '../src/db/database.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
-import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
+import { actionRow } from './opportunity-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -313,63 +312,6 @@ describe('Agent hand-off scopes', () => {
   });
 });
 
-describe('a leftover finding of a retired rule', () => {
-  it('is not listed before the next refresh, which retires it and clears its Action', async () => {
-    const { seed, pages } = foreign;
-    const scope = { workspace_id: seed.workspaceId, project_id: seed.projectId };
-    await recomputeOpportunities(db, scopeOf(seed));
-    const leftover = actionRow(scope, {
-      group_key: 'page:example.test/p00',
-      target_kind: 'page',
-      target_label: pages[0]!.url,
-      target_url: pages[0]!.url,
-      priority_score: 99,
-    });
-    await db.insertInto('actions').values(leftover).execute();
-    const finding = opportunityRow(scope, {
-      rule_id: 'missing_structured_data',
-      title: 'Missing structured data on owned page',
-      opportunity_type: 'site',
-      severity: 'medium',
-      target_key: `url:${pages[0]!.url}`,
-      target_url: pages[0]!.url,
-      action_id: leftover.id,
-    });
-    await db.insertInto('opportunities').values(finding).execute();
-    await db
-      .updateTable('actions')
-      .set({ member_opportunity_ids: JSON.stringify([finding.id]) })
-      .where('id', '=', leftover.id)
-      .execute();
-    const listed = async () => {
-      const path = `/api/v1/projects/${seed.projectId}/actions?status=any`;
-      const page = actionsPageSchema.parse(await (await request(seed, path)).json());
-      return page.items.map((item) => item.id).includes(leftover.id);
-    };
-    expect(await listed()).toBe(false);
-
-    // The sources are unchanged, yet the automatic refresh does not skip.
-    await recomputeOpportunities(db, scopeOf(seed), { skipIfCurrent: true });
-    const [retired, cleared] = await Promise.all([
-      db
-        .selectFrom('opportunities')
-        .select('superseded_at')
-        .where('id', '=', finding.id)
-        .executeTakeFirstOrThrow(),
-      db
-        .selectFrom('actions')
-        .select(['member_opportunity_ids', 'evidence_cleared_at'])
-        .where('id', '=', leftover.id)
-        .executeTakeFirstOrThrow(),
-    ]);
-    expect([
-      retired.superseded_at === null,
-      cleared.member_opportunity_ids,
-      cleared.evidence_cleared_at === null,
-    ]).toEqual([false, [], false]);
-  });
-});
-
 describe('the Actions tree', () => {
   /** 23 prompt Actions scored 100 down to 78, two SEO ones, one declined, one not yet synced. */
   async function treeProject() {
@@ -380,6 +322,17 @@ describe('the Actions tree', () => {
       actionRow(scope, {
         ...values,
         id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      });
+    const cohort = (rule: string) =>
+      JSON.stringify({
+        rule_id: rule,
+        rule_label: rule,
+        finding_class: 'defect',
+        crawl_id: 'c',
+        group_id: 'g',
+        page_count: 0,
+        whole_site: false,
+        pages: [],
       });
     const prompts = Array.from({ length: 23 }, (_, index) =>
       row(index, {
@@ -402,14 +355,7 @@ describe('the Actions tree', () => {
           priority_score: 40.4,
           goal: 'read_site',
           goal_grouping: 'seo',
-          cohort: JSON.stringify({
-            rule_id: 'a',
-            rule_label: 'a',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('a'),
         }),
         row(31, {
           group_key: 'issue-family:b',
@@ -418,14 +364,7 @@ describe('the Actions tree', () => {
           priority_score: 10,
           goal: 'read_site',
           goal_grouping: 'seo',
-          cohort: JSON.stringify({
-            rule_id: 'b',
-            rule_label: 'b',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('b'),
         }),
         row(32, {
           group_key: 'issue-family:c',
@@ -435,14 +374,7 @@ describe('the Actions tree', () => {
           goal: 'read_site',
           goal_grouping: 'aeo',
           status: 'dismissed',
-          cohort: JSON.stringify({
-            rule_id: 'c',
-            rule_label: 'c',
-            crawl_id: 'c',
-            group_id: 'g',
-            page_count: 0,
-            pages: [],
-          }),
+          cohort: cohort('c'),
         }),
         row(33, {
           group_key: 'page:old',

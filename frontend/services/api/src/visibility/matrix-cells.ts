@@ -102,21 +102,13 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
       : null;
   });
 
-  // A run finalized before AV-5 froze no topic: the topic segments it measured are unknown, not unasked.
-  const unmeasured = (segment: Segment): Exclude<MatrixCell, { kind: 'measured' }> =>
-    segment.topic !== null &&
-    runs[segment.market]?.run?.topics.size === 0 &&
-    measured({ ...segment, topic: null }) !== null
-      ? { kind: 'not_recorded' }
-      : { kind: 'not_run' };
-
   const answersOf = (segment: Partial<Segment>) =>
     measured({ market: strip, topic: filters.topic, engine: filters.engine, ...segment })
       ?.answers ?? 0;
 
   function cell(segment: Segment, brand: Brand | null): MatrixCell {
     const found = measured(segment);
-    if (!found) return unmeasured(segment);
+    if (!found) return { kind: 'not_run' };
     const target = brand ?? { name: '', is_brand: true };
     const row = found.rows.find((r) => sameBrand(r, target));
     const entities = sentiments(segment);
@@ -238,7 +230,7 @@ export function matrixProjection(input: MatrixInput): Omit<VisibilityMatrix, 'so
     picks[dimension].map((pick): VisibilityMatrix['rankings']['topic'][number] => {
       const segment = { market: strip, topic: filters.topic, engine: filters.engine, ...pick };
       const found = measured(segment);
-      if (!found) return unmeasured(segment);
+      if (!found) return { kind: 'not_run' };
       return {
         kind: 'measured',
         leaders: found.rows

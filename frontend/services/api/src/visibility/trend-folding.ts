@@ -117,16 +117,6 @@ function isMixedVersion(bucket: readonly TrendSource[]): boolean {
   );
 }
 
-const RETRIEVAL_ORDER = new Map<boolean | null, number>([
-  [false, 0],
-  [null, 1],
-  [true, 2],
-]);
-
-function retrievalOrder(value: boolean | null): number {
-  return RETRIEVAL_ORDER.get(value)!;
-}
-
 /**
  * Fold sources into UTC buckets, one point per (bucket, folding identity).
  * The identity carries the analyzer and scoring versions, so a bucket never
@@ -155,7 +145,7 @@ export function bucketPoints(sources: readonly TrendSource[], granularity: strin
       return (
         compareText(left.start, right.start) ||
         compareText(a.transportModel ?? '', b.transportModel ?? '') ||
-        retrievalOrder(a.retrievalEnabled) - retrievalOrder(b.retrievalEnabled)
+        Number(a.retrievalEnabled) - Number(b.retrievalEnabled)
       );
     })
     .map((bucket) => foldBucket(bucket.start, bucket.sources));

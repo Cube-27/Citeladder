@@ -11,8 +11,7 @@ import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
-import { StateBlock } from '@/components/ui/state-block';
-import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
+import { READING_LABELS } from '@/lib/visibility/matrix';
 import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
 
 const PLACES = 5;
@@ -36,40 +35,32 @@ export function TopRankings({
   const axisText = useAxisText();
   const data = query.data;
   const segments = data ? axisText(data.axes, by) : [];
-  // A segment whose topic the run never recorded has no ranking to show, so it is left out.
   const rows = data
-    ? segments.flatMap((text, i) => {
+    ? segments.map((text, i) => {
         const ranking = data.rankings[by][i];
-        if (ranking?.kind === 'not_recorded') return [];
-        return [
-          {
-            key: `${by}-${i}`,
-            header: <AxisLabel axes={data.axes} dimension={by} index={i} text={text} />,
-            chips: (ranking?.kind === 'measured' ? ranking.leaders : []).map((leader) => ({
-              key: `${leader.is_brand}:${leader.name}`,
-              mark: (
-                <BrandMark
-                  name={leader.name}
-                  logoUrl={leader.logo_url}
-                  websiteUrl={leader.website_url}
-                  placement="inline"
-                />
-              ),
-              name: leader.name,
-              detail: formatRate(leader.mention_rate),
-              own: leader.is_brand,
-            })),
-            empty: <Absence state="not_run" label={READING_LABELS.not_run} />,
-          },
-        ];
+        return {
+          key: `${by}-${i}`,
+          header: <AxisLabel axes={data.axes} dimension={by} index={i} text={text} />,
+          chips: (ranking?.kind === 'measured' ? ranking.leaders : []).map((leader) => ({
+            key: `${leader.is_brand}:${leader.name}`,
+            mark: (
+              <BrandMark
+                name={leader.name}
+                logoUrl={leader.logo_url}
+                websiteUrl={leader.website_url}
+                placement="inline"
+              />
+            ),
+            name: leader.name,
+            detail: formatRate(leader.mention_rate),
+            own: leader.is_brand,
+          })),
+          empty: <Absence state="not_run" label={READING_LABELS.not_run} />,
+        };
       })
     : [];
   function body() {
     if (!data) return null;
-    if (by === 'topic' && noTopicsRecorded(data.rankings.topic))
-      return (
-        <StateBlock kind="empty" inline message={noTopicsMessage(data.source_audit_ids.length)} />
-      );
     return (
       <RankTable
         labelledBy="insights-rankings"

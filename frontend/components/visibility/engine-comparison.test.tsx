@@ -66,7 +66,7 @@ describe('model outcome comparison', () => {
       logical_engine,
       transport_provider: 'p',
       transport_model,
-      retrieval_enabled: null,
+      retrieval_enabled: true,
     });
     render(
       <EngineComparison

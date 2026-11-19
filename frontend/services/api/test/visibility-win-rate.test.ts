@@ -1,6 +1,6 @@
 /**
  * Win rate (AV-7) on GET /visibility, against the real PostgreSQL schema: per
- * brand and engine, unavailable before the derivation, and pooled over a
+ * brand and engine, not applicable when no tracked business was named, and pooled over a
  * period as counts. Per frozen topic it is in visibility-topics.test.ts.
  * Workspace isolation of the route is in visibility-reads.test.ts.
  */
@@ -15,14 +15,13 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A stored four-answer aggregate; without `wins` it predates the derivation. */
-function aggregate(wins?: { answers: number; brand: number }): Record<string, unknown> {
-  const tally = wins && {
-    answers: wins.answers,
-    first: { 'Acme Corp': wins.brand, Globex: wins.answers - wins.brand },
-  };
+/** A stored four-answer aggregate. */
+function aggregate(wins: { answers: number; brand: number }): Record<string, unknown> {
   return {
-    ...(tally && { win_tally: tally }),
+    win_tally: {
+      answers: wins.answers,
+      first: { 'Acme Corp': wins.brand, Globex: wins.answers - wins.brand },
+    },
     total_completed: 4,
     brand_mention_count: 2,
     owned_citation_response_count: 0,
@@ -37,11 +36,15 @@ function aggregate(wins?: { answers: number; brand: number }): Record<string, un
 }
 
 describe('GET /visibility win rate', () => {
-  it('serves counts per brand and engine, and unavailable before the derivation', async () => {
+  it('serves counts per brand and engine, and no rate when no answer named a tracked business', async () => {
     const tenant = await fixtures.tenant();
     await fixtures.brand(tenant.projectId, 'Acme Corp', true);
     await fixtures.competitor(tenant.projectId, { name: 'Globex', domains: ['globex.example'] });
-    const before = await measuredRun(tenant, '2026-03-01T00:00:00Z', aggregate());
+    const before = await measuredRun(
+      tenant,
+      '2026-03-01T00:00:00Z',
+      aggregate({ answers: 0, brand: 0 }),
+    );
     await measuredRun(tenant, '2026-03-08T00:00:00Z', aggregate({ answers: 3, brand: 1 }));
 
     const { status, body } = await get(tenant, route(tenant));
@@ -56,11 +59,11 @@ describe('GET /visibility win rate', () => {
       { logical_engine: 'chatgpt', win_count: 1, win_answers: 3, win_rate: 1 / 3 },
     ]);
 
-    // Finalized before the derivation: unavailable, never zero.
-    const old = await get(tenant, route(tenant), { audit_id: before });
-    expect(byName(old.body.rankings)['Acme Corp']).toMatchObject({
-      win_count: null,
-      win_answers: null,
+    // No answer named a tracked business: not applicable, never a zero rate.
+    const none = await get(tenant, route(tenant), { audit_id: before });
+    expect(byName(none.body.rankings)['Acme Corp']).toMatchObject({
+      win_count: 0,
+      win_answers: 0,
       win_rate: null,
     });
   });

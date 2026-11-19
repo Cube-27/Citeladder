@@ -58,6 +58,7 @@ async function measuredPrompt() {
       brandMentions: ['Acme Corp'],
       competitorMentions: ['Globex', 'Initech'],
       mentionOffsets: { Globex: 3, 'Acme Corp': 10, Initech: 40 },
+      firstNamed: { kind: 'competitor', name: 'Globex' },
     },
   });
   const unnamed = await answer(tenant, {
@@ -113,8 +114,7 @@ describe('GET /projects/{project_id}/prompts/{prompt_id}/executions', () => {
       ],
       brand_mentioned: true,
       position: 2,
-      // Analysed before first-named was derived: unavailable, not "none".
-      first_named: { kind: 'unavailable' },
+      first_named: { kind: 'competitor', name: 'Globex' },
       cited: true,
       search: 'used',
     });

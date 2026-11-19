@@ -36,15 +36,13 @@ const auditEngineSnapshotSchema = responseObject({
 
 /**
  * One measured route on an AGGREGATE surface. Aggregates carry a LIST of these
- * in stable catalog order and must never be collapsed into a single model:
- * `retrieval_enabled: null` means the audit predates the frozen policy, not
- * "retrieval off".
+ * in stable catalog order and must never be collapsed into a single model.
  */
 export const modelProvenanceSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
-  retrieval_enabled: z.boolean().nullable(),
+  retrieval_enabled: z.boolean(),
 });
 
 // A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
@@ -347,12 +345,11 @@ export const surfaceRatesSchema = responseObject({
 });
 
 // The tracked business an answer named first (AV-7). `none`: it named no tracked
-// business (not applicable); `unavailable`: analysed before this was derived.
+// business (not applicable).
 export const firstNamedSchema = z.discriminatedUnion('kind', [
   responseObject({ kind: z.literal('brand'), name: z.string() }),
   responseObject({ kind: z.literal('competitor'), name: z.string() }),
   responseObject({ kind: z.literal('none') }),
-  responseObject({ kind: z.literal('unavailable') }),
 ]);
 export type FirstNamed = z.infer<typeof firstNamedSchema>;
 
@@ -361,7 +358,6 @@ export const markedFirstNamedSchema = z.discriminatedUnion('kind', [
   responseObject({ kind: z.literal('brand'), name: z.string(), ...brandMarkFields }),
   responseObject({ kind: z.literal('competitor'), name: z.string(), ...brandMarkFields }),
   responseObject({ kind: z.literal('none') }),
-  responseObject({ kind: z.literal('unavailable') }),
 ]);
 
 export const answerFormatSchema = z.enum(['shopping', 'map', 'comparison', 'image']);
@@ -411,7 +407,7 @@ export const executionEvidenceSchema = responseObject({
   transport_provider: z.string(),
   transport_model: z.string(),
   // Execution-level surface: singular model, frozen snapshots only.
-  retrieval_enabled: z.boolean().nullable().default(null),
+  retrieval_enabled: z.boolean(),
   prompt_index: z.number().int(),
   repetition: z.number().int(),
   prompt_class: z.string(),

@@ -61,13 +61,13 @@ export const winCountsSchema = responseObject({
     .nullable()
     .optional()
     .describe(
-      'Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.',
+      'Answers that named at least one tracked business. Null: not measured; 0: not applicable.',
     ),
   win_rate: z
     .number()
     .nullable()
     .optional()
-    .describe('`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.'),
+    .describe('`win_count` / `win_answers`, 0–1. Null when not measured or not applicable.'),
 });
 export type WinCounts = z.infer<typeof winCountsSchema>;
 
@@ -399,11 +399,7 @@ const observedCompetitorFields = {
   qualification_reason: z.string(),
   prompt_count: z.number().int().describe('Prompts whose answers named or cited it.'),
   engine_count: z.number().int().describe('Engines whose answers named or cited it.'),
-  engine_total: z
-    .number()
-    .int()
-    .nullable()
-    .describe('Engines the run asked. Null: recorded before the total was.'),
+  engine_total: z.number().int().describe('Engines the run asked.'),
   market_relevant: z.boolean(),
   analyzer_version: z.string(),
   source_analysis_ids: z.array(z.string()).describe('Provenance: the answers it came from.'),
@@ -418,11 +414,7 @@ export const observedCompetitorSchema = z.discriminatedUnion('kind', [
     ...observedCompetitorFields,
     kind: z.literal('cited_domain'),
     domain: z.string(),
-    citation_count: z
-      .number()
-      .int()
-      .nullable()
-      .describe('Citations of the domain. Null: recorded before citations were counted.'),
+    citation_count: z.number().int().describe('Citations of the domain.'),
   }),
   responseObject({ ...observedCompetitorFields, kind: z.literal('named_in_answers') }),
 ]);
