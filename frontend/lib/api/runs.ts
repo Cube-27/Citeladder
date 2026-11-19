@@ -28,11 +28,16 @@ import type {
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import { startInteractiveWork } from './interactive-work';
-import type { Audit, AuditSchedule, Execution, ExecutionEvidence } from '@citeladder/contracts';
+import type {
+  Audit,
+  AuditSchedule,
+  Execution,
+  ExecutionEvidence,
+  PromptAnswerSearch,
+} from '@citeladder/contracts';
 import {
   promptAnswerPageSchema,
   type PromptAnswerPage,
-  type PromptAnswerSearch,
 } from '@citeladder/contracts/visibility-prompt-answers';
 
 /** The prompt page's Past answers filters; omitted reads unfiltered. */

@@ -1,5 +1,4 @@
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { Absence } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -17,6 +16,14 @@ import {
 } from '@/lib/prompts/history';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
+
+import { NO_ANSWERS, NOT_MEASURED } from './prompt-figures';
+
+/** A run's owned citation rate; with no answer to cite from it is unavailable, not unmeasured. */
+function ownedRate(point: PromptHistory['points'][number]) {
+  if (point.owned_citation_rate !== null) return formatPercent(point.owned_citation_rate);
+  return point.counts.responses === 0 ? NO_ANSWERS : NOT_MEASURED;
+}
 
 /**
  * Visibility and owned citation rate per run, with declared work marked. A
@@ -65,19 +72,9 @@ function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
               />
             </TableCell>
             <TableCell numeric>
-              {point.mention_rate === null ? (
-                <Absence state="unavailable" label="No successful answer" />
-              ) : (
-                formatPercent(point.mention_rate)
-              )}
+              {point.mention_rate === null ? NO_ANSWERS : formatPercent(point.mention_rate)}
             </TableCell>
-            <TableCell numeric>
-              {point.owned_citation_rate === null ? (
-                <Absence state={point.counts.responses === 0 ? 'unavailable' : 'not_measured'} />
-              ) : (
-                formatPercent(point.owned_citation_rate)
-              )}
-            </TableCell>
+            <TableCell numeric>{ownedRate(point)}</TableCell>
           </TableRow>
         ))}
       </DataTable>

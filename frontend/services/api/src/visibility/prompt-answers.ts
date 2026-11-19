@@ -7,10 +7,8 @@
  * Pages are keyset on (run completion, execution id), so a page never shifts
  * when a newer run lands while the reader pages back.
  */
-import type {
-  promptAnswerPageSchema,
-  promptAnswerSearchSchema,
-} from '@citeladder/contracts/visibility-prompt-answers';
+import type { promptAnswerSearchSchema } from '@citeladder/contracts/audits';
+import type { promptAnswerPageSchema } from '@citeladder/contracts/visibility-prompt-answers';
 import { sql } from 'kysely';
 import { z } from 'zod';
 

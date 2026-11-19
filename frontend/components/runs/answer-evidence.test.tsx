@@ -34,9 +34,11 @@ const evidence: ExecutionEvidence = {
   unintended_domain_cited: false,
   citation_count: 0,
   search_used: false,
+  search: 'not_used',
   search_query_count: 0,
   avg_position: null,
   first_named: { kind: 'unavailable' },
+  named: [],
   answer_formats: { kind: 'not_applicable' },
   score: null,
   citations: [],
@@ -148,7 +150,12 @@ describe('Answer transcript', () => {
         'Try **Acme** or Rival Co. See [plumb.example](https://plumb.example/guide), or ask Other Brand.',
       brand_first_offset: 4,
       competitors_mentioned: ['Rival Co', 'Other Brand'],
-      score: { competitor_first_offsets: { 'Rival Co': 12, 'Other Brand': null } },
+      // The API's order and positions; the view adds only the marks.
+      named: [
+        { name: 'Acme', kind: 'brand', offset: 4, position: 1 },
+        { name: 'Rival Co', kind: 'competitor', offset: 12, position: 2 },
+        { name: 'Other Brand', kind: 'competitor', offset: null, position: null },
+      ],
       citations: [
         citation('https://plumb.example/guide', 'plumb.example', 1),
         citation('https://acme.example/', 'acme.example', 2, true),
@@ -257,6 +264,20 @@ describe('Answer transcript', () => {
     expect(
       await screen.findByText('3 searches ran; their wording is unavailable.'),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Search evidence', () => {
+  it('keeps a search the engine never reported apart from one it did not run', () => {
+    const searchCheck = () =>
+      screen.getByText('Grounded with search').nextElementSibling?.textContent;
+    const { unmount } = renderAnswer({ search: 'not_used' });
+    expect(searchCheck()).toBe('The engine ran no web search');
+    unmount();
+    renderAnswer({ search: 'not_reported' });
+    expect(searchCheck()).toBe(
+      'Not reported: this engine does not say whether it searched the web',
+    );
   });
 });
 

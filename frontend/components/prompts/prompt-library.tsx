@@ -33,18 +33,23 @@ import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
 import { PromptBulkBar, usePromptBulk } from './prompt-bulk-bar';
 import { PromptTable } from './prompt-table';
-import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
+import {
+  measurementsOf,
+  useLatestPromptMeasurements,
+  type PromptMeasurements,
+} from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 
 import { PromptActions, PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
 import { HeldTabRow, TabPanel, TabsRoot } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/toast';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { Notice, type RetryableRead } from '@/components/ui/notice';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 function mutationFailure(
@@ -107,6 +112,24 @@ function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error:
   );
 }
 
+/** A failed figures read with nothing loaded: the table shows no measured columns, so say why. */
+function FiguresFailure({ measurements }: Readonly<{ measurements: PromptMeasurements }>) {
+  if (measurements.kind !== 'failed') return null;
+  return (
+    <Notice
+      kind="read"
+      {...readErrorProps(measurements.read)}
+      title="Couldn't load the prompts' latest figures"
+      fallback="The prompts are listed without their measured columns."
+    />
+  );
+}
+
+const ROW_CHANGE_FAILED = {
+  active: 'restore this prompt',
+  archived: 'archive this prompt',
+} as const satisfies Record<PromptStatus, string>;
+
 /**
  * Whether the library still shows its first-load frame. Prompts often arrive
  * with the project, before the latest run's figures; a run adds four columns,
@@ -168,7 +191,7 @@ function measuredChoicesFor({
   project,
   filters,
 }: Readonly<{
-  measurements: ReturnType<typeof useLatestPromptMeasurements>;
+  measurements: ReturnType<typeof measurementsOf>;
   project: Parameters<typeof brandOptions>[0];
   filters: PromptFilters;
 }>) {
@@ -237,7 +260,14 @@ export function PromptLibrary() {
   const topicsQuery = useQuery(topicsQueries.list(scope));
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
   const measurements = useLatestPromptMeasurements(scope);
+  const measured = measurementsOf(measurements);
   const evidence = usePromptEvidence();
+  const toast = useToast();
+  // Per-call promises, not mutate's callbacks: those fire only for the latest of overlapping calls.
+  const failedTo = (action: string) => (error: unknown) =>
+    toast.notify(`Couldn't ${action}`, mutationNoticeForError(error, { action }).message, {
+      tone: 'negative',
+    });
 
   // Every descriptor refreshes the library's reads; these add the screen's own reaction.
   const closeForm = () => {
@@ -279,21 +309,21 @@ export function PromptLibrary() {
     [byStatus, selectedTopicId],
   );
   const visible = useMemo(
-    () => filterPrompts({ prompts: byTopic, search, filters, mentions: measurements }),
-    [byTopic, search, filters, measurements],
+    () => filterPrompts({ prompts: byTopic, search, filters, mentions: measured }),
+    [byTopic, search, filters, measured],
   );
-  // A filter change shows other rows, so it starts a new selection.
-  const selection = useRowSelection(
-    visible,
-    JSON.stringify([statusFilter, selectedTopicId, search, filters]),
-  );
+  // A filter change shows other rows: a new selection, on the first page. The
+  // status tab clears the page in the address itself, so Back keeps its page.
+  const filterKey = JSON.stringify([selectedTopicId, search, filters]);
+  const selection = useRowSelection(visible, `${statusFilter}:${filterKey}`);
   const bulk = usePromptBulk(scope, { topics, onDone: selection.clear });
   const confirmDelete = (pending: PendingDelete) => {
     switch (pending.kind) {
       case 'topic':
         return topicMutations.remove.mutate(pending.topic);
       case 'prompt':
-        return deleteMutation.mutate(pending.prompt.id);
+        void deleteMutation.mutateAsync(pending.prompt.id).catch(failedTo('delete this prompt'));
+        return;
       case 'prompts':
         return bulk.run({ kind: 'delete' }, pending.prompts);
       default: {
@@ -304,8 +334,8 @@ export function PromptLibrary() {
   };
   const personas = useMemo(() => personaOptions(prompts), [prompts]);
   const measuredChoices = useMemo(
-    () => measuredChoicesFor({ measurements, project, filters }),
-    [measurements, project, filters],
+    () => measuredChoicesFor({ measurements: measured, project, filters }),
+    [measured, project, filters],
   );
 
   const statusCounts = useMemo(() => {
@@ -346,7 +376,9 @@ export function PromptLibrary() {
           onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
           onToggleEnabled: toggle.press,
           onSetStatus: (prompt: Prompt, status: PromptStatus) =>
-            rowMutation.mutate({ promptId: prompt.id, input: { status } }),
+            void rowMutation
+              .mutateAsync({ promptId: prompt.id, input: { status } })
+              .catch(failedTo(ROW_CHANGE_FAILED[status])),
         },
         add: addPrompts,
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
@@ -372,7 +404,8 @@ export function PromptLibrary() {
             evidence.open({ ...answer, promptId: prompt.id, promptText: prompt.text })
           }
           selection={edits ? selection : undefined}
-          measurements={measurements}
+          measurements={measured}
+          resetKey={filterKey}
           setNames={setNames}
           topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
@@ -398,7 +431,7 @@ export function PromptLibrary() {
 
   // Status, search and filters share one control band once loaded; the first
   // load holds it so the table starts where the box stood.
-  const figuresRead = measurements !== undefined;
+  const figuresRead = measurements.kind !== 'loading';
   if (
     awaitingFirstLoad({
       promptsLoading: isLoading,
@@ -456,6 +489,7 @@ export function PromptLibrary() {
               pending={retrying}
             />
           ) : null}
+          {hasPrompts ? <FiguresFailure measurements={measurements} /> : null}
           <ToggleFailure toggle={toggle.mutation} />
           <PendingReviewNotice count={review.count} />
 

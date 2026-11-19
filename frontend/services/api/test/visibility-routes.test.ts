@@ -104,6 +104,7 @@ describe('GET /executions/{execution_id}', () => {
       brand_first_offset: 4,
       first_named: { kind: 'competitor', name: 'Globex' },
       competitors_mentioned: ['Globex'],
+      search: 'not_used',
       // An LLM execution has no observed surface: null, not an empty one.
       search_surface: null,
       created_at: '2026-03-01T10:20:30.123000Z',
@@ -111,6 +112,33 @@ describe('GET /executions/{execution_id}', () => {
     expect((body.citations as Body[]).map((citation) => [citation.ordinal, citation.url])).toEqual([
       [0, 'https://acme.example/a'],
       [1, 'https://globex.example/b'],
+    ]);
+  });
+
+  it("reports an unexposed search as not reported and ranks the named brands by the analysis's rule", async () => {
+    const auditId = await fixtures.audit(tenant);
+    const { taskId } = await fixtures.execution(tenant, {
+      auditId,
+      providerMetadata: { fanout_availability: 'unavailable' },
+      analysis: {
+        brandMentioned: true,
+        brandFirstOffset: 30,
+        brandMentions: ['Acme Corp'],
+        // Initech is not among the mentioned names, but its offset still ranks ahead.
+        score: {
+          brand_first_offset: 30,
+          competitors_mentioned: ['Globex'],
+          competitor_first_offsets: { Globex: 10, Initech: 5 },
+        },
+      },
+    });
+
+    const { body } = await get(tenant, `/api/v1/executions/${taskId}`);
+
+    expect(body.search).toBe('not_reported');
+    expect(body.named).toEqual([
+      { name: 'Globex', kind: 'competitor', offset: 10, position: 2 },
+      { name: 'Acme Corp', kind: 'brand', offset: 30, position: 3 },
     ]);
   });
 

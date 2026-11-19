@@ -227,6 +227,7 @@ typography:
 spacing:
   container-site: 1320px
   container-app: 1440px
+  container-answer: 1080px
   container-thread: 1040px
   container-prose: 720px
   container-narrow: 560px

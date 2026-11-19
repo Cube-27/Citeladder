@@ -8,6 +8,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { leadingSources } from '@/lib/prompts/filter';
 
+import { NO_ANSWERS } from './prompt-figures';
+
 /**
  * The sites a prompt's answers cited, as their favicons, most citations first;
  * each names its domain and citations on hover or focus. `null` is a prompt
@@ -16,7 +18,7 @@ import { leadingSources } from '@/lib/prompts/filter';
 export function CitedDomainMarks({
   sources,
 }: Readonly<{ sources: readonly CitedDomain[] | null }>) {
-  if (sources === null) return <Absence state="unavailable" label="No completed answers" />;
+  if (sources === null) return NO_ANSWERS;
   if (!sources.length) return <Absence state="none" />;
   const { shown, more } = leadingSources(sources);
   return (

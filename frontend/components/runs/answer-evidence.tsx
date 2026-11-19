@@ -1,109 +1,58 @@
-import { CheckCircle2, Search, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 import { AnswerTranscript } from '@/components/runs/answer-transcript';
 import { BrandsRail, FanoutRail, LinksRail, SourcesRail } from '@/components/runs/answer-rail';
-import { AnswerFormatTags } from '@/components/runs/answer-formats';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
-import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
-import { Absence } from '@/components/ui/absence';
 import { AnswerLayout } from '@/components/ui/answer-chat';
-import { BrandMark } from '@/components/ui/brand-mark';
-import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { wellClasses } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
-import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
+import { SubsectionHeader } from '@/components/ui/workspace';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { useEngineCatalog } from '@/lib/providers/engines';
 import { answerBrands, answerLinks, answerSources } from '@/lib/runs/answer-transcript';
 
+/** One check: its result, its name, and one line of detail that ends in an ellipsis when long. */
 function Outcome({
   label,
   detail,
   passed,
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   return (
-    <Inline className={wellClasses('items-start')}>
+    <Inline className={wellClasses('min-w-0 items-start')}>
       <Icon
         icon={passed ? CheckCircle2 : XCircle}
         className={passed ? 'text-positive' : 'text-ink-2'}
       />
       <div className="min-w-0">
         <p className={textRole('body')}>{label}</p>
-        <p className="type-caption">{detail}</p>
+        <p className="type-caption truncate" title={detail}>
+          {detail}
+        </p>
       </div>
     </Inline>
   );
 }
 
-/** The tracked business the answer named first (AV-7); untracked names never count. */
-function namedFirst(first: ExecutionEvidence['first_named']) {
-  switch (first.kind) {
-    case 'brand':
-    case 'competitor':
-      return (
-        <Inline gap="tight">
-          <BrandMark
-            name={first.name}
-            logoUrl={first.logo_url}
-            websiteUrl={first.website_url}
-            placement="inline"
-          />
-          {first.name}
-        </Inline>
-      );
-    case 'none':
-      return <Absence state="none" label="No tracked brand" />;
-    case 'unavailable':
-      return <Absence state="unavailable" />;
+function searchDetail(evidence: ExecutionEvidence): string {
+  switch (evidence.search) {
+    case 'used': {
+      const noun = evidence.search_query_count === 1 ? 'search' : 'searches';
+      return `${evidence.search_query_count} ${noun} recorded`;
+    }
+    case 'not_used':
+      return 'The engine ran no web search';
+    case 'not_reported':
+      return 'Not reported: this engine does not say whether it searched the web';
     default: {
-      const unreachable: never = first;
+      const unreachable: never = evidence.search;
       return unreachable;
     }
   }
-}
-
-/** Links written in the answer text, counted only where the stored page tells them from citations. */
-function inTextLinks(formats: ExecutionEvidence['answer_formats']) {
-  if (formats.kind === 'observed') return formats.in_text_links;
-  return <Absence state={formats.kind} />;
-}
-
-/** How the answer was measured, and what the analysis counted in it. */
-function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
-  const engines = useEngineCatalog();
-  return (
-    <Stack as="section">
-      <SubsectionHeader title="Measurement" />
-      <MeasurementContext
-        retrieval={evidence.retrieval_enabled}
-        model={engines.modelLabel(evidence.logical_engine, evidence.transport_model)}
-      />
-      <FactList
-        layout="ruled"
-        facts={[
-          { label: 'Brand', value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned' },
-          { label: 'Named first', value: namedFirst(evidence.first_named) },
-          { label: 'Owned sources', value: evidence.owned_citation_count },
-          {
-            label: 'Answer formats',
-            value: <AnswerFormatTags formats={evidence.answer_formats} />,
-          },
-          { label: 'In-text links', value: inTextLinks(evidence.answer_formats) },
-          { label: 'Citations', value: evidence.citation_count },
-          {
-            label: 'Searches',
-            value: evidence.search_used ? evidence.search_query_count : 'Not used',
-          },
-        ]}
-      />
-    </Stack>
-  );
 }
 
 function brandOutcomeDetail(evidence: ExecutionEvidence): string {
@@ -112,12 +61,9 @@ function brandOutcomeDetail(evidence: ExecutionEvidence): string {
   return `First match at character ${evidence.brand_first_offset}`;
 }
 
+/** The four checks in one row on a desktop; two columns below it, one on a phone. */
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
-  const searchNoun = evidence.search_query_count === 1 ? 'search' : 'searches';
-  const searchDetail = evidence.search_used
-    ? `${evidence.search_query_count} ${searchNoun} recorded`
-    : 'The provider did not report web search';
   const competitorDetail =
     evidence.competitors_mentioned.length > 0
       ? evidence.competitors_mentioned.join(', ')
@@ -125,11 +71,8 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
 
   return (
     <Stack as="section">
-      <SubsectionHeader
-        title="Why it scored this way"
-        description="Deterministic checks against the persisted answer and source evidence."
-      />
-      <Stack className="desktop:grid-cols-2">
+      <SubsectionHeader title="Why it scored this way" />
+      <Stack className="phone:grid-cols-1 desktop:grid-cols-4 grid-cols-2">
         <Outcome
           label="Brand detected"
           detail={brandOutcomeDetail(evidence)}
@@ -140,7 +83,11 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
           detail={`${evidence.owned_citation_count} owned ${ownedNoun} found`}
           passed={evidence.owned_domain_cited}
         />
-        <Outcome label="Grounded with search" detail={searchDetail} passed={evidence.search_used} />
+        <Outcome
+          label="Grounded with search"
+          detail={searchDetail(evidence)}
+          passed={evidence.search === 'used'}
+        />
         <Outcome
           label="Competitor pressure"
           detail={competitorDetail}
@@ -148,19 +95,6 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
         />
       </Stack>
     </Stack>
-  );
-}
-
-function EvidenceFooter({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
-  return (
-    <MetaFooter>
-      <Inline as="span" gap="tight">
-        <Icon icon={Search} />
-        {evidence.prompt_class.replaceAll('_', ' ')} prompt
-      </Inline>
-      <span>Analyzer {evidence.analyzer_version}</span>
-      <span>Rules {evidence.scoring_rule_version}</span>
-    </MetaFooter>
   );
 }
 
@@ -225,8 +159,6 @@ export function AnswerEvidence({
           {/* Only an observed surface has one; an LLM execution has no overview to report. */}
           {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}
           <EvidenceOutcomes evidence={evidence} />
-          <EvidenceMeasurement evidence={evidence} />
-          <EvidenceFooter evidence={evidence} />
         </>
       }
     />

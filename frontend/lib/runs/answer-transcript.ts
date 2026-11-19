@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import type { ExecutionEvidence, Project } from '@citeladder/contracts';
 import { hostOf } from '@/lib/visibility/sources';
 
@@ -32,10 +30,6 @@ export type AnswerSource = Readonly<{
 /** One address the answer text links to, listed once however often it is written. */
 export type AnswerLink = Readonly<{ href: string; domain: string; count: number; you: boolean }>;
 
-const storedOffsets = z.object({
-  competitor_first_offsets: z.record(z.string(), z.number().int().nullable()),
-});
-
 export function safeCitationUrl(value: string): string | null {
   try {
     const url = new URL(value);
@@ -54,37 +48,39 @@ function firstNamedMark(evidence: ExecutionEvidence, name: string): Mark | null 
   return { logoUrl: first.logo_url, websiteUrl: first.website_url };
 }
 
-function ownBrand(evidence: ExecutionEvidence, project: Project | null): AnswerBrand | null {
-  if (!evidence.brand_mentioned) return null;
+type Named = ExecutionEvidence['named'][number];
+
+function ownBrand(evidence: ExecutionEvidence, named: Named, project: Project | null): AnswerBrand {
   const firstBrand = evidence.first_named.kind === 'brand' ? evidence.first_named.name : '';
   const perceived = evidence.perception.find((entity) => entity.is_brand)?.entity ?? '';
-  const name = project?.brand_name || firstBrand || perceived || 'Your brand';
+  const name = project?.brand_name || named.name || firstBrand || perceived || 'Your brand';
   const mark = firstNamedMark(evidence, name);
   return {
     name,
     you: true,
-    offset: evidence.brand_first_offset,
-    position: null,
+    offset: named.offset,
+    position: named.position,
     logoUrl: project?.brand.logo_url ?? mark?.logoUrl ?? null,
     websiteUrl: project?.website_url || mark?.websiteUrl || null,
-    phrases: [name, ...(project?.brand.aliases ?? [])],
+    // The name the run matched too: a brand renamed since keeps its chip in older answers.
+    phrases: [...new Set([name, named.name, ...(project?.brand.aliases ?? [])].filter(Boolean))],
   };
 }
 
 function competitorBrand(
-  name: string,
-  offsets: Readonly<Record<string, number | null>>,
   evidence: ExecutionEvidence,
+  named: Named,
   project: Project | null,
 ): AnswerBrand {
+  const { name } = named;
   const tracked = project?.competitors.find((competitor) => competitor.name === name);
   const mark = firstNamedMark(evidence, name);
   const domain = tracked?.domains[0];
   return {
     name,
     you: false,
-    offset: offsets[name] ?? null,
-    position: null,
+    offset: named.offset,
+    position: named.position,
     logoUrl: tracked?.logo_url ?? mark?.logoUrl ?? null,
     websiteUrl: domain ? `https://${domain}` : (mark?.websiteUrl ?? null),
     phrases: [name, ...(tracked?.aliases ?? [])],
@@ -92,38 +88,25 @@ function competitorBrand(
 }
 
 /**
- * The tracked businesses the answer named, first-named first. Positions are
- * the stored first-mention offsets ranked (the same arithmetic as the
- * analysis's own brand position); a business without an offset has none and
- * is listed after the ranked ones.
+ * The tracked businesses the answer named, in the API's order (named first
+ * first), with the analysis's own positions; this view adds only their marks.
  */
 export function answerBrands(
   evidence: ExecutionEvidence,
   project: Project | null,
 ): readonly AnswerBrand[] {
-  const parsed = storedOffsets.safeParse(evidence.score);
-  const offsets = parsed.success ? parsed.data.competitor_first_offsets : {};
-  const own = ownBrand(evidence, project);
-  const named = [
-    ...(own ? [own] : []),
-    ...evidence.competitors_mentioned.map((name) =>
-      competitorBrand(name, offsets, evidence, project),
-    ),
-  ];
-  const ranked = named.map((brand) => {
-    const at = brand.offset;
-    if (at === null) return brand;
-    const ahead = named.filter((other) => other.offset !== null && other.offset < at).length;
-    return { ...brand, position: ahead + 1 };
+  return evidence.named.map((named) => {
+    switch (named.kind) {
+      case 'brand':
+        return ownBrand(evidence, named, project);
+      case 'competitor':
+        return competitorBrand(evidence, named, project);
+      default: {
+        const unreachable: never = named.kind;
+        return unreachable;
+      }
+    }
   });
-  return ranked
-    .map((brand, index) => ({ brand, index }))
-    .sort(
-      (a, b) =>
-        (a.brand.position ?? Number.POSITIVE_INFINITY) -
-          (b.brand.position ?? Number.POSITIVE_INFINITY) || a.index - b.index,
-    )
-    .map(({ brand }) => brand);
 }
 
 // A markdown link that is not an image, as the analysis counts them. The text

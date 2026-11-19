@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import type { RetryableRead } from '@/components/ui/notice';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
 
@@ -16,6 +17,15 @@ export function useLatestPromptMetrics(scope: PromptScope) {
 }
 
 /**
+ * The latest figures read: still loading, failed with nothing to show, or the
+ * measurements. A failed refresh keeps the last good figures.
+ */
+export type PromptMeasurements =
+  | { kind: 'loading' }
+  | { kind: 'failed'; read: RetryableRead }
+  | { kind: 'ready'; map: ReadonlyMap<string, PromptMeasurement> };
+
+/**
  * What the run that last measured each prompt found, so a run of other
  * prompts never hides an earlier result.
  *
@@ -23,26 +33,30 @@ export function useLatestPromptMetrics(scope: PromptScope) {
  * A prompt no run has measured simply has no entry, which reads as a muted
  * dash named "Not measured" rather than a fabricated zero.
  *
- * Undefined until the first read settles: whether a run exists decides the
- * table's columns, so the table waits for it instead of drawing without the
- * measured columns and then squeezing four in beside rows already on screen.
+ * Whether a run exists decides the table's columns, so the table waits for the
+ * first read instead of squeezing four columns in beside rows already on screen.
  */
-export function useLatestPromptMeasurements(
-  scope: PromptScope,
-): ReadonlyMap<string, PromptMeasurement> | undefined {
+export function useLatestPromptMeasurements(scope: PromptScope): PromptMeasurements {
   const result = useQuery(visibilityQueries.latestPerPrompt(scope));
-  return useMemo(() => {
-    if (result.isLoading) return undefined;
-    const map = new Map<string, PromptMeasurement>();
-    // A failed read is not a measured absence. Returning an empty map drops the
-    // columns entirely, which says "no run yet" rather than "every prompt is
-    // unmeasured" — the honest reading when we could not load the figures.
-    if (result.isError) return map;
-    for (const row of result.data ?? []) {
-      if (row.prompt_id) map.set(row.prompt_id, measurementOf(row));
+  const { data, error, refetch, isFetching } = result;
+  const map = useMemo(() => {
+    if (!data) return undefined;
+    const byPrompt = new Map<string, PromptMeasurement>();
+    for (const row of data) {
+      if (row.prompt_id) byPrompt.set(row.prompt_id, measurementOf(row));
     }
-    return map;
-  }, [result.data, result.isError, result.isLoading]);
+    return byPrompt;
+  }, [data]);
+  if (map) return { kind: 'ready', map };
+  if (result.isError) return { kind: 'failed', read: { error, refetch, isFetching } };
+  return { kind: 'loading' };
+}
+
+/** The measurements once read; none while loading or after a failed read. */
+export function measurementsOf(
+  measurements: PromptMeasurements,
+): ReadonlyMap<string, PromptMeasurement> | undefined {
+  return measurements.kind === 'ready' ? measurements.map : undefined;
 }
 
 function measurementOf(row: PromptMetricItem): PromptMeasurement {

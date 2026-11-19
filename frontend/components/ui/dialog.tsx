@@ -162,7 +162,7 @@ export function Dialog({
   /**
    * `wide` (640px) only for a side-by-side review the narrow panel cannot
    * hold (two calendar months, a CSV preview); a long form is a Drawer.
-   * `answer` is the answer view alone: most of the viewport, up to the app width.
+   * `answer` is the answer view alone: most of the viewport, up to `--container-answer`.
    */
   width?: 'narrow' | 'wide' | 'answer';
 }>) {
@@ -188,7 +188,7 @@ export function Dialog({
             SHEET_FACE,
             'dialog-panel z-modal fixed left-1/2 flex w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
             answer
-              ? 'max-w-app top-16 h-full max-h-[calc(100dvh-8rem)]'
+              ? 'max-w-answer top-16 h-full max-h-[calc(100dvh-8rem)]'
               : 'top-[12dvh] max-h-[calc(88dvh-1.5rem)]',
             !answer && (!danger && width === 'wide' ? 'max-w-form' : 'max-w-flow'),
           )}

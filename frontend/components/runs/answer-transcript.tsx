@@ -197,6 +197,7 @@ export function AnswerTranscript({
       >
         {body.kind === 'markdown' ? (
           <ContentMarkdown
+            density="compact"
             markdown={normalizeEvidenceMarkdown(body.text)}
             highlights={highlights}
             chips={brandChips(brands)}

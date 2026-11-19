@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Globe } from 'lucide-react';
 import { lazy, useEffect, type ReactNode } from 'react';
 
+import { ANSWER_FORMAT_LABELS } from '@/components/runs/answer-formats';
 import { choiceFilter } from '@/components/ui/all-filters';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Dialog } from '@/components/ui/dialog';
@@ -129,10 +130,10 @@ function FeatureFlags({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
     adsWord = ads.items.length === 1 ? '1 ad' : `${ads.items.length || 'No'} ads`;
   return (
     <>
-      {evidence.search_used ? <Tag>Web search used</Tag> : null}
+      {evidence.search === 'used' ? <Tag>Web search used</Tag> : null}
       {adsWord ? <Tag>{adsWord}</Tag> : null}
       {formats.kind === 'observed'
-        ? formats.formats.map((format) => <Tag key={format}>{format} answer</Tag>)
+        ? formats.formats.map((format) => <Tag key={format}>{ANSWER_FORMAT_LABELS[format]}</Tag>)
         : null}
     </>
   );

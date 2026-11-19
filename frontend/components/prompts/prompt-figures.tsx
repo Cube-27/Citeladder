@@ -14,14 +14,21 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPositionExact } from '@/lib/visibility/dashboard';
 import type { AnswerStates, PromptHistory, PromptMetricItem } from '@citeladder/contracts';
 
-const NOT_MEASURED = <Absence state="not_measured" />;
-const NO_ANSWER = (
-  <Absence
-    state="unavailable"
-    label="No successful answer"
-    reason="No answer succeeded in that run, so this is unavailable rather than zero."
-  />
-);
+/** No run has measured the prompt: the muted dash, its words in the tooltip and name. */
+export const NOT_MEASURED = <Absence state="not_measured" />;
+
+/** Measured with no successful answer: unavailable, never "not measured" or zero. */
+export const NO_ANSWERS = <Absence state="unavailable" label="No answers" />;
+
+/**
+ * A missing average position: no answers to rank, answers that never named
+ * the brand, or answers whose brand order was not recorded.
+ */
+export function positionAbsence(visibility: number | null): ReactNode {
+  if (visibility === null) return NO_ANSWERS;
+  if (visibility === 0) return <Absence state="none" label="Not named" />;
+  return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
+}
 
 /**
  * The prompt's key figures from the latest run that measured it, each said
@@ -39,7 +46,7 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
     {
       key: 'visibility',
       label: 'Visibility',
-      value: rateValue(point?.mention_rate, point ? NO_ANSWER : NOT_MEASURED),
+      value: rateValue(point?.mention_rate, point ? NO_ANSWERS : NOT_MEASURED),
       ...(delta == null ? {} : { delta: <Delta value={delta} unit=" pp" /> }),
       sub: [runDate, baselineAt ? `vs ${formatDisplayDate(baselineAt, timeZone)}` : null]
         .filter(Boolean)
@@ -50,7 +57,7 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
       label: 'Owned citation rate',
       value: rateValue(
         point?.owned_citation_rate,
-        point?.counts.responses === 0 ? NO_ANSWER : NOT_MEASURED,
+        point?.counts.responses === 0 ? NO_ANSWERS : NOT_MEASURED,
       ),
       sub: 'Answers that cited one of your pages.',
     },
@@ -77,7 +84,7 @@ const [BOTH, ...OTHER_STATES] = ANSWER_STATES;
  * 2026-11-19: one row of four figures), so none of them leaves the page.
  */
 function otherStates(states: AnswerStates | null, latest: PromptMetricItem | null): string {
-  const missing = latest ? 'no successful answer' : 'not measured';
+  const missing = latest ? 'no answers' : 'not measured';
   const parts = OTHER_STATES.map(
     (state) => `${state.label}: ${states ? formatCount(states[state.key]) : missing}`,
   );
@@ -94,7 +101,7 @@ function stateValue(
   latest: PromptMetricItem | null,
 ) {
   if (states) return formatCount(states[key]);
-  return latest ? NO_ANSWER : NOT_MEASURED;
+  return latest ? NO_ANSWERS : NOT_MEASURED;
 }
 
 /** The decimal average; never named and an unrecorded order stay apart from no run. */
@@ -104,10 +111,7 @@ function PositionValue({
 }: Readonly<{ latest: PromptMetricItem | null; visibility: number | null }>) {
   if (!latest) return NOT_MEASURED;
   if (latest.avg_position != null) return formatPositionExact(latest.avg_position);
-  // No successful answer: nothing was ranked, so the order is not what's missing.
-  if (visibility === null) return NO_ANSWER;
-  if (visibility === 0) return <Absence state="none" label="Not named" />;
-  return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
+  return positionAbsence(visibility);
 }
 
 type Outcome = NonNullable<PromptMetricItem['outcomes']>[number];
