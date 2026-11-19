@@ -69,7 +69,7 @@ function VisibilityWorkspace({
         ) : null}
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
-            <SelectionPageStateBlock state={state} queries={queries} view={view} />
+            <SelectionPageStateBlock state={state} queries={queries} />
           ) : (
             <DashboardPanel filters={filters} queries={queries} />
           )}

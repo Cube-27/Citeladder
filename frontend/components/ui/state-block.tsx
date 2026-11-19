@@ -249,7 +249,6 @@ function FilteredBody({
   return (
     <EmptyBody
       heading={heading ?? 'Nothing matches these filters'}
-      description="Change or clear the filters to see every row."
       action={<Button onClick={onClear}>Clear filters</Button>}
       headingLevel={headingLevel ?? containerLevel}
     />

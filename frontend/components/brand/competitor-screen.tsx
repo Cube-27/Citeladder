@@ -61,7 +61,7 @@ export function CompetitorScreen() {
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
-        <SelectionPageStateBlock state={state} queries={queries} view="competitor" />
+        <SelectionPageStateBlock state={state} queries={queries} />
       ) : (
         <SelectionGate query={queries.visibilityQuery}>
           {(selected) => (

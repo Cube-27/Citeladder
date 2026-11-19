@@ -46,10 +46,8 @@ export function selectionPageState(queries: Queries): SelectionPageState {
 export function SelectionPageStateBlock({
   state,
   queries,
-  view,
-}: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries; view: VisibilityView }>) {
-  if (state === 'empty')
-    return <VisibilityEmptyState activeRun={queries.activeRun ?? null} view={view} />;
+}: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries }>) {
+  if (state === 'empty') return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
   // Loading takes the overview's shape: its figures, then its chart, then its table.
   if (state === 'loading')
     return (

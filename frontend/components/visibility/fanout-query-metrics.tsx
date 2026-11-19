@@ -150,7 +150,7 @@ function missingMark(lookup: LookupState) {
   }
 }
 
-const empty = (heading: string, description: string): DataTableState => ({
+const empty = (heading: string, description?: string): DataTableState => ({
   kind: 'empty',
   headingLevel: 3,
   icon: Search,
@@ -176,7 +176,5 @@ export function movedState(
       'Changes show for one run once an earlier run reported searches.',
     );
   if (queries.rows.length) return undefined;
-  return view === 'rising'
-    ? empty('No query rose', 'No query gained share of searches since the previous run.')
-    : empty('No query fell', 'No query lost share of searches since the previous run.');
+  return view === 'rising' ? empty('No query rose') : empty('No query fell');
 }

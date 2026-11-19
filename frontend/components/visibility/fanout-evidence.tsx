@@ -137,11 +137,6 @@ function FanoutEmpty({
       kind="empty"
       icon={Inbox}
       heading={isFiltered ? 'No answers match these filters' : 'No searches recorded yet'}
-      description={
-        isFiltered
-          ? 'Widen the period or choose another run, model or prompt.'
-          : 'Once a run answers your prompts, the searches each engine ran first appear here.'
-      }
       action={
         isFiltered ? undefined : (
           <Button asChild>
@@ -246,11 +241,7 @@ export function FanoutEvidence({
       columns={COLUMNS}
       state={tableState({ view, rows: visible.length, needle, matched, queries })}
       pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
-      footer={
-        query.data?.truncated
-          ? `Showing the newest ${limit} executions; narrow the filters to see the rest.`
-          : null
-      }
+      footer={query.data?.truncated ? `Showing the newest ${limit} executions.` : null}
     >
       <FanoutRows view={view} groups={paged} queries={queries} />
     </DataTable>

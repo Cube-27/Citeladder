@@ -52,24 +52,14 @@ function denominatorCopy(rate: AioRate): string {
 function rateStat({
   key,
   label,
-  caption,
   rate,
-}: Readonly<{ key: string; label: string; caption: string; rate: AioRate }>): FigureSegment {
+}: Readonly<{ key: string; label: string; rate: AioRate }>): FigureSegment {
   return {
     key,
     label,
     value: rate.value === null ? null : formatPercent(rate.value),
     missingState: 'unavailable',
-    sub: (
-      <>
-        <span className="block">
-          {rate.value === null
-            ? 'Nothing to divide by yet: no observation has entered this denominator.'
-            : denominatorCopy(rate)}
-        </span>
-        <span className="block">{caption}</span>
-      </>
-    ),
+    sub: rate.value === null ? undefined : denominatorCopy(rate),
   };
 }
 
@@ -77,10 +67,7 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
   if (rates.length === 0) return null;
   return (
     <Stack as="section" gap="item">
-      <SubsectionHeader
-        title="Competitors, when an overview appeared"
-        description="Over the same denominator as your own conditional mention rate, so the two are comparable."
-      />
+      <SubsectionHeader title="Competitors, when an overview appeared" />
       <LedgerList label="Competitors, when an overview appeared">
         {rates.map((entry) => (
           <LedgerItem
@@ -150,39 +137,27 @@ export function SurfaceRatesPanel({
       <SectionHeader>
         <SectionTitle>Google AI Overview</SectionTitle>
         <SectionDescription>
-          {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview. Each rate below states what it divided by.`}
+          {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview.`}
         </SectionDescription>
       </SectionHeader>
       <SectionContent>
         <Stack gap="workspace">
           <FigureStrip
             segments={[
-              rateStat({
-                key: 'trigger',
-                label: 'Overview shown',
-                caption:
-                  'A property of the QUERIES, not of your brand. It moves when Google changes what it answers with.',
-                rate: data.trigger_rate,
-              }),
+              rateStat({ key: 'trigger', label: 'Overview shown', rate: data.trigger_rate }),
               rateStat({
                 key: 'named',
                 label: 'Named, when shown',
-                caption:
-                  'Conditional. It can rise while overall visibility falls, if Google shows fewer overviews but names you in more of them.',
                 rate: data.brand_mention_rate_when_present,
               }),
               rateStat({
                 key: 'overall',
                 label: 'Overall visibility',
-                caption:
-                  "Unconditional, and the closest to 'how visible are we here'. A search with no overview counts against it.",
                 rate: data.overall_brand_visibility,
               }),
               rateStat({
                 key: 'cited',
                 label: 'Your site cited',
-                caption:
-                  'Independent of being named: an overview can name you without citing you, and cite you without naming you.',
                 rate: data.owned_citation_rate_when_present,
               }),
             ]}

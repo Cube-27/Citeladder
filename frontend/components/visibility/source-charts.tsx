@@ -48,8 +48,7 @@ export function UsageCard({
       <SectionHeader>
         <SectionTitle>{title}</SectionTitle>
         <SectionDescription>
-          {heading?.description ??
-            `How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
+          {heading?.description ?? 'Share of answers in each period.'}
         </SectionDescription>
       </SectionHeader>
       <SectionContent>

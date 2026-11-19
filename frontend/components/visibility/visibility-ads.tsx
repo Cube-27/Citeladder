@@ -170,7 +170,7 @@ function AdvertiserTable({
         footer={
           advertisers.length < total
             ? `The ${advertisers.length} most frequent of ${total} advertisers.`
-            : 'Who paid to appear in these answers.'
+            : undefined
         }
         state={advertisers.length ? undefined : noAds('No ads in these answers.')}
       >
@@ -232,7 +232,7 @@ function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['pro
       <DataTable
         label="Prompts that surface ads"
         columns={PROMPT_COLUMNS}
-        footer="Where a competitor advertised, whether the answer also mentioned you organically. Counts only, not a cause."
+        footer="Counts only, not a cause."
         state={prompts.length ? undefined : noAds('No prompt surfaced an ad.')}
       >
         {prompts.map((row) => {
@@ -270,8 +270,8 @@ function CreativeList({
       title="Ad creatives"
       description={
         creatives.items.length < creatives.total
-          ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives, as text.`
-          : 'The ads as text, with where they lead.'
+          ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives.`
+          : undefined
       }
     >
       <SectionContent>

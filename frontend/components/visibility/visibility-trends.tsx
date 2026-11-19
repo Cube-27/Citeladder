@@ -43,13 +43,7 @@ import {
 } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
@@ -249,9 +243,6 @@ export function BrandTrend({
         }
       >
         <SectionTitle id="insights-trend">Your brand over time</SectionTitle>
-        <SectionDescription>
-          How your metrics change run by run, with the events that moved them
-        </SectionDescription>
       </SectionHeader>
       <SectionContent>
         <TrendSection
@@ -357,9 +348,7 @@ function TrendChart({
   );
 }
 
-function trendCaption(runs: number, events: readonly TrendEvent[]): string {
+function trendCaption(runs: number): string {
   if (runs === 1) return 'The trend appears after the next comparable run.';
-  return events.some((event) => event.kind === 'action')
-    ? 'Lines break between runs that are not comparable; a marker shows when work went live, not that it changed these rates.'
-    : 'Lines break between runs that are not comparable.';
+  return 'Lines break between runs that are not comparable.';
 }

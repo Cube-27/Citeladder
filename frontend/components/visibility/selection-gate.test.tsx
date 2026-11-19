@@ -70,11 +70,7 @@ describe('SelectionGate', () => {
       />,
     );
 
-    expect(
-      await screen.findByText(
-        'Results for this run are still being prepared. They appear here as soon as they are ready.',
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText('Results for this run are still being prepared.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 

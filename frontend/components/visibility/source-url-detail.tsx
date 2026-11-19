@@ -95,8 +95,7 @@ export function SourceUrlDetail({
         query={usage}
         heading={{
           title: 'Use over time',
-          description:
-            'How often answers used this page as a source, as a share of the answers in each period.',
+          description: 'Share of answers in each period.',
         }}
       />
 

@@ -46,11 +46,7 @@ export function SelectionGate({
   // Metrics not written yet is the normal state for the seconds after a run
   // ends; reporting it as an error told readers their results were lost.
   if (query.status === 'error' && isMetricsPending(query.error)) {
-    return (
-      <Notice tone="info">
-        Results for this run are still being prepared. They appear here as soon as they are ready.
-      </Notice>
-    );
+    return <Notice tone="info">Results for this run are still being prepared.</Notice>;
   }
   const state = screenState(query, {
     subject: 'the selected measurement',

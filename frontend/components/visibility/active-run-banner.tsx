@@ -16,10 +16,7 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
     <Notice tone="info">
       <Inline className="flex-wrap">
         <Spinner />
-        <span>
-          A run is in progress ({AUDIT_STATES[run.status].label}). Results appear here when it
-          completes.
-        </span>
+        <span>A run is in progress ({AUDIT_STATES[run.status].label}).</span>
         <TextLink text="emphasis" className="whitespace-nowrap" href={`/runs/${run.id}`}>
           Watch live progress →
         </TextLink>

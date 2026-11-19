@@ -106,12 +106,7 @@ export function EnginesCard({
   }
   return (
     <TitledSection title="Retrievals by AI model">
-      <DataTable
-        label="Retrievals by AI model"
-        columns={ENGINE_COLUMNS}
-        state={state}
-        footer="Which engines used this page as a source."
-      >
+      <DataTable label="Retrievals by AI model" columns={ENGINE_COLUMNS} state={state}>
         {rows.map((row) => (
           <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
             <TableCell>

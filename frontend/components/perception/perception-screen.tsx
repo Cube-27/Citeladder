@@ -134,7 +134,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
         fallback="Check your connection and try again."
       />
     );
-  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} view="perception" />;
+  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
 }
 
 function usePageFilters(filters: Filters, queries: Queries) {
