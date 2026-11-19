@@ -271,7 +271,7 @@ describe('A Done Action’s status', () => {
     renderDetail();
 
     const details = await screen.findByRole('region', { name: 'Details' });
-    expect(within(details).getAllByRole('definition')[0].textContent).toBe(status);
+    expect(within(details).getAllByRole('definition').at(0)?.textContent).toBe(status);
   });
 });
 
