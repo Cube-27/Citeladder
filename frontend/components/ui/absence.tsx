@@ -45,7 +45,7 @@ export function Absence({
     <Tooltip content={reason}>
       <button
         type="button"
-        className="rounded-mark inline-flex min-h-6 min-w-6 items-center justify-center align-middle"
+        className="rounded-mark hit-area inline-flex min-h-6 min-w-6 items-center justify-center align-middle"
       >
         {face}
       </button>

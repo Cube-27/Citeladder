@@ -212,7 +212,9 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
   const Glyph = segment.icon;
   return (
-    <dt className="type-body text-ink-2 flex min-w-0 items-center gap-2">
+    // Below 768 a marker that does not fit beside the label goes under it,
+    // so the label never wraps a word to a line.
+    <dt className="type-body text-ink-2 phone:flex-wrap phone:gap-y-1 flex min-w-0 items-center gap-2">
       {Glyph ? <Glyph aria-hidden className="size-4 shrink-0" /> : null}
       {text}
       {segment.marker || hint ? (

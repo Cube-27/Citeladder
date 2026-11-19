@@ -25,7 +25,7 @@ export const FIELD_EDGE = `bg-surface border border-control-line ${PUBLIC_EDGE}`
 const SOFT_FIELD_EDGE = `bg-control-fill border border-control-edge shadow-control ${PUBLIC_EDGE}`;
 
 const FIELD_SHAPE =
-  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]';
+  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]';
 
 /** A form field's box: FIELD_EDGE, the control radius, at least `control-md` tall. */
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
@@ -34,9 +34,10 @@ export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} [:root:not([data-public-surfac
 
 /**
  * A typed field (Input, SearchField, Textarea) tints its own fill 4% ink on
- * hover over 150ms instead of the trigger's 6% overlay (globals.css `field-hover`).
+ * hover instead of the trigger's 6% overlay (globals.css `field-hover`); the
+ * fill eases on its box's one transition with the edge and outline.
  */
-export const FIELD_HOVER = 'field-hover transition-colors duration-[var(--motion-tint)]';
+export const FIELD_HOVER = 'field-hover';
 const TYPED_FIELD_BOX = {
   line: `${FIELD_BOX} ${FIELD_HOVER}`,
   soft: `${SOFT_FIELD_EDGE} ${FIELD_SHAPE} ${FIELD_HOVER} [--field-fill:var(--color-control-fill)]`,
@@ -139,7 +140,8 @@ export function Input({
 /**
  * FieldEndButton — the one icon target at a field's end (clear a search,
  * reveal a password): SearchField's clear face, a 24px square (the minimum
- * target) with the 16px glyph, `ink-2` until hovered, its focus ring 1px out.
+ * target; its tap area 44 for touch) with the 16px glyph, `ink-2` until
+ * hovered, its focus ring 1px out.
  * Pass it as an `Input`'s `endContent`. `label` is its accessible name.
  */
 export function FieldEndButton({
@@ -157,7 +159,7 @@ export function FieldEndButton({
     <button
       type="button"
       data-field-end-target=""
-      className="focus-ring text-ink-2 enabled:hover:overlay-hover enabled:hover:text-ink rounded-mark grid size-[var(--target-min)] shrink-0 place-items-center transition-colors"
+      className="focus-ring text-ink-2 enabled:hover:overlay-hover enabled:hover:text-ink rounded-mark hit-area grid size-[var(--target-min)] shrink-0 place-items-center transition-colors"
       disabled={disabled}
       onClick={onClick}
       aria-label={label}

@@ -32,8 +32,13 @@ const GOAL_COUNT_PHRASE: Record<ActionGoal, readonly [string, string]> = {
 };
 
 export function goalCountPhrase(goal: ActionGoal, count: number): string {
+  return `${formatCount(count)} ${goalCountWords(goal, count)}`;
+}
+
+/** The words after a goal's count ("fixes open"). */
+export function goalCountWords(goal: ActionGoal, count: number): string {
   const [one, many] = GOAL_COUNT_PHRASE[goal];
-  return `${formatCount(count)} ${count === 1 ? one : many}`;
+  return count === 1 ? one : many;
 }
 
 /** What each goal's info mark explains. */

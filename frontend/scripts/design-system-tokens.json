@@ -873,6 +873,11 @@
         "usage": "The smallest interactive target anywhere (WCAG 2.5.8): toggle boxes and field end buttons sit in it."
       },
       {
+        "name": "target-hit",
+        "value": "var(--target-min)",
+        "usage": "The tap area around a small control (`hit-area`): target-min, and 44 in the app below 900px or under a coarse pointer; the drawn control keeps its size."
+      },
+      {
         "name": "tag-height",
         "value": "24px",
         "usage": "A tag and a status mark."

@@ -92,7 +92,7 @@ export function Tag(props: TagProps) {
             type="button"
             aria-label={`Remove ${removeLabel ?? text ?? 'tag'}`}
             onClick={onRemove}
-            className="focus-ring text-ink-2 hover:overlay-hover hover:text-ink rounded-mark relative grid size-5 place-items-center transition-colors before:absolute before:-inset-0.5 before:content-['']"
+            className="focus-ring text-ink-2 hover:overlay-hover hover:text-ink rounded-mark hit-area grid size-5 place-items-center transition-colors"
           >
             <X className="size-3.5" aria-hidden />
           </button>

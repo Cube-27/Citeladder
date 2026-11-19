@@ -208,6 +208,72 @@ for (const width of [1280, 1600])
     expect(shifts).toEqual([]);
   });
 
+/** A small control's tap area (`hit-area`'s ::before), width and height. */
+const hitArea = (control: Locator) =>
+  control.evaluate((element) => {
+    const area = getComputedStyle(element, '::before');
+    return [Number.parseFloat(area.width), Number.parseFloat(area.height)];
+  });
+
+test('at 390px an Action title keeps 180px, a goal keeps its title and count whole, and a tick taps at 44', async ({
+  page,
+}) => {
+  accepted.clear();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stubActions(page);
+  await page.goto(fixtureProjectPath('/actions'));
+  const aeoRows = page.getByRole('table', { name: /^\d+ actions$/ }).first();
+  await expect(aeoRows.getByRole('row')).toHaveCount(11);
+  await page.evaluate(() => document.fonts.ready);
+
+  const titles = await aeoRows
+    .getByRole('link')
+    .evaluateAll((links) => links.map((link) => link.getBoundingClientRect().width));
+  expect(Math.min(...titles)).toBeGreaterThanOrEqual(180);
+
+  // The Blocking tag and hint sit under the title, so the title is at most two lines.
+  const goal = page.getByRole('group', { name: 'Goals' }).locator('[data-figure-cell]').first();
+  const title = goal.getByText('Let AI read your site', { exact: true });
+  const titleBox = await title.boundingBox();
+  const markBox = await goal.getByText('Blocking').boundingBox();
+  if (!titleBox || !markBox) throw new Error('the first goal draws its title and Blocking tag');
+  expect(titleBox.height).toBeLessThanOrEqual(40);
+  expect(markBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
+  // The count is never cut; the words after it may be.
+  const count = goal.locator('[data-figure-value] span span').first();
+  await expect(count).toHaveText('35 ');
+  const cut = await count.evaluate((element) => {
+    const cell = element.closest('[data-figure-cell]')!.getBoundingClientRect();
+    return element.getBoundingClientRect().right > cell.right;
+  });
+  expect(cut).toBe(false);
+
+  const tick = aeoRows.getByRole('checkbox').first();
+  expect(await hitArea(tick)).toEqual([44, 44]);
+  expect((await tick.boundingBox())?.width).toBe(16);
+});
+
+test.describe('under a coarse pointer at 1280px', () => {
+  test.use({ hasTouch: true });
+
+  test('a tick keeps its 16px box and taps at 44', async ({ page }) => {
+    accepted.clear();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await stubActions(page);
+    await page.goto(fixtureProjectPath('/actions'));
+    const tick = page
+      .getByRole('table', { name: /^\d+ actions$/ })
+      .first()
+      .getByRole('checkbox')
+      .first();
+    await expect(tick).toBeVisible();
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    expect(await hitArea(tick)).toEqual([44, 44]);
+    expect((await tick.boundingBox())?.width).toBe(16);
+  });
+});
+
 /** One issue group across 12 URLs: the detail holds ten, the URL read the rest. */
 const GROUP = action(0, 'aeo');
 const pageUrl = (index: number) => ({
