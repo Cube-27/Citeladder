@@ -240,8 +240,8 @@ spacing:
 
 <!-- generated:controls:end -->
 
-The block lists the system's values. The app binds its own: controls 32
-(`control-md`) and 44 (`control-lg`, flow pages); below 900px or under a
+The block lists the system's values. The app binds its own: controls 28
+(`control-md`, owner 2026-11-19) and 44 (`control-lg`, flow pages); below 900px or under a
 coarse pointer every primary target is 44. Table rows are 44 (56 for a value
 over its caption).
 Tags are 24 and live in running content (cells, facts, sheets), never in a
@@ -271,7 +271,7 @@ inset (owner, 2026-11-18). The tab and filter strips stick under the
 masthead on `ground`, rules included (owner, 2026-11-19). `PageFrame` draws
 them; a page sets none.
 
-1. **Masthead** (52, sticky), as wide as the main column on every page: the
+1. **Masthead** (48, sticky), as wide as the main column on every page: the
    menu button below 900px, the back link on a record and the page title,
    starting on the page column's left edge; then the page's secondary
    actions and at most one primary action, then search (Ctrl K) and Ask
@@ -283,7 +283,7 @@ them; a page sets none.
    filters because a tab changes the filters and the strip above it must
    not change (owner, 2026-11-18).
 3. **Filter strip** (optional, the first strip on a page without tabs): 8
-   around 32 controls, 8 apart, one line:
+   around 28 controls (44 high, owner 2026-11-19), 8 apart, one line:
    view (Prompts' Active | Archived), search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
@@ -297,7 +297,7 @@ them; a page sets none.
    page itself is full-bleed like the strips, its first text on the content
    edge.
 
-The sidebar's Dashboard | Agent row under its 52 switcher cell is one strip
+The sidebar's Dashboard | Agent row under its 48 switcher cell is one strip
 high, the switch centred, so its rule continues the page's first strip's
 rule on one line on every page.
 

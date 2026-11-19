@@ -91,8 +91,8 @@ const ROUTES = [
   '/agent/context',
 ] as const;
 
-/** One control height for the product: control-md, 32 in the app. */
-const CONTROL_HEIGHT = 32;
+/** One control height for the product: control-md, 28 in the app. */
+const CONTROL_HEIGHT = 28;
 /** A switch's round track: 20 (components/ui/switch.tsx). */
 const SWITCH_HEIGHT = 20;
 /** Tags and status marks in running content (cells, facts): 24. */
@@ -101,7 +101,7 @@ const TAG_HEIGHT = 24;
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
 /** A page's tab row fills its strip (`--page-tabs-height`); section tab rows are one control high. */
-const PAGE_TABS_HEIGHT = 48;
+const PAGE_TABS_HEIGHT = 44;
 /** Tabs are text on a hairline with 12 each side and 4 between; segments no padding and 16 between. */
 const TAB_PADDING_X = 12;
 const TAB_GAP = 4;
@@ -109,10 +109,10 @@ const SEGMENT_GAP = 16;
 /** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
 const SIDEBAR_IDENT_HEIGHT = 44;
 /**
- * The masthead and the sidebar's switcher cell end on one 52px line from the
+ * The masthead and the sidebar's switcher cell end on one 48px line from the
  * top of the window, the hairline under both.
  */
-const MASTHEAD_HEIGHT = 52;
+const MASTHEAD_HEIGHT = 48;
 /**
  * Sidebar destination rows and the group labels that fold them are 32 (on a
  * 34 pitch): rows, not controls, and their labels never wrap.
@@ -120,7 +120,7 @@ const MASTHEAD_HEIGHT = 52;
 const NAV_ROW_HEIGHT = 32;
 /**
  * Masthead, tab strip and filter strip stack flush, each the same height on
- * every page (owner, 2026-11-18): the filter strip is 8 around its 32
+ * every page (owner, 2026-11-18): the filter strip is 8 around its 28
  * controls, the tab strip as high, its tabs filling it. The main column is
  * padded 32 left and right (`--page-pad-inline`); the body starts 16 below
  * the last strip.
@@ -128,9 +128,9 @@ const NAV_ROW_HEIGHT = 32;
 const BAND_GAP = 0;
 const PAGE_PAD_INLINE = 32;
 const TABS_STRIP_TOP = 0;
-const TABS_STRIP_HEIGHT = 48;
+const TABS_STRIP_HEIGHT = 44;
 const FILTER_STRIP_PADDING_Y = 8;
-const FILTER_STRIP_HEIGHT = 48;
+const FILTER_STRIP_HEIGHT = 44;
 const BODY_TOP_GAP = 16;
 /** The content band's sections stand 32 apart on the page surface. */
 const CONTENT_GAP = 32;
@@ -152,7 +152,7 @@ const TABLE_ROW_HEIGHT_TWO_LINES = 56;
 /** Rows are a height with content centred in it: 4 keeps a 32 control in a 44 row. */
 const TABLE_CELL_PADDING_Y = 4;
 /** A DataTable's title-and-toolbar row is one control high. */
-const DATA_TABLE_HEADER_HEIGHT = 32;
+const DATA_TABLE_HEADER_HEIGHT = 28;
 /** A FigureStrip cell is padded 12; a strip's cells share one height. */
 const FIGURE_CELL_PADDING_Y = 12;
 const FIGURE_STRIP_HEIGHT_SPREAD = 0;
@@ -221,7 +221,7 @@ function measure({ route }: { route: string }) {
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
     // A wide table's pair of sideways steppers are 24px glyph buttons
     // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
-    // `scroll-step.height`; a tab row's one row-end stepper is a 32 control.
+    // `scroll-step.height`; a tab row's one row-end stepper is a 28 control.
     if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {
       add('scroll-step.height', element, element.getBoundingClientRect().height);
       continue;

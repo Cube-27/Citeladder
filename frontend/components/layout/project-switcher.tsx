@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/menu';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { projectQueries } from '@/lib/api/projects';
-import { logoDomain } from '@/lib/brand/logo-dev';
 import {
   newProjectDestination,
   useSelectProject,
@@ -56,8 +55,7 @@ export function ProjectSwitcher() {
   } = useProjectContext();
   const { mayCreate, canAddProject, remainingProjectSlots } = useProjectCreation();
 
-  const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
-  const domain = logoDomain(activeProject?.website_url) ?? undefined;
+  const label = activeProject?.brand_name || activeProject?.name || 'No project';
 
   return (
     <Menu>
@@ -66,7 +64,6 @@ export function ProjectSwitcher() {
           <SidebarIdentButton
             aria-label={label}
             title={label}
-            meta={domain}
             pending={isLoading}
             lead={
               isLoading ? (
