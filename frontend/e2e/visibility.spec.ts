@@ -174,6 +174,7 @@ function evidenceItem(overrides: Record<string, unknown> = {}) {
     logical_engine: 'chatgpt',
     transport_provider: 'openai',
     transport_model: 'gpt-5.4',
+    retrieval_enabled: true,
     search_used: true,
     search_query_count: 2,
     query_text_available: true,

@@ -64,6 +64,7 @@ const evidence = {
   logical_engine: 'gemini',
   transport_provider: 'google',
   transport_model: 'gemini-flash-latest',
+  retrieval_enabled: true,
   prompt_index: 0,
   repetition: 1,
   prompt_class: 'unbranded',

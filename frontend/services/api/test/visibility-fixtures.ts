@@ -15,6 +15,9 @@ import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts'
 import { asOwner, Fixtures } from './support.ts';
 
 const now = () => new Date();
+// An answer that names no tracked business unless the test says otherwise.
+const firstNamedFixture = (first: FirstNamed | undefined) =>
+  firstNamedColumns(first ?? { kind: 'none' });
 
 export type Json = Parameters<typeof JSON.stringify>[0];
 
@@ -424,7 +427,7 @@ export class VisibilityFixtures extends Fixtures {
         unintended_domain_cited: false,
         citation_count: citations.length,
         avg_position: spec.avgPosition ?? null,
-        ...firstNamedColumns(spec.firstNamed ?? { kind: 'none' }),
+        ...firstNamedFixture(spec.firstNamed),
         answer_format_state: 'not_applicable',
         search_used: spec.searchUsed ?? false,
         search_query_count: spec.searchQueryCount ?? 0,
