@@ -2,7 +2,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Absence } from '@/components/ui/absence';
-import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Stack } from '@/components/ui/layout';
@@ -161,8 +160,9 @@ export function SelectedPropertyMark({
 }
 
 /**
- * Property picker for one integration connection: the row's Select (or
- * Change) action and the dialog it opens.
+ * Property picker for one integration connection: what the row's Select (or
+ * Change) action needs and the dialog it opens. The dialog is returned apart
+ * from the action, so a menu item can open it and close without unmounting it.
  *
  * A connected OAuth grant does not by itself tell a sync WHAT to pull: the
  * worker fetches from the connection's `account_ref`, and derivation resolves
@@ -175,10 +175,7 @@ export function SelectedPropertyMark({
  * text, so a ref can't be typed wrong. That call is live and lazy: it runs
  * only once the dialog opens.
  */
-export function PropertyPicker({
-  connection,
-  disabled = false,
-}: Readonly<{ connection: IntegrationConnection; disabled?: boolean }>) {
+export function usePropertyPicker(connection: IntegrationConnection) {
   const { activeProject } = useProjectContext();
   const mayDiscover = useWorkspaceCapability('manage_credentials');
   const activeMapping = useActiveMapping(
@@ -211,73 +208,73 @@ export function PropertyPicker({
   const selected = activeMapping?.property_ref ?? '';
   const noun = PROVIDER_META[connection.provider].noun;
   const verb = selected ? 'Change' : 'Select';
-  if (!mayDiscover) return null;
+  const openPicker = () => {
+    if (discovery.isPending) return;
+    discovery.reset();
+    setOpen(true);
+    discovery.mutate(activeProject?.id);
+  };
 
-  return (
-    <>
-      <Button
-        onClick={() => {
-          if (discovery.isPending) return;
-          discovery.reset();
-          setOpen(true);
-          discovery.mutate(activeProject?.id);
-        }}
-        disabled={disabled || discovery.isPending}
-        data-testid={`select-property-${connection.provider}`}
-        aria-label={`${verb} ${noun}`}
-      >
-        {verb}
-      </Button>
-
-      <Dialog
-        open={open}
-        // Hold the dialog open while a selection is in flight, matching the
-        // sibling confirm dialog: dismissing mid-mutation would unmount the
-        // only surface showing the pending row and any resulting error.
-        onOpenChange={(next) => {
-          if (!selectMutation.isPending) setOpen(next);
-        }}
-        title={`Choose a ${noun}`}
-        description={
-          activeProject
-            ? endSentence(`Data for the selected property is imported into ${activeProject.name}`)
-            : 'Select a project before choosing a property.'
-        }
-      >
-        <Stack gap="compact">
-          {!activeProject ? (
-            <Notice tone="warning">
-              No active project. Create or select a project first — a property must be imported into
-              one.
-            </Notice>
-          ) : null}
-          <DiscoveryState
-            pending={discovery.isPending}
-            error={discovery.error}
-            properties={discovery.data}
-            noun={noun}
+  const dialog = mayDiscover ? (
+    <Dialog
+      open={open}
+      // Hold the dialog open while a selection is in flight, matching the
+      // sibling confirm dialog: dismissing mid-mutation would unmount the
+      // only surface showing the pending row and any resulting error.
+      onOpenChange={(next) => {
+        if (!selectMutation.isPending) setOpen(next);
+      }}
+      title={`Choose a ${noun}`}
+      description={
+        activeProject
+          ? endSentence(`Data for the selected property is imported into ${activeProject.name}`)
+          : 'Select a project before choosing a property.'
+      }
+    >
+      <Stack gap="compact">
+        {!activeProject ? (
+          <Notice tone="warning">
+            No active project. Create or select a project first — a property must be imported into
+            one.
+          </Notice>
+        ) : null}
+        <DiscoveryState
+          pending={discovery.isPending}
+          error={discovery.error}
+          properties={discovery.data}
+          noun={noun}
+        />
+        <Stack gap="tight">
+          <PropertyOptions
+            properties={discovery.data ?? []}
+            selected={selected}
+            blocked={!activeProject || selectMutation.isPending}
+            selecting={{
+              isPending: selectMutation.isPending,
+              variables: selectMutation.variables?.property_ref,
+            }}
+            onSelect={selectProperty}
           />
-          <Stack gap="tight">
-            <PropertyOptions
-              properties={discovery.data ?? []}
-              selected={selected}
-              blocked={!activeProject || selectMutation.isPending}
-              selecting={{
-                isPending: selectMutation.isPending,
-                variables: selectMutation.variables?.property_ref,
-              }}
-              onSelect={selectProperty}
-            />
-          </Stack>
-
-          {selectMutation.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(selectMutation.error, { action: 'save the property' })}
-            />
-          ) : null}
         </Stack>
-      </Dialog>
-    </>
-  );
+
+        {selectMutation.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(selectMutation.error, { action: 'save the property' })}
+          />
+        ) : null}
+      </Stack>
+    </Dialog>
+  ) : null;
+
+  return {
+    /** Only a role that may discover properties chooses one. */
+    allowed: mayDiscover,
+    verb,
+    /** "Change Search Console property": the action's accessible name. */
+    label: `${verb} ${noun}`,
+    pending: discovery.isPending,
+    open: openPicker,
+    dialog,
+  };
 }

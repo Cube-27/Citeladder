@@ -285,12 +285,14 @@ them; a page sets none.
    filters because a tab changes the filters and the strip above it must
    not change (owner, 2026-11-18).
 3. **Filter strip** (optional, the first strip on a page without tabs): 8
-   around 28 controls (44 high, owner 2026-11-19), 8 apart: a view switch
-   (Prompts' Active | Archived) on a line of its own, then one line of
-   search, filter chips, **Filters** and
-   the chips of what is set in it, Clear, then at the end the muted meta
-   (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
-   count or a live note), cut before the strip wraps, and one action.
+   around 28 controls (44 high, owner 2026-11-19), 8 apart, on one line:
+   search, filter chips, **Filters** and the chips of what is set in it,
+   Clear, then at the end the muted meta (the data window, "Latest run · 18
+   Nov 09:12" in the one short form, the count or a live note), cut before
+   the strip wraps, and one action. A view switch (Prompts' Active |
+   Archived) leads the same line and the rest sits right-aligned after it
+   (owner, 2026-11-19). Controls that do not fit wrap as whole units; below
+   900px the search takes the first line and the rest flow after it.
 4. **Sections**, 16 below the strips, a `rule` between neighbouring page
    sections with 32 on each side (owner, 2026-11-18): one across the main
    column between stacked sections, one down each column gap of a grid's

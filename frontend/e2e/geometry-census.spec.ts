@@ -131,8 +131,6 @@ const TABS_STRIP_TOP = 0;
 const TABS_STRIP_HEIGHT = 44;
 const FILTER_STRIP_PADDING_Y = 8;
 const FILTER_STRIP_HEIGHT = 44;
-/** A strip whose view takes its own row above search and filters (owner, 2026-11-19). */
-const FILTER_STRIP_HEIGHT_WITH_VIEW = 80;
 const BODY_TOP_GAP = 16;
 /** The content band's sections stand 32 apart on the page surface. */
 const CONTENT_GAP = 32;
@@ -341,13 +339,8 @@ function measure({ route }: { route: string }) {
     const style = getComputedStyle(band);
     add('filter-strip.padding-y', band, px(style.paddingTop));
     add('filter-strip.padding-y', band, px(style.paddingBottom));
-    add(
-      band.querySelector('[data-filter-bar-rows] > [data-filter-bar]')
-        ? 'filter-strip.height.with-view'
-        : 'filter-strip.height',
-      band,
-      band.getBoundingClientRect().height,
-    );
+    // A view shares the strip's one row (owner, 2026-11-19), so every strip is one height.
+    add('filter-strip.height', band, band.getBoundingClientRect().height);
   }
   // The main column's side padding (`--page-pad-inline`).
   for (const main of all('[data-main-column]')) {
@@ -788,7 +781,6 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'tabs-strip.height', TABS_STRIP_HEIGHT);
   expectOneValue(records, 'filter-strip.padding-y', FILTER_STRIP_PADDING_Y);
   expectOneValue(records, 'filter-strip.height', FILTER_STRIP_HEIGHT);
-  expectOneValue(records, 'filter-strip.height.with-view', FILTER_STRIP_HEIGHT_WITH_VIEW);
   expectOneValue(records, 'main.padding-x', PAGE_PAD_INLINE);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
   expectOneValue(records, 'slip.gap', SLIP_GAP);

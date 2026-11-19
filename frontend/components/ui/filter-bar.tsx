@@ -83,47 +83,59 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
 }
 
 /**
- * FilterBar — the control rows at the top of every list and report page, in
- * one order on every page: the view on its own first row, then the search, the filter chips, Filters
- * and the chips of the filters set in it, Clear once anything is set, then
- * the data window, the count and the action at the row's end. Every control
- * is 32px and 8 apart. The
- * row is left-aligned, so a chip whose width follows its value moves only
- * what comes after it.
+ * FilterBar — the control row at the top of every list and report page, in
+ * one order on every page: the view switch, then the search, the filter
+ * chips, Filters and the chips of the filters set in it, Clear once anything
+ * is set, then the data window, the count and the action at the row's end.
+ * Every control is 32px (44 under a coarse pointer) and 8 apart.
  *
- * From 900px it is one line and the search is 256 wide (200 at least), so it
- * never runs up to a view or tabs beside the row (owner, 2026-11-18). The
- * meta at the end is cut before anything wraps; only controls that alone
- * overflow the line wrap, as whole units. Below 900px the bar stacks into one
- * full-width column in the same order.
+ * Without a view the row is left-aligned, so a chip whose width follows its
+ * value moves only what comes after it, and its meta is cut before anything
+ * wraps. With a view the view leads and the rest is right-aligned on the same
+ * row (owner, 2026-11-19: one row everywhere). Controls that do not fit wrap
+ * as whole units, at every width: from 900px the search is 200 to 256 wide;
+ * below it the search takes the first line and the rest flow after.
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
-export function FilterBar({ view, ...row }: FilterBarProps) {
-  if (!view) return <ControlRow {...row} />;
-  // The view leads on a row of its own; search and filters are the second row (owner, 2026-11-19).
-  const second =
-    row.lead || row.search || row.filters?.length || row.status !== undefined || row.actions;
-  return (
-    <div data-filter-bar-rows="" className="grid w-full min-w-0 gap-2">
-      <div className="flex max-w-full min-w-0">{view}</div>
-      {second ? <ControlRow {...row} /> : null}
-    </div>
-  );
-}
-
-function ControlRow({ lead, search, filters = [], status, actions }: Omit<FilterBarProps, 'view'>) {
-  const { chips, menu } = placeFilters(filters);
-  const set = filters.filter((filter) => !filter.isDefault);
-  const windowLabel = dataWindow(chips);
+export function FilterBar({ view, lead, ...row }: FilterBarProps) {
   return (
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
+      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2"
     >
+      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
-      {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
+      {view ? (
+        // Beside the view while 256 is left for it; its controls wrap inside it.
+        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-2">
+          <Controls {...row} afterView />
+        </div>
+      ) : (
+        <Controls {...row} />
+      )}
+    </fieldset>
+  );
+}
+
+function Controls({
+  search,
+  filters = [],
+  status,
+  actions,
+  afterView = false,
+}: Omit<FilterBarProps, 'view' | 'lead'> & { afterView?: boolean }) {
+  const { chips, menu } = placeFilters(filters);
+  const set = filters.filter((filter) => !filter.isDefault);
+  const windowLabel = dataWindow(chips);
+  return (
+    <>
+      {search ? (
+        <div className="rail:max-w-64 rail:grow rail:basis-[200px] min-w-0 basis-full">
+          {search}
+        </div>
+      ) : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />
@@ -158,10 +170,11 @@ function ControlRow({ lead, search, filters = [], status, actions }: Omit<Filter
       ) : null}
       {windowLabel || status !== undefined ? (
         // The strip's meta takes what the controls leave and is cut there, so
-        // it never wraps the strip onto a second line.
+        // it never wraps the strip onto a second line. After a view it is drawn
+        // before the right-aligned controls, which keep their places as it changes.
         <div
           data-strip-meta=""
-          className="rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden"
+          className={`${afterView ? 'rail:-order-1 ' : ''}rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden`}
         >
           {windowLabel ? (
             // Outside the live region: the window is on the chip's name already.
@@ -187,7 +200,7 @@ function ControlRow({ lead, search, filters = [], status, actions }: Omit<Filter
           {actions}
         </div>
       ) : null}
-    </fieldset>
+    </>
   );
 }
 

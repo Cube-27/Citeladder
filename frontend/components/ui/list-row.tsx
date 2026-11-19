@@ -307,18 +307,18 @@ export function TreeItemForm({
 
 /**
  * A card's list of `ItemRow`s, which lay out by its width rather than the
- * window's. It bleeds to the card's edges, so the hairlines span the card and
- * each row's own padding lines its text up with the card head.
+ * window's. Its rows and hairlines stay inside the content column, their text
+ * lined up with the section head.
  */
 export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="divide-rule @container -mx-[var(--card-padding)] divide-y">{children}</ul>;
+  return <ul className="divide-rule @container min-w-0 divide-y">{children}</ul>;
 }
 
 /**
  * A two-line item in a list its card frames (a data source and its
  * property), one grid: a 20px icon, the text column (the title, which wraps
  * and never cuts, over one caption line), the item's status, then its
- * actions; 12 down, 16 across, 12 between parts. Below a 640px list the
+ * actions; 12 down, flush with the column's edges, 12 between parts. Below a 640px list the
  * actions wrap to a third line under the text, left-aligned with it.
  */
 export function ItemRow({
@@ -340,7 +340,7 @@ export function ItemRow({
   return (
     <li
       {...props}
-      className="grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-center gap-3 px-[var(--card-padding)] py-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]"
+      className="grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-center gap-3 py-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]"
     >
       <span className="flex size-5 items-center justify-center self-start">{icon}</span>
       <div className="grid min-w-0 gap-0.5">
