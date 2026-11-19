@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { Visibility } from '@citeladder/contracts';
-import { answerShortfall } from './coverage';
+import { answerShortfall, selectionBasis } from './coverage';
 
 const counts = (patch: Record<string, unknown>) =>
   ({
@@ -19,5 +19,20 @@ describe('answerShortfall', () => {
     );
     expect(answerShortfall(counts({}))).toBeNull();
     expect(answerShortfall({ counts: null } as unknown as Visibility)).toBeNull();
+  });
+});
+
+describe('selectionBasis', () => {
+  it('adds the shared-answer count only to a matched-subset change', () => {
+    const subset = (status: string, failed = 0) =>
+      ({
+        ...counts({ failed }),
+        comparison: { status, matched_cells: 6, current_cells: 9 },
+      }) as unknown as Visibility;
+    expect(selectionBasis(subset('matched_subset', 2))).toBe(
+      '8 of 10 answers · 2 failed · 6 of 9 answers comparable',
+    );
+    expect(selectionBasis(subset('matched_subset'))).toBe('6 of 9 answers comparable');
+    expect(selectionBasis(subset('comparable'))).toBeNull();
   });
 });

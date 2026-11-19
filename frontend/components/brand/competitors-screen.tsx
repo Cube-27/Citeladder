@@ -16,6 +16,7 @@ import {
 } from '@/components/visibility/selection-page';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { subsetChangeNote } from '@/lib/visibility/coverage';
 import {
   useVisibilityFilters,
   useVisibilityQueries,
@@ -56,7 +57,12 @@ export function CompetitorsScreen() {
             query={queries.visibilityQuery}
             pending={<RankingRowsPending brands={project.competitors.length + 1} />}
           >
-            {(selected) => <RankingRowsTable rows={selected.rankings} />}
+            {(selected) => (
+              <RankingRowsTable
+                rows={selected.rankings}
+                description={subsetChangeNote(selected) ?? undefined}
+              />
+            )}
           </SelectionGate>
           <CompetitorSuggestions
             projectId={queries.projectId}

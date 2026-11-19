@@ -33,7 +33,7 @@ import {
   trendAxis,
 } from '@/lib/visibility/trends';
 import { noObservations } from '@/lib/visibility/vocabulary';
-import { answerShortfall } from '@/lib/visibility/coverage';
+import { selectionBasis } from '@/lib/visibility/coverage';
 import { type Absent, formatCount } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
@@ -63,7 +63,7 @@ const ALL_BRANDS = '__all__';
  * the Competitors table draws, computed in code.
  */
 export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
-  const shortfall = answerShortfall(selected);
+  const shortfall = selectionBasis(selected);
   const { headline, sub } = standingHeadline(brandStanding(selected.rankings));
   return (
     <Section aria-labelledby="insights-headline">

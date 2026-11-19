@@ -1,4 +1,5 @@
 import type { Visibility } from '@citeladder/contracts';
+import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { formatCount, pluralCount as plural } from '@/lib/format';
 
 /**
@@ -19,4 +20,22 @@ export function answerShortfall(selected: Visibility): string | null {
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/** "8 of 12 answers comparable" when the change covers only the shared answers; else null. */
+export function subsetChangeNote(selected: Visibility): string | null {
+  const comparison = selected.comparison;
+  if (comparison?.status !== 'matched_subset') return null;
+  const basis = comparisonBasis({
+    status: comparison.status,
+    answers: { matched: comparison.matched_cells, total: comparison.current_cells },
+  });
+  return basis.kind === 'matched_subset' ? basis.note : null;
+}
+
+/** The selection's one basis line: its shortfall and a subset change, or null when neither applies. */
+export function selectionBasis(selected: Visibility): string | null {
+  return (
+    [answerShortfall(selected), subsetChangeNote(selected)].filter(Boolean).join(' · ') || null
+  );
 }

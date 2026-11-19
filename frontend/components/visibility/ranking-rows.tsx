@@ -40,7 +40,14 @@ const POSITION_HINT =
  * A missing change is an em dash. The table is never paged: it holds at most six
  * brands (owner, 2026-10-21).
  */
-export function RankingRowsTable({ rows }: Readonly<{ rows: readonly RankingRow[] }>) {
+export function RankingRowsTable({
+  rows,
+  description,
+}: Readonly<{
+  rows: readonly RankingRow[];
+  /** The shared-answer basis when the change covers only part of the selection. */
+  description?: string;
+}>) {
   const navigate = useNavigate();
   const ordered = orderByVisibility(rows);
   // Runs measured before mention offsets were persisted have no position.
@@ -48,7 +55,7 @@ export function RankingRowsTable({ rows }: Readonly<{ rows: readonly RankingRow[
   // Runs admitted without perception classify no mention.
   const anySentiment = ordered.some((row) => row.sentiment != null);
   return (
-    <TitledSection title={TITLE}>
+    <TitledSection title={TITLE} description={description}>
       <DataTable
         label={TITLE}
         columns={rankingColumns({ anyPosition, anySentiment })}

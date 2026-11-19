@@ -340,7 +340,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
         <p className={textRole('caption')}>
           {review.credential_mode === 'funded'
             ? 'Held from your AI credits; only successful requests are charged, never above the estimate.'
-            : 'Billed to your DataForSEO account; never above the estimate.'}
+            : 'Billed to your DataForSEO account.'}
         </p>
       </Stack>
       {review.call_plan.length ? (

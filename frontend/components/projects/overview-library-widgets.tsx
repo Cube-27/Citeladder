@@ -260,9 +260,11 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
         >
           {(data) => (
             <>
-              {data.responses ? (
-                <p className={textRole('caption')}>{pluralCount(data.responses, 'answer')}</p>
-              ) : null}
+              <p className={textRole('caption')}>
+                {data.responses
+                  ? pluralCount(data.responses, 'answer')
+                  : 'No engine shows what it read'}
+              </p>
               <Rows
                 rows={data.items.map((item) => ({
                   key: item.url,
