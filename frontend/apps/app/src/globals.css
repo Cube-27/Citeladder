@@ -978,7 +978,7 @@
   --color-site-band-glow: oklch(86% 0.05 46 / 20%);
   --color-site-band-scrim: oklch(99% 0.002 260 / 50%);
   --color-site-band-ink-secondary: oklch(43.5% 0.008 265);
-  --color-site-band-line: oklch(16.5% 0.005 265 / 22%);
+  --color-site-band-line: oklch(16.5% 0.005 265 / 55%);
   --shadow-edge:
     inset 0 0 0 1px var(--color-site-well-edge),
     inset 0 1px 0 var(--color-site-well-highlight),
@@ -1031,7 +1031,7 @@
   --color-site-band-glow: oklch(70.3% 0.194 39.3 / 10%);
   --color-site-band-scrim: oklch(10% 0.003 265 / 45%);
   --color-site-band-ink-secondary: oklch(78% 0.006 265);
-  --color-site-band-line: oklch(100% 0 0 / 28%);
+  --color-site-band-line: oklch(100% 0 0 / 48%);
   --shadow-edge:
     inset 0 0 0 1px var(--color-site-well-edge),
     inset 0 1px 0 var(--color-site-well-highlight),

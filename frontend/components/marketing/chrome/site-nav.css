@@ -6,8 +6,24 @@
   z-index: var(--z-index-sticky);
   top: 0;
   border-bottom: 1px solid var(--color-line);
-  background: color-mix(in oklch, var(--site-page) 84%, transparent);
-  backdrop-filter: saturate(180%) blur(16px);
+}
+
+/* Painted on a pseudo-element so `backdrop-filter` never turns `.cl-navbar`
+   into a containing block for its `position: fixed` mobile sheet. */
+.cl-navbar::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--site-page);
+  pointer-events: none;
+  content: '';
+}
+
+@supports (backdrop-filter: blur(16px)) {
+  .cl-navbar::before {
+    background: color-mix(in oklch, var(--site-page) 84%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+  }
 }
 
 /* The bar's row is the page column: the logo and the last action sit on the
