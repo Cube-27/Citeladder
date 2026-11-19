@@ -19,6 +19,12 @@ import type { PromptHistory } from '@citeladder/contracts';
 
 import { NO_ANSWERS, NOT_MEASURED } from './prompt-figures';
 
+/** A run's owned citation rate; with no answer to cite from it is unavailable, not unmeasured. */
+function ownedRate(point: PromptHistory['points'][number]) {
+  if (point.owned_citation_rate !== null) return formatPercent(point.owned_citation_rate);
+  return point.counts.responses === 0 ? NO_ANSWERS : NOT_MEASURED;
+}
+
 /**
  * Visibility and owned citation rate per run, with declared work marked. A
  * single run plots its one point per line, as the Insights trend does.
@@ -68,13 +74,7 @@ function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
             <TableCell numeric>
               {point.mention_rate === null ? NO_ANSWERS : formatPercent(point.mention_rate)}
             </TableCell>
-            <TableCell numeric>
-              {point.owned_citation_rate === null
-                ? point.counts.responses === 0
-                  ? NO_ANSWERS
-                  : NOT_MEASURED
-                : formatPercent(point.owned_citation_rate)}
-            </TableCell>
+            <TableCell numeric>{ownedRate(point)}</TableCell>
           </TableRow>
         ))}
       </DataTable>
