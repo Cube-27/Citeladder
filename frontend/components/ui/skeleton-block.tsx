@@ -19,7 +19,7 @@ export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
     <span
       aria-hidden
       data-skeleton-block=""
-      className={cn('skeleton-sweep bg-well block h-3 min-h-3 rounded-sm', className)}
+      className={cn('skeleton-sweep bg-well rounded-mark block h-3 min-h-3', className)}
     />
   );
 }
@@ -207,7 +207,7 @@ export function TableBlocks({
     cn(cellWidth(columns, cell), cell >= columns - desktopOnly && 'desktop:block hidden');
   return (
     <span className="grid">
-      <span className="bg-well block h-[var(--table-header-height)] rounded-sm" />
+      <span className="bg-well rounded-mark block h-[var(--table-header-height)]" />
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
@@ -248,13 +248,6 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   );
 }
 
-/** A block at a named radius: cn() does not merge the named radii over SkeletonBlock's rounded-sm. */
-function RoundBlock({ className }: Readonly<{ className: string }>) {
-  return (
-    <span aria-hidden data-skeleton-block="" className={cn('skeleton-sweep bg-well', className)} />
-  );
-}
-
 /**
  * A chat, inset like AgentThread: the person's turn on the right (40 high,
  * 45%, radius 8), then the reply's two paragraph blocks on the left, no card.
@@ -262,7 +255,7 @@ function RoundBlock({ className }: Readonly<{ className: string }>) {
 function ThreadBlocks() {
   return (
     <span className="grid gap-[var(--card-padding)] px-4">
-      <RoundBlock className="rounded-card ms-auto block h-10 w-[45%]" />
+      <SkeletonBlock className="rounded-card ms-auto h-10 w-[45%]" />
       <span className="grid gap-2">
         <SkeletonBlock className="h-4 w-full" />
         <SkeletonBlock className="h-4 w-[70%]" />
@@ -281,7 +274,7 @@ export function ComposerBlocks() {
     <span className="bg-surface border-rule rounded-card shadow-pop grid gap-1 border p-2">
       <span className="block h-[30px]" />
       <span className="flex h-[var(--control-md)] items-center justify-end">
-        <RoundBlock className="block size-8 rounded-full" />
+        <SkeletonBlock className="size-8 rounded-full" />
       </span>
     </span>
   );

@@ -13,16 +13,17 @@ import { cn } from '@/lib/utils';
  * literal machine text, display names the page. Nothing is uppercase. Ink has
  * two steps: `ink` for what is read first and `ink-2` for what supports it
  * (caption and caption-strong default to it). Sizes are 12, 13, 14, 16, 24,
- * 28 and 32 only.
+ * 28 and 32 only. Weights are 400 and 500; the app's dark theme draws them
+ * at 350 and 450.
  */
 const TEXT_ROLES = {
   /** Flow headings, full-page notices. Display 28/36 500. */
   display: 'type-display',
   /** The masthead's page title and the new-chat greeting. Display 20/28 400. */
   title: 'type-title',
-  /** Card, section, dialog and drawer titles. Sans 16/24 600. */
+  /** Card, section, dialog and drawer titles. Sans 16/24 500. */
   heading: 'type-heading',
-  /** Group heads inside a card, widget titles, field-group legends. Sans 14/20 600. */
+  /** Group heads inside a card, widget titles, field-group legends. Sans 14/20 500. */
   subheading: 'type-subheading',
   /** Default interface text, table cells, stat labels. Sans 14/20 400. */
   body: 'type-body',
@@ -34,7 +35,7 @@ const TEXT_ROLES = {
   caption: 'type-caption',
   /** Column heads, group labels, tags, the "Draft" marker. Sans 12/16 500, sentence case, `ink-2`. */
   captionStrong: 'type-caption-strong',
-  /** At most one hero figure per page. Sans 32/40 600, tabular. */
+  /** At most one hero figure per page. Sans 32/40 500, tabular. */
   figureXl: 'type-figure-xl',
   /** Every metric figure in the app. Sans 20/28 500, tabular. */
   figure: 'type-figure',

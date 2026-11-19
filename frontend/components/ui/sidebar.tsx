@@ -288,7 +288,7 @@ export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // Labelled, a segment is its word (no icon) plus 12 a side, the two sharing
   // what is left: both fit the 200 sidebar; wider text spacing ends in an ellipsis.
   return cn(
-    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center rounded-sm px-3 transition-colors',
+    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center rounded-mark px-3 transition-colors',
     current ? 'bg-surface text-ink shadow-card' : AT_REST,
   );
 }

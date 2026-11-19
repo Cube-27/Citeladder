@@ -222,7 +222,7 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       {...attributes}
       data-status-tone={tone}
       className={cn(
-        'type-caption inline-flex font-medium h-[var(--tag-height)] shrink-0 items-center gap-1 rounded-sm px-2 align-middle whitespace-nowrap',
+        'type-caption inline-flex font-medium h-[var(--tag-height)] shrink-0 items-center gap-1 rounded-mark px-2 align-middle whitespace-nowrap',
         TONE_CHIP[tone],
         className,
       )}

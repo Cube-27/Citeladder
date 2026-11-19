@@ -1,9 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { PartDonut } from './part-donut';
 import { Sparkline } from './sparkline';
 import { SeriesTonesContext, seriesTones } from './step-chart-parts';
+
+const rows = (name: string) =>
+  within(screen.getByRole('table', { name }))
+    .getAllByRole('row')
+    .map((row) => [...row.children].map((cell) => cell.textContent));
 
 describe('PartDonut', () => {
   it('names every part with its share and count, and gives you the accent', () => {
@@ -17,9 +22,12 @@ describe('PartDonut', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('img')).toHaveAccessibleName(
-      'Source types: Your site 60.0% (60), Editorial 30.0% (30), Other 10.0% (10)',
-    );
+    expect(rows('Source types')).toEqual([
+      ['Series', 'Share', 'Value'],
+      ['Your site', '60.0%', '60'],
+      ['Editorial', '30.0%', '30'],
+      ['Other', '10.0%', '10'],
+    ]);
     expect(
       [...container.querySelectorAll('[data-part]')].map((part) => part.getAttribute('data-part')),
     ).toEqual(['you', 'rival-1', 'other']);
@@ -52,9 +60,11 @@ describe('PartDonut', () => {
         parts={[{ label: 'Editorial', value: 40 }]}
       />,
     );
-    expect(screen.getByRole('img')).toHaveAccessibleName(
-      'Source types: 50 citations, Editorial 80.0% (40), Unclassified 20.0% (10)',
-    );
+    expect(rows('Source types: 50 citations')).toEqual([
+      ['Series', 'Share', 'Value'],
+      ['Editorial', '80.0%', '40'],
+      ['Unclassified', '20.0%', '10'],
+    ]);
   });
 });
 
