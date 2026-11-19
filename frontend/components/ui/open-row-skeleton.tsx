@@ -16,18 +16,18 @@ export const pressableRowClasses =
 
 /**
  * An `OpenRow` with a caption while its read is pending: the row's geometry,
- * blocks for text. Apart from the rows, so a route's loading frame draws it
- * without loading them.
+ * a title block (16) over a caption block (12). Apart from the rows, so a
+ * route's loading frame draws it without loading them.
  */
 export function OpenRowSkeleton() {
   return (
     <span aria-hidden className={cn(pressableRowClasses, 'pointer-events-none')}>
       <span className="grid min-w-0 flex-1 gap-1">
         <span className={textRole('body', 'flex h-lh items-center')}>
-          <SkeletonBlock className="w-2/5" />
+          <SkeletonBlock className="h-4 w-2/5" />
         </span>
         <span className="type-caption flex h-lh items-center">
-          <SkeletonBlock className="w-3/5" />
+          <SkeletonBlock className="w-1/3" />
         </span>
       </span>
       <Icon icon={ChevronRight} className="text-ink-2 shrink-0 opacity-0" />

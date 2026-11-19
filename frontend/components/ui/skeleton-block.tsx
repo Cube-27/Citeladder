@@ -143,7 +143,10 @@ export function ReportSkeletonFrame({
   );
 }
 
-/** A record's identity card: 40px rows of a name block (30%) and a value block (45%) or a 24px tag. */
+/**
+ * A record's identity card: 40px rows of a 16px label block (30%) beside a
+ * value block that fills the value's 20px line (45%) or a 24px tag.
+ */
 function FactBlocks({
   rows = 3,
   tagRows = [],
@@ -152,11 +155,11 @@ function FactBlocks({
     <span className="grid">
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4">
-          <SkeletonBlock className="h-3.5 w-[30%]" />
+          <SkeletonBlock className="h-4 w-[30%]" />
           {tagRows.includes(row) ? (
             <SkeletonBlock className="h-6 w-16" />
           ) : (
-            <SkeletonBlock className="h-3.5 w-[45%]" />
+            <SkeletonBlock className="h-5 w-[45%]" />
           )}
         </span>
       ))}
@@ -164,14 +167,17 @@ function FactBlocks({
   );
 }
 
-/** A list: 48px rows of a 32 tile and one block at 50%. */
+/** A list: 48px rows of a 32 tile beside a title block (16, 50%) over a caption block (12, 30%). */
 function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
   return (
     <span className="grid">
       {range(rows).map((row) => (
         <span key={row} className="flex h-12 items-center gap-3">
           <SkeletonBlock className="size-8 shrink-0" />
-          <SkeletonBlock className="h-3.5 w-1/2" />
+          <span className="grid min-w-0 flex-1 gap-1">
+            <SkeletonBlock className="h-4 w-1/2" />
+            <SkeletonBlock className="w-[30%]" />
+          </span>
         </span>
       ))}
     </span>
@@ -187,8 +193,9 @@ function cellWidth(columns: number, cell: number): string {
 }
 
 /**
- * A table: the loaded head's height on `well`, then 40px rows of cell blocks,
- * one per visible column; the last `desktopOnly` cells show from the `desktop` width.
+ * A table: the loaded head's height as one `well` band, then 40px rows of
+ * 28px cell blocks (6 clear above and below), one per visible column; the
+ * last `desktopOnly` cells show from the `desktop` width.
  */
 export function TableBlocks({
   columns = 4,
@@ -204,7 +211,7 @@ export function TableBlocks({
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
-            <SkeletonBlock key={cell} className={width(cell)} />
+            <SkeletonBlock key={cell} className={cn('h-7', width(cell))} />
           ))}
         </span>
       ))}
@@ -214,8 +221,8 @@ export function TableBlocks({
 
 /**
  * FigureStrip's row (`figureRows`) and cells, with its lines and dividers
- * (globals.css): a 12px label block at 40% on the label's 20px line over a
- * 16×56 value block on the value's 24px line, 72 tall.
+ * (globals.css): a 14px label block at 50% on the label's 20px line over a
+ * 24×80 value block that fills the value's 24px line, 72 tall.
  */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   const { ref, width } = useStripWidth<HTMLSpanElement>();
@@ -230,10 +237,10 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
           style={{ '--row': size } as CSSProperties}
         >
           <span className="flex h-5 items-center">
-            <SkeletonBlock className="w-2/5" />
+            <SkeletonBlock className="h-3.5 w-1/2" />
           </span>
           <span data-figure-value="" className="flex items-center">
-            <SkeletonBlock className="h-4 w-14" />
+            <SkeletonBlock className="h-6 w-20 max-w-full" />
           </span>
         </span>
       ))}
