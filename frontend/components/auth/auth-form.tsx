@@ -103,7 +103,7 @@ function googleStartInput(
 function googleStartNotice(err: unknown): string {
   if (!(err instanceof ApiError)) return 'Unable to start Google sign-in. Please try email below.';
   if (err.code?.startsWith('human_verification_')) return err.message;
-  if (err.status === 503) return 'Google sign-in is coming soon — please use email below.';
+  if (err.status === 503) return 'Google sign-in is not available yet. Use email below.';
   return 'Unable to start Google sign-in. Please try email below.';
 }
 
