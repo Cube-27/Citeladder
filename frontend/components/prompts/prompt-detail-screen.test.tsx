@@ -287,8 +287,14 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   const stateCell = (label: string) =>
     states.getByText(label).closest('[data-figure-cell]')?.textContent;
   expect(stateCell('Mentioned and cited')).toMatch(/^Mentioned and cited.*1$/);
-  expect(stateCell('Mentioned only')).toMatch(/^Mentioned only.*0$/);
-  expect(stateCell('Neither')).toMatch(/^Neither.*1$/);
+  // One row of four figures: the other answer states are said in its hint.
+  expect(states.queryByText('Neither')).toBeNull();
+  await userEvent
+    .setup()
+    .click(states.getByRole('button', { name: 'Basis of Mentioned and cited' }));
+  expect(
+    await screen.findAllByText(/Mentioned only: 0 · Cited only: \d+ · Neither: 1\./u),
+  ).not.toHaveLength(0);
   // Answered of asked, then the answers naming and citing you, summed from the states.
   const coverage = within(screen.getByRole('table', { name: 'Engine coverage' }));
   const cells = (engine: RegExp) =>
@@ -400,7 +406,10 @@ it('reads the market from the address and keeps a run without answers unavailabl
   );
   // The latest run had no successful answer: its states are unavailable, not zero.
   expect(
-    figures.getByText('Neither').closest('[data-figure-cell]')?.querySelector('[data-absence]'),
+    figures
+      .getByText('Mentioned and cited')
+      .closest('[data-figure-cell]')
+      ?.querySelector('[data-absence]'),
   ).toHaveAttribute('data-absence', 'unavailable');
   // With no comparable run the figure prints its value alone, no "Not measured" beside it.
   expect(figures.getByText('Visibility').closest('[data-figure-cell]')?.textContent).toMatch(

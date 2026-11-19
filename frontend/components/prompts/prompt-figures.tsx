@@ -60,14 +60,28 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
       value: <PositionValue latest={latest} visibility={point?.mention_rate ?? null} />,
       sub: 'Where you were named among the brands in an answer, averaged over the answers that named you.',
     },
-    ...ANSWER_STATES.map((state): FigureSegment => ({
-      key: state.key,
-      label: state.label,
-      value: stateValue(states, state.key, latest),
-      sub: state.meaning,
-    })),
+    {
+      key: BOTH.key,
+      label: BOTH.label,
+      value: stateValue(states, BOTH.key, latest),
+      sub: `${BOTH.meaning} ${otherStates(states, latest)}`,
+    },
   ];
   return <FigureStrip label="Latest measurement" segments={segments} />;
+}
+
+const [BOTH, ...OTHER_STATES] = ANSWER_STATES;
+
+/**
+ * The other answer states, one line in the strip's last hint (owner,
+ * 2026-11-19: one row of four figures), so none of them leaves the page.
+ */
+function otherStates(states: AnswerStates | null, latest: PromptMetricItem | null): string {
+  const missing = latest ? 'no successful answer' : 'not measured';
+  const parts = OTHER_STATES.map(
+    (state) => `${state.label}: ${states ? formatCount(states[state.key]) : missing}`,
+  );
+  return `${parts.join(' · ')}.`;
 }
 
 function rateValue(rate: number | null | undefined, missing: ReactNode) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { normalizeEvidenceMarkdown } from './evidence-card';
+import { normalizeEvidenceMarkdown } from './answer-transcript';
 
 describe('normalizeEvidenceMarkdown', () => {
   it('rejoins citation-split list sentences without flattening real Markdown blocks', () => {

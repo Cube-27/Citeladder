@@ -30,8 +30,8 @@ import { PromptImplementations, PromptTrend } from './prompt-trend';
 const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
 
 /**
- * /prompts/:promptId — one prompt in one market: its key figures once, its
- * trend, engine coverage, then every past answer as the page's main content.
+ * /prompts/:promptId — one prompt in one market: its key figures once, every
+ * past answer, then its trend, engine coverage and implementations.
  */
 export function PromptDetailScreen() {
   const { promptId = '' } = useParams();
@@ -69,7 +69,7 @@ export function PromptDetailScreen() {
         <StateBlock
           kind="loading"
           label="Loading this prompt…"
-          shape={{ kind: 'figures', count: 7 }}
+          shape={{ kind: 'figures', count: 4 }}
         />
       </RecordPage>
     );
@@ -88,11 +88,7 @@ export function PromptDetailScreen() {
       }
     >
       {history.points.length ? (
-        <>
-          <PromptKeyFigures history={history} />
-          <PromptTrend history={history} />
-          <PromptEngineCoverage latest={history.latest} />
-        </>
+        <PromptKeyFigures history={history} />
       ) : (
         <StateBlock
           kind="empty"
@@ -100,6 +96,7 @@ export function PromptDetailScreen() {
           message="No run has asked this prompt in this market yet."
         />
       )}
+      {/* Past answers above the chart (owner, 2026-11-19): the answers are what a reader opens. */}
       <PromptPastAnswers
         // A new filter set starts again at the newest answer.
         key={JSON.stringify(answerFilters.answers)}
@@ -108,6 +105,12 @@ export function PromptDetailScreen() {
         params={answerFilters.answers}
         markets={markets}
       />
+      {history.points.length ? (
+        <>
+          <PromptTrend history={history} />
+          <PromptEngineCoverage latest={history.latest} />
+        </>
+      ) : null}
       <PromptImplementations history={history} />
     </RecordPage>
   );
