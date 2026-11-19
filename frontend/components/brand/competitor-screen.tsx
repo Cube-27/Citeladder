@@ -92,7 +92,6 @@ function CompetitorBody({
       <StateBlock
         kind="empty"
         heading={`${name} isn’t a tracked competitor`}
-        description="Add it in Context to measure it beside you."
         action={
           <Button asChild>
             <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>

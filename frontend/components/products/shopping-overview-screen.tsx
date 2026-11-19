@@ -52,7 +52,7 @@ const rankingCodec = stringUrlCodec<Ranking>(
 type Overview = CommerceShoppingOverview;
 
 /** A card's empty state in place of its table: what belongs here and why it is empty. */
-const emptyTable = (heading: string, description: string) =>
+const emptyTable = (heading: string, description?: string) =>
   ({ kind: 'empty', icon: ShoppingBag, heading, description }) as const;
 
 const VISIBILITY: DataTableColumn = {
@@ -119,13 +119,10 @@ function RankingTable({
   const [ranking, setRanking] = useUrlState('ranking', rankingCodec);
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
-  const empty = brands
-    ? emptyTable('No brand ranked yet', 'No answer in this window named a brand.')
-    : emptyTable('No product ranked yet', 'No answer in this window named a product.');
+  const empty = brands ? emptyTable('No brand ranked yet') : emptyTable('No product ranked yet');
   return (
     <DataTable
       title="Ranking"
-      description="By appearances in the window's answers."
       actions={
         <SegmentedControl
           ariaLabel="Ranking shown"
@@ -174,21 +171,18 @@ function RankingTable({
 
 function ProductList({
   title,
-  description,
   empty,
   rows,
   scope,
 }: Readonly<{
   title: string;
-  description: string;
-  empty: Readonly<{ heading: string; description: string }>;
+  empty: string;
   rows: readonly CommerceOverviewProduct[];
   scope: ProductScopeFilters;
 }>) {
   return (
     <DataTable
       title={title}
-      description={description}
       columns={[
         { key: 'name', label: 'Product', kind: 'identity' },
         {
@@ -201,7 +195,7 @@ function ProductList({
       ]}
       rowCount={rows.length}
       rowLines={2}
-      state={rows.length ? undefined : emptyTable(empty.heading, empty.description)}
+      state={rows.length ? undefined : emptyTable(empty)}
     >
       {rows.map((row) => (
         <TableRow key={row.holder_id}>
@@ -224,18 +218,13 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
   return (
     <DataTable
       title="Top merchants"
-      description="Where the answers send shoppers to buy."
       columns={[
         { key: 'domain', label: 'Merchant', kind: 'identity' },
         { key: 'answers', label: 'Answers', kind: 'number' },
         { key: 'products', label: 'Products', kind: 'number' },
       ]}
       rowCount={rows.length}
-      state={
-        rows.length
-          ? undefined
-          : emptyTable('No merchant yet', 'No answer in this window named a merchant.')
-      }
+      state={rows.length ? undefined : emptyTable('No merchant yet')}
     >
       {rows.map((row) => (
         <TableRow key={row.domain}>
@@ -313,23 +302,19 @@ function CategoryShelf({
   const segments = [
     {
       label: 'Product visibility',
-      sub: 'Share of answers that recommended you.',
       value: shelfPercent(shelf?.product_visibility ?? null),
     },
     {
       label: 'Share of shelf',
-      sub: 'Your share of every recommendation named.',
       value: shelfPercent(shelf?.share_of_shelf ?? null),
     },
     {
       label: 'Average position',
-      sub: 'Your mean rank in answers that ranked products.',
       value:
         shelf?.average_shelf_position == null ? null : formatMean(shelf.average_shelf_position),
     },
     {
       label: 'First-position rate',
-      sub: 'Share of ranked answers that put you first.',
       value: shelfPercent(shelf?.first_position_win_rate ?? null),
     },
   ];
@@ -410,7 +395,6 @@ export function OverviewSections({
           kind="empty"
           icon={ShoppingBag}
           heading={`No shopping answers in the last ${overview.window_days} days`}
-          description="Rankings, merchants and fan-out queries appear once a Commerce run measures your shopping prompts."
           action={
             <Button asChild>
               <ProjectLink href="/products">Open Products</ProjectLink>
@@ -442,21 +426,13 @@ export function OverviewSections({
       <AppGrid layout="halves">
         <ProductList
           title="Most visible"
-          description="Your products named in the most answers."
-          empty={{
-            heading: 'No product named yet',
-            description: 'No answer in this window named one of your products.',
-          }}
+          empty="No product named yet"
           rows={overview.most_visible}
           scope={scope}
         />
         <ProductList
           title="Least visible"
-          description="Your products named in the fewest answers."
-          empty={{
-            heading: 'Nothing else to list',
-            description: 'Every product is listed under Most visible.',
-          }}
+          empty="Every product is listed under Most visible"
           rows={overview.least_visible}
           scope={scope}
         />

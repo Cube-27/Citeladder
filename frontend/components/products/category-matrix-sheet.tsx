@@ -98,7 +98,7 @@ export function CategoryMatrixSheet({
       onOpenChange={onOpenChange}
       title="Shopping prompts"
       eyebrow={categoryLabel}
-      description="One prompt per buyer context and intent stage, plus a few branded comparisons. Generated prompts stay disabled until you approve them."
+      description="Generated prompts stay disabled until you approve them."
       footer={
         canRun ? (
           <Button

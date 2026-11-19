@@ -2,7 +2,6 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
-import type { TrendEvent } from '@/components/ui/series-data';
 import { SegmentedControl } from '@/components/ui/tabs';
 import {
   metricCodec,
@@ -60,9 +59,6 @@ export function CompetitorTrend({
   );
 }
 
-function competitorCaption(_runs: number, events: readonly TrendEvent[]): string {
-  const marker = events.some((event) => event.kind === 'action')
-    ? ' A marker shows when work went live, not that it changed these rates.'
-    : '';
-  return `A line breaks where two runs are not comparable, so a run with no comparable run beside it shows as a lone mark.${marker}`;
+function competitorCaption(): string {
+  return 'A line breaks between runs that are not comparable.';
 }

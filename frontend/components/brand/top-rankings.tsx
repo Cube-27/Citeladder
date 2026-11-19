@@ -6,7 +6,7 @@ import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { GridTableSkeleton, RankLegend, RankTable } from '@/components/ui/heat-table';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -83,7 +83,6 @@ export function TopRankings({
         }
       >
         <SectionTitle id="insights-rankings">Top rankings</SectionTitle>
-        <SectionDescription>Leading brands in each segment, by visibility</SectionDescription>
       </SectionHeader>
       <Stack>
         {matrixBodyState(

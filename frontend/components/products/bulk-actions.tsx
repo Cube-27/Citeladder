@@ -24,10 +24,9 @@ export function BulkActions({
 }>) {
   const noun = count === 1 ? 'product' : 'products';
   const tooMany = count > COMMERCE_TARGETS_MAX;
-  let hint = 'Check products to use bulk actions.';
-  if (tooMany)
-    hint = `Competitors can be found for up to ${COMMERCE_TARGETS_MAX} products at a time.`;
-  else if (count) hint = 'Find competitors for every checked product.';
+  const hint = tooMany
+    ? `Competitors can be found for up to ${COMMERCE_TARGETS_MAX} products at a time.`
+    : null;
   return (
     <Section>
       <Inline gap="compact" className="flex-wrap justify-between">
@@ -35,7 +34,7 @@ export function BulkActions({
           <span aria-live="polite" className={textRole('body')}>
             {count ? `${count} ${noun} selected` : 'No products selected'}
           </span>
-          <span className="type-caption">{hint}</span>
+          {hint ? <span className="type-caption">{hint}</span> : null}
           {error ? (
             <span role="alert" className="type-caption text-negative">
               {humanizeApiError(error, 'Competitor discovery could not start.').message}

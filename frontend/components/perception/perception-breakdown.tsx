@@ -98,7 +98,7 @@ function ThemeTable({
       actions={actions}
       label="Perception by theme"
       columns={THEME_COLUMNS}
-      footer={`What answers praised or criticised about you. Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions. Open a theme for its quotes.`}
+      footer={`Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
       state={themes.length ? undefined : noneHere('No themes in these answers.')}
     >
       {themes.map((theme) => {
@@ -246,7 +246,6 @@ function SourceTable({
         { key: 'answers', label: 'Answers with criticism', width: 'metric', kind: 'number' },
         { key: 'example', label: 'Example', kind: 'url' },
       ]}
-      footer="Cited alongside the criticism, never shown to have caused it."
       state={drivers.length ? undefined : noneHere('No sources cited alongside criticism.')}
     >
       {drivers.map((driver) => (
