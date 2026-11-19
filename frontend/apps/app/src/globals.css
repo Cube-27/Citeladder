@@ -704,10 +704,6 @@
   --text-data--line-height: 1rem;
   --text-display: 1.5rem;
   --text-display--line-height: 2rem;
-  --text-stat: 1.5rem;
-  --text-stat--line-height: 2rem;
-  --text-display-md: 1.5rem;
-  --text-display-md--line-height: 2rem;
 
   /* Shape (2.4): four radii plus round. Marks, tags, kbd chips and menu items
      4; controls and wells 6; cards and menus 8; dialogs and drawers 12; round
@@ -2017,10 +2013,6 @@ label {
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
-}
-/* Chart ticks are 12px text: the caption's 16 leading, not the body's 20. */
-:root:not([data-public-surface]) .recharts-text {
-  line-height: var(--text-caption--line-height);
 }
 :root:not([data-public-surface]) .table-frame td.tabular-nums {
   font-variant-numeric: tabular-nums;
