@@ -49,7 +49,7 @@ function strikingDistanceDetail(signal: DemandSignal): string | null {
     impressions === null ? null : `${formatCount(impressions)} impressions`,
   ].filter(Boolean);
   if (!observed.length) return null;
-  return `This query ${observed.join(' with ')} — close enough that better coverage can lift it into the positions that earn clicks.`;
+  return `This query ${observed.join(' with ')}, close enough that better coverage can lift it into the positions that earn clicks.`;
 }
 
 function ctrGapDetail(signal: DemandSignal): string | null {

@@ -139,5 +139,5 @@ test('project lookup failure retries in place and only confirmed empty projects 
   // one the fixture put the reader in — so a refresh of the creation route
   // cannot silently re-target it.
   await expect(page).toHaveURL(`/onboarding?workspace=${FIXTURE_WORKSPACE_ID}`);
-  await expect(page.getByRole('heading', { name: "Let's get started" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add your brand' })).toBeVisible();
 });

@@ -73,7 +73,7 @@ function CallbackNotice({
       return (
         <Notice tone="positive">
           <strong>Google connected.</strong> Search Console and Analytics 4 are now linked through
-          one Google connection. Select a property for each below to start importing — nothing syncs
+          one Google connection. Select a property for each below to start importing. Nothing syncs
           until a property is chosen.
         </Notice>
       );
@@ -82,13 +82,13 @@ function CallbackNotice({
       return (
         <Notice tone="positive">
           <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Select a property
-          below to start importing — nothing syncs until a property is chosen.
+          below to start importing. Nothing syncs until a property is chosen.
         </Notice>
       );
     }
     return (
       <Notice tone="positive">
-        <strong>Integration connected.</strong> Select a property below to start importing — nothing
+        <strong>Integration connected.</strong> Select a property below to start importing. Nothing
         syncs until a property is chosen.
       </Notice>
     );

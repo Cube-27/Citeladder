@@ -95,7 +95,7 @@ function TrendCard({
   formatTick,
 }: Readonly<{
   title: string;
-  description: string;
+  description?: string;
   badge: string;
   points: TrendPoint[];
   /** What the line counts: its name in the legend and the table. */
@@ -107,7 +107,7 @@ function TrendCard({
     <Section>
       <SectionHeader actions={<span className="type-caption">{badge}</span>}>
         <SectionTitle>{title}</SectionTitle>
-        <SectionDescription>{description}</SectionDescription>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
       </SectionHeader>
       <SectionContent>
         <AreaChart
@@ -130,7 +130,6 @@ function ReferralVolumeCard({ data }: Readonly<{ data: AiReferrals }>) {
   return (
     <TrendCard
       title="AI-referred sessions"
-      description="GA4 sessions whose source matches a known AI assistant"
       badge={bucketCountLabel(data.granularity, data.referral_volume.length)}
       points={toCountChartPoints(data.referral_volume, {
         granularity: data.granularity,

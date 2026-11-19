@@ -109,7 +109,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       kind: 'empty',
       icon: FileText,
       headingLevel: 3,
-      heading: 'Discovering pages — sitemaps and internal links are being scanned',
+      heading: 'Discovering pages: scanning sitemaps and internal links',
     }),
   });
 

@@ -51,7 +51,7 @@ describe('PagesTable', () => {
       'AEO readiness',
       'Last audit',
     ]);
-    const link = screen.getByRole('link', { name: /^View Homepage — / });
+    const link = screen.getByRole('link', { name: /^View Homepage, / });
     expect(link).toHaveTextContent('Homepage');
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${UUID}`);
   });
@@ -212,7 +212,7 @@ describe('PagesTable', () => {
         crawlId={CRAWL}
       />,
     );
-    expect(screen.getByRole('link', { name: /^View Homepage — / })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^View Homepage, / })).toHaveAttribute(
       'href',
       `/site/crawls/${SOURCE_CRAWL}/pages/${UUID}`,
     );

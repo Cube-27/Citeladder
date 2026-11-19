@@ -64,7 +64,7 @@ function rateStat({
       <>
         <span className="block">
           {rate.value === null
-            ? 'Nothing to divide by yet — no observation has entered this denominator.'
+            ? 'Nothing to divide by yet: no observation has entered this denominator.'
             : denominatorCopy(rate)}
         </span>
         <span className="block">{caption}</span>

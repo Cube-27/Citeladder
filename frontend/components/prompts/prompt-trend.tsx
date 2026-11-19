@@ -28,7 +28,7 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
   return (
     <TitledSection
       title="Trend"
-      description="Each point is one run. A run with no successful answer is a gap, and a change in measurement conditions starts a new line."
+      description="A run with no successful answer is a gap. A change in measurement conditions starts a new line."
     >
       <SectionContent>
         <Stack gap="workspace">

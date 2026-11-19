@@ -309,7 +309,7 @@ describe('dashboardRunNotice', () => {
       badge: 'partial',
       tone: 'warning',
       message:
-        'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
+        'Some pages could not be analyzed. Partial results are shown. Re-crawl to retry the remaining pages.',
     });
   });
 
@@ -317,7 +317,7 @@ describe('dashboardRunNotice', () => {
     const notice = dashboardRunNotice({ ...noticeBase, status: 'failed' });
     expect(notice?.badge).toBe('failed');
     // Partial results exist — the "so far" phrasing stays, with the reason.
-    expect(notice?.message).toMatch(/showing the pages analyzed so far/);
+    expect(notice?.message).toMatch(/The pages analyzed so far are shown/);
   });
 
   it('drops the "pages analyzed so far" claim when nothing was analyzed (SH-2)', () => {
@@ -335,7 +335,7 @@ describe('dashboardRunNotice', () => {
       },
     });
     expect(notice?.badge).toBe('failed');
-    expect(notice?.message).not.toMatch(/showing the pages analyzed so far/);
+    expect(notice?.message).not.toMatch(/The pages analyzed so far are shown/);
     expect(notice?.message).toContain('The run failed before any page was analyzed.');
     expect(notice?.message).toContain('The domain could not be resolved (DNS)');
     expect(notice?.message).toMatch(/domain is spelled correctly/);

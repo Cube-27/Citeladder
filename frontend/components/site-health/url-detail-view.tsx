@@ -213,7 +213,7 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
         <Disclosure title="Technical details">
           <Stack gap="workspace" className="min-w-0">
             <Stack as="section" gap="item">
-              <SubsectionHeader title="Delivery" description="Static HTTP-level measurements" />
+              <SubsectionHeader title="Delivery" />
               <DeliveryMetrics delivery={detail.delivery} />
             </Stack>
             <Stack as="section" gap="item">

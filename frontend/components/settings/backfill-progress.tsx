@@ -69,7 +69,7 @@ function useBackfillProgressQuery(workspaceId: string, connectionId: string) {
 function progressLabel(progress: IntegrationBackfillProgress): string {
   const { completed_windows: completed, total_windows: total } = progress;
   if (progress.state === 'importing') {
-    return `Importing — ${completed} of ${total} windows`;
+    return `Importing: ${completed} of ${total} windows`;
   }
   const covered = coveredLabel(progress);
   if (progress.state === 'partial') {

@@ -80,7 +80,6 @@ export function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>
         if (!next && !analyze.isPending) onClose();
       }}
       title="Analyze a page"
-      description="Pick a page and the prompts it should answer."
       footer={
         <>
           <Button onClick={onClose} disabled={analyze.isPending}>

@@ -42,7 +42,7 @@ export function CompetitorThemes({
   return (
     <TitledSection
       title={TITLE}
-      description="Share of each brand’s mentions that raise the theme · quotes stay yours only"
+      description="Share of each brand’s mentions that raise the theme. Competitor quotes are never shown."
     >
       <SectionContent>
         <Stack gap="item">

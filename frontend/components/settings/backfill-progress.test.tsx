@@ -61,7 +61,7 @@ describe('BackfillProgress', () => {
     );
     renderWithProviders(<BackfillProgress connectionId={CONNECTION} />);
 
-    expect(await screen.findByText('Importing — 6 of 14 windows')).toBeInTheDocument();
+    expect(await screen.findByText('Importing: 6 of 14 windows')).toBeInTheDocument();
   });
 
   it('shows the covered date range once the import completes', async () => {

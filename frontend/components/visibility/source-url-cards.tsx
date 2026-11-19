@@ -156,7 +156,7 @@ export function BrandsCard({
   return (
     <SectionCard
       title="Named in the answers"
-      caption="Named in the answers that cited this URL — not necessarily present on the page itself."
+      caption="Named in the answers that cited this URL, not necessarily present on the page itself."
       loading={loading}
       errored={errored}
       empty="No tracked brand was named in the answers citing this URL."

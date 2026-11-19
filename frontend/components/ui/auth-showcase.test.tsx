@@ -43,7 +43,9 @@ describe('AuthShowcase', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Site Health' }));
 
     expect(shownSlide()).toHaveAccessibleName('3 of 3: Site Health');
-    expect(shownSlide()).toHaveTextContent('Find what keeps your pages out of answers.');
+    expect(shownSlide()).toHaveTextContent(
+      'Site Health crawls your site and checks indexing, structured data and AI crawler access.',
+    );
     expect(screen.getByRole('button', { name: 'Site Health' })).toHaveAttribute(
       'aria-current',
       'true',

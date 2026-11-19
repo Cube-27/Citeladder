@@ -83,8 +83,8 @@ function StripContent({
     return (
       <Notice tone="info">
         {crawl
-          ? 'Starting a fresh crawl — current results stay visible until the new run completes.'
-          : 'Starting crawl — pages will appear below as they are found.'}
+          ? 'Starting a fresh crawl. Current results stay visible until it completes.'
+          : 'Starting crawl. Pages will appear below as they are found.'}
       </Notice>
     );
   }
@@ -102,7 +102,7 @@ function StripContent({
         kind="empty"
         icon={ICONS.siteHealth}
         heading="No crawl yet"
-        description="Discover and analyze your site's pages for AI search optimization. Start a crawl to see your pages, scores, and issues here — this screen updates in place as the crawl progresses."
+        description="Start a crawl to see your pages, scores and issues."
       />
     );
   }
@@ -253,9 +253,9 @@ function DiscoveryStrip({
   const sampleMode = crawl.sample_mode;
   let narration: string;
   if (cancelPending) {
-    narration = 'Stopping crawl — finishing the page in flight';
+    narration = 'Stopping crawl: finishing the page in flight';
   } else if (provisional) {
-    narration = `${discoveryProgressLabel(crawl)} — scanning continues in the background`;
+    narration = `${discoveryProgressLabel(crawl)}. Scanning continues in the background`;
   } else {
     narration = discoveryProgressLabel(crawl);
   }
@@ -302,14 +302,14 @@ function AnalysisStrip({
 type ProgressCount = { label: string; value: number | null };
 
 function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
-  if (cancelPending) return 'Cancelling — finishing the page in flight and stopping';
+  if (cancelPending) return 'Cancelling: finishing the page in flight and stopping';
   if (crawl.counters.activity.state === 'waiting') {
     return crawl.counters.activity.reason === 'host_gate'
       ? 'Waiting for the site host gate while the worker lease stays healthy'
       : 'Waiting for the next persisted retry window';
   }
   if (crawl.counters.activity.state === 'stalled')
-    return 'Worker lease expired — recovery is pending';
+    return 'Worker lease expired. Recovery is pending.';
   return !crawl.sample_mode && !isDiscoveryTerminal(crawl.discovery_status)
     ? 'Auditing monitored pages while discovery re-scans the site in the background'
     : 'Auditing monitored pages for Web fundamentals and AEO issues';

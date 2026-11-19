@@ -14,7 +14,6 @@ type SlideId = 'mcp' | 'search' | 'site-health';
 type Slide = Readonly<{
   id: SlideId;
   name: string;
-  caption: string;
   line: string;
   /** The product window, and the card that floats over it. */
   main: Shot;
@@ -29,7 +28,6 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   {
     id: 'mcp',
     name: 'Connect MCP',
-    caption: 'Ask your AI assistant about your visibility.',
     line: 'Connect Claude, ChatGPT or another MCP client to read your CiteLadder evidence in chat.',
     main: { file: 'mcp-main', width: 541, height: 357 },
     accent: { file: 'mcp-accent', width: 615, height: 70 },
@@ -37,7 +35,6 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   {
     id: 'search',
     name: 'Keyword Research',
-    caption: 'See the keywords you share with competitors.',
     line: 'Keyword Research lists the keywords you rank for, the domains you compete with and your backlinks.',
     main: { file: 'search-main', width: 471, height: 283 },
     accent: { file: 'search-accent', width: 252, height: 184 },
@@ -45,7 +42,6 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   {
     id: 'site-health',
     name: 'Site Health',
-    caption: 'Find what keeps your pages out of answers.',
     line: 'Site Health crawls your site and checks indexing, structured data and AI crawler access.',
     main: { file: 'site-health-main', width: 661, height: 305 },
     accent: { file: 'site-health-accent', width: 202, height: 96 },
@@ -201,7 +197,7 @@ const SHOWCASE_CONTROL =
  * AuthShowcase — account access's product showcase: one feature per slide on
  * a flat, black-and-white `well` half filling the window's right side edge to
  * edge, its content centred. Every slide shares one grid cell, so the stage
- * and caption keep the tallest slide's size and nothing moves between slides.
+ * and line keep the tallest slide's size and nothing moves between slides.
  * It turns slowly, pauses while hovered or focused, and never turns on its own
  * under reduced motion; the dots and the pause control are keyboard reachable.
  */
@@ -274,7 +270,6 @@ export function AuthShowcase() {
                 ) : null}
               </div>
               <div className="max-w-narrow grid gap-2 text-center">
-                <p className={textRole('title', 'text-balance')}>{slide.caption}</p>
                 <p className={textRole('body', 'text-ink-2 text-balance')}>{slide.line}</p>
               </div>
             </section>

@@ -54,7 +54,7 @@ export function CopyButton({
   // text steady; the check icon and toast confirm success without resizing it.
   const iconLabel = status === 'copied' ? copiedLabel : 'Copy';
   let label: ReactNode = children;
-  if (status === 'error') label = 'Copy failed — retry';
+  if (status === 'error') label = 'Copy failed. Retry.';
 
   return (
     <Button

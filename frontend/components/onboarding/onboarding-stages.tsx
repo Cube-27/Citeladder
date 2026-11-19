@@ -38,7 +38,7 @@ export function BrandStage({
   return (
     <SetupStep
       titleId={STAGE_HEADING_ID}
-      title={isAdditional ? 'Add a project' : "Let's get started"}
+      title={isAdditional ? 'Add a project' : 'Add your brand'}
       help="We'll review your website, suggest comparable brands, and prepare balanced questions."
       back={actions.back}
       next={actions.next}

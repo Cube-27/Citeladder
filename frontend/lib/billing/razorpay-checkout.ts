@@ -98,7 +98,7 @@ export async function openRazorpay(
     const modal = new Constructor({
       key: checkout.public_key,
       ...referenceOption(checkout),
-      name: checkout.provider_mode === 'test' ? 'CiteLadder — Test mode' : 'CiteLadder',
+      name: checkout.provider_mode === 'test' ? 'CiteLadder (test mode)' : 'CiteLadder',
       prefill: { email },
       handler: (callback) => resolve({ fields: { ...callback } }),
       modal: { ondismiss: () => resolve(null) },

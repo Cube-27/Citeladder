@@ -33,7 +33,7 @@ export function DeveloperTicketButton({ action }: Readonly<{ action: ActionDetai
         open={open}
         onOpenChange={setOpen}
         title="Developer ticket"
-        description="Markdown for your issue tracker. Copy it and paste it into a new ticket."
+        description="Markdown for your issue tracker."
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)}>

@@ -210,10 +210,7 @@ function WebFundamentalsCard({
   onOpen,
 }: Readonly<{ data: SiteHealthOverview['web_fundamentals']; onOpen: () => void }>) {
   return (
-    <TitledSection
-      title="Web fundamentals"
-      description="What each page’s HTML and response headers show."
-    >
+    <TitledSection title="Web fundamentals">
       <SectionContent>
         <Stack gap="workspace">
           {/* One list, one area a row: a 2 × 2 grid of badges left uneven
@@ -370,12 +367,7 @@ function WebFundamentalsDrawer({
   onOpenChange: (open: boolean) => void;
 }>) {
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Web fundamentals"
-      description="What each page’s HTML and response headers show, area by area."
-    >
+    <Drawer open={open} onOpenChange={onOpenChange} title="Web fundamentals">
       <div className={ledgerClasses()}>
         {data.areas.map((area) => (
           <Stack as="section" key={area.key} className={ledgerItemClasses()}>

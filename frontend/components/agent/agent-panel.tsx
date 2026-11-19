@@ -55,7 +55,6 @@ export function AgentPanel() {
       open={open}
       onOpenChange={panel.setOpen}
       title="Agent"
-      description="Chats are saved in the Agent workspace."
       closeLabel="Close agent"
       // The panel body lays out its own scroll area and bottom-pinned composer.
       body="dock"

@@ -160,10 +160,7 @@ function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
 /** Recommendations: the section head says they are advisories, so the rows never repeat it. */
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
-    <TitledSection
-      title={`Advisories (${advisories.length})`}
-      description="Recommendations to consider."
-    >
+    <TitledSection title={`Advisories (${advisories.length})`}>
       <SectionContent>
         <DisclosureList>
           {advisories.map((issue) => (

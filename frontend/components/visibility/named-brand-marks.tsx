@@ -27,7 +27,7 @@ export function NamedBrandMarks({
       {brands.map((brand) => (
         <Tooltip
           key={`${brand.kind}:${brand.name}`}
-          content={`${brand.name} — named in ${brand.responses} of ${answers}`}
+          content={`${brand.name}: named in ${brand.responses} of ${answers}`}
         >
           <span className="inline-flex">
             {/* The mark is decorative; the name is what a screen reader hears. */}

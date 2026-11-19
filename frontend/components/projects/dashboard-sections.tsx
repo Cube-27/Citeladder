@@ -353,7 +353,6 @@ export function RankedActionsCard({
     <WidgetFrame
       id="ranked-actions"
       title="Ranked actions"
-      description={actions.length ? 'Shared order · drag or use the arrow controls.' : undefined}
       link={{ href: '/actions', label: 'View all' }}
     >
       {actions.length ? (

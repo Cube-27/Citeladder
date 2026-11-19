@@ -20,7 +20,7 @@ export function BrandOnPage({
       <p className={textRole('body', 'text-ink-2')}>{heading}</p>
       <p className={textRole('body')}>
         {brand.entity_name}
-        {verdict ? ` — ${verdict.toLowerCase()}` : ''}
+        {verdict ? `: ${verdict.toLowerCase()}` : ''}
       </p>
       {brand.passages.map((passage) => (
         <Passage key={passage}>{passage}</Passage>

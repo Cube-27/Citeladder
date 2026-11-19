@@ -142,7 +142,7 @@ export function InviteDialog({
                 <span>
                   {deliveryNotice(delivery)}
                   Share this one-time acceptance link. It is shown once and cannot be retrieved
-                  again — resending issues a new link and invalidates this one.
+                  again. Resending issues a new link and invalidates this one.
                 </span>
                 <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
                   {acceptanceLink(issuedToken)}
