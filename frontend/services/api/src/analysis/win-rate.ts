@@ -83,9 +83,9 @@ export function winTally(answers: readonly FirstNamed[], brandKey: string): WinT
   return { answers: counted, first };
 }
 
-/** The tally a metric snapshot persisted; corrupt or missing fails. */
-export function storedWinTally(value: unknown): WinTally {
-  return winTallySchema.parse(value);
+/** The tally a metric block persisted; null for an unmeasured slice (`{}`), and a corrupt one fails. */
+export function storedWinTally(value: unknown): WinTally | null {
+  return value === undefined ? null : winTallySchema.parse(value);
 }
 
 const UNAVAILABLE: WinCounts = { win_count: null, win_answers: null, win_rate: null };
@@ -118,6 +118,6 @@ export function sumWinCounts(parts: readonly WinCounts[]): WinCounts {
   return parts.length ? counted(count, answers) : UNAVAILABLE;
 }
 
-export function winCounts(tally: WinTally, name: string): WinCounts {
-  return counted(ownCount(tally.first, name), tally.answers);
+export function winCounts(tally: WinTally | null, name: string): WinCounts {
+  return tally === null ? UNAVAILABLE : counted(ownCount(tally.first, name), tally.answers);
 }

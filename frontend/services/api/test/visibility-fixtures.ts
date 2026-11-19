@@ -15,14 +15,6 @@ import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts'
 import { asOwner, Fixtures } from './support.ts';
 
 const now = () => new Date();
-// A finalized snapshot always carries a win tally; tests that don't care get an empty one.
-const withWinTally = (metrics: Json) =>
-  metrics !== null &&
-  typeof metrics === 'object' &&
-  !Array.isArray(metrics) &&
-  !('win_tally' in metrics)
-    ? { win_tally: { answers: 0, first: {} }, ...metrics }
-    : metrics;
 
 export type Json = Parameters<typeof JSON.stringify>[0];
 
@@ -586,7 +578,7 @@ export class VisibilityFixtures extends Fixtures {
         total_completed: 0,
         total_failed: 0,
         visibility_score: input.visibilityScore ?? 0,
-        metrics: JSON.stringify(withWinTally(input.metrics)),
+        metrics: JSON.stringify(input.metrics),
         source_analysis_ids: JSON.stringify([]),
         source_artifact_ids: JSON.stringify([]),
         owned_citation_count: 0,
