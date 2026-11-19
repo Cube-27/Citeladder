@@ -246,7 +246,6 @@ export function demandControls(demand: Demand): ReactNode {
         <Inline
           as="span"
           gap="status"
-          data-demand-status=""
           className="rail:flex-nowrap rail:whitespace-nowrap items-baseline whitespace-normal"
         >
           <span>

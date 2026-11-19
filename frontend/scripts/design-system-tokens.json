@@ -22,14 +22,6 @@
         "usage": "The ground: the page of the app and the website and the app's top bar (white cards sit on it in light, lighter cards in dark). Never an inset."
       },
       {
-        "name": "sidebar",
-        "value": {
-          "light": "{paper}",
-          "dark": "{paper}"
-        },
-        "usage": "The app's sidebar column and navigation drawer: one step off the page, darker in both themes; its selected row lifts to `surface`. The website has no sidebar, so the system's value is the ground and the app rebinds it."
-      },
-      {
         "name": "surface",
         "value": {
           "light": "oklch(100% 0 0)",

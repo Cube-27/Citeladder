@@ -108,7 +108,6 @@ colors:
   raised: '#ffffff' # dark '#151515'
   rule: '#e5e5e5' # dark '#2a2a2a'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
-  sidebar: '#f4f4f4' # dark '#0a0a0a'
   stage-lilac: '#dfd6f7' # dark '#231b3d'
   stage-mint: '#cdeedf' # dark '#0f2a26'
   stage-peach: '#fcdac6' # dark '#2f1b22'

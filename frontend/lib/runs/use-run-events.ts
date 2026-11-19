@@ -1,9 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
-import { API_BASE_URL } from '@/lib/config/operational';
 import { invalidationsFor, parseAuditEvent, type RawSseFrame } from '@/lib/api/run-events';
-import { refreshAuditDetail, refreshAuditExecutions, refreshAuditResults } from '@/lib/api/runs';
+import {
+  refreshAuditDetail,
+  refreshAuditExecutions,
+  refreshAuditResults,
+  runsApi,
+} from '@/lib/api/runs';
 import {
   RUN_STREAM_INVALIDATE_DEBOUNCE_MS,
   RUN_STREAM_RECONNECT_BASE_MS,
@@ -50,7 +54,7 @@ export function useRunEvents(
   useSseEventStream({
     workspaceId,
     enabled: enabled && Boolean(auditId),
-    url: auditId ? `${API_BASE_URL}/audits/${auditId}/events?stream=true` : null,
+    url: auditId ? runsApi.eventsUrl(auditId) : null,
     invalidateDebounceMs: RUN_STREAM_INVALIDATE_DEBOUNCE_MS,
     reconnectBaseMs: RUN_STREAM_RECONNECT_BASE_MS,
     reconnectMaxMs: RUN_STREAM_RECONNECT_MAX_MS,

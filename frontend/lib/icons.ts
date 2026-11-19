@@ -5,7 +5,6 @@ import {
   BookOpen,
   Bot,
   ChartLine,
-  Check,
   CreditCard,
   FileBarChart,
   FileText,
@@ -14,7 +13,6 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListChecks,
-  LoaderCircle,
   MapPin,
   MessageSquareQuote,
   MessageSquareText,
@@ -80,8 +78,6 @@ export const ICONS = {
   queryFanouts: Search,
   promptBuilder: Sparkles,
   competitors: Swords,
-  // The answer engines themselves (the surfaces a run asks).
-  analytics: Bot,
   searchIntelligence: Telescope,
   aiTraffic: Activity,
   performance: TrendingUp,
@@ -102,10 +98,8 @@ export const ICONS = {
   connect: Plug,
   // Shared UI concepts.
   market: MapPin,
-  spinner: LoaderCircle,
   warning: TriangleAlert,
   danger: AlertCircle,
-  success: Check,
 } as const;
 
 /** A product concept with a canonical glyph. */

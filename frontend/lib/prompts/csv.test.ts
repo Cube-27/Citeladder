@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { toCsvForTest } from '@/lib/csv/download';
+import { toCsv } from '@/lib/csv/download';
 
 import {
   PROMPT_CSV_COLUMNS,
@@ -32,7 +32,7 @@ describe('tokenizeCsv', () => {
 
 describe('parsePromptCsv', () => {
   it('round-trips the downloadable sample through the parser', () => {
-    const parsed = parsePromptCsv(`﻿${toCsvForTest(PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS)}`);
+    const parsed = parsePromptCsv(`﻿${toCsv(PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS)}`);
     expect(parsed.hasHeader).toBe(true);
     expect(parsed.errors).toEqual([]);
     expect(validRows(parsed).map((row) => [row.topic, row.text])).toEqual(PROMPT_CSV_SAMPLE_ROWS);
