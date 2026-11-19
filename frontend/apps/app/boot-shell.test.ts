@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { DASHBOARD_GROUPS, FOOT_NAV_ITEMS } from '@/components/layout/nav-items';
+import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import * as manifest from '@/lib/navigation/app-routes';
 
 import { BOOT_SIDEBAR_MARKER, bootSidebarHtml, bootTitleScript } from './boot-shell';
@@ -86,6 +87,38 @@ describe('boot-title.js', () => {
     expect(bootAt('/projects').width).toBe('480px');
     window.localStorage.removeItem('citeladder:app:sidebar-width');
     expect(bootAt('/projects').width).toBe('');
+  });
+});
+
+describe('the boot shell geometry', () => {
+  // The app's tokens: the first `:root:not([data-public-surface])` block.
+  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(
+    readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8'),
+  )?.[1];
+  const token = (name: string) =>
+    Number(new RegExp(`${name}: (\\d+)px;`, 'u').exec(appTokens ?? '')?.[1]);
+  const px = (element: Element, property: 'height' | 'marginTop' | 'marginBottom') =>
+    Number.parseFloat(getComputedStyle(element)[property]);
+
+  it('draws the masthead, the switch and the rows at the live tokens and weights', () => {
+    bootAt('/projects');
+    const at = (selector: string) => document.querySelector(selector)!;
+    const mode = at('.boot-mode');
+    expect({
+      masthead: px(at('.boot-mast'), 'height'),
+      ident: px(at('.boot-ident'), 'height'),
+      switch: px(mode, 'height'),
+      switchRow: px(mode, 'marginTop') + px(mode, 'height') + px(mode, 'marginBottom'),
+      row: px(at('.boot-row'), 'height'),
+      rowWeight: getComputedStyle(at('.boot-row')).fontWeight,
+    }).toEqual({
+      masthead: token('--masthead-height'),
+      ident: token('--masthead-height'),
+      switch: token('--control-md'),
+      switchRow: token('--filter-bar-height'),
+      row: token('--nav-row-height'),
+      rowWeight: sidebarNavRowClasses(false).includes('font-normal') ? '400' : '500',
+    });
   });
 });
 
