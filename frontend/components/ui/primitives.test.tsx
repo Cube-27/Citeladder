@@ -101,7 +101,7 @@ describe('Input + Field', () => {
 
 describe('Select', () => {
   it('shows the placeholder for an empty value, and an empty option when one exists', () => {
-    const choices = [{ value: 'b2b', label: 'Businesses' }];
+    const choices = [{ value: 'b2b' as const, label: 'Businesses' }];
     const { rerender } = render(
       <Select<'' | 'b2b'> ariaLabel="Buyer" value="" placeholder="Not set" options={choices} />,
     );
@@ -111,7 +111,7 @@ describe('Select', () => {
         ariaLabel="Buyer"
         value=""
         placeholder="Not set"
-        options={[{ value: '', label: 'Anyone' }, ...choices]}
+        options={[{ value: '' as const, label: 'Anyone' }, ...choices]}
       />,
     );
     expect(screen.getByRole('combobox', { name: 'Buyer' })).toHaveTextContent('Anyone');

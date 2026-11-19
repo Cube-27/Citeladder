@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
+import { type TrendPoint } from '@/components/ui/series-data';
 import { textRole } from '@/components/ui/typography';
 import {
   searchIntelligenceQueries,
@@ -95,7 +96,7 @@ function HistoryBody({
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
         <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>
-        <StepChart
+        <AreaChart
           label="Saved monthly backlink totals"
           name="Backlinks"
           data={points((row) => row.backlinks)}
@@ -105,7 +106,7 @@ function HistoryBody({
       </Stack>
       <Stack gap="compact" className="min-w-0 content-start">
         <h3 className={textRole('subheading', 'min-h-6')}>Monthly changes</h3>
-        <StepChart
+        <AreaChart
           label="Saved monthly new and lost backlinks"
           name="New backlinks"
           data={points((row) => row.new)}

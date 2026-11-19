@@ -148,6 +148,7 @@ function FacetChoice<T extends string>({
       {(field) => (
         <Select<T | ''>
           id={field.id}
+          ariaLabel={label}
           aria-describedby={field['aria-describedby']}
           value={value ?? ''}
           placeholder="Not set"

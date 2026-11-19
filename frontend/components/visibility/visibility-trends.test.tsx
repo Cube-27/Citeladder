@@ -134,7 +134,7 @@ describe('Your brand over time', () => {
       <BrandTrend query={loaded([point('2026-11-17T00:00:00Z', 0.31)])} selected={selected} />,
     );
     expect(container.querySelector('[data-single-measurement]')).toBeNull();
-    expect(container.querySelectorAll('[data-trend-line="you"] circle')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-trend-point="you"]')).toHaveLength(1);
     expect(lineNames(container)).toEqual(['You', 'Kmart Australia', 'Target Australia']);
     // Each brand's mark sits in its key entry.
     expect(container.querySelectorAll('ul[aria-hidden] li [data-brand-mark]')).toHaveLength(3);

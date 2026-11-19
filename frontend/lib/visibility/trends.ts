@@ -8,7 +8,7 @@
  * projects persisted values for display (invariant 7). Average position stays
  * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
-import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
+import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/series-data';
 import type { RankingRow, VisibilityTrendEvent, VisibilityTrendPoint } from '@citeladder/contracts';
 import type { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import {

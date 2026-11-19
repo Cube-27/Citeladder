@@ -11,7 +11,7 @@ import { PartDonut } from '@/components/ui/part-donut';
 import { Section, SectionContent, SectionStack, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { textRole } from '@/components/ui/typography';
 import {
   EntityTable,
@@ -227,7 +227,7 @@ function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend']
     >
       <SectionContent>
         {trend.length > 1 ? (
-          <StepChart
+          <AreaChart
             label="Net sentiment over time"
             data={sentimentTrend(trend, (iso) => formatDisplayDate(iso, timeZone))}
             yMin={-100}

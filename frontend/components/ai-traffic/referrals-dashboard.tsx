@@ -3,7 +3,8 @@ import { SearchX } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { AppGrid } from '@/components/ui/app-grid';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
+import { type TrendPoint } from '@/components/ui/series-data';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import {
   aiSourceLabel,
@@ -109,7 +110,7 @@ function TrendCard({
         <SectionDescription>{description}</SectionDescription>
       </SectionHeader>
       <SectionContent>
-        <StepChart
+        <AreaChart
           label={title}
           name={unit}
           data={points}

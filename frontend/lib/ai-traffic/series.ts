@@ -1,5 +1,5 @@
 /** Display-only helpers for the persisted AI-referral projection. */
-import type { TrendPoint } from '@/components/ui/step-chart';
+import type { TrendPoint } from '@/components/ui/series-data';
 import type { AiReferrals, AiSource } from '@/lib/api/ai-traffic';
 import { formatShortDate } from '@/lib/format';
 import { label } from './vocabulary';

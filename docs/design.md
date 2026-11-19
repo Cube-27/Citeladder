@@ -482,9 +482,14 @@ its own spacing, size or radius on them.
   region.
 - **Links** in a list, table or card underline on hover and focus; a link
   inside a sentence keeps its underline.
-- **Charts** draw time series as steps, your series in the accent and last.
-  A missing period is a gap with a `well` band, never a zero and never
-  interpolated. Charts carry a written description for assistive tech.
+- **Charts** in the app are Recharts in HeroUI's chart style (owner,
+  2026-11-19; `chart-tooltip.tsx` holds the shared look): monotone areas with a
+  gradient fill, a faint dashed horizontal grid, no axis or tick lines, round
+  y steps, a tooltip card on hover and the arrow keys, donuts with rounded,
+  gapped segments. The website keeps its stepped charts. Your series is the
+  accent and drawn last. A missing period is a gap under a `well` band, never
+  a zero and never interpolated. Charts carry a written description and a
+  table for assistive tech.
 - **Focus** is one ring on every interactive element but an app field (which
   glows, above), in both themes: 2px solid `focus` (ink), 2px out. Never removed, never the
   accent. After a pointer press only text fields keep it

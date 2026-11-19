@@ -25,7 +25,7 @@ const FRAME_HEIGHT = {
  *: the height role as a floor, so loading, a
  * read error or an empty selection hold the plot's footprint, and the text
  * summary assistive technology reads instead of the drawing. A drawing sized
- * by its own rows (a distribution of MeterRows, a StepChart of one
+ * by its own rows (a distribution of MeterRows, an AreaChart of one
  * measurement) passes no `height`.
  */
 export function ChartFrame({

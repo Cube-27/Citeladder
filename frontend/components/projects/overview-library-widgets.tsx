@@ -7,7 +7,7 @@ import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contra
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Delta } from '@/components/ui/delta';
 import { Inline } from '@/components/ui/layout';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { ValueLedger } from '@/components/ui/facts';
@@ -144,7 +144,7 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
       >
         {(points) =>
           points.length ? (
-            <StepChart
+            <AreaChart
               data={toChartPoints(points, 'brand_mention_rate')}
               label="Visibility by run"
               height="sm"

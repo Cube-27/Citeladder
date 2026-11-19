@@ -166,7 +166,7 @@ const SCROLL_STEP_HEIGHT = 24;
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
 const ICON_TILE_SIZE = 40;
-/** A ControlRow and an IdentityRow hold their parts 8 apart (compact-gap). */
+/** A ControlRow holds its parts 8 apart (compact-gap). */
 const ROW_PART_GAP = 8;
 /** A ruled fact list pads each fact 8 above and below. */
 const FACT_ROW_PADDING_Y = 8;
@@ -451,10 +451,10 @@ function measure({ route }: { route: string }) {
     add('icon-tile.size', element, rect.width);
     add('icon-tile.size', element, rect.height);
   }
-  // A ControlRow's and an IdentityRow's parts: the drawn space between the
+  // A ControlRow's parts: the drawn space between the
   // leading mark and the text, and (ControlRow) the gap the row keeps open
   // between the text and its controls.
-  for (const row of all('[data-control-row], [data-identity-row]')) {
+  for (const row of all('[data-control-row]')) {
     const [lead] = Array.from(row.children).filter(visible);
     const parts = lead ? Array.from(lead.children).filter(visible) : [];
     const [media, text] = parts;

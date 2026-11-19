@@ -1,9 +1,10 @@
 import { useContext, type ReactNode } from 'react';
+import { Cell, Pie, PieChart } from 'recharts';
 
 import { chartPercent } from '@/components/ui/chart';
+import { roleColor, SERIES_COLOR } from '@/components/ui/chart-tooltip';
 import {
   SERIES_FILL,
-  SERIES_STROKE,
   SeriesTonesContext,
   seriesTone,
   type SeriesTone,
@@ -27,31 +28,26 @@ export type Part = Readonly<{
 
 type PartStatus = 'positive' | 'neutral' | 'negative' | 'warning';
 
-const STATUS_INK: Record<PartStatus, { stroke: string; fill: string }> = {
-  positive: { stroke: 'stroke-positive', fill: 'bg-positive' },
-  neutral: { stroke: 'stroke-data-other', fill: 'bg-data-other' },
-  negative: { stroke: 'stroke-negative', fill: 'bg-negative' },
-  warning: { stroke: 'stroke-warning', fill: 'bg-warning' },
+const STATUS_INK: Record<PartStatus, { color: string; fill: string }> = {
+  positive: { color: 'var(--color-positive)', fill: 'bg-positive' },
+  neutral: { color: 'var(--color-data-other)', fill: 'bg-data-other' },
+  negative: { color: 'var(--color-negative)', fill: 'bg-negative' },
+  warning: { color: 'var(--color-warning)', fill: 'bg-warning' },
 };
 
-/** The ring on a 100-unit box: its radius and width, and the gap between segments. */
-const RADIUS = 40;
-const RING = 16;
-const GAP = 0.8;
-/** The remainder's ink as an SVG attribute: one rule fewer in the eager CSS. */
 const WELL = 'var(--color-well)';
 
 type Row = Readonly<{
   label: string;
   value: number;
-  /** Its `data-part` name and stroke and swatch classes; null inks it `well`. */
-  ink: { part: string; stroke: string; fill: string } | null;
+  /** Its `data-part` name, segment colour and swatch class; null inks it `well`. */
+  ink: { part: string; color: string; fill: string } | null;
   share: number;
 }>;
 
 function partInk(status: PartStatus | undefined, tone: SeriesTone): NonNullable<Row['ink']> {
   if (status) return { part: status, ...STATUS_INK[status] };
-  return { part: tone, stroke: SERIES_STROKE[tone], fill: SERIES_FILL[tone] };
+  return { part: tone, color: SERIES_COLOR[tone], fill: SERIES_FILL[tone] };
 }
 
 /**
@@ -116,11 +112,11 @@ export function PartDonut({
         className="relative w-36 shrink-0"
       >
         <DonutRing
+          size={144}
           segments={rows.map((row) => ({
             key: row.label,
             share: row.share,
-            stroke: row.ink?.stroke ?? null,
-            part: row.ink?.part ?? 'remainder',
+            color: row.ink?.color ?? WELL,
           }))}
         />
         {totalLabel ? (
@@ -133,7 +129,10 @@ export function PartDonut({
       <ul aria-hidden className="flex min-w-44 flex-1 flex-col gap-2">
         {rows.map((row) => (
           <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
-            <span className={cn('rounded-mark size-2 shrink-0', row.ink?.fill ?? 'bg-well')} />
+            <span
+              data-part={row.ink?.part ?? 'remainder'}
+              className={cn('rounded-full size-2 shrink-0', row.ink?.fill ?? 'bg-well')}
+            />
             <span className="text-ink min-w-0 flex-1 truncate" title={row.label}>
               {row.label}
             </span>
@@ -153,7 +152,7 @@ type CountPart = Readonly<{
   /** Its name in the legend, e.g. a StatusMark. */
   term: ReactNode;
   value: number;
-  /** A `stroke-*` class for its segment. */
+  /** A `stroke-*` class naming its segment's colour role (`stroke-negative`). */
   stroke: string;
 }>;
 
@@ -183,11 +182,11 @@ export function CountDonut({
       </dl>
       <div className="w-24 shrink-0">
         <DonutRing
+          size={96}
           segments={parts.map((part) => ({
             key: part.key,
             share: whole ? part.value / whole : 0,
-            stroke: part.stroke,
-            part: part.key,
+            color: roleColor(part.stroke, 'stroke'),
           }))}
         />
       </div>
@@ -199,42 +198,47 @@ type DonutSegment = Readonly<{
   key: string;
   /** Its share of the whole, 0 to 1. */
   share: number;
-  /** A `stroke-*` class; null inks the segment `well`. */
-  stroke: string | null;
-  /** Its `data-part`, which names the segment to tests and styles. */
-  part: string;
+  /** Its colour, a CSS colour. */
+  color: string;
 }>;
 
 /**
- * DonutRing — the bare ring, clockwise from the top in thin-gapped segments,
- * filling its container's width; decorative, so its caller names it. A zero
- * is left out, and an empty whole is one `well` ring.
+ * DonutRing — the bare ring in HeroUI's chart style (owner, 2026-11-19), drawn
+ * with Recharts: clockwise from the top in rounded segments with small gaps;
+ * decorative, so its caller names it. A zero is left out, and an empty whole
+ * is one `well` ring.
  */
-function DonutRing({ segments }: Readonly<{ segments: readonly DonutSegment[] }>) {
+function DonutRing({
+  segments,
+  size,
+}: Readonly<{ segments: readonly DonutSegment[]; size: number }>) {
   const drawn = segments.filter((segment) => segment.share > 0);
-  const ring = { cx: 50, cy: 50, r: RADIUS, fill: 'none', strokeWidth: RING, pathLength: 100 };
-  const gap = drawn.length > 1 ? GAP : 0;
+  const data = drawn.length ? drawn : [{ key: 'empty', share: 1, color: WELL }];
   return (
-    <svg aria-hidden viewBox="0 0 100 100" className="block w-full -rotate-90">
-      {drawn.length ? (
-        drawn.map((segment, index) => {
-          const length = Math.max(segment.share * 100 - gap, 0.5);
-          const offset = drawn.slice(0, index).reduce((sum, before) => sum + before.share * 100, 0);
-          return (
-            <circle
-              key={segment.key}
-              {...ring}
-              data-part={segment.part}
-              strokeDasharray={`${length} ${100 - length}`}
-              strokeDashoffset={-offset}
-              stroke={segment.stroke ? undefined : WELL}
-              className={segment.stroke ?? undefined}
-            />
-          );
-        })
-      ) : (
-        <circle {...ring} stroke={WELL} />
-      )}
-    </svg>
+    <div aria-hidden className="block w-full">
+      <PieChart
+        width={size}
+        height={size}
+        style={{ width: '100%', height: 'auto', aspectRatio: 1 }}
+      >
+        <Pie
+          data={data.map((segment) => ({ ...segment }))}
+          dataKey="share"
+          nameKey="key"
+          startAngle={90}
+          endAngle={-270}
+          innerRadius="68%"
+          outerRadius="100%"
+          paddingAngle={data.length > 1 ? 2 : 0}
+          cornerRadius={4}
+          stroke="none"
+          isAnimationActive={false}
+        >
+          {data.map((segment) => (
+            <Cell key={segment.key} fill={segment.color} />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
   );
 }

@@ -12,7 +12,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { SiteHealthOverview } from '@citeladder/contracts';
@@ -246,7 +246,7 @@ function OpenIssuesTrendCard({
     >
       <SectionContent>
         <Stack gap="item">
-          <StepChart
+          <AreaChart
             data={points.map((point) => ({
               label: point.day,
               value: point.open_count,

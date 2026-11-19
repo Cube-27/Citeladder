@@ -1,5 +1,6 @@
 import { Stack } from '@/components/ui/layout';
-import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
+import { type TrendPoint } from '@/components/ui/series-data';
 import {
   SeriesTonesContext,
   seriesTones,
@@ -77,7 +78,7 @@ function MetricChart({ series, height }: Readonly<{ series: ChartSeries; height:
     comparing ? ', with comparison period' : ''
   }`;
   return (
-    <StepChart
+    <AreaChart
       data={chartPoints(series)}
       name={series.label}
       label={label}
