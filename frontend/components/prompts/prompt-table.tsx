@@ -2,7 +2,6 @@ import { Archive, Check, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
-import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -242,29 +241,28 @@ function answerOpener(
   return () => onOpenAnswer(prompt, measurement.answer);
 }
 
-/** The question: a button to its latest answer, or a link to its history before any run. */
+/**
+ * The question links to its history; once a run has measured it, a plain click
+ * opens the latest answer instead, and a modified click still opens the history.
+ */
 function PromptQuestion({
   prompt,
   openAnswer,
 }: Readonly<{ prompt: Prompt; openAnswer: (() => void) | undefined }>) {
-  if (!openAnswer)
-    return (
-      <TextLink href={promptHistoryHref(prompt.id)} text="inherit" underline="hover">
-        {prompt.text}
-      </TextLink>
-    );
   return (
-    <TextLink asChild text="inherit" underline="hover">
-      <Pressable
-        aria-haspopup="dialog"
-        onClick={(event) => {
-          event.stopPropagation();
-          openAnswer();
-        }}
-        className="w-auto min-w-0 text-start"
-      >
-        {prompt.text}
-      </Pressable>
+    <TextLink
+      href={promptHistoryHref(prompt.id)}
+      text="inherit"
+      underline="hover"
+      aria-haspopup={openAnswer ? 'dialog' : undefined}
+      onClick={(event) => {
+        const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+        if (!openAnswer || event.button !== 0 || modified) return;
+        event.preventDefault();
+        openAnswer();
+      }}
+    >
+      {prompt.text}
     </TextLink>
   );
 }

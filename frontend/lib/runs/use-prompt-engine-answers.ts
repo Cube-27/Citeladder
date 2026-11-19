@@ -37,8 +37,8 @@ export function usePromptEngineAnswers({
   const activeId = answers.some((answer) => answer.id === pickedId) ? pickedId : executionId;
   return {
     activeId,
-    /** The shown answer's execution status; null until the run's executions are read. */
-    status: run.data?.find((execution) => execution.id === activeId)?.status ?? null,
+    /** The shown answer's execution row (its status, the prompt as asked); null until read. */
+    shown: run.data?.find((execution) => execution.id === activeId) ?? null,
     /** One option per answer; a repeated engine is numbered ("ChatGPT 2"). */
     options: answers.map((answer, index) => {
       const label = catalog.label(answer.logical_engine);

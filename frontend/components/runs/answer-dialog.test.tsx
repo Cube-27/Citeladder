@@ -88,7 +88,12 @@ describe('Answer dialog', () => {
 
   it('switches to another engine’s answer to the same prompt without leaving the dialog', async () => {
     const OTHER = '22222222-2222-4222-8222-222222222222';
-    const row = { transport_provider: 'x', error_code: '', latency_ms: 1, prompt_text: 'Q' };
+    const row = {
+      transport_provider: 'x',
+      error_code: '',
+      latency_ms: 1,
+      prompt_text: 'best plumber near me',
+    };
     mswServer.use(
       http.get(`/api/v1/executions/${ID}`, () =>
         HttpResponse.json({ ...evidence, answer_text: 'From the first engine.' }),
@@ -137,9 +142,12 @@ describe('Answer dialog', () => {
     // The prompt's text is the title, and its number is not printed beside it.
     const dialog = await screen.findByRole('dialog', { name: 'best plumber' });
     await within(dialog).findByText('From the first engine.', {}, { timeout: 15_000 });
-    // The header says how the shown answer ended; the prompt is said as the title and your message.
+    // The header says how the shown answer ended. Your message is the prompt as the run asked
+    // it, not as the library words it now (the title).
     expect(await within(dialog).findByText('Succeeded')).toBeVisible();
-    expect(within(dialog).getAllByText('best plumber')).toHaveLength(2);
+    const conversation = within(dialog).getByRole('list', { name: 'Conversation' });
+    expect(within(conversation).getByText('best plumber near me')).toBeVisible();
+    expect(within(dialog).getAllByText('best plumber')).toHaveLength(1);
     expect(within(dialog).queryByText(/Prompt #/)).toBeNull();
     await user.click(await within(dialog).findByRole('button', { name: /^Engine:/u }));
     const options = await screen.findAllByRole('menuitemradio');

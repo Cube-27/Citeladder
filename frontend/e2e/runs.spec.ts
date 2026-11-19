@@ -6,7 +6,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  *
  * The `/auth/me`, `/projects`, `/audits*`, and `/executions/*` calls are stubbed
  * at the network layer so the spec runs without a live backend. It exercises the
- * in-run evidence drawer flow (shell → Runs → open run → open evidence).
+ * in-run answer dialog flow (shell → Runs → open run → open evidence).
  *
  * playwright.config.ts starts (or reuses) the dev server; if it cannot come up
  * the whole run fails to boot rather than skipping this spec.
@@ -121,9 +121,10 @@ test('shell → open run → open execution evidence', async ({ page }) => {
   await expect(page.getByText('Executions')).toBeVisible();
   await page.getByRole('button', { name: 'Evidence' }).first().click();
 
-  // Execution evidence stays in the run page's drawer: answer + citation.
-  const drawer = page.getByRole('dialog');
-  await expect(drawer).toBeVisible();
-  await expect(drawer.getByText('Acme is a leading CRM.')).toBeVisible();
-  await expect(drawer.getByText('Acme docs')).toBeVisible();
+  // The answer opens over the run page as a chat: the brand is a chip in the text, the citation in the rail.
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/is a leading CRM\./u)).toBeVisible();
+  await expect(dialog.locator('[data-brand-chip="Acme"]')).toContainText('Acme');
+  await expect(dialog.getByText('Acme docs')).toBeVisible();
 });

@@ -23,7 +23,7 @@ export function AnswerLayout({
       <div className="grid min-w-0 content-start gap-[var(--workspace-gap)]">{main}</div>
       <aside
         aria-label={railLabel}
-        className="desktop:border-s desktop:ps-[var(--workspace-gap)] border-rule flex min-w-0 flex-col gap-[var(--workspace-gap)]"
+        className="desktop:border-s desktop:pl-4 border-rule flex min-w-0 flex-col gap-[var(--workspace-gap)]"
       >
         {rail}
       </aside>
@@ -64,7 +64,7 @@ export function UserMessage({
 }: Readonly<{ avatar: ReactNode; children: ReactNode }>) {
   return (
     <li className="flex items-start justify-end gap-3">
-      <div className="bg-well text-ink type-body rounded-card max-w-[min(36rem,85%)] px-4 py-3">
+      <div className="bg-well text-ink type-body rounded-card max-w-[min(80%,var(--container-prose))] px-4 py-3">
         {children}
       </div>
       {avatar}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Globe } from 'lucide-react';
 import { lazy, useEffect, type ReactNode } from 'react';
 
@@ -147,6 +147,89 @@ function StatusChip({ status, engine }: Readonly<{ status: ExecutionStatus; engi
   );
 }
 
+/** The dialog's body: the stated absence, the read's failure, loading, or the answer itself. */
+function AnswerBody({
+  query,
+  promptText,
+  promptId,
+  unavailable,
+}: Readonly<{
+  query: UseQueryResult<ExecutionEvidence>;
+  /** The prompt as the run asked it, not as the library words it now. */
+  promptText: string | null;
+  promptId: string | undefined;
+  unavailable?: string;
+}>) {
+  if (unavailable) return <StateBlock kind="empty" icon={ICONS.runs} heading={unavailable} />;
+  if (query.isError)
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        title="Couldn't load this answer's evidence"
+        fallback="The request failed or timed out."
+      />
+    );
+  if (!query.data) return <AnswerLoading />;
+  return (
+    <LazyIsland
+      label="answer-evidence"
+      defects="surface"
+      loading={<AnswerLoading />}
+      failed={<IslandUnavailable message="Couldn't load the answer." />}
+    >
+      <AnswerEvidence evidence={query.data} promptText={promptText} promptId={promptId} />
+    </LazyIsland>
+  );
+}
+
+/** The chips that describe the shown answer, the engine filter, and the prompt's history link. */
+function AnswerToolbar({
+  evidence,
+  engines,
+  promptId,
+}: Readonly<{
+  evidence: ExecutionEvidence | undefined;
+  engines: ReturnType<typeof usePromptEngineAnswers>;
+  promptId: string | null | undefined;
+}>) {
+  return (
+    <>
+      {evidence ? (
+        <>
+          {engines.shown ? (
+            <StatusChip status={engines.shown.status} engine={evidence.logical_engine} />
+          ) : null}
+          <EngineChip engine={evidence.logical_engine} />
+          <MarketChip auditId={evidence.audit_id} />
+          <SentimentChip evidence={evidence} />
+          <FeatureFlags evidence={evidence} />
+        </>
+      ) : null}
+      {/* One engine's answer has nothing to choose; the filter appears with a second. */}
+      {engines.options.length > 1 && engines.activeId !== null ? (
+        <FilterControls
+          filters={[
+            choiceFilter({
+              id: 'engine',
+              label: 'Engine',
+              value: engines.activeId,
+              defaultValue: engines.activeId,
+              groups: [{ options: engines.options }],
+              onChange: engines.select,
+            }),
+          ]}
+        />
+      ) : null}
+      {promptId ? (
+        <TextLink href={promptHistoryHref(promptId)} text="caption" className="ms-auto">
+          Prompt history
+        </TextLink>
+      ) : null}
+    </>
+  );
+}
+
 /** One answer, drawn as the chat it was, over the screen that opened it. */
 export function AnswerDialog({
   execution,
@@ -174,40 +257,7 @@ export function AnswerDialog({
   useEffect(() => {
     if (open) void loadAnswerEvidence().catch(() => {});
   }, [open]);
-  const evidence = unavailable ? undefined : evidenceQuery.data;
 
-  let body: ReactNode;
-  if (unavailable) {
-    body = <StateBlock kind="empty" icon={ICONS.runs} heading={unavailable} />;
-  } else if (evidenceQuery.isError) {
-    body = (
-      <Notice
-        kind="read"
-        {...readErrorProps(evidenceQuery)}
-        title="Couldn't load this answer's evidence"
-        fallback="The request failed or timed out."
-      />
-    );
-  } else if (!evidence) {
-    body = <AnswerLoading />;
-  } else {
-    body = (
-      <LazyIsland
-        label="answer-evidence"
-        defects="surface"
-        loading={<AnswerLoading />}
-        failed={<IslandUnavailable message="Couldn't load the answer." />}
-      >
-        <AnswerEvidence
-          evidence={evidence}
-          promptText={execution?.prompt_text ?? null}
-          promptId={execution?.prompt_id ?? undefined}
-        />
-      </LazyIsland>
-    );
-  }
-
-  const promptId = execution?.prompt_id;
   return (
     <Dialog
       open={open}
@@ -215,38 +265,19 @@ export function AnswerDialog({
       title={answerTitle(execution)}
       width="answer"
       toolbar={
-        <>
-          {engines.status && evidence ? (
-            <StatusChip status={engines.status} engine={evidence.logical_engine} />
-          ) : null}
-          {evidence ? <EngineChip engine={evidence.logical_engine} /> : null}
-          {evidence ? <MarketChip auditId={evidence.audit_id} /> : null}
-          {evidence ? <SentimentChip evidence={evidence} /> : null}
-          {evidence ? <FeatureFlags evidence={evidence} /> : null}
-          {/* One engine's answer has nothing to choose; the filter appears with a second. */}
-          {engines.options.length > 1 && engines.activeId !== null ? (
-            <FilterControls
-              filters={[
-                choiceFilter({
-                  id: 'engine',
-                  label: 'Engine',
-                  value: engines.activeId,
-                  defaultValue: engines.activeId,
-                  groups: [{ options: engines.options }],
-                  onChange: engines.select,
-                }),
-              ]}
-            />
-          ) : null}
-          {promptId ? (
-            <TextLink href={promptHistoryHref(promptId)} text="caption" className="ms-auto">
-              Prompt history
-            </TextLink>
-          ) : null}
-        </>
+        <AnswerToolbar
+          evidence={unavailable ? undefined : evidenceQuery.data}
+          engines={engines}
+          promptId={execution?.prompt_id}
+        />
       }
     >
-      {body}
+      <AnswerBody
+        query={evidenceQuery}
+        promptText={engines.shown?.prompt_text ?? null}
+        promptId={execution?.prompt_id ?? undefined}
+        unavailable={unavailable}
+      />
     </Dialog>
   );
 }

@@ -156,7 +156,7 @@ describe('PromptLibrary first load', () => {
     renderLibrary();
 
     // The question opens the answer; it no longer leaves the library.
-    await user.click(await screen.findByRole('button', { name: prompt.text }));
+    await user.click(await screen.findByRole('link', { name: prompt.text }));
 
     // The dialog is titled by the prompt it answers.
     expect(await screen.findByRole('dialog', { name: prompt.text })).toBeVisible();

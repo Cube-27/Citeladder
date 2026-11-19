@@ -416,7 +416,10 @@ describe('PromptTable pagination', () => {
     const [, row] = screen.getAllByRole('row');
 
     await user.click(within(row!).getByText('50.0%'));
-    await user.click(screen.getByRole('button', { name: 'Prompt number 1' }));
+    // The question keeps its history address for a modified click; a plain click opens the answer.
+    const question = screen.getByRole('link', { name: 'Prompt number 1' });
+    expect(question).toHaveAttribute('href', `/prompts/${measured.id}`);
+    await user.click(question);
     expect(onOpenAnswer.mock.calls).toEqual([
       [measured, ANSWER],
       [measured, ANSWER],

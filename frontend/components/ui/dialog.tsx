@@ -188,7 +188,7 @@ export function Dialog({
             SHEET_FACE,
             'dialog-panel z-modal fixed left-1/2 flex w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
             answer
-              ? 'max-w-app top-[4dvh] h-[calc(92dvh-1.5rem)]'
+              ? 'max-w-app top-16 h-full max-h-[calc(100dvh-8rem)]'
               : 'top-[12dvh] max-h-[calc(88dvh-1.5rem)]',
             !answer && (!danger && width === 'wide' ? 'max-w-form' : 'max-w-flow'),
           )}
