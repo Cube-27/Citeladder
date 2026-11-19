@@ -53,16 +53,28 @@
   --compact-gap: 8px;
   --card-padding: 16px;
   --table-row-height: var(--row-app);
+  --sidebar-width: 224px;
   --screen-natural: 1440px;
   --screen-w: var(--screen-natural);
   --screen-h: 820px;
+  /* The app's ground, then its chrome a step lighter, then cards. The website
+     aliases ground and chrome to its paper (white in light), so the screen
+     draws the app's steps from the website's own fills. */
+  --color-ground: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 50%);
+  --color-chrome: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 20%);
 
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   gap: 0;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-paper);
+  background: var(--color-ground);
+}
+
+/* In dark the website's sunken fill is above its cards, so the ground is the paper. */
+:root[data-theme='dark'] .cl-screen--app {
+  --color-ground: var(--color-paper);
+  --color-chrome: color-mix(in oklch, var(--color-paper), var(--color-surface) 55%);
 }
 
 /* Insights runs past the hero frame's foot, which cuts it inside the competitors table. */
@@ -86,6 +98,7 @@
   min-width: 0;
   padding: 0 12px 12px;
   border-right: 1px solid var(--color-line);
+  background: var(--color-chrome);
 }
 
 .cl-app-topbar {
@@ -178,6 +191,7 @@
 }
 
 .cl-app-nav-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -187,13 +201,22 @@
   color: var(--color-ink-secondary);
 }
 
-/* The current row is the only 500 in the drawn sidebar, as in the app. */
+/* The current row is the app's 7% ink tile with the accent mark at its start. */
 
 .cl-app-nav-row.is-active {
-  background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  background: color-mix(in oklch, var(--color-ink) 7%, transparent);
   color: var(--color-ink);
   font-weight: 500;
+}
+
+.cl-app-nav-row.is-active::before {
+  position: absolute;
+  inset-block: 8px;
+  inset-inline-start: 0;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  content: '';
 }
 
 .cl-app-nav-icon {
@@ -285,6 +308,34 @@
 
 .cl-app-lede > p {
   margin: 0;
+}
+
+/* The website draws the strip without React measuring it, so its rows follow
+   `figureRows` (figure-rows.ts) by container width instead: five across while
+   each cell keeps 160px, then 3 + 2, then pairs below a 480px strip. */
+
+.cl-screen--app [data-figure-strip-frame] {
+  container: cl-figures / inline-size;
+}
+
+@container cl-figures (480px <= width < 800px) {
+  .cl-screen--app [data-figure-cell] {
+    flex-basis: calc(100% / 3);
+  }
+
+  .cl-screen--app [data-figure-cell]:nth-child(3n + 1) {
+    box-shadow: inset 0 -1px 0 var(--color-rule);
+  }
+}
+
+@container cl-figures (width < 480px) {
+  .cl-screen--app [data-figure-cell] {
+    flex-basis: 50%;
+  }
+
+  .cl-screen--app [data-figure-cell]:nth-child(2n + 1) {
+    box-shadow: inset 0 -1px 0 var(--color-rule);
+  }
 }
 
 /* Site health's split Run new crawl: two faces joined on one edge. */
