@@ -54,11 +54,7 @@ export function WorkspacePanel() {
             />
             <SettingRow
               label="Leave workspace"
-              description={
-                isOwner
-                  ? 'To leave, first make another member the owner.'
-                  : `You lose access to ${activeWorkspace.name} and its projects immediately.`
-              }
+              description={isOwner ? 'To leave, first make another member the owner.' : undefined}
               action={
                 isOwner ? null : (
                   <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>

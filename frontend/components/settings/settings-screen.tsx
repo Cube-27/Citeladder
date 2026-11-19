@@ -31,7 +31,7 @@ import { SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -93,9 +93,6 @@ function ProjectDeletionControls() {
         <SectionHeader>
           {/* Its own card: Settings has no project-scoped tab, so it stays under Account. */}
           <SectionTitle id="settings-danger-zone-title">Delete project</SectionTitle>
-          <SectionDescription>
-            Permanently delete the active project and everything inside it.
-          </SectionDescription>
         </SectionHeader>
         <Stack gap="item">
           {activeProject ? (
@@ -213,7 +210,6 @@ export function SettingsScreen() {
           <Section aria-labelledby="settings-profile-title">
             <SectionHeader>
               <SectionTitle id="settings-profile-title">Profile</SectionTitle>
-              <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
             </SectionHeader>
             <SettingRows>
               <SettingRow

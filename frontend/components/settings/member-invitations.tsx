@@ -94,7 +94,6 @@ export function InviteDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Invite member"
-      description="They receive the workspace role you choose here."
       footer={
         <>
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
@@ -183,8 +182,8 @@ export function PendingInvitations({
       title="Pending invitations"
       description={
         invitations.length
-          ? `${pluralCount(invitations.length, 'invitation')} not yet accepted. Resend a link or revoke it.`
-          : 'Invitations not yet accepted.'
+          ? `${pluralCount(invitations.length, 'invitation')} not yet accepted.`
+          : undefined
       }
     >
       <DataTable

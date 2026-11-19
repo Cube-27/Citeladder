@@ -17,7 +17,7 @@ import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -109,19 +109,9 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
       {/* The list's title is its card's head, not a heading between blocks. */}
       <SectionHeader>
         <SectionTitle>{title}</SectionTitle>
-        <SectionDescription>
-          {adminView
-            ? 'Every member’s assistant that can read this workspace. Remove one to cut it off.'
-            : 'Assistants you approved, and what each can read. Revoke one to cut it off at once.'}
-        </SectionDescription>
       </SectionHeader>
       {empty ? (
-        <StateBlock
-          kind="empty"
-          icon={ICONS.agent}
-          heading="No connections yet"
-          description="An assistant appears here once you approve its connection."
-        />
+        <StateBlock kind="empty" icon={ICONS.agent} heading="No connections yet" />
       ) : (
         <DataTable label={title} columns={COLUMNS} state={connectionsState(query, adminView)}>
           {query.data?.map((connection) => (
@@ -182,7 +172,7 @@ function RevokeDialog({
         <p className={textRole('body', 'text-ink-2')}>
           {adminView
             ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
-            : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
+            : 'The assistant stops reading or changing CiteLadder at once.'}
         </p>
         {revoke.isError ? (
           <Notice
@@ -203,9 +193,6 @@ export function McpConnections() {
       <Section aria-labelledby="mcp-connect-title">
         <SectionHeader>
           <SectionTitle id="mcp-connect-title">Connect an AI assistant</SectionTitle>
-          <SectionDescription>
-            Use CiteLadder from Claude, ChatGPT, Gemini, Cursor or Grok.
-          </SectionDescription>
         </SectionHeader>
         <ConnectStrip surface="app" />
       </Section>

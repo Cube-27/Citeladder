@@ -26,7 +26,7 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
       heading="No integrations connected"
       description={
         canManage
-          ? 'One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in.'
+          ? undefined
           : 'A workspace Owner or Admin can connect Google Search Console, Analytics 4 and Bing Webmaster Tools.'
       }
       action={

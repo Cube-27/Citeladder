@@ -261,7 +261,6 @@ export default function AccountSecurity() {
         <SettingRows>
           <SettingRow
             label="Sign out all sessions"
-            description="Sign out every device, including this one."
             action={
               <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
                 Sign out all sessions

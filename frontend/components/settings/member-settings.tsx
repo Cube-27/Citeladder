@@ -214,18 +214,13 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           }
         >
           <SectionTitle>Members</SectionTitle>
-          <SectionDescription>
-            {membersQuery.data ? (
-              <>
-                {endSentence(
-                  pluralCount(membersQuery.data.length, 'member') + ' in ' + workspaceName,
-                )}{' '}
-                Change a role or remove someone here.
-              </>
-            ) : (
-              `Who belongs to ${workspaceName} and what each person may do.`
-            )}
-          </SectionDescription>
+          {membersQuery.data ? (
+            <SectionDescription>
+              {endSentence(
+                pluralCount(membersQuery.data.length, 'member') + ' in ' + workspaceName,
+              )}
+            </SectionDescription>
+          ) : null}
         </SectionHeader>
         <Stack gap="workspace">
           {mayInvite ? null : (
