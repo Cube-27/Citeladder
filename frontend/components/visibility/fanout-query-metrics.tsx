@@ -35,6 +35,9 @@ export const FANOUT_VIEWS = [
 ] as const;
 export type FanoutView = (typeof FANOUT_VIEWS)[number]['value'];
 
+/** Where a query's figures stand; a loaded lookup may still not hold the query. */
+export type LookupState = 'loading' | 'failed' | 'loaded';
+
 /** The endpoint's largest page: the most searched queries a Top lookup covers. */
 const LOOKUP_LIMIT = 500;
 /** Rising and Falling each list this many queries, one page. */
@@ -76,19 +79,22 @@ export function useFanoutQueries(scope: FanoutScope, enabled: boolean, view: Fan
     rows: read.data?.items ?? [],
     compared: read.data?.compared ?? false,
     isError: read.isError && !read.data,
+    lookup: lookupState(read),
   };
+}
+
+function lookupState(read: Readonly<{ data: unknown; isError: boolean }>): LookupState {
+  if (read.data) return 'loaded';
+  return read.isError ? 'failed' : 'loading';
 }
 
 /** A query's Share, Change and Brands matched cells. */
 export function QueryMetricCells({
   row,
-  failed,
-}: Readonly<{ row: FanoutQueryRow | undefined; failed: boolean }>) {
+  lookup,
+}: Readonly<{ row: FanoutQueryRow | undefined; lookup: LookupState }>) {
   if (!row) {
-    // Loading leaves the cells blank under the table's busy note.
-    const missing = failed ? (
-      <Absence state="unavailable" reason="Couldn't load this query's share and brands." />
-    ) : null;
+    const missing = missingMark(lookup);
     return (
       <>
         <TableCell numeric>{missing}</TableCell>
@@ -121,6 +127,27 @@ export function QueryMetricCells({
       </TableCell>
     </>
   );
+}
+
+function missingMark(lookup: LookupState) {
+  switch (lookup) {
+    case 'loading':
+      // Loading leaves the cells blank under the table's busy note.
+      return null;
+    case 'failed':
+      return <Absence state="unavailable" reason="Couldn't load this query's share and brands." />;
+    case 'loaded':
+      return (
+        <Absence
+          state="unavailable"
+          reason={`Outside the ${LOOKUP_LIMIT} most searched queries in this selection.`}
+        />
+      );
+    default: {
+      const unhandled: never = lookup;
+      return unhandled;
+    }
+  }
 }
 
 const empty = (heading: string, description: string): DataTableState => ({

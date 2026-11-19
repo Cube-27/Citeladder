@@ -179,6 +179,22 @@ describe('Fanout query share, change and brands', () => {
     expect(within(pricing).getByText('No tracked brand')).toBeVisible();
     expect(screen.queryByText('best crm')).toBeNull();
   });
+
+  it('marks a query outside the Top lookup unavailable, not loading', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockResolvedValue({
+      ...summary,
+      items: [row('another query', 0.5, null, [])],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<Panel projectId={A} />);
+    const best = screen.getByText('best crm').closest('tr')!;
+    const marks = await within(best).findAllByRole('button', { name: 'Unavailable' });
+    expect(marks).toHaveLength(3);
+    await user.hover(marks[0]!);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Outside the 500 most searched queries in this selection.',
+    );
+  });
 });
 
 describe('Fanout paging', () => {
