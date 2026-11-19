@@ -84,8 +84,10 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
     const label = skillGroupLabel(skill.group);
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
+  // A plain wrapper: the groups are one list, not page sections, so no rule
+  // between them (owner, 2026-11-19); each Section keeps its 32 above.
   return (
-    <>
+    <div className="min-w-0">
       {[...groups].map(([group, rows]) => (
         <Section key={group} aria-label={group}>
           <SectionHeader>
@@ -102,7 +104,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
           </AppGrid>
         </Section>
       ))}
-    </>
+    </div>
   );
 }
 

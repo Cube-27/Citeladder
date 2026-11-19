@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
+import { Notice } from '@/components/ui/notice';
 import { Select } from '@/components/ui/select';
+import { SettingRow } from '@/components/ui/setting-row';
 import {
   saveTimeZonePreference,
   useDisplayTimeZone,
@@ -62,18 +64,19 @@ export function TimeZoneSetting() {
         <SectionDescription>{`Timestamps currently display in ${displayZone}.`}</SectionDescription>
       </SectionHeader>
       <Stack gap="item">
-        <Field label="Timezone" error={error?.at === 'choice' ? error.message : undefined}>
-          {(field) => (
+        <SettingRow
+          label="Timezone"
+          action={
             <Select
-              {...field}
               value={choice}
               onValueChange={choose}
               options={CHOICES}
               ariaLabel="Display timezone preference"
-              className="max-w-sm"
             />
-          )}
-        </Field>
+          }
+        >
+          {error?.at === 'choice' ? <Notice tone="negative">{error.message}</Notice> : null}
+        </SettingRow>
         {choice === 'custom' ? (
           <Field label="IANA timezone" error={error?.at === 'zone' ? error.message : undefined}>
             {(field) => (

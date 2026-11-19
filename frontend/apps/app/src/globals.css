@@ -565,10 +565,6 @@
 @utility shadow-control {
   box-shadow: var(--shadow-control);
 }
-/* A `rule` hairline drawn inside an element's foot, so a tab row keeps its height. */
-@utility rule-below {
-  box-shadow: inset 0 -1px 0 var(--color-rule);
-}
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }
@@ -2273,7 +2269,10 @@ label {
 
 /* Control states on HeroUI v3's timings (owner 2026-11-18). A held press
    scales a control (`--press`: buttons and triggers .97, menu rows .98,
-   radios .95, checkboxes .92), never on the website or under reduced motion. */
+   radios .95, checkboxes .92), never on the website or under reduced motion.
+   Never on a popup's trigger: its menu opens on press, anchored to the
+   trigger's scaling box, and slid 3px with it on a first open (owner,
+   2026-11-19: "it dances on first click"). */
 :root:not([data-public-surface]) .press {
   transition:
     scale 250ms,
@@ -2283,7 +2282,8 @@ label {
     box-shadow 100ms;
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-public-surface]) .press:active:not(:disabled, [data-disabled], [aria-busy='true']) {
+  :root:not([data-public-surface])
+    .press:active:not(:disabled, [data-disabled], [aria-busy='true'], [aria-haspopup], [role='combobox']) {
     scale: var(--press, 0.97);
   }
 }

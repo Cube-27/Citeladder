@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
 
 /**
- * Settings: the masthead, page tabs, then one card per group across the full
- * main column. Each card's head sits on top and its body below at full card
- * width; only a form field stops at 640 (globals.css).
+ * Settings: the masthead, page tabs, then one section per group in the
+ * route's compact column, a rule between groups. A group's head sits on top
+ * and its rows (`SettingRow`) below; only a form field stops at 640 (globals.css).
  */
 export function SettingsPage({
   children,

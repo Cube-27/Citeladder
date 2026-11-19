@@ -188,10 +188,6 @@ describe('Workspace panel', () => {
     view.unmount();
     renderPanel();
     expect(screen.queryByRole('button', { name: 'Leave workspace' })).toBeNull();
-    expect(
-      screen.getByText(
-        'Full access, including billing, members and ownership transfer. To leave, first make another member the owner.',
-      ),
-    ).toBeVisible();
+    expect(screen.getByText('To leave, first make another member the owner.')).toBeVisible();
   });
 });

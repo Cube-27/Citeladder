@@ -228,9 +228,9 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    // A narrow masthead folds its actions into More, a real menu.
+    // A narrow page folds its actions into More actions, a real menu.
     if (viewport.width < 900) {
-      await page.getByRole('button', { name: 'More', exact: true }).click();
+      await page.getByRole('button', { name: 'More actions', exact: true }).click();
       await page.getByRole('menuitem', { name: 'New analysis' }).click();
     } else {
       await page.getByRole('button', { name: 'New analysis' }).click();

@@ -7,7 +7,7 @@ import { emitResize } from '@/test/resize-observer';
 
 import { Button } from './button';
 import { Masthead } from './masthead';
-import { MastheadPrimary } from './masthead-actions';
+import { MastheadPrimary, RowActions } from './masthead-actions';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from './menu';
 
 function EmptyEnd() {
@@ -35,24 +35,19 @@ describe('Masthead', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(TITLE);
   });
 
-  it('keeps the primary action beside the title and folds the rest behind More', async () => {
+  it("keeps a row's primary action in the row and folds the rest behind More", async () => {
     const user = userEvent.setup();
     let exported = 0;
     const { rerender } = render(
-      <Masthead
-        title="Website"
-        search={<Button>Search</Button>}
-        end={<Button>Ask agent</Button>}
-        actions={
-          <>
-            <Button>Crawl schedule</Button>
-            <Button onClick={() => (exported += 1)}>Export</Button>
-            <MastheadPrimary>
-              <Button variant="primary">Run new crawl</Button>
-            </MastheadPrimary>
-          </>
-        }
-      />,
+      <RowActions>
+        <Button>Search</Button>
+        <Button>Crawl schedule</Button>
+        <Button onClick={() => (exported += 1)}>Export</Button>
+        <MastheadPrimary>
+          <Button variant="primary">Run new crawl</Button>
+        </MastheadPrimary>
+        <Button>Ask agent</Button>
+      </RowActions>,
     );
     const more = await screen.findByRole('button', { name: 'More' });
     const menu = await openMore(user, more);
@@ -75,14 +70,14 @@ describe('Masthead', () => {
 
     // One control has nothing to fold: it stays in the row. An end that drew
     // nothing (no "Ask agent" on an Agent page) is not counted.
-    rerender(<Masthead title="Website" actions={<Button>Export</Button>} end={<EmptyEnd />} />);
+    rerender(<Masthead title="Website" search={<Button>Export</Button>} end={<EmptyEnd />} />);
     expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
 
-  it('folds the actions before the title keeps less than min(360px, 40%) of the masthead', async () => {
+  it('folds its controls before the title keeps less than min(360px, 40%) of the masthead', async () => {
     const user = userEvent.setup();
-    render(<Masthead title={RECORD} actions={<Button>Export</Button>} />);
+    render(<Masthead title={RECORD} search={<Button>Export</Button>} />);
     const header = document.querySelector<HTMLElement>('[data-masthead]')!;
     const heading = screen.getByRole('heading', { level: 1, name: RECORD });
     Object.defineProperty(heading, 'scrollWidth', { configurable: true, value: 720 });
@@ -109,30 +104,28 @@ describe('Masthead', () => {
   it('offers a folded menu as a submenu and, in a row too full, the primary first', async () => {
     const user = userEvent.setup();
     let edited = 0;
+    // A page's actions at the end of its filter strip.
     render(
-      <Masthead
-        title="Overview"
-        search={<Button>Search</Button>}
-        actions={
-          <>
-            <Menu>
-              <MenuTrigger asChild>
-                <Button>Manage project</Button>
-              </MenuTrigger>
-              <MenuContent>
-                <MenuItem onSelect={() => (edited += 1)}>Edit active project</MenuItem>
-              </MenuContent>
-            </Menu>
-            <MastheadPrimary>
-              <Button variant="primary">Run Website crawl</Button>
-            </MastheadPrimary>
-          </>
-        }
-      />,
+      <div data-page-band="filters">
+        <RowActions>
+          <Button>Search</Button>
+          <Menu>
+            <MenuTrigger asChild>
+              <Button>Manage project</Button>
+            </MenuTrigger>
+            <MenuContent>
+              <MenuItem onSelect={() => (edited += 1)}>Edit active project</MenuItem>
+            </MenuContent>
+          </Menu>
+          <MastheadPrimary>
+            <Button variant="primary">Run Website crawl</Button>
+          </MastheadPrimary>
+        </RowActions>
+      </div>,
     );
     // The row lacks 120px however much folds, so the primary folds too.
-    const header = document.querySelector<HTMLElement>('[data-masthead]')!;
-    const end = document.querySelector<HTMLElement>('[data-masthead-end]')!;
+    const header = document.querySelector<HTMLElement>('[data-page-band]')!;
+    const end = document.querySelector<HTMLElement>('[data-row-end]')!;
     vi.spyOn(end, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 520, 56));
     vi.spyOn(header, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 56));
     for (let step = 0; step < 2; step += 1) act(() => emitResize(header));

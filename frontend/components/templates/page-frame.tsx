@@ -5,7 +5,7 @@ import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
 import { Masthead, MastheadBack } from '@/components/ui/masthead';
-import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
+import { PageEmptyOfferProvider, RowActions } from '@/components/ui/masthead-actions';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export type PageFrameSlots = Readonly<{
   back?: PageBack;
   /** A breadcrumb drawn in the masthead instead of the title; the body holds the h1. */
   crumb?: ReactNode;
-  /** The masthead's own actions: secondary first, then at most one primary. */
+  /** The page's actions, at the end of its last strip: secondary first, then at most one primary. */
   actions?: ReactNode;
   /** The tab strip: the page's sub-views. */
   tabs?: ReactNode;
@@ -48,9 +48,12 @@ const STRIP_RULE =
  * one line), both 48 high and each closed by a hairline across the main
  * column, then the body `--page-pad-block` below. A page passes content into
  * the slots and sets no strip geometry of its own. The masthead's
- * menu button, search and "Ask agent" come from the shell. A narrow route (its manifest `width`) centres the whole frame, title and
- * actions included, in the chat's `max-w-thread`; `fill` keeps a workbench
- * across the main column. A page the window scrolls ends in
+ * menu button, search and "Ask agent" come from the shell; search and "Ask
+ * agent" keep the main column's right edge on every page, and the page's
+ * actions end its last strip (owner, 2026-11-19). A narrow route (its
+ * manifest `width`) centres its strips and body in `max-w-thread`, a compact
+ * one in `max-w-prose`, and starts the masthead's title on that column's
+ * edge; `fill` keeps a workbench across the main column. A page the window scrolls ends in
  * `--page-end-space` of empty space; a `fitted` one (a thread, a workbench)
  * fills the window and scrolls inside itself, so it has none.
  */
@@ -70,13 +73,20 @@ export function PageFrame({
   const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
+  // The page's actions end its last strip: the filters, else the tabs, else a strip of their own.
+  const actionsIn = actions ? (filters || !tabs ? 'filters' : 'tabs') : null;
+  const rowActions = actions ? (
+    <RowActions moreLabel="More actions" className="ms-auto">
+      {actions}
+    </RowActions>
+  ) : null;
   return (
     <PageEmptyOfferProvider>
       <div
         data-page-width={width}
         className={cn(
           'flex min-w-0 flex-1 flex-col',
-          width === 'narrow' && 'max-w-thread mx-auto w-full',
+          PAGE_START[width],
           !fitted && 'pb-[var(--page-end-space)]',
         )}
       >
@@ -95,27 +105,52 @@ export function PageFrame({
             </>
           }
           search={shell?.searchTrigger}
-          actions={actions}
           end={shell?.agentTrigger}
         />
-        {tabs ? (
-          // The tabs fill the strip, so the current tab's underline sits on its rule.
-          <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end')}>
-            {tabs}
+        <div className={cn('flex min-w-0 flex-1 flex-col', PAGE_COLUMN[width])}>
+          {tabs ? (
+            // The tabs fill the strip, so the current tab's underline sits on its rule.
+            <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end gap-2')}>
+              <div className="flex min-w-0 flex-1 items-end">{tabs}</div>
+              {actionsIn === 'tabs' ? <div className="self-center">{rowActions}</div> : null}
+            </div>
+          ) : null}
+          {actionsIn === 'filters' || filters ? (
+            <div
+              data-page-band="filters"
+              className={cn(STRIP_RULE, 'flex items-center gap-2 py-2')}
+            >
+              {filters ? <div className="flex min-w-0 flex-1 items-center">{filters}</div> : null}
+              {actionsIn === 'filters' ? rowActions : null}
+            </div>
+          ) : null}
+          <div
+            data-page-body=""
+            className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]"
+          >
+            {children}
           </div>
-        ) : null}
-        {filters ? (
-          <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
-            {filters}
-          </div>
-        ) : null}
-        <div data-page-body="" className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]">
-          {children}
         </div>
       </div>
     </PageEmptyOfferProvider>
   );
 }
+
+type PageWidth = ReturnType<typeof routeWidth>;
+
+/** A narrow page's column: the strips and body, centred in the main column. */
+const PAGE_COLUMN: Record<PageWidth, string | false> = {
+  full: false,
+  narrow: 'max-w-thread mx-auto w-full',
+  compact: 'mx-auto w-full max-w-[var(--container-prose)]',
+};
+
+/** Where the masthead's title starts: on the page column's left edge. */
+const PAGE_START: Record<PageWidth, string | false> = {
+  full: false,
+  narrow: '[--page-start:max(0px,calc((100%_-_var(--container-thread))/2))]',
+  compact: '[--page-start:max(0px,calc((100%_-_var(--container-prose))/2))]',
+};
 
 /** The body's sections on the page surface, 32 apart, on the one left edge. */
 export function PageSections({

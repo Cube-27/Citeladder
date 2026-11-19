@@ -19,7 +19,7 @@ import { POP_FACE } from '@/components/ui/slip';
 /**
  * The floating panel menus and listboxes share: the pop face (`raised`, a
  * 1px `rule` border, radius 8, `shadow-pop`), a 4px inset, growing from 96%
- * at its anchor in 150ms (ui-motion.css).
+ * at its anchor in 200ms (ui-motion.css).
  */
 export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
 

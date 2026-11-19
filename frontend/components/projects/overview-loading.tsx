@@ -6,6 +6,7 @@ import type {
   OverviewWidget,
   OverviewWidgetKey,
 } from '@citeladder/contracts/overview';
+import { PageSections } from '@/components/templates/page-frame';
 import { AppGrid } from '@/components/ui/app-grid';
 import {
   ReportSkeletonFrame,
@@ -13,9 +14,8 @@ import {
   type LoadingShape,
 } from '@/components/ui/skeleton-block';
 import { projectKeys } from '@/lib/api/query-keys/core';
-import { loneHalves } from '@/lib/overview/layout';
+import { overviewRows } from '@/lib/overview/layout';
 import { useOptionalProjectContext } from '@/lib/project/project-scope';
-import { cn } from '@/lib/utils';
 
 /** Each widget's body as it loads: the shape of what its card shows. */
 const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
@@ -67,30 +67,32 @@ function useCachedWidgets(): readonly OverviewWidget[] | undefined {
 }
 
 /**
- * The Overview as it loads: the project's meta line, then one card per widget
- * placed in the halves grid as OverviewGrid places them (the saved layout
+ * The Overview as it loads: the project's meta line, then one block per widget
+ * in the rows OverviewGrid draws (the saved layout
  * when known, else the default), each a title block over its widget's shape.
  */
 export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly OverviewWidget[] }>) {
   const cached = useCachedWidgets();
   const shown = widgets ?? cached ?? DEFAULT_WIDGETS;
-  const lone = loneHalves(shown);
+  // Sections in the page's section rhythm, so the loaded rows' rules and gaps draw already.
+  const block = (widget: OverviewWidget) => (
+    <section key={widget.key} data-loading-widget={widget.key} className="min-w-0">
+      <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} />
+    </section>
+  );
   return (
     <ReportSkeletonFrame label="Loading the Overview" variant="overview">
-      <AppGrid layout="halves">
-        {shown.map((widget) => (
-          <div
-            key={widget.key}
-            data-loading-widget={widget.key}
-            className={cn(
-              'min-w-0',
-              (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
-            )}
-          >
-            <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} framed={widget.size !== 'full'} />
-          </div>
-        ))}
-      </AppGrid>
+      <PageSections>
+        {overviewRows(shown).map((row) =>
+          row.length === 1 ? (
+            block(row[0])
+          ) : (
+            <AppGrid key={row.map((widget) => widget.key).join()} layout="halves">
+              {row.map(block)}
+            </AppGrid>
+          ),
+        )}
+      </PageSections>
     </ReportSkeletonFrame>
   );
 }

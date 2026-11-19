@@ -38,9 +38,7 @@ it('disconnects integrations only after the person confirms what it revokes', as
     ),
   ).toEqual(['Sign-in', 'Sessions']);
   expect(
-    within(screen.getByRole('region', { name: 'Sign-in' })).getByRole('heading', {
-      name: 'Password',
-    }),
+    within(screen.getByRole('region', { name: 'Sign-in' })).getByText('Password'),
   ).toBeVisible();
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Sign out and disconnect' }));

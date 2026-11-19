@@ -16,12 +16,11 @@ import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { PasswordField } from '@/components/ui/password-field';
-import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { SettingRow } from '@/components/ui/setting-row';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -31,16 +30,13 @@ function SecurityIdentity({
   if (!data) return null;
   const methods = data.methods.map((method) => METHOD_LABELS[method] ?? method);
   return (
-    <FactList
-      layout="ruled"
-      facts={[
-        {
-          label: 'Sign in with',
-          value: methods.length ? methods.join(' or ') : 'No sign-in method yet',
-        },
-        { label: 'Email', value: data.email_verified ? 'Verified' : 'Not verified' },
-      ]}
-    />
+    <>
+      <SettingRow
+        label="Sign in with"
+        description={methods.length ? methods.join(' or ') : 'No sign-in method yet'}
+      />
+      <SettingRow label="Email" description={data.email_verified ? 'Verified' : 'Not verified'} />
+    </>
   );
 }
 
@@ -66,16 +62,6 @@ function SignInMethods({
       )}
       <SecurityIdentity data={security.data} />
     </>
-  );
-}
-
-/** A group head inside a card: `subheading`, with its caption. */
-function GroupHead({ title, caption }: Readonly<{ title: string; caption: string }>) {
-  return (
-    <Stack gap="tight">
-      <h3 className={textRole('subheading')}>{title}</h3>
-      <p className={textRole('caption')}>{caption}</p>
-    </Stack>
   );
 }
 
@@ -182,14 +168,13 @@ export default function AccountSecurity() {
           <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
           <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
         </SectionHeader>
-        <Stack gap="section">
+        <Stack gap="workspace">
           <SignInMethods security={security} />
-          <Stack gap="workspace">
-            <GroupHead title="Password" caption="Changing it signs you out everywhere." />
-            {hasPassword ? (
-              <PasswordForm form={passwordForm} />
-            ) : (
-              <Inline>
+          <SettingRow
+            label="Password"
+            description="Changing it signs you out everywhere."
+            action={
+              hasPassword ? null : (
                 <Button
                   variant="secondary"
                   disabled={!security.data || setup.isPending}
@@ -197,24 +182,24 @@ export default function AccountSecurity() {
                 >
                   Email password setup link
                 </Button>
-              </Inline>
-            )}
-          </Stack>
+              )
+            }
+          >
+            {hasPassword ? <PasswordForm form={passwordForm} /> : null}
+          </SettingRow>
           {canLinkGoogle ? (
-            <Stack gap="workspace">
-              <GroupHead
-                title="Google sign-in"
-                caption="Enter your current password above, then connect Google."
-              />
-              <Inline>
+            <SettingRow
+              label="Google sign-in"
+              description="Enter your current password above, then connect Google."
+              action={
                 <ActionButton
                   action="connectGoogle"
                   type="button"
                   disabled={!current || link.isPending}
                   onClick={() => link.mutate()}
                 />
-              </Inline>
-            </Stack>
+              }
+            />
           ) : null}
           {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
@@ -223,17 +208,26 @@ export default function AccountSecurity() {
       <Section aria-labelledby="settings-sessions-title">
         <SectionHeader>
           <SectionTitle id="settings-sessions-title">Sessions</SectionTitle>
-          <SectionDescription>Sign out every device, including this one.</SectionDescription>
         </SectionHeader>
-        <Stack gap="item">
-          <Inline className="flex-wrap">
-            <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
-              Sign out all sessions
-            </Button>
-            <Button variant="danger" onClick={() => setConfirm('disconnect')}>
-              Sign out and disconnect
-            </Button>
-          </Inline>
+        <Stack gap="workspace">
+          <SettingRow
+            label="Sign out all sessions"
+            description="Sign out every device, including this one."
+            action={
+              <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
+                Sign out all sessions
+              </Button>
+            }
+          />
+          <SettingRow
+            label="Sign out and disconnect"
+            description="Also disconnects your MCP clients and revokes your API keys."
+            action={
+              <Button variant="danger" onClick={() => setConfirm('disconnect')}>
+                Sign out and disconnect
+              </Button>
+            }
+          />
         </Stack>
       </Section>
       <Dialog

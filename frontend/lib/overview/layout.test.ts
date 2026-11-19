@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   addWidget,
   addableWidgets,
-  loneHalves,
   moveWidget,
+  overviewRows,
   removeWidget,
   toggleWidth,
 } from './layout';
@@ -34,10 +34,12 @@ describe('Overview layout edits', () => {
     ]);
   });
 
-  it('marks the half widgets left alone in a row, pairing again after each full widget', () => {
-    expect([...loneHalves(layout)]).toEqual(['project_state']);
-    expect([
-      ...loneHalves([
+  it('pairs half widgets into rows, a lone half alone in its row, pairing again after each full widget', () => {
+    const keys = (widgets: Parameters<typeof overviewRows>[0]) =>
+      overviewRows(widgets).map((row) => row.map((widget) => widget.key));
+    expect(keys(layout)).toEqual([['project_state'], ['movement'], ['company_facts']]);
+    expect(
+      keys([
         { key: 'project_state', size: 'half' },
         { key: 'citation_share', size: 'half' },
         { key: 'movement', size: 'half' },
@@ -46,7 +48,13 @@ describe('Overview layout edits', () => {
         { key: 'ranked_actions', size: 'half' },
         { key: 'missing_prompts', size: 'half' },
       ]),
-    ]).toEqual(['movement', 'missing_prompts']);
+    ).toEqual([
+      ['project_state', 'citation_share'],
+      ['movement'],
+      ['company_facts'],
+      ['next_action', 'ranked_actions'],
+      ['missing_prompts'],
+    ]);
   });
 
   it('removes a widget but keeps the last one', () => {

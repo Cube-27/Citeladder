@@ -341,7 +341,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/context',
-    width: 'narrow',
+    width: 'compact',
     title: 'Context',
     screen: screens.context,
     // The Company facts form's five fields.
@@ -427,7 +427,7 @@ export const APP_ROUTES = [
   // The workspace's own pages, inside the shell.
   page({
     path: '/settings',
-    width: 'narrow',
+    width: 'compact',
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
@@ -533,7 +533,7 @@ export function routeLoading(pathname: string): RouteLoading {
 }
 
 /** A page's width: its section's, else the main column's. */
-export function routeWidth(pathname: string): 'narrow' | 'full' {
+export function routeWidth(pathname: string): 'narrow' | 'compact' | 'full' {
   return sectionRoute(pathname)?.width ?? 'full';
 }
 

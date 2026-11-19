@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
+import { RowActions } from '@/components/ui/masthead-actions';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
@@ -24,25 +24,25 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
 
 /**
  * Masthead: the head of every shell page, 56 tall on `chrome`, sticky with a
- * rule under it, one row at every width. From the left: the menu button
- * below 900px and a record page's back link (`lead`), the page title in
- * `title` type; at the right the search trigger, the page's secondary
- * actions, its one primary action (`actions`, the primary inside
- * `MastheadPrimary`), then "Ask agent" (`end`), each with its text label.
+ * rule under it, one row at every width, across the whole main column. From
+ * the left, at the page's own start (`--page-start`, so a narrow page's title
+ * lines up with its content): the menu button below 900px and a record
+ * page's back link (`lead`), the page title in `title` type; at the column's
+ * right edge on every page the search trigger, then "Ask agent" (`end`), each
+ * with its text label. A page's own actions sit in its strips (`PageFrame`,
+ * owner 2026-11-19), never here.
  *
  * The title is one line: a longer name is cut with an ellipsis, and only then
  * does it take keyboard focus and show the full name in the tooltip. Its
- * accessible name is always the full name. Below `rail` the row is the menu
- * button, the title, the primary and one "More" menu holding the search, the
- * secondary actions and "Ask agent". A button label is never cut: a row that
+ * accessible name is always the full name. Below `rail` the search and "Ask
+ * agent" fold into one "More" menu. A button label is never cut: a row that
  * would squeeze the title under min(360px, 40% of the masthead) (or its whole
- * text, if shorter) folds its actions into More, the primary last.
+ * text, if shorter) folds them into More.
  */
 export function Masthead({
   title,
   lead,
   search,
-  actions,
   end,
   crumb,
 }: Readonly<{
@@ -53,8 +53,6 @@ export function Masthead({
   crumb?: ReactNode;
   /** The shell's search trigger, first at the right. */
   search?: ReactNode;
-  /** The page's own actions: secondary first, then at most one primary. */
-  actions?: ReactNode;
   /** Last at the right: "Ask agent", or the Agent's History button. */
   end?: ReactNode;
 }>) {
@@ -62,8 +60,7 @@ export function Masthead({
   const header = useRef<HTMLElement>(null);
   const cut = useIsCut(heading, title);
   usePublishedHeight(header);
-  const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
-  const hasControls = [search, actions, end].some(
+  const hasControls = [search, end].some(
     (part) => part !== undefined && part !== null && part !== false,
   );
   return (
@@ -72,7 +69,8 @@ export function Masthead({
       ref={header}
       className={cn(
         BAR_LAYER,
-        'z-sticky sticky top-0 isolate flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 rail:h-[var(--masthead-height)]',
+        // As wide as the main column, past the page's 1440 cap, so search and "Ask agent" end on its edge.
+        'z-sticky sticky top-0 isolate flex min-h-[var(--masthead-height)] w-[100cqw] min-w-0 items-center gap-2 ps-[var(--page-start,0px)] rail:h-[var(--masthead-height)]',
       )}
     >
       {/* Below `rail` the title side keeps its content's minimum; the actions give way. */}
@@ -95,22 +93,12 @@ export function Masthead({
           </Tooltip>
         )}
       </div>
-      <div
-        data-masthead-end=""
-        className="flex shrink-0 items-center gap-2 [&_:is(button,a)]:shrink-0"
-      >
-        {hasControls ? (
-          <MastheadPrimarySlot value={primarySlot}>
-            <MastheadOverflow>
-              {search}
-              {actions}
-              {/* "Ask agent" comes after the primary in the row. */}
-              {end ? <div className="rail:order-1 flex flex-col">{end}</div> : null}
-            </MastheadOverflow>
-          </MastheadPrimarySlot>
-        ) : null}
-        <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
-      </div>
+      {hasControls ? (
+        <RowActions>
+          {search}
+          {end ? <div className="flex flex-col">{end}</div> : null}
+        </RowActions>
+      ) : null}
     </header>
   );
 }
