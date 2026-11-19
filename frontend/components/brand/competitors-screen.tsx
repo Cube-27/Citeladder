@@ -68,7 +68,11 @@ export function CompetitorsScreen() {
               />
             )}
           </SelectionGate>
-          <CompetitorSuggestions projectId={queries.projectId} suggestionsQuery={suggestions} />
+          <CompetitorSuggestions
+            projectId={queries.projectId}
+            tracked={project.competitors.length}
+            suggestionsQuery={suggestions}
+          />
         </SectionStack>
       )}
     </ReportPage>

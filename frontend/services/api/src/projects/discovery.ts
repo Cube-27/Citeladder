@@ -70,7 +70,7 @@ export async function discoveryRow(db: Database, workspaceId: string, id: string
 export function discoveryCatalog() {
   const industries = policy.discovery.industry_library.industries;
   return {
-    maximum_competitors: discoverySettings().maximum_competitors,
+    maximum_competitors: policy.brand_identity.max_project_competitors,
     industries: Object.keys(industries),
     subindustries: Object.fromEntries(
       Object.entries(industries).map(([name, context]) => [

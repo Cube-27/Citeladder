@@ -48,6 +48,7 @@ const API_ERROR_CODES = [
   'commerce_prompt_hero_required',
   'commerce_store_not_allowed',
   'commerce_store_unavailable',
+  'competitor_limit',
   'competitor_not_found',
   'conflict',
   'connection',

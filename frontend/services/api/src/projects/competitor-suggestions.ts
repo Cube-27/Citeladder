@@ -9,8 +9,6 @@
  * candidate row, so concurrent accepts cannot both add a competitor past the
  * project ceiling or duplicate one.
  */
-import { randomUUID } from 'node:crypto';
-
 import { competitorSchema } from '@citeladder/contracts/project';
 import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
 import type { Selectable } from 'kysely';
@@ -24,7 +22,7 @@ import { ApiError, notFound } from '../errors.ts';
 import type { ObservedEntityCandidates } from '../generated/db-schema.ts';
 import { isTracked } from '../perception/untracked-names.ts';
 import { compareText } from '../text-order.ts';
-import { competitorView, lockProject } from './competitors.ts';
+import { competitorView, insertCompetitor, lockProject } from './competitors.ts';
 import type { ProjectScope } from './brand-profile.ts';
 
 type Suggestion = z.input<typeof observedCompetitorSchema>;
@@ -38,7 +36,6 @@ const {
   status_accepted: ACCEPTED,
   status_rejected: REJECTED,
 } = policy.audits.observed_competitors;
-const MAX_COMPETITORS = policy.brand_identity.max_project_competitors;
 const ids = z.array(z.string());
 const strings = z.array(z.string());
 
@@ -173,29 +170,17 @@ export function acceptSuggestion(
       .orderBy('created_at')
       .orderBy('id')
       .execute();
-    let competitor = competitors.find((row) => tracks(row, candidate));
-    if (competitor === undefined) {
-      if (competitors.length >= MAX_COMPETITORS)
-        throw new ApiError(
-          409,
-          `A project can have at most ${MAX_COMPETITORS} competitors; remove one before accepting this suggestion`,
-        );
-      const now = new Date();
-      competitor = await trx
-        .insertInto('competitors')
-        .values({
-          id: randomUUID(),
-          workspace_id: decision.workspaceId,
-          project_id: decision.projectId,
+    const competitor =
+      competitors.find((row) => tracks(row, candidate)) ??
+      (await insertCompetitor(trx, {
+        scope: decision,
+        tracked: competitors.length,
+        fields: {
           name: candidate.name,
-          aliases: JSON.stringify([candidate.name]),
-          domains: JSON.stringify(candidate.domain === null ? [] : [candidate.domain]),
-          created_at: now,
-          updated_at: now,
-        })
-        .returning(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
-        .executeTakeFirstOrThrow();
-    }
+          aliases: [candidate.name],
+          domains: candidate.domain === null ? [] : [candidate.domain],
+        },
+      }));
     await decide(trx, decision, candidate, ACCEPTED);
     return competitorView(decision.projectId, competitor);
   });
