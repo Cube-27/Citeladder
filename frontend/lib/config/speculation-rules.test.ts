@@ -57,6 +57,14 @@ describe('speculation rules', () => {
     ];
     for (const policy of policies) {
       expect(typeof policy === 'object' && policy.scriptDirective?.hashes).toEqual([hash]);
+      // Prerendered pages carry these as a <meta>, where frame-ancestors is ignored and logged.
+      const frameDirectives =
+        typeof policy === 'object'
+          ? policy.directives
+              ?.filter((directive) => directive.startsWith('frame-'))
+              .map((directive) => directive.split(' ')[0])
+          : [];
+      expect(frameDirectives).toEqual(['frame-src']);
     }
   });
 });

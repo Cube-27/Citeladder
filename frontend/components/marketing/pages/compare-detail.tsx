@@ -1,6 +1,6 @@
 import { Callout } from '@/components/ui/callout';
 import { TextLink } from '@/components/ui/text-link';
-import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import {
   CITELADDER_POSITION,
   COMPARISON_CHECKLIST,
@@ -97,7 +97,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                         <SourceLink source={source} />
                         <span className="text-ink-muted">
                           {' '}
-                          · reviewed {formatBlogDate(source.reviewedDate)}
+                          · reviewed {formatSiteDate(source.reviewedDate)}
                         </span>
                       </>
                     ) : (
@@ -138,23 +138,20 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       </PageSection>
 
       <PageSection spacing="compact" label="Comparison sources and disclosure">
-        {/* Wrapped, the disclosure spans the content width, level with the sections above. */}
-        <div>
-          <Callout tone="neutral">
-            {COMPARISON_DISCLOSURE}
-            {competitor.sources.map((item) => (
-              <span key={item.url}>
-                {' '}
-                <SourceLink source={item} />
-                {'. '}
-                <time dateTime={item.reviewedDate}>
-                  Source reviewed {formatBlogDate(item.reviewedDate)}
-                </time>
-                .
-              </span>
-            ))}
-          </Callout>
-        </div>
+        <Callout tone="neutral">
+          {COMPARISON_DISCLOSURE}
+          {competitor.sources.map((item) => (
+            <span key={item.url}>
+              {' '}
+              <SourceLink source={item} />
+              {'. '}
+              <time dateTime={item.reviewedDate}>
+                Source reviewed {formatSiteDate(item.reviewedDate)}
+              </time>
+              .
+            </span>
+          ))}
+        </Callout>
       </PageSection>
 
       <PageSection title="Related guides">

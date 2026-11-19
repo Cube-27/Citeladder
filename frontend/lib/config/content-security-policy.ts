@@ -107,7 +107,10 @@ function astroContentSecurityPolicy({
   };
 }
 
-// Server-rendered marketing emits the policy as a response header.
+// Server-rendered marketing emits the policy as a response header; prerendered
+// pages carry it as a <meta>, where browsers ignore (and log) frame-ancestors.
+// X-Frame-Options DENY denies framing on both: the generated _headers file for
+// assets, withSiteHeaders for Worker responses.
 export function marketingContentSecurityPolicy({
   analyticsEnabled,
   scriptHashes,
@@ -124,7 +127,6 @@ export function marketingContentSecurityPolicy({
     ],
     scriptHashes,
     directives: [
-      "frame-ancestors 'none'",
       `frame-src ${TURNSTILE_ORIGIN}`,
       analyticsEnabled
         ? "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum https://www.google-analytics.com https://region1.google-analytics.com"

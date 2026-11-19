@@ -24,7 +24,7 @@ import SourceRow from '@/components/marketing/content/SourceRow.astro';
 import SourcesList from '@/components/marketing/content/SourcesList.astro';
 import { RelatedCards } from '@/components/marketing/sections/cards';
 import { PageSection } from '@/components/marketing/sections/page-section';
-import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import { platformLabel } from '@/lib/marketing-content/nav';
 import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
 import type { ResearchArticle } from '../research-articles';
@@ -86,7 +86,7 @@ const more = moreGuides(article);
         meta={[
           {
             prefix: 'Research reviewed',
-            text: formatBlogDate(meta.reviewed_at),
+            text: formatSiteDate(meta.reviewed_at),
             dateTime: meta.reviewed_at,
           },
         ]}
