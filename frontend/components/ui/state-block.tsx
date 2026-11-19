@@ -274,7 +274,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           error={props.error}
           fallback={props.fallback}
           onRetry={props.onRetry}
-          pending={props.pending ?? false}
+          pending={props.pending}
           title={props.title}
         />
       );

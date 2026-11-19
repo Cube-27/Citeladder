@@ -74,7 +74,7 @@ describe('UsageTable', () => {
 
   it('says an unresolved allowance is unavailable and draws no bar', () => {
     const row = renderRow(item({ limit_state: 'unknown', allowance: null, consumed: null }));
-    expect(cells(row)[2]).toBe('—Not available');
+    expect(cells(row)[2]).toBe('—Unavailable');
     expect(within(row).queryByRole('meter')).toBeNull();
     expect(screen.getByRole('meter', { name: 'Projects' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About Prompts' })).toHaveAccessibleDescription(

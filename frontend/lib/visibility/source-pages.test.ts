@@ -47,7 +47,8 @@ describe('cited-page vocabulary', () => {
     expect(absenceBasis('present', 'exact_alias', 4200)).toBeNull();
   });
 
-  it('offers no basis for a page nobody read, where nothing was searched', () => {
+  it('offers no basis for a page nobody read or whose read text is unknown', () => {
     expect(absenceBasis('not_detected', null, 0)).toBeNull();
+    expect(absenceBasis('not_detected', null, null)).toBeNull();
   });
 });

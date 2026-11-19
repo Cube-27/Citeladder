@@ -10,7 +10,7 @@ import type { SiteHealthDashboard } from '@citeladder/contracts';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { IssuesPageLoading } from '@/components/site-health/issues-summary-loading';
 
 /**
@@ -53,11 +53,8 @@ function IssuesDataRegion({
         <StateBlock
           kind="error"
           error={dashboard.error}
-          fallback={
-            accessDenied
-              ? 'Site health is unavailable for this project.'
-              : "Couldn't load the latest Site health crawl."
-          }
+          // An access failure's own guidance follows the headline instead.
+          fallback={accessDenied ? '' : READ_FAILED}
           title={
             accessDenied
               ? 'Site health is unavailable for this project'
@@ -95,7 +92,7 @@ function IssuesLoadedRegion({
           <Notice
             kind="read"
             {...readErrorProps(dashboard)}
-            fallback="Could not refresh the latest Site health crawl."
+            fallback={READ_FAILED}
             title="Could not refresh the latest Site health crawl"
           />
         }
@@ -105,7 +102,7 @@ function IssuesLoadedRegion({
         <StateBlock
           kind="error"
           {...readErrorProps(dashboard)}
-          fallback="Could not refresh the latest Site health crawl."
+          fallback={READ_FAILED}
           title="Could not refresh the latest Site health crawl"
         />
       </ReportPage>

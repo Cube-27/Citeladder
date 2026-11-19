@@ -418,7 +418,7 @@ describe('BillingScreen', () => {
     const [, prompts, runs] = within(table).getAllByRole('row');
     expect(prompts?.textContent).toBe('Prompts4210058');
     // …and an `unknown` row says so rather than rendering a zero.
-    expect(runs?.textContent).toMatch(/^Prompt runs.*Not available/u);
+    expect(runs?.textContent).toMatch(/^Prompt runs.*Unavailable/u);
     expect(runs?.textContent).not.toMatch(/\b0\b/u);
     expect(within(table).getAllByRole('meter')).toHaveLength(1);
     expect(screen.queryByText('No usage yet this period')).toBeNull();

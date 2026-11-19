@@ -76,11 +76,12 @@ const UNKNOWN_METHOD_BASIS: Record<string, string> = {
 export function absenceBasis(
   state: string,
   matchMethod: string | null,
-  extractedChars: number,
+  /** Null: how much text the read held is unknown, so no coverage can be claimed. */
+  extractedChars: number | null,
 ): string | null {
   const fallback = UNKNOWN_METHOD_BASIS[state];
   if (!fallback) return null;
-  if (extractedChars <= 0) return null;
+  if (extractedChars === null || extractedChars <= 0) return null;
   const read = `${formatCount(extractedChars)} characters of readable text`;
   const method = matchMethod ? MATCH_METHOD_LABELS[matchMethod] : undefined;
   return method ? `Searched ${read} for ${method}.` : `Searched ${read}; ${fallback}.`;

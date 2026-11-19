@@ -183,18 +183,14 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
  * never are. A sentence a person can act on follows it; a server fault shows
  * the notice's own fallback, never its status text.
  */
-function ReadFailureNotice({
-  error,
-  fallback,
-  onRetry,
-  pending = false,
-  title,
-  className,
-}: ReadFailure) {
+function ReadFailureNotice({ error, fallback, onRetry, pending, title, className }: ReadFailure) {
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
-  const sentence = failureSentence(detail, { title, fallback });
+  // The failure's own words when a person wrote them, the fallback for a
+  // server fault ("Internal Server Error" is never shown); words repeating the headline drop.
+  const said = (detail.status ?? 0) >= 500 ? fallback : detail.message;
+  const sentence = said.replace(/\.$/u, '') === title ? null : said;
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
@@ -214,20 +210,6 @@ function ReadFailureNotice({
       {next ? <p>{next}</p> : null}
     </MessageNoticeView>
   );
-}
-
-/**
- * The sentence under the headline: the failure's own words when a person wrote
- * them, the notice's fallback for a server fault ("Internal Server Error" is
- * never shown). Words repeating the headline drop.
- */
-function failureSentence(
-  detail: ReturnType<typeof humanizeApiError>,
-  { title, fallback }: Readonly<{ title: string; fallback: string }>,
-) {
-  const serverFault = detail.status !== undefined && detail.status >= 500;
-  const said = serverFault ? fallback : detail.message;
-  return said === title ? null : said;
 }
 
 /** The failure's actions, then the support reference as a quiet copy control. */

@@ -266,7 +266,7 @@ export function ConfirmDialog({
             Cancel
           </Button>
           <Button
-            variant={request?.destructive ? 'danger' : 'primary'}
+            variant={request?.destructive ? 'danger-confirm' : 'primary'}
             onClick={request?.onConfirm}
             disabled={pending}
             pending={pending}
