@@ -48,7 +48,11 @@ export function SourceUrlPageCard({
             entities={onPageCompetitors(page?.entities)}
           />
           {brand && page?.read_at ? (
-            <BrandOnPage heading="You" brand={brand} extractedChars={page.extracted_chars ?? 0} />
+            <BrandOnPage
+              heading="You"
+              brand={brand}
+              extractedChars={page.extracted_chars ?? null}
+            />
           ) : null}
           {page ? <PageFacts page={page} /> : null}
         </Stack>

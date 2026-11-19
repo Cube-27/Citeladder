@@ -227,7 +227,7 @@ function failureSentence(
 ) {
   const serverFault = detail.status !== undefined && detail.status >= 500;
   const said = serverFault ? fallback : detail.message;
-  return said === title ? null : said;
+  return said.replace(/\.$/u, '') === title ? null : said;
 }
 
 /** The failure's actions, then the support reference as a quiet copy control. */

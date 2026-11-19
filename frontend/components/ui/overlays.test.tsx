@@ -324,6 +324,9 @@ describe('InfoHint', () => {
     await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
     focusByKeyboard(button);
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Share of answers that cite you.');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
   });
 });
 

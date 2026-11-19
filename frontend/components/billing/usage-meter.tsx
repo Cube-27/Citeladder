@@ -57,7 +57,7 @@ function figuresOf(item: UsageItem): Figures {
     case 'unknown':
       return {
         used: <Absence state="unavailable" />,
-        allowance: <Absence state="unavailable" label="Not available" />,
+        allowance: <Absence state="unavailable" />,
         remaining: <Absence state="unavailable" />,
       };
     case 'unlimited':

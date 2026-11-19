@@ -176,17 +176,19 @@ function sentimentFigure(sentiment: NetSentiment): FigureSegment {
 function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null): FigureSegment {
   const answers = brand?.win_answers ?? null;
   const rate = brand?.win_rate ?? null;
+  const wins = brand?.win_count ?? null;
   return {
     key: 'win_rate',
     label: 'Win rate',
     marker: <InfoHint label="Win rate">{WIN_RATE_HINT}</InfoHint>,
     value: unmeasured ?? (rate === null ? null : formatRate(rate)),
     missingLabel: availabilityLabel(winRateAbsence(brand)),
-    delta: answers ? (
-      <span className={textRole('caption')}>
-        {`Named first in ${formatCount(brand?.win_count ?? 0)} of ${formatCount(answers)}`}
-      </span>
-    ) : null,
+    delta:
+      answers && wins !== null ? (
+        <span className={textRole('caption')}>
+          {`Named first in ${formatCount(wins)} of ${formatCount(answers)}`}
+        </span>
+      ) : null,
   };
 }
 

@@ -32,6 +32,22 @@ describe('Notice kind="read"', () => {
     expect(await navigator.clipboard.readText()).toBe('request-123');
   });
 
+  it('drops a fallback that repeats the headline, even with a closing full stop', () => {
+    render(
+      <Notice
+        kind="read"
+        error={new ApiError('Internal Server Error', 500, '')}
+        title="Couldn't load the latest Site health crawl"
+        fallback="Couldn't load the latest Site health crawl."
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Error: Couldn't load the latest Site health crawlRetry in a moment.Retry",
+    );
+  });
+
   it('does not offer blind retry for an access failure', () => {
     render(
       <Notice

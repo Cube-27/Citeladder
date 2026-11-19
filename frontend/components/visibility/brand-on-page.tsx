@@ -12,7 +12,7 @@ export function BrandOnPage({
   heading,
   brand,
   extractedChars,
-}: Readonly<{ heading: string; brand: PageEntity; extractedChars: number }>) {
+}: Readonly<{ heading: string; brand: PageEntity; extractedChars: number | null }>) {
   const verdict = presenceLabel(brand.presence);
   const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
   return (

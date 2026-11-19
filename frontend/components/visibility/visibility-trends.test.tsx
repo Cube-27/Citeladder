@@ -79,6 +79,22 @@ describe('Insights lede', () => {
     expect(screen.getByText('Share of voice')).toBeVisible();
     expect(screen.queryByText('Position')).toBeNull();
   });
+
+  it('counts first-named answers only when the win count is known', () => {
+    const withWins = (winCount: number | null) =>
+      ({
+        ...selected,
+        rankings: rankings.map((row) =>
+          row.is_brand ? { ...row, win_count: winCount, win_answers: 12, win_rate: null } : row,
+        ),
+      }) as Visibility;
+    const { unmount } = render(<InsightsLede selected={withWins(5)} />);
+    expect(screen.getByText('Named first in 5 of 12')).toBeVisible();
+    unmount();
+
+    render(<InsightsLede selected={withWins(null)} />);
+    expect(screen.queryByText(/Named first in/u)).toBeNull();
+  });
 });
 
 describe('Your brand over time', () => {

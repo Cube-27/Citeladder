@@ -34,7 +34,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
                 <ProjectLink
                   href={part.href}
                   state={part.state}
-                  className="hover:overlay-hover hover:text-ink focus-ring block max-w-68 truncate rounded-sm px-1"
+                  className="hover:overlay-hover hover:text-ink focus-ring rounded-mark block min-h-[var(--target-min)] max-w-68 min-w-[var(--target-min)] truncate px-1 py-0.5"
                 >
                   {part.label}
                 </ProjectLink>
