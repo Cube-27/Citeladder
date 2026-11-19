@@ -27,18 +27,13 @@ const evidencePage = (page: ArchitecturePage) => ({
   title: page.title,
   page_kind: page.kind,
 });
-const kindCounts = (kind: KindRow) => ({
-  page_kind: kind.page_kind,
-  page_count: kind.page_count,
-  duplicate_metadata_count: kind.duplicate_metadata_count,
-});
-
 /** Each kind with the pages no hub parents. */
 const unhubbedSample =
   (byId: Map<string, ArchitecturePage>) =>
   (kinds: KindRow[]): Pick<UnhubbedPageKindEvidence, 'page_kinds'> => ({
     page_kinds: kinds.map((kind) => ({
-      ...kindCounts(kind),
+      page_kind: kind.page_kind,
+      page_count: kind.page_count,
       pages: kind.site_url_ids
         .slice(0, p.max_evidence_items)
         .map((id) => evidencePage(byId.get(id)!)),

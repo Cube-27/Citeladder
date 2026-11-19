@@ -41,12 +41,8 @@ const unreachablePagesEvidenceSchema = pageListEvidenceSchema.extend({
   ),
 });
 
-/** One affected page kind, with its page and duplicate-metadata counts. */
-const pageKindShape = {
-  page_kind: z.string(),
-  page_count: count(),
-  duplicate_metadata_count: count(),
-};
+/** One affected page kind, with its page count. */
+const pageKindShape = { page_kind: z.string(), page_count: count() };
 
 /**
  * Pages across the site repeating one exact title (or meta description): the

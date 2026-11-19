@@ -34,7 +34,6 @@ function architecture(overrides: Record<string, unknown> = {}) {
         page_count: 2,
         median_depth: 1,
         indexable_count: 2,
-        duplicate_metadata_count: 1,
         orphan_count: 1,
       },
       {
@@ -42,7 +41,6 @@ function architecture(overrides: Record<string, unknown> = {}) {
         page_count: 1,
         median_depth: 0,
         indexable_count: 1,
-        duplicate_metadata_count: 0,
         orphan_count: 0,
       },
     ],

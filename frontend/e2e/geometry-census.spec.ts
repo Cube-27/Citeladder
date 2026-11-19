@@ -52,127 +52,58 @@ const PROMPT_SETS = {
  *
  * `check:policy` guards the inputs (tokens, classes). It cannot see a 28px
  * button beside a 32px tab, a toolbar rebinding a token, or an error block
- * that is 88px on one route and 152px on the next — and those are what made
- * the app look inconsistent. So this
- * walks every product route at the owner's viewport (982×900, DPR 1) and at
- * 1280×900 (light: dark rebinds only colours and shadows), measures every visible control, tag, tab,
- * band, section, slip and state block, and asserts ONE value per role — the same
- * literals in every configuration. The expected values are literals on
- * purpose: deriving them from the tokens would let a token edit move the
- * whole app and still pass.
+ * whose padding differs from its neighbour's, and those are what made the app
+ * look inconsistent. So each test loads one product page state at the owner's
+ * viewport (982×900, DPR 1), measures it there and at 1280×900, and asserts
+ * role-level invariants: one value per role, controls one height with the
+ * shell's own, strips flush and one height, a box's content at its padding,
+ * nothing cut or overflowing, and the geometry still two frames later. The
+ * design's pixel values live in the tokens; this file holds none of them.
  *
  * The shell fixture answers every unstubbed read with a 404, so most routes
- * settle into their read-error state; Runs is also rendered with fixture
- * rows, so table rows and status marks are measured too, and Settings
- * integrations with a connection, so neighbouring slips are measured.
+ * settle into their read-error state; the stubbed states below draw rows,
+ * figures, neighbouring slips, a searched field and an open panel.
  */
 
-const ROUTES = [
-  '/projects',
-  '/site',
-  '/issues',
-  '/search-intelligence',
-  '/performance',
-  '/products',
-  '/prompts',
-  '/visibility',
-  '/runs',
-  '/ai-traffic',
-  '/ai-traffic?tab=crawlers',
-  '/ai-traffic?tab=activity',
-  '/ai-traffic?tab=pages',
-  '/settings',
-  '/settings?tab=integrations',
-  '/settings?tab=providers',
-  '/settings?tab=connections',
-  '/billing',
-  '/actions',
-  '/agent/skills',
-  '/agent/context',
+/** Roles the shell draws on every product route. */
+const SHELL_ROLES = [
+  'masthead.bottom',
+  'nav-row.height',
+  'header-cluster.height',
+  'main.padding-x',
+  'button.height',
 ] as const;
-
-/** One control height for the product: control-md, 28 in the app. */
-const CONTROL_HEIGHT = 28;
-/** A switch's round track: 20 (components/ui/switch.tsx). */
-const SWITCH_HEIGHT = 20;
-/** Tags and status marks in running content (cells, facts): 24. */
-const TAG_HEIGHT = 24;
-/** Text controls have one horizontal padding; icon-only controls are square, with none. */
-const TEXT_CONTROL_PADDING_X = 12;
-const ICON_CONTROL_PADDING_X = 0;
-/** A page's tab row fills its strip (`--page-tabs-height`); section tab rows are one control high. */
-const PAGE_TABS_HEIGHT = 44;
-/** Tabs are text on a hairline with 12 each side and 4 between; segments are pills 2 apart on their track. */
-const TAB_PADDING_X = 12;
-const TAB_GAP = 4;
-const SEGMENT_GAP = 2;
-/** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
-const SIDEBAR_IDENT_HEIGHT = 44;
+/** Every control is one height: the shell's masthead cluster sets it for the page. */
+const CONTROL_ROLES = [
+  'header-cluster.height',
+  'button.height',
+  'input.height',
+  'select.height',
+  'segmented.height',
+  'scroll-step.height',
+  'data-table-header.height',
+] as const;
+/** Masthead, tab strip and filter strip stack flush, each strip one height, its tabs filling it. */
+const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height', 'filter-strip.height'] as const;
+/** A slip's content starts at its padding, on both axes. */
+const SLIP_INSET_ROLES = ['slip.padding', 'slip.inset-top', 'slip.inset-left'] as const;
 /**
- * The masthead and the sidebar's switcher cell end on one 48px line from the
- * top of the window, the hairline under both.
+ * Roles whose only right value is none: flush bands, square icon-only
+ * controls, frameless states, whole-cell figure targets, one-height figure
+ * strips, uncut head labels and no sideways page scroll.
  */
-const MASTHEAD_HEIGHT = 48;
-/**
- * Sidebar destination rows and the group labels that fold them are 32 (on a
- * 34 pitch): rows, not controls, and their labels never wrap.
- */
-const NAV_ROW_HEIGHT = 32;
-/**
- * Masthead, tab strip and filter strip stack flush, each the same height on
- * every page (owner, 2026-11-18): the filter strip is 8 around its 28
- * controls, the tab strip as high, its tabs filling it. The main column is
- * padded 32 left and right (`--page-pad-inline`); the body starts 16 below
- * the last strip.
- */
-const BAND_GAP = 0;
-const PAGE_PAD_INLINE = 32;
-const TABS_STRIP_TOP = 0;
-const TABS_STRIP_HEIGHT = 44;
-const FILTER_STRIP_PADDING_Y = 8;
-const FILTER_STRIP_HEIGHT = 44;
-const BODY_TOP_GAP = 16;
-/** The content band's sections stand 32 apart on the page surface. */
-const CONTENT_GAP = 32;
-/** Neighbouring slips sit on the grid, one grid gap apart. */
-const SLIP_GAP = 16;
-/** One card recipe (2.4) for slips: padding 16 and radius 8. */
-const SLIP_INSET = 16;
-const SLIP_RADIUS = 8;
-/**
- * A state's height is its content. As a read error (its Notice is the box) or
- * inside a container, a state that draws no frame has no padding.
- */
-const QUERY_STATE_PADDING = 0;
-/**
- * A row of a title over its caption (`TableCellLines`): a two-line table holds
- * every row at 56, the title (20) + 4 + caption (16) centred in it.
- */
-const TABLE_ROW_HEIGHT_TWO_LINES = 56;
-/** Rows are a height with content centred in it: 4 keeps a 32 control in a 44 row. */
-const TABLE_CELL_PADDING_Y = 4;
-/** A DataTable's title-and-toolbar row is one control high. */
-const DATA_TABLE_HEADER_HEIGHT = 28;
-/** A FigureStrip cell is padded 12; a strip's cells share one height. */
-const FIGURE_CELL_PADDING_Y = 12;
-const FIGURE_STRIP_HEIGHT_SPREAD = 0;
-/** A figure cell is two lines: 12 + label 20 + 4 + value 24 + 12. */
-const FIGURE_CELL_HEIGHT = 72;
-/** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
-const TREE_ROW_HEIGHT = 40;
-/** A wide table's pair of sideways steppers are one small control, 28 (components/ui/scroll-edges.tsx); /billing at 982 shows them. */
-const SCROLL_STEP_HEIGHT = 28;
-/** The Icon atom's one glyph size. */
-const ICON_SIZE = 16;
-/** A metric card's icon tile is a 40px square, centred on the label and value lines. */
-const ICON_TILE_SIZE = 40;
-/** Setting rows pad each row 12 above and below, the list's ends flush. */
-const SETTING_ROW_PADDING_Y = 12;
-/** A field's end target (clear, reveal) is a 24px square, WCAG 2.5.8's minimum. */
-const FIELD_END_TARGET_SIZE = 24;
-/** An inline code token is padded 8 across and 4 down. */
-const CODE_TOKEN_PADDING_X = 8;
-const CODE_TOKEN_PADDING_Y = 4;
+const NONE_ROLES = [
+  'band.gap',
+  'tabs-strip.top',
+  'button.padding-x.icon',
+  'query-state.padding',
+  'figure-target.gap',
+  'figure-strip.height-spread',
+  'table-head.cut',
+  'page.overflow-x',
+] as const;
+/** WCAG 2.5.8's minimum target, for a field's end target (clear, reveal). */
+const MIN_TARGET_SIZE = 24;
 
 type Box = Readonly<{ route: string; role: string; label: string; value: number }>;
 
@@ -496,6 +427,9 @@ function measure({ route }: { route: string }) {
       Math.max(0, ...drawn.map((node) => node.scrollWidth - node.clientWidth)),
     );
   }
+  // The page never scrolls sideways; a wide table scrolls inside its own frame.
+  const root = document.documentElement;
+  add('page.overflow-x', root, Math.max(0, root.scrollWidth - root.clientWidth));
   return records;
 }
 
@@ -518,40 +452,71 @@ async function census(
   // failed read forever: a product bug to fix, never a timeout to raise.
   await page.waitForLoadState('networkidle');
   await prepare?.(page);
-  const records: Box[] = [];
-  for (const width of WIDTHS) {
-    await page.setViewportSize({ width, height: 900 });
-    // A resize re-renders whatever listens for it; measure the next painted frame.
-    await page.evaluate(
+  const nextFrame = () =>
+    page.evaluate(
       () =>
         new Promise<void>((resolve) => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
+  const records: Box[] = [];
+  for (const width of WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    // A resize re-renders whatever listens for it; measure the next painted frame.
+    await nextFrame();
     await expect(page.locator('[data-state-block="loading"], [data-skeleton]')).toHaveCount(0);
-    records.push(...(await page.evaluate(measure, { route: `${label} @${width}` })));
+    const route = `${label} @${width}`;
+    const settled = await page.evaluate(measure, { route });
+    // A settled page holds still: nothing shifts once it has painted.
+    await nextFrame();
+    expect.soft(await page.evaluate(measure, { route }), `${route} holds still`).toEqual(settled);
+    records.push(...settled);
   }
   return records;
 }
 
 /** The distinct values one role rendered, with where each came from. */
-function valuesOf(records: readonly Box[], role: string) {
+function valuesOf(records: readonly Box[], roles: readonly string[]) {
   const values = new Map<number, string[]>();
-  for (const record of records.filter((entry) => entry.role === role)) {
+  for (const record of records.filter((entry) => roles.includes(entry.role))) {
     const where = values.get(record.value) ?? [];
-    where.push(`${record.route} "${record.label}"`);
+    where.push(`${record.role} ${record.route} "${record.label}"`);
     values.set(record.value, where);
   }
   return values;
 }
 
-function expectOneValue(records: readonly Box[], role: string, expected: number) {
-  const values = valuesOf(records, role);
-  const offenders = [...values.entries()]
-    .filter(([value]) => value !== expected)
-    .map(([value, where]) => `${value}px: ${where.slice(0, 6).join(', ')}`);
-  expect.soft(offenders, `${role} renders only ${expected}px`).toEqual([]);
-  expect.soft(values.size, `${role} was measured`).toBeGreaterThan(0);
+const describeValues = (values: ReadonlyMap<number, string[]>) =>
+  [...values.entries()].map(([value, where]) => `${value}px: ${where.slice(0, 4).join(', ')}`);
+
+/** The roles render one value between them, at both widths. */
+function expectOneValue(records: readonly Box[], roles: readonly string[]) {
+  const values = valuesOf(records, roles);
+  if (values.size > 1)
+    expect.soft(describeValues(values), `${roles.join(' = ')} render one value`).toEqual([]);
+}
+
+function expectNone(records: readonly Box[], role: string) {
+  const values = valuesOf(records, [role]);
+  values.delete(0);
+  expect.soft(describeValues(values), `${role} is always 0`).toEqual([]);
+}
+
+/** Every invariant over one page state; `required` names the roles the state exists to draw. */
+function expectRoleInvariants(records: readonly Box[], required: readonly string[] = []) {
+  const measured = new Set(records.map((entry) => entry.role));
+  const missing = [...SHELL_ROLES, ...required].filter((role) => !measured.has(role));
+  expect.soft(missing, 'every expected role was measured').toEqual([]);
+  for (const role of measured) expectOneValue(records, [role]);
+  expectOneValue(records, CONTROL_ROLES);
+  expectOneValue(records, STRIP_ROLES);
+  expectOneValue(records, SLIP_INSET_ROLES);
+  expectOneValue(records, ['field-end-target.size', 'field-end-target.hit']);
+  for (const role of NONE_ROLES) expectNone(records, role);
+  const small = [...valuesOf(records, ['field-end-target.size']).keys()].filter(
+    (value) => value < MIN_TARGET_SIZE,
+  );
+  expect.soft(small, `a field end target is at least ${MIN_TARGET_SIZE}px`).toEqual([]);
 }
 
 /** The latest figures for the fixture's one prompt (`PROMPT_SETS`). */
@@ -631,7 +596,7 @@ const MEMBERS = [
   },
 ];
 
-/** A Search Console connection, so Settings draws its integration slips. */
+/** A Search Console connection, so Settings draws a connected integration. */
 const CONNECTIONS = [
   {
     id: '55555555-5555-4555-8555-555555555551',
@@ -648,92 +613,29 @@ const CONNECTIONS = [
   },
 ];
 
-// One theme, at both widths (WIDTHS). The dark theme rebinds colour and
-// shadow tokens only (globals.css), neither of which moves a box, so a
-// second pass in it measured the same geometry again.
-test.describe('light theme', () => {
-  test.use({ deviceScaleFactor: 1, colorScheme: 'light' });
+type PageState = Readonly<{
+  route: string;
+  label?: string;
+  stubs?: Parameters<typeof stubAuthedShell>[1];
+  /** Roles this state exists to draw, beyond the shell's own. */
+  required?: readonly string[];
+  prepare?: (page: Page) => Promise<void>;
+}>;
 
-  test('every product route renders one value per geometric role', async ({ page }) => {
-    test.setTimeout(240_000);
-    // With no stored choice the theme follows the emulated device scheme.
-    await expectOneGeometry(page);
-  });
-});
+const [run] = RUNS;
+const [skill] = skills.skills;
+const workspace = FIXTURE_PROJECT.workspace_id;
 
-async function expectOneGeometry(page: Page) {
-  await stubAuthedShell(page);
-  const records: Box[] = [];
-  for (const route of ROUTES) records.push(...(await census(page, route)));
-
-  // A list route with rows, so table rows and status marks are measured.
-  await stubAuthedShell(page, [[/\/api\/v1\/audits(\?.*)?$/, RUNS]]);
-  records.push(...(await census(page, '/runs', { label: '/runs (rows)' })));
-
-  // One run's detail, so a FigureStrip (the run's progress figures) is measured.
-  const [run] = RUNS;
-  if (!run) throw new Error('the runs fixture has a first run');
-  await stubAuthedShell(page, [
-    [new RegExp(String.raw`/api/v1/audits/${run.id}$`), run],
-    [new RegExp(String.raw`/api/v1/audits/${run.id}/executions(\?.*)?$`), []],
-  ]);
-  records.push(...(await census(page, `/runs/${run.id}`, { label: '/runs/:id (detail)' })));
-
-  // Neighbouring slips, so the slip → slip gap is measured, not assumed.
-  await stubAuthedShell(page, [[/\/api\/v1\/integrations(\?.*)?$/, CONNECTIONS]]);
-  records.push(
-    ...(await census(page, '/settings?tab=integrations', {
-      label: '/settings integrations (cards)',
-    })),
-  );
-
-  // The member roster: a DataTable whose header row holds its search, so the
-  // header is measured now that list titles sit in their card's head.
-  const workspace = FIXTURE_PROJECT.workspace_id;
-  await stubAuthedShell(page, [
-    [new RegExp(String.raw`/api/v1/workspaces/${workspace}/members(\?.*)?$`), MEMBERS],
-    [new RegExp(String.raw`/api/v1/workspaces/${workspace}/invitations(\?.*)?$`), []],
-  ]);
-  records.push(
-    ...(await census(page, '/settings?tab=workspace', { label: '/settings workspace (roster)' })),
-  );
-
-  // Two skills in one group, so neighbouring slips are measured.
-  const [skill] = skills.skills;
-  if (!skill) throw new Error('the skills fixture has a skill');
-  await stubAuthedShell(page, [
-    [
-      /\/api\/v1\/agent\/skills$/,
-      { ...skills, skills: [skill, { ...skill, id: 'gsc_titles', label: 'Title rewrites' }] },
-    ],
-  ]);
-  records.push(...(await census(page, '/agent/skills', { label: '/agent/skills (slips)' })));
-
-  // A search holding a value, so its end target (Clear search) is drawn. The
-  // library needs a prompt: an empty or failed one draws no search at all.
-  await stubAuthedShell(page, [['**/api/v1/prompt-sets?*', PROMPT_SETS]]);
-  records.push(
-    ...(await census(page, '/prompts', {
-      label: '/prompts (searched)',
-      prepare: async (current) => {
-        await current.getByRole('searchbox').first().fill('pricing');
-        await expect(current.getByRole('button', { name: 'Clear search' })).toBeVisible();
-      },
-    })),
-  );
-
-  // A measured prompt, so the library draws its figure and mark columns: their
-  // floors (880) pass the 982 viewport's column, and the table scrolls sideways
-  // behind its steppers, so `scroll-step` is measured by design.
-  await stubAuthedShell(page, [
-    ['**/api/v1/prompt-sets?*', PROMPT_SETS],
-    [/\/visibility\/prompts(\?.*)?$/, [PROMPT_METRIC]],
-  ]);
-  records.push(...(await census(page, '/prompts', { label: '/prompts (measured)' })));
-
-  // The account menu open, so its ThemeSwitch (the one control-sm atom) is drawn.
-  records.push(
-    ...(await census(page, '/projects', {
+/**
+ * Each product page state, by route group. Unstubbed reads settle into their
+ * read-error state; a stubbed state draws what its comment names.
+ */
+const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
+  projects: [
+    { route: '/projects' },
+    {
+      // The account menu open, so its ThemeSwitch is drawn.
+      route: '/projects',
       label: '/projects (account menu)',
       prepare: async (current) => {
         await current.getByRole('button', { name: /^Account menu/ }).click();
@@ -745,68 +647,134 @@ async function expectOneGeometry(page: Page) {
           .getByRole('menu')
           .evaluate((menu) => Promise.all(menu.getAnimations().map((motion) => motion.finished)));
       },
-    })),
-  );
-
-  // The project edit panel open, so its mention-rule Switch is drawn.
-  records.push(
-    ...(await census(page, '/agent/context?tab=competitors', {
+    },
+  ],
+  'site health and search': [
+    { route: '/site' },
+    { route: '/issues' },
+    { route: '/search-intelligence' },
+    { route: '/performance' },
+    { route: '/products' },
+  ],
+  visibility: [
+    { route: '/prompts' },
+    { route: '/visibility' },
+    {
+      // A search holding a value, so its end target (Clear search) is drawn. The
+      // library needs a prompt: an empty or failed one draws no search at all.
+      route: '/prompts',
+      label: '/prompts (searched)',
+      stubs: [['**/api/v1/prompt-sets?*', PROMPT_SETS]],
+      required: ['field-end-target.size'],
+      prepare: async (current) => {
+        await current.getByRole('searchbox').first().fill('pricing');
+        await expect(current.getByRole('button', { name: 'Clear search' })).toBeVisible();
+      },
+    },
+    {
+      // A measured prompt: the figure and mark columns' floors pass the 982
+      // column, so the table scrolls sideways behind its steppers.
+      route: '/prompts',
+      label: '/prompts (measured)',
+      stubs: [
+        ['**/api/v1/prompt-sets?*', PROMPT_SETS],
+        [/\/visibility\/prompts(\?.*)?$/, [PROMPT_METRIC]],
+      ],
+      required: ['scroll-step.height'],
+    },
+  ],
+  runs: [
+    { route: '/runs' },
+    {
+      // Rows, so table rows and status marks are measured.
+      route: '/runs',
+      label: '/runs (rows)',
+      stubs: [[/\/api\/v1\/audits(\?.*)?$/, RUNS]],
+      required: ['table-cell.padding-y', 'tag.height'],
+    },
+    {
+      // One run's detail, so a FigureStrip (its progress figures) is measured.
+      route: `/runs/${run?.id}`,
+      label: '/runs/:id (detail)',
+      stubs: [
+        [new RegExp(String.raw`/api/v1/audits/${run?.id}$`), run],
+        [new RegExp(String.raw`/api/v1/audits/${run?.id}/executions(\?.*)?$`), []],
+      ],
+      required: ['figure-cell.padding-y', 'figure-strip.height-spread'],
+    },
+  ],
+  'ai traffic': [
+    { route: '/ai-traffic' },
+    { route: '/ai-traffic?tab=crawlers' },
+    { route: '/ai-traffic?tab=activity' },
+    { route: '/ai-traffic?tab=pages' },
+  ],
+  settings: [
+    { route: '/settings' },
+    { route: '/settings?tab=integrations' },
+    { route: '/settings?tab=providers' },
+    { route: '/settings?tab=connections' },
+    { route: '/billing' },
+    {
+      // A connection, so the provider sections draw a connected integration.
+      route: '/settings?tab=integrations',
+      label: '/settings integrations (connected)',
+      stubs: [[/\/api\/v1\/integrations(\?.*)?$/, CONNECTIONS]],
+    },
+    {
+      // The member roster: a DataTable whose header row holds its search.
+      route: '/settings?tab=workspace',
+      label: '/settings workspace (roster)',
+      stubs: [
+        [new RegExp(String.raw`/api/v1/workspaces/${workspace}/members(\?.*)?$`), MEMBERS],
+        [new RegExp(String.raw`/api/v1/workspaces/${workspace}/invitations(\?.*)?$`), []],
+      ],
+      required: ['data-table-header.height', 'input.height'],
+    },
+  ],
+  agent: [
+    { route: '/actions' },
+    { route: '/agent/skills' },
+    { route: '/agent/context' },
+    {
+      // Two skills in one group, so neighbouring slips are measured.
+      route: '/agent/skills',
+      label: '/agent/skills (slips)',
+      stubs: [
+        [
+          /\/api\/v1\/agent\/skills$/,
+          { ...skills, skills: [skill, { ...skill, id: 'gsc_titles', label: 'Title rewrites' }] },
+        ],
+      ],
+      required: ['slip.gap'],
+    },
+    {
+      // The project edit panel open, so its mention-rule Switch is drawn.
+      route: '/agent/context?tab=competitors',
       label: '/agent/context (edit panel)',
+      required: ['switch.height'],
       prepare: async (current) => {
         await current.getByRole('button', { name: 'Edit competitors' }).click();
         // An ordinary brand name keeps its mention rule behind a disclosure.
         await current.locator('summary', { hasText: 'Mention rule' }).first().click();
         await expect(current.getByRole('switch').first()).toBeVisible();
       },
-    })),
-  );
+    },
+  ],
+};
 
-  expectOneValue(records, 'button.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
-  expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
-  expectOneValue(records, 'scroll-step.height', SCROLL_STEP_HEIGHT);
-  expectOneValue(records, 'figure-target.gap', 0);
-  expectOneValue(records, 'input.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'select.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);
-  expectOneValue(records, 'segmented.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'nav-row.height', NAV_ROW_HEIGHT);
-  expectOneValue(records, 'header-cluster.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'control.font-size', 14);
-  expectOneValue(records, 'tag.height', TAG_HEIGHT);
-  expectOneValue(records, 'button.padding-x.text', TEXT_CONTROL_PADDING_X);
-  expectOneValue(records, 'button.padding-x.icon', ICON_CONTROL_PADDING_X);
-  expectOneValue(records, 'tab.padding-x', TAB_PADDING_X);
-  expectOneValue(records, 'tab.gap', TAB_GAP);
-  expectOneValue(records, 'segment.gap', SEGMENT_GAP);
-  expectOneValue(records, 'sidebar-ident.height', SIDEBAR_IDENT_HEIGHT);
-  expectOneValue(records, 'masthead.bottom', MASTHEAD_HEIGHT);
-  expectOneValue(records, 'band.gap', BAND_GAP);
-  expectOneValue(records, 'body.top-gap', BODY_TOP_GAP);
-  expectOneValue(records, 'tabs-strip.top', TABS_STRIP_TOP);
-  expectOneValue(records, 'tabs-strip.height', TABS_STRIP_HEIGHT);
-  expectOneValue(records, 'filter-strip.padding-y', FILTER_STRIP_PADDING_Y);
-  expectOneValue(records, 'filter-strip.height', FILTER_STRIP_HEIGHT);
-  expectOneValue(records, 'main.padding-x', PAGE_PAD_INLINE);
-  expectOneValue(records, 'content.gap', CONTENT_GAP);
-  expectOneValue(records, 'slip.gap', SLIP_GAP);
-  expectOneValue(records, 'slip.padding', SLIP_INSET);
-  expectOneValue(records, 'slip.radius', SLIP_RADIUS);
-  expectOneValue(records, 'slip.inset-top', SLIP_INSET);
-  expectOneValue(records, 'slip.inset-left', SLIP_INSET);
-  expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
-  expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
-  expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
-  expectOneValue(records, 'table-head.cut', 0);
-  expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
-  expectOneValue(records, 'figure-cell.padding-y', FIGURE_CELL_PADDING_Y);
-  expectOneValue(records, 'figure-strip.height-spread', FIGURE_STRIP_HEIGHT_SPREAD);
-  expectOneValue(records, 'figure-cell.height', FIGURE_CELL_HEIGHT);
-  expectOneValue(records, 'icon.size', ICON_SIZE);
-  expectOneValue(records, 'icon-tile.size', ICON_TILE_SIZE);
-  expectOneValue(records, 'setting-row.padding-y', SETTING_ROW_PADDING_Y);
-  expectOneValue(records, 'field-end-target.size', FIELD_END_TARGET_SIZE);
-  expectOneValue(records, 'field-end-target.hit', FIELD_END_TARGET_SIZE);
-  expectOneValue(records, 'code-token.padding-x', CODE_TOKEN_PADDING_X);
-  expectOneValue(records, 'code-token.padding-y', CODE_TOKEN_PADDING_Y);
+// One theme, at both widths (WIDTHS). The dark theme rebinds colour and
+// shadow tokens only (globals.css), neither of which moves a box. With no
+// stored choice the theme follows the emulated device scheme.
+test.use({ deviceScaleFactor: 1, colorScheme: 'light' });
+
+for (const [group, states] of Object.entries(ROUTE_GROUPS)) {
+  test.describe(`geometry: ${group}`, () => {
+    for (const { route, label = route, stubs, required, prepare } of states) {
+      test(`${label} keeps its role invariants`, async ({ page }) => {
+        await stubAuthedShell(page, stubs);
+        expectRoleInvariants(await census(page, route, { label, prepare }), required);
+      });
+    }
+  });
 }

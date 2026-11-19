@@ -227,7 +227,6 @@ function PageKindTable({
                 <TableCell numeric>
                   {pageKind.indexable_count} / {pageKind.page_count}
                 </TableCell>
-                <TableCell numeric>{pageKind.duplicate_metadata_count}</TableCell>
                 <TableCell numeric>
                   {pageKind.orphan_count ?? <Absence state="not_measured" />}
                 </TableCell>
@@ -246,7 +245,6 @@ const PAGE_KIND_COLUMNS: readonly DataTableColumn[] = [
   { key: 'pages', label: 'Pages crawled', kind: 'number' },
   { key: 'depth', label: 'Median depth', kind: 'number' },
   { key: 'indexable', label: 'Indexable', kind: 'number' },
-  { key: 'duplicates', label: 'Duplicate metadata', kind: 'number', priority: 'low' },
   { key: 'orphaned', label: 'Orphaned', kind: 'number', priority: 'low' },
 ];
 const PAGE_KIND_KEYS = PAGE_KIND_COLUMNS.map((column) => column.key);

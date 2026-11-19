@@ -47,13 +47,6 @@ function setsBy(members: ArchitecturePage[], keyOf: (page: ArchitecturePage) => 
     .filter((set) => set.pages.length > 1)
     .sort((a, b) => b.pages.length - a.pages.length || compareText(a.first.url, b.first.url));
 }
-/** Pages of one kind sharing a normalized title and description; blank metadata never matches. */
-const duplicateSets = (members: ArchitecturePage[]) =>
-  setsBy(members, (page) => {
-    const title = normalized(page.title);
-    const description = normalized(page.description);
-    return title || description ? JSON.stringify([title, description]) : '';
-  });
 /** Pages sharing one exact title or description (case and whitespace aside); blank never matches. */
 export const exactDuplicateSets = (members: ArchitecturePage[], field: 'title' | 'description') =>
   setsBy(members, (page) => normalized(page[field]));
@@ -63,10 +56,6 @@ function kindRow(kind: string, members: ArchitecturePage[]) {
     page_count: members.length,
     median_depth: median(members.flatMap((page) => (page.depth === null ? [] : [page.depth]))),
     indexable_count: members.filter((page) => page.indexable === true).length,
-    duplicate_metadata_count: duplicateSets(members).reduce(
-      (sum, set) => sum + set.pages.length,
-      0,
-    ),
     orphan_count: members.filter((page) => page.kind !== 'homepage' && page.inbound === 0).length,
     site_url_ids: members.map((page) => page.id),
   };
