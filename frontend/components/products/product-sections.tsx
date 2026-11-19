@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
-import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
+import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
@@ -261,7 +261,7 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
           </li>
         ))}
       </ProductSection>
-      <ExecutionEvidenceDrawer
+      <AnswerDialog
         execution={open ? { id: open.task_id, prompt_text: open.prompt_text } : null}
         open={open !== null}
         onOpenChange={(next) => {

@@ -1,4 +1,4 @@
-import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
+import { Archive, Check, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
@@ -55,7 +55,7 @@ export type PromptMeasurement = PromptMentions & {
   /** Distinct brands named in the answers; `brands` is the leading few. */
   mentions: number;
   brands: readonly NamedBrand[];
-  /** Where that run asked the prompt, for the row's Evidence. */
+  /** Where that run asked the prompt: the row opens that answer. */
   answer: PromptAnswerRef;
 };
 
@@ -65,8 +65,6 @@ export type PromptRowActions = Readonly<{
   onDelete: (prompt: Prompt) => void;
   onToggleEnabled: (prompt: Prompt) => void;
   onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
-  /** Opens the answers the latest run got for a measured prompt. */
-  onEvidence?: (prompt: Prompt, answer: PromptAnswerRef) => void;
 }>;
 
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
@@ -83,8 +81,9 @@ function emptyState(rows: number, onClearFilters?: () => void): DataTableState |
 /**
  * Prompt table (F7). Questions, their topic and measured visibility, with a
  * per-row menu (edit, enable or disable, archive or restore when
- * `onSetStatus` is wired, evidence, delete). A click anywhere on a row
- * outside its controls opens the prompt.
+ * `onSetStatus` is wired, delete). A click anywhere on a row outside its
+ * controls opens the latest run's answer to the prompt, or the prompt's
+ * history when no run has measured it.
  *
  * The measured columns arrive as a map rather than being fetched here: the
  * prompt IS the object a reader is looking at, so its result belongs on this
@@ -103,10 +102,13 @@ export function PromptTable({
   commerceSetIds,
   selection,
   onClearFilters,
+  onOpenAnswer,
 }: Readonly<{
   prompts: Prompt[];
   /** Set while search, topic or filters hide rows the tab has: an empty table offers to clear them. */
   onClearFilters?: () => void;
+  /** Opens the answer the latest run got for a measured prompt. */
+  onOpenAnswer?: (prompt: Prompt, answer: PromptAnswerRef) => void;
   /** Each topic's name by id; omitted until the topic list is read. */
   topicNames?: ReadonlyMap<string, string>;
   /** Row checkboxes for bulk actions, for a role that may edit prompts. */
@@ -161,55 +163,50 @@ export function PromptTable({
         ...pageNumberControls(page, pageCount, setPage),
       }}
     >
-      {pagedPrompts.map((prompt) => (
-        <TableRow
-          key={prompt.id}
-          className="cursor-pointer"
-          onClick={(event) => {
-            if (isRowSurfaceClick(event)) void navigate(projectHref(promptHistoryHref(prompt.id)));
-          }}
-        >
-          {selection ? (
-            <TableSelectCell
-              label={`Select “${prompt.text}”`}
-              checked={selection.ids.has(prompt.id)}
-              onCheckedChange={(checked, range) => selection.toggle(prompt.id, checked, range)}
-            />
-          ) : null}
-          <TableCell>
-            {/* The question links to its history for the keyboard: two lines,
-                or one over a caption, its whole text in a tooltip. The caption
-                names the prompt's set when there are several brand sets, and
-                says when audits skip the prompt. */}
-            <TableCellLines
-              title
-              wrap
-              primary={
-                <TextLink href={promptHistoryHref(prompt.id)} text="inherit" underline="hover">
-                  {prompt.text}
-                </TextLink>
-              }
-              secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
-            />
-          </TableCell>
-          <TableCell>
-            <TopicName topicId={prompt.topic_id} names={topicNames} />
-          </TableCell>
-          {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
-            <ShelfMeasuredCells columns={measuredColumns} />
-          ) : null}
-          {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
-            <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
-          ) : null}
-          {actions ? (
-            <PromptRowMenu
-              prompt={prompt}
-              actions={actions}
-              onEvidence={evidenceOpener(prompt, measurements?.get(prompt.id), actions)}
-            />
-          ) : null}
-        </TableRow>
-      ))}
+      {pagedPrompts.map((prompt) => {
+        const openAnswer = answerOpener(prompt, measurements?.get(prompt.id), onOpenAnswer);
+        return (
+          <TableRow
+            key={prompt.id}
+            className="cursor-pointer"
+            onClick={(event) => {
+              if (!isRowSurfaceClick(event)) return;
+              if (openAnswer) openAnswer();
+              else void navigate(projectHref(promptHistoryHref(prompt.id)));
+            }}
+          >
+            {selection ? (
+              <TableSelectCell
+                label={`Select “${prompt.text}”`}
+                checked={selection.ids.has(prompt.id)}
+                onCheckedChange={(checked, range) => selection.toggle(prompt.id, checked, range)}
+              />
+            ) : null}
+            <TableCell>
+              {/* The question is the keyboard's way in: two lines, or one over
+                  a caption, its whole text in a tooltip. The caption names the
+                  prompt's set when there are several brand sets, and says when
+                  audits skip the prompt. */}
+              <TableCellLines
+                title
+                wrap
+                primary={<PromptQuestion prompt={prompt} openAnswer={openAnswer} />}
+                secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
+              />
+            </TableCell>
+            <TableCell>
+              <TopicName topicId={prompt.topic_id} names={topicNames} />
+            </TableCell>
+            {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
+              <ShelfMeasuredCells columns={measuredColumns} />
+            ) : null}
+            {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
+              <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
+            ) : null}
+            {actions ? <PromptRowMenu prompt={prompt} actions={actions} /> : null}
+          </TableRow>
+        );
+      })}
     </DataTable>
   );
 }
@@ -234,14 +231,40 @@ function rowCaption(prompt: Prompt, setName: string | undefined): string | undef
   return parts.filter(Boolean).join(' · ') || undefined;
 }
 
-/** Opens the latest run's answers to a measured prompt; nothing for an unmeasured one. */
-function evidenceOpener(
+/** Opens the latest run's answer to a measured prompt; nothing for an unmeasured one. */
+function answerOpener(
   prompt: Prompt,
   measurement: PromptMeasurement | undefined,
-  { onEvidence }: PromptRowActions,
+  onOpenAnswer: ((prompt: Prompt, answer: PromptAnswerRef) => void) | undefined,
 ) {
-  if (!measurement || !onEvidence) return undefined;
-  return () => onEvidence(prompt, measurement.answer);
+  if (!measurement || !onOpenAnswer) return undefined;
+  return () => onOpenAnswer(prompt, measurement.answer);
+}
+
+/**
+ * The question links to its history; once a run has measured it, a plain click
+ * opens the latest answer instead, and a modified click still opens the history.
+ */
+function PromptQuestion({
+  prompt,
+  openAnswer,
+}: Readonly<{ prompt: Prompt; openAnswer: (() => void) | undefined }>) {
+  return (
+    <TextLink
+      href={promptHistoryHref(prompt.id)}
+      text="inherit"
+      underline="hover"
+      aria-haspopup={openAnswer ? 'dialog' : undefined}
+      onClick={(event) => {
+        const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+        if (!openAnswer || event.button !== 0 || modified) return;
+        event.preventDefault();
+        openAnswer();
+      }}
+    >
+      {prompt.text}
+    </TextLink>
+  );
 }
 
 /** The prompt's topic; a prompt filed under none says so, an unread topic list is unavailable. */
@@ -259,12 +282,9 @@ function TopicName({
 function PromptRowMenu({
   prompt,
   actions: { onEdit, onDelete, onToggleEnabled, onSetStatus },
-  onEvidence,
 }: Readonly<{
   prompt: Prompt;
   actions: PromptRowActions;
-  /** Opens the latest run's answers; absent for a prompt no run has measured. */
-  onEvidence?: () => void;
 }>) {
   return (
     <TableActionsCell>
@@ -293,11 +313,6 @@ function PromptRowMenu({
               onSelect={() => onSetStatus(prompt, 'archived')}
             >
               Archive
-            </MenuItem>
-          ) : null}
-          {onEvidence ? (
-            <MenuItem icon={<Icon icon={FileSearch} />} onSelect={onEvidence}>
-              Evidence
             </MenuItem>
           ) : null}
           <MenuSeparator />

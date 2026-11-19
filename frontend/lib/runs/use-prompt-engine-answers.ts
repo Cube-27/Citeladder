@@ -5,14 +5,14 @@ import { runsQueries } from '@/lib/api/runs';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
 /**
- * The answers every engine gave one prompt in one run, for the evidence
- * drawer's Engine filter: the opened execution's siblings on the same prompt
+ * The answers every engine gave one prompt in one run, for the answer
+ * dialog's Engine filter: the opened execution's siblings on the same prompt
  * that have an answer to show, and which of them the reader is on.
  *
  * The run and the prompt come from the opened execution's own evidence, so a
  * surface that holds only an execution id (AI Visibility's source rows) gets
  * the same choice as the run page. The choice belongs to the execution that
- * opened the drawer: opening another starts on that one.
+ * opened the dialog: opening another starts on that one.
  */
 export function usePromptEngineAnswers({
   workspaceId,
@@ -37,6 +37,8 @@ export function usePromptEngineAnswers({
   const activeId = answers.some((answer) => answer.id === pickedId) ? pickedId : executionId;
   return {
     activeId,
+    /** The shown answer's execution row (its status, the prompt as asked); null until read. */
+    shown: run.data?.find((execution) => execution.id === activeId) ?? null,
     /** One option per answer; a repeated engine is numbered ("ChatGPT 2"). */
     options: answers.map((answer, index) => {
       const label = catalog.label(answer.logical_engine);

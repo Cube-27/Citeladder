@@ -87,9 +87,16 @@ export function useReturnFocus(open: boolean) {
 function DialogHeader({
   title,
   description,
+  toolbar,
   danger,
   divided,
-}: Readonly<{ title: ReactNode; description?: ReactNode; danger: boolean; divided: boolean }>) {
+}: Readonly<{
+  title: ReactNode;
+  description?: ReactNode;
+  toolbar?: ReactNode;
+  danger: boolean;
+  divided: boolean;
+}>) {
   return (
     <header
       className={cn(
@@ -103,12 +110,15 @@ function DialogHeader({
           <Icon icon={AlertTriangle} className="my-0" />
         </span>
       ) : null}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <DialogPrimitive.Title className="type-heading text-balance">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
             <div className="text-body-sm text-ink-2 mt-1">{description}</div>
           </DialogPrimitive.Description>
+        ) : null}
+        {toolbar ? (
+          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div>
         ) : null}
       </div>
     </header>
@@ -136,6 +146,7 @@ export function Dialog({
   description,
   children,
   footer,
+  toolbar,
   tone = 'default',
   width = 'narrow',
 }: Readonly<{
@@ -145,15 +156,19 @@ export function Dialog({
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  /** Chips and controls under the title, outside the description. */
+  toolbar?: ReactNode;
   tone?: 'default' | 'danger';
   /**
    * `wide` (640px) only for a side-by-side review the narrow panel cannot
    * hold (two calendar months, a CSV preview); a long form is a Drawer.
+   * `answer` is the answer view alone: most of the viewport, up to the app width.
    */
-  width?: 'narrow' | 'wide';
+  width?: 'narrow' | 'wide' | 'answer';
 }>) {
   const returnFocus = useReturnFocus(open);
   const danger = tone === 'danger';
+  const answer = !danger && width === 'answer';
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -171,13 +186,17 @@ export function Dialog({
           onCloseAutoFocus={returnFocus}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed top-[12dvh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
-            !danger && width === 'wide' ? 'max-w-form' : 'max-w-flow',
+            'dialog-panel z-modal fixed left-1/2 flex w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
+            answer
+              ? 'max-w-app top-16 h-full max-h-[calc(100dvh-8rem)]'
+              : 'top-[12dvh] max-h-[calc(88dvh-1.5rem)]',
+            !answer && (!danger && width === 'wide' ? 'max-w-form' : 'max-w-flow'),
           )}
         >
           <DialogHeader
             title={title}
             description={description}
+            toolbar={toolbar}
             danger={danger}
             divided={children != null}
           />
