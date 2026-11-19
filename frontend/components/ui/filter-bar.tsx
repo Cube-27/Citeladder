@@ -93,8 +93,8 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
  * value moves only what comes after it, and its meta is cut before anything
  * wraps. With a view the view leads and the rest is right-aligned on the same
  * row (owner, 2026-11-19: one row everywhere). Controls that do not fit wrap
- * as whole units, at every width: from 900px the search is 256 wide (200 at
- * least); below it the search takes the first line and the rest flow after.
+ * as whole units, at every width: from 900px the search is 200 to 256 wide;
+ * below it the search takes the first line and the rest flow after.
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
@@ -108,8 +108,9 @@ export function FilterBar({ view, lead, ...row }: FilterBarProps) {
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {view ? (
-        <div className="ms-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
-          <Controls {...row} />
+        // Beside the view while 256 is left for it; its controls wrap inside it.
+        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-2">
+          <Controls {...row} afterView />
         </div>
       ) : (
         <Controls {...row} />
@@ -123,14 +124,15 @@ function Controls({
   filters = [],
   status,
   actions,
-}: Omit<FilterBarProps, 'view' | 'lead'>) {
+  afterView = false,
+}: Omit<FilterBarProps, 'view' | 'lead'> & { afterView?: boolean }) {
   const { chips, menu } = placeFilters(filters);
   const set = filters.filter((filter) => !filter.isDefault);
   const windowLabel = dataWindow(chips);
   return (
     <>
       {search ? (
-        <div className="rail:w-64 rail:min-w-[200px] rail:basis-auto min-w-0 basis-full">
+        <div className="rail:max-w-64 rail:grow rail:basis-[200px] min-w-0 basis-full">
           {search}
         </div>
       ) : null}
@@ -168,10 +170,11 @@ function Controls({
       ) : null}
       {windowLabel || status !== undefined ? (
         // The strip's meta takes what the controls leave and is cut there, so
-        // it never wraps the strip onto a second line.
+        // it never wraps the strip onto a second line. After a view it is drawn
+        // before the right-aligned controls, which keep their places as it changes.
         <div
           data-strip-meta=""
-          className="rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden"
+          className={`${afterView ? 'rail:-order-1 ' : ''}rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden`}
         >
           {windowLabel ? (
             // Outside the live region: the window is on the chip's name already.
