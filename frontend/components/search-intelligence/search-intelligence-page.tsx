@@ -332,9 +332,7 @@ function researchView({
   const loaded = readiness.data;
   if (!loaded.connected && !loaded.datasets.length)
     return {
-      body: statePanels((value) => (
-        <NotConnected funded={loaded.credential_mode === 'funded'} tab={value} />
-      )),
+      body: statePanels(() => <NotConnected funded={loaded.credential_mode === 'funded'} />),
     };
   if (!loaded.owned_targets.length)
     return {
@@ -343,7 +341,6 @@ function researchView({
           kind="empty"
           icon={Settings2}
           heading="Add your website address"
-          description="Keyword research needs the project’s homepage address."
           action={<TextLink href="/projects">Edit the project</TextLink>}
         />
       )),

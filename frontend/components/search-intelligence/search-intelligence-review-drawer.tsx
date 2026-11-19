@@ -199,7 +199,7 @@ export function SearchIntelligenceReviewDrawer({
             )}
           </Field>
           {wantsSeed ? (
-            <Field label="Keyword suggestion seed" hint="The keyword to find related searches for.">
+            <Field label="Keyword suggestion seed">
               {(field) => (
                 <Input {...field} value={seed} onChange={(event) => setSeed(event.target.value)} />
               )}

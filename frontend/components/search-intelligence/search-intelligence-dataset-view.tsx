@@ -188,7 +188,6 @@ function EvidenceDrawer({
         if (!open) onClose();
       }}
       title="Row details"
-      description="What the provider reported for this result when it was saved."
     >
       {selected ? (
         <Inline className="flex-wrap">
@@ -234,17 +233,12 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
 
 /** A saved dataset with no rows: what the provider answered, as the region's one state. */
 function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
-  const scope = `${dataset.target_hostname}${
-    dataset.comparison_origin
-      ? `, compared with ${new URL(dataset.comparison_origin).hostname}`
-      : ''
-  }`;
   return (
     <StateBlock
       kind="empty"
       icon={SearchX}
       heading={emptyDatasetHeading(dataset)}
-      description={`0 saved rows for ${scope}. Requests can incur charges even when no results are returned, so check the website and market before reviewing another analysis.`}
+      description="Requests can incur charges even when no results are returned."
     />
   );
 }
@@ -297,7 +291,7 @@ function datasetSummary(dataset: SearchIntelligenceDataset) {
       {actions ? (
         <p className={textRole('caption')}>
           Gaps with real search volume where a competitor ranks in the top 10 become{' '}
-          <TextLink href="/actions">Actions</TextLink>. Open a row to see its Action.
+          <TextLink href="/actions">Actions</TextLink>.
         </p>
       ) : null}
     </>

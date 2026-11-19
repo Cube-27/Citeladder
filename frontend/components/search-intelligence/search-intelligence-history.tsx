@@ -89,9 +89,8 @@ function HistoryBody({
   return (
     <AppGrid layout="halves">
       <p className={textRole('caption', 'shell:col-span-2')}>
-        Monthly domain-level history for {dataset.target_domain}, {formatWindowDate(first.date)} to{' '}
-        {formatWindowDate(last.date)}. Coverage includes the provider’s historical link population
-        and may differ from the live summary. Missing observations are gaps.
+        {dataset.target_domain}, {formatWindowDate(first.date)} to {formatWindowDate(last.date)}.
+        May differ from the live summary.
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
         <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>

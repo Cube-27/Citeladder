@@ -220,7 +220,7 @@ export function AdvancedOptions({
           />
         )}
       </Field>
-      <Field label="Minimum search volume" hint="Keywords below this volume are not fetched.">
+      <Field label="Minimum search volume">
         {(field) => (
           <Input
             {...field}

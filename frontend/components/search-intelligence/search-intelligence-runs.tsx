@@ -162,12 +162,7 @@ export function CostDetails({
     );
   if (pending) content = <Skeleton variant="list" />;
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Cost details"
-      description="What each confirmed analysis was estimated to cost and what it was charged."
-    >
+    <Drawer open={open} onOpenChange={onOpenChange} title="Cost details">
       {content}
     </Drawer>
   );

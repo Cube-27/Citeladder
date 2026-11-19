@@ -15,37 +15,16 @@ const PROVIDER_SETTINGS = '/settings?tab=providers';
 export type ResearchTab = 'overview' | 'keywords' | 'competitors' | 'backlinks';
 
 /** What each tab shows, said by its empty state before anything is saved. */
-const TAB_EMPTY: Readonly<Record<ResearchTab, { heading: string; shows: string }>> = {
-  overview: {
-    heading: 'See where you rank and where competitors outrank you',
-    shows: 'Your organic keywords, estimated traffic and backlinks appear here.',
-  },
-  keywords: {
-    heading: 'See the keywords your website ranks for',
-    shows: 'Ranking keywords, your top pages and keyword ideas appear here.',
-  },
-  competitors: {
-    heading: 'See the keywords competitors rank for and you do not',
-    shows: 'Missing and shared keywords against each saved competitor appear here.',
-  },
-  backlinks: {
-    heading: 'See who links to your website',
-    shows: 'Backlinks, referring domains and their monthly history appear here.',
-  },
+const TAB_EMPTY: Readonly<Record<ResearchTab, string>> = {
+  overview: 'See where you rank and where competitors outrank you',
+  keywords: 'See the keywords your website ranks for',
+  competitors: 'See the keywords competitors rank for and you do not',
+  backlinks: 'See who links to your website',
 };
 
 /** No saved analysis yet: what this tab shows, and the analysis that fills it. */
 export function NoAnalysisYet({ tab, action }: Readonly<{ tab: ResearchTab; action: ReactNode }>) {
-  const copy = TAB_EMPTY[tab];
-  return (
-    <StateBlock
-      kind="empty"
-      icon={Database}
-      heading={copy.heading}
-      description={`${copy.shows} Run the first analysis; you see the exact cost before anything is fetched.`}
-      action={action}
-    />
-  );
+  return <StateBlock kind="empty" icon={Database} heading={TAB_EMPTY[tab]} action={action} />;
 }
 
 /**
@@ -53,15 +32,13 @@ export function NoAnalysisYet({ tab, action }: Readonly<{ tab: ResearchTab; acti
  * unavailable on a funded plan, else a login to add. The login is a
  * credential, so only a role that manages credentials is sent to add it.
  */
-export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: ResearchTab }>) {
+export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
   const canManage = useWorkspaceCapability('manage_credentials');
-  const { shows } = TAB_EMPTY[tab];
   let state = (
     <StateBlock
       kind="empty"
       icon={Unplug}
       heading="Connect DataForSEO"
-      description={`${shows} Add your DataForSEO login once to run analyses.`}
       action={
         <Button asChild>
           <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
@@ -75,7 +52,7 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
         kind="empty"
         icon={Unplug}
         heading="Connect DataForSEO"
-        description={`${shows} Ask a workspace Owner or Admin to add a DataForSEO login.`}
+        description="Ask a workspace Owner or Admin to add a DataForSEO login."
       />
     );
   if (funded)
@@ -84,7 +61,7 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
         kind="empty"
         icon={Unplug}
         heading="Keyword research is unavailable"
-        description={`${shows} Keyword analyses are temporarily unavailable on your plan. Try again later.`}
+        description="Keyword analyses are temporarily unavailable on your plan."
       />
     );
   return state;

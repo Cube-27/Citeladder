@@ -2,7 +2,7 @@ import { Database } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -68,7 +68,6 @@ export function SearchIntelligenceOverview({
         kind="empty"
         icon={Database}
         heading="See where you rank and where competitors outrank you"
-        description="Your organic keywords, estimated traffic and backlinks appear here. Include your website's footprint in a new analysis; you see the exact cost before anything is fetched."
       />
     );
   const share = footprint?.summary.top_10_percentage;
@@ -78,10 +77,6 @@ export function SearchIntelligenceOverview({
       <Section aria-labelledby="keyword-research-figures">
         <SectionHeader>
           <SectionTitle id="keyword-research-figures">Your search footprint</SectionTitle>
-          <SectionDescription>
-            How {ownedHostname} ranks in organic search and who links to it, from the latest saved
-            analysis.
-          </SectionDescription>
         </SectionHeader>
         <SearchMetrics
           metrics={[
@@ -112,7 +107,6 @@ export function SearchIntelligenceOverview({
       />
       <SearchSummaryEvidence
         datasets={[footprint, backlinks].filter((item) => item !== undefined)}
-        note="Provider estimates and observed rankings are separate from first-party Demand data."
       />
     </Stack>
   );
@@ -121,8 +115,7 @@ export function SearchIntelligenceOverview({
 /** How the figures are defined and when each dataset was collected, in its own card. */
 export function SearchSummaryEvidence({
   datasets,
-  note,
-}: Readonly<{ datasets: SearchIntelligenceDataset[]; note?: string }>) {
+}: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {
   return (
     <Section aria-label="Metric definitions and sources">
       <Stack gap="item">
@@ -147,7 +140,6 @@ export function SearchSummaryEvidence({
             ))}
           </Stack>
         </Disclosure>
-        {note ? <p className={textRole('caption')}>{note}</p> : null}
       </Stack>
     </Section>
   );
