@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Layers, Play, Receipt, RefreshCw, Settings2 } from 'lucide-react';
 
 import type { ReactNode } from 'react';
@@ -254,24 +254,77 @@ function useKeywordResearch({
     onReview: actions.review,
     onCost: () => setCostOpen(true),
   };
-  const frame = (filters: ReactNode, body: ReactNode) => ({
+  return {
     actions: pageActions,
-    filters,
-    body,
     overlays,
-  });
+    ...researchView({
+      readiness,
+      tab,
+      empty,
+      datasets,
+      collection,
+      actions,
+      cancelling: cancelMutation.isPending,
+      savedView: (researchTab) =>
+        savedViewFilters({
+          scopes,
+          scope: activeScope,
+          markets,
+          market: activeMarket,
+          tab: researchTab,
+          onScope: (value) => {
+            setScope(value);
+            setComparison(null);
+          },
+          onMarket: (value) => {
+            setMarket(value);
+            setComparison(null);
+          },
+        }),
+      onOpen: (dataset) => {
+        setComparison(dataset);
+        setTab('competitors');
+      },
+      onSelect: setComparison,
+    }),
+  };
+}
+
+/** Keyword Research's control strip and panels for the state its read is in. */
+function researchView({
+  readiness,
+  tab,
+  empty,
+  datasets,
+  collection,
+  actions,
+  cancelling,
+  savedView,
+  onOpen,
+  onSelect,
+}: Readonly<{
+  readiness: UseQueryResult<SearchIntelligenceReadiness>;
+  tab: PageTab;
+  empty: boolean;
+  datasets: SearchIntelligenceDataset[];
+  collection: SearchCollection | null;
+  actions: ReturnType<typeof useRoleActions>;
+  cancelling: boolean;
+  savedView: (tab: Tab) => FilterDefinition[];
+  onOpen: (dataset: SearchIntelligenceDataset) => void;
+  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
+}>): Readonly<{ filters?: ReactNode; body: ReactNode }> {
   // The first load draws the control band and the shape of the tab's first
   // card, so the work starts on the same line before and after.
   if (readiness.isPending)
-    return frame(
-      <FilterBar {...RESERVED_CONTROLS} />,
-      statePanels((value) => <ResearchLoading tab={value} />),
-    );
+    return {
+      filters: <FilterBar {...RESERVED_CONTROLS} />,
+      body: statePanels((value) => <ResearchLoading tab={value} />),
+    };
   // A failed read keeps the tab row, so the page does not lose its place.
   if (readiness.isError)
-    return frame(
-      undefined,
-      statePanels(() => (
+    return {
+      body: statePanels(() => (
         <StateBlock
           kind="error"
           {...readErrorProps(readiness)}
@@ -279,19 +332,17 @@ function useKeywordResearch({
           title="Keyword research could not be loaded"
         />
       )),
-    );
+    };
   const loaded = readiness.data;
   if (!loaded.connected && !loaded.datasets.length)
-    return frame(
-      undefined,
-      statePanels((value) => (
+    return {
+      body: statePanels((value) => (
         <NotConnected funded={loaded.credential_mode === 'funded'} tab={value} />
       )),
-    );
+    };
   if (!loaded.owned_targets.length)
-    return frame(
-      undefined,
-      statePanels(() => (
+    return {
+      body: statePanels(() => (
         <StateBlock
           kind="empty"
           icon={Settings2}
@@ -300,69 +351,53 @@ function useKeywordResearch({
           action={<TextLink href="/projects">Edit the project</TextLink>}
         />
       )),
-    );
+    };
   const firstRun = actions.analysis ? (
     <Button onClick={actions.analysis}>
       <Icon icon={Play} />
       Review first analysis
     </Button>
   ) : undefined;
-  const filters =
-    tab === 'demand' ? undefined : (
-      <FilterBar
-        {...pageControls({
-          data: loaded,
-          tab,
-          datasets,
-          // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
-          collection: empty ? null : collection,
-          onSeed: actions.onSeed,
-          onMatch: actions.onMatch,
-          onExpand: actions.onExpand,
-          savedView: savedViewFilters({
-            scopes,
-            scope: activeScope,
-            markets,
-            market: activeMarket,
+  return {
+    filters:
+      tab === 'demand' ? undefined : (
+        <FilterBar
+          {...pageControls({
+            data: loaded,
             tab,
-            onScope: (value) => {
-              setScope(value);
-              setComparison(null);
-            },
-            onMarket: (value) => {
-              setMarket(value);
-              setComparison(null);
-            },
-          }),
-        })}
-      />
-    );
-  return frame(
-    filters,
-    <Stack gap="workspace" className="min-w-0">
-      <UnavailableNotice data={loaded} />
-      <RunNotice
-        run={loaded.latest_run}
-        onCancel={actions.cancel}
-        onReview={actions.analysis}
-        cancelling={cancelMutation.isPending}
-      />
-      {empty ? (
-        statePanels((value) => <NoAnalysisYet tab={value} action={firstRun} />)
-      ) : (
-        <ResearchPanels
-          data={loaded}
-          datasets={datasets}
-          collection={collection}
-          onOpen={(dataset) => {
-            setComparison(dataset);
-            setTab('competitors');
-          }}
-          onSelect={setComparison}
+            datasets,
+            // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
+            collection: empty ? null : collection,
+            onSeed: actions.onSeed,
+            onMatch: actions.onMatch,
+            onExpand: actions.onExpand,
+            savedView: savedView(tab),
+          })}
         />
-      )}
-    </Stack>,
-  );
+      ),
+    body: (
+      <Stack gap="workspace" className="min-w-0">
+        <UnavailableNotice data={loaded} />
+        <RunNotice
+          run={loaded.latest_run}
+          onCancel={actions.cancel}
+          onReview={actions.analysis}
+          cancelling={cancelling}
+        />
+        {empty ? (
+          statePanels((value) => <NoAnalysisYet tab={value} action={firstRun} />)
+        ) : (
+          <ResearchPanels
+            data={loaded}
+            datasets={datasets}
+            collection={collection}
+            onOpen={onOpen}
+            onSelect={onSelect}
+          />
+        )}
+      </Stack>
+    ),
+  };
 }
 
 /**
