@@ -85,6 +85,27 @@ type FoldedEntry = Readonly<{
     | Readonly<{ kind: 'menu'; items: ReactNode }>;
 }>;
 
+/** How a control kept behind More at every width registers with its masthead. */
+const FoldedAlways = createContext<(() => () => void) | null>(null);
+
+/**
+ * Secondary actions a crowded view keeps behind More at every width (the
+ * Overview's Layout and Export PDF). Outside a masthead they render in place.
+ */
+export function MastheadFolded({ children }: Readonly<{ children: ReactNode }>) {
+  const register = useContext(FoldedAlways);
+  useEffect(() => register?.(), [register]);
+  if (!register) return children;
+  return (
+    <div data-masthead-folded-always="" hidden>
+      {children}
+    </div>
+  );
+}
+
+const ALWAYS = '[data-masthead-folded-always]';
+const RAIL_QUERY = '(min-width: 900px)';
+
 /**
  * The masthead's controls other than the primary (search, secondary actions,
  * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
@@ -98,31 +119,51 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const [group, setGroup] = useState<HTMLDivElement | null>(null);
   const [foldedSlot, setFoldedSlot] = useState<HTMLSpanElement | null>(null);
   const [menus] = useState(() => new Map<string, ReactNode>());
+  const [always, setAlways] = useState(0);
+  const register = useCallback(() => {
+    setAlways((current) => current + 1);
+    return () => setAlways((current) => current - 1);
+  }, []);
   const rowSlot = useContext(MastheadPrimarySlot) ?? null;
   const fold = useFold({ group, rowSlot, foldedSlot });
+  const more = always > 0 ? 'always' : fold.more;
   // A folded control's overlay returns focus here (`returnTargetFor` in dialog.tsx).
   const moreId = useId();
+  // Read when More opens: whether the group's own controls are drawn in the row.
+  const groupInRow = () =>
+    fold.secondary === 'row' ||
+    (fold.secondary === 'belowRail' && globalThis.matchMedia(RAIL_QUERY).matches);
 
   return (
     <>
-      {fold.more === 'none' ? null : (
+      {more === 'none' ? null : (
         <MoreMenu
           id={moreId}
-          trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
-          read={() => foldedEntries([foldedSlot, group], menus)}
+          trigger={more === 'always' ? undefined : 'rail:hidden'}
+          read={() =>
+            foldedEntries(
+              [
+                { box: foldedSlot, inRow: false },
+                { box: group, inRow: groupInRow() },
+              ],
+              menus,
+            )
+          }
         />
       )}
       <span ref={setFoldedSlot} data-masthead-folded-primary="" data-folded-by={moreId} hidden />
       <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
         <MenuFold.Provider value={menus}>
-          <div
-            ref={setGroup}
-            data-masthead-overflow=""
-            data-folded-by={moreId}
-            className={GROUP[fold.secondary]}
-          >
-            {children}
-          </div>
+          <FoldedAlways.Provider value={register}>
+            <div
+              ref={setGroup}
+              data-masthead-overflow=""
+              data-folded-by={moreId}
+              className={GROUP[fold.secondary]}
+            >
+              {children}
+            </div>
+          </FoldedAlways.Provider>
         </MenuFold.Provider>
       </MastheadPrimarySlot.Provider>
     </>
@@ -246,15 +287,19 @@ function FoldedIcon({ glyph }: Readonly<{ glyph: Element }>) {
 
 const CONTROL = 'button, a[href], [data-menu-fold]';
 
-/** The folded controls in order (the folded primary first), read when More opens. */
+/**
+ * The folded controls in order (the folded primary first), read when More
+ * opens; of a box drawn in the row, only those kept behind More at every width.
+ */
 function foldedEntries(
-  boxes: readonly (HTMLElement | null)[],
+  boxes: readonly Readonly<{ box: HTMLElement | null; inRow: boolean }>[],
   menus: ReadonlyMap<string, ReactNode>,
 ): FoldedEntry[] {
-  return boxes.flatMap((box) =>
+  return boxes.flatMap(({ box, inRow }) =>
     box
       ? [...box.querySelectorAll<HTMLElement>(CONTROL)]
           .filter((node) => !node.parentElement?.closest(CONTROL))
+          .filter((node) => !inRow || node.closest(ALWAYS))
           .flatMap((node, index) =>
             foldedEntry(node, menus, `${box.dataset.mastheadOverflow ?? 'p'}${index}`),
           )
@@ -368,8 +413,10 @@ function useChildCount(node: HTMLElement | null) {
     if (!node) return;
     const update = () =>
       setCount(
-        [...node.children].filter((child) => child.matches('button, a') || child.firstElementChild)
-          .length,
+        [...node.children].filter(
+          (child) =>
+            !child.matches(ALWAYS) && (child.matches('button, a') || child.firstElementChild),
+        ).length,
       );
     update();
     const observer = new MutationObserver(update);

@@ -108,7 +108,7 @@ const commandCenter = {
     brand_rank: { value: 2, delta: -1 },
   },
   movements: [
-    { label: 'visibility', direction: 'positive', current: 72.5, previous: 68.3, delta: 4.2 },
+    { label: 'chatgpt', direction: 'positive', current: 72.5, previous: 68.3, delta: 4.2 },
   ],
   actions: [],
   action_order_version: 0,
@@ -204,6 +204,27 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 
 function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
+}
+
+/** A window from `rail` (900px) up, where the masthead draws its row of controls. */
+function stubDesktop() {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === '(min-width: 900px)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
+/** The masthead's More menu, opened. */
+async function openMore(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'More' }));
+  return screen.findByRole('menu');
+}
+
+/** Presses Export PDF, which the Overview keeps behind More at every width. */
+async function exportPdf(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }));
 }
 
 const DEFAULT_LAYOUT = {
@@ -562,23 +583,41 @@ describe('DashboardScreen', () => {
     ).toEqual(['company_facts', 'project_state']);
     expect(screen.queryByRole('heading', { name: 'Movement' })).not.toBeInTheDocument();
   });
-  it('offers the layout menu to editors only', () => {
-    renderDashboard(
+  it('keeps Layout and Export PDF behind More at desktop width, Layout for editors only', async () => {
+    stubDesktop();
+    const user = userEvent.setup();
+    const editor = renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-    expect(screen.getByRole('button', { name: 'Layout' })).toBeVisible();
-  });
-  it('hides the layout menu from viewers', () => {
+    // Manage project and Launch run stay in the row; More holds only the two.
+    expect(screen.getByRole('button', { name: /manage project/i })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeVisible();
+    const menu = await openMore(user);
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Layout', 'Export PDF']);
+    expect(within(menu).getByRole('menuitem', { name: 'Layout' })).toHaveAttribute(
+      'aria-haspopup',
+      'menu',
+    );
+    await user.keyboard('{Escape}');
+    editor.unmount();
+
     role.canWrite = false;
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-    expect(screen.queryByRole('button', { name: 'Layout' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /export pdf/i })).toBeVisible();
+    expect(
+      within(await openMore(user))
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Export PDF']);
   });
   it('downloads the authenticated Overview PDF', async () => {
     const user = userEvent.setup();
@@ -599,8 +638,7 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    expect(screen.getAllByRole('button', { name: /export pdf/i })).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: /export pdf/i }));
+    await exportPdf(user);
     expect(downloadOverviewReport).toHaveBeenCalledWith(project.id, {
       workspaceId: project.workspace_id,
     });
@@ -624,16 +662,17 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    await user.click(screen.getByRole('button', { name: /export pdf/i }));
+    await exportPdf(user);
     expect(await screen.findByText('The report could not be downloaded. Try again.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: /export pdf/i }));
+    await exportPdf(user);
     await waitFor(() =>
       expect(
         screen.queryByText('The report could not be downloaded. Try again.'),
       ).not.toBeInTheDocument(),
     );
   });
-  it('renders facts and a real next action before the first audit', () => {
+  it('renders facts and a real next action before the first audit', async () => {
+    const user = userEvent.setup();
     queryResult.data = {
       ...commandCenter,
       measurement: null,
@@ -679,7 +718,9 @@ describe('DashboardScreen', () => {
     // A widget with something to show stays.
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     // The PDF exports the layout, so it is available before the first audit too.
-    expect(screen.getByRole('button', { name: /export pdf/i })).toBeVisible();
+    expect(
+      within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }),
+    ).toBeVisible();
   });
   it('asks a project with no active prompts to add some', () => {
     queryResult.data = { ...commandCenter, active_prompt_count: 0 };

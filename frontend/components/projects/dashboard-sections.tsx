@@ -1,7 +1,7 @@
 import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
-import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { MastheadFolded, MastheadPrimary } from '@/components/ui/masthead-actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { Button } from '@/components/ui/button';
@@ -127,8 +127,11 @@ export function DashboardActions({
     // A fragment: the identity band owns the gap between route actions.
     <>
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
-      {layoutMenu}
-      <PdfButton downloading={downloading} onDownload={onDownload} />
+      {/* Six controls crowd the bar: Layout and Export PDF live behind More at every width. */}
+      <MastheadFolded>
+        {layoutMenu}
+        <PdfButton downloading={downloading} onDownload={onDownload} />
+      </MastheadFolded>
       {/* The one primary: the run the Overview's figures come from. */}
       {launch ? (
         <MastheadPrimary>
