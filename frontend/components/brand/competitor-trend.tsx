@@ -2,8 +2,10 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import type { TrendEvent } from '@/components/ui/series-data';
 import { SegmentedControl } from '@/components/ui/tabs';
 import {
+  markerNote,
   metricCodec,
   type TrendLines,
   TrendSection,
@@ -59,6 +61,6 @@ export function CompetitorTrend({
   );
 }
 
-function competitorCaption(): string {
-  return 'A line breaks between runs that are not comparable.';
+function competitorCaption(_runs: number, events: readonly TrendEvent[]): string {
+  return `A line breaks between runs that are not comparable.${markerNote(events)}`;
 }

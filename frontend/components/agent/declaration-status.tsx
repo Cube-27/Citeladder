@@ -125,7 +125,8 @@ export function DeclarationStatus({
       ) : null}
       {declaration.checks.length > 0 ? (
         <p className={textRole('caption')}>
-          New evidence is read until <DisplayTime value={declaration.measured_until} dateOnly />.
+          New evidence is read until <DisplayTime value={declaration.measured_until} dateOnly />. A
+          met check does not prove this Action caused any movement.
         </p>
       ) : null}
       <VerificationObservations implementation={declaration} showAuditLink={hasVisibility} />

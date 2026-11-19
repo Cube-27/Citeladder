@@ -246,6 +246,7 @@ function SourceTable({
         { key: 'answers', label: 'Answers with criticism', width: 'metric', kind: 'number' },
         { key: 'example', label: 'Example', kind: 'url' },
       ]}
+      footer="Cited alongside the criticism, never shown to have caused it."
       state={drivers.length ? undefined : noneHere('No sources cited alongside criticism.')}
     >
       {drivers.map((driver) => (

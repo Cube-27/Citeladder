@@ -243,7 +243,7 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
   ]);
   const bold = [...table.querySelectorAll('tbody strong')].map((name) => name.textContent);
   expect(bold).toEqual(['Acme, named first']);
-  expect(screen.getByText(/newest first · bold brand was named first$/)).toBeVisible();
+  expect(screen.getByText('Bold brand was named first')).toBeVisible();
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),
     PROMPT,

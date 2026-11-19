@@ -348,7 +348,14 @@ function TrendChart({
   );
 }
 
-function trendCaption(runs: number): string {
+/** The non-causality notice wherever an implementation marker is plotted. */
+export function markerNote(events: readonly TrendEvent[]): string {
+  return events.some((event) => event.kind === 'action')
+    ? ' A marker shows when work went live, not that it changed these rates.'
+    : '';
+}
+
+function trendCaption(runs: number, events: readonly TrendEvent[]): string {
   if (runs === 1) return 'The trend appears after the next comparable run.';
-  return 'Lines break between runs that are not comparable.';
+  return `Lines break between runs that are not comparable.${markerNote(events)}`;
 }

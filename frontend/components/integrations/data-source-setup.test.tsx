@@ -119,7 +119,7 @@ describe('DataSourceSetup', () => {
         required={['gsc']}
         optional={['ga4', 'bing']}
         title="Connect Search Console"
-        unconnected={{ heading: 'Connect Google and Bing', description: 'Why it matters.' }}
+        unconnected={{ heading: 'Connect Google and Bing' }}
       />
     );
     serve([]);
