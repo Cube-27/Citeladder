@@ -1,20 +1,23 @@
 /** Public copy for the landing page's integration field and FAQ. */
 
-import { Cloud, type LucideIcon } from 'lucide-react';
+import { Cloud } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
 
 import type { EngineKey } from '@/components/ui/engine-mark';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
 
+import { McpMark } from './mcp-mark';
+
 /**
  * An integration's logo: an engine mark the site already draws inline, a
- * logo file served from `public/brand/integrations`, or a lucide icon in ink
- * for a source without a usable logo.
+ * logo file served from `public/brand/integrations`, or an inline mark in ink
+ * (a lucide icon for a source without a usable logo).
  */
 export type IntegrationMark =
   | { readonly kind: 'engine'; readonly engine: EngineKey }
   | { readonly kind: 'image'; readonly src: string }
-  | { readonly kind: 'icon'; readonly icon: LucideIcon };
+  | { readonly kind: 'icon'; readonly icon: ComponentType<SVGProps<SVGSVGElement>> };
 
 export type Integration = {
   readonly title: string;
@@ -35,7 +38,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   { title: 'Google Gemini', mark: { kind: 'engine', engine: 'gemini' } },
   { title: 'Anthropic', mark: { kind: 'engine', engine: 'claude' } },
   { title: 'DataForSEO', mark: { kind: 'image', src: '/brand/integrations/dataforseo.png' } },
-  { title: 'MCP clients', mark: { kind: 'image', src: '/brand/integrations/mcp.png' } },
+  { title: 'MCP clients', mark: { kind: 'icon', icon: McpMark } },
   { title: 'Shopify', mark: { kind: 'image', src: '/brand/integrations/shopify.png' } },
   {
     title: 'Google Merchant Center',
