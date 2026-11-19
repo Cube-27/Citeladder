@@ -131,7 +131,8 @@ type PageWidth = ReturnType<typeof routeWidth>;
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   full: false,
   narrow: 'max-w-thread mx-auto w-full',
-  compact: 'max-w-prose mx-auto w-full',
+  // `max-w-prose` is Tailwind's 65ch, not the 720 `--container-prose`.
+  compact: 'mx-auto w-full max-w-[var(--container-prose)]',
 };
 
 /** Where the masthead's title starts: on the page column's left edge. */
