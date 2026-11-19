@@ -1380,29 +1380,16 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-/* The page workspace editor's colours and its text field's ring, drawn inside
-   the pane so the scroller never clips it; the rest of the editor's look
-   loads with its route (components/agent/workspace/page-workspace.css). A
-   suggestion is underlined in the info tint when ready to apply and the
-   warning tint when it needs a fact; a pressed suggestion's card takes the
-   focus ink over its own border utility. */
+/* The page workspace editor's text field ring, drawn inside the pane so the
+   scroller never clips it, and a pressed suggestion's card in the focus ink
+   over its own border utility. Focus belongs here (design-system source
+   checks); the rest of the editor's look loads with its route
+   (components/agent/workspace/page-workspace.css). */
 .page-editor .cm-editor.cm-focused {
   outline: none;
 }
 .page-editor .cm-editor .cm-content:focus-visible {
   outline-offset: -2px;
-}
-.page-editor .page-editor-link {
-  color: var(--color-accent-ink);
-}
-.page-editor .page-editor-suggestion {
-  background: var(--color-info-soft);
-  color: var(--color-ink);
-  border-color: var(--color-info);
-}
-.page-editor .page-editor-suggestion-needs_input {
-  background: var(--color-warning-soft);
-  border-color: var(--color-warning);
 }
 .suggestion-card[aria-current='true'] {
   border-color: var(--color-focus);
