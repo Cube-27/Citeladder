@@ -38,7 +38,7 @@ type FilterBase = Readonly<{
   reset: () => void;
   /** Draws the filter as an icon chip in the row (`FilterBar` keeps at most four). */
   icon?: FilterIcon;
-  /** The page's placement puts it in Filters, so the row never takes it in. */
+  /** The page's placement puts it in Filters; the row takes it only when it is the one left. */
   inFilters?: boolean;
   /**
    * The data window a period reads, at the row's end while its chip shows

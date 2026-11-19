@@ -35,7 +35,7 @@ export type FilterBarProps = Readonly<{
   /**
    * Every filter of the list, after the search, in the page's order. The
    * first four with an `icon` are chips in the row; the rest share Filters
-   * (a lone one is a chip of its own unless the page puts it `inFilters`).
+   * once there are two of them, and a lone one is a chip of its own.
    */
   filters?: readonly FilterDefinition[];
   /**
@@ -54,9 +54,9 @@ const ROW_ICON_CHIPS = 4;
 
 /**
  * Which filters are chips in the row and which share Filters: up to four
- * icon filters in the page's order, then the rest behind Filters, or as a
- * value chip of its own when only one without an icon is left and the page
- * did not place it in Filters.
+ * icon filters in the page's order, then the rest behind Filters. Filters
+ * never holds a single filter (owner, 2026-11-19): one left over is a chip
+ * of its own, wherever the page placed it.
  */
 function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
   chips: readonly FilterDefinition[];
@@ -66,9 +66,7 @@ function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
     .filter((filter) => filter.icon && !filter.inFilters)
     .slice(0, ROW_ICON_CHIPS);
   const rest = filters.filter((filter) => !icons.includes(filter));
-  const [only] = rest;
-  if (rest.length === 1 && only && !only.icon && !only.inFilters)
-    return { chips: [...icons, only], menu: [] };
+  if (rest.length === 1) return { chips: [...icons, ...rest], menu: [] };
   return { chips: icons, menu: rest };
 }
 

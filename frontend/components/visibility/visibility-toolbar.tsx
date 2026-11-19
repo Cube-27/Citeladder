@@ -136,9 +136,10 @@ type FilterId =
   | 'granularity';
 
 /**
- * Each page's row and Filters, as the filter placement approved 2026-11-18
- * draws them. A filter a page puts in Filters stays there whatever else is
- * set or hidden, so the row never recomposes when a filter changes.
+ * Each page's row and Filters. On the brand pages every icon filter is
+ * listed for the row, in order, so one takes the room a hidden market
+ * leaves; `FilterBar` keeps four icon chips and opens Filters only for two
+ * or more of the rest (owner, 2026-11-19).
  */
 function placement(view: VisibilityView): Readonly<{
   row: readonly FilterId[];
@@ -146,9 +147,9 @@ function placement(view: VisibilityView): Readonly<{
 }> {
   const tail = ['prompt', 'outcome', 'granularity'] as const;
   if (view === 'insights')
-    return { row: ['measurement', 'engine', 'market', 'cohort'], inFilters: ['topic', ...tail] };
+    return { row: ['measurement', 'engine', 'market', 'cohort', 'topic'], inFilters: tail };
   if (view === 'competitors' || view === 'competitor' || view === 'perception')
-    return { row: ['measurement', 'engine', 'market', 'topic'], inFilters: ['cohort', ...tail] };
+    return { row: ['measurement', 'engine', 'market', 'topic', 'cohort'], inFilters: tail };
   return { row: ['measurement', 'engine', 'cohort', 'topic'], inFilters: ['market', ...tail] };
 }
 
