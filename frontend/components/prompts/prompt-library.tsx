@@ -362,6 +362,15 @@ export function PromptLibrary() {
           setNames={setNames}
           topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
+          onClearFilters={
+            byStatus.length
+              ? () => {
+                  setSearch('');
+                  setFilters(emptyFilters);
+                  setSelectedTopicId(null);
+                }
+              : undefined
+          }
         />
         {/* The zero-height dock goes after the table: before it, it doubled the section gap. */}
         <PromptBulkBar
@@ -446,7 +455,7 @@ export function PromptLibrary() {
             topics={topics}
             mutations={topicMutations}
             // One error per region: a failed library read already says the page failed.
-            loadError={topicsQuery.isError && !failedEmpty}
+            loadError={topicsQuery.isError && !failedEmpty ? topicsQuery : null}
             onAdd={openAddTopic}
             onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
           />

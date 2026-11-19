@@ -221,8 +221,14 @@ describe('ManageTopicsDialog', () => {
     expect(dialog.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('says when the topics could not be loaded', () => {
-    renderManage({ topics: [], loadError: true });
+  it('says when the topics could not be loaded and reads them again on Retry', async () => {
+    const refetch = vi.fn();
+    renderManage({
+      topics: [],
+      loadError: { error: new Error('offline'), refetch, isFetching: false },
+    });
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load topics");
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

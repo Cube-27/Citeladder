@@ -17,12 +17,24 @@ import type { Topic } from '@citeladder/contracts';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 
 import type { useTopicMutations } from './use-topic-mutations';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type TopicMutations = ReturnType<typeof useTopicMutations>;
 
-const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try again.";
+/** The failed topics read, retried in place; null while topics loaded. */
+type TopicsLoadError = RetryableRead | null;
+
+function TopicsLoadNotice({ read }: Readonly<{ read: RetryableRead }>) {
+  return (
+    <Notice
+      kind="read"
+      {...readErrorProps(read)}
+      title="Couldn't load topics"
+      fallback="Check your connection and try again."
+    />
+  );
+}
 
 /** The filter value for "All topics". */
 const ALL_TOPICS = '';
@@ -215,14 +227,14 @@ export function TopicDialogs({
   onDialogChange: (dialog: TopicDialog | null) => void;
   topics: readonly Topic[];
   mutations: TopicMutations;
-  loadError: boolean;
+  loadError: TopicsLoadError;
   onAdd: () => void;
   onDelete: (topic: Topic) => void;
 }>) {
   const createFailed = mutations.create.isError;
   return (
     <>
-      {loadError ? <Notice tone="negative">{TOPICS_LOAD_ERROR}</Notice> : null}
+      {loadError ? <TopicsLoadNotice read={loadError} /> : null}
       <AddTopicDialog
         open={dialog === 'add'}
         onOpenChange={(open) => onDialogChange(open ? 'add' : null)}
@@ -261,7 +273,7 @@ export function ManageTopicsDialog({
   onRename,
   onDelete,
   onAdd,
-  loadError = false,
+  loadError = null,
   actionError,
 }: Readonly<{
   open: boolean;
@@ -271,7 +283,7 @@ export function ManageTopicsDialog({
   onRename: (topic: Topic, name: string) => Promise<void>;
   onDelete: (topic: Topic) => void;
   onAdd: () => void;
-  loadError?: boolean;
+  loadError?: TopicsLoadError;
   actionError?: MutationNoticeData | null;
 }>) {
   const ordered = orderTopicsForRail(topics);
@@ -290,7 +302,7 @@ export function ManageTopicsDialog({
         </>
       }
     >
-      {loadError ? <Notice tone="negative">{TOPICS_LOAD_ERROR}</Notice> : null}
+      {loadError ? <TopicsLoadNotice read={loadError} /> : null}
       {!loadError && actionError ? <Notice kind="mutation" notice={actionError} /> : null}
       {ordered.length ? (
         <TreeList label="Topics">

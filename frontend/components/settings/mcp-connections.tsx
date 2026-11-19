@@ -42,7 +42,7 @@ function ConnectionRow({
           <ClampText className={textRole('body', 'text-ink-2')}>
             {connection.requires_consent
               ? 'Reconnect to choose workspaces.'
-              : `Reads ${workspaces || 'no workspace you can still access'}.`}
+              : `${connection.access === 'read_and_change' ? 'Reads and changes' : 'Reads'} ${workspaces || 'no workspace you can still access'}.`}
           </ClampText>
           <p className={textRole('caption', 'truncate')}>
             {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
