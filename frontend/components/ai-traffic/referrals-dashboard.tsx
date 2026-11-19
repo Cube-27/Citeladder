@@ -132,7 +132,10 @@ function ReferralVolumeCard({ data }: Readonly<{ data: AiReferrals }>) {
       title="AI-referred sessions"
       description="GA4 sessions whose source matches a known AI assistant"
       badge={bucketCountLabel(data.granularity, data.referral_volume.length)}
-      points={toCountChartPoints(data.referral_volume)}
+      points={toCountChartPoints(data.referral_volume, {
+        granularity: data.granularity,
+        windowEnd: data.window_end,
+      })}
       unit="Sessions"
       domainMax={countDomainMax(values)}
     />
@@ -145,7 +148,10 @@ function ReferralShareCard({ data }: Readonly<{ data: AiReferrals }>) {
       title="Share of GA4 sessions"
       description="AI-referred sessions divided by all sessions in the same GA4 source report"
       badge={bucketCountLabel(data.granularity, data.referral_share.length)}
-      points={toPercentChartPoints(data.referral_share)}
+      points={toPercentChartPoints(data.referral_share, {
+        granularity: data.granularity,
+        windowEnd: data.window_end,
+      })}
       unit="Share"
       formatTick={(value) => `${Math.round(value)}%`}
     />

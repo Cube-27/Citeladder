@@ -127,6 +127,13 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
+/** `2026-07` (or a day in it) → `Jul 2026` (monthly series labels). */
+export function formatMonth(isoMonth: string): string {
+  const date = new Date(`${isoMonth.slice(0, 7)}-01T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return isoMonth;
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
 
 /**

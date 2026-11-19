@@ -251,7 +251,8 @@ function AreaPlot({
           type="number"
           domain={['dataMin', 'dataMax']}
           ticks={xs}
-          interval="preserveStartEnd"
+          // One stride for every label that shows, so the axis stays even; the latest point keeps its label.
+          interval="equidistantPreserveEnd"
           minTickGap={24}
           tickFormatter={(x: number) => axisLabel.get(x) ?? ''}
         />
@@ -330,7 +331,12 @@ function AreaPlot({
               fill={`url(#${id}-${at})`}
               activeDot={{ r: 4, fill: color, stroke: 'var(--color-surface)', strokeWidth: 2 }}
               dot={(props: { cx?: number; cy?: number; payload?: ChartRow }) => (
-                <LineDot key={`${line.name}-${props.payload?.x}`} {...props} line={line} />
+                <LineDot
+                  key={`${line.name}-${props.payload?.x}`}
+                  {...props}
+                  line={line}
+                  data={data}
+                />
               )}
             />
           );
@@ -346,11 +352,18 @@ function LineDot({
   cy,
   payload,
   line,
-}: Readonly<{ cx?: number; cy?: number; payload?: ChartRow; line: Line }>) {
+  data,
+}: Readonly<{
+  cx?: number;
+  cy?: number;
+  payload?: ChartRow;
+  line: Line;
+  data: readonly TrendPoint[];
+}>) {
   const index = payload && !payload.break ? payload.index : -1;
   const value = index >= 0 ? line.values[index] : null;
   if (cx === undefined || cy === undefined || value === null || value === undefined) return <g />;
-  if (!line.shape && !isolated(line.values, index)) return <g />;
+  if (!line.shape && !isolated(line.values, index, data)) return <g />;
   return (
     <g data-trend-point={line.tone}>
       <ShapeMark

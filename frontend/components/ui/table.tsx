@@ -419,9 +419,10 @@ export function TableTime({
 }: Readonly<{ value: string | null | undefined; fallback?: ReactNode }>) {
   const timeZone = useDisplayTimeZone();
   if (!value) return fallback;
+  // A date cut by a narrow column keeps its whole text in ClampText's tooltip.
   return (
-    <time dateTime={value} className="block min-w-0 truncate tabular-nums">
-      {formatTableTimestamp(value, timeZone)}
-    </time>
+    <ClampText className="tabular-nums">
+      <time dateTime={value}>{formatTableTimestamp(value, timeZone)}</time>
+    </ClampText>
   );
 }

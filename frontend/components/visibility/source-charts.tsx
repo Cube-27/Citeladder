@@ -7,6 +7,7 @@ import { PartDonut, type Part } from '@/components/ui/part-donut';
 import { AreaChart } from '@/components/ui/area-chart';
 import { type TrendSeries } from '@/components/ui/series-data';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { formatDisplayShortDate } from '@/lib/format';
 import { hostOf, seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -257,8 +258,5 @@ function TypesMix({
 
 /** A bucket boundary as an axis tick — the date, never the time. */
 function bucketLabel(value: string): string {
-  const at = new Date(value);
-  return Number.isNaN(at.getTime())
-    ? value
-    : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return formatDisplayShortDate(value, 'UTC');
 }
