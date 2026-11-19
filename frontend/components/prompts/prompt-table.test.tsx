@@ -382,4 +382,50 @@ describe('PromptTable pagination', () => {
     await user.click(screen.getByText('No topic'));
     expect(path()).toBe(`/prompts/${prompt.id}`);
   });
+
+  it("opens a measured prompt's latest answer from its row or its question, and stays on the page", async () => {
+    const user = userEvent.setup();
+    const onOpenAnswer = vi.fn();
+    const measured = makePrompt(1);
+    const unmeasured = makePrompt(2);
+    const measurement = {
+      visibilityRate: 0.5,
+      ownedCitationRate: 0,
+      change: { kind: 'first' },
+      position: null,
+      shareOfVoice: null,
+      sentiment: null,
+      answer: ANSWER,
+      mentions: 0,
+      brands: [],
+      named: [],
+      sources: [],
+    } as const;
+    render(
+      <MemoryRouter initialEntries={['/prompts']}>
+        <TooltipProvider>
+          <PromptTable
+            prompts={[measured, unmeasured]}
+            onOpenAnswer={onOpenAnswer}
+            measurements={new Map([[measured.id, measurement]])}
+          />
+          <Pathname />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+    const [, row] = screen.getAllByRole('row');
+
+    await user.click(within(row!).getByText('50.0%'));
+    await user.click(screen.getByRole('button', { name: 'Prompt number 1' }));
+    expect(onOpenAnswer.mock.calls).toEqual([
+      [measured, ANSWER],
+      [measured, ANSWER],
+    ]);
+    expect(screen.getByTestId('pathname').textContent).toBe('/prompts');
+    // No run measured the other prompt: its question still links to its history.
+    expect(screen.getByRole('link', { name: 'Prompt number 2' })).toHaveAttribute(
+      'href',
+      `/prompts/${unmeasured.id}`,
+    );
+  });
 });

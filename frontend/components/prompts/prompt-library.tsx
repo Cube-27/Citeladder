@@ -347,8 +347,6 @@ export function PromptLibrary() {
           onToggleEnabled: toggle.press,
           onSetStatus: (prompt: Prompt, status: PromptStatus) =>
             rowMutation.mutate({ promptId: prompt.id, input: { status } }),
-          onEvidence: (prompt: Prompt, answer: PromptAnswerRef) =>
-            evidence.open({ ...answer, promptText: prompt.text }),
         },
         add: addPrompts,
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
@@ -370,6 +368,9 @@ export function PromptLibrary() {
         <PromptTable
           prompts={visible}
           actions={edits?.rows}
+          onOpenAnswer={(prompt: Prompt, answer: PromptAnswerRef) =>
+            evidence.open({ ...answer, promptId: prompt.id, promptText: prompt.text })
+          }
           selection={edits ? selection : undefined}
           measurements={measurements}
           setNames={setNames}
@@ -468,7 +469,7 @@ export function PromptLibrary() {
             onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
           />
           <TabPanel value={statusFilter}>{libraryBody}</TabPanel>
-          {evidence.drawer}
+          {evidence.dialog}
 
           <PromptLibraryDialogs
             pendingDelete={pendingDelete}

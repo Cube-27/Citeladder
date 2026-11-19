@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { FirstNamed, PromptAnswer, PromptAnswerPage } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
 import { AnswerFormatTags } from '@/components/runs/answer-formats';
-import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
+import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -145,7 +145,7 @@ export function PromptPastAnswers({
           </TableRow>
         ))}
       </DataTable>
-      <ExecutionEvidenceDrawer
+      <AnswerDialog
         execution={opened ? { id: opened, prompt_text: promptText } : null}
         open={opened !== null}
         onOpenChange={(next) => {

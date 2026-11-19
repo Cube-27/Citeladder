@@ -45,6 +45,12 @@ type LeaveGuard = Readonly<{
 /** Set only by a `ContentMarkdown` given `knownHosts`; links read it to decide. */
 const LeaveGuardContext = createContext<LeaveGuard | null>(null);
 
+/** Draws a link the caller recognises (a cited source) as its own node; null keeps the plain link. */
+export type LinkChip = (href: string, children: ReactNode) => ReactNode | null;
+
+/** Set only by a `ContentMarkdown` given `linkChip`. */
+const LinkChipContext = createContext<LinkChip | null>(null);
+
 function MarkdownLink({
   node: _node,
   children,
@@ -52,6 +58,7 @@ function MarkdownLink({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'a'> & ExtraProps>) {
   const guard = useContext(LeaveGuardContext);
+  const chip = useContext(LinkChipContext)?.(href ?? '', children) ?? null;
   const confirm =
     guard !== null && href !== undefined && leavesForUnknownHost(href, guard.knownHosts);
   // Ctrl/Cmd/Shift-click fire `click`; a middle click fires only `auxclick`.
@@ -60,6 +67,7 @@ function MarkdownLink({
     event.preventDefault();
     guard?.confirmLeave(href ?? '');
   };
+  if (chip !== null) return <>{chip}</>;
   return (
     <a
       {...props}
@@ -213,6 +221,7 @@ export function ContentMarkdown({
   highlights = [],
   chips = NO_CHIPS,
   knownHosts,
+  linkChip,
 }: Readonly<{
   markdown: string;
   density?: 'default' | 'compact';
@@ -226,6 +235,8 @@ export function ContentMarkdown({
    * shows its full address. Omitted, every link opens directly.
    */
   knownHosts?: readonly string[];
+  /** Replaces a link it recognises; links it returns null for render as plain links. */
+  linkChip?: LinkChip;
 }>) {
   const content = markdown ?? '';
   const [leaving, setLeaving] = useState<string | null>(null);
@@ -241,10 +252,15 @@ export function ContentMarkdown({
       highlights={highlights}
     />
   );
-  const chipped = chips.length ? (
+  const phrased = chips.length ? (
     <ChipsContext.Provider value={chips}>{body}</ChipsContext.Provider>
   ) : (
     body
+  );
+  const chipped = linkChip ? (
+    <LinkChipContext.Provider value={linkChip}>{phrased}</LinkChipContext.Provider>
+  ) : (
+    phrased
   );
   if (!guard) return chipped;
   return (

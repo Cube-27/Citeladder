@@ -155,10 +155,10 @@ describe('PromptLibrary first load', () => {
     const user = userEvent.setup();
     renderLibrary();
 
-    await user.click(await screen.findByRole('button', { name: 'Prompt actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Evidence' }));
+    // The question opens the answer; it no longer leaves the library.
+    await user.click(await screen.findByRole('button', { name: prompt.text }));
 
-    // The drawer is titled by the prompt it answers.
+    // The dialog is titled by the prompt it answers.
     expect(await screen.findByRole('dialog', { name: prompt.text })).toBeVisible();
     await waitFor(() => expect(read).toContain(ANSWER));
     expect(new Set(read)).toEqual(new Set([ANSWER]));

@@ -5,10 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import {
-  ExecutionEvidenceDrawer,
-  type EvidenceSubject,
-} from '@/components/runs/execution-evidence-drawer';
+import { AnswerDialog, type EvidenceSubject } from '@/components/runs/answer-dialog';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
@@ -105,7 +102,7 @@ export function SourcePrompts({
           ))}
         </DataTable>
       </TitledSection>
-      <ExecutionEvidenceDrawer
+      <AnswerDialog
         execution={opened}
         open={opened !== null}
         onOpenChange={(next) => {
@@ -195,12 +192,13 @@ function PromptRow({
           variant="quiet"
           onClick={() =>
             onOpenAnswer({
-              // The visibility row names the execution as `task_id`; the drawer
+              // The visibility row names the execution as `task_id`; the dialog
               // reads the answer and its evidence from that one execution — a
               // source row summarises an answer without carrying one.
               id: item.task_id,
               prompt_text: item.prompt_text,
               prompt_index: item.prompt_index,
+              prompt_id: item.prompt_id,
             })
           }
         >

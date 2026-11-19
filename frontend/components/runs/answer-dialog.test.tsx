@@ -8,9 +8,9 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-import { ExecutionEvidenceDrawer } from './execution-evidence-drawer';
+import { AnswerDialog } from './answer-dialog';
 
-/** The drawer opens on a run page, under the gate's project. */
+/** The dialog opens on a run page, under the gate's project. */
 const runRoute = { projectSelection: { activeProject: makeProject() } };
 
 const ID = '11111111-1111-4111-8111-111111111111';
@@ -57,7 +57,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-describe('Execution evidence drawer', () => {
+describe('Answer dialog', () => {
   it('renders the answer the single-execution read returns, as markdown', async () => {
     mswServer.use(
       http.get(`/api/v1/executions/${ID}`, () =>
@@ -68,28 +68,25 @@ describe('Execution evidence drawer', () => {
       ),
     );
     renderWithProviders(
-      <ExecutionEvidenceDrawer
-        execution={{ id: ID, prompt_index: 2 }}
-        open
-        onOpenChange={() => {}}
-      />,
+      <AnswerDialog execution={{ id: ID, prompt_index: 2 }} open onOpenChange={() => {}} />,
       runRoute,
     );
 
     // With no prompt text the title is the prompt's number, said once.
-    const drawer = await screen.findByRole('dialog', { name: 'Prompt #3' });
-    expect(within(drawer).getAllByText(/Prompt #3/)).toHaveLength(1);
+    const dialog = await screen.findByRole('dialog', { name: 'Prompt #3' });
+    expect(within(dialog).getAllByText(/Prompt #3/)).toHaveLength(1);
     // The first import transforms the markdown renderer, so it gets a cold budget.
-    const strong = await within(drawer).findByText('Acme Plumbing', {}, { timeout: 15_000 });
+    const strong = await within(dialog).findByText('Acme Plumbing', {}, { timeout: 15_000 });
     expect(strong.tagName).toBe('STRONG');
+    const list = within(dialog).getByText('Fast').closest('ul');
     expect(
-      within(drawer)
+      within(list ?? dialog)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Fast', 'Local']);
   }, 20_000);
 
-  it('switches to another engine’s answer to the same prompt without leaving the drawer', async () => {
+  it('switches to another engine’s answer to the same prompt without leaving the dialog', async () => {
     const OTHER = '22222222-2222-4222-8222-222222222222';
     const row = { transport_provider: 'x', error_code: '', latency_ms: 1, prompt_text: 'Q' };
     mswServer.use(
@@ -129,7 +126,7 @@ describe('Execution evidence drawer', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(
-      <ExecutionEvidenceDrawer
+      <AnswerDialog
         execution={{ id: ID, prompt_index: 0, prompt_text: 'best plumber' }}
         open
         onOpenChange={() => {}}
@@ -138,15 +135,17 @@ describe('Execution evidence drawer', () => {
     );
 
     // The prompt's text is the title, and its number is not printed beside it.
-    const drawer = await screen.findByRole('dialog', { name: 'best plumber' });
-    await within(drawer).findByText('From the first engine.', {}, { timeout: 15_000 });
-    expect(within(drawer).getAllByText('best plumber')).toHaveLength(1);
-    expect(within(drawer).queryByText(/Prompt #/)).toBeNull();
-    await user.click(await within(drawer).findByRole('button', { name: /^Engine:/u }));
+    const dialog = await screen.findByRole('dialog', { name: 'best plumber' });
+    await within(dialog).findByText('From the first engine.', {}, { timeout: 15_000 });
+    // The header says how the shown answer ended; the prompt is said as the title and your message.
+    expect(await within(dialog).findByText('Succeeded')).toBeVisible();
+    expect(within(dialog).getAllByText('best plumber')).toHaveLength(2);
+    expect(within(dialog).queryByText(/Prompt #/)).toBeNull();
+    await user.click(await within(dialog).findByRole('button', { name: /^Engine:/u }));
     const options = await screen.findAllByRole('menuitemradio');
     expect(options).toHaveLength(2);
     await user.click(screen.getByRole('menuitemradio', { name: /gemini/iu }));
-    expect(await within(drawer).findByText('From the second engine.')).toBeInTheDocument();
+    expect(await within(dialog).findByText('From the second engine.')).toBeInTheDocument();
   }, 20_000);
 
   it("reports a measured AI Overview absence from the read's persisted outcome", async () => {
@@ -161,17 +160,13 @@ describe('Execution evidence drawer', () => {
       ),
     );
     renderWithProviders(
-      <ExecutionEvidenceDrawer
-        execution={{ id: ID, prompt_index: 0 }}
-        open
-        onOpenChange={() => {}}
-      />,
+      <AnswerDialog execution={{ id: ID, prompt_index: 0 }} open onOpenChange={() => {}} />,
       runRoute,
     );
 
-    const drawer = await screen.findByRole('dialog', { name: 'Prompt #1' });
+    const dialog = await screen.findByRole('dialog', { name: 'Prompt #1' });
     expect(
-      await within(drawer).findByText(
+      await within(dialog).findByText(
         'No AI Overview was shown for this search.',
         {},
         { timeout: 15_000 },

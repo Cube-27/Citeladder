@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 
-import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
+import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { RunActions, useRunExport } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
 import { RecordPage } from '@/components/templates/record-page';
@@ -107,7 +107,7 @@ export function RunDetailScreen() {
         onRerunFailures={rerunFailures}
         onSelectEvidence={(execution) => setSelectedExecutionId(execution.id)}
       />
-      <ExecutionEvidenceDrawer
+      <AnswerDialog
         execution={selectedExecution}
         open={selectedExecution !== null}
         onOpenChange={(open) => {
