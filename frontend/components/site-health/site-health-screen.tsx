@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { ICONS } from '@/lib/icons';
+import { SITE_HEALTH_TABS, type SiteHealthTab } from '@/lib/site-health/tabs';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
@@ -102,7 +103,11 @@ function SiteHealthContent({
       <ReportPage
         actions={blocking?.kind === 'state' ? undefined : headerActions}
         tabs={
-          <TabRow items={ANALYSIS_TABS} ariaLabel="Site health analysis" onIntent={prefetchTab} />
+          <TabRow
+            items={SITE_HEALTH_TABS}
+            ariaLabel="Site health analysis"
+            onIntent={prefetchTab}
+          />
         }
         filters={controls ? <FilterBar {...controls} /> : undefined}
       >
@@ -153,7 +158,7 @@ function tabControls({
   links,
   linksActions,
 }: Readonly<{
-  tab: AnalysisTab;
+  tab: SiteHealthTab;
   blocking: BlockingState | null;
   /** False before the first crawl, when the tab holds only the first-crawl state. */
   crawled: boolean;
@@ -257,7 +262,7 @@ function useSiteHealthTabPrefetch(
   terminal: boolean,
 ) {
   const queryClient = useQueryClient();
-  return (nextTab: AnalysisTab) => {
+  return (nextTab: SiteHealthTab) => {
     const scope = { workspaceId, projectId };
     if (nextTab === 'overview') {
       if (terminal) warmQuery(queryClient, siteHealthQueries.overview(scope, crawlId));
@@ -311,30 +316,13 @@ function SiteHealthNotices({
   );
 }
 
-type AnalysisTab =
-  | 'overview'
-  | 'pages'
-  | 'architecture'
-  | 'aeo-readiness'
-  | 'internal-links'
-  | 'changes';
-
-const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'pages', label: 'Pages' },
-  { value: 'architecture', label: 'Architecture' },
-  { value: 'aeo-readiness', label: 'AEO readiness' },
-  { value: 'internal-links', label: 'Internal links' },
-  { value: 'changes', label: 'Changes' },
-];
-
 /**
  * Site Health always opens on Pages and never changes tab by itself: not
  * while the crawl resolves, starts, runs or finishes (owner, 2026-11-02). A
  * tab the reader picks, or a `?tab=` link, stays as chosen.
  */
-const TAB_CODEC = stringUrlCodec<AnalysisTab>(
-  ANALYSIS_TABS.map((item) => item.value),
+const TAB_CODEC = stringUrlCodec<SiteHealthTab>(
+  SITE_HEALTH_TABS.map((item) => item.value),
   'pages',
 );
 
@@ -348,7 +336,7 @@ function AnalysisPanel({
   mutationsAllowed,
   linksRead,
 }: Readonly<{
-  tab: AnalysisTab;
+  tab: SiteHealthTab;
   crawlId: string;
   projectId: string;
   workspaceId: string;

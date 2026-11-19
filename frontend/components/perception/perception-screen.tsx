@@ -7,6 +7,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { PERCEPTION_TABS, type PerceptionTab } from '@/lib/perception/tabs';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
@@ -23,14 +24,10 @@ import {
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
-type PerceptionTab = 'brand' | 'fact-checking';
-
-const TABS = [
-  { value: 'brand', label: 'Brand' },
-  { value: 'fact-checking', label: 'Fact-checking' },
-] as const satisfies readonly { value: PerceptionTab; label: string }[];
-
-const TAB_CODEC = stringUrlCodec<PerceptionTab>(['brand', 'fact-checking'], 'brand');
+const TAB_CODEC = stringUrlCodec<PerceptionTab>(
+  PERCEPTION_TABS.map((item) => item.value),
+  'brand',
+);
 
 type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
@@ -55,7 +52,9 @@ export function PerceptionScreen() {
       <ReportPage
         tabs={
           <TabRow
-            items={pilot ? TABS : TABS.filter((item) => item.value === 'brand')}
+            items={
+              pilot ? PERCEPTION_TABS : PERCEPTION_TABS.filter((item) => item.value === 'brand')
+            }
             ariaLabel="Perception views"
           />
         }

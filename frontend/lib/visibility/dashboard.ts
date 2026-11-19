@@ -17,6 +17,7 @@ import type {
   Visibility,
   VisibilityEngine,
 } from '@citeladder/contracts';
+import type { VisibilityTab } from './tabs';
 
 /** Audit statuses that carry a dashboard-ready metric snapshot (B6). */
 const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
@@ -24,18 +25,7 @@ const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
   'partially_completed',
 ]);
 
-/**
- * The Sources page tabs, in display order. `domains` is the default.
- *   - domains:        the domains AI answers retrieved and cited
- *   - urls:           the cited pages
- *   - read-not-cited: your pages an engine read and still did not cite
- *   - query-fanout:   frozen prompts + generated search-query evidence
- *   - ads:            paid ads shown in ChatGPT Search answers, apart from sources
- *
- * Every tab reads the selected measurement, so the run / engine / prompt /
- * period controls apply throughout and there is no per-tab exception.
- */
-export type VisibilityTab = 'domains' | 'urls' | 'read-not-cited' | 'query-fanout' | 'ads';
+export { VISIBILITY_TABS, type VisibilityTab } from './tabs';
 
 /** The tabs that draw the Sources inventory. */
 export type SourceTab = Extract<VisibilityTab, 'domains' | 'urls' | 'read-not-cited'>;
@@ -51,16 +41,6 @@ export type VisibilityView =
   | 'competitors'
   | 'competitor'
   | 'perception';
-
-/** The ordered tab definitions (id + human label) rendered by the tablist. */
-export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
-  // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
-  { id: 'domains', label: 'Domains' },
-  { id: 'urls', label: 'URLs' },
-  { id: 'read-not-cited', label: 'Read, not cited' },
-  { id: 'query-fanout', label: 'Query fanouts' },
-  { id: 'ads', label: 'Ads' },
-] as const;
 
 /** The tabs backed by the shared execution-evidence query + cache key. */
 export function isEvidenceTab(tab: VisibilityView): boolean {

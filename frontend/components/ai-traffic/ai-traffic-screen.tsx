@@ -1,4 +1,4 @@
-import { CRAWL_ONLY_TABS, TRAFFIC_TABS } from '@/lib/config/crawl-logs';
+import { CRAWL_ONLY_TABS, TRAFFIC_TABS } from '@/lib/ai-traffic/tabs';
 import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { crawlLogsAvailable, useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
