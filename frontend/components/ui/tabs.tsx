@@ -43,10 +43,19 @@ function useRevealSelected(selected: string | null) {
     const list = strip.current;
     const item = list?.querySelector<HTMLElement>(SELECTED_ITEM);
     if (!list || !item) return;
-    const start = item.offsetLeft - REVEAL_PADDING;
-    const end = item.offsetLeft + item.offsetWidth + REVEAL_PADDING - list.clientWidth;
-    if (list.scrollLeft > start) list.scrollLeft = Math.max(0, start);
-    else if (list.scrollLeft < end) list.scrollLeft = end;
+    // A lone end stepper means scrolling will add a start one, narrowing the
+    // strip; the padding shrinks to fit, and a too-wide item shows its start.
+    const wrap = list.parentElement;
+    const view =
+      list.clientWidth -
+      (wrap?.previousElementSibling ? 0 : (wrap?.nextElementSibling?.clientWidth ?? 0));
+    const pad = Math.max(0, Math.min(REVEAL_PADDING, (view - item.offsetWidth) / 2));
+    const start = Math.max(0, item.offsetLeft - pad);
+    const left = list.scrollLeft;
+    list.scrollLeft =
+      left > start
+        ? start
+        : Math.max(left, Math.min(start, start + item.offsetWidth + 2 * pad - view));
   }, [selected]);
   return strip;
 }
@@ -517,9 +526,6 @@ export function SegmentedControl<T extends string>({
                   disabled={disabled}
                   tabIndex={index === tabStop ? 0 : -1}
                   onClick={() => onChange(option.value)}
-                  onFocus={(event) =>
-                    event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-                  }
                   onKeyDown={(event) => {
                     const edge = EDGE_KEY[event.key];
                     const delta = ARROW_DELTA[event.key];

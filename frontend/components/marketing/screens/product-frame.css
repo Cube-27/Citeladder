@@ -17,10 +17,10 @@
   }
 }
 
-/* The product image's frame: a lit backdrop (a spotlight), not a shadow. A
-   violet glow from above, a warm corner, a vignette and a dither (below); no text
-   sits on it (the caption is under the panel). On its own it holds the
-   picture's white card (below). */
+/* The product image's frame: a lit backdrop (a spotlight), not a shadow. One
+   warm family (a glow from above, a halo, a corner, a vignette) and a dither
+   (below); no text sits on it (the caption is under the panel). On its own it
+   holds the picture's white card (below). */
 
 .cl-frame-card {
   display: flex;

@@ -129,7 +129,7 @@
 }
 
 .cl-faq-icon {
-  color: var(--site-violet);
+  color: var(--site-mark);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
@@ -168,18 +168,17 @@
 }
 
 /* ---------- CtaBand: the signature band ----------
-   The copy and actions stack centred in the container while a misty
-   slate-to-navy gradient (soft diagonal streaks, a dark corner) runs full-bleed behind them (a pseudo-element the main column's
-   overflow-x clip holds). The band re-points the ink tokens, so its text and
-   primary button invert in both themes. */
+   The copy and actions stack centred in the container while a warm silk
+   gradient (soft diagonal streaks, a glowing corner) runs full-bleed behind
+   them (a pseudo-element the main column's overflow-x clip holds): pale in
+   light, deep low-glow on near-black in dark. Text and controls keep
+   the page's ink in both themes (dark in light, light in dark). Only the
+   secondary ink is re-pointed, to hold 4.5:1 on the dark band. */
 .cl-cta {
-  --color-ink: var(--color-site-band-ink);
-  --color-ink-hover: var(--color-site-band-ink-hover);
-  --color-on-ink: var(--color-site-band-on-ink);
   --color-ink-secondary: var(--color-site-band-ink-secondary);
   --color-ink-muted: var(--color-site-band-ink-secondary);
   --color-surface: transparent;
-  --color-line-control: rgb(255 255 255 / 45%);
+  --color-line-control: var(--color-site-band-line);
 
   position: relative;
   isolation: isolate;
@@ -202,9 +201,9 @@
   background:
     radial-gradient(34% 70% at 50% 50%, var(--color-site-band-scrim), transparent 80%),
     radial-gradient(45% 120% at 6% 0%, var(--color-site-band-mist), transparent 70%),
-    linear-gradient(115deg, transparent 16%, var(--color-site-band-slate) 28%, transparent 44%),
-    linear-gradient(115deg, transparent 52%, var(--color-site-band-blue) 66%, transparent 82%),
-    radial-gradient(50% 120% at 100% 100%, var(--color-site-band-to), transparent 70%),
+    linear-gradient(115deg, transparent 16%, var(--color-site-band-streak) 28%, transparent 44%),
+    linear-gradient(115deg, transparent 52%, var(--color-site-band-warm) 66%, transparent 82%),
+    radial-gradient(50% 120% at 100% 100%, var(--color-site-band-glow), transparent 70%),
     linear-gradient(
       115deg,
       var(--color-site-band-from) 0%,

@@ -916,63 +916,68 @@
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
-/* The marketing site's second colour and depth palette (docs and the app
-   keep theirs): orange stays the brand colour beside a Stripe-like
-   blue-violet; panels are wells a shade under the page in light, and a
-   neutral shade over the jet-black page in dark. */
+/* The marketing site's effects palette (docs and the app keep theirs): big
+   effects are soft warm light drawn from the accent; small marks, rails and
+   wells are zero-chroma grey (owner, 2026-11-19). */
 :root[data-marketing-surface] {
-  --color-site-violet: oklch(57.8% 0.235 278.3);
-  /* Label chips and icon tiles are neutral grey, never violet. */
+  --color-site-mark: oklch(55.6% 0 0);
   --color-site-chip: oklch(94.6% 0 0);
   --color-site-chip-ink: oklch(26.9% 0 0);
-  --color-site-guide: oklch(41.2% 0.069 278 / 16%);
-  --color-site-rule-from: oklch(57.8% 0.235 278.3 / 60%);
+  --color-site-guide: oklch(43.9% 0 0 / 16%);
+  --color-site-rule-from: oklch(80.8% 0.11 55 / 55%);
   --color-site-rule-to: oklch(63.4% 0.1973 37.5 / 55%);
-  --color-site-well: oklch(97.2% 0.0066 286);
-  --color-site-well-shade: oklch(25.7% 0.086 281 / 7%);
-  --color-site-well-edge: oklch(25.7% 0.086 281 / 7%);
-  --color-site-vignette: oklch(51% 0.23 277 / 9%);
-  --color-spot-from: oklch(92.1% 0.041 290);
-  --color-spot-to: oklch(96.4% 0.019 293);
-  --color-spot-glow: oklch(57.8% 0.235 278.3 / 40%);
-  --color-spot-halo: oklch(57.8% 0.235 278.3 / 30%);
+  --color-site-well: oklch(97% 0 0);
+  --color-site-well-shade: oklch(25% 0 0 / 7%);
+  --color-site-well-edge: oklch(25% 0 0 / 7%);
+  --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
+  --color-spot-from: oklch(95% 0.03 55);
+  --color-spot-to: oklch(97.6% 0.012 65);
+  --color-spot-glow: oklch(76% 0.15 45 / 35%);
+  --color-spot-halo: oklch(86% 0.08 55 / 35%);
   --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
-  --color-spot-vignette: oklch(35.9% 0.158 279 / 10%);
-  --color-site-band-from: oklch(43.5% 0.044 244);
-  --color-site-band-mid: oklch(32% 0.0867 274.3);
-  --color-site-band-to: oklch(18.4% 0.031 302);
-  --color-site-band-mist: oklch(77.4% 0.022 223);
-  --color-site-band-slate: oklch(55.6% 0.043 249 / 55%);
-  --color-site-band-blue: oklch(43% 0.13 273.21 / 60%);
-  --color-site-band-scrim: oklch(23% 0.068 276 / 60%);
-  --color-site-band-ink: oklch(100% 0 0);
-  --color-site-band-ink-hover: oklch(92.9% 0.036 289);
-  --color-site-band-ink-secondary: oklch(84.3% 0.058 288);
-  --color-site-band-on-ink: oklch(17.8% 0 0);
-  --color-site-band-soft: oklch(100% 0 0 / 14%);
+  --color-spot-vignette: oklch(55% 0.12 40 / 10%);
+  /* The closing band: pale warm silk with ink text. Contrast is checked over
+     every stop with any two layers stacked. */
+  --color-site-band-from: oklch(97.6% 0.018 70);
+  --color-site-band-mid: oklch(94.4% 0.04 58);
+  --color-site-band-to: oklch(91% 0.06 50);
+  --color-site-band-mist: oklch(100% 0 0 / 70%);
+  --color-site-band-streak: oklch(100% 0 0 / 60%);
+  --color-site-band-warm: oklch(88% 0.07 48 / 35%);
+  --color-site-band-glow: oklch(86.5% 0.08 46 / 50%);
+  --color-site-band-scrim: oklch(99% 0.008 70 / 55%);
+  --color-site-band-ink-secondary: oklch(43.9% 0 0);
+  --color-site-band-line: oklch(17.8% 0 0 / 80%);
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
-  --color-site-violet: oklch(67.7% 0.177 283.2);
+  --color-site-mark: oklch(70.8% 0 0);
   --color-site-chip: oklch(26.9% 0 0);
   --color-site-chip-ink: oklch(92.2% 0 0);
   --color-site-guide: oklch(100% 0 0 / 9%);
-  --color-site-rule-from: oklch(67.7% 0.177 283.2 / 60%);
+  --color-site-rule-from: oklch(55% 0.13 40 / 55%);
   --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
   --color-site-well: oklch(18.2% 0 0);
   --color-site-well-shade: oklch(0% 0 0 / 55%);
   --color-site-well-edge: oklch(100% 0 0 / 6%);
-  --color-site-vignette: oklch(67.7% 0.177 283.2 / 11%);
-  --color-spot-from: oklch(25.7% 0.097 280.3);
-  --color-spot-to: oklch(15.8% 0.04 283);
-  --color-spot-glow: oklch(62% 0.211 281.3 / 60%);
-  --color-spot-halo: oklch(62% 0.211 281.3 / 36%);
+  --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
+  --color-spot-from: oklch(22% 0.04 40);
+  --color-spot-to: oklch(15% 0.015 40);
+  --color-spot-glow: oklch(70.3% 0.194 39.3 / 35%);
+  --color-spot-halo: oklch(60% 0.15 40 / 22%);
   --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
   --color-spot-vignette: oklch(0% 0 0 / 55%);
-  --color-site-band-from: oklch(38.5% 0.043 248);
-  --color-site-band-mid: oklch(28.7% 0.075 274.4);
-  --color-site-band-to: oklch(16.7% 0.026 303);
-  --color-site-band-mist: oklch(65.3% 0.028 228);
+  /* Deep, low-glow warm on near-black with light text. */
+  --color-site-band-from: oklch(17% 0.03 45);
+  --color-site-band-mid: oklch(13% 0.018 42);
+  --color-site-band-to: oklch(10% 0.008 40);
+  --color-site-band-mist: oklch(32% 0.09 40 / 30%);
+  --color-site-band-streak: oklch(100% 0 0 / 5%);
+  --color-site-band-warm: oklch(70.3% 0.194 39.3 / 10%);
+  --color-site-band-glow: oklch(24% 0.06 40 / 55%);
+  --color-site-band-scrim: oklch(9% 0 0 / 50%);
+  --color-site-band-ink-secondary: oklch(88% 0 0);
+  --color-site-band-line: oklch(100% 0 0 / 45%);
 }
 
 /* A secondary (outline) button's edge is the control line, at least 3:1 on

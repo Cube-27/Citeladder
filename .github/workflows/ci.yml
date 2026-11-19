@@ -319,8 +319,25 @@ jobs:
       # headless shell, so the full Chrome build is not downloaded.
       - name: Install Playwright browser
         run: ./node_modules/.bin/playwright install --only-shell chromium
+      # Built here, not by playwright.config.ts's webServer, whose 60 s start
+      # timeout the two builds overran. Env matches the webServer entries.
+      - name: Build the app and marketing site
+        env:
+          PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3101
+          PUBLIC_APP_ORIGIN: http://127.0.0.1:3100
+          LOCAL_COMPOSE_BUILD: 'true'
+        run: |
+          log="$RUNNER_TEMP/e2e-builds.log"
+          if pnpm build:vite > "$log" 2>&1 && NEXT_PUBLIC_GA_MEASUREMENT_ID=G-CONSENTTEST pnpm build:marketing >> "$log" 2>&1; then
+            echo 'E2E builds passed.'
+          else
+            status=$?
+            tail -n 120 "$log"
+            exit "$status"
+          fi
       - name: Playwright
         env:
+          E2E_PREBUILT: '1'
           E2E_FILES: ${{ needs.changes.outputs.e2e_args }}
         run: |
           read -r -a e2e_files <<< "$E2E_FILES"
@@ -344,6 +361,7 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
             ${{ runner.temp }}/playwright.log
+            ${{ runner.temp }}/e2e-builds.log
           if-no-files-found: warn
           retention-days: 7
 
