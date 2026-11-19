@@ -60,6 +60,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.deepEqual(selectE2EFiles(['frontend/components/templates/page-frame.tsx']), [
     'e2e/geometry-census.spec.ts',
     'e2e/shell.spec.ts',
+    'e2e/surface-layout-actions.spec.ts',
     'e2e/surface-layout-issues.spec.ts',
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);

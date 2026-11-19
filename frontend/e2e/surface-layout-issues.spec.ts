@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page, type Route } from '@playwright/t
 
 import { makeSiteCrawl } from '../test/fixtures/site-health';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+import { bandBox, type Box } from './helpers/band-box';
 
 const CRAWL = '44444444-4444-4444-8444-444444444444';
 const PAGE_SIZE = 25;
@@ -100,8 +101,6 @@ async function stubIssues(page: Page) {
   await page.route(new RegExp(`/api/v1/site-crawls/${CRAWL}/issues(\\?|$)`), issuesPage);
 }
 
-type Box = readonly number[] | null;
-
 /** Every band of the page a click could move: x, y, width and height. */
 async function layout(page: Page, table: Locator): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
@@ -117,15 +116,9 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
     pager: table.locator('[data-data-table-foot]'),
     table,
   };
-  // Page coordinates, since clicking a control below the fold scrolls it into
-  // view first; the masthead sticks, so it stays in the viewport's.
-  const scrolled = await page.evaluate(() => window.scrollY);
   const boxes: Record<string, Box> = {};
-  for (const [name, part] of Object.entries(parts)) {
-    const box = (await part.count()) === 1 ? await part.boundingBox() : null;
-    const top = name === 'masthead' ? 0 : scrolled;
-    boxes[name] = box && [box.x, box.y + top, box.width, box.height];
-  }
+  for (const [name, part] of Object.entries(parts))
+    boxes[name] = (await part.count()) === 1 ? await bandBox(part) : null;
   boxes.document = [await page.evaluate(() => document.documentElement.scrollHeight)];
   return boxes;
 }
