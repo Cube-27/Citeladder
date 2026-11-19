@@ -31,7 +31,6 @@ export function MissingPrompts({
     <WidgetFrame
       id="missing-prompts"
       title="Where you're missing"
-      description="Prompts in the latest run where an answer named a competitor but not you."
       link={rows.length > SHOWN ? { href: '/prompts', label: 'All prompts' } : null}
     >
       <MissingBody query={query} rows={rows} />

@@ -80,13 +80,7 @@ function StripContent({
   onRerun?: () => void;
 }>) {
   if (startPending) {
-    return (
-      <Notice tone="info">
-        {crawl
-          ? 'Starting a fresh crawl. Current results stay visible until it completes.'
-          : 'Starting crawl. Pages will appear below as they are found.'}
-      </Notice>
-    );
+    return <Notice tone="info">{crawl ? 'Starting a fresh crawl.' : 'Starting crawl.'}</Notice>;
   }
 
   // The phase inputs have not all settled: say nothing rather than narrate a
@@ -97,14 +91,7 @@ function StripContent({
   if (!crawl || phase === 'empty') {
     // Direct component callers retain an empty-state fallback. The canonical
     // layout owns the actionable first-crawl placeholder.
-    return (
-      <StateBlock
-        kind="empty"
-        icon={ICONS.siteHealth}
-        heading="No crawl yet"
-        description="Start a crawl to see your pages, scores and issues."
-      />
-    );
+    return <StateBlock kind="empty" icon={ICONS.siteHealth} heading="No crawl yet" />;
   }
 
   if (phase === 'discovering') {

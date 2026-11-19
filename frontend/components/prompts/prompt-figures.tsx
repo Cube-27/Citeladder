@@ -58,13 +58,11 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
         point?.owned_citation_rate,
         point?.counts.responses === 0 ? NO_ANSWERS : NOT_MEASURED,
       ),
-      sub: 'Answers that cited one of your pages.',
     },
     {
       key: 'position',
       label: 'Position',
       value: <PositionValue latest={latest} visibility={point?.mention_rate ?? null} />,
-      sub: 'Where you were named among the brands in an answer, averaged over the answers that named you.',
     },
     {
       key: BOTH.key,
@@ -129,14 +127,12 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
     label: 'Mentioned',
     width: 'figure',
     kind: 'number',
-    hint: 'Answers that named you.',
   },
   {
     key: 'cited',
     label: 'Cited',
     width: 'figure',
     kind: 'number',
-    hint: 'Answers that cited one of your pages.',
   },
 ];
 

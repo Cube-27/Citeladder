@@ -76,9 +76,6 @@ function FactCheckingLede({
         <h2 className={textRole('heading')}>
           {contradictedHeadline(data.score.coverage.contradicted)}
         </h2>
-        <p className={textRole('body', 'text-ink-2')}>
-          Correct them at the pages AI reads, not in the answer itself.
-        </p>
       </Stack>
       <FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />
     </Inline>

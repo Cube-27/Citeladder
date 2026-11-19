@@ -139,17 +139,15 @@ describe('Context layout', () => {
       ),
     );
     renderContext();
-    // A blank profile says what belongs here and offers no save until a change.
+    // A blank profile offers no save until a change.
     const idle = await screen.findByRole('button', { name: 'Save brand knowledge' });
     expect(idle).toHaveAttribute('aria-disabled', 'true');
     expect(idle).toHaveAccessibleDescription('No changes to save');
-    expect(screen.getByText(/^No company facts yet/)).toBeVisible();
     await user.type(screen.getByLabelText('Description'), 'Coffee');
     const save = screen.getByRole('button', { name: 'Save brand knowledge' });
     expect(save).toBeEnabled();
     expect(save).not.toHaveAttribute('aria-disabled');
     expect(save).not.toHaveAccessibleDescription('No changes to save');
-    expect(screen.queryByText(/^No company facts yet/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
     expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Instructions' }));
@@ -499,7 +497,7 @@ describe('Business map', () => {
     expect(map).toHaveTextContent('Entries marked Suggested came from discovery');
     // Every offering is one row of one table; a wholly suggested list says so once.
     const offerings = screen.getByRole('region', { name: 'Offerings' });
-    expect(offerings).toHaveTextContent('1 offering. Who buys each one');
+    expect(offerings).toHaveTextContent('1 offering.');
     expect(offerings).toHaveTextContent('Entries marked suggested came from discovery');
     const [, row] = within(within(offerings).getByRole('table')).getAllByRole('row');
     if (!row) throw new Error('The offering renders as a row');

@@ -270,13 +270,7 @@ function PromptRows({
     return <StateBlock kind="loading" label="Loading prompts" shape={{ kind: 'list' }} />;
   if (!rows.length) {
     return (
-      <StateBlock
-        kind="empty"
-        icon={MessageSquare}
-        heading="No prompts yet"
-        description={onToggle ? 'Generate a set, or add one manually.' : undefined}
-        headingLevel={3}
-      />
+      <StateBlock kind="empty" icon={MessageSquare} heading="No prompts yet" headingLevel={3} />
     );
   }
   return (

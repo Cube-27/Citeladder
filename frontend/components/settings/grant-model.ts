@@ -83,8 +83,7 @@ export const FAMILY_META: Record<
     title: 'Google',
     connectProvider: 'gsc',
     blurb: 'One consent links Search Console and Analytics 4.',
-    reconnectNote:
-      'Reconnecting renews access for every property in this connection. Signed in with Google? The account is pre-selected.',
+    reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
   // Titled for the product the user is actually connecting, not the identity
   // provider behind it: a Google grant cannot authorize Bing, and saying
@@ -92,8 +91,7 @@ export const FAMILY_META: Record<
   microsoft: {
     title: 'Bing',
     connectProvider: 'bing',
-    blurb:
-      'Bing Webmaster Tools needs its own consent. A Google grant cannot authorize it. The Bing account itself can still be one created with a Google ID.',
+    blurb: 'A Google grant cannot authorize Bing Webmaster Tools.',
     reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
 };

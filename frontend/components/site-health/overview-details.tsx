@@ -237,10 +237,7 @@ function OpenIssuesTrendCard({
   points,
 }: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
   return (
-    <TitledSection
-      title="Open issues over time"
-      description="Each day’s count after that day’s crawls and re-audits of your tracked pages."
-    >
+    <TitledSection title="Open issues over time">
       <SectionContent>
         <Stack gap="item">
           <AreaChart
@@ -279,10 +276,7 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
 
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
   return (
-    <TitledSection
-      title="Score change"
-      description="Site score change against the previous comparable crawl. The Changes tab counts tracked field changes on pages present in both crawls."
-    >
+    <TitledSection title="Score change" description="Against the previous comparable crawl.">
       <SectionContent>
         <Stack>
           {data.metrics.map((metric) => (

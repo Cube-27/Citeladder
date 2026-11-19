@@ -98,7 +98,7 @@ export function OfferingsTable({ maps }: Readonly<{ maps: readonly OfferingMap[]
       <SectionHeader>
         <SectionTitle id="offerings">Offerings</SectionTitle>
         <SectionDescription>
-          {`${pluralCount(maps.length, 'offering')}. Who buys each one, when, and what matters to them.`}
+          {`${pluralCount(maps.length, 'offering')}.`}
           {suggested
             ? ' Entries marked suggested came from discovery and are not yet confirmed.'
             : null}

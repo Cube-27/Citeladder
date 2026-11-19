@@ -96,14 +96,7 @@ function BacklinkMetrics({
 function CollectionResult({ collection }: Readonly<{ collection: SearchCollection }>) {
   const { dataset, title } = collection;
   if (!dataset)
-    return (
-      <StateBlock
-        kind="empty"
-        icon={Database}
-        heading={`No saved ${title.toLowerCase()}`}
-        description="Choose it in a new analysis, then review the cost before anything is fetched."
-      />
-    );
+    return <StateBlock kind="empty" icon={Database} heading={`No saved ${title.toLowerCase()}`} />;
   return (
     <SearchIntelligenceDatasetView
       key={dataset.id}

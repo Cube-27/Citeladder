@@ -98,8 +98,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
     <Stack gap="workspace">
       <Inline className="flex-wrap justify-between">
         <p className={textRole('body', 'text-ink-2')}>
-          Proposals fill gaps beside your topics and never replace them. A removed topic&apos;s
-          prompts stay in your library without a topic. Nothing changes until you confirm.
+          A removed topic&apos;s prompts stay in your library without a topic.
         </p>
         <Button
           variant="secondary"

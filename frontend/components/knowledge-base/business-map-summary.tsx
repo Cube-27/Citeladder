@@ -78,12 +78,10 @@ const hasSuggestion = (fields: readonly MapField[]) =>
  */
 function MapGroup({
   title,
-  description,
   fields,
   action,
 }: Readonly<{
   title: string;
-  description: string;
   fields: readonly MapField[];
   action?: ReactNode;
 }>) {
@@ -91,11 +89,11 @@ function MapGroup({
     <Section aria-labelledby="business-map">
       <SectionHeader actions={action}>
         <SectionTitle id="business-map">{title}</SectionTitle>
-        <SectionDescription>
-          {hasSuggestion(fields)
-            ? `${description} Entries marked Suggested came from discovery and are not yet confirmed.`
-            : description}
-        </SectionDescription>
+        {hasSuggestion(fields) ? (
+          <SectionDescription>
+            Entries marked Suggested came from discovery and are not yet confirmed.
+          </SectionDescription>
+        ) : null}
       </SectionHeader>
       <SettingRows label="Business details">
         {fields.map((field) => (
@@ -150,12 +148,7 @@ export function BusinessMapSummary({
   ];
   return (
     <Stack gap="workspace">
-      <MapGroup
-        title="Business map"
-        description="These details steer prompt generation."
-        fields={details}
-        action={edit}
-      />
+      <MapGroup title="Business map" fields={details} action={edit} />
       <OfferingsTable maps={draft.maps} />
     </Stack>
   );

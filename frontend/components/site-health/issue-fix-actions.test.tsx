@@ -113,11 +113,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       await within(dialog).findByText('Re-run all re-audits 3 pages, one page fetch each.'),
     ).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
-    expect(
-      await within(dialog).findByText(
-        'Re-auditing 3 pages. The progress updates when the audit finishes.',
-      ),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByText('Re-auditing 3 pages.')).toBeInTheDocument();
     expect(await within(dialog).findByText('3 of 32 pages fixed')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));

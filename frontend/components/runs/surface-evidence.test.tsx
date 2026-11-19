@@ -121,7 +121,7 @@ describe('AI Overview evidence', () => {
         })}
       />,
     );
-    expect(screen.getByText(/Google showed no AI Overview/)).toBeVisible();
+    expect(screen.getByText('Not shown')).toBeVisible();
     unmount();
 
     render(
@@ -133,8 +133,8 @@ describe('AI Overview evidence', () => {
         })}
       />,
     );
-    expect(screen.getByText(/never successfully retrieved/)).toBeVisible();
-    expect(screen.queryByText(/Google showed no AI Overview/)).toBeNull();
+    expect(screen.getByText('Not observed')).toBeVisible();
+    expect(screen.queryByText('Not shown')).toBeNull();
   });
 
   it('keeps the presence table out of a run that observed nothing', () => {

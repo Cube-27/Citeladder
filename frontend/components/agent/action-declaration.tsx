@@ -39,7 +39,6 @@ type MarkImplementedProps = Readonly<{
   revision: { id: string; number: number } | null;
   disabled?: boolean;
   recommendationIds?: string[];
-  selectionDescription?: string;
   onDeclared?: () => void;
   /** What the Agent proposed from what the person said; the dialog opens with it, still editable. */
   proposed?: Proposed;
@@ -69,7 +68,6 @@ export function useMarkImplemented({
   action,
   revision,
   recommendationIds,
-  selectionDescription,
   onDeclared,
   proposed,
 }: MarkImplementedProps) {
@@ -111,12 +109,7 @@ export function useMarkImplemented({
       open={open}
       onOpenChange={setOpen}
       title="Mark implemented"
-      description={
-        selectionDescription ??
-        (revision
-          ? `Declare that revision ${revision.number} of this output is live on your site.`
-          : 'Declare that this work is live, done outside CiteLadder.')
-      }
+      description={revision ? `Revision ${revision.number}` : undefined}
       footer={
         <>
           <Button variant="secondary" onClick={() => setOpen(false)}>
@@ -159,10 +152,7 @@ export function useMarkImplemented({
             />
           )}
         </Field>
-        <Field
-          label="What shipped it?"
-          hint="Optional: the release, pull request or commit. The deployment is recorded under your account."
-        >
+        <Field label="What shipped it?" hint="Optional">
           {(field) => (
             <Input
               {...field}
@@ -250,9 +240,7 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
           );
         })}
       </Stack>
-      <p className={textRole('caption')}>
-        Nothing runs on its own, and an Action can be declared once.
-      </p>
+      <p className={textRole('caption')}>An Action can be declared once.</p>
     </Stack>
   );
 }

@@ -96,12 +96,7 @@ export function PromptImplementations({ history }: Readonly<{ history: PromptHis
     <DataTable
       title="Work marked implemented"
       columns={IMPLEMENTATION_COLUMNS}
-      footer={
-        <p className="type-caption">
-          A marker shows when work went live, not that it changed these rates: other changes and
-          answer-engine updates can overlap.
-        </p>
-      }
+      footer="Live from shows when work went live, not that it changed these rates."
     >
       {history.implementations.map((item) => (
         <TableRow key={`${item.action_id}:${item.implemented_at}`}>

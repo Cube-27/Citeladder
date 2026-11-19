@@ -165,17 +165,12 @@ function RunsContent({
     );
   }
   if (audits.length === 0) {
-    const toStart = promptsReady ? '' : ' Add prompts to start.';
     return (
       <StateBlock
         kind="empty"
         icon={Play}
         heading="No runs yet"
-        description={
-          canRun
-            ? `A run asks AI engines your prompts and measures how they answer about your brand.${toStart}`
-            : 'No run has measured how AI engines answer questions about this brand yet.'
-        }
+        description={canRun && !promptsReady ? 'Add prompts to start.' : undefined}
         action={canRun ? <FirstRunAction /> : undefined}
       />
     );

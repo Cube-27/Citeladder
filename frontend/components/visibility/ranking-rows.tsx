@@ -26,7 +26,6 @@ import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
 
 const TITLE = 'You and your competitors';
-const FOOTER = 'How often each brand is named, across the same answers.';
 
 const SENTIMENT_HINT =
   'Net sentiment: positive minus negative mentions, as a share of the classified mentions of each brand, from −100 to +100.';
@@ -72,7 +71,6 @@ export function RankingRowsTable({
                 heading: 'No measured responses in this selection',
               }
         }
-        footer={FOOTER}
       >
         {ordered.map((row) => {
           // A matched-subset delta is the same measurement over the cells both
@@ -172,7 +170,6 @@ export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
         columns={rankingColumns({ anyPosition: true, anySentiment: true })}
         pageSize={brands}
         state={{ kind: 'loading', label: 'Loading the rankings…' }}
-        footer={FOOTER}
       />
     </TitledSection>
   );

@@ -396,7 +396,6 @@ function FirstCrawl({
         kind="empty"
         icon={ICONS.siteHealth}
         heading={start ? 'Run your first site crawl' : 'No site crawl yet'}
-        description="A crawl reads your pages so CiteLadder can find issues, page structure and internal links."
         action={
           start ? (
             <ActionButton

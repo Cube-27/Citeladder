@@ -72,8 +72,6 @@ export function SearchIntelligenceCompetitors({
               kind: 'empty',
               icon: Users,
               heading: 'No competitors saved for this project',
-              description:
-                'Each saved competitor’s organic keywords, traffic and keyword gaps appear here once an analysis includes it.',
             }
       }
     >

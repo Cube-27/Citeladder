@@ -146,7 +146,7 @@ function RerunAllButton({
           onSuccess: (result) =>
             onNotice({
               tone: 'info',
-              text: `Re-auditing ${pluralCount(result.page_count, 'page')}. The progress updates when the audit finishes.`,
+              text: `Re-auditing ${pluralCount(result.page_count, 'page')}.`,
             }),
           onError: (error) => onNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
         });

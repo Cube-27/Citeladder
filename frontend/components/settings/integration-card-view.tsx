@@ -154,13 +154,13 @@ function ConnectCard({
         grant={null}
         actions={canManage ? <ConnectButton workspaceId={workspaceId} family={family} /> : null}
       />
-      <SectionContent>
-        <p className={textRole('body', 'text-ink-2')}>
-          {canManage
-            ? `Connect your ${meta.title} account to automatically import traffic and search visibility metrics.`
-            : `A workspace Owner or Admin can connect ${meta.title} to import traffic and search visibility metrics.`}
-        </p>
-      </SectionContent>
+      {canManage ? null : (
+        <SectionContent>
+          <p className={textRole('body', 'text-ink-2')}>
+            A workspace Owner or Admin can connect {meta.title}.
+          </p>
+        </SectionContent>
+      )}
     </Section>
   );
 }
@@ -235,10 +235,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
         }
       >
         <Stack gap="compact">
-          <p className={textRole('body', 'text-ink-2')}>
-            Previously imported data is kept. Reconnecting resumes from it; to stop importing just
-            one property, use Remove on its row instead.
-          </p>
+          <p className={textRole('body', 'text-ink-2')}>Previously imported data is kept.</p>
           {disconnect.isError ? (
             <Notice
               kind="mutation"

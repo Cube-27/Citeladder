@@ -75,12 +75,7 @@ export function NamedInsteadOfYou({ focus }: Readonly<{ focus: CompetitorFocus }
   return (
     <DataTable
       title="Named instead of you"
-      description={[
-        cappedCount(focus.named_instead.length, focus.named_instead_total),
-        'Rows open the prompt',
-      ]
-        .filter(Boolean)
-        .join(' · ')}
+      description={cappedCount(focus.named_instead.length, focus.named_instead_total)}
       label="Named instead of you"
       columns={PROMPT_COLUMNS}
       state={

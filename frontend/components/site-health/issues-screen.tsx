@@ -115,7 +115,6 @@ function IssuesLoadedRegion({
           kind="empty"
           icon={ICONS.issues}
           heading="No Site health crawl yet"
-          description="Issue types appear here once a Site health crawl finishes. Run one from Site health."
           action={
             <Button asChild>
               <ProjectLink href="/site">Go to Site health</ProjectLink>

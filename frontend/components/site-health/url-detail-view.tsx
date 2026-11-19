@@ -28,13 +28,7 @@ import {
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** A page detail's trail: Site health, then its Pages tab, where its rows live. */
 export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
@@ -186,7 +180,6 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
     <Section className="min-w-0">
       <SectionHeader>
         <SectionTitle>Linked from</SectionTitle>
-        <SectionDescription>Pages this crawl found linking to this URL</SectionDescription>
       </SectionHeader>
       <SectionContent>
         <ul className={ledgerClasses()}>

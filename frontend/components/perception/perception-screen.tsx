@@ -117,7 +117,6 @@ function factFigure(data: AccuracyResponse | undefined, onSelect: () => void): F
     missingState: data?.state === 'unavailable' ? 'unavailable' : undefined,
     missingLabel: data && data.state !== 'value' ? ACCURACY_MISSING[data.state] : undefined,
     loading: data === undefined,
-    sub: 'Claims about you that a confirmed fact contradicts.',
     action: { label: 'Open fact-checking', onSelect },
   };
 }
@@ -135,7 +134,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
         fallback="Check your connection and try again."
       />
     );
-  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} view="perception" />;
+  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
 }
 
 function usePageFilters(filters: Filters, queries: Queries) {

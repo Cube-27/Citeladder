@@ -39,10 +39,7 @@ export function usePerformanceSync() {
   const currentBatch = batch?.scopeKey === scopeKey ? batch : null;
   const runs = currentBatch?.runs ?? [];
   const startedAt = currentBatch?.startedAt ?? null;
-  const notice =
-    currentBatch && !runs.length
-      ? 'Nothing to sync yet. Connect a data source and choose its property above.'
-      : null;
+  const notice = currentBatch && !runs.length ? 'Nothing to sync yet.' : null;
   const mutation = useMutation(performanceMutations.syncNow({ workspaceId, projectId }));
   // The batch belongs to the project it was started for: a late answer for a
   // project the reader has since left is never polled here.

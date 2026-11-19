@@ -213,9 +213,6 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
     <Stack gap="item">
-      <p className={textRole('caption', 'text-ink-2')}>
-        What answers said about you that a confirmed fact contradicts, quoted exactly.
-      </p>
       {!claims.length ? (
         <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
       ) : (
@@ -299,7 +296,7 @@ function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongsi
           { key: 'domain', label: 'Domain' },
           { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
         ]}
-        footer="Domains cited in answers with a contradicted claim. Cited alongside, not shown to be the source."
+        footer="Cited alongside, not shown to be the source."
         state={
           cited.length
             ? undefined

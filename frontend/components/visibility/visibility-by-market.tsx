@@ -61,12 +61,7 @@ export function VisibilityByMarket({
   if (markets.length < 2) return null;
   return (
     <TitledSection title="By market">
-      <DataTable
-        label="By market"
-        columns={COLUMNS}
-        footer="Each market's latest run, with the change since its previous comparable run."
-        state={marketsState(query)}
-      >
+      <DataTable label="By market" columns={COLUMNS} state={marketsState(query)}>
         {(query.data?.markets ?? []).map((row) => (
           <TableRow key={row.market.id ?? 'default'}>
             <TableCell>

@@ -95,10 +95,6 @@ export function SearchIntelligenceCitationMatcher({
     // The drawer is the surface and its title the heading; a Card here would
     // nest one object inside another.
     <Stack gap="compact">
-      <p className="type-body text-ink-2">
-        Choose the Visibility audits whose cited sources to compare with the domains that link to
-        you.
-      </p>
       {derive.isError ? (
         <Notice
           kind="mutation"

@@ -74,11 +74,7 @@ function DeclarationProposal({
   const open = <ActionButton action="openAction" href={`/actions/${action.id}`} />;
   const declared = detail.data ? detail.data.declaration !== null : DECLARED.has(action.status);
   if (declared)
-    return (
-      <DraftSheet title={`${label} is marked implemented`} state="accepted" actions={open}>
-        <p className={textRole('caption')}>CiteLadder measures it from the day it went live.</p>
-      </DraftSheet>
-    );
+    return <DraftSheet title={`${label} is marked implemented`} state="accepted" actions={open} />;
   const declarable =
     mayWrite && (detail.data ? isDeclarable(detail.data) : PENDING.has(action.status));
   return (
@@ -133,7 +129,7 @@ function proposalDetail(proposal: Proposal) {
     ? `Revision ${proposal.revision.number} of the document`
     : 'Work done outside CiteLadder';
   const live = proposal.go_live_day ? `, live since ${proposal.go_live_day}` : '';
-  return `${what}${live}. You confirm the details before anything is declared.`;
+  return `${what}${live}`;
 }
 
 function unavailable(mayWrite: boolean) {

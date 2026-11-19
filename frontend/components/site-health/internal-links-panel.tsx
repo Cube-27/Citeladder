@@ -127,7 +127,6 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
         kind="empty"
         icon={ICONS.site}
         heading="Find missing internal links"
-        description="Suggests the contextual links each crawled page is missing, with the passage to link from."
         action={
           canRun ? (
             <Button pending={read.analyze.isPending} onClick={read.startAnalysis}>
@@ -196,7 +195,7 @@ function LinksBody({
       {isRunning(analysis.state) && summary ? (
         <output className="type-caption">
           {formatCount(summary.candidates - summary.pending)} of {formatCount(summary.candidates)}{' '}
-          page pairs checked. Suggestions appear as they are found.
+          page pairs checked
         </output>
       ) : null}
       <LinksTable

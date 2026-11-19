@@ -77,9 +77,7 @@ export function RegisterScreen({
       <AuthFormShell
         title="Registration unavailable"
         description={
-          demoMode ? (
-            'This temporary demo uses a preconfigured account.'
-          ) : (
+          demoMode ? undefined : (
             <>
               Accounts are set up for you by the CiteLadder team.{' '}
               <TextLink asChild text="inherit">

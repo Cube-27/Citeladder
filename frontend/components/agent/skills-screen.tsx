@@ -51,15 +51,7 @@ export function SkillsScreen() {
   else if (!query.data) body = <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   else body = <SkillGroups skills={query.data.skills} />;
 
-  return (
-    <ReportPage>
-      {/* The template has no description slot, so the route's intro is the body's first child. */}
-      <p className={textRole('body', 'text-ink-2')}>
-        The agent picks a skill when a task needs one, or choose one here or type / in the composer.
-      </p>
-      {body}
-    </ReportPage>
-  );
+  return <ReportPage>{body}</ReportPage>;
 }
 
 /** A skill's icon, by the catalog's output kind (`config/agent-skills.ts`). */

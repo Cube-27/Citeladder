@@ -278,9 +278,6 @@ function CoverageGaps({
       <h3 id="coverage-gaps" className={textRole('subheading')}>
         Coverage gaps
       </h3>
-      <p className={textRole('caption')}>
-        Topics AI answers cite other pages for, from this Action’s evidence.
-      </p>
       <Stack as="ul" gap="compact">
         {gaps.map(({ id, evidence }) => (
           <Stack as="li" key={id} gap="item" className={wellClasses()}>
@@ -382,7 +379,7 @@ function BulkActions({
 }
 
 const EMPTY: Readonly<Record<Filter, string>> = {
-  open: 'Nothing to review. Ask the agent below for suggestions on the page.',
+  open: 'Nothing to review.',
   applied: 'No suggestions applied yet.',
   dismissed: 'No suggestions dismissed.',
 };

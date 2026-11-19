@@ -31,7 +31,7 @@ function ProductSection({
   description,
   empty,
   children,
-}: Readonly<{ title: string; description: string; empty: string | null; children: ReactNode }>) {
+}: Readonly<{ title: string; description?: string; empty: string | null; children: ReactNode }>) {
   return (
     <TitledSection title={title} description={description}>
       <SectionContent>
@@ -53,7 +53,6 @@ export function CompetingProducts({
   return (
     <ProductSection
       title="Competing products"
-      description="Products named in the same answers, by answers shared."
       empty={rows.length ? null : 'No other product was named in its answers.'}
     >
       {rows.map((row) => (
@@ -95,7 +94,6 @@ export function Merchants({ detail }: Readonly<{ detail: CommerceProductDetail }
   return (
     <ProductSection
       title="Merchants"
-      description="Where the answers send shoppers to buy it."
       empty={detail.merchants.length ? null : 'No answer named a merchant for it.'}
     >
       {detail.merchants.map((row) => (
@@ -118,7 +116,6 @@ export function SeenIn({
   return (
     <ProductSection
       title="Seen in"
-      description="The categories and products whose shopping prompts named it."
       empty={detail.seen_in.length ? null : 'No shopping prompt’s answer named it.'}
     >
       {detail.seen_in.map((row) => (
@@ -143,7 +140,6 @@ export function Sources({ detail }: Readonly<{ detail: CommerceProductDetail }>)
   return (
     <ProductSection
       title="Sources"
-      description="Pages cited by the answers that named it."
       empty={detail.sources.length ? null : 'The answers that named it cited no pages.'}
     >
       {detail.sources.map((row) => (
@@ -168,7 +164,6 @@ export function FanOutQueries({ detail }: Readonly<{ detail: CommerceProductDeta
   return (
     <ProductSection
       title="Fan-out queries"
-      description="What the engines searched for while writing the answers that named it."
       empty={
         detail.fan_out_queries.length
           ? null
@@ -192,7 +187,6 @@ export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDeta
   return (
     <ProductSection
       title="Prompts"
-      description="Each prompt that named it or targets it, over that prompt's answers."
       empty={detail.prompts.length ? null : 'No prompt named it in this window.'}
     >
       {detail.prompts.map((row) => (
@@ -236,7 +230,7 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
         description={
           more > 0
             ? `The newest ${formatCount(detail.answers.length)} of ${pluralCount(detail.answer_total, 'answer')} that named it.`
-            : 'Every answer that named it, newest first.'
+            : undefined
         }
         empty={detail.answers.length ? null : 'No answer named it in this window.'}
       >

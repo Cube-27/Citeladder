@@ -134,7 +134,6 @@ export function SetupCompetitors({
             query={query}
             rows={rows}
             running={running}
-            canFind={canRun}
             pending={decide.isPending}
             onDecide={canWrite ? (id, decision) => decide.mutate({ id, decision }) : undefined}
           />
@@ -148,15 +147,12 @@ function CompetitorRows({
   query,
   rows,
   running,
-  canFind,
   pending,
   onDecide,
 }: Readonly<{
   query: CommerceQueries['competitors'];
   rows: NonNullable<CommerceQueries['competitors']['data']>;
   running: boolean;
-  /** Whether the reader is offered Find competitors. */
-  canFind: boolean;
   pending: boolean;
   /** Approves or rejects a candidate; omitted for a role that may not. */
   onDecide?: (id: string, decision: 'approved' | 'rejected') => void;
@@ -178,7 +174,6 @@ function CompetitorRows({
         kind="empty"
         icon={Users}
         heading={running ? 'Looking for competitors…' : 'No candidates yet'}
-        description={running || !canFind ? undefined : 'Run Find competitors.'}
         headingLevel={3}
       />
     );

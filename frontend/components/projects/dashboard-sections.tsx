@@ -280,9 +280,7 @@ function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSe
     key: 'citation-share',
     label: 'Owned citation rate',
     action: { href: '/insights?metric=owned_citation_rate', label: 'Open Insights' },
-    caption: `Answers that link to a page you own · ${
-      observed ? `Across ${pluralCount(track.engine_coverage, 'engine')}` : 'All engines'
-    }`,
+    caption: observed ? `Across ${pluralCount(track.engine_coverage, 'engine')}` : 'All engines',
     value: track.citation_share.value === null ? null : percentFigure(track.citation_share.value),
     missingState: observed ? 'unavailable' : 'not_run',
     // No comparable run means no change; the Movement card says so once.
@@ -361,12 +359,7 @@ export function RankedActionsCard({
       {actions.length ? (
         <ReorderList items={actions.map(actionItem)} pending={pending} onMove={onMove} />
       ) : (
-        <StateBlock
-          kind="empty"
-          icon={ArrowRight}
-          heading="No open actions"
-          description="Launch another run to look for new opportunities."
-        />
+        <StateBlock kind="empty" icon={ArrowRight} heading="No open actions" />
       )}
     </WidgetFrame>
   );

@@ -150,10 +150,7 @@ export function IntegrationSettings() {
     <>
       <CallbackNotice notice={notice} />
       {settled ? null : (
-        <TitledSection
-          title="Search and analytics"
-          description="Google Search Console, Analytics 4 and Bing Webmaster Tools."
-        >
+        <TitledSection title="Search and analytics">
           {connectionsQuery.isError ? (
             <StateBlock
               kind="error"

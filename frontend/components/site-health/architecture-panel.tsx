@@ -99,10 +99,7 @@ export function ArchitecturePanel({
       <StateBlock
         kind="empty"
         heading="Site architecture isn't available yet"
-        description={
-          architecture.data?.limitations[0] ??
-          'Page kinds appear once a crawl has finished and its structure has been derived.'
-        }
+        description={architecture.data?.limitations[0]}
       />
     );
   }
@@ -144,14 +141,13 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 }
 
-/** What the table groups, then why coverage fell short when the crawl said why. */
-function pageKindDescription(coverage: CoverageState, reasons: readonly string[]): string {
-  const lead = 'Pages grouped by what each one is for, in this crawl.';
+/** Why coverage fell short, when the crawl said why. */
+function pageKindDescription(coverage: CoverageState, reasons: readonly string[]): string | null {
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
   // A complete crawl carries a completion reason, not a limit.
-  if (coverage === 'complete' || named.length === 0) return lead;
+  if (coverage === 'complete' || named.length === 0) return null;
   const why = named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ');
-  return `${lead} Why coverage is limited: ${why}.`;
+  return `Why coverage is limited: ${why}.`;
 }
 
 /**
@@ -173,6 +169,7 @@ function PageKindTable({
 }>) {
   const [openKind, setOpenKind] = useState<string | null>(null);
   const pagesId = useId();
+  const why = pageKindDescription(coverage, reasons);
   return (
     <Section>
       <SectionHeader
@@ -183,7 +180,7 @@ function PageKindTable({
         }
       >
         <SectionTitle>Page kinds</SectionTitle>
-        <SectionDescription>{pageKindDescription(coverage, reasons)}</SectionDescription>
+        {why ? <SectionDescription>{why}</SectionDescription> : null}
       </SectionHeader>
       <DataTable
         label="Page kinds"

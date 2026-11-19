@@ -17,21 +17,13 @@ export function PromptEmptyState({
   add?: AddPromptsHandlers;
 }>) {
   if (!add) {
-    return (
-      <StateBlock
-        kind="empty"
-        icon={MessageSquarePlus}
-        heading="No prompts tracked yet"
-        description="This project does not track any questions yet."
-      />
-    );
+    return <StateBlock kind="empty" icon={MessageSquarePlus} heading="No prompts tracked yet" />;
   }
   return (
     <StateBlock
       kind="empty"
       icon={MessageSquarePlus}
       heading="Choose the questions you want to track"
-      description="Generate buyer questions from your confirmed offerings with Prompt builder, write your own, or upload a file."
       action={<AddPromptsMenu {...add} />}
     />
   );

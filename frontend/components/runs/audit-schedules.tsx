@@ -83,10 +83,7 @@ function WorkspaceSchedules({
   // the schedules as one-line rows, then the new-schedule form as its own block.
   return (
     <>
-      <TitledSection
-        title="Scheduled audits"
-        description="Runs use the selected prompt set and your connected engines."
-      >
+      <TitledSection title="Scheduled audits">
         <SectionContent>
           <Stack>
             {schedulesQuery.isError ? (

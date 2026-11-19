@@ -67,7 +67,6 @@ export function OrphanPageDrawer({
       open={open}
       onOpenChange={onOpenChange}
       title="Orphaned pages"
-      description={ORPHAN_SCOPE_NOTE}
       closeLabel="Close orphaned pages"
     >
       <Stack gap="section">

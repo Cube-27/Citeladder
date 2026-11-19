@@ -212,7 +212,7 @@ describe('Shopping overview', () => {
     renderWithProviders(<Harness />, projectRoute);
 
     const merchants = await screen.findByRole('region', { name: 'Top merchants' });
-    expect(merchants).toHaveTextContent('No answer in this window named a merchant.');
+    expect(merchants).toHaveTextContent('No merchant yet');
     expect(within(merchants).queryByRole('columnheader')).not.toBeInTheDocument();
     expect(table('Top fan-out queries')).toHaveTextContent('No answer exposed its search queries.');
   });

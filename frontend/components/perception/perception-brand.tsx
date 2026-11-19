@@ -109,15 +109,11 @@ function Lede({
       <SectionContent>
         <Stack gap="item">
           <Stack gap="tight">
-            <p className={textRole('caption', 'text-ink-2')}>
-              From your tracked prompts
-              {latest ? (
-                <>
-                  {' · latest run '}
-                  <DisplayTime value={latest} dateOnly />
-                </>
-              ) : null}
-            </p>
+            {latest ? (
+              <p className={textRole('caption', 'text-ink-2')}>
+                Latest run <DisplayTime value={latest} dateOnly />
+              </p>
+            ) : null}
             <h2 className={textRole('heading')}>
               {negativeHeadline(score) ?? 'How AI describes you'}
             </h2>

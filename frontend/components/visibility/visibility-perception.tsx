@@ -48,11 +48,7 @@ export function PerceptionState({
 export function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
   return (
     <TitledSection title="You and competitors">
-      <DataTable
-        label="You and competitors"
-        columns={ENTITY_COLUMNS}
-        footer="Classified mentions of each business in the selected answers."
-      >
+      <DataTable label="You and competitors" columns={ENTITY_COLUMNS}>
         {entities.map((entity) => (
           // Your own row is highlighted, as in the Trends brand table.
           <TableRow key={entity.name} highlight={entity.is_brand}>
@@ -106,10 +102,7 @@ export function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
 export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <TitledSection
-      title="Criticism in answers"
-      description="Negative points about you, quoted exactly as the answer put them."
-    >
+    <TitledSection title="Criticism in answers">
       <SectionContent>
         {!quotes.length ? (
           <StateBlock

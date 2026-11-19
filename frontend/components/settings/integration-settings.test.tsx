@@ -182,7 +182,6 @@ describe('IntegrationSettings — empty state + OAuth navigation', () => {
     renderSettings();
 
     expect(await screen.findByText('No integrations connected')).toBeInTheDocument();
-    expect(screen.getByText(/Search Console and Analytics 4/)).toBeInTheDocument();
 
     await ue.click(screen.getByRole('button', { name: 'Connect Google' }));
     expect(assignMock).toHaveBeenCalledWith(

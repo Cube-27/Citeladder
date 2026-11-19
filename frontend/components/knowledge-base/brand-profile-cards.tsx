@@ -21,7 +21,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { SaveFoot } from './save-foot';
 import type { BrandProfileForm } from './use-brand-profile-form';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** The profile save's outcome, above the tab it was saved from. */
 export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
@@ -59,17 +59,9 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
     <Section aria-labelledby="company-facts">
       <SectionHeader>
         <SectionTitle id="company-facts">Company facts</SectionTitle>
-        <SectionDescription>
-          {form.empty && !form.dirty
-            ? 'No company facts yet. The agent and prompt generation read them first. Start with what you sell.'
-            : 'The canonical facts used across CiteLadder, including by the agent.'}
-        </SectionDescription>
       </SectionHeader>
       <SettingRows>
-        <SettingField
-          label="What you sell"
-          hint="The category buyers would search for. Generated questions are built from it."
-        >
+        <SettingField label="What you sell">
           {(field) => (
             <Input
               {...field}
@@ -93,11 +85,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           disabled={saving}
           onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
         />
-        <SettingField
-          wide
-          label="Description"
-          hint="Core mission, value proposition, and brand summary."
-        >
+        <SettingField wide label="Description">
           {(field) => (
             <Textarea
               {...field}
@@ -108,11 +96,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             />
           )}
         </SettingField>
-        <SettingField
-          wide
-          label="Positioning"
-          hint="Include price tier, differentiation, and competitive segment."
-        >
+        <SettingField wide label="Positioning">
           {(field) => (
             <Textarea
               {...field}
@@ -175,14 +159,9 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
     <Section aria-labelledby="audience-offerings">
       <SectionHeader>
         <SectionTitle id="audience-offerings">Audience and offerings</SectionTitle>
-        <SectionDescription>Who you sell to, and what you sell.</SectionDescription>
       </SectionHeader>
       <SettingRows>
-        <SettingField
-          wide
-          label="Target audience"
-          hint="Key demographics, customer personas, and ideal buyers."
-        >
+        <SettingField wide label="Target audience">
           {(field) => (
             <Textarea
               {...field}
@@ -195,7 +174,6 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
         </SettingField>
         <ChipInput
           label="Products and services"
-          hint="One offering per entry, named as a buyer would."
           items={draft.products_services.map((value) => ({ value }))}
           onChange={(items) =>
             form.setDraft({ ...draft, products_services: items.map((item) => item.value) })
@@ -230,7 +208,6 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
         }
       >
         <SectionTitle id="tracked-competitors">Tracked competitors</SectionTitle>
-        <SectionDescription>The brands CiteLadder measures you against.</SectionDescription>
       </SectionHeader>
       {(project.competitors ?? []).length === 0 ? (
         <StateBlock kind="empty" inline message="No competitors tracked yet." />

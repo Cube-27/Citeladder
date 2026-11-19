@@ -1,12 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { UsageTable } from '@/components/billing/usage-meter';
 import { textRole } from '@/components/ui/typography';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
@@ -68,9 +62,6 @@ export function UsageMeters() {
     <Section aria-labelledby="usage-title">
       <SectionHeader>
         <SectionTitle id="usage-title">Usage</SectionTitle>
-        <SectionDescription>
-          Measured against the allowances your active grants provide.
-        </SectionDescription>
         {idle ? (
           <p className={textRole('caption', 'text-ink-2')}>No usage yet this period</p>
         ) : null}

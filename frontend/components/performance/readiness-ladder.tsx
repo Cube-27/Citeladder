@@ -43,14 +43,14 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
 
 /** What the user should understand, in one line, at each stage. */
 /** `not_connected` belongs to the data source setup, which can act on it. */
-const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, string> = {
-  connected: 'Connected. The first history import has not started yet.',
-  importing: 'Importing your history. Numbers below fill in as data arrives and are not final.',
-  import_failed:
-    'The history import finished without importing anything. Start a new sync to retry.',
-  core_data_ready:
-    'Your Search Console and Analytics numbers are ready. CiteLadder’s own analysis is still computing.',
-  analysis_ready: 'Everything is ready.',
+const EXPLANATION: Record<
+  Exclude<ProjectReadinessStage, 'not_connected' | 'analysis_ready'>,
+  string
+> = {
+  connected: 'The first history import has not started yet.',
+  importing: 'Numbers below are not final.',
+  import_failed: 'The history import finished without importing anything.',
+  core_data_ready: 'CiteLadder’s own analysis is still computing.',
 };
 
 function stageIndex(stage: ProjectReadinessStage): number {

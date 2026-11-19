@@ -58,11 +58,11 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
         <SectionTitle id="overview-start">
           {firstRun ? 'Get your first results' : 'Track prompts again'}
         </SectionTitle>
-        <SectionDescription>
-          {firstRun
-            ? 'The Overview fills in as each step finishes.'
-            : 'No prompt is active, so the next run has nothing to measure.'}
-        </SectionDescription>
+        {firstRun ? null : (
+          <SectionDescription>
+            No prompt is active, so the next run has nothing to measure.
+          </SectionDescription>
+        )}
       </SectionHeader>
       <SetupSteps label="Steps to your first results" steps={startSteps(data)} />
     </Section>

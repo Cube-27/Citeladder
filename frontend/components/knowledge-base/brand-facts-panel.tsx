@@ -100,10 +100,7 @@ export function BrandFactsPanel({
         </SettingRows>
       )}
       {retired.length ? (
-        <p className={textRole('caption')}>
-          Retired facts: {formatCount(retired.length)}. They are kept for earlier runs and no longer
-          checked.
-        </p>
+        <p className={textRole('caption')}>Retired facts: {formatCount(retired.length)}</p>
       ) : null}
       {mayEdit ? (
         <AddFact
@@ -156,11 +153,7 @@ function AddFact({
             />
           )}
         </SettingField>
-        <SettingField
-          wide
-          label="Fact"
-          hint="One statement, as you want an answer to say it. For example: Orders over $50 ship free."
-        >
+        <SettingField wide label="Fact">
           {(props) => (
             <Textarea
               {...props}
@@ -171,10 +164,7 @@ function AddFact({
             />
           )}
         </SettingField>
-        <SettingField
-          label="Source page (optional)"
-          hint="The full address of the page that states it, starting with https://"
-        >
+        <SettingField label="Source page (optional)" hint="Starts with https://">
           {(props) => (
             <Input
               {...props}
@@ -185,7 +175,6 @@ function AddFact({
           )}
         </SettingField>
         <Inline className="flex-wrap justify-end">
-          {empty ? <span className={textRole('caption')}>Write the fact to add it.</span> : null}
           <Button type="submit" variant="primary" disabled={pending || empty}>
             <Icon icon={Plus} />
             Add draft fact

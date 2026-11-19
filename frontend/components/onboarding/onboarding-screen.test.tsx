@@ -550,7 +550,6 @@ describe('OnboardingScreen', () => {
     expect(screen.getByText('Opened your website')).toBeInTheDocument();
     expect(screen.getByText('Finding comparable brands')).toBeInTheDocument();
     expect(screen.getByText('3 pages read')).toBeInTheDocument();
-    expect(screen.getByText(/learning what you offer/i)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(
       /finding_competitors|lease|attempt_count|error_detail|provider/i,
     );
@@ -645,7 +644,7 @@ describe('OnboardingScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Creating your project' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Does this look right?' })).toBeNull();
-    expect(screen.getByText('Next, choose the questions you want to track.')).toBeVisible();
+    expect(screen.getByText('Opening your workspace')).toBeVisible();
 
     act(() => releaseCompletion());
     await waitFor(() =>

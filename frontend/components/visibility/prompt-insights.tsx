@@ -161,11 +161,10 @@ export function CompetitorSuggestions({
   );
 }
 
-function sectionDescription(tracked: number, limit: number | undefined): string {
-  const lead = 'Suggestions never join your competitors until you accept them.';
+function sectionDescription(tracked: number, limit: number | undefined): string | undefined {
   return limit === undefined
-    ? lead
-    : `${lead} ${formatCount(tracked)} of ${formatCount(limit)} competitors tracked.`;
+    ? undefined
+    : `${formatCount(tracked)} of ${formatCount(limit)} competitors tracked.`;
 }
 
 /** A failed accept or reject in the server's words; Try again only for a transient failure. */

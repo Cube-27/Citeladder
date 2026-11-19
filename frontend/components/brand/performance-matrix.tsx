@@ -10,7 +10,7 @@ import {
   type HeatValue,
 } from '@/components/ui/heat-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -142,7 +142,6 @@ export function PerformanceMatrix({
     <Section aria-labelledby="insights-matrix">
       <SectionHeader>
         <SectionTitle id="insights-matrix">Performance matrix</SectionTitle>
-        <SectionDescription>Compare a metric across two dimensions</SectionDescription>
       </SectionHeader>
       <Stack>
         <Inline className="flex-wrap">

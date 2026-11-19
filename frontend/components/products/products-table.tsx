@@ -280,19 +280,10 @@ export function ProductsTable({
 }
 
 const EMPTY_COPY = {
-  catalog: {
-    heading: 'No products yet',
-    description: 'Add products, or run a Site health crawl to read them from your site.',
-  },
-  all: {
-    heading: 'No products yet',
-    description: 'Your catalog and the competitors seen in shopping answers list here.',
-  },
-  archived: {
-    heading: 'No archived products',
-    description: 'A product you archive from its page lists here until you restore it.',
-  },
-} as const satisfies Record<ProductFilters['source'], { heading: string; description: string }>;
+  catalog: { heading: 'No products yet' },
+  all: { heading: 'No products yet' },
+  archived: { heading: 'No archived products' },
+} as const satisfies Record<ProductFilters['source'], { heading: string }>;
 
 function tableState({
   query,

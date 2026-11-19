@@ -98,7 +98,7 @@ function ThemeTable({
       actions={actions}
       label="Perception by theme"
       columns={THEME_COLUMNS}
-      footer={`What answers praised or criticised about you. Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions. Open a theme for its quotes.`}
+      footer={`Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
       state={themes.length ? undefined : noneHere('No themes in these answers.')}
     >
       {themes.map((theme) => {

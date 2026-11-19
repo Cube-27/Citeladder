@@ -273,7 +273,7 @@ function TopicField({
       />
     );
   return (
-    <Field label="Topic" hint="Only topics with prompts are listed.">
+    <Field label="Topic">
       {(control) => (
         <Select
           {...control}
@@ -304,7 +304,6 @@ function PromptsField({
   return (
     <ChecklistField
       label="Prompts"
-      help="The page is improved to answer these prompts."
       count={`${selected.size} of ${prompts.length}`}
       note={selected.size === 0 ? 'Choose at least one prompt.' : undefined}
       items={prompts.map((prompt) => ({

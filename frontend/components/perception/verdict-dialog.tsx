@@ -62,7 +62,7 @@ export function VerdictDialog({
         if (!open) onClose();
       }}
       title="Change verdict"
-      description={`“${claim.quote}”. The model's verdict stays on record beside yours.`}
+      description={`“${claim.quote}”`}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -90,7 +90,7 @@ export function VerdictDialog({
           onValueChange={setVerdict}
           options={OPTIONS}
         />
-        <Field label="Note" hint="Optional. Why the verdict changed.">
+        <Field label="Note" hint="Optional">
           {(props) => (
             <Textarea
               {...props}

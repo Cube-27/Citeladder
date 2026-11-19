@@ -262,7 +262,7 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
             <>
               <p className={textRole('caption')}>
                 {data.responses
-                  ? `Your pages engines read but did not cite, across ${formatCount(data.responses)} answers that show what they read.`
+                  ? `Across ${formatCount(data.responses)} answers that show what they read.`
                   : 'No engine in this run shows what it read.'}
               </p>
               <Rows

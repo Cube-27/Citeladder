@@ -60,7 +60,6 @@ export function PageKindScores({
       <DataTable
         label="Scores by page kind"
         columns={COLUMNS}
-        footer="Mean scores across the analyzed pages of each type."
         state={emptyState(summary === null, rows.length)}
       >
         {rows.map((row) => (

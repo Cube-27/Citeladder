@@ -168,7 +168,7 @@ export function TopMoversCard({
     <Stack as="section" aria-label="Top movers">
       <EditorialSectionHeader
         title="Top movers"
-        description={`The ${dimension === 'url' ? 'pages' : 'domains'} whose share of citations changed most against the previous comparable period, in percentage points.`}
+        description="Percentage points against the previous comparable period."
       />
       <AppGrid layout="halves">
         <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />

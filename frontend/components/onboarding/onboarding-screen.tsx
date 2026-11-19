@@ -121,7 +121,6 @@ function onboardingStage(
   if (flow.step === 1) {
     return (
       <DiscoveryStage
-        brandName={flow.brand?.brand_name}
         discovery={flow.discovery}
         onEdit={() => flow.setStep(0)}
         onRerun={flow.rerunDiscovery}

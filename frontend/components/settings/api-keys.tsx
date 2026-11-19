@@ -357,12 +357,7 @@ function ApiKeysBody({
         </Notice>
       )}
       {keys.length === 0 && available ? (
-        <StateBlock
-          kind="empty"
-          icon={KeyRound}
-          heading="No API keys yet"
-          description="Create a key to call the REST API from your own code."
-        />
+        <StateBlock kind="empty" icon={KeyRound} heading="No API keys yet" />
       ) : null}
       {keys.length === 0 ? null : (
         <DataTable label="API keys" columns={KEY_COLUMNS}>
@@ -405,8 +400,7 @@ export function ApiKeys() {
               variant="quiet"
               className="align-middle"
               copiedLabel="Copied the API address"
-            />{' '}
-            from your own code.
+            />
           </SectionDescription>
         </SectionHeader>
         <ApiKeysBody

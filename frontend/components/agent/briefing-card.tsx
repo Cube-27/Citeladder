@@ -34,19 +34,14 @@ export function BriefingCard({
   const actions = useQuery(actionsQueries.list({ workspaceId, projectId }));
   const top = actions.data?.items.slice(0, AGENT_BRIEFING_ACTIONS) ?? [];
   const actionLabel = top.length === 1 ? 'Action' : 'Actions';
-  const basis =
-    top.length > 0
-      ? `Reads your evidence and your top ${top.length} open ${actionLabel}.`
-      : 'Reads your evidence across Visibility, Website, Demand and Performance.';
+  const basis = top.length > 0 ? `Reads your top ${top.length} open ${actionLabel}.` : null;
   return (
     <Stack as="section" aria-labelledby="agent-briefing">
       <Stack gap="tight">
         <h2 id="agent-briefing" className={textRole('subheading')}>
           What should I work on?
         </h2>
-        <p className={textRole('body', 'text-ink-2')}>
-          {basis} Runs once when you ask; nothing is scheduled.
-        </p>
+        {basis ? <p className={textRole('body', 'text-ink-2')}>{basis}</p> : null}
       </Stack>
       <Button
         variant="secondary"

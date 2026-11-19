@@ -9,13 +9,7 @@ import { Download } from 'lucide-react';
 import { IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -74,7 +68,6 @@ function invoicesState(read: InvoicesRead, count: number): DataTableState | unde
     icon: ICONS.billing,
     headingLevel: 3,
     heading: 'No invoices have been issued yet',
-    description: 'An invoice and its receipt appear here after each payment.',
   };
 }
 
@@ -113,7 +106,6 @@ export function InvoiceHistory({
     <Section aria-labelledby="invoices-title">
       <SectionHeader>
         <SectionTitle id="invoices-title">Invoices</SectionTitle>
-        <SectionDescription>Invoices with their receipts, and any credit notes.</SectionDescription>
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
         {downloadError ? (

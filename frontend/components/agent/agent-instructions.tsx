@@ -12,7 +12,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The project's Agent instructions and their draft. The draft follows the
@@ -82,10 +82,6 @@ export function AgentInstructionsCard({
     <Section aria-labelledby="agent-instructions">
       <SectionHeader>
         <SectionTitle id="agent-instructions">Agent instructions</SectionTitle>
-        <SectionDescription>
-          Audience, voice and standing requirements the agent follows in every chat for this
-          project.
-        </SectionDescription>
       </SectionHeader>
       {query.isPending ? (
         <StateBlock

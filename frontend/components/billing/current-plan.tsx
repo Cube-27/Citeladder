@@ -226,7 +226,6 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         if (!cancellation.pending) cancellation.setOpen(open);
       }}
       title="Cancel subscription"
-      description="Cancellation takes effect at the end of the current billing period."
       footer={
         <>
           <Button

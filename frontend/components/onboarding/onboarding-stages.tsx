@@ -39,7 +39,6 @@ export function BrandStage({
     <SetupStep
       titleId={STAGE_HEADING_ID}
       title={isAdditional ? 'Add a project' : 'Add your brand'}
-      help="We'll review your website, suggest comparable brands, and prepare balanced questions."
       back={actions.back}
       next={actions.next}
     >
@@ -109,13 +108,11 @@ export function BrandStage({
 }
 
 export function DiscoveryStage({
-  brandName,
   discovery,
   onEdit,
   onRerun,
   actions,
 }: Readonly<{
-  brandName: string | undefined;
   discovery: {
     discovery: ReturnType<
       typeof import('@/lib/onboarding/use-brand-discovery').useBrandDiscovery
@@ -143,7 +140,6 @@ export function DiscoveryStage({
     <SetupStep
       titleId={STAGE_HEADING_ID}
       title="Finding what to track"
-      help={`We're reading ${brandName || 'your website'} and learning what you offer.`}
       back={actions.back}
       next={actions.next}
     >
@@ -205,26 +201,18 @@ export function CreationStage({
     {
       id: 'save',
       label: 'Saving your project',
-      detail: projectCommitted
-        ? 'Your confirmed details are saved.'
-        : 'Your confirmed draft remains recoverable.',
       status: projectCommitted ? 'done' : 'running',
     },
     {
       id: 'open',
       label: 'Opening your workspace',
-      detail: 'Next, choose the questions you want to track.',
       status: projectCommitted ? 'running' : 'pending',
     },
   ];
 
   return (
     <div aria-busy="true">
-      <SetupStep
-        titleId={STAGE_HEADING_ID}
-        title="Creating your project"
-        help="We're saving your confirmed details and will open the project as soon as it is committed."
-      >
+      <SetupStep titleId={STAGE_HEADING_ID} title="Creating your project">
         <StageSteps label="Project creation progress" steps={steps} />
       </SetupStep>
     </div>
@@ -284,7 +272,6 @@ export function ReviewStage({
     <SetupStep
       titleId={STAGE_HEADING_ID}
       title="Does this look right?"
-      help="Confirm what we found before we create your project."
       back={actions.back}
       next={actions.next}
     >

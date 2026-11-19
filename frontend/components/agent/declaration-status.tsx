@@ -126,8 +126,7 @@ export function DeclarationStatus({
       {declaration.checks.length > 0 ? (
         <p className={textRole('caption')}>
           New evidence is read until <DisplayTime value={declaration.measured_until} dateOnly />. A
-          met check shows the change is live and measured; it does not prove this Action caused any
-          movement, and other changes can overlap.
+          met check does not prove this Action caused any movement.
         </p>
       ) : null}
       <VerificationObservations implementation={declaration} showAuditLink={hasVisibility} />
@@ -253,7 +252,7 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
   if (start.isSuccess)
     return (
       <output className={textRole('caption')}>
-        Crawl started. The checks update when it finishes.{' '}
+        Crawl started.{' '}
         <TextLink href="/site" text="inherit">
           Open Site health
         </TextLink>
