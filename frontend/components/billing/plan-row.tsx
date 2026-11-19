@@ -108,7 +108,7 @@ function monthlyPriceLabel(
 function planCheckoutLabel(pending: boolean, available: boolean, planName: string): string {
   if (pending) return 'Preparing quote…';
   if (available) return `Choose ${planName}`;
-  return `Choose ${planName} — checkout unavailable`;
+  return `Choose ${planName} (checkout unavailable)`;
 }
 
 function planCheckoutState(

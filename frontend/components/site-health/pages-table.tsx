@@ -158,7 +158,7 @@ export function PagesTable({
                       underline="hover"
                       href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
                       onClick={(event) => event.stopPropagation()}
-                      aria-label={`View ${title} — ${page.display_url}`}
+                      aria-label={`View ${title}, ${page.display_url}`}
                     >
                       {title}
                     </TextLink>

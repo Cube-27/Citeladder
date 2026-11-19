@@ -31,7 +31,7 @@ describe('mutationNoticeForError (A4)', () => {
   it('uses transient copy WITH retry on a 5xx', () => {
     const notice = mutationNoticeForError(new ApiError('boom', 500, '{}'), ACTION);
     expect(notice.message).toBe(
-      'Could not start the attribution recompute — the request failed or timed out. This is usually temporary; try again.',
+      'Could not start the attribution recompute. The request failed or timed out. This is usually temporary; try again.',
     );
     expect(notice.retryable).toBe(true);
   });

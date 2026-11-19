@@ -91,7 +91,7 @@ export function onboardingErrorMessage(error: unknown): string {
   // Reporting it as "we couldn't finish" told people their project had failed
   // when it was usually about to appear.
   if (code === 'request_timeout') {
-    return 'This is taking longer than usual. We’re still working on it — checking again…';
+    return 'This is taking longer than usual. We’re still working on it and checking again…';
   }
   return 'We couldn’t finish this setup step just now. Please try again.';
 }

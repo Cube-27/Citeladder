@@ -151,7 +151,6 @@ export function AddTopicDialog({
       open={open}
       onOpenChange={close}
       title="Add topic"
-      description="Topics group prompts so you can filter and compare them."
       footer={
         <>
           <Button variant="secondary" onClick={() => close(false)}>

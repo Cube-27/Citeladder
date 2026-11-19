@@ -7,7 +7,7 @@ export function qualityStatusLabel(candidate: PromptCandidate): string {
     case 'off':
       return 'Quality checking was off for this batch';
     case 'unavailable':
-      return 'Quality check unavailable — review carefully';
+      return 'Quality check unavailable. Review carefully.';
     case 'not_judged':
       return 'Not quality checked';
   }

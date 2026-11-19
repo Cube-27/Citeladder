@@ -33,11 +33,11 @@ function failureGuidanceFor(code: string | undefined): string {
       return 'Check that the domain is spelled correctly and publicly reachable, then re-crawl.';
     case 'connection_failed':
     case 'timeout':
-      return 'The site may be down or blocking automated traffic — re-crawl to try again.';
+      return 'The site may be down or blocking automated traffic. Re-crawl to try again.';
     case 'robots_denied':
       return "Allow the crawler in the site's robots.txt, then re-crawl.";
     case 'robots_unavailable':
-      return 'This is usually temporary — re-crawl to try again.';
+      return 'This is usually temporary. Re-crawl to try again.';
     case 'access_blocked':
       return 'Re-crawling will not help until the site’s security settings allow the crawler.';
     case 'bot_blocked':
@@ -45,7 +45,7 @@ function failureGuidanceFor(code: string | undefined): string {
     case 'http_4xx':
       return 'Check that the start URL is correct and publicly reachable, then re-crawl.';
     case 'http_5xx':
-      return 'The site is having server trouble — this is often temporary; re-crawl to try again.';
+      return 'The site is having server trouble. This is often temporary. Re-crawl to try again.';
     case 'ssrf_blocked':
       return 'Choose a publicly reachable start URL, then re-crawl.';
     default:
@@ -93,10 +93,10 @@ export type DashboardRunNotice = {
  * problem with the audit, and re-crawling can fix it.
  */
 const ANALYSIS_INCOMPLETE =
-  'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.';
+  'Some pages could not be analyzed. Partial results are shown. Re-crawl to retry the remaining pages.';
 
 const PARTIAL_FALLBACK =
-  'This crawl finished with partial results — showing everything it did analyze.';
+  'This crawl finished with partial results. Everything it analyzed is shown.';
 
 function partialCrawlNotice(partialReason: string): DashboardRunNotice {
   switch (partialReason) {
@@ -120,7 +120,7 @@ export function dashboardRunNotice(
         badge: 'cancelled',
         tone: 'info',
         message:
-          'This run was cancelled — showing the pages analyzed so far. Re-crawl to complete the analysis.',
+          'This run was cancelled. The pages analyzed so far are shown. Re-crawl to complete the analysis.',
       };
     case 'partially_completed':
       return partialCrawlNotice(crawl.partial_reason);
@@ -131,7 +131,7 @@ export function dashboardRunNotice(
       const headline =
         crawl.analyzed_count === 0
           ? 'The run failed before any page was analyzed.'
-          : 'The run failed before finishing — showing the pages analyzed so far.';
+          : 'The run failed before finishing. The pages analyzed so far are shown.';
       return {
         badge: 'failed',
         tone: 'warning',

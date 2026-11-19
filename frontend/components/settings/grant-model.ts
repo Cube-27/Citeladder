@@ -93,7 +93,7 @@ export const FAMILY_META: Record<
     title: 'Bing',
     connectProvider: 'bing',
     blurb:
-      'Bing Webmaster Tools needs its own consent — a Google grant cannot authorize it. The Bing account itself can still be one created with a Google ID.',
+      'Bing Webmaster Tools needs its own consent. A Google grant cannot authorize it. The Bing account itself can still be one created with a Google ID.',
     reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
 };

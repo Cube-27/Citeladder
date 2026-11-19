@@ -65,15 +65,15 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   if (status === 'needs_reauth') {
     return (
       <Notice tone="warning">
-        {title} needs you to sign in again. Reconnect to resume syncing — previously imported data
-        is unaffected.
+        {title} needs you to sign in again. Reconnect to resume syncing. Previously imported data is
+        unaffected.
       </Notice>
     );
   }
   if (status === 'error') {
     return (
       <Notice tone="negative">
-        The last connection test failed — {title}&nbsp;rejected CiteLadder&rsquo;s access. Reconnect
+        The last connection test failed: {title}&nbsp;rejected CiteLadder&rsquo;s access. Reconnect
         to resume syncing.
       </Notice>
     );
@@ -81,7 +81,7 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   if (status === 'pending_revocation') {
     return (
       <Notice tone="warning">
-        Disconnect is finishing — CiteLadder is retrying the {title} revocation in the background.
+        Disconnect is finishing. CiteLadder is retrying the {title} revocation in the background.
         Previously imported data is kept.
       </Notice>
     );

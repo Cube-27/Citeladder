@@ -79,7 +79,7 @@ const _GENERIC_TRANSIENT_CODES = new Set(['internal_error', 'request_timeout', '
  * message is a sanitized placeholder or just the HTTP status text.
  */
 function transientMessage(error: unknown, action: string): string {
-  const generic = `Could not ${action} — the request failed or timed out. This is usually temporary; try again.`;
+  const generic = `Could not ${action}. The request failed or timed out. This is usually temporary; try again.`;
   return serverMessage(error) ?? generic;
 }
 

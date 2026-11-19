@@ -228,7 +228,7 @@ export function ProjectEditPanel({
           </Field>
           <Field
             label="Brand aliases"
-            hint="Comma separated. Every other spelling an answer might use for you — a mention only counts when it matches one of these or your brand name."
+            hint="Comma separated. Every other spelling an answer might use for you. A mention counts only when it matches one of these or your brand name."
           >
             {(props) => (
               <Input

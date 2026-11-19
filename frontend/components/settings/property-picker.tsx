@@ -234,7 +234,7 @@ export function usePropertyPicker(connection: IntegrationConnection) {
       <Stack gap="compact">
         {!activeProject ? (
           <Notice tone="warning">
-            No active project. Create or select a project first — a property must be imported into
+            No active project. Create or select a project first. A property must be imported into
             one.
           </Notice>
         ) : null}

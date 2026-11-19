@@ -103,7 +103,7 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   if (Object.keys(groups).length < 2 || pooled >= total) return null;
   return (
     <Notice tone="info">
-      {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here — open them individually from the measurement menu.`}
+      {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here. Open them individually from the measurement menu.`}
     </Notice>
   );
 }

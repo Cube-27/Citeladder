@@ -168,7 +168,7 @@ function domainColumns(
       desktopOnly: true,
       priority: 'low',
       sort: sortProps(sort, onSort, 'citation_rate'),
-      hint: 'Citations per answer that cited this domain — not per answer in the selection.',
+      hint: 'Citations per answer that cited this domain, not per answer in the selection.',
     },
   ];
 }

@@ -283,13 +283,13 @@ export function performanceNotices({
     messages.push({
       key: 'sync-failed',
       tone: 'warning',
-      text: 'Sync finished with errors — previously imported data is unchanged. Check Settings → Integrations for details.',
+      text: 'Sync finished with errors. Previously imported data is unchanged. Check Settings → Integrations for details.',
     });
   if (sync.syncing)
     messages.push({
       key: 'syncing',
       tone: 'info',
-      text: 'Sync in progress — importing the dates not yet covered. Charts and tables update when it completes.',
+      text: 'Sync in progress. Importing the dates not yet covered.',
     });
   if (sync.notice) messages.push({ key: 'sync-notice', tone: 'info', text: sync.notice });
   if (projecting)

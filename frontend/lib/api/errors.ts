@@ -64,7 +64,7 @@ export type HumanizedApiError = {
  */
 export function humanizeApiError(
   error: unknown,
-  fallbackMessage = 'Something went wrong. Please try again.',
+  fallbackMessage = 'Something went wrong. Try again.',
 ): HumanizedApiError {
   if (error instanceof ApiError) {
     return {

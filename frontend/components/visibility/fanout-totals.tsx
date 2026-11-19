@@ -56,7 +56,7 @@ export function SearchScopeNote({
  */
 export function noSearchMatchState(search: string | null, matched: number | null): DataTableState {
   const verb = matched === 1 ? 'match sits' : 'matches sit';
-  const elsewhere = matched ? ` — ${matched} ${verb} elsewhere in the run set.` : '.';
+  const elsewhere = matched ? `. ${matched} ${verb} elsewhere in the run set.` : '.';
   return {
     kind: 'empty',
     icon: SearchX,

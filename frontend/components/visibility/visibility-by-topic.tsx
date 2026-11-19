@@ -70,7 +70,7 @@ export function VisibilityByTopic({
   return (
     <TitledSection
       title="By topic"
-      description="Each answer counts under the topic its prompt had when the run asked it"
+      description="Answers count under the prompt’s topic at run time."
     >
       <DataTable label="By topic" columns={COLUMNS} state={topicsState(query)}>
         {(query.data?.items ?? []).map((row) => (

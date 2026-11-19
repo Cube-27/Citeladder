@@ -22,7 +22,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   return (
     <Stack gap="item" data-testid="root-errors-block">
       <p className={textRole('body', 'text-ink-2')}>
-        The start URL could not be fetched — the crawl never reached any page. Each row is one
+        The start URL could not be fetched, so the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>
       <ul className={ledgerClasses()}>

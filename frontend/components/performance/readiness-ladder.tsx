@@ -45,8 +45,7 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
 /** `not_connected` belongs to the data source setup, which can act on it. */
 const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, string> = {
   connected: 'Connected. The first history import has not started yet.',
-  importing:
-    'Importing your history. Numbers below fill in as each chunk lands — they are not final yet.',
+  importing: 'Importing your history. Numbers below fill in as data arrives and are not final.',
   import_failed:
     'The history import finished without importing anything. Start a new sync to retry.',
   core_data_ready:

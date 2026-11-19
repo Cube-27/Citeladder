@@ -247,7 +247,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     // Partial results open on Pages like every other run (owner, 2026-11-02).
     expect(
-      await screen.findByText(/This run was cancelled — showing the pages analyzed so far/),
+      await screen.findByText(/This run was cancelled\. The pages analyzed so far are shown/),
     ).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Pages' })).toHaveAttribute('aria-selected', 'true');
     expect(

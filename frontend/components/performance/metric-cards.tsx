@@ -57,7 +57,7 @@ function metricComparison(
 ) {
   return {
     label:
-      comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel,
+      comparison.evidence_state === 'not_run' ? `${compareLabel} (not imported)` : compareLabel,
     value: measured(metricKey, comparison.totals[metricKey]),
   };
 }
@@ -170,7 +170,7 @@ function ga4ComparisonLabel(
   value: number | null | undefined,
   compareLabel: string,
 ) {
-  if (comparison.evidence_state === 'not_run') return `${compareLabel} — not imported`;
+  if (comparison.evidence_state === 'not_run') return `${compareLabel} (not imported)`;
   if (value === null || value === undefined)
     return (
       <>
