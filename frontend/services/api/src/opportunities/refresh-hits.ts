@@ -212,10 +212,13 @@ function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null
       metrics: { ...record(signal.metrics) },
       coverage: { ...record(signal.coverage) },
       limitations: Array.isArray(signal.limitations) ? [...signal.limitations] : [],
-      query_relevance: queryRelevanceSchema
-        .nullable()
-        .catch(null)
-        .parse(evidence.query_relevance ?? null),
+      // Absent means relevance does not apply; present but malformed stays unknown.
+      query_relevance:
+        evidence.query_relevance == null
+          ? null
+          : queryRelevanceSchema
+              .catch({ state: 'unknown', reason: 'invalid_evidence' })
+              .parse(evidence.query_relevance),
     },
     source_analysis_ids: [],
     source_issue_ids: [],

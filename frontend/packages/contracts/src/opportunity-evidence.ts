@@ -163,7 +163,6 @@ export const queryRelevanceSchema = z.discriminatedUnion('state', [
   }),
   z.object({ state: z.literal('unknown'), reason: z.string() }),
 ]);
-export type QueryRelevance = z.infer<typeof queryRelevanceSchema>;
 
 /** A promoted Search Console signal on a page or query. */
 const demandSignalEvidenceSchema = z.object({
