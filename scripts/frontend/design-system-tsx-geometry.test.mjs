@@ -79,20 +79,21 @@ test('a feature folder carries no geometry, sizes or breakpoints of its own', ()
   );
 });
 
-test('the product breakpoints are desktop:, shell: and the column- variants, in ui and layout too', () => {
+test('the product breakpoints are desktop:, phone:, shell: and the column- variants, in ui and layout too', () => {
   const tokens =
-    'sm:grid-cols-2 max-[700px]:hidden lg:[&>li]:block desktop:grid-cols-2 shell:grid-cols-4 column-split:grid-cols-3 column-wide:grid-cols-2';
+    'sm:grid-cols-2 max-[700px]:hidden lg:[&>li]:block max-md:px-3 desktop:grid-cols-2 phone:px-3 shell:grid-cols-4 column-split:grid-cols-3 column-wide:grid-cols-2';
   assert.deepEqual(layering(`<div className="${tokens}" />`, 'components/ui/stat.tsx'), [
-    "components/ui/stat.tsx:1: sm:grid-cols-2 — the product's breakpoints are desktop:, shell: and the column- variants [layer-breakpoint]",
-    "components/ui/stat.tsx:1: max-[700px]:hidden — the product's breakpoints are desktop:, shell: and the column- variants [layer-breakpoint]",
-    "components/ui/stat.tsx:1: lg:[&>li]:block — the product's breakpoints are desktop:, shell: and the column- variants [layer-breakpoint]",
+    "components/ui/stat.tsx:1: sm:grid-cols-2 — the product's breakpoints are desktop:, phone:, shell: and the column- variants [layer-breakpoint]",
+    "components/ui/stat.tsx:1: max-[700px]:hidden — the product's breakpoints are desktop:, phone:, shell: and the column- variants [layer-breakpoint]",
+    "components/ui/stat.tsx:1: lg:[&>li]:block — the product's breakpoints are desktop:, phone:, shell: and the column- variants [layer-breakpoint]",
+    "components/ui/stat.tsx:1: max-md:px-3 — the product's breakpoints are desktop:, phone:, shell: and the column- variants [layer-breakpoint]",
   ]);
 });
 
 test('owners keep their geometry and public surfaces keep their ladder', () => {
   const source = '<div className="gap-2 p-4 md:grid-cols-2" />';
   assert.deepEqual(layering(source, 'components/ui/card.tsx'), [
-    "components/ui/card.tsx:1: md:grid-cols-2 — the product's breakpoints are desktop:, shell: and the column- variants [layer-breakpoint]",
+    "components/ui/card.tsx:1: md:grid-cols-2 — the product's breakpoints are desktop:, phone:, shell: and the column- variants [layer-breakpoint]",
   ]);
   assert.deepEqual(layering(source, 'components/marketing/hero.tsx'), []);
   assert.deepEqual(layering(source, 'components/auth/sign-in.tsx'), [

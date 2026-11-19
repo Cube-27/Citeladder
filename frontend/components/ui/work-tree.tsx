@@ -136,7 +136,7 @@ export function TreeGroupingRow({
 
 /**
  * One level down: indented under its parent's chevron. Below 768 the three
- * levels indent 8 + 17 + 0 instead of 20 + 33 + 24, so a row's title keeps
+ * levels indent 8 + 13 + 0 instead of 20 + 33 + 24, so a row's title keeps
  * its width (at least 180 at 390).
  */
 export function TreeIndent({ children }: Readonly<{ children: ReactNode }>) {
@@ -146,7 +146,7 @@ export function TreeIndent({ children }: Readonly<{ children: ReactNode }>) {
 /** The groupings under a group, on a tree line. */
 export function TreeLine({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="border-rule phone:ml-2 phone:pl-2 ml-5 grid border-l pl-3">{children}</div>
+    <div className="border-rule phone:ml-2 phone:pl-1 ml-5 grid border-l pl-3">{children}</div>
   );
 }
 

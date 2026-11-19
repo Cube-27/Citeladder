@@ -619,9 +619,11 @@
 
 /* A small control's tap area: centred on it and at least --target-hit square
    (44 below 900px or under a coarse pointer); the drawn control keeps its size. */
-@utility hit-area {
-  position: relative;
-  &::before {
+@layer components {
+  .hit-area {
+    position: relative;
+  }
+  .hit-area::before {
     content: '';
     position: absolute;
     top: 50%;

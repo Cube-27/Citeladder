@@ -156,7 +156,8 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cn(CHECK_TARGET, '-my-0.5')}>{box}</span>
+      {/* The label row is the tap target, so the box's own area stays 24 and never covers a stacked neighbour. */}
+      <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--target-min)]')}>{box}</span>
       <span className="flex min-w-0 flex-col">
         <span className="type-body">{label}</span>
         {description != null ? <span className="type-body text-ink-2">{description}</span> : null}

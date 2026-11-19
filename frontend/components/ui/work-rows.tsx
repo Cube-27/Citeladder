@@ -21,7 +21,7 @@ export const ROWS_PANEL = 'bg-surface rounded-card overflow-hidden';
  * source fold away, and below 768 impact narrows to its word.
  */
 const GRID =
-  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_76px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
+  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_72px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
 const WIDE = 'hidden desktop:block';
 
 export function WorkRows({
