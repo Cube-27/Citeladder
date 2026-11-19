@@ -374,6 +374,13 @@ describe('CiteLadder MCP App', () => {
               share_of_voice: 0.25,
               avg_position: 1.5,
               win_rate: 0.4,
+              sentiment: {
+                mentions: 4,
+                classified: 2,
+                positive: 1,
+                negative: 0,
+                net_sentiment: 50,
+              },
             },
             {
               ...row,
@@ -421,8 +428,11 @@ describe('CiteLadder MCP App', () => {
     };
     await pick('Share of voice');
     expect(cells()).toContain('25.0%');
-    await pick('Average position');
+    await pick('Position');
     expect(cells()).toContain('1.5');
+    // Sentiment under the classified minimum gives that reason, never a value or a bare gap.
+    await pick('Sentiment');
+    expect(cells().some((text) => /Too few.*classified/i.test(text ?? ''))).toBe(true);
     await pick('Win rate');
     expect(cells()).toContain('40.0%');
     // An unmeasured win rate is unavailable; one over no qualifying answer is not applicable.

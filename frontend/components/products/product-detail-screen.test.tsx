@@ -403,7 +403,7 @@ describe('ProductDetailScreen', () => {
     await waitFor(() => expect(sent).toEqual([[RIVAL, { decision: 'approved' }]]));
   });
 
-  it('opens a category’s setup and reports an unknown product as not loaded', async () => {
+  it('opens a category’s setup and reports an unknown product as not found', async () => {
     serve({});
     const category = renderAt(`/products/${CATEGORY}`);
     expect(await screen.findByRole('heading', { name: 'Road' })).toBeInTheDocument();
@@ -412,6 +412,6 @@ describe('ProductDetailScreen', () => {
     category.unmount();
 
     renderAt(`/products/${RIVAL}`);
-    expect(await screen.findByText('Product not found')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
   });
 });

@@ -30,21 +30,13 @@ function escapeCell(value: CsvCell): string {
   return /[",\n\r]/.test(body) ? `"${body.replaceAll('"', '""')}"` : body;
 }
 
-function toCsv(
+/** The serializer; its escaping rules are tested on the text, not through a download. */
+export function toCsv(
   headers: readonly string[],
   rows: readonly (readonly (string | number | null | undefined)[])[],
 ): string {
   return [headers, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
 }
-
-/**
- * The serializer, exposed for its own tests.
- *
- * `downloadCsv` is the module's real entry point and it touches the DOM, so
- * the escaping rules — the part with the failure modes — are asserted on the
- * text directly rather than through a stubbed anchor click.
- */
-export const toCsvForTest = toCsv;
 
 /**
  * Save the given rows as a CSV file.

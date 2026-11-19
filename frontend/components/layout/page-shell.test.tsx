@@ -8,7 +8,17 @@ import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { choiceFilter } from '@/components/ui/all-filters';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
+import { CONTEXT_TABS } from '@/lib/agent/context-tabs';
+import { TRAFFIC_TABS } from '@/lib/ai-traffic/tabs';
+import { PERCEPTION_TABS } from '@/lib/perception/tabs';
+import { SEARCH_INTELLIGENCE_TABS } from '@/lib/search-intelligence/tabs';
+import { SETTINGS_TABS } from '@/lib/settings/tabs';
+import { SITE_HEALTH_TABS } from '@/lib/site-health/tabs';
+import { VISIBILITY_TABS } from '@/lib/visibility/tabs';
 import { RouteLoadingScreen } from './page-shell';
+
+// The held row draws each screen's own list, so a renamed or reordered tab cannot drift.
+const labels = (items: readonly { label: string }[]) => items.map((item) => item.label);
 
 function renderAt(path: string) {
   return render(
@@ -71,7 +81,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/visibility',
       title: 'Sources',
-      tabs: ['Domains', 'URLs', 'Read, not cited', 'Query fanouts', 'Ads'],
+      tabs: labels(VISIBILITY_TABS),
       selected: 'Domains',
       filters: true,
       shapes: ['table', 'chart'],
@@ -79,10 +89,34 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/site/crawls?tab=changes',
       title: 'Site health',
-      tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
+      tabs: labels(SITE_HEALTH_TABS),
       selected: 'Changes',
       filters: false,
       shapes: ['figures', 'table'],
+    },
+    {
+      path: '/search-intelligence?tab=backlinks',
+      title: 'Keyword research',
+      tabs: labels(SEARCH_INTELLIGENCE_TABS),
+      selected: 'Backlinks',
+      filters: true,
+      shapes: ['table'],
+    },
+    {
+      path: '/ai-traffic?tab=pages',
+      title: 'AI traffic',
+      tabs: labels(TRAFFIC_TABS),
+      selected: 'Pages',
+      filters: true,
+      shapes: ['figures', 'chart'],
+    },
+    {
+      path: '/perception',
+      title: 'Perception',
+      tabs: labels(PERCEPTION_TABS.filter((item) => item.value === 'brand')),
+      selected: 'Brand',
+      filters: true,
+      shapes: ['figures', 'chart'],
     },
     {
       path: '/actions',
@@ -94,7 +128,8 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/agent/context?tab=instructions',
       title: 'Context',
-      tabs: ['Company', 'Audience', 'Business map', 'Competitors', 'Instructions'],
+      // Brand facts, the pilot's only, joins the live row's end after the gate answers.
+      tabs: labels(CONTEXT_TABS.filter((item) => item.value !== 'brand-facts')),
       selected: 'Instructions',
       filters: false,
       shapes: ['facts'],
@@ -102,7 +137,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/settings?tab=workspace',
       title: 'Settings',
-      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      tabs: labels(SETTINGS_TABS),
       selected: 'Workspace',
       filters: false,
       shapes: ['facts'],
@@ -110,7 +145,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/settings?tab=unknown',
       title: 'Settings',
-      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      tabs: labels(SETTINGS_TABS),
       selected: 'Account',
       filters: false,
       shapes: ['facts'],

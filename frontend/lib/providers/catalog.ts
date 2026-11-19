@@ -53,8 +53,6 @@ export const ENGINE_LOGOS: Record<string, string> = {
 type EngineRouteOption = {
   transport_provider: TransportProvider;
   model: string;
-  /** Toggle-free label, e.g. "Direct (OpenAI)". */
-  label: string;
   /** `llm` routes are asked a question; `search_ai` routes are observed. */
   surface_kind: SurfaceKind;
   /**
@@ -82,36 +80,15 @@ function credentialShapeFor(transport: TransportProvider): CredentialShape {
 export type EngineCardModel = {
   logical_engine: LogicalEngine;
   label: string;
-  /** The single direct route for this engine (null if the catalog omits it). */
+  /** The single direct route for this engine; null (the catalog omits it) makes it non-connectable. */
   route: EngineRouteOption | null;
   /**
-   * Whether this engine can be connected at all. An engine the catalog
-   * publishes no route for is `unavailable` with `route: null`, which is what
-   * makes it non-connectable: it constructs no mutation.
-   */
-  availability: 'available' | 'unavailable';
-  /**
-   * The AUTHENTICATED workspace state, distinct from availability. A provider
+   * The AUTHENTICATED workspace state, distinct from having a route. A provider
    * can be generally available and still `missing` for this workspace.
    */
   state: ProviderConnectionState;
-  /** Safe probe/state reason from the authenticated projection. */
-  safe_reason: string | null;
   latest_probe: ProviderConnectionStateEntry['latest_probe'];
 };
-
-/**
- * Display label for a route.
- *
- * An observed surface is not reached "directly" in the sense the LLM cards
- * mean — nothing is sent to Google. Saying so would misdescribe what the
- * measurement is.
- */
-function routeLabel(transport: TransportProvider, surfaceKind: SurfaceKind): string {
-  if (surfaceKind === 'search_ai') return `Observed via ${TRANSPORT_LABELS[transport]}`;
-  if (surfaceKind === 'llm_scraper') return `Consumer app via ${TRANSPORT_LABELS[transport]}`;
-  return `Direct (${TRANSPORT_LABELS[transport]})`;
-}
 
 /**
  * Build the ordered engine card models.
@@ -137,7 +114,6 @@ export function buildEngineCards(
       ? {
           transport_provider: approvedRoute.transport_provider,
           model: approvedRoute.transport_model,
-          label: routeLabel(approvedRoute.transport_provider, approvedRoute.surface_kind),
           surface_kind: approvedRoute.surface_kind,
           credential_shape: credentialShapeFor(approvedRoute.transport_provider),
         }
@@ -147,9 +123,7 @@ export function buildEngineCards(
       logical_engine: engine,
       label,
       route,
-      availability: route ? ('available' as const) : ('unavailable' as const),
       state: entry?.state ?? ('missing' as const),
-      safe_reason: entry?.safe_reason ?? null,
       latest_probe: entry?.latest_probe ?? null,
     };
   });
@@ -157,7 +131,7 @@ export function buildEngineCards(
 
 /** True when this card may construct a save/test mutation at all. */
 function isConnectable(model: EngineCardModel): boolean {
-  return model.availability === 'available' && model.route !== null;
+  return model.route !== null;
 }
 
 /** One stored credential and every engine it measures. */

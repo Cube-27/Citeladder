@@ -42,25 +42,21 @@ import {
 import type { SearchReviewAction } from '@citeladder/contracts/search-intelligence-requests';
 import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
+import { SEARCH_INTELLIGENCE_TABS } from '@/lib/search-intelligence/tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-const TABS = [
-  { value: 'demand', label: 'Demand' },
-  { value: 'overview', label: 'Overview' },
-  { value: 'keywords', label: 'Keywords' },
-  { value: 'competitors', label: 'Organic competitors' },
-  { value: 'backlinks', label: 'Backlinks' },
-] as const;
-type PageTab = (typeof TABS)[number]['value'];
+type PageTab = (typeof SEARCH_INTELLIGENCE_TABS)[number]['value'];
 /** The tabs read from saved Keyword Research datasets; Demand reads Search Console. */
 type Tab = Exclude<PageTab, 'demand'>;
-const RESEARCH_TABS = TABS.flatMap(({ value }) => (value === 'demand' ? [] : [value]));
+const RESEARCH_TABS = SEARCH_INTELLIGENCE_TABS.flatMap(({ value }) =>
+  value === 'demand' ? [] : [value],
+);
 const TAB_CODEC = stringUrlCodec(
-  TABS.map(({ value }) => value),
+  SEARCH_INTELLIGENCE_TABS.map(({ value }) => value),
   'demand' as PageTab,
 );
 /** Demand's own address keys, dropped when the reader leaves its tab. */
@@ -125,7 +121,7 @@ export function SearchIntelligencePage() {
             <DemandActions demand={demand} />
           </PageActions>
         }
-        tabs={<TabRow items={TABS} ariaLabel="Keyword research views" />}
+        tabs={<TabRow items={SEARCH_INTELLIGENCE_TABS} ariaLabel="Keyword research views" />}
         filters={tab === 'demand' ? demandControls(demand) : research.filters}
       >
         <TabPanel value="demand" className="min-w-0">

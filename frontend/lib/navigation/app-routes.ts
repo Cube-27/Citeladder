@@ -6,7 +6,8 @@
  *
  * Data only: no React at runtime and no static domain import. Each screen is a
  * `() => import()` so the shell's boot download carries none of them. The
- * build loads this file in Node (apps/app/boot-shell.ts): type imports only.
+ * build loads this file in Node (apps/app/boot-shell.ts): type imports, and
+ * runtime imports only of import-free data modules by relative `.ts` path.
  */
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 import type { IconName } from '@/lib/icons';
@@ -20,6 +21,13 @@ import type {
   Screen,
   SidebarGroup,
 } from './route-types';
+import { CONTEXT_TABS } from '../agent/context-tabs.ts';
+import { TRAFFIC_TABS } from '../ai-traffic/tabs.ts';
+import { PERCEPTION_TABS } from '../perception/tabs.ts';
+import { SEARCH_INTELLIGENCE_TABS } from '../search-intelligence/tabs.ts';
+import { SETTINGS_TABS } from '../settings/tabs.ts';
+import { SITE_HEALTH_TABS } from '../site-health/tabs.ts';
+import { VISIBILITY_TABS } from '../visibility/tabs.ts';
 
 /**
  * Dashboard mode's groups in order, with their labels. Each group answers one question: how AI sees the brand, what is
@@ -146,11 +154,9 @@ const cards = (
   shapes: readonly LoadingShape[],
   frame: Omit<Extract<RouteLoading, { kind: 'cards' }>, 'kind' | 'shapes'> = {},
 ): RouteLoading => ({ kind: 'cards', shapes, ...frame });
-/** A page's tabs as `?param=value` names them, in the row's order: `{ value: label }`. */
-const held = (param: string, items: Readonly<Record<string, string>>): HeldTabs => ({
-  param,
-  items: Object.entries(items).map(([value, label]) => ({ value, label })),
-});
+/** A page's tabs as `?param=value` names them, in the row's order: its screen's own list. */
+const held = (param: string, items: HeldTabs['items']): HeldTabs => ({ param, items });
+const tab = (value: string, label: string) => ({ value, label });
 /** A record: its identity card. */
 const RECORD_LOADING = cards([facts(3)]);
 
@@ -181,14 +187,7 @@ export const APP_ROUTES = [
     title: 'Site health',
     screen: screens.site,
     loading: cards([figures(), table(6)], {
-      tabs: held('tab', {
-        overview: 'Overview',
-        pages: 'Pages',
-        architecture: 'Architecture',
-        'aeo-readiness': 'AEO readiness',
-        'internal-links': 'Internal links',
-        changes: 'Changes',
-      }),
+      tabs: held('tab', SITE_HEALTH_TABS),
     }),
     nav: [listed('Site health', 'site', 'website')],
   }),
@@ -224,13 +223,7 @@ export const APP_ROUTES = [
     screen: screens.keywords,
     // Opens on Demand: its signals table under a held control strip.
     loading: cards([table(8)], {
-      tabs: held('tab', {
-        demand: 'Demand',
-        overview: 'Overview',
-        keywords: 'Keywords',
-        competitors: 'Organic competitors',
-        backlinks: 'Backlinks',
-      }),
+      tabs: held('tab', SEARCH_INTELLIGENCE_TABS),
       filters: true,
     }),
     nav: [listed('Keyword research', 'searchIntelligence', 'search')],
@@ -310,7 +303,10 @@ export const APP_ROUTES = [
     title: 'Perception',
     screen: screens.perception,
     // Fact-checking, shown only to the pilot, is last and arrives after; so does its fifth figure.
-    loading: cards([figures(4), chart], { tabs: held('tab', { brand: 'Brand' }), filters: true }),
+    loading: cards([figures(4), chart], {
+      tabs: held('tab', PERCEPTION_TABS.slice(0, 1)),
+      filters: true,
+    }),
     nav: [
       listed('Perception', 'perception', 'brand'),
       // A non-pilot project opens on Brand: the page owns the pilot gate.
@@ -370,13 +366,7 @@ export const APP_ROUTES = [
     screen: screens.context,
     // The Company facts form's five fields. Brand facts, for the pilot only, joins the row's end.
     loading: cards([facts(5)], {
-      tabs: held('tab', {
-        facts: 'Company',
-        audience: 'Audience',
-        map: 'Business map',
-        competitors: 'Competitors',
-        instructions: 'Instructions',
-      }),
+      tabs: held('tab', CONTEXT_TABS.slice(0, -1)),
     }),
     nav: [listed('Context', 'context', 'agent')],
   }),
@@ -385,7 +375,7 @@ export const APP_ROUTES = [
     title: 'Prompts',
     screen: screens.prompts,
     loading: cards([table(8)], {
-      tabs: held('status', { active: 'Active', archived: 'Archived' }),
+      tabs: held('status', [tab('active', 'Active'), tab('archived', 'Archived')]),
       filters: true,
     }),
     nav: [listed('Prompts', 'prompts', 'tracking')],
@@ -414,13 +404,10 @@ export const APP_ROUTES = [
     screen: screens.visibility,
     // Domains, the default tab, opens on its cited-domain table and charts.
     loading: cards([table(8), chart], {
-      tabs: held('tab', {
-        domains: 'Domains',
-        urls: 'URLs',
-        'read-not-cited': 'Read, not cited',
-        'query-fanout': 'Query fanouts',
-        ads: 'Ads',
-      }),
+      tabs: held(
+        'tab',
+        VISIBILITY_TABS.map(({ id, label }) => tab(id, label)),
+      ),
       filters: true,
     }),
     nav: [
@@ -439,12 +426,12 @@ export const APP_ROUTES = [
     title: 'Runs',
     screen: screens.runs,
     loading: cards([table(5)], {
-      tabs: held('status', {
-        all: 'All',
-        completed: 'Completed',
-        running: 'Running',
-        failed: 'Failed',
-      }),
+      tabs: held('status', [
+        tab('all', 'All'),
+        tab('completed', 'Completed'),
+        tab('running', 'Running'),
+        tab('failed', 'Failed'),
+      ]),
     }),
     nav: [listed('Runs', 'runs', 'tracking')],
   }),
@@ -463,13 +450,7 @@ export const APP_ROUTES = [
     // Overview's key figures under the filter row, then the crawl trend.
     loading: cards([figures(5), chart], {
       filters: true,
-      tabs: held('tab', {
-        overview: 'Overview',
-        crawlers: 'Crawlers',
-        referrals: 'Referrals',
-        pages: 'Pages',
-        activity: 'Activity',
-      }),
+      tabs: held('tab', TRAFFIC_TABS),
     }),
     nav: [listed('AI traffic', 'aiTraffic', 'website')],
   }),
@@ -483,14 +464,7 @@ export const APP_ROUTES = [
     screen: screens.settings,
     // Account's Profile card: the identity row, then two facts.
     loading: cards([facts(3)], {
-      tabs: held('tab', {
-        account: 'Account',
-        workspace: 'Workspace',
-        providers: 'Providers',
-        integrations: 'Integrations',
-        connections: 'MCP connections',
-        'api-keys': 'API keys',
-      }),
+      tabs: held('tab', SETTINGS_TABS),
     }),
     nav: [
       {

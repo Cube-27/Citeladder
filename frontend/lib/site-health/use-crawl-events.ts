@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-import { API_BASE_URL } from '@/lib/config/operational';
+import { siteHealthApi } from '@/lib/api/site-health';
 import { refreshCrawlViews, refreshSiteHealthDashboard } from '@/lib/api/site-health-queries';
 import {
   SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS,
@@ -43,7 +43,7 @@ export function useCrawlEvents(
   useSseEventStream({
     workspaceId,
     enabled: enabled && Boolean(crawlId),
-    url: crawlId ? `${API_BASE_URL}/site-crawls/${crawlId}/events?stream=true` : null,
+    url: crawlId ? siteHealthApi.eventsUrl(crawlId) : null,
     invalidateDebounceMs: SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS,
     reconnectBaseMs: SITE_HEALTH_STREAM_RECONNECT_BASE_MS,
     reconnectMaxMs: SITE_HEALTH_STREAM_RECONNECT_MAX_MS,

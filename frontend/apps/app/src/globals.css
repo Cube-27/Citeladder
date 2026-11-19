@@ -366,8 +366,6 @@
 /* Aliases no scope rebinds, inlined into their utilities. The others stay in
    `@theme`: the app rebinds them, or a website band rebinds the ink they read. */
 @theme inline {
-  /* The system's sidebar role; the app paints its sidebar with `chrome`. */
-  --color-sidebar: var(--color-paper);
   --color-data-you: var(--color-accent);
 }
 

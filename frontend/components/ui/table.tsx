@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
  *    (`scope="col"`, `ink` while sorted) over an inset `surface` body panel
  *  - `table-row-height` rows (44 in the app) with `rule` lines between them;
  *    every row tints on hover as one piece, pinned cells included
- *    (globals.css "r3 data"); `highlight` marks your own row (one row per
+ *    (data-table.css); `highlight` marks your own row (one row per
  *    table, never for emphasis); no zebra stripes, no column rules
  *  - every cell is one line: `ClampText` cuts a long value with an ellipsis
  *    and puts the whole of it in a tooltip, so no row is an outlier
@@ -202,7 +202,7 @@ export const TableTitleLinesContext = createContext<1 | 2>(1);
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    // Padding 8 and 8: the row hairline is drawn inside the row (globals.css "r2 data").
+    // Padding 8 and 8: the row hairline is drawn inside the row (data-table.css).
     'text-body-sm text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
     // A value never wraps: a word split over two lines reads as two values.
     // Tabular figures, so a right-aligned column lines up place by place.

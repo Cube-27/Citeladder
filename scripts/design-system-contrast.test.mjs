@@ -93,7 +93,7 @@ test('an app rebinding fails the app scope it reaches and spares the website', (
   assert.ok(
     violations.some((violation) =>
       violation.includes(
-        ':root:not([data-public-surface]) --color-ink-secondary on --color-sidebar is 1.',
+        ':root:not([data-public-surface]) --color-ink-secondary on --color-chrome is 1.',
       ),
     ),
   );

@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { RunActions, useRunExport } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { isNotFound } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -15,6 +17,9 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useRunEvents } from '@/lib/runs/use-run-events';
 import { useRunExecutions } from '@/lib/runs/use-run-executions';
 import { AUDIT_STATES, pollAudits, runTitle } from '@/lib/runs/status';
+
+const failureNotice = (mutation: Readonly<{ isError: boolean; error: unknown }>, action: string) =>
+  mutation.isError ? mutationNoticeForError(mutation.error, { action }) : null;
 
 /** Active-run progress, cancellation, failed-execution reruns, and evidence selection. */
 export function RunDetailScreen() {
@@ -63,6 +68,8 @@ export function RunDetailScreen() {
   const timeZone = useDisplayTimeZone();
   const title = audit ? runTitle(audit, timeZone) : undefined;
 
+  // A 404 means the run is gone (deleted, or another workspace's), even with a cached copy.
+  if (isNotFound(auditQuery.error)) return <NotFoundScreen />;
   return (
     <RecordPage
       title={title}
@@ -88,20 +95,8 @@ export function RunDetailScreen() {
         executionsLoading={executionsQuery.isLoading}
         executionsRead={executionsQuery}
         exportError={runExport.exportError}
-        cancelNotice={
-          cancelMutation.isError
-            ? mutationNoticeForError(cancelMutation.error, {
-                action: 'cancel the run',
-              })
-            : null
-        }
-        rerunNotice={
-          rerunFailuresMutation.isError
-            ? mutationNoticeForError(rerunFailuresMutation.error, {
-                action: 'rerun failed executions',
-              })
-            : null
-        }
+        cancelNotice={failureNotice(cancelMutation, 'cancel the run')}
+        rerunNotice={failureNotice(rerunFailuresMutation, 'rerun failed executions')}
         onCancel={() => cancelMutation.mutate()}
         onRerunFailures={rerunFailures}
         onSelectEvidence={(execution) => setSelectedExecutionId(execution.id)}

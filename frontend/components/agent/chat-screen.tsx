@@ -5,6 +5,7 @@ import { ChatConversation, ReplyComposer, useChatThread } from '@/components/age
 import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { ThreadPage, ThreadPageLoading } from '@/components/templates/thread-page';
 import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
@@ -13,6 +14,7 @@ import { ComposerDock } from '@/components/ui/chat-dock';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail } from '@/lib/api/agent';
+import { isNotFound } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -35,6 +37,8 @@ export function ChatScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const query = useChatDetail(workspaceId, chatId);
 
+  // A 404 means the chat is gone, even with a cached copy on screen.
+  if (isNotFound(query.error)) return <NotFoundScreen />;
   // A failed background refresh keeps the chat on screen; only a first load fails the page.
   if (query.isError && !query.data)
     return (

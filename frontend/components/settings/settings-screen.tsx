@@ -22,6 +22,7 @@ import { useEntitlement, useManagedPlan } from '@/lib/billing/entitlement-contex
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
+import { SETTINGS_TABS, type SettingsTab } from '@/lib/settings/tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { Avatar } from '@/components/ui/avatar';
@@ -34,17 +35,6 @@ import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/comp
 import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 
-const SETTINGS_TABS = [
-  { id: 'account', label: 'Account' },
-  { id: 'workspace', label: 'Workspace' },
-  { id: 'providers', label: 'Providers' },
-  { id: 'integrations', label: 'Integrations' },
-  { id: 'connections', label: 'MCP connections' },
-  { id: 'api-keys', label: 'API keys' },
-] as const;
-
-type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
-
 /**
  * Someone who belongs to no workspace yet has only their account to manage;
  * API keys are for the Owners and Admins who manage credentials.
@@ -53,15 +43,15 @@ type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
 function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean, managed: boolean) {
   return SETTINGS_TABS.filter(
     (tab) =>
-      tab.id === 'account' ||
+      tab.value === 'account' ||
       (hasWorkspace &&
-        (tab.id !== 'api-keys' || managesCredentials) &&
-        (tab.id !== 'providers' || !managed)),
+        (tab.value !== 'api-keys' || managesCredentials) &&
+        (tab.value !== 'providers' || !managed)),
   );
 }
 
 const SETTINGS_TAB_CODEC = stringUrlCodec(
-  SETTINGS_TABS.map((tab) => tab.id),
+  SETTINGS_TABS.map((tab) => tab.value),
   'account' as SettingsTab,
 );
 
@@ -214,18 +204,11 @@ export function SettingsScreen() {
   // `?tab=` is deep-linkable, so someone can arrive asking for a tab that is
   // not offered. Fall back to Account rather than selecting
   // a tab that no longer exists, which would leave no panel visible at all.
-  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'account';
+  const activeTab = tabs.some((tab) => tab.value === requestedTab) ? requestedTab : 'account';
 
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
-      <SettingsPage
-        tabs={
-          <TabRow
-            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
-            ariaLabel="Settings sections"
-          />
-        }
-      >
+      <SettingsPage tabs={<TabRow items={tabs} ariaLabel="Settings sections" />}>
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
           <Section aria-labelledby="settings-profile-title">
             <SectionHeader>

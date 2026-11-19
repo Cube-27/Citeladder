@@ -33,8 +33,6 @@ how to add or change an entry.
 - **Browser minimum: Chrome/Edge 123, Firefox 132, Safari/iOS 17.5, Samsung 27.**
   No UI may depend on native popover alone (iOS Safari 18.3). Owner, 2026-11-13;
   [frontend architecture](frontend-architecture.md) owns the matrix.
-- **Product charts are plain SVG** from the chart kit in `components/ui/`; no
-  chart library, Recharts included. Owner, 2026-11-05.
 - **Source files are limited by tokens (6,000), not lines**; the 500-line module
   rule is gone. Owner, 2026-11-13; [Development](DEVELOPMENT.md#source-file-size).
 

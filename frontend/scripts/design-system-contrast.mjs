@@ -49,7 +49,7 @@ const SCOPES = [
 const color = (role) => `--color-${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
 const SOFTS = ['accent', ...STATUSES].map((role) => color(`${role}-soft`));
-const GROUNDS = ['paper', 'sidebar', 'surface', 'surface-sunken'].map(color);
+const GROUNDS = ['paper', 'chrome', 'surface', 'surface-sunken'].map(color);
 const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color);
 
 /**

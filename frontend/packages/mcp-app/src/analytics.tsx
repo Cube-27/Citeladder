@@ -15,15 +15,23 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { Label, Metric, textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
-import { toTrendEvents, trendAxis } from '@/lib/visibility/trends';
+import { VISIBILITY_METRICS } from '@/lib/config/visibility';
+import { availabilityLabel } from '@/lib/format';
+import { sentimentFigureValue } from '@/lib/visibility/perception';
+import {
+  toChartPoints,
+  toNamedChartPoints,
+  toTrendEvents,
+  trendAxis,
+  type TrendMetric,
+} from '@/lib/visibility/trends';
 import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { notYetMeasuredMessage, SourcesView, SiteHealthView } from './evidence-views';
 import { day, moment, rate } from './format';
-import { isRate, isTrendMetric, trendGap, trendValue, type TrendMetric } from './trend-metrics';
 
 const views = [
   { value: 'overview', label: 'Overview' },
@@ -153,14 +161,23 @@ function Trends({
     ),
   ];
   const competitor = selection.competitor ?? null;
-  const value = (point: (typeof points)[number]) => trendValue(point, metric, competitor);
-  // Position plots negated as in the app's trends: #1 at the top, up is better.
-  const position = isRate(metric) ? null : trendAxis('avg_position', [points.map(value)]);
-  const shown = (measured: number | null) =>
-    position ? (measured?.toFixed(1) ?? 'Unavailable') : rate(measured);
-  const cell = (point: (typeof points)[number]) => {
-    const measured = value(point);
-    return measured === null ? trendGap(point, metric, competitor) : shown(measured);
+  const metricLabel = VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? metric;
+  const chart = competitor
+    ? toNamedChartPoints(points, metric, competitor)
+    : toChartPoints(points, metric);
+  const axis = trendAxis(metric, [chart.map((point) => point.value)]);
+  // A win rate over no answer naming a tracked brand is not applicable, and a sentiment gap
+  // gives the app's reason; any other gap is unavailable.
+  const cell = (index: number) => {
+    const measured = chart[index]?.value ?? null;
+    if (measured !== null) return axis.format(measured);
+    const row = points[index]?.rankings.find((entry) =>
+      competitor ? entry.name === competitor : entry.is_brand,
+    );
+    if (metric === 'sentiment') return sentimentFigureValue(row?.sentiment).missingLabel;
+    return availabilityLabel(
+      metric === 'win_rate' && row?.win_answers === 0 ? 'not_applicable' : 'unavailable',
+    );
   };
   const events = toTrendEvents(points, { timeZone: 'UTC', engineLabel: (key) => key });
   return (
@@ -169,9 +186,10 @@ function Trends({
         <Select
           ariaLabel="Trend metric"
           value={metric}
-          options={appPolicy.metrics}
+          options={VISIBILITY_METRICS}
           onValueChange={(next) => {
-            if (isTrendMetric(next)) setMetric(next);
+            const picked = VISIBILITY_METRICS.find((item) => item.value === next);
+            if (picked) setMetric(picked.value);
           }}
         />
         <Select
@@ -184,46 +202,38 @@ function Trends({
           onValueChange={(competitor) => selectCompetitor(competitor || null)}
         />
       </div>
-      <StepChart
-        label="Observed visibility history"
-        yMin={position?.yMin}
-        yMax={position ? position.yMax : 1}
-        yFormat={position ? position.tick : rate}
-        format={position ? (plotted) => shown(position.unplot(plotted)) : undefined}
+      <AreaChart
+        label={`${metricLabel} over time`}
+        name={competitor ?? 'Your brand'}
+        you={!competitor}
+        data={chart.map((point) => ({
+          ...point,
+          value: axis.plot(point.value),
+          label: `${point.dateLabel} · ${axis.format(point.value)}`,
+          axisLabel: point.label,
+        }))}
         events={events}
         eventsLabel="What changed"
         eventLegend
-        data={points.map((point, index) => {
-          const previous = points[index - 1];
-          return {
-            label: day(point.completed_at),
-            value: position ? position.plot(value(point)) : value(point),
-            timestamp: Date.parse(point.completed_at),
-            breakBefore:
-              previous !== undefined &&
-              (!point.comparison_key ||
-                point.comparison_key !== previous.comparison_key ||
-                JSON.stringify(point.analyzer_versions) !==
-                  JSON.stringify(previous.analyzer_versions) ||
-                JSON.stringify(point.scoring_rule_versions) !==
-                  JSON.stringify(previous.scoring_rule_versions)),
-          };
-        })}
+        yMin={axis.yMin}
+        yMax={axis.yMax}
+        yFormat={axis.tick}
+        format={(plotted) => axis.format(axis.unplot(plotted))}
       />
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Completed</TableHead>
-            <TableHead>{position ? 'Position' : 'Rate'}</TableHead>
+            <TableHead>{metricLabel}</TableHead>
             <TableHead>Coverage / model</TableHead>
             <TableHead>Evidence</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {points.map((point) => (
+          {points.map((point, index) => (
             <TableRow key={point.source_snapshot_ids.join(',')}>
               <TableCell>{moment(point.completed_at)}</TableCell>
-              <TableCell>{cell(point)}</TableCell>
+              <TableCell>{cell(index)}</TableCell>
               <TableCell>
                 {point.counts?.state ?? 'unknown'} · {point.transport_model ?? 'mixed / unknown'} ·
                 retrieval {String(point.retrieval_enabled)}

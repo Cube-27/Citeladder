@@ -20,6 +20,7 @@ import { Stack } from '@/components/ui/layout';
 import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile, Project } from '@citeladder/contracts';
+import { CONTEXT_TABS, type ContextTab } from '@/lib/agent/context-tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -27,23 +28,10 @@ import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-const CONTEXT_TABS = [
-  // Short labels: six tabs fit the compact column on one row.
-  { id: 'facts', label: 'Company' },
-  { id: 'audience', label: 'Audience' },
-  { id: 'map', label: 'Business map' },
-  { id: 'competitors', label: 'Competitors' },
-  { id: 'instructions', label: 'Instructions' },
-  // Last, and only once the pilot gate answers: it joins the end of the row,
-  // so its arrival moves no other tab.
-  { id: 'brand-facts', label: 'Brand facts' },
-] as const;
-
-type ContextTab = (typeof CONTEXT_TABS)[number]['id'];
 type ProfileRead = UseQueryResult<BrandProfile>;
 
 const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
-  CONTEXT_TABS.map((tab) => tab.id),
+  CONTEXT_TABS.map((tab) => tab.value),
   'facts',
 );
 
@@ -76,23 +64,16 @@ function ContextWorkspace({
   });
   const instructions = useAgentInstructions(workspaceId, project.id);
   const offersBrandFacts = facts.isError || Boolean(facts.data?.enabled);
-  const tabs = CONTEXT_TABS.filter((tab) => tab.id !== 'brand-facts' || offersBrandFacts);
+  const tabs = CONTEXT_TABS.filter((tab) => tab.value !== 'brand-facts' || offersBrandFacts);
   // `?tab=` is deep-linkable, so a link can ask for a tab this project does
   // not offer. A link to Brand facts holds that tab while the gate is read.
   const awaitingGate = requestedTab === 'brand-facts' && facts.isPending;
-  const offered = awaitingGate || tabs.some((tab) => tab.id === requestedTab);
+  const offered = awaitingGate || tabs.some((tab) => tab.value === requestedTab);
   const activeTab = offered ? requestedTab : 'facts';
 
   return (
     <TabsRoot value={activeTab} onValueChange={setTab}>
-      <SettingsPage
-        tabs={
-          <TabRow
-            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
-            ariaLabel="Context sections"
-          />
-        }
-      >
+      <SettingsPage tabs={<TabRow items={tabs} ariaLabel="Context sections" />}>
         <ContextPanels
           project={project}
           workspaceId={workspaceId}
