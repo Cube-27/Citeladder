@@ -49,13 +49,13 @@ function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind
 }
 
 /**
- * Figures take the short width, so the identity and the columns before the
+ * Figures take the figure width, so the identity and the columns before the
  * low-priority tail (CPC, difficulty, intent) fit the main column at 982; the
  * tail hides where the frame has no room. A second text column is a name.
  */
 function columnWidth(column: SearchColumn, first: boolean): DataTableColumn['width'] {
   if (first || URL_FIELDS.has(column.field)) return 'flex';
-  if (column.numeric) return 'short';
+  if (column.numeric) return 'figure';
   return SHORT_TEXT_FIELDS.has(column.field) ? 'status' : 'name';
 }
 

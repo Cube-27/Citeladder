@@ -359,8 +359,7 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'mentions',
     label: 'Mentions',
-    // Three marks and a count: a figure's width holds them.
-    width: 'figure',
+    width: 'marks',
     hint: "The brands named in this prompt's answers: yours and your competitors'.",
   },
   {
@@ -373,7 +372,7 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'sources',
     label: 'Sources',
-    width: 'figure',
+    width: 'marks',
     hint: "The sites this prompt's answers cited, most citations first.",
   },
   {
@@ -387,7 +386,7 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'sov',
     label: 'Share of voice',
-    width: 'short',
+    width: 'figure',
     kind: 'number',
     priority: 'low',
     hint: SHARE_OF_VOICE_HINT,

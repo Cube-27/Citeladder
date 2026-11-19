@@ -35,7 +35,7 @@ import { formatCount, formatMean, formatPercent } from '@/lib/format';
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Query or page', kind: 'identity' },
   { key: 'signal', label: 'Signal', kind: 'status', width: 'category' },
-  { key: 'impressions', label: 'Impressions', kind: 'number', width: 'short' },
+  { key: 'impressions', label: 'Impressions', kind: 'number', width: 'figure' },
   { key: 'clicks', label: 'Clicks', kind: 'number', width: 'control' },
   { key: 'ctr', label: 'CTR', kind: 'number', width: 'control' },
   { key: 'position', label: 'Position', kind: 'number', width: 'control' },

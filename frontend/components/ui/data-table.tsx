@@ -167,7 +167,7 @@ export function DataTable({
           hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
           minWidth={tableMinWidth({ columns: shown, selection: Boolean(selection) })}
-          layout={columnLayout(columns, Boolean(selection))}
+          layout={columnLayout({ columns, shown, selection: Boolean(selection) })}
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}

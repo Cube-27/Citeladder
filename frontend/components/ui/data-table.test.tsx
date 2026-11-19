@@ -72,6 +72,8 @@ describe('DataTable', () => {
     expect(frame).toHaveAttribute('data-end-cols', '3 5');
     expect(frame).toHaveAttribute('data-start-cols', '2 4');
     expect(frame).toHaveAttribute('data-tabular-cols', '3 4');
+    // The date opens on a gutter after the end-aligned count; the count does not after the page.
+    expect(frame).toHaveAttribute('data-gutter-cols', '4');
     // The checkbox and the identity column are one pinned block.
     expect(frame).toHaveAttribute('data-pinned', '2');
     // The actions column keeps an accessible head.
@@ -409,8 +411,9 @@ describe('DataTable', () => {
       desktop: '872.0',
       cols: ['rest', '224.0', '128.0', '224.0', '96.0'],
     });
-    // A sorted head wider than its figure role, a date in a figure role, and
-    // two flexible columns that split what is left evenly, each at the wider floor.
+    // A sorted head wider than its figure role, a date in a figure role that
+    // opens on a 16px gutter after the figure, and two flexible columns that
+    // split what is left evenly, each at the wider floor.
     expect(
       layout({
         columns: [
@@ -425,7 +428,29 @@ describe('DataTable', () => {
           { key: 'breakdown', label: 'Folder and resource breakdown' },
         ],
       }),
-    ).toEqual({ narrow: '849.6', desktop: '849.6', cols: ['rest', '184.0', '192.0', 'rest'] });
+    ).toEqual({ narrow: '865.6', desktop: '865.6', cols: ['rest', '184.0', '208.0', 'rest'] });
+    // The Prompts table: figures at their label or 96px, mark stacks at 104px
+    // plus the gutter where they follow a right-aligned figure, and the spare
+    // width left to the reading column alone.
+    const hint = 'What it measures.';
+    expect(
+      layout({
+        columns: [
+          { key: 'prompt', label: 'Prompt', kind: 'identity', width: 'reading' },
+          { key: 'topic', label: 'Topic', width: 'status' },
+          { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
+          { key: 'mentions', label: 'Mentions', width: 'marks', hint },
+          { key: 'citations', label: 'Citations', width: 'figure', kind: 'number', hint },
+          { key: 'sources', label: 'Sources', width: 'marks', hint },
+          { key: 'position', label: 'Position', width: 'figure', kind: 'number', hint },
+          { key: 'actions', label: 'Actions', width: 'control', kind: 'actions' },
+        ],
+      }),
+    ).toEqual({
+      narrow: '936.0',
+      desktop: '936.0',
+      cols: ['rest', '128.0', '96.0', '120.0', '96.0', '120.0', '96.0', '80.0'],
+    });
   });
 
   it('warns in development when no column can absorb the width', () => {

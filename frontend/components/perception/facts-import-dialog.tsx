@@ -31,7 +31,7 @@ type Outcome = BrandFactImportResult['rows'][number];
 
 const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
   { key: 'line', label: 'Row', width: 'index', kind: 'number' },
-  { key: 'topic', label: 'Topic', width: 'short' },
+  { key: 'topic', label: 'Topic', width: 'figure' },
   { key: 'statement', label: 'Statement' },
   { key: 'status', label: 'Status', width: 'category' },
 ];

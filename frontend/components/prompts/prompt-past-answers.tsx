@@ -32,7 +32,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market', width: 'index' },
   { key: 'brands', label: 'Brands named', kind: 'identity' },
   { key: 'you', label: 'You', kind: 'number' },
-  { key: 'cited', label: 'Cited', width: 'short' },
+  { key: 'cited', label: 'Cited', width: 'figure' },
   { key: 'search', label: 'Search used', width: 'figure', priority: 'low' },
   { key: 'formats', label: 'Answer formats', width: 'name', priority: 'low' },
 ];
