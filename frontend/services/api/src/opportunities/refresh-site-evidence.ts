@@ -79,8 +79,6 @@ async function perPageFamilies(db: Database, crawl: ViewCrawl): Promise<Family[]
 
 /** The pages a site-level finding's evidence names, however its rule records them. */
 export function evidencePages(finding: SiteLevelFinding): Page[] {
-  const pick = (pages: readonly Page[]) =>
-    pages.map(({ site_url_id, url }) => ({ site_url_id, url }));
   switch (finding.rule_id) {
     case 'architecture.duplicate_titles':
     case 'architecture.duplicate_meta_descriptions':
@@ -91,8 +89,41 @@ export function evidencePages(finding: SiteLevelFinding): Page[] {
     case 'technical.sitewide_link_redirect':
       return finding.evidence.targets.flatMap((target) => pick(target.pages));
     default:
-      // Every other rule's evidence is a page list; a new shape fails to type-check here.
+      // A new rule fails to type-check here until it is listed above or below.
+      return pageListPages(finding);
+  }
+}
+
+const pick = (pages: readonly Page[]) =>
+  pages.map(({ site_url_id, url }) => ({ site_url_id, url }));
+
+type PageListFinding = Extract<
+  SiteLevelFinding,
+  {
+    rule_id:
+      | 'architecture.excessive_depth'
+      | 'architecture.breadcrumb_hierarchy_conflict'
+      | 'architecture.orphan_pages'
+      | 'architecture.parentless_detail_pages'
+      | 'architecture.dead_end_pages'
+      | 'architecture.unreachable_from_home';
+  }
+>;
+
+/** The rules whose evidence is one page list. */
+function pageListPages(finding: PageListFinding): Page[] {
+  switch (finding.rule_id) {
+    case 'architecture.excessive_depth':
+    case 'architecture.breadcrumb_hierarchy_conflict':
+    case 'architecture.orphan_pages':
+    case 'architecture.parentless_detail_pages':
+    case 'architecture.dead_end_pages':
+    case 'architecture.unreachable_from_home':
       return pick(finding.evidence.pages);
+    default: {
+      const unhandled: never = finding;
+      return unhandled;
+    }
   }
 }
 

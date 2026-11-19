@@ -126,6 +126,8 @@ export function useSourceSeries(
   scope: Pick<SourceScope, 'dimension' | 'domain' | 'sourceType'> & {
     /** One page's own line, on its detail view. */
     url?: string | null;
+    /** False where nothing draws the series; defaults to true. */
+    enabled?: boolean;
   },
 ) {
   const params = {
@@ -141,7 +143,7 @@ export function useSourceSeries(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
       params,
     ),
-    enabled: Boolean(queries.activeRunId),
+    enabled: Boolean(queries.activeRunId) && scope.enabled !== false,
     // Hold the plot while the next one loads, exactly as the table above does.
     // The legend sits ABOVE the chart and wraps to as many lines as it needs,
     // so dropping to a bare skeleton did not just blank the plot -- it removed

@@ -19,9 +19,6 @@ export const FACT_CSV_SAMPLE_ROWS: readonly (readonly [string, string, string])[
   ['company', 'Founded in 2019.', ''],
 ];
 
-/** Mirrors the API's `fact_check.facts_import_max_rows`, which refuses a larger request whole. */
-const FACT_CSV_MAX_ROWS = 150;
-
 const HEADER_KEYS = {
   topic: new Set(['topic']),
   statement: new Set(['statement', 'fact']),
@@ -78,8 +75,12 @@ function parseRow(
   };
 }
 
-/** Parse a facts CSV. A header naming at least the topic and statement columns is required. */
-export function parseFactCsv(raw: string): ParsedFactCsv {
+/**
+ * Parse a facts CSV. A header naming at least the topic and statement columns is required.
+ * `maxRows` is the API's import cap (null before the list read brings it; the API still
+ * refuses a larger request whole).
+ */
+export function parseFactCsv(raw: string, maxRows: number | null): ParsedFactCsv {
   const [header, ...data] = tokenizeCsv(raw);
   if (!header) return { rows: [], errors: ['The file is empty.'] };
   const find = (keys: ReadonlySet<string>) =>
@@ -93,11 +94,11 @@ export function parseFactCsv(raw: string): ParsedFactCsv {
     return { rows: [], errors: ['The first row must name the topic and statement columns.'] };
   const rows = data.map((cells, index) => parseRow(cells, columns, index + 1));
   if (!rows.length) return { rows, errors: ['No data rows were found.'] };
-  if (rows.length > FACT_CSV_MAX_ROWS)
+  if (maxRows !== null && rows.length > maxRows)
     return {
       rows,
       errors: [
-        `The file has ${rows.length} rows; import up to ${FACT_CSV_MAX_ROWS} at a time by splitting it.`,
+        `The file has ${rows.length} rows; import up to ${maxRows} at a time by splitting it.`,
       ],
     };
   return { rows, errors: [] };

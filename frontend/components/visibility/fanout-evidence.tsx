@@ -41,6 +41,7 @@ import {
   FANOUT_VIEWS,
   type FanoutScope,
   type FanoutView,
+  type LookupState,
   METRIC_COLUMNS,
   movedState,
   QueryMetricCells,
@@ -272,7 +273,7 @@ function FanoutRows({
         key={group.key}
         group={group}
         metrics={queries.byQuery}
-        failed={queries.isError}
+        lookup={queries.lookup}
       />
     ));
   return queries.rows.map((row) => (
@@ -283,7 +284,7 @@ function FanoutRows({
       occurrences={row.event_count}
       nested={false}
     >
-      <QueryMetricCells row={row} failed={false} />
+      <QueryMetricCells row={row} lookup="loaded" />
     </QueryRow>
   ));
 }
@@ -389,11 +390,11 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
 function SearchGroupRows({
   group,
   metrics,
-  failed,
+  lookup,
 }: Readonly<{
   group: SearchGroup;
   metrics: ReadonlyMap<string, FanoutQueryRow>;
-  failed: boolean;
+  lookup: LookupState;
 }>) {
   const undisclosedNoun = group.undisclosed === 1 ? 'answer' : 'answers';
   const unavailableNoun = group.unavailable === 1 ? 'answer has' : 'answers have';
@@ -427,7 +428,7 @@ function SearchGroupRows({
           occurrences={row.occurrences}
           nested={Boolean(group.label)}
         >
-          <QueryMetricCells row={metrics.get(row.query)} failed={failed} />
+          <QueryMetricCells row={metrics.get(row.query)} lookup={lookup} />
         </QueryRow>
       ))}
       {note ? (

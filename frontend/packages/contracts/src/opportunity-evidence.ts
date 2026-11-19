@@ -143,6 +143,27 @@ const siteChangeEvidenceSchema = z.object({
   coverage: json,
 });
 
+// A wrongly typed coverage reads as not measured instead of failing the whole relevance.
+const relevanceCoverage = z.number().optional().catch(undefined);
+const absentTerms = z.array(z.string()).optional().catch(undefined);
+
+/**
+ * How well a query's terms cover its page (the demand detectors' `relevance()`):
+ * measured coverage per field, or unknown with the reason it could not be.
+ */
+export const queryRelevanceSchema = z.discriminatedUnion('state', [
+  z.object({
+    state: z.literal('measured'),
+    title_coverage: relevanceCoverage,
+    h1_coverage: relevanceCoverage,
+    primary_content_coverage: relevanceCoverage,
+    absent_from_title: absentTerms,
+    absent_from_h1: absentTerms,
+    statement: z.string().nullable().optional().catch(null),
+  }),
+  z.object({ state: z.literal('unknown'), reason: z.string() }),
+]);
+
 /** A promoted Search Console signal on a page or query. */
 const demandSignalEvidenceSchema = z.object({
   demand_snapshot_id: z.string(),
@@ -151,7 +172,7 @@ const demandSignalEvidenceSchema = z.object({
   metrics: json,
   coverage: json,
   limitations: z.array(z.unknown()),
-  query_relevance: z.unknown(),
+  query_relevance: queryRelevanceSchema.nullable(),
 });
 
 /**

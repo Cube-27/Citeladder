@@ -92,6 +92,7 @@ export function BrandFactsPanel({
               key={fact.id}
               fact={fact}
               mayEdit={mayEdit}
+              maxChars={list.limits.statement_max_chars}
               pending={change.isPending}
               onChange={(update) => changeFact({ fact, update })}
             />
@@ -104,16 +105,23 @@ export function BrandFactsPanel({
           checked.
         </p>
       ) : null}
-      {mayEdit ? <AddFact pending={create.isPending} onAdd={addFact} /> : null}
+      {mayEdit ? (
+        <AddFact
+          maxChars={list.limits.statement_max_chars}
+          pending={create.isPending}
+          onAdd={addFact}
+        />
+      ) : null}
     </Stack>
   );
 }
 
 /** The add form as setting rows under its own heading, after the facts it adds to. */
 function AddFact({
+  maxChars,
   pending,
   onAdd,
-}: Readonly<{ pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
+}: Readonly<{ maxChars: number; pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   // A refused fact stays in the form to correct; only a saved one clears it,
   // and only if it was not edited while the save was in flight.
@@ -157,7 +165,7 @@ function AddFact({
             <Textarea
               {...props}
               rows={2}
-              maxLength={300}
+              maxLength={maxChars}
               value={draft.statement}
               onChange={(event) => setDraft({ ...draft, statement: event.target.value })}
             />
@@ -191,11 +199,13 @@ function AddFact({
 function FactRow({
   fact,
   mayEdit,
+  maxChars,
   pending,
   onChange,
 }: Readonly<{
   fact: BrandFact;
   mayEdit: boolean;
+  maxChars: number;
   pending: boolean;
   /** Settles with the save; the panel shows the error notice when it fails. */
   onChange: (update: Change['update']) => Promise<unknown>;
@@ -210,7 +220,7 @@ function FactRow({
           <Textarea
             aria-label="Edit fact"
             rows={2}
-            maxLength={300}
+            maxLength={maxChars}
             value={editing}
             onChange={(event) => setEditing(event.target.value)}
           />

@@ -7,7 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
 import { AreaChart } from '@/components/ui/area-chart';
-import { type TrendEvent } from '@/components/ui/series-data';
+import { type TrendEvent, type TrendSeries } from '@/components/ui/series-data';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
 import type {
@@ -54,7 +54,8 @@ import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
 
-const metricCodec = stringUrlCodec(
+/** The plotted metric, on URL key `metric`, for every trend section. */
+export const metricCodec = stringUrlCodec(
   VISIBILITY_METRICS.map((item) => item.value),
   'brand_mention_rate',
 );
@@ -209,6 +210,20 @@ export function BrandTrend({
   const [focused, setFocused] = useUrlState('brand', optionalStringUrlCodec);
   const brands = orderByVisibility(selected.rankings);
   const focusedBrand = brands.some((row) => row.name === focused) ? focused : null;
+  const brandName = selected.rankings.find((row) => row.is_brand)?.name ?? null;
+  // Focusing the tracked brand is its OWN series, which the projection
+  // publishes directly; a competitor's comes from the rankings.
+  const focusedIsBrand = focusedBrand !== null && focusedBrand === brandName;
+  const lines = (points: readonly VisibilityTrendPoint[], timeZone: string): TrendLines => ({
+    name: focusedBrand ?? 'You',
+    markName: focusedBrand === null || focusedIsBrand ? null : focusedBrand,
+    lead:
+      focusedBrand === null || focusedIsBrand
+        ? toChartPoints(points, metric, timeZone)
+        : toNamedChartPoints(points, metric, focusedBrand, timeZone),
+    // One focused brand means one line.
+    series: focusedBrand === null ? toCompetitorSeries(points, metric) : [],
+  });
   return (
     <Section aria-labelledby="insights-trend">
       <SectionHeader
@@ -239,34 +254,44 @@ export function BrandTrend({
         </SectionDescription>
       </SectionHeader>
       <SectionContent>
-        <TrendBody
+        <TrendSection
           query={query}
           metric={metric}
-          focused={focusedBrand}
-          brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
+          lines={lines}
+          caption={trendCaption}
+          keyed
+          lonePoint="plot"
         />
       </SectionContent>
     </Section>
   );
 }
 
-type TrendBodyProps = Readonly<{
+/** A trend's lines for one metric: the lead line (yours or the focused brand's) and those against it. */
+export type TrendLines = Readonly<{
+  name: string;
+  /** The lead line's brand for its mark; null marks it as yours. */
+  markName: string | null;
+  lead: ReturnType<typeof toChartPoints>;
+  series: readonly TrendSeries[];
+}>;
+
+type TrendSectionProps = Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   metric: Metric;
-  focused: string | null;
-  brandName: string | null;
+  lines: (points: readonly VisibilityTrendPoint[], timeZone: string) => TrendLines;
+  caption: (runs: number, events: readonly TrendEvent[]) => string;
+  /** Whether the loading chart draws a key, as the drawn chart will. */
+  keyed: boolean;
+  lonePoint: 'list' | 'plot';
 }>;
 
 /** The failed read, the loading chart, no runs in the window, or the line chart. */
-function TrendBody({ query, ...chart }: TrendBodyProps) {
+export function TrendSection({ query, keyed, ...chart }: TrendSectionProps) {
   // No data yet is loading, never an empty chart; retained data stays while it refetches.
   if (query.isPending)
     return (
-      <StateBlock
-        kind="loading"
-        label="Loading the history…"
-        shape={{ kind: 'chart', keyed: true }}
-      />
+      <StateBlock kind="loading" label="Loading the history…" shape={{ kind: 'chart', keyed }} />
     );
   if (query.isError)
     return (
@@ -279,35 +304,28 @@ function TrendBody({ query, ...chart }: TrendBodyProps) {
     );
   if (!query.data.length)
     return <StateBlock kind="empty" inline message="No runs in this period." />;
-  return <HistoryLineChart points={query.data} busy={query.isFetching} {...chart} />;
+  return <TrendChart points={query.data} busy={query.isFetching} {...chart} />;
 }
 
-function HistoryLineChart({
+function TrendChart({
   points,
   metric,
-  focused,
-  brandName,
+  lines,
+  caption,
+  lonePoint,
   busy,
-}: Omit<TrendBodyProps, 'query'> &
+}: Omit<TrendSectionProps, 'query' | 'keyed'> &
   Readonly<{ points: readonly VisibilityTrendPoint[]; busy: boolean }>) {
   const timeZone = useDisplayTimeZone();
   const { label: engineLabel } = useEngineCatalog();
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
-  // Focusing the tracked brand is its OWN series, which the projection
-  // publishes directly; a competitor's comes from the rankings.
-  const focusedIsBrand = focused !== null && focused === brandName;
-  const base =
-    focused === null || focusedIsBrand
-      ? toChartPoints(points, metric, timeZone)
-      : toNamedChartPoints(points, metric, focused, timeZone);
-  // One focused brand means one line.
-  const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
+  const { name, markName, lead, series } = lines(points, timeZone);
   const axis = trendAxis(metric, [
-    base.map((point) => point.value),
-    ...competitors.map((line) => line.values),
+    lead.map((point) => point.value),
+    ...series.map((line) => line.values),
   ]);
-  const chartPoints = base.map((point) => ({
+  const chartPoints = lead.map((point) => ({
     ...point,
     value: axis.plot(point.value),
     label: `${point.dateLabel} · ${axis.format(point.value)}`,
@@ -318,15 +336,10 @@ function HistoryLineChart({
     <Stack aria-busy={busy}>
       <AreaChart
         label={`${metricLabel} over time`}
-        name={focused ?? 'You'}
-        mark={
-          <RankedBrandMark
-            rows={points.at(-1)?.rankings}
-            name={focused === null || focusedIsBrand ? null : focused}
-          />
-        }
+        name={name}
+        mark={<RankedBrandMark rows={points.at(-1)?.rankings} name={markName} />}
         data={chartPoints}
-        series={competitors.map((line) => ({
+        series={series.map((line) => ({
           ...line,
           mark: <RankedBrandMark rows={points.at(-1)?.rankings} name={line.label} />,
           values: line.values.map(axis.plot),
@@ -337,9 +350,9 @@ function HistoryLineChart({
         yMax={axis.yMax}
         yFormat={axis.tick}
         format={(plotted) => axis.format(axis.unplot(plotted))}
-        lonePoint="plot"
+        lonePoint={lonePoint}
       />
-      <p className={textRole('caption')}>{trendCaption(points.length, events)}</p>
+      <p className={textRole('caption')}>{caption(points.length, events)}</p>
     </Stack>
   );
 }

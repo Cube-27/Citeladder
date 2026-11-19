@@ -12,6 +12,7 @@ describe('parseFactCsv', () => {
         'ftp://acme.test,Founded in 2019.,weather',
         ',,company',
       ].join('\n'),
+      10,
     );
     expect(parsed.errors).toEqual([]);
     expect(parsed.rows).toEqual([
@@ -46,17 +47,21 @@ describe('parseFactCsv', () => {
   });
 
   it('refuses a file without the topic and statement headers', () => {
-    expect(parseFactCsv('Pro costs $59 a month.,pricing').errors).toEqual([
+    expect(parseFactCsv('Pro costs $59 a month.,pricing', 10).errors).toEqual([
       'The first row must name the topic and statement columns.',
     ]);
-    expect(parseFactCsv('topic,statement\n').errors).toEqual(['No data rows were found.']);
+    expect(parseFactCsv('topic,statement\n', 10).errors).toEqual(['No data rows were found.']);
+  });
+
+  it('refuses a file over the API’s row cap whole, and caps nothing before the cap is known', () => {
     const rows = (count: number) =>
       ['topic,statement', ...Array.from({ length: count }, (_, i) => `pricing,Fact ${i}.`)].join(
         '\n',
       );
-    expect([parseFactCsv(rows(150)).errors, parseFactCsv(rows(151)).errors]).toEqual([
-      [],
-      ['The file has 151 rows; import up to 150 at a time by splitting it.'],
-    ]);
+    expect([
+      parseFactCsv(rows(2), 2).errors,
+      parseFactCsv(rows(3), 2).errors,
+      parseFactCsv(rows(3), null).errors,
+    ]).toEqual([[], ['The file has 3 rows; import up to 2 at a time by splitting it.'], []]);
   });
 });
