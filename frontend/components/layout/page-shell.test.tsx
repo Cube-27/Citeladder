@@ -51,22 +51,85 @@ describe('RouteLoadingScreen', () => {
     expect(container.querySelector('[data-loading-shape]')).toBeNull();
   });
 
+  it('draws Issues as its summary, then the table under its switch and search rows', () => {
+    const { container } = renderAt('/issues');
+    expect(container.querySelector('[data-page-band="filters"]')).toBeNull();
+    const order = [
+      container.querySelector('[data-skeleton="summary"]'),
+      container.querySelector('[data-filter-bar-rows] [data-filter-bar]'),
+      container.querySelector('[data-loading-shape="table"]'),
+    ];
+    expect(order).not.toContain(null);
+    order.slice(1).forEach((node, index) => {
+      expect(order[index]!.compareDocumentPosition(node!) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+  });
+
   it.each([
     {
       path: '/visibility',
       title: 'Sources',
       tabs: ['Domains', 'URLs', 'Read, not cited', 'Query fanouts', 'Ads'],
+      selected: 'Domains',
       filters: true,
       shapes: ['table', 'chart'],
     },
     {
-      path: '/site/crawls',
+      path: '/site/crawls?tab=changes',
       title: 'Site health',
       tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
+      selected: 'Changes',
       filters: false,
       shapes: ['figures', 'table'],
     },
-    { path: '/issues', title: 'Issues', tabs: [], filters: true, shapes: ['table'] },
+    {
+      path: '/actions',
+      title: 'Actions',
+      tabs: [],
+      filters: true,
+      shapes: ['intro', 'figures', 'table'],
+    },
+    {
+      path: '/agent/context?tab=instructions',
+      title: 'Context',
+      tabs: ['Company', 'Audience', 'Business map', 'Competitors', 'Instructions'],
+      selected: 'Instructions',
+      filters: false,
+      shapes: ['facts'],
+    },
+    {
+      path: '/settings?tab=workspace',
+      title: 'Settings',
+      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      selected: 'Workspace',
+      filters: false,
+      shapes: ['facts'],
+    },
+    {
+      path: '/settings?tab=unknown',
+      title: 'Settings',
+      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      selected: 'Account',
+      filters: false,
+      shapes: ['facts'],
+    },
+    {
+      path: '/runs?status=failed',
+      title: 'Runs',
+      tabs: ['All', 'Completed', 'Running', 'Failed'],
+      selected: 'Failed',
+      filters: false,
+      shapes: ['table'],
+    },
+    {
+      path: '/prompts/p1',
+      title: 'Prompt',
+      tabs: [],
+      filters: true,
+      shapes: ['figures', 'chart'],
+    },
     {
       path: '/products/p1',
       title: 'Product',
@@ -75,11 +138,12 @@ describe('RouteLoadingScreen', () => {
       shapes: ['facts', 'figures'],
     },
     { path: '/pricing', title: 'Pricing', tabs: [], filters: false, shapes: ['facts'] },
-  ])('draws $path in its loaded frame', ({ path, title, tabs, filters, shapes }) => {
+  ])('draws $path in its loaded frame', ({ path, title, tabs, selected, filters, shapes }) => {
     const { container } = renderAt(path);
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
     const held = container.querySelector('[data-held-tabs]');
     expect([...(held?.children ?? [])].map((tab) => tab.textContent)).toEqual(tabs);
+    expect(held?.querySelector('[data-selected]')?.textContent).toBe(selected);
     if (held) expect(held).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByRole('tab')).toBeNull();
     expect(container.querySelector('[data-page-band="filters"]') !== null).toBe(filters);

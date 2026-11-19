@@ -65,18 +65,28 @@ export type Screen = () => Promise<{ default: ComponentType }>;
 
 /**
  * What a shell route draws before its page can (RouteLoadingScreen), so
- * nothing moves when the page arrives: `cards` is its real tab labels, a held
- * filter row, then its first screen's shapes in order; `overview`, `thread`
- * and `new-chat` are those screens' own loading layouts.
+ * nothing moves when the page arrives: `cards` is its real tabs, a held
+ * filter row, then its first screen's shapes in order; `overview`, `issues`,
+ * `thread` and `new-chat` are those screens' own loading layouts.
  */
 export type RouteLoading =
   | Readonly<{
       kind: 'cards';
-      tabs?: readonly string[];
+      tabs?: HeldTabs;
       filters?: boolean;
+      /** The page's heading and its line above the shapes. */
+      intro?: boolean;
+      /** The intro and shapes are one stack 16 apart, not sections 32 apart. */
+      stacked?: boolean;
       shapes: readonly LoadingShape[];
     }>
-  | Readonly<{ kind: 'overview' | 'thread' | 'new-chat' }>;
+  | Readonly<{ kind: 'overview' | 'issues' | 'thread' | 'new-chat' }>;
+
+/** A page's tabs in order, and the search param whose value names the current one (else the first). */
+export type HeldTabs = Readonly<{
+  param: string;
+  items: readonly Readonly<{ value: string; label: string }>[];
+}>;
 
 export type AppRouteRecord = {
   /** A React Router pattern; `:name` segments match one path segment. */

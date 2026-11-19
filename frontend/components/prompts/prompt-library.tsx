@@ -385,7 +385,15 @@ export function PromptLibrary() {
     })
   ) {
     return (
-      <ReportPage tabs={<HeldTabRow labels={['Active', 'Archived']} />} filters={<FilterBar />}>
+      <ReportPage
+        tabs={
+          <HeldTabRow
+            labels={['Active', 'Archived']}
+            selected={statusFilter === 'archived' ? 'Archived' : 'Active'}
+          />
+        }
+        filters={<FilterBar />}
+      >
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
     );

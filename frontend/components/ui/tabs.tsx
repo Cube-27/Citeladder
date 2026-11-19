@@ -283,13 +283,22 @@ export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowP
 
 /**
  * A route's tab labels while its page loads: the page strip's face and row,
- * not operable and hidden from assistive technology, the first one current.
+ * not operable and hidden from assistive technology, `selected` current (the
+ * first when it names none).
  */
-export function HeldTabRow({ labels }: Readonly<{ labels: readonly string[] }>) {
+export function HeldTabRow({
+  labels,
+  selected,
+}: Readonly<{ labels: readonly string[]; selected?: string }>) {
+  const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
   return (
     <div aria-hidden data-held-tabs="" className={cn(TAB_STRIP, 'pointer-events-none gap-1')}>
-      {labels.map((label, index) => (
-        <span key={label} className={tabFace({ kind: 'page', selected: index === 0 })}>
+      {labels.map((label) => (
+        <span
+          key={label}
+          data-selected={label === current || undefined}
+          className={tabFace({ kind: 'page', selected: label === current })}
+        >
           {label}
         </span>
       ))}

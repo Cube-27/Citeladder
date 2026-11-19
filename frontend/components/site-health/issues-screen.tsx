@@ -11,9 +11,7 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { IssuesSummaryLoading } from '@/components/site-health/issues-summary';
-import { Section } from '@/components/ui/section';
-import { Skeleton } from '@/components/ui/skeleton';
+import { IssuesPageLoading } from '@/components/site-health/issues-summary-loading';
 
 /**
  * Issues screen container (Slice 8, mockup 710).
@@ -43,10 +41,7 @@ function IssuesDataRegion({
   if (dashboard.isLoading)
     return (
       <ReportPage>
-        <IssuesSummaryLoading />
-        <Section>
-          <Skeleton variant="table" columns={4} rows={8} label="Loading issues" />
-        </Section>
+        <IssuesPageLoading />
       </ReportPage>
     );
 
