@@ -117,8 +117,7 @@ function UsageRow({ item, metered }: Readonly<{ item: UsageItem; metered: boolea
 
 /** What the figures leave out: an unresolved allowance, a reservation, a reset or an expiry. */
 function quotaNote(item: UsageItem, unit: string): ReactNode {
-  if (item.limit_state === 'unknown')
-    return 'This allowance could not be resolved, so no usage is shown.';
+  if (item.limit_state === 'unknown') return 'Allowance unresolved.';
   const reserved = item.reserved ? `${formatCount(item.reserved)} ${unit} reserved. ` : null;
   const timing = timingNote(item, unit);
   if (!reserved && !timing) return null;

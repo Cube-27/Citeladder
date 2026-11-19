@@ -85,8 +85,7 @@ export function PlanChanges({
       <SectionHeader>
         <SectionTitle id="plan-changes-title">Change plan</SectionTitle>
         <SectionDescription>
-          Upgrades start as soon as the prorated charge for the rest of this period is paid.
-          Downgrades take effect at your next renewal, with no refund for the current period.
+          Upgrades are prorated and start once paid. Downgrades start at renewal, with no refund.
         </SectionDescription>
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
@@ -127,7 +126,7 @@ export function PlanChanges({
         {options.some(
           (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
         ) ? (
-          <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
+          <p className="type-caption">Upgrades unavailable: checkout is closed.</p>
         ) : null}
         {controls.downgradeError ? (
           <Notice
@@ -162,8 +161,7 @@ export function PlanChanges({
           }
         >
           <p className={textRole('body', 'text-ink-2')}>
-            You keep {currentPlan.name} and its allowances until the end of the current period. The
-            current period is not refunded.
+            {currentPlan.name} continues to the end of this period. No refund.
           </p>
         </Dialog>
       </Stack>

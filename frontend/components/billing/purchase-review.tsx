@@ -65,8 +65,8 @@ export function PurchaseReview({
         />
         {upgradedPlan?.base_price ? (
           <p className={textRole('body', 'text-ink-2')}>
-            After this charge, your subscription renews at{' '}
-            {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a month before tax
+            Then renews at {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a
+            month before tax
             {renewsOn ? (
               <>
                 , starting <DisplayTime value={renewsOn} dateOnly />

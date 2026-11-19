@@ -26,7 +26,7 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
   useEffect(() => {
     resetPrepared();
   }, [workspaceId, country, details, resetPrepared]);
-  if (!canManage) return <p>Ask a workspace Owner or Admin to choose a plan for this workspace.</p>;
+  if (!canManage) return <p>Owner or Admin only.</p>;
   if (catalogQuery.isError)
     return (
       <StateBlock

@@ -78,7 +78,7 @@ describe('UsageTable', () => {
     expect(within(row).queryByRole('meter')).toBeNull();
     expect(screen.getByRole('meter', { name: 'Projects' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About Prompts' })).toHaveAccessibleDescription(
-      'This allowance could not be resolved, so no usage is shown.',
+      'Allowance unresolved.',
     );
   });
 

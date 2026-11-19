@@ -44,18 +44,16 @@ const STATUS_NOTICE: Readonly<
 > = {
   pending: {
     tone: 'info',
-    text: 'Payment is being verified. The plan starts once the payment is confirmed; nothing is granted before that.',
+    text: 'Payment being verified. The plan starts once it is confirmed.',
   },
   past_due: {
     tone: 'warning',
-    text: 'The latest renewal payment did not go through. The payment provider will retry it. Contact billing help if it keeps failing.',
+    text: 'Renewal payment failed. The payment provider will retry it.',
   },
   unpaid: {
     tone: 'negative',
-    text: 'Renewal payment failed and paid access has stopped. Choose a plan again to restore it.',
+    text: 'Renewal payment failed. Paid access has stopped.',
   },
-  cancelled: { tone: 'info', text: 'This subscription has ended.' },
-  expired: { tone: 'info', text: 'This subscription has ended.' },
 };
 
 function accessLabel(entitlement: BillingEntitlement | null): string {
@@ -76,16 +74,14 @@ function ScheduledChange({
   if (change.state === 'provider_rejected') {
     return (
       <Notice tone="warning">
-        The change to {planName(change.catalog_key)} was not accepted by the payment provider. Your
-        current plan continues unchanged.
+        The payment provider rejected the change to {planName(change.catalog_key)}.
       </Notice>
     );
   }
   return (
     <Notice tone="info">
       {change.direction === 'downgrade' ? 'Downgrade' : 'Change'} to {planName(change.catalog_key)}{' '}
-      scheduled for <DisplayTime value={change.effective_at} dateOnly />. Your current plan and its
-      allowances continue until then.
+      on <DisplayTime value={change.effective_at} dateOnly />
     </Notice>
   );
 }
@@ -163,7 +159,7 @@ function ResumeNotice({
     <>
       {subscription?.resumable_until ? (
         <p className={textRole('caption')}>
-          You can resume until <DisplayTime value={subscription.resumable_until} dateOnly />.
+          Resumable until <DisplayTime value={subscription.resumable_until} dateOnly />
         </p>
       ) : null}
       {cancellation.resumeError ? (
@@ -181,9 +177,8 @@ function ResumeNotice({
 function OverrideNotice({ besidePlan }: Readonly<{ besidePlan: boolean }>) {
   return (
     <Notice tone="info">
-      {besidePlan
-        ? 'An operator override adds access beside this plan. The override is read-only here, expires with its grant and includes no funded AI credits.'
-        : 'This access is read-only here and expires with its grant. It is not a paid subscription and includes no funded AI credits.'}
+      {besidePlan ? 'The operator override expires' : 'Expires'} with its grant, with no funded AI
+      credits.
     </Notice>
   );
 }
@@ -206,13 +201,11 @@ function PlanNotices({
       {entitlement?.trial_grant ? (
         <Notice tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
-          No card is on file, nothing renews, and access returns to free at expiry.
+          Nothing renews.
         </Notice>
       ) : null}
       {entitlement === null ? (
-        <Notice tone="warning">
-          Your entitlement could not be resolved. No paid capability is active until it does.
-        </Notice>
+        <Notice tone="warning">Entitlement unresolved. No paid capability is active.</Notice>
       ) : null}
     </>
   );
@@ -247,9 +240,7 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
       }
     >
       <p className={textRole('body', 'text-ink-2')}>
-        Your paid access runs to the end of the current period and the plan does not renew.
-        Cancelling does not refund the rest of the period, and completed audits and evidence are not
-        deleted when a plan ends.
+        Access runs to the end of this period. No refund.
       </p>
       {cancellation.error ? (
         <Notice

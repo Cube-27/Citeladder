@@ -331,14 +331,14 @@ function currentPlanRead(
   return { kind: 'plan', name: plan?.name ?? subscription.catalog_key };
 }
 
-function currentPlanSentence(workspaceName: string, plan: CurrentPlanRead): string {
+function currentPlanLine(plan: CurrentPlanRead): string | undefined {
   switch (plan.kind) {
     case 'unknown':
-      return '';
+      return undefined;
     case 'none':
-      return `${workspaceName} has no plan yet. `;
+      return 'No plan yet';
     case 'plan':
-      return `${workspaceName} is on ${plan.name}. `;
+      return `Current plan: ${plan.name}`;
     default: {
       const unreachable: never = plan;
       return unreachable;
@@ -382,9 +382,7 @@ function PricingState({
     );
   return (
     <>
-      {canBuy ? null : (
-        <Notice tone="info">Ask a workspace Owner or Admin to make this purchase.</Notice>
-      )}
+      {canBuy ? null : <Notice tone="info">Owner or Admin only.</Notice>}
       {catalogRead.isError ? (
         <Notice
           kind="read"
@@ -394,16 +392,14 @@ function PricingState({
         />
       ) : null}
       {selection && offered === false ? (
-        <Notice tone="warning">
-          This selection is no longer in the current catalog. Choose again with View public pricing.
-        </Notice>
+        <Notice tone="warning">This selection is no longer offered.</Notice>
       ) : null}
       {selection ? null : (
         <StateBlock
           kind="empty"
           headingLevel={2}
           heading={currentPlan.kind === 'plan' ? 'Change plan' : 'Choose a plan'}
-          description={currentPlanSentence(workspaceName, currentPlan).trim() || undefined}
+          description={currentPlanLine(currentPlan)}
           action={
             <Button asChild>
               <a href={websitePricing}>View public pricing</a>

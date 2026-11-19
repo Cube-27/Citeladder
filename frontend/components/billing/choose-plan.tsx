@@ -63,7 +63,7 @@ const MODES = [
 ] as const satisfies readonly { value: CredentialMode; label: string }[];
 
 const MODE_NOTE: Record<CredentialMode, string | null> = {
-  byok: 'Audits run on your own provider keys, billed by those providers directly.',
+  byok: 'Your providers bill audit usage directly.',
   funded: null,
 };
 
