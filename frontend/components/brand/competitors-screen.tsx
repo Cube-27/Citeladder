@@ -54,7 +54,7 @@ export function CompetitorsScreen() {
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {/* While the runs load, the gate below draws the table's footprint. */}
       {state && state !== 'loading' ? (
-        <SelectionPageStateBlock state={state} queries={queries} />
+        <SelectionPageStateBlock state={state} queries={queries} view="competitors" />
       ) : (
         <SectionStack>
           <SelectionGate
