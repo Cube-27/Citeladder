@@ -167,6 +167,13 @@ function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactN
   return hasPrompts ? <FilterBar {...controls} /> : undefined;
 }
 
+function libraryTabs(
+  hasPrompts: boolean,
+  counts: ComponentProps<typeof PromptStatusTabs>['counts'],
+): ReactNode {
+  return hasPrompts ? <PromptStatusTabs counts={counts} /> : undefined;
+}
+
 /**
  * Prompt library client (F7). Owns the active prompt set (via F5 project
  * context), the topic/status/search filter state, and every CRUD, import,
@@ -388,7 +395,7 @@ export function PromptLibrary() {
     <TabsRoot value={statusFilter} onValueChange={setStatusFilter}>
       <ReportPage
         actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
-        tabs={hasPrompts ? <PromptStatusTabs counts={statusCounts} /> : undefined}
+        tabs={libraryTabs(hasPrompts, statusCounts)}
         filters={libraryFilterBar(
           hasPrompts,
           promptFilterControls({
