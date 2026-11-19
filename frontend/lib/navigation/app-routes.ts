@@ -361,7 +361,7 @@ export const APP_ROUTES = [
     path: '/prompts',
     title: 'Prompts',
     screen: screens.prompts,
-    loading: cards([table(8)], { filters: true }),
+    loading: cards([table(8)], { tabs: ['Active', 'Archived'], filters: true }),
     nav: [listed('Prompts', 'prompts', 'tracking')],
   }),
   // Before `/prompts/:promptId`, so `build` is never read as a prompt id.
@@ -406,7 +406,7 @@ export const APP_ROUTES = [
     width: 'compact',
     title: 'Runs',
     screen: screens.runs,
-    loading: cards([table(5)]),
+    loading: cards([table(5)], { tabs: ['All', 'Completed', 'Running', 'Failed'] }),
     nav: [listed('Runs', 'runs', 'tracking')],
   }),
   page({

@@ -10,9 +10,8 @@ import {
 } from '@/components/runs/launch-audit-button';
 import { RunsTable } from '@/components/runs/runs-table';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { Spinner } from '@/components/ui/spinner';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { runsQueries } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -89,51 +88,49 @@ export function RunsScreen() {
       <LaunchAuditButton />
     </MastheadPrimary>
   );
-  // The status choice is the row's view: the one shared segmented control,
-  // each choice with the number of runs it keeps. A never-filled list has none.
-  const filters =
+  // The status choices are the page's tabs, each with the number of runs it
+  // keeps. A never-filled list has none.
+  const tabs =
     audits.length === 0 ? undefined : (
-      <FilterBar
-        view={
-          <SegmentedControl
-            ariaLabel="Filter by status"
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={STATUS_FILTERS.map((filter) => ({
-              value: filter.id,
-              label: filter.label,
-              count: audits.filter(filter.match).length,
-            }))}
-          />
-        }
+      <TabRow
+        ariaLabel="Filter by status"
+        items={STATUS_FILTERS.map((filter) => ({
+          value: filter.id,
+          label: filter.label,
+          count: audits.filter(filter.match).length,
+        }))}
       />
     );
 
   if (runsQuery.isLoading) {
     return (
-      <ReportPage actions={actions} filters={filters}>
+      <ReportPage actions={actions}>
         <StateBlock kind="loading" label="Loading runs…" shape={{ kind: 'table' }} />
       </ReportPage>
     );
   }
 
   return (
-    <ReportPage actions={actions} filters={filters}>
-      <RunsContent
-        read={runsQuery}
-        audits={audits}
-        filteredAudits={filteredAudits}
-        statusFilter={statusFilter}
-        anyActive={anyActive}
-        canRun={canRun}
-        promptsReady={readiness.kind !== 'blocked'}
-      />
+    <TabsRoot value={statusFilter} onValueChange={setStatusFilter}>
+      <ReportPage actions={actions} tabs={tabs}>
+        <TabPanel value={statusFilter}>
+          <RunsContent
+            read={runsQuery}
+            audits={audits}
+            filteredAudits={filteredAudits}
+            statusFilter={statusFilter}
+            anyActive={anyActive}
+            canRun={canRun}
+            promptsReady={readiness.kind !== 'blocked'}
+          />
+        </TabPanel>
 
-      {/* A schedule runs active prompts, so it waits until one exists. */}
-      {readiness.kind === 'ready' ? (
-        <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
-      ) : null}
-    </ReportPage>
+        {/* A schedule runs active prompts, so it waits until one exists. */}
+        {readiness.kind === 'ready' ? (
+          <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
+        ) : null}
+      </ReportPage>
+    </TabsRoot>
   );
 }
 

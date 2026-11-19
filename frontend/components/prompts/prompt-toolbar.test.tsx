@@ -8,7 +8,9 @@ import { emptyFilters } from '@/lib/prompts/filter';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 
-import { promptFilterControls } from './prompt-toolbar';
+import { TabsRoot } from '@/components/ui/tabs';
+
+import { PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
 
 describe('promptFilterControls', () => {
   it('keeps search controlled and lets the reader clear it', async () => {
@@ -18,11 +20,6 @@ describe('promptFilterControls', () => {
       return (
         <FilterBar
           {...promptFilterControls({
-            status: {
-              value: 'active',
-              counts: { active: 0, archived: 0 },
-              onChange: () => undefined,
-            },
             search,
             onSearchChange: setSearch,
             filters: emptyFilters,
@@ -46,26 +43,20 @@ describe('promptFilterControls', () => {
     function Harness() {
       const [status, setStatus] = useState<'active' | 'archived'>('active');
       return (
-        <FilterBar
-          {...promptFilterControls({
-            status: { value: status, counts: { active: 12, archived: 3 }, onChange: setStatus },
-            search: '',
-            onSearchChange: () => undefined,
-            filters: emptyFilters,
-            onFiltersChange: () => undefined,
-          })}
-        />
+        <TabsRoot value={status} onValueChange={setStatus}>
+          <PromptStatusTabs counts={{ active: 12, archived: 3 }} />
+        </TabsRoot>
       );
     }
 
     render(<Harness />);
     // jsdom drops the space the browser reads between label and count.
-    const archived = screen.getByRole('radio', { name: /^Archived\s*\(3\)$/ });
-    const active = screen.getByRole('radio', { name: /^Active\s*\(12\)$/ });
-    expect(active).toBeChecked();
+    const archived = screen.getByRole('tab', { name: /^Archived\s*\(3\)$/ });
+    const active = screen.getByRole('tab', { name: /^Active\s*\(12\)$/ });
+    expect(active).toHaveAttribute('aria-selected', 'true');
     await user.click(archived);
-    expect(archived).toBeChecked();
-    expect(active).not.toBeChecked();
+    expect(archived).toHaveAttribute('aria-selected', 'true');
+    expect(active).toHaveAttribute('aria-selected', 'false');
   });
 });
 
@@ -77,7 +68,6 @@ describe('promptFilterControls filters', () => {
       return (
         <FilterBar
           {...promptFilterControls({
-            status: { value: 'active', counts: { active: 1, archived: 0 }, onChange: () => {} },
             search: '',
             onSearchChange: () => undefined,
             filters,

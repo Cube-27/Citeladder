@@ -14,7 +14,7 @@ import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { TabRow } from '@/components/ui/tabs';
 import type { PromptStatus } from '@citeladder/contracts';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import {
@@ -31,7 +31,7 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
 ];
 
 /**
- * The prompt library's control row: the Active / Archived view, the
+ * The prompt library's control row (Active / Archived are the page's tabs): the
  * search, the Topic and Branded chips, then Filters: Intent, Buyer stage,
  * Persona (when the library has any), Brands and Sources (once a run has
  * measured the prompts) and Enabled. Presentational; state lives in the page.
@@ -121,8 +121,23 @@ function measuredFilters({
   ];
 }
 
+/** Active / Archived, with the number of prompts in each: the library page's tabs. */
+export function PromptStatusTabs({
+  counts,
+}: Readonly<{ counts: Readonly<Record<PromptStatus, number>> }>) {
+  return (
+    <TabRow
+      ariaLabel="Prompt status"
+      items={PROMPT_STATUSES.map((option) => ({
+        value: option.value,
+        label: option.label,
+        count: counts[option.value],
+      }))}
+    />
+  );
+}
+
 export function promptFilterControls({
-  status,
   search,
   onSearchChange,
   filters,
@@ -131,12 +146,6 @@ export function promptFilterControls({
   measured,
   topic,
 }: Readonly<{
-  /** Active / Archived, with the number of prompts in each. */
-  status: Readonly<{
-    value: PromptStatus;
-    counts: Readonly<Record<PromptStatus, number>>;
-    onChange: (value: PromptStatus) => void;
-  }>;
   search: string;
   onSearchChange: (value: string) => void;
   filters: PromptFilters;
@@ -151,18 +160,6 @@ export function promptFilterControls({
 }>): FilterBarProps {
   const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
   return {
-    view: (
-      <SegmentedControl
-        ariaLabel="Prompt status"
-        value={status.value}
-        onChange={status.onChange}
-        options={PROMPT_STATUSES.map((option) => ({
-          value: option.value,
-          label: option.label,
-          count: status.counts[option.value],
-        }))}
-      />
-    ),
     search: (
       <SearchField
         value={search}

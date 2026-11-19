@@ -1568,6 +1568,14 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
   --color-ground: var(--color-surface);
 }
+/* Dark keeps its near-black ground and draws cards, table bodies and control
+   fills on it, as light does (owner, 2026-11-19). Overlays portal outside the
+   shell and keep their lighter surface. */
+:root[data-theme='dark']:not([data-public-surface]) [data-app-surface] {
+  --color-surface: var(--color-ground);
+  --table-ground: var(--color-ground);
+  --color-control-fill: var(--color-ground);
+}
 
 .table-frame {
   border: 1px solid var(--color-rule);

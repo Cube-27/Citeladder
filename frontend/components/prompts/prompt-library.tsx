@@ -37,7 +37,8 @@ import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 
-import { PromptActions, promptFilterControls } from './prompt-toolbar';
+import { PromptActions, PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
+import { HeldTabRow, TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -377,91 +378,93 @@ export function PromptLibrary() {
     })
   ) {
     return (
-      <ReportPage filters={<FilterBar />}>
+      <ReportPage tabs={<HeldTabRow labels={['Active', 'Archived']} />} filters={<FilterBar />}>
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
     );
   }
 
   return (
-    <ReportPage
-      actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
-      filters={libraryFilterBar(
-        hasPrompts,
-        promptFilterControls({
-          status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
-          search,
-          onSearchChange: setSearch,
-          filters,
-          onFiltersChange: setFilters,
-          personas,
-          measured: measuredChoices,
-          topic: topicFilter({
-            topics,
-            selectedTopicId,
-            onSelect: setSelectedTopicId,
-            manage: edits?.topics,
+    <TabsRoot value={statusFilter} onValueChange={setStatusFilter}>
+      <ReportPage
+        actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
+        tabs={hasPrompts ? <PromptStatusTabs counts={statusCounts} /> : undefined}
+        filters={libraryFilterBar(
+          hasPrompts,
+          promptFilterControls({
+            search,
+            onSearchChange: setSearch,
+            filters,
+            onFiltersChange: setFilters,
+            personas,
+            measured: measuredChoices,
+            topic: topicFilter({
+              topics,
+              selectedTopicId,
+              onSelect: setSelectedTopicId,
+              manage: edits?.topics,
+            }),
           }),
-        }),
-      )}
-    >
-      <>
-        {error && !failedEmpty ? (
-          <Notice
-            kind="read"
-            error={error}
-            title="Couldn't refresh the prompts"
-            fallback="The prompts below are from the last successful read."
-            onRetry={retry}
-            pending={retrying}
+        )}
+      >
+        <>
+          {error && !failedEmpty ? (
+            <Notice
+              kind="read"
+              error={error}
+              title="Couldn't refresh the prompts"
+              fallback="The prompts below are from the last successful read."
+              onRetry={retry}
+              pending={retrying}
+            />
+          ) : null}
+          <ToggleFailure toggle={toggle.mutation} />
+          <PendingReviewNotice count={review.count} />
+
+          <TopicDialogs
+            dialog={topicDialog}
+            onDialogChange={setTopicDialog}
+            topics={topics}
+            mutations={topicMutations}
+            // One error per region: a failed library read already says the page failed.
+            loadError={topicsQuery.isError && !failedEmpty}
+            onAdd={openAddTopic}
+            onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
           />
-        ) : null}
-        <ToggleFailure toggle={toggle.mutation} />
-        <PendingReviewNotice count={review.count} />
+          <TabPanel value={statusFilter}>{libraryBody}</TabPanel>
+          {evidence.drawer}
 
-        <TopicDialogs
-          dialog={topicDialog}
-          onDialogChange={setTopicDialog}
-          topics={topics}
-          mutations={topicMutations}
-          // One error per region: a failed library read already says the page failed.
-          loadError={topicsQuery.isError && !failedEmpty}
-          onAdd={openAddTopic}
-          onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
-        />
-        {libraryBody}
-        {evidence.drawer}
-
-        <PromptLibraryDialogs
-          pendingDelete={pendingDelete}
-          setPendingDelete={setPendingDelete}
-          confirmDelete={confirmDelete}
-          formOpen={formOpen}
-          setFormOpen={setFormOpen}
-          editing={editing}
-          setEditing={setEditing}
-          submitForm={submitForm}
-          isSaving={createMutation.isPending || updateMutation.isPending}
-          formError={mutationFailure(createMutation, updateMutation)}
-          importOpen={importOpen}
-          setImportOpen={setImportOpen}
-          importPrompts={async (rows) => {
-            await importMutation.mutateAsync(rows).then(
-              () => setImportOpen(false),
-              () => undefined,
-            );
-          }}
-          isImporting={importMutation.isPending}
-          importError={
-            importMutation.isError
-              ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
-              : undefined
-          }
-          topics={topics}
-          selectedTopicId={selectedTopicId}
-          limits={limits}
-        />
-      </>
-    </ReportPage>
+          <PromptLibraryDialogs
+            pendingDelete={pendingDelete}
+            setPendingDelete={setPendingDelete}
+            confirmDelete={confirmDelete}
+            formOpen={formOpen}
+            setFormOpen={setFormOpen}
+            editing={editing}
+            setEditing={setEditing}
+            submitForm={submitForm}
+            isSaving={createMutation.isPending || updateMutation.isPending}
+            formError={mutationFailure(createMutation, updateMutation)}
+            importOpen={importOpen}
+            setImportOpen={setImportOpen}
+            importPrompts={async (rows) => {
+              await importMutation.mutateAsync(rows).then(
+                () => setImportOpen(false),
+                () => undefined,
+              );
+            }}
+            isImporting={importMutation.isPending}
+            importError={
+              importMutation.isError
+                ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
+                : undefined
+            }
+            topics={topics}
+            selectedTopicId={selectedTopicId}
+            limits={limits}
+          />
+        </>
+      </ReportPage>
+    </TabsRoot>
   );
 }
