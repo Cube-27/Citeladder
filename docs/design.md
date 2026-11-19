@@ -271,9 +271,10 @@ inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
 
 1. **Masthead** (52, sticky), as wide as the main column on every page: the
    menu button below 900px, the back link on a record and the page title,
-   starting on the page column's left edge; search (Ctrl K) and Ask agent at
-   the column's right edge, the same x on every page and page width. Nothing
-   else sits in it (owner, 2026-11-19).
+   starting on the page column's left edge; then the page's secondary
+   actions and at most one primary action, then search (Ctrl K) and Ask
+   agent at the column's right edge, the same x on every page and page width
+   (owner, 2026-11-19). Filters and search fields never sit in it.
 2. **Tab strip** (optional): as high as the filter strip (owner,
    2026-11-18), the tabs filling it with their labels centred, so the
    current tab's underline sits on the strip's rule. Tabs come before
@@ -284,11 +285,7 @@ inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
    view (Prompts' Active | Archived), search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
-   count or a live note), cut before the strip wraps.
-
-The page's own actions (secondary first, then at most one primary) end its
-last strip: the filter strip, else the tab strip, else a filter strip of
-their own (owner, 2026-11-19).
+   count or a live note), cut before the strip wraps, and one action.
 4. **Sections**, 16 below the strips, a `rule` between neighbouring page
    sections with 32 on each side (owner, 2026-11-18): one across the main
    column between stacked sections, one down each column gap of a grid's
@@ -417,8 +414,8 @@ Atoms have one form, defined once and composed everywhere; a page never sets
 its own spacing, size or radius on them.
 
 - **Buttons:** a look follows the kind of action, never the page. Primary
-  (ink fill) is the one action a view exists for, and lives only last in the
-  page's actions (Page anatomy) or last in a sheet or form footer. Every other
+  (ink fill) is the one action a view exists for, and lives only in the
+  masthead's primary slot or last in a sheet or form footer. Every other
   action is secondary (`control-fill`, `control-edge`), quiet (no edge), danger,
   or a link. Controls in one row share one height.
 - **Fields** (input, textarea): `surface`, a 1px `control-line` edge, label

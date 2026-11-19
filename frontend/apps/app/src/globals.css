@@ -795,11 +795,6 @@
     --page-pad-inline: 32px;
   }
 }
-/* A strip of page actions alone whose actions drew nothing (no step to
-   offer) takes no room. */
-[data-page-band='filters']:not(:has(> :not([data-row-end]))):not(:has([data-row-end] :is(button, a))) {
-  display: none;
-}
 /* The labelled sidebar's Dashboard | Agent row: a strip's height, the switch
    centred, its rule on the page's first strip's line (owner, 2026-11-18). */
 [data-sidebar-mode-row]:where([data-sidebar-state='expanded'] *, [data-nav-drawer] *) {

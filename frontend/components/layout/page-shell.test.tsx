@@ -3,9 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { PageFrameSlots } from '@/components/templates/page-frame';
 import { ReportPage } from '@/components/templates/report-page';
-import { Button } from '@/components/ui/button';
 import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { choiceFilter } from '@/components/ui/all-filters';
 import { FilterBar } from '@/components/ui/filter-bar';
@@ -109,33 +107,6 @@ describe('PageFrame', () => {
       widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),
       widthAt('/issues', <RouteLoadingScreen />),
     ]).toEqual(['compact', 'narrow', 'full', 'full', 'narrow']);
-  });
-
-  it('ends the last strip with the page actions, never the masthead', () => {
-    const placed = (slots: Pick<PageFrameSlots, 'tabs' | 'filters'>) => {
-      const { unmount } = render(
-        <MemoryRouter initialEntries={['/visibility']}>
-          <TabsRoot value="a" onValueChange={() => undefined}>
-            <ReportPage {...slots} actions={<Button>Export</Button>}>
-              body
-            </ReportPage>
-          </TabsRoot>
-        </MemoryRouter>,
-      );
-      const band = screen
-        .getByRole('button', { name: 'Export' })
-        .closest('[data-page-band], [data-masthead]');
-      unmount();
-      return band?.getAttribute('data-page-band') ?? 'masthead';
-    };
-    const tabs = <TabRow items={[{ value: 'a', label: 'A' }]} ariaLabel="Views" />;
-    const filters = <p>Filters</p>;
-    expect([placed({ tabs, filters }), placed({ tabs }), placed({ filters }), placed({})]).toEqual([
-      'filters',
-      'tabs',
-      'filters',
-      'filters',
-    ]);
   });
 
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {

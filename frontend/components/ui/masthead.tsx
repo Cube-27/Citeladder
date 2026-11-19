@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { RowActions } from '@/components/ui/masthead-actions';
+import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
@@ -27,22 +27,25 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
  * rule under it, one row at every width, across the whole main column. From
  * the left, at the page's own start (`--page-start`, so a narrow page's title
  * lines up with its content): the menu button below 900px and a record
- * page's back link (`lead`), the page title in `title` type; at the column's
- * right edge on every page the search trigger, then "Ask agent" (`end`), each
- * with its text label. A page's own actions sit in its strips (`PageFrame`,
- * owner 2026-11-19), never here.
+ * page's back link (`lead`), the page title in `title` type; at the right the
+ * page's secondary actions, its one primary action (`actions`, the primary
+ * inside `MastheadPrimary`), then the search trigger and "Ask agent" (`end`)
+ * on the column's right edge on every page (owner, 2026-11-19), each with its
+ * text label.
  *
  * The title is one line: a longer name is cut with an ellipsis, and only then
  * does it take keyboard focus and show the full name in the tooltip. Its
- * accessible name is always the full name. Below `rail` the search and "Ask
- * agent" fold into one "More" menu. A button label is never cut: a row that
+ * accessible name is always the full name. Below `rail` the row is the menu
+ * button, the title, the primary and one "More" menu holding the search, the
+ * secondary actions and "Ask agent". A button label is never cut: a row that
  * would squeeze the title under min(360px, 40% of the masthead) (or its whole
- * text, if shorter) folds them into More.
+ * text, if shorter) folds its actions into More, the primary last.
  */
 export function Masthead({
   title,
   lead,
   search,
+  actions,
   end,
   crumb,
 }: Readonly<{
@@ -51,8 +54,10 @@ export function Masthead({
   lead?: ReactNode;
   /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */
   crumb?: ReactNode;
-  /** The shell's search trigger, first at the right. */
+  /** The shell's search trigger, after the page's actions. */
   search?: ReactNode;
+  /** The page's own actions: secondary first, then at most one primary. */
+  actions?: ReactNode;
   /** Last at the right: "Ask agent", or the Agent's History button. */
   end?: ReactNode;
 }>) {
@@ -60,7 +65,8 @@ export function Masthead({
   const header = useRef<HTMLElement>(null);
   const cut = useIsCut(heading, title);
   usePublishedHeight(header);
-  const hasControls = [search, end].some(
+  const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
+  const hasControls = [search, actions, end].some(
     (part) => part !== undefined && part !== null && part !== false,
   );
   return (
@@ -93,12 +99,22 @@ export function Masthead({
           </Tooltip>
         )}
       </div>
-      {hasControls ? (
-        <RowActions>
-          {search}
-          {end ? <div className="flex flex-col">{end}</div> : null}
-        </RowActions>
-      ) : null}
+      <div
+        data-masthead-end=""
+        className="flex shrink-0 items-center gap-2 [&_:is(button,a)]:shrink-0"
+      >
+        {hasControls ? (
+          <MastheadPrimarySlot value={primarySlot}>
+            <MastheadOverflow>
+              {actions}
+              {/* Search and "Ask agent" come after the primary, pinned at the right. */}
+              {search ? <div className="rail:order-1 flex flex-col">{search}</div> : null}
+              {end ? <div className="rail:order-1 flex flex-col">{end}</div> : null}
+            </MastheadOverflow>
+          </MastheadPrimarySlot>
+        ) : null}
+        <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
+      </div>
     </header>
   );
 }

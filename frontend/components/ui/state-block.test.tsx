@@ -8,7 +8,8 @@ import { ApiError } from '@/lib/api/errors';
 
 import { Button } from './button';
 import { Card } from './card';
-import { MastheadPrimary, PageEmptyOfferProvider, RowActions } from './masthead-actions';
+import { Masthead } from './masthead';
+import { MastheadPrimary, PageEmptyOfferProvider } from './masthead-actions';
 import { StateBlock, screenState } from './state-block';
 
 type Coverage = Readonly<{ crawled_pages: number | null }>;
@@ -112,14 +113,17 @@ describe('StateBlock empty states', () => {
     expect(screen.getByRole('button', { name: 'Add prompt' })).toBeInTheDocument();
   });
 
-  it('holds the view primary on the page, stepping the page actions’ primary down only while it shows', () => {
+  it('holds the view primary on the page, stepping the masthead primary down only while it shows', () => {
     const view = (state: ReactNode) => (
       <PageEmptyOfferProvider>
-        <RowActions>
-          <MastheadPrimary>
-            <Button variant="primary">Run audit</Button>
-          </MastheadPrimary>
-        </RowActions>
+        <Masthead
+          title="Prompts"
+          actions={
+            <MastheadPrimary>
+              <Button variant="primary">Run audit</Button>
+            </MastheadPrimary>
+          }
+        />
         {state}
       </PageEmptyOfferProvider>
     );
@@ -134,7 +138,7 @@ describe('StateBlock empty states', () => {
     const { rerender } = render(view(empty));
     expect([offered(), demoted()]).toEqual([true, true]);
 
-    // Inside a card the block is compact: its action stays secondary beside the page's primary.
+    // Inside a card the block is compact: its action stays secondary beside the masthead's primary.
     rerender(view(<Card>{empty}</Card>));
     expect([offered(), demoted()]).toEqual([false, false]);
 

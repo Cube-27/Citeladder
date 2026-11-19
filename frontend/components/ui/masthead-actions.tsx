@@ -22,19 +22,18 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { cn } from '@/lib/utils';
 
 /**
  * Where a masthead draws its one primary action: `undefined` outside a
  * masthead, `null` until the slot has mounted.
  */
-const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>(undefined);
+export const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>(undefined);
 
 /**
  * The page's one primary action, wherever the actions component renders it:
- * drawn in its row's primary slot (`RowActions`) after the secondary actions,
- * so it stays in view when they fold behind More. Outside a row it renders
- * in place. While a page-level empty state offers the view's main
+ * drawn in the masthead's primary slot after the secondary actions, so it
+ * stays in view when they fold behind More. Outside a masthead it
+ * renders in place. While a page-level empty state offers the view's main
  * action, the control keeps its place but takes the secondary face (globals.css).
  */
 export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>) {
@@ -47,35 +46,6 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
     </span>
   );
   return slot ? createPortal(control, slot) : null;
-}
-
-/**
- * A row's controls at its end (the masthead's search and "Ask agent", a
- * strip's page actions): secondary first, folding behind More as
- * `MastheadOverflow` says, then the row's one primary (`MastheadPrimary`).
- */
-export function RowActions({
-  moreLabel,
-  className,
-  children,
-}: Readonly<{
-  /** The fold menu's name, so a strip's ("More actions") differs from the masthead's ("More"). */
-  moreLabel?: string;
-  className?: string;
-  children: ReactNode;
-}>) {
-  const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
-  return (
-    <div
-      data-row-end=""
-      className={cn('flex shrink-0 items-center gap-2 [&_:is(button,a)]:shrink-0', className)}
-    >
-      <MastheadPrimarySlot value={primarySlot}>
-        <MastheadOverflow moreLabel={moreLabel}>{children}</MastheadOverflow>
-      </MastheadPrimarySlot>
-      <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
-    </div>
-  );
 }
 
 /** The page-level empty states now offering the view's main action, and how one registers. */
@@ -116,18 +86,15 @@ type FoldedEntry = Readonly<{
 }>;
 
 /**
- * A row's controls other than the primary (the masthead's search and "Ask
- * agent", a strip's secondary actions). In a wide row they sit in the row. Below `rail`, two or
+ * The masthead's controls other than the primary (search, secondary actions,
+ * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
  * more, or one beside the primary, fold behind one "More" menu; a row too
  * full for its controls folds them at any width, then the primary too, as
  * More's first item, so no label is ever cut. The controls stay mounted
  * (hidden) so their dialogs and state survive; each More item presses its
  * control, and a folded menu (Manage project) becomes a submenu.
  */
-function MastheadOverflow({
-  moreLabel = 'More',
-  children,
-}: Readonly<{ moreLabel?: string; children: ReactNode }>) {
+export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>) {
   const [group, setGroup] = useState<HTMLDivElement | null>(null);
   const [foldedSlot, setFoldedSlot] = useState<HTMLSpanElement | null>(null);
   const [menus] = useState(() => new Map<string, ReactNode>());
@@ -141,7 +108,6 @@ function MastheadOverflow({
       {fold.more === 'none' ? null : (
         <MoreMenu
           id={moreId}
-          label={moreLabel}
           trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
           read={() => foldedEntries([foldedSlot, group], menus)}
         />
@@ -184,7 +150,7 @@ function useFold({
   const primary = useChildCount(rowSlot) + useChildCount(foldedSlot);
   const steps = Math.sign(secondary) + Math.sign(primary);
   const stage = useFoldStage(
-    group?.closest<HTMLElement>('[data-masthead], [data-page-band]') ?? null,
+    group?.closest<HTMLElement>('[data-masthead]') ?? null,
     steps,
     secondary * 10 + primary,
   );
@@ -211,15 +177,9 @@ function foldOf({
 /** The "More" menu, its rows read from the folded controls each time it opens. */
 function MoreMenu({
   id,
-  label,
   trigger,
   read,
-}: Readonly<{
-  id: string;
-  label: string;
-  trigger: string | undefined;
-  read: () => FoldedEntry[];
-}>) {
+}: Readonly<{ id: string; trigger: string | undefined; read: () => FoldedEntry[] }>) {
   const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
   return (
     <Menu
@@ -232,7 +192,7 @@ function MoreMenu({
         <IconButton
           data-folds={id}
           icon={MoreHorizontal}
-          label={label}
+          label="More"
           variant="secondary"
           className={trigger}
         />
@@ -386,7 +346,7 @@ const TITLE_SHARE = 0.4;
 function rowDeficit(header: HTMLElement): number {
   const title = header.querySelector<HTMLElement>('[data-masthead-title]');
   const heading = title?.querySelector<HTMLElement>('h1');
-  const end = header.querySelector<HTMLElement>('[data-row-end]');
+  const end = header.querySelector<HTMLElement>('[data-masthead-end]');
   const overflow = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
   const reserve = heading
     ? Math.min(TITLE_RESERVE, TITLE_SHARE * header.clientWidth, heading.scrollWidth)
@@ -395,25 +355,7 @@ function rowDeficit(header: HTMLElement): number {
   const edge =
     header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
   const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;
-  return squeezed + past + wrapDeficit(header);
-}
-
-/**
- * A strip's filter bar that has wrapped onto a second line (a strip is one
- * line, owner 2026-11-18): the width its items lack on one line, so the
- * strip's actions fold first. Zero for a bar stacked by design below `rail`.
- */
-function wrapDeficit(row: HTMLElement): number {
-  const bar = row.querySelector<HTMLElement>('[data-filter-bar]');
-  if (!bar) return 0;
-  const style = getComputedStyle(bar);
-  const items = [...bar.children].filter((item) => item.getClientRects().length > 0);
-  const first = items[0]?.getBoundingClientRect();
-  const last = items.at(-1)?.getBoundingClientRect();
-  if (style.flexDirection !== 'row' || !first || !last || last.top <= first.top) return 0;
-  const gap = Number.parseFloat(style.columnGap) || 0;
-  const line = items.reduce((sum, item) => sum + item.getBoundingClientRect().width, 0);
-  return Math.max(1, line + gap * (items.length - 1) - bar.clientWidth);
+  return squeezed + past;
 }
 
 /**
