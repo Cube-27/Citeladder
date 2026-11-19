@@ -2,9 +2,9 @@
 -- it to an empty database in one transaction and records its SHA-256 in
 -- schema_migrations; later changes are numbered forward migrations from 0002.
 --
--- Checkpoint of 2026-11-17: the former 0001-0049 chain folded into one file
--- before an owner-run reset (docs/decisions.md). Their rationale stays in git
--- history. Sections run by area: each table with its keys and indexes, then
+-- Checkpoint of 2026-11-19: the former 0001-0049 chain (folded 2026-11-17) and
+-- 0002_ai_visibility_gaps, folded into one strict file before an owner-run
+-- reset (docs/decisions.md). Their rationale stays in git history. Sections run by area: each table with its keys and indexes, then
 -- views, every foreign key, and last the application role with its grants.
 
 -- ==========================================================================
@@ -1478,26 +1478,44 @@ CREATE INDEX ix_competitors_project_id ON public.competitors USING btree (projec
 
 CREATE INDEX ix_competitors_workspace_id_project_id ON public.competitors USING btree (workspace_id, project_id);
 
+-- Competitor suggestions: a candidate is a cited domain or a name the
+-- perception call labelled; a person's accept or reject records who and when.
 CREATE TABLE public.observed_entity_candidates (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
     project_id uuid NOT NULL,
     audit_id uuid NOT NULL,
+    kind character varying(32) NOT NULL,
     name character varying(255) NOT NULL,
-    domain character varying(255) NOT NULL,
+    domain character varying(255),
+    name_key character varying(255),
     qualification_reason text NOT NULL,
     prompt_count integer NOT NULL,
     engine_count integer NOT NULL,
+    engine_total integer NOT NULL,
+    citation_count integer,
     market_relevant boolean NOT NULL,
     analyzer_version character varying(32) NOT NULL,
     source_analysis_ids jsonb NOT NULL,
     source_artifact_ids jsonb NOT NULL,
     status character varying(16) NOT NULL,
-    created_at timestamp with time zone NOT NULL
+    decided_by_user_id uuid,
+    decided_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_observed_candidate_kind CHECK (
+        CASE kind
+            WHEN 'cited_domain' THEN domain IS NOT NULL AND name_key IS NULL AND citation_count IS NOT NULL
+            WHEN 'named_in_answers' THEN domain IS NULL AND name_key IS NOT NULL AND citation_count IS NULL
+            ELSE false
+        END
+    )
 );
 
 ALTER TABLE ONLY public.observed_entity_candidates
     ADD CONSTRAINT observed_entity_candidates_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.observed_entity_candidates
+    ADD CONSTRAINT uq_observed_candidate_name UNIQUE (audit_id, name_key);
 
 ALTER TABLE ONLY public.observed_entity_candidates
     ADD CONSTRAINT uq_observed_candidate_domain UNIQUE (audit_id, domain);
@@ -1879,6 +1897,28 @@ CREATE INDEX ix_answer_perceptions_task_id ON public.answer_perceptions USING bt
 
 CREATE INDEX ix_answer_perceptions_workspace_id_created_at ON public.answer_perceptions USING btree (workspace_id, created_at);
 
+-- The untracked business names each answer's perception returned, verified
+-- against its passages: raw observations, append-only.
+CREATE TABLE public.answer_untracked_names (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    perception_id uuid NOT NULL,
+    analysis_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    name_key character varying(255) NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT uq_answer_untracked_name UNIQUE (perception_id, name_key);
+
+CREATE INDEX ix_answer_untracked_names_audit_id ON public.answer_untracked_names USING btree (audit_id, name_key);
+
 CREATE TABLE public.audit_answer_aggregates (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -1886,6 +1926,7 @@ CREATE TABLE public.audit_answer_aggregates (
     audit_id uuid NOT NULL,
     logical_engine character varying(32) NOT NULL,
     cohort character varying(32) NOT NULL,
+    topic_id uuid,
     analysis_ids uuid[] NOT NULL,
     prompt_keys text[] NOT NULL,
     analyzer_version character varying(32) NOT NULL,
@@ -1897,7 +1938,7 @@ ALTER TABLE ONLY public.audit_answer_aggregates
     ADD CONSTRAINT audit_answer_aggregates_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.audit_answer_aggregates
-    ADD CONSTRAINT uq_audit_answer_aggregate UNIQUE (audit_id, logical_engine, cohort);
+    ADD CONSTRAINT uq_audit_answer_aggregate UNIQUE NULLS NOT DISTINCT (audit_id, logical_engine, cohort, topic_id);
 
 CREATE INDEX ix_audit_answer_aggregates_project_id ON public.audit_answer_aggregates USING btree (project_id);
 
@@ -1967,6 +2008,33 @@ CREATE INDEX ix_audit_events_audit_id_created_at_id ON public.audit_events USING
 
 CREATE INDEX ix_audit_events_created_at ON public.audit_events USING btree (created_at);
 
+-- Fanout search queries: one row per finalized run, its answers' fanout
+-- queries counted whole, with searches, share, the tracked brands each query
+-- names and the share change against previous_audit_id (NULL: nothing to
+-- compare).
+CREATE TABLE public.audit_fanout_terms (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    previous_audit_id uuid,
+    total_searches integer NOT NULL,
+    unreported_engines text[] NOT NULL,
+    terms jsonb NOT NULL,
+    source_analysis_ids jsonb NOT NULL,
+    analyzer_version character varying(32) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_audit_fanout_terms_total CHECK (total_searches >= 0)
+);
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT uq_audit_fanout_terms_audit UNIQUE (audit_id);
+
+CREATE INDEX ix_audit_fanout_terms_workspace_project ON public.audit_fanout_terms USING btree (workspace_id, project_id);
+
 CREATE TABLE public.audit_prompt_snapshots (
     id uuid NOT NULL,
     audit_id uuid NOT NULL,
@@ -1979,8 +2047,13 @@ CREATE TABLE public.audit_prompt_snapshots (
     prompt_intent character varying(32) NOT NULL,
     cohort character varying(32) DEFAULT 'core'::character varying NOT NULL,
     generation_evidence jsonb,
+    -- The topic the prompt had when the run froze it, so refiling or renaming
+    -- a topic never rewrites a past run. NULL: the prompt had no topic.
+    topic_id uuid,
+    topic_name character varying(255),
     created_at timestamp with time zone NOT NULL,
-    workspace_id uuid NOT NULL
+    workspace_id uuid NOT NULL,
+    CONSTRAINT ck_audit_prompt_snapshot_topic CHECK (((topic_id IS NULL) = (topic_name IS NULL)))
 );
 
 ALTER TABLE ONLY public.audit_prompt_snapshots
@@ -2040,6 +2113,7 @@ CREATE TABLE public.audit_source_aggregates (
     audit_id uuid NOT NULL,
     logical_engine character varying(32) NOT NULL,
     cohort character varying(32) NOT NULL,
+    topic_id uuid,
     dimension character varying(8) NOT NULL,
     key text NOT NULL,
     domain character varying(255) NOT NULL,
@@ -2146,6 +2220,31 @@ CREATE INDEX ix_audit_tasks_provider_connection_id ON public.audit_tasks USING b
 CREATE INDEX ix_audit_tasks_result_artifact_id ON public.audit_tasks USING btree (result_artifact_id) WHERE (result_artifact_id IS NOT NULL);
 
 CREATE INDEX ix_audit_tasks_source_task_id ON public.audit_tasks USING btree (source_task_id);
+
+-- Topic dimension: finalization groups a run's Sources facts by the topic each
+-- prompt snapshot froze and writes one metric block per topic.
+CREATE TABLE public.audit_topic_metrics (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    topic_id uuid NOT NULL,
+    topic_name character varying(255) NOT NULL,
+    visibility_score double precision NOT NULL,
+    metrics jsonb NOT NULL,
+    -- The analyses the block counts, as metric_snapshots keeps them (invariant 5).
+    source_analysis_ids jsonb NOT NULL,
+    analyzer_version character varying(32) NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT uq_audit_topic_metric UNIQUE (audit_id, topic_id);
+
+CREATE INDEX ix_audit_topic_metrics_workspace_id ON public.audit_topic_metrics USING btree (workspace_id);
 
 CREATE TABLE public.audits (
     id uuid NOT NULL,
@@ -2269,6 +2368,27 @@ CREATE INDEX ix_citations_audit_id ON public.citations USING btree (audit_id);
 
 CREATE INDEX ix_citations_workspace_url_hash ON public.citations USING btree (workspace_id, url_hash);
 
+-- Verdict overrides: a person's verdict on one claim, appended beside the
+-- model's claim_verdicts row, which is never rewritten. Reads take the newest
+-- override per verdict row.
+CREATE TABLE public.claim_verdict_overrides (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    claim_verdict_id uuid NOT NULL,
+    from_verdict character varying(16) NOT NULL,
+    to_verdict character varying(16) NOT NULL,
+    note text,
+    created_by_user_id uuid,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_claim_verdict_override_from CHECK (from_verdict IN ('supported', 'contradicted', 'inconclusive', 'not_covered')),
+    CONSTRAINT ck_claim_verdict_override_to CHECK (to_verdict IN ('supported', 'contradicted', 'inconclusive'))
+);
+
+ALTER TABLE ONLY public.claim_verdict_overrides
+    ADD CONSTRAINT claim_verdict_overrides_pkey PRIMARY KEY (id);
+
+CREATE INDEX ix_claim_verdict_overrides_ws_verdict_newest ON public.claim_verdict_overrides USING btree (workspace_id, claim_verdict_id, created_at DESC, id DESC);
+
 CREATE TABLE public.claim_verdicts (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -2288,6 +2408,9 @@ ALTER TABLE ONLY public.claim_verdicts
 
 ALTER TABLE ONLY public.claim_verdicts
     ADD CONSTRAINT uq_claim_verdict_verification_claim UNIQUE (verification_id, claim_id);
+
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT uq_claim_verdicts_ws_id UNIQUE (workspace_id, id);
 
 CREATE INDEX ix_claim_verdicts_workspace_id_claim_id ON public.claim_verdicts USING btree (workspace_id, claim_id);
 
@@ -2651,7 +2774,34 @@ CREATE TABLE public.response_analyses (
     score jsonb,
     entity_assessments jsonb NOT NULL,
     retrieval_observed boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone NOT NULL
+    -- Win rate: the tracked business the answer names first ('none': no
+    -- tracked business named), derived from the stored mention offsets.
+    first_named_kind character varying(16) NOT NULL,
+    first_named_name character varying(255),
+    -- Answer formats: what a scraper answer showed besides text, parsed from
+    -- its stored artifact. 'not_applicable': an API engine; 'unavailable': a
+    -- scraper envelope without an item list. In-text links are distinct link
+    -- targets written in the answer text.
+    answer_format_state character varying(16) NOT NULL,
+    answer_formats text[],
+    in_text_link_count integer,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_response_analyses_first_named CHECK (
+        CASE first_named_kind
+            WHEN 'none' THEN first_named_name IS NULL
+            WHEN 'brand' THEN first_named_name IS NOT NULL
+            WHEN 'competitor' THEN first_named_name IS NOT NULL
+            ELSE false
+        END
+    ),
+    CONSTRAINT ck_response_analyses_answer_formats CHECK (
+        CASE answer_format_state
+            WHEN 'observed' THEN answer_formats IS NOT NULL AND in_text_link_count IS NOT NULL AND in_text_link_count >= 0
+            WHEN 'unavailable' THEN answer_formats IS NULL AND in_text_link_count IS NULL
+            WHEN 'not_applicable' THEN answer_formats IS NULL AND in_text_link_count IS NULL
+            ELSE false
+        END
+    )
 );
 
 ALTER TABLE ONLY public.response_analyses
@@ -6117,7 +6267,7 @@ CREATE TABLE public.mcp_confirmations (
     expires_at timestamp with time zone NOT NULL,
     consumed_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_mcp_confirmations_kind CHECK (((kind)::text = ANY (ARRAY[('add_prompts'::character varying)::text, ('archive_prompts'::character varying)::text, ('launch_audit'::character varying)::text, ('schedule'::character varying)::text, ('declare_implemented'::character varying)::text])))
+    CONSTRAINT ck_mcp_confirmations_kind CHECK (((kind)::text = ANY (ARRAY[('add_prompts'::character varying)::text, ('update_prompts'::character varying)::text, ('launch_audit'::character varying)::text, ('schedule'::character varying)::text, ('declare_implemented'::character varying)::text])))
 );
 
 ALTER TABLE ONLY public.mcp_confirmations
@@ -6509,6 +6659,9 @@ ALTER TABLE ONLY public.observed_entity_candidates
 ALTER TABLE ONLY public.observed_entity_candidates
     ADD CONSTRAINT observed_entity_candidates_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.observed_entity_candidates
+    ADD CONSTRAINT observed_entity_candidates_decided_by_user_id_fkey FOREIGN KEY (decided_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
 ALTER TABLE ONLY public.owned_domains
     ADD CONSTRAINT owned_domains_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
@@ -6607,6 +6760,18 @@ ALTER TABLE ONLY public.answer_perceptions
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_perception_id_fkey FOREIGN KEY (perception_id) REFERENCES public.answer_perceptions(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_untracked_names
+    ADD CONSTRAINT answer_untracked_names_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;
+
 ALTER TABLE ONLY public.audit_answer_aggregates
     ADD CONSTRAINT audit_answer_aggregates_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
@@ -6664,8 +6829,20 @@ ALTER TABLE ONLY public.audit_source_aggregates
 ALTER TABLE ONLY public.audit_tasks
     ADD CONSTRAINT audit_tasks_engine_snapshot_id_fkey FOREIGN KEY (engine_snapshot_id) REFERENCES public.audit_engine_snapshots(id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.audit_fanout_terms
+    ADD CONSTRAINT audit_fanout_terms_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
 ALTER TABLE ONLY public.audit_tasks
     ADD CONSTRAINT audit_tasks_prompt_snapshot_id_fkey FOREIGN KEY (prompt_snapshot_id) REFERENCES public.audit_prompt_snapshots(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.audit_topic_metrics
+    ADD CONSTRAINT audit_topic_metrics_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_tasks
     ADD CONSTRAINT audit_tasks_provider_connection_id_fkey FOREIGN KEY (provider_connection_id) REFERENCES public.provider_connections(id) ON DELETE SET NULL;
@@ -6723,6 +6900,12 @@ ALTER TABLE ONLY public.citations
 
 ALTER TABLE ONLY public.citations
     ADD CONSTRAINT citations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.claim_verdict_overrides
+    ADD CONSTRAINT claim_verdict_overrides_workspace_id_claim_verdict_id_fkey FOREIGN KEY (workspace_id, claim_verdict_id) REFERENCES public.claim_verdicts(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.claim_verdict_overrides
+    ADD CONSTRAINT claim_verdict_overrides_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.claim_verdicts
     ADD CONSTRAINT claim_verdicts_workspace_id_claim_id_fkey FOREIGN KEY (workspace_id, claim_id) REFERENCES public.answer_claims(workspace_id, id) ON DELETE CASCADE;
@@ -7941,6 +8124,8 @@ REVOKE UPDATE, DELETE ON
     public.brand_research_snapshots,
     public.aio_observations,
     public.answer_ad_observations,
+    public.answer_untracked_names,
+    public.claim_verdict_overrides,
     public.commerce_product_observations,
     public.commerce_recommendation_observations,
     public.site_change_observations

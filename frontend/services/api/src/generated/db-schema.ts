@@ -2136,7 +2136,7 @@ export interface ObservedEntityCandidates {
   decided_by_user_id: string | null;
   domain: string | null;
   engine_count: number;
-  engine_total: number | null;
+  engine_total: number;
   id: string;
   kind: string;
   market_relevant: boolean;
@@ -2712,7 +2712,7 @@ export interface ReferralEvents {
 export interface ResponseAnalyses {
   ads_parser_version: string | null;
   analyzer_version: string;
-  answer_format_state: string | null;
+  answer_format_state: string;
   answer_formats: string[] | null;
   artifact_id: string;
   audit_id: string;
@@ -2728,7 +2728,7 @@ export interface ResponseAnalyses {
   fanout_projection_version: Generated<string>;
   fanout_queries: Generated<string[]>;
   fanout_state: Generated<string>;
-  first_named_kind: string | null;
+  first_named_kind: string;
   first_named_name: string | null;
   id: string;
   in_text_link_count: number | null;

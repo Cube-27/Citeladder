@@ -410,7 +410,10 @@ deployed. A migration that drops or renames a column or table, or adds
   `reset_database` checked and the exact project ID. It replaces the VM, which
   deletes every row with no backup, and then migrates. It refuses demo mode.
   Schema changes never need it: they arrive as forward migrations. Production
-  is never reset.
+  is reset only for an owner-authorized baseline refold
+  ([decisions](../decisions.md#platform-and-schema)); afterwards run
+  `~/citeladder-ops/provision-team.mjs` (outside git) to recreate the operator
+  and team accounts.
 - **PostgreSQL image or startup-script update:** a deploy that changes
   `infra/gcp/postgres/Dockerfile` or `infra/gcp/postgres-vm.sh` updates the
   VM's startup script in place, then restarts the VM before the migrate job,
