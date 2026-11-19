@@ -328,15 +328,15 @@
   background: color-mix(in srgb, var(--color-ink) 8%, var(--tint-neutral));
 }
 
-/* On the closing band the secondary is a translucent block in the band's ink. */
+/* On the closing band the secondary is a translucent block in the ink; 9% at
+   most keeps its label at 4.5:1 on the dark band. */
 
 .cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary'] {
-  background: var(--color-site-band-soft);
-  color: var(--color-site-band-ink);
+  background: color-mix(in srgb, var(--color-ink) 6%, transparent);
 }
 
 .cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary']:hover {
-  background: var(--color-site-band-soft-hover);
+  background: color-mix(in srgb, var(--color-ink) 9%, transparent);
 }
 
 .cl-site

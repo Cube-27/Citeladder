@@ -946,13 +946,8 @@
   --color-site-band-warm: oklch(88% 0.07 48 / 35%);
   --color-site-band-glow: oklch(86.5% 0.08 46 / 50%);
   --color-site-band-scrim: oklch(99% 0.008 70 / 55%);
-  --color-site-band-ink: oklch(20.5% 0 0);
-  --color-site-band-ink-hover: oklch(30% 0 0);
-  --color-site-band-ink-secondary: oklch(42% 0.02 45);
-  --color-site-band-on-ink: oklch(100% 0 0);
-  --color-site-band-soft: oklch(20.5% 0 0 / 7%);
-  --color-site-band-soft-hover: oklch(20.5% 0 0 / 14%);
-  --color-site-band-line: oklch(20.5% 0 0 / 80%);
+  --color-site-band-ink-secondary: oklch(43.9% 0 0);
+  --color-site-band-line: oklch(17.8% 0 0 / 80%);
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
@@ -981,12 +976,7 @@
   --color-site-band-warm: oklch(70.3% 0.194 39.3 / 10%);
   --color-site-band-glow: oklch(24% 0.06 40 / 55%);
   --color-site-band-scrim: oklch(9% 0 0 / 50%);
-  --color-site-band-ink: oklch(100% 0 0);
-  --color-site-band-ink-hover: oklch(92% 0.02 60);
-  --color-site-band-ink-secondary: oklch(88% 0.02 60);
-  --color-site-band-on-ink: oklch(17.8% 0 0);
-  --color-site-band-soft: oklch(100% 0 0 / 7%);
-  --color-site-band-soft-hover: oklch(100% 0 0 / 10%);
+  --color-site-band-ink-secondary: oklch(88% 0 0);
   --color-site-band-line: oklch(100% 0 0 / 45%);
 }
 

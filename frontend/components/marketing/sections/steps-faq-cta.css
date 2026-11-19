@@ -170,12 +170,11 @@
 /* ---------- CtaBand: the signature band ----------
    The copy and actions stack centred in the container while a warm silk
    gradient (soft diagonal streaks, a glowing corner) runs full-bleed behind
-   them (a pseudo-element the main column's overflow-x clip holds): pale with
-   dark ink in light, deep low-glow on near-black with light ink in dark. */
+   them (a pseudo-element the main column's overflow-x clip holds): pale in
+   light, deep low-glow on near-black in dark. Text and controls keep
+   the page's ink in both themes (dark in light, light in dark). Only the
+   secondary ink is re-pointed, to hold 4.5:1 on the dark band. */
 .cl-cta {
-  --color-ink: var(--color-site-band-ink);
-  --color-ink-hover: var(--color-site-band-ink-hover);
-  --color-on-ink: var(--color-site-band-on-ink);
   --color-ink-secondary: var(--color-site-band-ink-secondary);
   --color-ink-muted: var(--color-site-band-ink-secondary);
   --color-surface: transparent;
