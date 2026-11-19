@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
@@ -19,7 +19,8 @@ import { PasswordInput } from '@/components/ui/password-field';
 import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
@@ -78,7 +79,7 @@ function PasswordForm({ form }: Readonly<{ form: ReturnType<typeof usePasswordFo
   return (
     <form noValidate onSubmit={(event) => void form.submit(event)}>
       <SettingRows>
-        <SettingRow label="Password" description="Changing it signs you out everywhere." />
+        <SettingRow label="Password" />
         {PASSWORD_INPUTS.map((input) => (
           <SettingField
             key={input.name}
@@ -142,6 +143,36 @@ function usePasswordForm() {
   return { fields, change, submit };
 }
 
+const GOOGLE_REASON = 'Enter your current password first';
+
+function ConnectGoogle({
+  needsPassword,
+  pending,
+  onConnect,
+}: Readonly<{ needsPassword: boolean; pending: boolean; onConnect: () => void }>) {
+  const reasonId = useId();
+  if (!needsPassword)
+    return (
+      <ActionButton action="connectGoogle" type="button" disabled={pending} onClick={onConnect} />
+    );
+  // aria-disabled, not disabled: a disabled button takes no focus or hover, so its tooltip never opens.
+  return (
+    <>
+      <Tooltip content={GOOGLE_REASON} describe={false}>
+        <ActionButton
+          action="connectGoogle"
+          type="button"
+          aria-disabled="true"
+          aria-describedby={reasonId}
+        />
+      </Tooltip>
+      <span id={reasonId} className="sr-only">
+        {GOOGLE_REASON}
+      </span>
+    </>
+  );
+}
+
 /** One danger alert per failed request, keyed by the request's name. */
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
@@ -186,7 +217,6 @@ export default function AccountSecurity() {
       <Section aria-labelledby="settings-sign-in-title">
         <SectionHeader>
           <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
-          <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
         </SectionHeader>
         <Stack gap="workspace">
           <SettingRows>
@@ -196,7 +226,6 @@ export default function AccountSecurity() {
             ) : (
               <SettingRow
                 label="Password"
-                description="Changing it signs you out everywhere."
                 action={
                   <Button
                     variant="secondary"
@@ -211,13 +240,11 @@ export default function AccountSecurity() {
             {canLinkGoogle ? (
               <SettingRow
                 label="Google sign-in"
-                description="Enter your current password above, then connect Google."
                 action={
-                  <ActionButton
-                    action="connectGoogle"
-                    type="button"
-                    disabled={!current || link.isPending}
-                    onClick={() => link.mutate()}
+                  <ConnectGoogle
+                    needsPassword={!current}
+                    pending={link.isPending}
+                    onConnect={() => link.mutate()}
                   />
                 }
               />

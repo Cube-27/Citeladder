@@ -11,10 +11,7 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
  */
 export function ProviderSettings() {
   return (
-    <TitledSection
-      title="Measurement providers"
-      description="Bring your own credentials. Each provider is entered once and measures every engine listed with it. Saving runs a connection test; stored secrets are never displayed."
-    >
+    <TitledSection title="Measurement providers">
       <SectionContent>
         <ProviderList />
       </SectionContent>
