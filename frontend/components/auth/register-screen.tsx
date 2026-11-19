@@ -79,7 +79,6 @@ export function RegisterScreen({
         description={
           demoMode ? undefined : (
             <>
-              Accounts are set up for you by the CiteLadder team.{' '}
               <TextLink asChild text="inherit">
                 <a href={websiteHref('/contact')}>Book a demo</a>
               </TextLink>{' '}

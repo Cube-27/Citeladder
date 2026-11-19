@@ -24,11 +24,7 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
       kind="empty"
       icon={ICONS.connect}
       heading="No integrations connected"
-      description={
-        canManage
-          ? undefined
-          : 'A workspace Owner or Admin can connect Google Search Console, Analytics 4 and Bing Webmaster Tools.'
-      }
+      description={canManage ? undefined : 'Owner or Admin only.'}
       action={
         canManage ? (
           <>

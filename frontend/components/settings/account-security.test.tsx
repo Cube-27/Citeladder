@@ -44,7 +44,7 @@ it('disconnects integrations only after the person confirms what it revokes', as
   await user.click(await screen.findByRole('button', { name: 'Sign out and disconnect' }));
   const dialog = await screen.findByRole('dialog');
   expect(dialog).toHaveTextContent(
-    'It also disconnects every MCP client you connected and revokes every API key you created.',
+    'Signs out every device, disconnects your MCP clients and revokes your API keys.',
   );
   expect(logoutAndDisconnect).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Sign out and disconnect' }));

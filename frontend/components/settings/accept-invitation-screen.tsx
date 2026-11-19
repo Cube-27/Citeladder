@@ -59,7 +59,7 @@ export function AcceptInvitationScreen() {
     return (
       <InvitationDeadEnd
         heading="This invitation link is incomplete"
-        description="Open the invitation link exactly as it was sent to you, or ask for a new one."
+        description="Ask for a new link."
         onLeave={leave}
       />
     );
@@ -79,12 +79,9 @@ export function AcceptInvitationScreen() {
 
 function InvitationProgress({ joined }: Readonly<{ joined: boolean }>) {
   return joined ? (
-    <FlowBlock title="You have joined" sub="Taking you to the workspace now." />
+    <FlowBlock title="You have joined" />
   ) : (
-    <FlowBlock
-      title="Checking your invitation"
-      sub="Invitations are single-use and expire, and they only work for the address they were sent to."
-    />
+    <FlowBlock title="Checking your invitation" />
   );
 }
 
@@ -104,7 +101,7 @@ function RefusedInvitation({ error, onLeave }: Readonly<{ error: unknown; onLeav
       description={
         notice.retryable
           ? notice.message
-          : 'It has expired, was already used or revoked, or was sent to another address. Ask the person who invited you for a new link.'
+          : 'Expired, used, revoked or sent to another address. Ask for a new link.'
       }
       reference={reference}
       onLeave={onLeave}

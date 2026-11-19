@@ -65,7 +65,7 @@ export function TimeZoneSetting() {
       <Stack gap="item">
         <SettingRow
           label="Timezone"
-          description={`Timestamps currently display in ${displayZone}.`}
+          description={displayZone}
           action={
             <Select
               value={choice}

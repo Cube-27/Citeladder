@@ -54,7 +54,7 @@ export function WorkspacePanel() {
             />
             <SettingRow
               label="Leave workspace"
-              description={isOwner ? 'To leave, first make another member the owner.' : undefined}
+              description={isOwner ? 'Transfer ownership first.' : undefined}
               action={
                 isOwner ? null : (
                   <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
@@ -71,11 +71,6 @@ export function WorkspacePanel() {
               notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
             />
           ) : null}
-          {mayManage ? null : (
-            <Notice tone="info">
-              The owner and admins manage who belongs to this workspace and what each person may do.
-            </Notice>
-          )}
         </Stack>
       </Section>
 

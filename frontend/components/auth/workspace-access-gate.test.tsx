@@ -317,9 +317,7 @@ it('offers an ended trial a plan to continue, and tells a member who may buy it'
   unmount();
   capability.mockReturnValue(false);
   renderWithProviders(gatedTree());
-  expect(
-    await screen.findByText('Ask a workspace Owner or Admin to choose a plan for this workspace.'),
-  ).toBeInTheDocument();
+  expect(await screen.findByText('Owner or Admin only.')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();
 });
 
