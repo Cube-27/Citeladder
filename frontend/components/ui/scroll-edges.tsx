@@ -113,9 +113,9 @@ export function ScrollSteppers({ state }: Readonly<{ state: ScrollFrameState }>)
 /**
  * ScrollFrame — a region that scrolls sideways outside a table card (a tab
  * row, a table in an Agent reply). The content fades out at the edge it can
- * scroll towards. `stepper="row-end"` (a tab row) puts one button at the
- * row's end, outside the content, stepping towards the side with more;
- * `stepper="below"` puts the pair under the content, end-aligned. While it
+ * scroll towards. `stepper="row-edges"` (a tab row) puts a button outside the
+ * content at each edge that hides more, so the start mirrors the end once
+ * scrolled; `stepper="below"` puts the pair under the content, end-aligned. While it
  * scrolls, a `label`led frame is a named region with a tab stop, so the
  * arrow keys scroll it; a frame whose content takes focus itself (a tab
  * list) passes no label. Scrollbars are left as they are.
@@ -127,20 +127,26 @@ export function ScrollFrame({
   children,
 }: Readonly<{
   label?: string;
-  stepper?: 'row-end' | 'below';
+  stepper?: 'row-edges' | 'below';
   className?: string;
   children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
   const state = useScrollFrame({ label });
-  if (stepper === 'row-end') {
-    const forward = state.edges.end || !state.edges.start;
+  if (stepper === 'row-edges') {
     return (
       <div {...state.frame} className={cn('flex min-w-0 items-center', className)}>
-        <div className="flex min-w-0 flex-1">{children(state.ref, state.region)}</div>
-        {state.scrolls ? (
+        {state.edges.start ? (
           <ScrollStep
-            side={forward ? 'end' : 'start'}
-            onStep={() => state.step(forward ? 1 : -1)}
+            side="start"
+            onStep={() => state.step(-1)}
+            className="min-h-[var(--control-md)]"
+          />
+        ) : null}
+        <div className="flex min-w-0 flex-1">{children(state.ref, state.region)}</div>
+        {state.edges.end ? (
+          <ScrollStep
+            side="end"
+            onStep={() => state.step(1)}
             className="min-h-[var(--control-md)]"
           />
         ) : null}

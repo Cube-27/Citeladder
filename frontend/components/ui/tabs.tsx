@@ -113,9 +113,9 @@ function TabMark() {
 }
 
 /**
- * The strip's `ScrollFrame`: the edge that hides more items fades, and one
- * stepper at the row's end, outside the tabs, moves it along, so a strip cut
- * at a narrow width says more exists and no label sits under a button. The
+ * The strip's `ScrollFrame`: each edge that hides more items fades and has a
+ * stepper outside the tabs, so a strip cut at a narrow width says more exists
+ * on either side and no label sits under a button. The
  * items take focus themselves, so the frame is no tab stop.
  */
 function StripFrame({
@@ -124,7 +124,7 @@ function StripFrame({
   children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
   return (
-    <ScrollFrame stepper="row-end" className="inline-flex max-w-full shrink-0">
+    <ScrollFrame stepper="row-edges" className="inline-flex max-w-full shrink-0">
       {children}
     </ScrollFrame>
   );

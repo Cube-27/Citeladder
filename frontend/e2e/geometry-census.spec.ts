@@ -219,7 +219,7 @@ function measure({ route }: { route: string }) {
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
     // A wide table's pair of sideways steppers are 24px glyph buttons
     // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
-    // `scroll-step.height`; a tab row's one row-end stepper is a 28 control.
+    // `scroll-step.height`; a tab row's edge steppers are 28 controls.
     if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {
       add('scroll-step.height', element, element.getBoundingClientRect().height);
       continue;
