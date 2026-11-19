@@ -103,7 +103,7 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
   {
     key: 'answered',
     label: 'Answered',
-    width: 'short',
+    width: 'figure',
     kind: 'number',
     hint: 'Answers that succeeded, of the answers the run asked for.',
   },

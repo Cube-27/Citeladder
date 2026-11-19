@@ -402,6 +402,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/runs',
+    width: 'compact',
     title: 'Runs',
     screen: screens.runs,
     loading: cards([table(5)]),

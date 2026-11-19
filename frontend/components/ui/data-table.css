@@ -94,6 +94,25 @@
 [data-start-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
   text-align: start;
 }
+/* A start-aligned column after an end-aligned one opens on a gutter, so a
+   figure never runs into the next column's marks (`GUTTER_PX`, `gutters`). */
+[data-gutter-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
+[data-gutter-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
+[data-gutter-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
+[data-gutter-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
+[data-gutter-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
+[data-gutter-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
+[data-gutter-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
+[data-gutter-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
+[data-gutter-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
+[data-gutter-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
+[data-gutter-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12),
+[data-gutter-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(13),
+[data-gutter-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
+[data-gutter-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
+[data-gutter-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
+  padding-inline-start: calc(var(--table-cell-padding-x) + 16px);
+}
 [data-tabular-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
 [data-tabular-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),
 [data-tabular-cols~='3'] table > tbody > tr:not([data-table-state]) > :nth-child(3),

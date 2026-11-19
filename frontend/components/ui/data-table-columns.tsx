@@ -22,15 +22,15 @@ const COLUMN_WIDTH = {
   reading: { kind: 'rest', steps: 86 },
   /** A row's ordinal on the page (#, rank). */
   index: { kind: 'steps', steps: 12 },
-  /** A count, a rate or a short figure. */
-  figure: { kind: 'steps', steps: 28 },
   /**
-   * A short figure in a table that shares its row with another card, so its
-   * name column keeps room: a one-word header ("Rank", "Visibility"), or a
-   * short one that wraps to two lines ("Share of voice").
+   * A count, a rate or a short figure ("100.0%", "+12.3 pp", "99,999") with
+   * its padding; a longer header widens it (`labelFloor`), so spare width
+   * goes to the flexible column rather than past the figure.
    */
-  short: { kind: 'steps', steps: 24 },
-  /** As `short`, for a header of three words that wraps to two lines ("Owned citation rate"). */
+  figure: { kind: 'steps', steps: 24 },
+  /** Up to three 16px marks and a "+n" count (the brands named, the sites cited). */
+  marks: { kind: 'steps', steps: 26 },
+  /** As `figure`, for a header of three words that wraps to two lines ("Owned citation rate"). */
   shortMetric: { kind: 'steps', steps: 28 },
   /**
    * A figure whose header names its unit ("AI referral sessions", "Longest
@@ -138,25 +138,53 @@ export function isFlexible(column: DataTableColumn): boolean {
   return COLUMN_WIDTH[widthOf(column)].kind === 'rest';
 }
 
+const alignOf = (column: DataTableColumn) => KIND[columnKind(column)].align;
+
 /**
- * The table's column map for the cell rules in globals.css ("r3 data"): the
- * 1-based positions of the end-aligned, start-aligned and tabular columns,
- * the selection column counted, so every cell follows its column's kind
- * whatever the page passed to the cell.
+ * Whether each column opens on a gutter: a start-aligned column straight after
+ * an end-aligned one, whose values would otherwise meet across the padding.
  */
-export function columnLayout(
-  columns: readonly DataTableColumn[],
-  selection: boolean,
-): Readonly<{ 'data-end-cols': string; 'data-start-cols': string; 'data-tabular-cols': string }> {
+function gutters(columns: readonly DataTableColumn[]): boolean[] {
+  return columns.map(
+    (column, index) =>
+      index > 0 && alignOf(column) === 'start' && alignOf(columns[index - 1]!) === 'end',
+  );
+}
+
+/**
+ * The table's column map for the cell rules in data-table.css: the 1-based
+ * positions of the end-aligned, start-aligned and tabular columns, and of the
+ * shown columns that open on a gutter, the selection column counted, so every
+ * cell follows its column's kind whatever the page passed to the cell.
+ */
+export function columnLayout({
+  columns,
+  shown,
+  selection,
+}: Readonly<{
+  columns: readonly DataTableColumn[];
+  shown: readonly DataTableColumn[];
+  selection: boolean;
+}>): Readonly<{
+  'data-end-cols': string;
+  'data-start-cols': string;
+  'data-tabular-cols': string;
+  'data-gutter-cols': string;
+}> {
   const offset = selection ? 2 : 1;
+  const position = (column: DataTableColumn) => columns.indexOf(column) + offset;
   const at = (test: (spec: KindSpec) => boolean) =>
     columns
-      .flatMap((column, index) => (test(KIND[columnKind(column)]) ? [index + offset] : []))
+      .flatMap((column) => (test(KIND[columnKind(column)]) ? [position(column)] : []))
       .join(' ');
+  const gutter = gutters(shown);
   return {
     'data-end-cols': at((spec) => spec.align === 'end'),
     'data-start-cols': at((spec) => spec.align === 'start'),
     'data-tabular-cols': at((spec) => spec.tabular),
+    'data-gutter-cols': shown
+      .flatMap((column, index) => (gutter[index] ? [position(column)] : []))
+      .join(' '),
   };
 }
 
@@ -198,10 +226,12 @@ const HEAD_MARK_PX = 16;
 /** A cell's inline padding: 12 a side, 16 at the table's first and last edge. */
 const CELL_PAD_PX = 12;
 const EDGE_PAD_PX = 16;
+/** The extra start padding of a column that opens on a gutter (`gutters`), as in data-table.css. */
+const GUTTER_PX = 16;
 /** A date-time on one line ("Sep 30, 2026, 12:59 PM") with its padding: dates never cut. */
 const DATE_FLOOR_STEPS = 48;
 
-type ColumnEdge = Readonly<{ first: boolean; last: boolean }>;
+type ColumnEdge = Readonly<{ first: boolean; last: boolean; gutter: boolean }>;
 
 /** The head label (or its sublabel) on one line in `caption-strong`, with its glyph and padding. */
 function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
@@ -222,7 +252,8 @@ function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
   const label = labelFloor(column, edge);
   if (label) parts.push(label);
-  return `max(${parts.join(', ')})`;
+  const floor = `max(${parts.join(', ')})`;
+  return edge.gutter ? `calc(${floor} + ${GUTTER_PX}px)` : floor;
 }
 
 /** The width the low-priority fit keeps for a column: a `reading` column's reading width, else its floor. */
@@ -234,9 +265,14 @@ export function fitFloor(column: DataTableColumn, edge: ColumnEdge): string {
 
 /** Each shown column with its edge: the select column, when present, is the first edge. */
 export function withEdges(columns: readonly DataTableColumn[], selection: boolean) {
+  const gutter = gutters(columns);
   return columns.map((column, index) => ({
     column,
-    edge: { first: !selection && index === 0, last: index === columns.length - 1 },
+    edge: {
+      first: !selection && index === 0,
+      last: index === columns.length - 1,
+      gutter: gutter[index] ?? false,
+    },
   }));
 }
 

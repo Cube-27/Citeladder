@@ -331,7 +331,7 @@ function urlColumns(
     {
       key: 'mentioned',
       label: 'Mentioned',
-      width: 'status',
+      width: 'marks',
       desktopOnly: true,
       priority: 'low',
       hint: 'The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page.',

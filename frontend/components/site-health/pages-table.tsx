@@ -80,9 +80,9 @@ function pagesColumns(
     // low-priority tail and scrolls in the frame when it does not.
     // The longest page kind ("Case Study / Review") fits on one line.
     { key: 'type', label: 'Type', kind: 'status', width: 'category' },
-    { key: 'issues', label: 'Issues', kind: 'number', width: 'short' },
-    { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'short' },
-    { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'short' },
+    { key: 'issues', label: 'Issues', kind: 'number', width: 'figure' },
+    { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'figure' },
+    { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'figure' },
     { key: 'audited', label: 'Last audit', kind: 'date', width: 'metric', priority: 'low' },
   ];
 }

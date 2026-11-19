@@ -565,6 +565,36 @@ function expectOneValue(records: readonly Box[], role: string, expected: number)
   expect.soft(values.size, `${role} was measured`).toBeGreaterThan(0);
 }
 
+/** The latest figures for the fixture's one prompt (`PROMPT_SETS`). */
+const PROMPT_METRIC = {
+  id: '44444444-4444-4444-8444-000000000003',
+  audit_id: '44444444-4444-4444-8444-444444444441',
+  prompt_id: '44444444-4444-4444-8444-000000000002',
+  prompt_index: 0,
+  prompt_text: 'Best pricing tools for small teams',
+  cohort: 'core',
+  composite_score: null,
+  previous_score: null,
+  immediate_delta: null,
+  rolling_four: [],
+  per_engine_scores: {},
+  components: {},
+  engine_agreement: 1,
+  repetition_agreement: 1,
+  evidence_coverage: 1,
+  trend_confidence: 1,
+  decline_confirmed: false,
+  analyzer_version: 'v1',
+  scoring_rule_version: 'v1',
+  created_at: '2026-08-01T00:00:00Z',
+  visibility_rate: 0.5,
+  owned_citation_rate: 0.25,
+  avg_position: null,
+  visibility_delta: null,
+  mentions: 0,
+  brands: [],
+};
+
 const RUNS = [
   { id: '44444444-4444-4444-8444-444444444441', status: 'completed', failed_count: 0 },
   { id: '44444444-4444-4444-8444-444444444442', status: 'failed', failed_count: 3 },
@@ -702,6 +732,15 @@ async function expectOneGeometry(page: Page) {
       },
     })),
   );
+
+  // A measured prompt, so the library draws its figure and mark columns: their
+  // floors (880) pass the 982 viewport's column, and the table scrolls sideways
+  // behind its steppers, so `scroll-step` is measured by design.
+  await stubAuthedShell(page, [
+    ['**/api/v1/prompt-sets?*', PROMPT_SETS],
+    [/\/visibility\/prompts(\?.*)?$/, [PROMPT_METRIC]],
+  ]);
+  records.push(...(await census(page, '/prompts', { label: '/prompts (measured)' })));
 
   // The account menu open, so its ThemeSwitch (the one control-sm atom) is drawn.
   records.push(

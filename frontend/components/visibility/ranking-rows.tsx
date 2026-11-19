@@ -205,12 +205,12 @@ function rankingColumns({
             key: 'position',
             label: 'Position',
             hint: POSITION_HINT,
-            width: 'short',
+            width: 'figure',
             kind: 'number',
           } as const,
         ]
       : []),
-    { key: 'win_rate', label: 'Win rate', hint: WIN_RATE_HINT, width: 'short', kind: 'number' },
+    { key: 'win_rate', label: 'Win rate', hint: WIN_RATE_HINT, width: 'figure', kind: 'number' },
     ...(anySentiment
       ? [
           {
@@ -222,6 +222,6 @@ function rankingColumns({
           } as const,
         ]
       : []),
-    { key: 'change', label: 'Change', width: 'short', kind: 'number' },
+    { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
   ];
 }
