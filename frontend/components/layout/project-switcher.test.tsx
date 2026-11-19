@@ -152,7 +152,7 @@ it('asks for a project’s view while its row is highlighted, so choosing it rea
   expect(router.state.location.search).toBe(`?project=${GLOBEX.id}`);
   expect(paths.filter((path) => path === globexView)).toEqual([globexView]);
   // The trigger is the mark's initial and the brand as stored, no domain.
-  expect(screen.getByRole('button', { name: 'GlobeX' })).toHaveTextContent(/^GGlobeX$/);
+  expect(screen.getByRole('button', { name: 'GlobeX' }).textContent).toBe('GGlobeX');
   expect(screen.queryByText('globex.example')).toBeNull();
   router.dispose();
 });
