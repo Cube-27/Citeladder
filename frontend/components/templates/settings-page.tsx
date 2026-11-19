@@ -10,7 +10,7 @@ import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
 export function SettingsPage({
   children,
   ...slots
-}: Omit<PageFrameSlots, 'filters' | 'back'> & Readonly<{ children: ReactNode }>) {
+}: Omit<PageFrameSlots, 'filters' | 'trail' | 'crumb'> & Readonly<{ children: ReactNode }>) {
   return (
     <PageFrame {...slots}>
       <div data-settings-sections="" className="min-w-0">

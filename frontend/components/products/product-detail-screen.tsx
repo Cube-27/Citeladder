@@ -62,8 +62,10 @@ const KPIS = [
   'catalog_price',
 ] as const;
 
-const backTo = (filters: ProductScopeFilters) =>
-  ({ href: `/products?${productScopeSearch(filters)}`, label: 'Back to Products' }) as const;
+/** Products, opened with the filters this page was reached under. */
+const trailFrom = (filters: ProductScopeFilters) => [
+  { label: 'Products', href: `/products?${productScopeSearch(filters)}` },
+];
 
 /**
  * `/products/:id`: a product holder's page (commerce improvement PR 4), or a
@@ -76,11 +78,11 @@ export function ProductDetailScreen() {
   const { projectId } = useProjectScope();
   const scope = useProductScopeFilters();
   const queries = useCommerceQueries(projectId);
-  const back = backTo(scope.filters);
+  const trail = trailFrom(scope.filters);
   const { catalog } = queries;
   if (catalog.isError)
     return (
-      <RecordPage back={back}>
+      <RecordPage trail={trail}>
         <StateBlock
           kind="error"
           {...readErrorProps(catalog)}
@@ -91,14 +93,14 @@ export function ProductDetailScreen() {
     );
   if (!catalog.data)
     return (
-      <RecordPage back={back}>
+      <RecordPage trail={trail}>
         <StateBlock kind="loading" label="Loading product" shape={PRODUCT_IDENTITY} />
       </RecordPage>
     );
   const category = catalog.data.categories.find((row) => row.id === targetId);
   if (category)
     return (
-      <CategorySetup category={category} projectId={projectId} queries={queries} back={back} />
+      <CategorySetup category={category} projectId={projectId} queries={queries} trail={trail} />
     );
   // Keyed by holder, so typed prompt text and launch state never carry to the next page.
   return (
@@ -112,24 +114,24 @@ export function ProductDetailScreen() {
   );
 }
 
-type Back = ReturnType<typeof backTo>;
+type Trail = ReturnType<typeof trailFrom>;
 
 /** A category's own page: who competes on its shelf, and its shopping-prompt matrix. */
 function CategorySetup({
   category,
   projectId,
   queries,
-  back,
+  trail,
 }: Readonly<{
   category: CommerceCatalog['categories'][number];
   projectId: string;
   queries: CommerceQueries;
-  back: Back;
+  trail: Trail;
 }>) {
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'category', id: category.id } as const;
   return (
-    <RecordPage title={category.name} back={back}>
+    <RecordPage title={category.name} trail={trail}>
       <SetupCompetitors
         projectId={projectId}
         target={target}
@@ -171,10 +173,10 @@ function HolderDetail({
     engines,
     promptSets: promptSets.data?.prompt_sets ?? [],
   });
-  const back = backTo(scopeFilters);
+  const trail = trailFrom(scopeFilters);
   if (detail.isError)
     return (
-      <RecordPage back={back}>
+      <RecordPage trail={trail}>
         <StateBlock
           kind="error"
           {...readErrorProps(detail)}
@@ -185,7 +187,7 @@ function HolderDetail({
     );
   if (!detail.data)
     return (
-      <RecordPage back={back}>
+      <RecordPage trail={trail}>
         <StateBlock kind="loading" label="Loading product" shape={PRODUCT_IDENTITY} />
       </RecordPage>
     );
@@ -194,7 +196,7 @@ function HolderDetail({
   return (
     <RecordPage
       title={data.product.name}
-      back={back}
+      trail={trail}
       busy={detail.isFetching}
       identity={<ProductIdentity detail={data} scope={projectScope} filters={filters} />}
     >

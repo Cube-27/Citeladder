@@ -616,17 +616,6 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
-/* An older Agent turn skips layout and paint while off screen; the browser
-   keeps its last rendered height (`auto`), and 320 stands in until then.
-   Only with scroll anchoring (not Safari): without it the estimate's error
-   would jump the thread as a reader scrolls up into older turns. */
-@supports (overflow-anchor: auto) {
-  .render-when-visible {
-    content-visibility: auto;
-    contain-intrinsic-block-size: auto 320px;
-  }
-}
-
 /* The app's system: paper and ink with one mark, a
    compact even density tuned for a 982x800 window. The app's document is
    the one without `data-public-surface`; the website and docs keep the
@@ -752,11 +741,12 @@
   --rail-button: 40px;
   --nav-current-fill: color-mix(in oklch, var(--color-ink) 7%, transparent);
   /* What a Thread page leaves for its own scrolling region: the masthead (as
-     drawn: below `rail` its actions take a second row, `Masthead`), the
-     `page-pad-block` above the first content and the main column's foot. */
+     drawn: below `rail` its actions take a second row, `Masthead`), a record
+     page's h1 (`PageFrame`), the `page-pad-block` above the first content and
+     the main column's foot. */
   --route-chrome-height: calc(
-    var(--masthead-block-size, var(--masthead-height)) + var(--page-pad-block) +
-      var(--page-section-gap)
+    var(--masthead-block-size, var(--masthead-height)) +
+      var(--page-heading-block-size, 0px) + var(--page-pad-block) + var(--page-section-gap)
   );
   /* No shell cap: a page fills the main column, so collapsing the sidebar
      grows it. A reading page's `thread` column (`PageFrame`) and the measures
@@ -1803,10 +1793,6 @@ a.focus-ring:active .type-caption {
   .focus-input:focus-visible,
   .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     border-style: dotted;
-  }
-
-  .focus-frame :is(input, textarea, select):focus-visible {
-    outline: none;
   }
 }
 

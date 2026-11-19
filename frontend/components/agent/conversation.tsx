@@ -34,6 +34,8 @@ import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown, MarkdownText } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
+import './conversation.css';
+
 /**
  * Messages and the chat's documents in conversational order (each document
  * after the reply that last wrote it), followed by current activity and

@@ -65,7 +65,7 @@ export function ThreadPage({
   scrollLabel,
   children,
   ...slots
-}: Omit<PageFrameSlots, 'tabs' | 'filters' | 'back'> &
+}: Omit<PageFrameSlots, 'tabs' | 'filters' | 'trail' | 'crumb'> &
   Readonly<{
     composer?: ReactNode;
     scrollRef?: RefObject<HTMLElement | null>;

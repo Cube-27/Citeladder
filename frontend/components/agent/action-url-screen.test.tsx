@@ -95,7 +95,10 @@ describe('A URL page', () => {
       },
     });
 
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('/shop/…/bb0556');
+    // The h1 holds the route's name until the URL is read.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /\/shop\/…\/bb0556/ }),
+    ).toBeVisible();
     const details = screen.getByRole('region', { name: 'Details' });
     expect(
       within(details)
@@ -115,11 +118,12 @@ describe('A URL page', () => {
       'Form controls missing accessible namesAEOHigh',
       'Meta description too longAEOHigh',
     ]);
+    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
     expect(
-      screen.getByRole('link', { name: '← Back to Form controls missing accessible names' }),
+      within(trail).getByRole('link', { name: 'Form controls missing accessible names' }),
     ).toHaveAttribute('href', `/actions/${FROM}?project=${PROJECT}`);
     expect(
-      within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      within(trail)
         .getAllByRole('listitem')
         .map((step) => step.textContent)
         .filter((text) => text !== '›'),
@@ -142,12 +146,14 @@ describe('A URL page', () => {
     ]);
   });
 
-  it('goes back to the list when not opened from an Action', async () => {
+  it('trails straight to the list when not opened from an Action', async () => {
     renderUrl();
-    expect(await screen.findByRole('link', { name: '← Back to actions' })).toHaveAttribute(
-      'href',
-      `/actions?project=${PROJECT}`,
-    );
+    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(
+      within(trail)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual([`/actions?project=${PROJECT}`]);
     expect(await screen.findByRole('link', { name: 'Fix this URL with Agent' })).toBeVisible();
   });
 

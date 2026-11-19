@@ -135,9 +135,7 @@ for (const width of [1280, 390]) {
     await expect(composer).toHaveValue(MESSAGE);
     await composer.press('Enter');
 
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Actions › acme.test/pricing' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'acme.test/pricing' })).toBeVisible();
     expect(state.created).toEqual([
       expect.objectContaining({
         message: MESSAGE,

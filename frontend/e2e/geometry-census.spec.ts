@@ -296,6 +296,8 @@ function measure({ route }: { route: string }) {
     add('masthead.bottom', element, element.getBoundingClientRect().bottom);
   for (const element of all('aside a, nav a, [data-sidebar-group-toggle]')) {
     if (element.closest('[role="radiogroup"], [role="tablist"], [data-segmented-track]')) continue;
+    // A record page's trail is a line of text links in the masthead, not a nav row.
+    if (element.closest('nav[aria-label="Breadcrumb"]')) continue;
     if (!hasText(element)) continue;
     add('nav-row.height', element, element.getBoundingClientRect().height);
   }

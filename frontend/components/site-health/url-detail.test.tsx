@@ -230,8 +230,13 @@ describe('UrlDetail', () => {
     expect(
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
     ).toBeInTheDocument();
-    // The masthead holds the title; the identity card never repeats it.
-    expect(screen.getAllByText('Best&Less Online')).toHaveLength(1);
+    // The trail and the h1 name the page; the identity card never repeats it.
+    await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(
+      screen
+        .getAllByText('Best&Less Online')
+        .map((node) => (node.closest('nav') ? 'trail' : node.tagName)),
+    ).toEqual(['trail', 'H1']);
     expect(screen.getByText('Product')).toBeInTheDocument();
     // Delivery metric: TTFB rendered with ms suffix.
     expect(screen.getByText('840ms')).toBeInTheDocument();
@@ -266,14 +271,20 @@ describe('UrlDetail', () => {
     expect(screen.getByRole('button', { name: 'History' })).toBeVisible();
   });
 
-  it('opens as a page detail with a way back to Pages before its title', async () => {
+  it('opens as a page detail trailed through Pages, with no back link', async () => {
     mswServer.use(...handlers(detail()));
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    const title = await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const back = screen.getByRole('link', { name: 'Back to Pages' });
-    expect(back.getAttribute('href')).toMatch(/^\/site\?tab=pages/);
-    expect(back.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(trail).getByRole('link', { name: 'Pages' }).getAttribute('href')).toMatch(
+      /^\/site\?tab=pages/,
+    );
+    expect(within(trail).getByText('Best&Less Online').closest('li')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.queryByRole('link', { name: /^Back to/ })).not.toBeInTheDocument();
   });
 
   it('says an unknown compression is not measured rather than "none"', async () => {

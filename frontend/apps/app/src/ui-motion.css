@@ -4,21 +4,11 @@
 /* Popups (menus, selects, info hints, tooltips), toasts, dialogs and the
    selection dock open and close with one keyframe pair: Radix Presence keeps
    content mounted only while an animation runs. Each moves from
-   `--popup-from` (4px from its side, a tooltip a 2px rise, the dock 8px up)
+   `--popup-from` (a tooltip a 2px rise, the dock 8px up)
    and grows from `--popup-scale` (a menu, select list or info hint from 96%
    at its anchor), over --motion-tint (a menu over --motion-open). */
-.menu-panel,
 .tooltip-panel {
   --popup-from: 0 -4px;
-}
-[data-side='top'] {
-  --popup-from: 0 4px;
-}
-[data-side='left'] {
-  --popup-from: 4px 0;
-}
-[data-side='right'] {
-  --popup-from: -4px 0;
 }
 .tooltip-panel[data-side] {
   --popup-from: 0 2px;

@@ -1,32 +1,31 @@
-import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { lazy, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
-import { Masthead, MastheadBack, usePublishedHeight } from '@/components/ui/masthead';
+import type { Crumb } from '@/components/ui/breadcrumb';
+import { LazyIsland } from '@/components/ui/lazy-island';
+import { Masthead, usePublishedHeight } from '@/components/ui/masthead';
 import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
+import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
+import { routeTrail } from '@/lib/navigation/route-trail';
 import { cn } from '@/lib/utils';
 
-/** A record page's way back to the collection it belongs to. */
-export type PageBack = Readonly<{
-  /** The collection route, e.g. `/runs`; scoped to the project like any app link. */
-  href: string;
-  /** The link's accessible name and hint, e.g. "Back to runs". */
-  label: string;
-  /** Scope to this project rather than the active one. */
-  projectId?: string | null;
-}>;
+// Only record pages draw a trail, so it stays out of the boot bundle; a route's loading frame fetches it first.
+const Breadcrumb = lazy(() =>
+  import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
+);
 
 /** The slots every shell template shares (top to bottom). */
 export type PageFrameSlots = Readonly<{
   /** The record's name or a screen's own title; else the route's manifest title. */
   title?: string;
-  /** A record page's back link to its collection. */
-  back?: PageBack;
-  /** A breadcrumb drawn in the masthead instead of the title; the body holds the h1. */
-  crumb?: ReactNode;
+  /** The steps above this page; else its route's collection. Empty: a top-level page. */
+  trail?: readonly Crumb[];
+  /** The page's own crumb when it differs from the title (a short path, a logo). */
+  crumb?: Pick<Crumb, 'label' | 'mark'>;
   /** The masthead's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
   /** The tab strip: the page's sub-views. */
@@ -48,7 +47,11 @@ const STRIP_RULE =
  * strip, then the optional tab strip and filter strip (8 around 32 controls,
  * one line), both 48 high and each closed by a hairline across the main
  * column, then the body `--page-pad-block` below. A page passes content into
- * the slots and sets no strip geometry of its own. The masthead's
+ * the slots and sets no strip geometry of its own. One rule for the title
+ * (owner, 2026-11-19): a page with a trail (a record under its collection)
+ * draws the breadcrumb in the masthead and its title as the h1 above the
+ * strips; a top-level page's masthead holds its title. No page has a back
+ * arrow. The masthead's
  * menu button, search and "Ask agent" come from the shell; the page's
  * actions sit just left of them, and they keep the main column's right edge
  * on every page (owner, 2026-11-19). A narrow route (its
@@ -60,7 +63,7 @@ const STRIP_RULE =
  */
 export function PageFrame({
   title,
-  back,
+  trail,
   crumb,
   actions,
   tabs,
@@ -71,6 +74,8 @@ export function PageFrame({
 }: PageFrameSlots & Readonly<{ fill?: true; fitted?: true; children: ReactNode }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
+  const parents = trail ?? routeTrail(pathname);
+  const hasTrail = parents.length > 0;
   const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
@@ -86,15 +91,18 @@ export function PageFrame({
       >
         <Masthead
           title={resolved}
-          crumb={crumb}
+          crumb={
+            hasTrail ? (
+              <LazyIsland failed={null} label="breadcrumb" defects="contain">
+                <Breadcrumb parts={[...parents, crumb ?? { label: resolved }]} />
+              </LazyIsland>
+            ) : null
+          }
           lead={
             <>
               {shell?.sidebarToggle}
               {navDrawer ? (
                 <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} />
-              ) : null}
-              {back ? (
-                <MastheadBack href={back.href} label={back.label} projectId={back.projectId} />
               ) : null}
             </>
           }
@@ -103,6 +111,7 @@ export function PageFrame({
           end={shell?.agentTrigger}
         />
         <div className={cn('flex min-w-0 flex-1 flex-col', PAGE_COLUMN[width])}>
+          {hasTrail ? <PageHeading title={resolved} strips={Boolean(tabs || filters)} /> : null}
           {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
           <div
             data-page-body=""
@@ -113,6 +122,24 @@ export function PageFrame({
         </div>
       </div>
     </PageEmptyOfferProvider>
+  );
+}
+
+/**
+ * A record page's h1, above its strips. Its height is published, so a fitted
+ * page (a workbench, the prompt builder) still fills the window exactly.
+ */
+function PageHeading({ title, strips }: Readonly<{ title: string; strips: boolean }>) {
+  const block = useRef<HTMLDivElement>(null);
+  usePublishedHeight(block, '--page-heading-block-size');
+  return (
+    <div
+      ref={block}
+      data-page-heading=""
+      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-4')}
+    >
+      <h1 className={textRole('title', 'break-words')}>{title}</h1>
+    </div>
   );
 }
 

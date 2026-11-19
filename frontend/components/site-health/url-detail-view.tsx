@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { RecordPage } from '@/components/templates/record-page';
-import type { PageBack } from '@/components/templates/page-frame';
+import type { Crumb } from '@/components/ui/breadcrumb';
 import { Inline, Stack } from '@/components/ui/layout';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import { UrlText } from '@/components/ui/table';
@@ -36,8 +36,11 @@ import {
   SectionTitle,
 } from '@/components/ui/section';
 
-/** A page detail's way back: the Pages tab of Website, where its rows live. */
-export const PAGE_DETAIL_BACK: PageBack = { href: '/site?tab=pages', label: 'Back to Pages' };
+/** A page detail's trail: Site health, then its Pages tab, where its rows live. */
+export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
+  { label: 'Site health', href: '/site' },
+  { label: 'Pages', href: '/site?tab=pages' },
+];
 
 /** Queued is neither "running" nor "ready to ask again": it is its own state. */
 const rerunLabel = (pending: boolean) => (pending ? 'Re-auditing…' : 'Re-audit this page');
@@ -67,7 +70,7 @@ export function UrlDetailView({
   return (
     <RecordPage
       title={title}
-      back={PAGE_DETAIL_BACK}
+      trail={PAGE_DETAIL_TRAIL}
       identity={
         <PageIdentity
           detail={detail}
