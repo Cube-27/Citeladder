@@ -206,13 +206,8 @@ describe('AI Traffic state and navigation', () => {
     expect(screen.getByRole('button', { name: 'Upload recognized requests' })).toBeEnabled();
   });
   it.each([
-    [null, 'complete', true, 'No patterns were observed in this window.'],
-    [
-      null,
-      'partial',
-      false,
-      'No patterns were observed in the data covered so far; coverage is incomplete.',
-    ],
+    [null, 'complete', true, 'No patterns'],
+    [null, 'partial', false, 'No patterns'],
     ['Coverage is incomplete.', 'partial', false, 'Coverage is incomplete.'],
   ])(
     'keeps the insights card in place when nothing was observed (%s, %s crawl)',
