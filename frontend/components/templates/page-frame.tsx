@@ -136,7 +136,7 @@ function PageHeading({ title, strips }: Readonly<{ title: string; strips: boolea
     <div
       ref={block}
       data-page-heading=""
-      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-[var(--workspace-gap)]')}
+      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-4')}
     >
       <h1 className={textRole('title', 'break-words')}>{title}</h1>
     </div>
