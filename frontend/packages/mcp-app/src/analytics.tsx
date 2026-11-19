@@ -20,6 +20,7 @@ import { Label, Metric, textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { availabilityLabel } from '@/lib/format';
+import { sentimentFigureValue } from '@/lib/visibility/perception';
 import {
   toChartPoints,
   toNamedChartPoints,
@@ -165,13 +166,15 @@ function Trends({
     ? toNamedChartPoints(points, metric, competitor)
     : toChartPoints(points, metric);
   const axis = trendAxis(metric, [chart.map((point) => point.value)]);
-  // A win rate over no answer naming a tracked brand is not applicable; any other gap is unavailable.
+  // A win rate over no answer naming a tracked brand is not applicable, and a sentiment gap
+  // gives the app's reason; any other gap is unavailable.
   const cell = (index: number) => {
     const measured = chart[index]?.value ?? null;
     if (measured !== null) return axis.format(measured);
     const row = points[index]?.rankings.find((entry) =>
       competitor ? entry.name === competitor : entry.is_brand,
     );
+    if (metric === 'sentiment') return sentimentFigureValue(row?.sentiment).missingLabel;
     return availabilityLabel(
       metric === 'win_rate' && row?.win_answers === 0 ? 'not_applicable' : 'unavailable',
     );
