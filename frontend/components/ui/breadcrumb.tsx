@@ -29,12 +29,12 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
       <ol className={textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2')}>
         {parts.slice(0, -1).map((part, index) => (
           <Fragment key={part.label}>
-            <li className={index === 0 ? 'min-w-0 shrink-[0.001]' : 'min-w-0 shrink'}>
+            <li className={index === 0 ? 'min-w-6 shrink-[0.001]' : 'min-w-6 shrink'}>
               {part.href ? (
                 <ProjectLink
                   href={part.href}
                   state={part.state}
-                  className="hover:overlay-hover hover:text-ink focus-ring rounded-mark block min-h-[var(--target-min)] max-w-68 min-w-[var(--target-min)] truncate px-1 py-0.5"
+                  className="hover:overlay-hover hover:text-ink focus-ring rounded-mark block min-h-6 max-w-68 min-w-6 truncate px-1 py-0.5"
                 >
                   {part.label}
                 </ProjectLink>
