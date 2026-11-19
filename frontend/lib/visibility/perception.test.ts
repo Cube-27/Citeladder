@@ -11,6 +11,7 @@ import {
   sentimentTrend,
   stateCopy,
   themeLabel,
+  themeNegativeShare,
 } from './perception';
 
 const RUN = '11111111-1111-4111-8111-111111111111';
@@ -108,6 +109,10 @@ describe('perception derivations', () => {
       needed: 20,
     });
     expect(breakdownRow(row(score(0, 0, 0), 4), 0).kind).toBe('too_few');
+    // A theme's share reads from its praised and criticised mentions, under the same minimum.
+    expect(themeNegativeShare(theme('price', 15, 5), 20)).toBe(0.25);
+    expect(themeNegativeShare(theme('price', 1, 0), 20)).toBeNull();
+    expect(themeNegativeShare(theme('price', 0, 0), 0)).toBeNull();
   });
 
   it('reads a net sentiment from the minimum classified count, keeping too few apart from zero', () => {

@@ -4,6 +4,7 @@ import { Fragment, type ComponentProps, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { useShownSpan } from '@/components/ui/data-table-fit';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { CellMeter } from '@/components/ui/meter';
@@ -81,8 +82,8 @@ const THEME_COLUMNS: readonly DataTableColumn[] = [
   { key: 'theme', label: 'Theme' },
   { key: 'negative', label: 'Negative', width: 'figure', kind: 'number' },
   { key: 'positive', label: 'Positive', width: 'figure', kind: 'number' },
-  { key: 'share', label: 'Share negative', width: 'metric', kind: 'number' },
-  { key: 'bar', label: 'Negative vs positive', width: 'category' },
+  { key: 'share', label: 'Share negative', width: 'figure', kind: 'number' },
+  { key: 'bar', label: 'Negative vs positive', width: 'category', priority: 'low' },
 ];
 
 function ThemeTable({
@@ -97,7 +98,7 @@ function ThemeTable({
       actions={actions}
       label="Perception by theme"
       columns={THEME_COLUMNS}
-      footer="What answers praised or criticised about you. Open a theme for its quotes."
+      footer={`What answers praised or criticised about you. Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions. Open a theme for its quotes.`}
       state={themes.length ? undefined : noneHere('No themes in these answers.')}
     >
       {themes.map((theme) => {
@@ -121,7 +122,7 @@ function ThemeTable({
               </TableCell>
               <TableCell numeric>{theme.negative}</TableCell>
               <TableCell numeric>{theme.positive}</TableCell>
-              <TableCell numeric>{shown ?? <Absence />}</TableCell>
+              <TableCell numeric>{shown ?? <Absence state="too_few" />}</TableCell>
               <TableCell>
                 {share === null ? null : (
                   <CellMeter
@@ -136,24 +137,39 @@ function ThemeTable({
             </TableRow>
             {expanded
               ? theme.quotes.map((quote) => (
-                  <TableRow key={`${quote.execution_id}:${quote.text}`}>
-                    <TableCell nested colSpan={2}>
-                      <QuoteLink quote={quote} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusMark variant="sentiment" value={quote.polarity}>
-                        {quote.polarity === 'negative' ? 'Negative' : 'Positive'}
-                      </StatusMark>
-                    </TableCell>
-                    <TableCell>{engineLabel(quote.logical_engine)}</TableCell>
-                    <TableCell>{quote.prompt}</TableCell>
-                  </TableRow>
+                  <QuoteRow
+                    key={`${quote.execution_id}:${quote.text}`}
+                    quote={quote}
+                    engine={engineLabel(quote.logical_engine)}
+                  />
                 ))
               : null}
           </Fragment>
         );
       })}
     </DataTable>
+  );
+}
+
+/** A theme's quote under it: the quote gives up the hidden bar column's cell. */
+function QuoteRow({
+  quote,
+  engine,
+}: Readonly<{ quote: PerceptionResponse['themes'][number]['quotes'][number]; engine: string }>) {
+  const span = useShownSpan(['theme', 'negative', 'bar']) - 1;
+  return (
+    <TableRow>
+      <TableCell nested colSpan={span}>
+        <QuoteLink quote={quote} />
+      </TableCell>
+      <TableCell>
+        <StatusMark variant="sentiment" value={quote.polarity}>
+          {quote.polarity === 'negative' ? 'Negative' : 'Positive'}
+        </StatusMark>
+      </TableCell>
+      <TableCell>{engine}</TableCell>
+      <TableCell>{quote.prompt}</TableCell>
+    </TableRow>
   );
 }
 
