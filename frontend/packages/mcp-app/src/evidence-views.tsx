@@ -21,6 +21,7 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AppState, Controller } from './controller';
+import { formattedText } from '@/lib/format';
 import { moment, rate } from './format';
 
 type Props = Readonly<{ state: AppState; controller: Controller }>;
@@ -174,7 +175,7 @@ export function SiteHealthView({ state, controller }: Props) {
       <p className={textRole('body', 'text-ink-2')}>
         Web fundamentals: {site.scores.web_fundamentals ?? 'Unavailable'} · AEO readiness:{' '}
         {site.scores.aeo_readiness ?? 'Unavailable'} · measurement coverage:{' '}
-        {rate(site.scores.aeo_measurement_coverage)}
+        {formattedText(rate(site.scores.aeo_measurement_coverage))}
       </p>
       <p className={textRole('caption')}>
         Observed {moment(site.observed_at)} · {site.coverage.analyzed_urls} analyzed /{' '}

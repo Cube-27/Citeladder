@@ -11,8 +11,8 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
-import { availabilityLabel } from '@/lib/format';
-import { formatShare, themeLabel } from '@/lib/visibility/perception';
+import { percentText } from '@/lib/format';
+import { themeLabel } from '@/lib/visibility/perception';
 import { themeAssociation, type ThemeCell } from '@/lib/visibility/theme-association';
 
 const TITLE = 'How AI describes competitors';
@@ -53,14 +53,14 @@ export function CompetitorThemes({
                 key: 'top',
                 label: 'Your most associated theme',
                 value: map.top ? themeLabel(map.top.theme) : null,
-                missingLabel: availabilityLabel('too_few'),
-                sub: map.top ? `${formatShare(map.top.share)} of your mentions` : undefined,
+                missingState: 'too_few',
+                sub: map.top ? `${percentText(map.top.share)} of your mentions` : undefined,
               },
               {
                 key: 'gap',
                 label: 'Largest gap to the leader',
                 value: map.gap ? themeLabel(map.gap.theme) : null,
-                missingLabel: map.top ? 'No gap' : availabilityLabel('too_few'),
+                ...(map.top ? { missingLabel: 'No gap' } : { missingState: 'too_few' }),
                 sub: map.gap ? `${map.gap.leader} ahead by ${map.gap.points} pts` : undefined,
               },
             ]}
@@ -116,5 +116,5 @@ function HeatCell({ cell }: Readonly<{ cell: ThemeCell }>) {
         reason={`Shows from ${PERCEPTION_MIN_CLASSIFIED} classified mentions; ${cell.classified} so far.`}
       />
     );
-  return <HeatValue share={cell.share}>{formatShare(cell.share)}</HeatValue>;
+  return <HeatValue share={cell.share}>{percentText(cell.share)}</HeatValue>;
 }

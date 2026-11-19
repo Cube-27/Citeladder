@@ -1,9 +1,10 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
 import type { CredentialMode } from '@/lib/api/billing';
 import {
-  availabilityLabel,
+  absent,
   formatAmount,
   formatDisplayDate,
+  type Formatted,
   formatWindowDate,
   pluralCount,
 } from '@/lib/format';
@@ -48,10 +49,10 @@ type RunCost = {
  * The analysis's estimate as the workspace pays it: AI credits on a managed
  * plan, the DataForSEO price on its own account.
  */
-export function runEstimate(run: RunCost): string {
+export function runEstimate(run: RunCost): Formatted {
   if (run.credential_mode === 'funded')
     return run.estimated_credits === null
-      ? availabilityLabel('unavailable')
+      ? absent('unavailable')
       : pluralCount(run.estimated_credits, 'AI credit');
   return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
 }

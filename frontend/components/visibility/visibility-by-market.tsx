@@ -10,7 +10,7 @@ import { TitledSection } from '@/components/ui/section';
 import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
-import { formatRate, measured } from '@/lib/visibility/dashboard';
+import { formatRate } from '@/lib/visibility/dashboard';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { readErrorProps } from '@/components/ui/notice';
@@ -82,9 +82,7 @@ export function VisibilityByMarket({
             </TableCell>
             {row.state === 'measured' ? (
               <>
-                <TableCell numeric>
-                  {measured(formatRate(row.mention_rate)) ?? <Absence />}
-                </TableCell>
+                <TableCell numeric>{formatRate(row.mention_rate)}</TableCell>
                 <TableCell numeric>
                   <Delta
                     value={row.mention_rate_delta}
@@ -92,9 +90,7 @@ export function VisibilityByMarket({
                     missingReason="No comparable earlier run"
                   />
                 </TableCell>
-                <TableCell numeric>
-                  {measured(formatRate(row.share_of_voice)) ?? <Absence />}
-                </TableCell>
+                <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
                 <TableCell numeric>
                   <Delta
                     value={row.share_of_voice_delta}

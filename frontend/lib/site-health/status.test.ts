@@ -3,11 +3,9 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { CrawlOverallStatus } from '@citeladder/contracts';
 import { CRAWL_POLL_MS } from '@/lib/config/operational';
 import {
-  PLACEHOLDER,
   canShowDiscoveredTotal,
   crawlDisplayStatus,
   discoveryProgressLabel,
-  formatAudited,
   formatIssueCount,
   formatScore,
   crawlPollInterval,
@@ -385,8 +383,8 @@ describe('badge mapping', () => {
 
 describe('score / count / date placeholders', () => {
   it('renders not measured for a null or NaN score (never 0 for missing)', () => {
-    expect(formatScore(null)).toBe(PLACEHOLDER);
-    expect(formatScore(Number.NaN)).toBe(PLACEHOLDER);
+    expect(formatScore(null)).toEqual({ absent: 'not_measured' });
+    expect(formatScore(Number.NaN)).toEqual({ absent: 'not_measured' });
     expect(formatScore(0)).toBe('0');
     // Whole numbers: the tenth is an artefact of the division, not a
     // measurement, and it changes with one check on one page.
@@ -395,14 +393,9 @@ describe('score / count / date placeholders', () => {
   });
 
   it('renders not measured for a null issue count', () => {
-    expect(formatIssueCount(null)).toBe(PLACEHOLDER);
+    expect(formatIssueCount(null)).toEqual({ absent: 'not_measured' });
     expect(formatIssueCount(0)).toBe('0');
     expect(formatIssueCount(4)).toBe('4');
-  });
-
-  it('renders not measured for a null last-audited', () => {
-    expect(formatAudited(null)).toBe(PLACEHOLDER);
-    expect(formatAudited('not-a-date')).toBe('not-a-date');
   });
 
   it('sentence-cases snake_case status tokens', () => {

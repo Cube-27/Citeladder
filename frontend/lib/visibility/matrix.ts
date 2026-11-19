@@ -10,8 +10,7 @@ import type {
   VisibilityMatrix,
 } from '@citeladder/contracts/visibility-matrix';
 import type { MATRIX_METRICS } from '@/lib/config/visibility';
-import { availabilityLabel } from '@/lib/format';
-import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import { availabilityLabel, formatMean, percentText } from '@/lib/format';
 import { sentimentReading } from '@/lib/visibility/perception';
 
 export type MatrixMetric = (typeof MATRIX_METRICS)[number]['value'];
@@ -66,7 +65,7 @@ export function cellReading(cell: MatrixCell | undefined, metric: MatrixMetric):
   }
   const value = cell[metric];
   if (value === null) return { kind: 'not_measured', answers };
-  const text = metric === 'avg_position' ? formatPositionExact(value) : formatRate(value);
+  const text = metric === 'avg_position' ? formatMean(value) : percentText(value);
   return { kind: 'value', value, text, answers };
 }
 

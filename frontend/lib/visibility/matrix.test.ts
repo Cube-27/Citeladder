@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { MatrixCell, VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { cellAt, cellReading, matrixCsvRows, noTopicsRecorded, type MatrixMetric } from './matrix';
 
-const measured = (over: Partial<Extract<MatrixCell, { kind: 'measured' }>>): MatrixCell => ({
+const measuredCell = (over: Partial<Extract<MatrixCell, { kind: 'measured' }>>): MatrixCell => ({
   kind: 'measured',
   answers: 12,
   mention_rate: 0.25,
@@ -20,8 +20,8 @@ const grids: VisibilityMatrix['grids'] = {
   engine_topic: empty,
   engine_market: empty,
   engine_brand: [
-    [measured({ mention_rate: 0.5 }), measured({ mention_rate: 0.2 })],
-    [{ kind: 'not_run' }, measured({ mention_rate: 0.4 })],
+    [measuredCell({ mention_rate: 0.5 }), measuredCell({ mention_rate: 0.2 })],
+    [{ kind: 'not_run' }, measuredCell({ mention_rate: 0.4 })],
   ],
   topic_market: empty,
   topic_brand: empty,
@@ -49,11 +49,11 @@ describe('performance matrix cells', () => {
     const enough = { mentions: 30, classified: 25, positive: 15, negative: 5, net_sentiment: 40 };
     expect([
       cellReading({ kind: 'not_run' }, 'mention_rate'),
-      cellReading(measured({ sentiment: fewClassified }), 'sentiment'),
-      cellReading(measured({}), 'sentiment'),
-      cellReading(measured({}), 'avg_position'),
-      cellReading(measured({ sentiment: enough }), 'sentiment'),
-      cellReading(measured({ avg_position: 2.345 }), 'avg_position'),
+      cellReading(measuredCell({ sentiment: fewClassified }), 'sentiment'),
+      cellReading(measuredCell({}), 'sentiment'),
+      cellReading(measuredCell({}), 'avg_position'),
+      cellReading(measuredCell({ sentiment: enough }), 'sentiment'),
+      cellReading(measuredCell({ avg_position: 2.345 }), 'avg_position'),
     ]).toEqual([
       { kind: 'not_run' },
       { kind: 'too_few', answers: 12 },
@@ -74,8 +74,8 @@ describe('performance matrix cells', () => {
       });
     expect(
       csv('mention_rate', [
-        [measured({ mention_rate: 0.1234 }), { kind: 'not_run' }],
-        [measured({ answers: 3, mention_rate: null }), { kind: 'not_recorded' }],
+        [measuredCell({ mention_rate: 0.1234 }), { kind: 'not_run' }],
+        [measuredCell({ answers: 3, mention_rate: null }), { kind: 'not_recorded' }],
       ]),
     ).toEqual([
       ['ChatGPT', 'Acme', 12.3, 12],
@@ -83,7 +83,7 @@ describe('performance matrix cells', () => {
       ['Gemini', 'Acme', 'Not measured', 3],
       ['Gemini', 'Globex', 'Topic not recorded for this run', ''],
     ]);
-    expect(csv('avg_position', [[measured({ avg_position: 2.345 })]])).toEqual([
+    expect(csv('avg_position', [[measuredCell({ avg_position: 2.345 })]])).toEqual([
       ['ChatGPT', 'Acme', 2.35, 12],
     ]);
   });

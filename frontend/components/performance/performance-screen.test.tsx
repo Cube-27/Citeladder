@@ -659,7 +659,7 @@ function pagerRange(text: string) {
 }
 
 describe('PerformanceScreen table interactions', () => {
-  const measured = () =>
+  const measuredBody = () =>
     dashboard({
       selected: measuredWindow({ ...emptyTotals, clicks: 12, impressions: 120 }),
       dimension_counts: { ...dimensionCounts, query: 12, page: 30 },
@@ -673,7 +673,7 @@ describe('PerformanceScreen table interactions', () => {
       releaseSecondPage = resolve;
     });
     mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measured())),
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measuredBody())),
       http.get(`/api/v1/projects/${PROJECT}/performance/table`, async ({ request }) => {
         const params = new URL(request.url).searchParams;
         const dimension = params.get('dimension')!;
@@ -722,7 +722,7 @@ describe('PerformanceScreen table interactions', () => {
     const user = userEvent.setup();
     const asked: string[] = [];
     mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measured())),
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measuredBody())),
       http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
         const params = new URL(request.url).searchParams;
         const dimension = params.get('dimension')!;
@@ -768,7 +768,7 @@ describe('PerformanceScreen table interactions', () => {
       releasePages = resolve;
     });
     mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measured())),
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(measuredBody())),
       http.get(`/api/v1/projects/${PROJECT}/performance/table`, async ({ request }) => {
         const dimension = new URL(request.url).searchParams.get('dimension')!;
         if (dimension === 'page') await pages;

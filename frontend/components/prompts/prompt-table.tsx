@@ -31,7 +31,7 @@ import type { RowSelectionState } from '@/lib/prompts/selection';
 
 import { CitedDomainMarks } from './cited-domain-marks';
 import { NO_ANSWERS, NOT_MEASURED, positionAbsence } from './prompt-figures';
-import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
+import { formatMean, percentText } from '@/lib/format';
 
 /**
  * The change since the run that measured the same prompt before (owner,
@@ -433,7 +433,7 @@ function RateValue({
   rate,
 }: Readonly<{ measurement?: PromptMeasurement; rate?: number | null }>) {
   if (!measurement) return NOT_MEASURED;
-  return rate == null ? NO_ANSWERS : formatRate(rate);
+  return rate == null ? NO_ANSWERS : percentText(rate);
 }
 
 /** A prompt's visibility and its movement, its marks, then the low-priority figures. */
@@ -504,18 +504,16 @@ function FigureCells({ measurement }: Readonly<{ measurement?: PromptMeasurement
 function ShareOfVoice({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
   if (!measurement) return NOT_MEASURED;
   if (measurement.visibilityRate === null) return NO_ANSWERS;
-  return (
-    measured(formatRate(measurement.shareOfVoice)) ?? (
-      <Absence state="none" reason="No tracked brand was named in these answers." />
-    )
-  );
+  if (measurement.shareOfVoice === null)
+    return <Absence state="none" reason="No tracked brand was named in these answers." />;
+  return percentText(measurement.shareOfVoice);
 }
 
 /** The average position; never named and an unrecorded order stay apart from no run. */
 function AveragePosition({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
   if (!measurement) return NOT_MEASURED;
   if (measurement.position === null) return positionAbsence(measurement.visibilityRate);
-  const position = formatPositionExact(measurement.position);
+  const position = formatMean(measurement.position);
   return <span title={`Average of ${position} across this prompt's answers`}>{position}</span>;
 }
 

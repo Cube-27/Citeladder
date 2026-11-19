@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Absence } from '@/components/ui/absence';
 import { InfoHint } from '@/components/ui/info-hint';
 import type { PerformanceWindow } from '@/lib/api/performance';
-import { availabilityLabel, formatCount } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import {
   METRIC_CARDS,
   formatMetric,
@@ -12,14 +12,6 @@ import {
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 import type { MetricMark } from './performance-chart';
-
-/** The one missing-figure label on this surface. */
-const NOT_MEASURED = availabilityLabel('not_measured');
-
-/** A formatted figure, or null when the window measured nothing for it. */
-function measured(key: PerformanceMetricKey, value: number | null | undefined): string | null {
-  return value === null || value === undefined ? null : formatMetric(key, value);
-}
 
 /**
  * The four selectable GSC metric cards.
@@ -58,7 +50,7 @@ function metricComparison(
   return {
     label:
       comparison.evidence_state === 'not_run' ? `${compareLabel} (not imported)` : compareLabel,
-    value: measured(metricKey, comparison.totals[metricKey]),
+    value: formatMetric(metricKey, comparison.totals[metricKey] ?? null),
   };
 }
 
@@ -133,8 +125,7 @@ export function MetricCards({
             // The period labels earn their place only when TWO values stack:
             // with one number the range is already stated in the toolbar.
             caption: comparison ? selectedLabel : undefined,
-            value: measured(card.key, selected.totals[card.key]),
-            missingLabel: NOT_MEASURED,
+            value: formatMetric(card.key, selected.totals[card.key] ?? null),
             loading,
             comparison: comparison
               ? metricComparison(card.key, comparison, compareLabel)
@@ -201,7 +192,6 @@ export function Ga4SummaryRow({
             key: entry.key,
             label: entry.label,
             value: value === null || value === undefined ? null : formatCount(value),
-            missingLabel: NOT_MEASURED,
             loading,
             sub: comparison ? (
               <span className="tabular-nums">

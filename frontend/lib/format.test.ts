@@ -56,7 +56,7 @@ describe('formatPercent', () => {
       '0.0%',
       '100.0%',
     ]);
-    expect(formatPercent(null)).toBe('Not measured');
+    expect(formatPercent(null)).toEqual({ absent: 'not_measured' });
   });
 });
 

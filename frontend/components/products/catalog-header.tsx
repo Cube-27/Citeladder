@@ -12,7 +12,7 @@ import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
-import { availabilityLabel, formatCount, pluralCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { crawlPollInterval } from '@/lib/site-health/status';
 
@@ -62,10 +62,10 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
   if (read.kind !== 'answered') {
     const loading = read.kind === 'pending';
     // The page's one read-failure notice names the failure; a figure says only that it is missing.
-    const missingLabel = loading ? undefined : availabilityLabel('unavailable');
+    const missingState = loading ? undefined : ('unavailable' as const);
     return [
-      { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingLabel },
-      { key: 'site-health', label: 'Site health', value: null, loading, missingLabel },
+      { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingState },
+      { key: 'site-health', label: 'Site health', value: null, loading, missingState },
     ];
   }
   const { crawl } = read;
@@ -74,13 +74,13 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
       key: 'analyzed',
       label: 'Pages analyzed',
       value: crawl ? analyzedLabel(crawl) : null,
-      missingLabel: availabilityLabel('not_run'),
+      missingState: 'not_run',
     },
     {
       key: 'site-health',
       label: 'Site health',
       value: crawl ? <CrawlStatusBadge crawl={crawl} /> : null,
-      missingLabel: availabilityLabel('not_run'),
+      missingState: 'not_run',
     },
   ];
 }
@@ -123,7 +123,7 @@ function CatalogStats({
   // A catalog read still pending or failed says nothing about the counts (invariant 7).
   const missing = {
     loading: catalog.isPending,
-    missingLabel: catalog.isError ? availabilityLabel('unavailable') : undefined,
+    missingState: catalog.isError ? ('unavailable' as const) : undefined,
   };
   const counts = catalog.data;
   const items: FigureSegment[] = [

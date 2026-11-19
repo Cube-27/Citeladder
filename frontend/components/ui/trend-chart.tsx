@@ -24,7 +24,8 @@ import {
   type TrendScale,
 } from '@/components/ui/trend-geometry';
 import { LineEndLabels } from '@/components/ui/trend-line-labels';
-import { availabilityLabel } from '@/lib/format';
+import { shownWith } from '@/components/ui/series-data';
+import { formattedText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
@@ -114,8 +115,7 @@ export function TrendChart({
     values: line.values,
     tone: chartTone(line, index),
   }));
-  const shown = (value: number | null | undefined) =>
-    value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
+  const shown = shownWith(format);
   const scale = trendScale({
     width,
     height,
@@ -200,7 +200,7 @@ export function TrendChart({
         columns={data.map((point) => point.label)}
         rows={lines.map((line) => ({
           name: line.name,
-          values: data.map((_, index) => shown(line.values[index])),
+          values: data.map((_, index) => formattedText(shown(line.values[index]))),
         }))}
         notes={[
           ...data.flatMap((point) =>

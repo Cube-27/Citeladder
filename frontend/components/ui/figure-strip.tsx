@@ -18,12 +18,18 @@ import {
 import { InfoHint } from '@/components/ui/info-hint';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { TextLink } from '@/components/ui/text-link';
-import { absenceOf, availabilityLabel } from '@/lib/format';
+import {
+  type Absent,
+  availabilityLabel,
+  type DataAvailabilityState,
+  type Formatted,
+  isAbsent,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type FigureValue =
   | {
-      value: ReactNode;
+      value: ReactNode | Absent;
       score?: undefined;
       /** A glyph before the label; give one to every figure of a strip or to none. */
       icon?: LucideIcon;
@@ -53,7 +59,9 @@ export type FigureSegment = Readonly<
     label: ReactNode;
     /** The card's title already names the figure: the label stays only as the `dt`, visually hidden. */
     labelHidden?: boolean;
-    /** The absence's word, for its accessible name and tooltip. Defaults to "Not measured". */
+    /** Which absence a null value is. Defaults to not measured. */
+    missingState?: DataAvailabilityState;
+    /** The absence's word, when the state's own word is not the reader's ("Too few classified"). */
     missingLabel?: string;
     loading?: boolean;
     /** A small mark after the label (series key, info hint). */
@@ -64,7 +72,7 @@ export type FigureSegment = Readonly<
     /** The basis: in the figure's hint, or under the value when the strip has `subLine`. */
     sub?: ReactNode;
     /** A second window's own value, in the figure's hint (never a ratio). */
-    comparison?: Readonly<{ label: ReactNode; value: string | null }>;
+    comparison?: Readonly<{ label: ReactNode; value: Formatted | null }>;
     action?: FigureLink;
   } & FigureValue &
     FigureAction
@@ -295,13 +303,8 @@ function FigureValue({ segment }: FigurePart) {
     );
   }
   const { value } = segment;
-  // A formatter's absence word is an absence too, never printed as a value.
-  if (value == null) {
-    const state = absenceOf(segment.missingLabel) ?? 'not_measured';
-    return <Absence state={state} label={segment.missingLabel} />;
-  }
-  const absent = absenceOf(value);
-  if (absent) return <Absence state={absent} />;
+  if (value == null) return <Absence state={segment.missingState} label={segment.missingLabel} />;
+  if (isAbsent(value)) return <Absence state={value.absent} label={segment.missingLabel} />;
   // Cut inside its cell; the whole value stays in the text and on hover.
   if (typeof value === 'string' || typeof value === 'number')
     return (
@@ -341,7 +344,10 @@ function comparisonText(segment: FigureSegment): ReactNode {
     <span data-figure-comparison="">
       {comparison.label}:{' '}
       <span className="tabular-nums">
-        {comparison.value ?? segment.missingLabel ?? availabilityLabel('not_measured')}
+        {comparison.value === null || isAbsent(comparison.value)
+          ? (segment.missingLabel ??
+            availabilityLabel(comparison.value?.absent ?? segment.missingState ?? 'not_measured'))
+          : comparison.value}
       </span>
     </span>
   );

@@ -19,7 +19,8 @@ import { AreaChart } from '@/components/ui/area-chart';
 import { Label, Metric, textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
-import { availabilityLabel } from '@/lib/format';
+import { Absence, printed } from '@/components/ui/absence';
+import { absent } from '@/lib/format';
 import { sentimentFigureValue } from '@/lib/visibility/perception';
 import {
   toChartPoints,
@@ -76,13 +77,13 @@ function Overview({
         <div>
           <Label>Brand mention rate</Label>
           <div>
-            <Metric>{rate(projection.visibility_rate)}</Metric>
+            <Metric>{printed(rate(projection.visibility_rate))}</Metric>
           </div>
         </div>
         <div>
           <Label>Owned citation rate</Label>
           <div>
-            <Metric>{rate(projection.owned_citation_rate)}</Metric>
+            <Metric>{printed(rate(projection.owned_citation_rate))}</Metric>
           </div>
         </div>
       </div>
@@ -174,8 +175,9 @@ function Trends({
     const row = points[index]?.rankings.find((entry) =>
       competitor ? entry.name === competitor : entry.is_brand,
     );
-    if (metric === 'sentiment') return sentimentFigureValue(row?.sentiment).missingLabel;
-    return availabilityLabel(
+    if (metric === 'sentiment')
+      return <Absence label={sentimentFigureValue(row?.sentiment).missingLabel} />;
+    return absent(
       metric === 'win_rate' && row?.win_answers === 0 ? 'not_applicable' : 'unavailable',
     );
   };

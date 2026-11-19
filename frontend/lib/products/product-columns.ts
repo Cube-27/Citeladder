@@ -61,7 +61,7 @@ const missing = (state: MissingState, note?: string): ProductCell => ({
 export const formatRate = (value: number) => formatPercent(value);
 
 /** A rate or mean, unavailable when nothing in scope measured it. */
-const measured = (value: number | null, format: (value: number) => string): ProductCell =>
+const figureCell = (value: number | null, format: (value: number) => string): ProductCell =>
   value === null ? missing('unavailable') : { kind: 'value', text: format(value) };
 
 /**
@@ -98,13 +98,13 @@ function merchantList(row: CommerceProductRow): ProductCell {
 export function productCell(row: CommerceProductRow, key: ProductColumnKey): ProductCell {
   switch (key) {
     case 'visibility':
-      return measured(row.visibility, formatRate);
+      return figureCell(row.visibility, formatRate);
     case 'appearances':
       return { kind: 'value', text: formatCount(row.appearances) };
     case 'win_rate':
-      return measured(row.win_rate, formatRate);
+      return figureCell(row.win_rate, formatRate);
     case 'position':
-      return measured(row.position, formatMean);
+      return figureCell(row.position, formatMean);
     case 'mentioned_price':
       return mentionedPrice(row);
     case 'catalog_price':

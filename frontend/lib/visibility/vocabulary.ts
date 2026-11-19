@@ -18,15 +18,15 @@
  *     shared availability vocabulary. Never a placeholder sentence per cell.
  */
 
-import { availabilityLabel } from '@/lib/format';
+import { absent, type Absent } from '@/lib/format';
 
 /**
  * What the reader is told when a measurement produced no observations at all —
  * distinct from an observed zero, which stays `0%` (design.md, data
  * states).
  */
-export function observationLabel(state: string | null | undefined): string | null {
-  return state === 'no_observations' ? availabilityLabel('not_measured') : null;
+export function noObservations(state: string | null | undefined): Absent | null {
+  return state === 'no_observations' ? absent() : null;
 }
 
 /**

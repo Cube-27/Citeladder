@@ -4,7 +4,6 @@ import { SearchX } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
-import { Absence } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
@@ -24,7 +23,6 @@ import {
   dimensionTab,
   formatDimensionValue,
   formatMetric,
-  measured,
   metricDelta,
   metricDifference,
   sortDirection,
@@ -306,7 +304,7 @@ export function DimensionTable({
           {displayedMetrics.flatMap((metric) => {
             const selectedCell = (
               <TableCell key={metric.key} numeric>
-                {measured(formatMetric(metric.key, row.metrics[metric.key])) ?? <Absence />}
+                {formatMetric(metric.key, row.metrics[metric.key])}
               </TableCell>
             );
             if (!comparing) return [selectedCell];
@@ -320,7 +318,7 @@ export function DimensionTable({
             return [
               selectedCell,
               <TableCell key={`${metric.key}-comparison`} numeric className="text-ink-2">
-                {measured(formatMetric(metric.key, comparisonValue)) ?? <Absence />}
+                {formatMetric(metric.key, comparisonValue)}
               </TableCell>,
               <TableCell key={`${metric.key}-difference`} numeric>
                 <Delta {...metricDelta(metric.key, difference)} />

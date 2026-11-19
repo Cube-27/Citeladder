@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
 import {
-  availabilityLabel,
   formatCount,
   formatPercent,
   formatWindowDate,
@@ -151,7 +150,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
         key: 'requests',
         label: CRAWL_REQUESTS,
         value: null,
-        missingLabel: availabilityLabel('unavailable'),
+        missingState: 'unavailable',
         marker: (
           <WhyAbsent label={CRAWL_REQUESTS}>
             Crawl log collection is not available for this workspace yet. AI referrals and tracked
@@ -180,7 +179,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       key: 'pages',
       label: 'Path-level pages',
       value: crawl.pages === null ? null : formatCount(crawl.pages),
-      missingLabel: availabilityLabel('unavailable'),
+      missingState: 'unavailable',
       sub:
         crawl.active_bots === null
           ? 'Active bots unavailable'
@@ -190,7 +189,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       key: 'errors',
       label: 'Error share',
       value: crawl.error_share === null ? null : errorShare(crawl.error_share),
-      missingLabel: availabilityLabel('unavailable'),
+      missingState: 'unavailable',
       sub: failedNote
         ? `Within the selected requests. ${failedNote}`
         : 'Within the selected requests.',
@@ -216,7 +215,7 @@ function noRequestsFigure({
       key: 'requests',
       label: CRAWL_REQUESTS,
       value: null,
-      missingLabel: availabilityLabel('not_connected'),
+      missingState: 'not_connected',
     };
   return {
     key: 'requests',
@@ -246,7 +245,7 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
     label,
     caption: 'Latest day',
     value: latest?.value == null ? null : formatCount(latest.value),
-    missingLabel: availabilityLabel(synced ? 'unavailable' : unsyncedKind(ga4)),
+    missingState: synced ? 'unavailable' : unsyncedKind(ga4),
     marker: hinted ? <WhyAbsent label={label}>{unsynced.note}</WhyAbsent> : undefined,
     sub:
       reported || referrals.window_end !== null ? (
@@ -326,9 +325,7 @@ function citationFigure(citations: Overview['citations']): FigureSegment {
     label: 'Tracked citations',
     value: measured ? formatCount(citations.count) : null,
     // No run is "not run yet"; a run not yet counted is unavailable for now.
-    missingLabel: availabilityLabel(
-      !measured && citations.reason === 'no_completed_run' ? 'not_run' : 'unavailable',
-    ),
+    missingState: !measured && citations.reason === 'no_completed_run' ? 'not_run' : 'unavailable',
     sub: measured ? citations.label : `${citations.label} · ${citationGapLabel(citations.reason)}`,
   };
 }

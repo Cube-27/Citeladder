@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 
 import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
+import { printed } from '@/components/ui/absence';
 import { POP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
+import type { Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -102,7 +104,7 @@ export type TooltipRow = Readonly<{
   name: string;
   /** Its indicator's colour, a CSS colour (`SERIES_COLOR[tone]`). */
   color: string;
-  value: string;
+  value: Formatted;
   shape?: MarkerShape;
   mark?: ReactNode;
 }>;
@@ -124,7 +126,7 @@ export function ChartTooltipCard({
           <SeriesIndicator color={row.color} shape={row.shape} />
           {row.mark}
           <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-medium tabular-nums">{row.value}</span>
+          <span className="text-ink font-medium tabular-nums">{printed(row.value)}</span>
         </div>
       ))}
       {note ? <p className={textRole('caption', 'text-warning')}>{note}</p> : null}

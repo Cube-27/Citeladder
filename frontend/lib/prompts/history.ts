@@ -2,7 +2,7 @@ import type { AnswerStates } from '@citeladder/contracts/visibility';
 
 import type { TrendEvent, TrendPoint } from '@/components/ui/series-data';
 import type { PromptHistory, PromptMetricItem } from '@citeladder/contracts';
-import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
+import { formatDisplayDate, formatDisplayShortDate, formattedText } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 
 type HistoryPoint = PromptHistory['points'][number];
@@ -24,7 +24,7 @@ export function mentionRatePoints(points: readonly HistoryPoint[], timeZone: str
   return points.map((point) => {
     const value = percent(point.mention_rate);
     return {
-      label: `${formatDisplayDate(point.completed_at, timeZone)} · ${formatWholePercent(value)}`,
+      label: `${formatDisplayDate(point.completed_at, timeZone)} · ${formattedText(formatWholePercent(value))}`,
       axisLabel: formatDisplayShortDate(point.completed_at, timeZone),
       value,
       timestamp: new Date(point.completed_at).getTime(),

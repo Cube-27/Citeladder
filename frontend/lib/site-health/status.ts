@@ -29,7 +29,7 @@ import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 import { CRAWL_POLL_MS, CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
-import { availabilityLabel, formatCount, formatDisplayTimestamp } from '@/lib/format';
+import { absent, availabilityLabel, formatCount, type Formatted } from '@/lib/format';
 import { sentenceCaseStatus } from '@/lib/utils';
 
 const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
@@ -77,9 +77,6 @@ export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
     return `Some page pairs were not checked: ${reasons}. These suggestions cover the rest.`;
   return null;
 }
-
-/** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
-export const PLACEHOLDER = availabilityLabel('not_measured');
 
 /**
  * The page browser's default ordering, which is also the pages endpoint's
@@ -389,7 +386,7 @@ export function measurementCaveat(
   }
   if (state === 'excluded') return 'Excluded from this audit';
   if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
-  return PLACEHOLDER;
+  return availabilityLabel('not_measured');
 }
 
 /**
@@ -418,16 +415,10 @@ export function pageDisplayTitle(title: string | null, displayUrl: string): stri
   return last ? `/${last}` : displayUrl;
 }
 
-/** Format a nullable issue count; null (unanalysed) renders the placeholder. */
-export function formatIssueCount(count: number | null): string {
-  if (count === null) return PLACEHOLDER;
+/** Format a nullable issue count; null (unanalysed) is not measured. */
+export function formatIssueCount(count: number | null): Formatted {
+  if (count === null) return absent();
   return `${count}`;
-}
-
-/** Short, stable date/time label for a timestamp (or the placeholder). */
-export function formatAudited(timestamp: string | null, timeZone = 'UTC'): string {
-  if (!timestamp) return PLACEHOLDER;
-  return formatDisplayTimestamp(timestamp, timeZone);
 }
 
 function pluralize(n: number, word: string): string {

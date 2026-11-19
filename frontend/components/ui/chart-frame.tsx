@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/step-chart-parts';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
-import { ABSENCE_MARK, absenceOf } from '@/lib/format';
+import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** The plot heights a chart may take: 160, 240 and 320. */
@@ -83,12 +83,12 @@ export type KeyEntry = Readonly<{
   mark?: ReactNode;
   tone: SeriesTone;
   shape?: MarkerShape;
-  value?: string;
+  value?: Formatted;
 }>;
 
 /** A key's latest value; an absence is the muted mark (the summary and table say it in words). */
-function KeyValue({ value }: Readonly<{ value: string }>) {
-  if (absenceOf(value))
+function KeyValue({ value }: Readonly<{ value: Formatted }>) {
+  if (isAbsent(value))
     return <span className="type-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
   return <span className="type-caption text-ink shrink-0 tabular-nums">{value}</span>;
 }
@@ -178,7 +178,7 @@ export function ChartTipSheet({
           <SeriesSwatch tone={row.tone} />
           {row.mark}
           <span className="min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="tabular-nums">{row.value}</span>
+          {row.value === undefined ? null : <KeyValue value={row.value} />}
         </div>
       ))}
       {note ? <p className={textRole('caption')}>{note}</p> : null}

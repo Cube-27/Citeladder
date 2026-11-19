@@ -9,13 +9,7 @@ import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import {
-  availabilityLabel,
-  formatDisplayShortDate,
-  formatPercent,
-  measured,
-  pluralCount,
-} from '@/lib/format';
+import { formatDisplayShortDate, formatPercent, pluralCount } from '@/lib/format';
 import {
   AD_APPLICABILITY,
   ADS_COVERAGE_NOTE,
@@ -133,14 +127,14 @@ function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
               {
                 key: 'presence',
                 label: 'Ad presence',
-                value: measured(formatPercent(data.presence.rate)),
-                missingLabel: availabilityLabel('unavailable'),
+                value: data.presence.rate === null ? null : formatPercent(data.presence.rate),
+                missingState: 'unavailable',
                 sub: presenceLine(data.presence),
               },
               {
                 key: 'brand',
                 label: 'Your ad share',
-                value: measured(formatPercent(data.brand.share)),
+                value: formatPercent(data.brand.share),
                 missingLabel: 'Not advertising',
                 sub:
                   data.brand.best_rank === null

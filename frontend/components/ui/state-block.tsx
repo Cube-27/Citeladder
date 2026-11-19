@@ -117,7 +117,7 @@ type Subject = Readonly<{
 type MeasuredOptions<T, M extends T> = Subject &
   Readonly<{
     /** True when the persisted answer holds a measurement; false is "No measurements yet". */
-    measured: (data: T) => data is M;
+    hasMeasurement: (data: T) => data is M;
     notMeasured: NotMeasuredCopy;
   }>;
 
@@ -157,7 +157,7 @@ export function screenState<T, M extends T>(
       },
     };
   }
-  if (!('measured' in options) || options.measured(read.data)) {
+  if (!('hasMeasurement' in options) || options.hasMeasurement(read.data)) {
     return { kind: 'ready', data: read.data };
   }
   return { kind: 'state', state: { kind: 'not_measured', ...options.notMeasured } };

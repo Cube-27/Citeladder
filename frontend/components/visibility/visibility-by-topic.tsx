@@ -11,7 +11,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
-import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
+import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -95,15 +95,9 @@ export function VisibilityByTopic({
             {row.kind === 'measured' ? (
               <>
                 <TableCell numeric>{formatCount(row.answers)}</TableCell>
-                <TableCell numeric>
-                  {measured(formatRate(row.visibility_rate)) ?? <Absence />}
-                </TableCell>
-                <TableCell numeric>
-                  {measured(formatRate(row.share_of_voice)) ?? <Absence />}
-                </TableCell>
-                <TableCell numeric>
-                  {measured(formatPositionExact(row.avg_position)) ?? <Absence />}
-                </TableCell>
+                <TableCell numeric>{formatRate(row.visibility_rate)}</TableCell>
+                <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
+                <TableCell numeric>{formatPositionExact(row.avg_position)}</TableCell>
                 <TableCell numeric>
                   {row.rank === null ? (
                     <Absence reason="No tracked brand was named" />

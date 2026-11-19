@@ -9,7 +9,13 @@
  * (branded / non-branded) breakdown in `VisibilityResponse` yet, so no such
  * control is offered.
  */
-import { availabilityLabel, formatMean, formatPercent, formatStripTimestamp } from '@/lib/format';
+import {
+  absent,
+  formatMean,
+  formatPercent,
+  formatStripTimestamp,
+  type Formatted,
+} from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
@@ -150,14 +156,14 @@ export function visibleEngines(
   });
 }
 
-/** Format a 0–1 rate as a one-decimal percentage, or the placeholder. */
-export function formatRate(rate: number | null): string {
-  if (rate === null || Number.isNaN(rate)) return PLACEHOLDER;
+/** Format a 0–1 rate as a one-decimal percentage, or its absence. */
+export function formatRate(rate: number | null): Formatted {
+  if (rate === null || Number.isNaN(rate)) return absent();
   return formatPercent(rate);
 }
 
 /**
- * Format a value that is ALREADY a percentage, or the placeholder.
+ * Format a value that is ALREADY a percentage, or its absence.
  *
  * `formatRate` takes a 0–1 rate and scales it. The trend series is built in
  * whole percent, so passing its points through `formatRate` multiplied them a
@@ -165,39 +171,25 @@ export function formatRate(rate: number | null): string {
  * `formatPercent` in `lib/format`, which takes a 0–1 fraction: the two shared a
  * name and signature, so an auto-import of the wrong one type-checked.
  */
-export function formatWholePercent(value: number | null): string {
-  if (value === null || Number.isNaN(value)) return PLACEHOLDER;
+export function formatWholePercent(value: number | null): Formatted {
+  if (value === null || Number.isNaN(value)) return absent();
   return `${Math.round(value)}%`;
 }
 
-/** Format a 0–100 score as a whole number, or the placeholder. */
+/** Format a 0–100 score as a whole number, or its absence. */
 export { formatScore } from '@/lib/format';
 
 /** A whole place in an ordered list ("#3"); never an average, which is `formatPositionExact`. */
-export function formatRank(rank: number | null): string {
-  if (rank === null || Number.isNaN(rank)) return PLACEHOLDER;
+export function formatRank(rank: number | null): Formatted {
+  if (rank === null || Number.isNaN(rank)) return absent();
   return `#${Math.max(1, Math.round(rank))}`;
 }
 
 /** An average position as a decimal ("2.5"): a mean over answers, not a rank. */
-export function formatPositionExact(position: number | null): string {
-  if (position === null || Number.isNaN(position)) return PLACEHOLDER;
+export function formatPositionExact(position: number | null): Formatted {
+  if (position === null || Number.isNaN(position)) return absent();
   return formatMean(position);
 }
-
-/** The not-measured placeholder for an absent average position. */
-export const PLACEHOLDER = availabilityLabel('not_measured');
-
-/**
- * A formatted value, or `null` where the formatter had nothing to format.
- *
- * The formatters answer in WORDS, and the COMPONENT that renders them decides
- * to draw the shared mark instead — `Value` and `Absence` both do, pairing
- * it with those words as its accessible name. Keeping the mark out
- * of the string is what makes that possible: a bare dash in a formatter's
- * output reaches the screen with nothing to announce it.
- */
-export { measured } from '@/lib/format';
 
 /**
  * A prompt option for the Query Fanout evidence prompt selector. This is

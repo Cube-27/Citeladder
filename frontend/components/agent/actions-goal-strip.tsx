@@ -1,7 +1,7 @@
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StatusMark } from '@/components/ui/status-mark';
-import { availabilityLabel, formatCount } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import {
   ACTION_GOAL_HINT,
   ACTION_GOAL_LABEL,
@@ -46,7 +46,7 @@ export function GoalStrip({
               <span className="min-w-0 truncate">{goalCountWords(goal, entry.count)}</span>
             </span>
           ) : null,
-          missingLabel: availabilityLabel('unavailable'),
+          missingState: 'unavailable',
           marker: (
             <>
               {entry?.blocking ? (

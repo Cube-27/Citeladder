@@ -114,6 +114,7 @@ function factFigure(data: AccuracyResponse | undefined, onSelect: () => void): F
     key: 'contradicted',
     label: 'Contradicted claims',
     value: data?.state === 'value' ? String(data.score.coverage.contradicted) : null,
+    missingState: data?.state === 'unavailable' ? 'unavailable' : undefined,
     missingLabel: data && data.state !== 'value' ? ACCURACY_MISSING[data.state] : undefined,
     loading: data === undefined,
     sub: 'Claims about you that a confirmed fact contradicts.',

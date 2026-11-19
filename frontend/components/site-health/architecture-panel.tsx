@@ -14,7 +14,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -24,7 +24,7 @@ import type {
   CoverageState,
   SiteArchitecture,
 } from '@citeladder/contracts';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatPercent, formattedText } from '@/lib/format';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
@@ -294,7 +294,7 @@ function PageKindPages({
 function depthSummary(data: SiteArchitecture): string {
   const parts = data.structure_depth.buckets.map(
     (bucket) =>
-      `${DEPTH_LABELS[bucket.key]}: ${bucket.page_count} pages (${formatPercent(bucket.percentage)})`,
+      `${DEPTH_LABELS[bucket.key]}: ${bucket.page_count} pages (${formattedText(formatPercent(bucket.percentage))})`,
   );
   return `Share of pages by click depth from the homepage. ${parts.join('; ')}.`;
 }
@@ -367,7 +367,12 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                   <MeterRow
                     key={bucket.key}
                     name={DEPTH_LABELS[bucket.key]}
-                    figure={`${formatCount(bucket.page_count)} (${formatPercent(bucket.percentage)})`}
+                    figure={
+                      <>
+                        {formatCount(bucket.page_count)} (
+                        {printed(formatPercent(bucket.percentage))})
+                      </>
+                    }
                     value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
                     label={`${DEPTH_LABELS[bucket.key]} share of pages`}
                     tone="accent"
