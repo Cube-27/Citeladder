@@ -28,6 +28,8 @@ export type FilterBarProps = Readonly<{
    * Archived, Domains | URLs, Issues | Advisories). It leads the row.
    */
   view?: ReactNode;
+  /** Pickers that open the control row, before the search (Actions' status and grouping). */
+  lead?: ReactNode;
   /** A `SearchField`, after the view. */
   search?: ReactNode;
   /**
@@ -100,7 +102,8 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
 export function FilterBar({ view, ...row }: FilterBarProps) {
   if (!view) return <ControlRow {...row} />;
   // The view leads on a row of its own; search and filters are the second row (owner, 2026-11-19).
-  const second = row.search || row.filters?.length || row.status !== undefined || row.actions;
+  const second =
+    row.lead || row.search || row.filters?.length || row.status !== undefined || row.actions;
   return (
     <div data-filter-bar-rows="" className="grid w-full min-w-0 gap-2">
       <div className="flex max-w-full min-w-0">{view}</div>
@@ -109,7 +112,7 @@ export function FilterBar({ view, ...row }: FilterBarProps) {
   );
 }
 
-function ControlRow({ search, filters = [], status, actions }: Omit<FilterBarProps, 'view'>) {
+function ControlRow({ lead, search, filters = [], status, actions }: Omit<FilterBarProps, 'view'>) {
   const { chips, menu } = placeFilters(filters);
   const set = filters.filter((filter) => !filter.isDefault);
   const windowLabel = dataWindow(chips);
@@ -119,6 +122,7 @@ function ControlRow({ search, filters = [], status, actions }: Omit<FilterBarPro
       aria-label="Search and filters"
       className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
+      {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {search ? <div className="rail:w-64 rail:min-w-[200px] min-w-0">{search}</div> : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">

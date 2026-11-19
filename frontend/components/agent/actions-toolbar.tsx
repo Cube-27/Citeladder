@@ -47,7 +47,7 @@ export function ActionsToolbar({
 }: Readonly<{ scope: ProjectScope; view: ActionsView; newCount: number | undefined }>) {
   return (
     <FilterBar
-      view={
+      lead={
         <Inline className="flex-wrap">
           <FilterChoice<StatusChoice>
             label="Status"

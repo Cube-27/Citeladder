@@ -111,7 +111,7 @@ async function stubActions(page: Page) {
 async function layout(page: Page): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
-    toolbar: page.locator('[data-filter-bar-rows]'),
+    toolbar: page.locator('[data-filter-bar]'),
     goals: page.getByRole('group', { name: 'Goals' }),
     firstGroup: page.locator('[data-tree-group]').first(),
   };
@@ -155,7 +155,7 @@ for (const width of [1280, 1600])
       }
     };
     const choose = async (trigger: RegExp, option: string) => {
-      await page.locator('[data-filter-bar-rows]').getByRole('button', { name: trigger }).click();
+      await page.locator('[data-filter-bar]').getByRole('button', { name: trigger }).click();
       await page.getByRole('menuitemradio', { name: option }).click();
     };
     const toggle = (name: RegExp) => page.getByRole('button', { name }).first().click();
