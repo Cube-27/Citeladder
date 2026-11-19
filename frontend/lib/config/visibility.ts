@@ -1,20 +1,30 @@
+/** One name per Insights metric (owner, 2026-11-19); the trend and the matrix keep their wire keys. */
+const METRIC_LABELS = {
+  visibility: 'Visibility',
+  shareOfVoice: 'Share of voice',
+  position: 'Position',
+  winRate: 'Win rate',
+  sentiment: 'Sentiment',
+  ownedCitationRate: 'Owned citation rate',
+} as const;
+
 /** Visibility presentation choices; calculations stay in the analysis domain. */
 export const VISIBILITY_METRICS = [
-  { value: 'brand_mention_rate', label: 'Visibility' },
-  { value: 'sov', label: 'Share of voice' },
-  { value: 'avg_position', label: 'Position' },
-  { value: 'win_rate', label: 'Win rate' },
-  { value: 'sentiment', label: 'Sentiment' },
-  { value: 'owned_citation_rate', label: 'Owned citation rate' },
+  { value: 'brand_mention_rate', label: METRIC_LABELS.visibility },
+  { value: 'sov', label: METRIC_LABELS.shareOfVoice },
+  { value: 'avg_position', label: METRIC_LABELS.position },
+  { value: 'win_rate', label: METRIC_LABELS.winRate },
+  { value: 'sentiment', label: METRIC_LABELS.sentiment },
+  { value: 'owned_citation_rate', label: METRIC_LABELS.ownedCitationRate },
 ] as const;
 
 /** The Insights performance matrix's metrics and axes. */
 export const MATRIX_METRICS = [
-  { value: 'mention_rate', label: 'Mention rate' },
-  { value: 'share_of_voice', label: 'Share of voice' },
-  { value: 'avg_position', label: 'Avg position' },
-  { value: 'win_rate', label: 'Win rate' },
-  { value: 'sentiment', label: 'Net sentiment' },
+  { value: 'mention_rate', label: METRIC_LABELS.visibility },
+  { value: 'share_of_voice', label: METRIC_LABELS.shareOfVoice },
+  { value: 'avg_position', label: METRIC_LABELS.position },
+  { value: 'win_rate', label: METRIC_LABELS.winRate },
+  { value: 'sentiment', label: METRIC_LABELS.sentiment },
 ] as const;
 
 export const MATRIX_DIMENSIONS = [
