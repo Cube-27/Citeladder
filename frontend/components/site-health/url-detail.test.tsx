@@ -231,6 +231,7 @@ describe('UrlDetail', () => {
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
     ).toBeInTheDocument();
     // The trail and the h1 name the page; the identity card never repeats it.
+    await screen.findByRole('navigation', { name: 'Breadcrumb' });
     expect(
       screen
         .getAllByText('Best&Less Online')
@@ -275,7 +276,7 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
     expect(within(trail).getByRole('link', { name: 'Pages' }).getAttribute('href')).toMatch(
       /^\/site\?tab=pages/,
     );

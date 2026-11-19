@@ -118,7 +118,7 @@ describe('A URL page', () => {
       'Form controls missing accessible namesAEOHigh',
       'Meta description too longAEOHigh',
     ]);
-    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
     expect(
       within(trail).getByRole('link', { name: 'Form controls missing accessible names' }),
     ).toHaveAttribute('href', `/actions/${FROM}?project=${PROJECT}`);

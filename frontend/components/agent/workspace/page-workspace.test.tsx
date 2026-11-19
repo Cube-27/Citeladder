@@ -109,7 +109,7 @@ describe('The page workspace', () => {
       await screen.findByRole('heading', { level: 1, name: 'acme.test/pricing' }),
     ).toBeVisible();
     expect(
-      within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      within(await screen.findByRole('navigation', { name: 'Breadcrumb' }))
         .getAllByRole('link')
         .map((link) => link.textContent),
     ).toEqual(['Actions']);

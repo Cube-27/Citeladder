@@ -1,16 +1,22 @@
-import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { lazy, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
-import { Breadcrumb, type Crumb } from '@/components/ui/breadcrumb';
+import type { Crumb } from '@/components/ui/breadcrumb';
+import { LazyIsland } from '@/components/ui/lazy-island';
 import { Masthead, usePublishedHeight } from '@/components/ui/masthead';
 import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { routeTrail } from '@/lib/navigation/route-trail';
 import { cn } from '@/lib/utils';
+
+// Only record pages draw a trail, so it stays out of the boot bundle; a route's loading frame fetches it first.
+const Breadcrumb = lazy(() =>
+  import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
+);
 
 /** The slots every shell template shares (top to bottom). */
 export type PageFrameSlots = Readonly<{
@@ -86,7 +92,11 @@ export function PageFrame({
         <Masthead
           title={resolved}
           crumb={
-            hasTrail ? <Breadcrumb parts={[...parents, crumb ?? { label: resolved }]} /> : null
+            hasTrail ? (
+              <LazyIsland failed={null} label="breadcrumb" defects="contain">
+                <Breadcrumb parts={[...parents, crumb ?? { label: resolved }]} />
+              </LazyIsland>
+            ) : null
           }
           lead={
             <>
