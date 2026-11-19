@@ -488,33 +488,34 @@
   --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
-/* The app's dark: designed, not inverted. Linear's near-blacks (sampled
-   2026-11-17), with our shell kept: the chrome is a step lighter than the
-   ground, not a darker frame. It rebinds every literal the app's light block
-   below sets: that block follows the system's dark at the same specificity,
-   so it would otherwise win here. The website and docs keep the system's dark above. */
+/* The app's dark: designed, not inverted. Neutral near-blacks after the
+   owner's table reference (sampled 2026-11-19), with our shell kept: the
+   chrome is a step lighter than the ground, not a darker frame. It rebinds
+   every literal the app's light block below sets: that block follows the
+   system's dark at the same specificity, so it would otherwise win here.
+   The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  /* Each layer steps lighter than the one beneath, so a surface reads by its
-     fill alone, with no edge and no shadow. */
-  --color-ground: oklch(18.3% 0.002 286);
-  --color-chrome: oklch(20% 0.002 286);
-  --color-surface: oklch(21.8% 0.002 286);
-  --color-raised: oklch(24% 0.004 286);
-  --color-well: oklch(25.7% 0.004 286);
+  /* Each layer steps at least 1.05 lighter than the one beneath, so a surface
+     reads by its fill alone, with no edge and no shadow. */
+  --color-ground: oklch(12.5% 0 0);
+  --color-chrome: oklch(17% 0 0);
+  --color-surface: oklch(20.6% 0 0);
+  --color-raised: oklch(23% 0 0);
+  --color-well: oklch(25.6% 0 0);
   --color-control-fill: var(--color-well);
-  --color-rule: oklch(26.5% 0.002 286);
-  --color-control-edge: oklch(31% 0.0055 271);
+  --color-rule: oklch(28.5% 0 0);
+  --color-control-edge: oklch(31% 0 0);
   /* Field, checkbox and radio edges: quiet like Linear's, a step past
      control-edge so an unchecked ring still shows on a surface. */
-  --color-control-line: oklch(35.3% 0.009 277);
-  --color-chart-grid: oklch(28.6% 0.004 286);
-  --color-ink: oklch(91.6% 0 0);
-  --color-ink-2: oklch(75.7% 0 0);
-  --color-ink-hover: oklch(83.3% 0 0);
-  --color-on-ink: oklch(18.3% 0.002 286);
+  --color-control-line: oklch(36% 0 0);
+  --color-chart-grid: oklch(26% 0 0);
+  --color-ink: oklch(94% 0 0);
+  --color-ink-2: oklch(72% 0 0);
+  --color-ink-hover: oklch(85% 0 0);
+  --color-on-ink: oklch(12.5% 0 0);
   --color-accent: oklch(70.3% 0.194 39.3);
   --color-accent-text: oklch(75.3% 0.155 41.6);
-  /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
+  /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
      the loudest surface on a page. */
   --color-accent-wash: oklch(28% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
@@ -636,7 +637,10 @@
 :root:not([data-public-surface]) {
   /* Inherited: no paragraph ends on a lone word; nowrap rows keep one line. */
   text-wrap: pretty;
-  --table-ground: var(--color-ground);
+  /* A table is a `well` shell holding its head, around an inset `surface` body. */
+  --table-head-ground: var(--color-well);
+  --table-ground: var(--color-surface);
+  --table-inset: 4px;
   /* Layers (2.4): ground, chrome, card, inset, overlay; each a fill step. */
   --color-ground: oklch(97.3% 0.003 265);
   --color-chrome: oklch(98.8% 0.0013 286);
@@ -1555,16 +1559,14 @@ a.focus-ring:active .type-caption {
 /* Containers. On the website a container is `surface` with one 1px `line`
    border. In the app the signed-in shell is one surface: the ground and the
    surface are one colour, and sections, lede text, figures and empty states
-   sit on it with no box (owner, 2026-11-18). Only tables, charts and
-   `framed` sections take a light `rule` frame with no fill; clickable cards,
+   sit on it with no box (owner, 2026-11-18). A table is its own `well`
+   shell (below); charts and `framed` sections take a light `rule` frame with
+   no fill; clickable cards,
    dialogs, drawers and menus keep their box. What sits inside a container
    never draws a second frame, and an inset (`.surface-inset`: a neutral
    callout, an inline empty state) is the sunken fill. */
 :root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
   --color-ground: var(--color-surface);
-}
-:root:not([data-public-surface]) [data-app-surface] {
-  --table-ground: var(--color-ground);
 }
 
 .table-frame {
@@ -1947,72 +1949,46 @@ label {
   }
 }
 
-/* A DataTable's title, description, toolbar, steppers and pager sit on the
-   page surface, on its left edge; only the table is framed: a `rule` edge at
-   the card radius, no fill, clipped to its corners (`clip`, not `hidden`: no
-   scroll container, so sticky heads still pin). Inside another container it
-   draws no second frame: it bleeds to the container's edges, and its bars
-   take the container's padding so the first and last cells still align. */
+/* Every app table, in a container or not (owner, 2026-11-19, after HeroUI's
+   table): a `well` shell at the overlay radius holds the head row, and the
+   body is a `surface` panel inset 4 from the shell's sides and foot, its
+   corners at the card radius. The shell is the DataTable frame, outside the
+   scroll mask, so a fading edge fades into the shell; it clips (not
+   `hidden`), so sticky heads still pin. A Table on its own draws the shell
+   on its scroll frame, as a border, so its sticky head pins inside it.
+   Title, toolbar and pager sit on the page above and below the shell. */
 :root:not([data-public-surface]) [data-data-table] {
   --table-bar-inset: 0px;
 }
 :root:not([data-public-surface]) [data-data-table-frame] {
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-card);
+  padding: 0 var(--table-inset) var(--table-inset);
+  border-radius: var(--radius-overlay);
+  background: var(--table-head-ground);
   overflow: clip;
 }
-:root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  [data-data-table] {
-  --table-bar-inset: var(--card-padding);
-  margin-inline: calc(var(--card-padding) * -1);
-}
-:root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  [data-data-table-frame] {
-  border: 0;
-  border-radius: 0;
-  overflow: visible;
-}
-:root:not([data-public-surface]) :where([role='dialog']) [data-data-table] {
-  --table-ground: var(--color-raised);
-}
-/* Inside a container the footer bar closes the table under a rule, like a sheet's footer. */
-:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  [data-data-table-foot] {
-  border-top: 1px solid var(--color-rule);
-}
-
-/* A Table on its own in the app (outside a DataTable) takes the same frame on
-   the surface and is plain inside a container. */
-/* Rows are a height with their content centred in it (owner, 2026-11-18,
-   after Peec): 4 above and below, so a 32 control or a 28 avatar fits a
-   40 row and a value over its caption a 56 one. */
+/* Rows are a height with their content centred in it: 4 above and below, so
+   a 32 control fits a 44 row and a value over its caption a 56 one. */
 :root:not([data-public-surface]) .table-frame {
-  --table-row-height: 40px;
+  --table-row-height: 44px;
   --table-row-height-2: 56px;
   --table-cell-padding-y: 4px;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
-:root:not([data-public-surface])
-  .table-frame:not(
-    [data-data-table] *,
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog']) *
-  ) {
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-card);
+:root:not([data-public-surface]) [data-data-table-frame] .table-frame {
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
-@media (max-width: 899px), (pointer: coarse) {
-  :root:not([data-public-surface]) .table-frame {
-    --table-row-height: 44px;
-  }
+:root:not([data-public-surface]) .table-frame:not([data-data-table] *) {
+  border: var(--table-inset) solid var(--table-head-ground);
+  border-top-width: 0;
+  border-radius: var(--radius-overlay);
+  background: var(--table-head-ground);
 }
 
-/* The head row: the frame's first row, 36 high, caption-strong, sentence
-   case, ink-2, with no fill of its own (the table's ground keeps a sticky
-   head opaque over scrolled rows) and a `rule` under it. */
+/* The head row sits on the shell: 36 high, caption-strong, sentence case,
+   ink-2, no rule under it; its shell fill keeps a sticky head opaque over
+   scrolled rows. The body panel's corners round on its corner cells. */
 :root:not([data-public-surface]) .table-frame thead th {
   height: 36px;
   font-size: var(--text-caption);
@@ -2021,8 +1997,22 @@ label {
   letter-spacing: normal;
   text-transform: none;
   color: var(--color-ink-2);
-  background: var(--table-ground);
-  box-shadow: inset 0 -1px 0 var(--color-rule);
+  background: var(--table-head-ground);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr > * {
+  background-color: var(--table-ground);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr:first-child > :first-child {
+  border-start-start-radius: var(--radius-card);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr:first-child > :last-child {
+  border-start-end-radius: var(--radius-card);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr:last-child > :first-child {
+  border-end-start-radius: var(--radius-card);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr:last-child > :last-child {
+  border-end-end-radius: var(--radius-card);
 }
 /* The head row is its cells' 36, not a body row's height. */
 :root:not([data-public-surface]) .table-frame thead > tr {

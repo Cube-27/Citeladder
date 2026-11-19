@@ -149,7 +149,7 @@ const QUERY_STATE_PADDING = 0;
  * every row at 56, the title (20) + 4 + caption (16) centred in it.
  */
 const TABLE_ROW_HEIGHT_TWO_LINES = 56;
-/** Rows are a height with content centred in it: 4 keeps a 32 control in a 40 row. */
+/** Rows are a height with content centred in it: 4 keeps a 32 control in a 44 row. */
 const TABLE_CELL_PADDING_Y = 4;
 /** A DataTable's title-and-toolbar row is one control high. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
