@@ -13,13 +13,12 @@ import {
 } from '@citeladder/contracts/visibility-prompt-answers';
 
 import { policy } from '../config.ts';
-import { ApiError, notFound } from '../errors.ts';
-import { InvalidCursorError } from '../http/keyset-cursor.ts';
-import { AnalysisNotFoundError, TrendQueryError } from '../visibility/selection.ts';
+import { notFound } from '../errors.ts';
+import { AnalysisNotFoundError } from '../visibility/selection.ts';
 import { getExecutionEvidence } from '../visibility/execution.ts';
 import { getPromptAnswers } from '../visibility/prompt-answers.ts';
 import { defineGetRoute } from './define.ts';
-import { CURSOR, ENGINE, LIMIT, MARKET, WINDOW } from './visibility-selection.ts';
+import { CURSOR, ENGINE, LIMIT, MARKET, selectionErrors, WINDOW } from './visibility-selection.ts';
 
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 
@@ -81,23 +80,21 @@ export const executionRoutes = [
         projectId: path.project_id,
         marketId: query.market,
       };
-      try {
-        return await getPromptAnswers(db, scope, {
-          promptId: path.prompt_id,
-          logicalEngine: query.engine,
-          fromAt: query.from_at,
-          toAt: query.to_at,
-          brand: query.brand,
-          cited: query.cited,
-          search: query.search,
-          cursor: query.cursor,
-          limit: query.limit,
-        });
-      } catch (error) {
-        if (error instanceof TrendQueryError || error instanceof InvalidCursorError)
-          throw new ApiError(422, error.message);
-        throw error;
-      }
+      return selectionErrors(
+        () =>
+          getPromptAnswers(db, scope, {
+            promptId: path.prompt_id,
+            logicalEngine: query.engine,
+            fromAt: query.from_at,
+            toAt: query.to_at,
+            brand: query.brand,
+            cited: query.cited,
+            search: query.search,
+            cursor: query.cursor,
+            limit: query.limit,
+          }),
+        () => notFound('Prompt'),
+      );
     },
   }),
 ];

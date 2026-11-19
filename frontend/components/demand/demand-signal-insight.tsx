@@ -1,4 +1,5 @@
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
+import { queryRelevanceSchema } from '@citeladder/contracts/opportunity-evidence';
 import type { DemandSignal } from '@/lib/api/demand';
 import { numericMetric, signalDefinition } from '@/lib/demand/signals';
 import { formatCount, formatMean, formatPercent } from '@/lib/format';
@@ -66,33 +67,15 @@ function emergingDetail(signal: DemandSignal, { trends }: DemandDetectorPolicy):
   return `Impressions grew ${formatPercent((recent - prior) / prior)} (+${formatCount(recent - prior)}) across the last two ${trends.window_days}-day windows.`;
 }
 
-type QueryRelevance = {
-  state: string;
-  reason?: string;
-  title_coverage?: number;
-  h1_coverage?: number;
-  primary_content_coverage?: number;
-  absent_from_title?: string[];
-  absent_from_h1?: string[];
-  statement?: string | null;
-};
-
-function queryRelevance(signal: DemandSignal): QueryRelevance | null {
-  const value = signal.evidence.query_relevance;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const relevance = value as Record<string, unknown>;
-  if (typeof relevance.state !== 'string') return null;
-  return relevance as QueryRelevance;
-}
-
 function coverageLabel(value: number | undefined) {
-  return typeof value === 'number' ? formatPercent(value) : <Absence state="not_measured" />;
+  return value === undefined ? <Absence state="not_measured" /> : formatPercent(value);
 }
 
 function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) {
-  const relevance = queryRelevance(signal);
-  if (!relevance) return null;
-  if (relevance.state !== 'measured') {
+  const parsed = queryRelevanceSchema.safeParse(signal.evidence.query_relevance);
+  if (!parsed.success) return null;
+  const relevance = parsed.data;
+  if (relevance.state === 'unknown') {
     return (
       <Stack gap="tight" className={wellClasses()}>
         <span className={textRole('body', 'text-ink-2')}>Query relevance unavailable</span>

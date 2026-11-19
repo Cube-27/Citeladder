@@ -3,6 +3,8 @@
  * Change Intelligence regressions, promoted Demand signals and Commerce
  * product-metric, catalog and shelf gaps.
  */
+import { queryRelevanceSchema } from '@citeladder/contracts/opportunity-evidence';
+
 import { policy } from '../config.ts';
 import { siteHealth } from '../config/site-health.ts';
 import { rules } from '../analysis/opportunities/detectors.ts';
@@ -210,7 +212,10 @@ function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null
       metrics: { ...record(signal.metrics) },
       coverage: { ...record(signal.coverage) },
       limitations: Array.isArray(signal.limitations) ? [...signal.limitations] : [],
-      query_relevance: 'query_relevance' in evidence ? evidence.query_relevance : null,
+      query_relevance: queryRelevanceSchema
+        .nullable()
+        .catch(null)
+        .parse(evidence.query_relevance ?? null),
     },
     source_analysis_ids: [],
     source_issue_ids: [],

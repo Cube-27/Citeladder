@@ -335,6 +335,34 @@ describe('Demand tab', () => {
     expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
   });
 
+  it('reads a wrongly typed coverage as not measured and keeps the rest of the relevance', async () => {
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      signals: snapshot.signals.map((signal) =>
+        signal.topic_cluster === 'school fees'
+          ? {
+              ...signal,
+              evidence: {
+                ...signal.evidence,
+                query_relevance: {
+                  state: 'measured',
+                  title_coverage: '0.5',
+                  h1_coverage: 0,
+                  primary_content_coverage: 1,
+                },
+              },
+            }
+          : signal,
+      ),
+    });
+    renderProjection();
+
+    fireEvent.click(await findSignalRow('school fees'));
+
+    const relevance = await screen.findByRole('region', { name: 'Query relevance' });
+    expect(relevance).toHaveTextContent('Title—Not measuredH10.0%Page text100.0%');
+  });
+
   it('opens a promoted signal’s Action from its evidence and asks about the rest', async () => {
     const user = userEvent.setup();
     renderProjection();
