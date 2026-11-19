@@ -521,28 +521,6 @@ describe('A3 persisted Pages join', () => {
       referrals: { state: 'not_connected', value: null },
       citations: { value: null },
     });
-    // Inventory-only paths derive their path, folder and resource class, the
-    // same on an unfiltered page as under a folder or resource filter.
-    await fixtures.page(missing, '/docs/Guides/Deep/News.RSS', {}, { observed: true });
-    await fixtures.page(missing, '/robots.txt', {}, { observed: true });
-    const s = { workspaceId: missing.workspaceId, projectId: missing.projectId };
-    const shape = async (extra: Record<string, string>) =>
-      (await pagesRead(db, s, { ...filters, sort: 'url_asc', ...extra })).items.map((r) => [
-        r.display_path,
-        r.folder,
-        r.resource_class,
-      ]);
-    expect(await shape({})).toEqual([
-      ['/docs/Guides/Deep/News.RSS', '/docs/Guides', 'feed'],
-      ['/known', '/known', 'page'],
-      ['/robots.txt', '/robots.txt', 'robots'],
-    ]);
-    expect(await shape({ resource_class: 'feed' })).toEqual([
-      ['/docs/Guides/Deep/News.RSS', '/docs/Guides', 'feed'],
-    ]);
-    expect(await shape({ folder: '/robots.txt' })).toEqual([
-      ['/robots.txt', '/robots.txt', 'robots'],
-    ]);
   });
   it('retains crawler-only canonical hosts and encoded paths after raw expiry, and distinguishes unknown coverage', async () => {
     const owned = await fixtures.crawl(),

@@ -127,7 +127,8 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
   const rowConditions = [sql`canonical_url is not null`];
   if (options.url_hash) rowConditions.push(sql`url_hash=${options.url_hash}`);
   if (options.url_hashes) rowConditions.push(sql`url_hash=any(${options.url_hashes}::text[])`);
-  const formattedConditions = [];
+  const formattedConditions = [],
+    and = sql` and `;
   if (options.folder) formattedConditions.push(sql`folder=${options.folder}`);
   if (options.resource_class)
     formattedConditions.push(sql`resource_class=${options.resource_class}`);
@@ -185,7 +186,7 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
       l.sessions,l.key_events,l.analytics_quality,l.referral_timezones,l.landing_ids,c.citations,c.citation_ids,c.audit_ids,f.findings,e.verified_errors
     from keys k left join bot b using(url_hash) left join landing l using(url_hash) left join citation c using(url_hash)
       left join inventory i using(url_hash) left join finding f using(url_hash) left join errors e using(url_hash))
-    select * from joined where ${sql.join(rowConditions, sql` and `)}`;
+    select * from joined where ${sql.join(rowConditions, and)}`;
   // Deriving a row's path, folder and resource class costs a regex per row,
   // and the inventory alone can hold tens of thousands of paths: a read
   // formats only its page unless a folder or resource filter needs them all.
@@ -201,7 +202,7 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
   return {
     options,
     crawl,
-    filtered: sql`select * from (${format(filtered)}) x where ${sql.join(formattedConditions, sql` and `)}`,
+    filtered: sql`select * from (${format(filtered)}) x where ${sql.join(formattedConditions, and)}`,
     formatted: true,
     format,
   };
