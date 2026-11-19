@@ -92,9 +92,9 @@ export function answerFormatColumns(input: {
   };
 }
 
-/** The persisted reading; an answer analysed before this derivation existed is unavailable. */
+/** The persisted reading. */
 export function storedAnswerFormats(row: {
-  answer_format_state: string | null;
+  answer_format_state: string;
   answer_formats: string[] | null;
   in_text_link_count: number | null;
 }): AnswerFormats {
@@ -108,7 +108,6 @@ export function storedAnswerFormats(row: {
     case 'not_applicable':
       return { kind: 'not_applicable' };
     case 'unavailable':
-    case null:
       return { kind: 'unavailable' };
     default:
       throw new Error(`Unknown answer format state: ${row.answer_format_state}`);

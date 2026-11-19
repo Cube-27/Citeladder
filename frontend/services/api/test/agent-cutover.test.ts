@@ -132,16 +132,6 @@ describe('served Agent cutover on PostgreSQL', () => {
       `${long}\n\nDocument 1 saved in Website page format.`,
     );
     expect(detail.outputs.map((output) => output.latest_revision.body)).toEqual(['Outline body']);
-    // A step stored before its kind's current shape is left out; the chat still reads.
-    await db
-      .updateTable('agent_messages')
-      .set({ steps: JSON.stringify([{ kind: 'model', ordinal: 1 }, { kind: 'document' }]) })
-      .where('id', '=', detail.messages.at(-1)!.id)
-      .execute();
-    const reread = agentChatDetailSchema.parse(
-      await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
-    );
-    expect(reread.messages.at(-1)?.steps).toEqual([{ kind: 'model', ordinal: 1 }]);
     // A second request for the finished turn never executes it again.
     const again = await app.request(
       `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,

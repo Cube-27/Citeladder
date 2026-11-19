@@ -68,7 +68,7 @@ export const visibilityExecutionEvidenceSchema = responseObject({
   transport_provider: z.string(),
   transport_model: z.string(),
   // Execution-level surface (singular model).
-  retrieval_enabled: z.boolean().nullable().default(null),
+  retrieval_enabled: z.boolean(),
   search_used: z.boolean(),
   search_query_count: z.number().int(),
   query_text_available: z.boolean(),

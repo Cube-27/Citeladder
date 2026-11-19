@@ -211,7 +211,6 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
     .select(['c.id', 'c.workspace_id'])
     .where('c.status', 'in', ACTIVE_CRAWL_STATUSES)
     .where('c.updated_at', '<', cutoff)
-    // Retired kinds left in an old database are not work any worker will claim.
     .where(({ not, exists, selectFrom }) =>
       not(
         exists(
@@ -219,7 +218,6 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
             .select('t.id')
             .whereRef('t.crawl_id', '=', 'c.id')
             .whereRef('t.workspace_id', '=', 'c.workspace_id')
-            .where('t.task_kind', 'in', policy.site_health.ts_owned_task_kinds)
             .where('t.status', 'not in', TERMINAL_TASK),
         ),
       ),

@@ -3775,17 +3775,6 @@
             },
             "required": ["kind"],
             "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "const": "unavailable"
-              }
-            },
-            "required": ["kind"],
-            "additionalProperties": false
           }
         ]
       },
@@ -4261,7 +4250,7 @@
             "type": "string"
           },
           "retrieval_enabled": {
-            "type": ["boolean", "null"]
+            "type": "boolean"
           }
         },
         "required": [
@@ -4384,17 +4373,10 @@
                 "description": "Engines whose answers named or cited it."
               },
               "engine_total": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Engines the run asked. Null: recorded before the total was."
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Engines the run asked."
               },
               "market_relevant": {
                 "type": "boolean"
@@ -4430,17 +4412,10 @@
                 "type": "string"
               },
               "citation_count": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Citations of the domain. Null: recorded before citations were counted."
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Citations of the domain."
               }
             },
             "required": [
@@ -4496,17 +4471,10 @@
                 "description": "Engines whose answers named or cited it."
               },
               "engine_total": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Engines the run asked. Null: recorded before the total was."
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Engines the run asked."
               },
               "market_relevant": {
                 "type": "boolean"
@@ -6550,7 +6518,7 @@
             ]
           },
           "win_answers": {
-            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
+            "description": "Answers that named at least one tracked business. Null: not measured; 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6563,7 +6531,7 @@
             ]
           },
           "win_rate": {
-            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
+            "description": "`win_count` / `win_answers`, 0–1. Null when not measured or not applicable.",
             "type": ["number", "null"]
           },
           "share_of_voice": {
@@ -6886,7 +6854,7 @@
             ]
           },
           "win_answers": {
-            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
+            "description": "Answers that named at least one tracked business. Null: not measured; 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -6899,7 +6867,7 @@
             ]
           },
           "win_rate": {
-            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
+            "description": "`win_count` / `win_answers`, 0–1. Null when not measured or not applicable.",
             "type": ["number", "null"]
           },
           "sentiment": {
@@ -9190,7 +9158,7 @@
             ]
           },
           "win_answers": {
-            "description": "Answers that named at least one tracked business. Null: unavailable (measured before win rate existed); 0: not applicable.",
+            "description": "Answers that named at least one tracked business. Null: not measured; 0: not applicable.",
             "anyOf": [
               {
                 "type": "integer",
@@ -9203,7 +9171,7 @@
             ]
           },
           "win_rate": {
-            "description": "`win_count` / `win_answers`, 0–1. Null when unavailable or not applicable.",
+            "description": "`win_count` / `win_answers`, 0–1. Null when not measured or not applicable.",
             "type": ["number", "null"]
           }
         },
@@ -9335,8 +9303,7 @@
             "type": "string"
           },
           "retrieval_enabled": {
-            "default": null,
-            "type": ["boolean", "null"]
+            "type": "boolean"
           },
           "search_used": {
             "type": "boolean"
@@ -10206,8 +10173,7 @@
             "type": ["string", "null"]
           },
           "retrieval_enabled": {
-            "default": null,
-            "type": ["boolean", "null"]
+            "type": "boolean"
           },
           "model_provenance": {
             "default": [],
@@ -13405,7 +13371,7 @@
                     ],
                     "avg_position": null,
                     "transport_model": null,
-                    "retrieval_enabled": null,
+                    "retrieval_enabled": true,
                     "model_provenance": [],
                     "source_snapshot_ids": ["00000000-0000-4000-8000-000000000002"],
                     "analyzer_versions": ["Example analyzer versions"],
@@ -14254,7 +14220,7 @@
                       "logical_engine": "Example logical engine",
                       "transport_provider": "Example transport provider",
                       "transport_model": "Example transport model",
-                      "retrieval_enabled": null,
+                      "retrieval_enabled": true,
                       "search_used": true,
                       "search_query_count": 1,
                       "query_text_available": true,
@@ -16500,7 +16466,7 @@
                     "qualification_reason": "Example qualification reason",
                     "prompt_count": 1,
                     "engine_count": 1,
-                    "engine_total": null,
+                    "engine_total": 1,
                     "market_relevant": true,
                     "analyzer_version": "Example analyzer version",
                     "source_analysis_ids": ["Example source analysis ids"],
@@ -16509,7 +16475,7 @@
                     "created_at": "2026-01-15T09:30:00.000Z",
                     "kind": "cited_domain",
                     "domain": "example.com",
-                    "citation_count": null
+                    "citation_count": 1
                   }
                 ]
               }
@@ -16616,7 +16582,7 @@
                   "qualification_reason": "Example qualification reason",
                   "prompt_count": 1,
                   "engine_count": 1,
-                  "engine_total": null,
+                  "engine_total": 1,
                   "market_relevant": true,
                   "analyzer_version": "Example analyzer version",
                   "source_analysis_ids": ["Example source analysis ids"],
@@ -16625,7 +16591,7 @@
                   "created_at": "2026-01-15T09:30:00.000Z",
                   "kind": "cited_domain",
                   "domain": "example.com",
-                  "citation_count": null
+                  "citation_count": 1
                 }
               }
             }

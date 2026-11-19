@@ -78,16 +78,9 @@ export function revisionView(revision: {
     created_at: iso(revision.created_at),
   });
 }
-/** A reply's stored steps; one written before its kind's current shape is left out, not a failed read. */
+/** A reply's stored steps; a malformed one fails the read. */
 function messageSteps(steps: unknown) {
-  return z
-    .array(z.unknown())
-    .catch([])
-    .parse(steps)
-    .flatMap((step) => {
-      const parsed = agentStepSchema.safeParse(step);
-      return parsed.success ? [parsed.data] : [];
-    });
+  return z.array(agentStepSchema).parse(steps);
 }
 function modelStepStatus(outcome: string, latest: boolean) {
   if (outcome === 'dispatched') return 'working';

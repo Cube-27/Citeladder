@@ -72,7 +72,7 @@ const suggestionsQuery = {
       kind: 'named_in_answers',
       name: 'Ledgerly',
       prompt_count: 5,
-      engine_total: null,
+      engine_total: 3,
     },
   ],
   isError: false,
@@ -104,7 +104,7 @@ describe('CompetitorSuggestions', () => {
         (cell) => cell.textContent,
       ).slice(1, 4);
     expect(cells('Northstar')).toEqual(['Cited domain', '7 citations', '2 of 4']);
-    expect(cells('Ledgerly')).toEqual(['Named in answers', '5 prompts', '2']);
+    expect(cells('Ledgerly')).toEqual(['Named in answers', '5 prompts', '2 of 3']);
   });
 
   it('refreshes company facts after accepting a competitor', async () => {

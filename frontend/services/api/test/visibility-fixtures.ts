@@ -6,7 +6,8 @@
  */
 import { randomUUID } from 'node:crypto';
 import { fanoutProjection } from '../src/analysis/fanout.ts';
-import { firstNamedColumns, type AnswerFirstNamed } from '../src/analysis/win-rate.ts';
+import type { FirstNamed } from '@citeladder/contracts/audits';
+import { firstNamedColumns } from '../src/analysis/win-rate.ts';
 
 import type { Database } from '../src/db/database.ts';
 import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
@@ -14,10 +15,19 @@ import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts'
 import { asOwner, Fixtures } from './support.ts';
 
 const now = () => new Date();
-const firstNamedFixture = (first: AnswerFirstNamed | undefined) =>
-  first ? firstNamedColumns(first) : {};
+// A finalized snapshot always carries a win tally; tests that don't care get an empty one.
+const withWinTally = (metrics: Json) =>
+  metrics !== null &&
+  typeof metrics === 'object' &&
+  !Array.isArray(metrics) &&
+  !('win_tally' in metrics)
+    ? { win_tally: { answers: 0, first: {} }, ...metrics }
+    : metrics;
 
 export type Json = Parameters<typeof JSON.stringify>[0];
+
+const asObject = (value: Json | undefined): Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
 export type Tenant = { userId: string; workspaceId: string; projectId: string };
 
@@ -53,7 +63,7 @@ export type ExecutionInput = {
     ownedCited?: boolean;
     avgPosition?: number | null;
     // Omitted: analysed before the win-rate derivation existed.
-    firstNamed?: AnswerFirstNamed;
+    firstNamed?: FirstNamed;
     searchUsed?: boolean;
     searchQueryCount?: number;
     score?: Json;
@@ -234,7 +244,12 @@ export class VisibilityFixtures extends Fixtures {
         completed_count: 0,
         failed_count: 0,
         error_message: '',
-        configuration: JSON.stringify(options.configuration ?? {}),
+        // Every frozen run records its prompt selection and measurement policy.
+        configuration: JSON.stringify({
+          prompt_selection: 'set',
+          measurement_policy: { retrieval_enabled: true },
+          ...asObject(options.configuration),
+        }),
         completed_at: options.completedAt === undefined ? now() : options.completedAt,
         created_at: now(),
         updated_at: now(),
@@ -417,7 +432,8 @@ export class VisibilityFixtures extends Fixtures {
         unintended_domain_cited: false,
         citation_count: citations.length,
         avg_position: spec.avgPosition ?? null,
-        ...firstNamedFixture(spec.firstNamed),
+        ...firstNamedColumns(spec.firstNamed ?? { kind: 'none' }),
+        answer_format_state: 'not_applicable',
         search_used: spec.searchUsed ?? false,
         search_query_count: spec.searchQueryCount ?? 0,
         ...fanoutProjection({
@@ -570,7 +586,7 @@ export class VisibilityFixtures extends Fixtures {
         total_completed: 0,
         total_failed: 0,
         visibility_score: input.visibilityScore ?? 0,
-        metrics: JSON.stringify(input.metrics),
+        metrics: JSON.stringify(withWinTally(input.metrics)),
         source_analysis_ids: JSON.stringify([]),
         source_artifact_ids: JSON.stringify([]),
         owned_citation_count: 0,

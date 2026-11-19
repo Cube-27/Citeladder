@@ -68,7 +68,6 @@ async function finalizedRun(
   tenant: Tenant,
   completedAt: string,
   answers: { engine: string; queries: string[] }[],
-  persist = true,
   frozenOverrides: Record<string, unknown> = {},
 ) {
   const auditId = await fixtures.audit(tenant, {
@@ -82,7 +81,6 @@ async function finalizedRun(
       artifactEvents: answer.queries.map((query, sequence) => ({ sequence, query })),
       analysis: { searchUsed: true, searchQueryCount: answer.queries.length },
     });
-  if (!persist) return auditId;
   const audit = await db
     .selectFrom('audits')
     .selectAll()
@@ -174,25 +172,20 @@ describe('GET /visibility/fanout share, change and brands', () => {
     expect((await get(outsider, route(tenant, '/fanout'), { audit_id: march })).status).toBe(404);
   });
 
-  it('reads brands as not counted for a run finalized before queries were counted', async () => {
+  it('fails a read of a corrupt stored query row instead of reading it as not counted', async () => {
     const tenant = await fixtures.tenant();
-    const counted = await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
+    const run = await finalizedRun(tenant, '2026-02-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing'] },
     ]);
-    const before = await finalizedRun(
-      tenant,
-      '2026-03-01T00:00:00Z',
-      [{ engine: 'chatgpt', queries: ['acme pricing'] }],
-      false,
-    );
-    const read = async (auditId: string) =>
-      rows((await get(tenant, route(tenant, '/fanout'), { audit_id: auditId })).body);
-    expect(await read(before)).toEqual([
-      { query: 'acme pricing', event_count: 1, share: 1, change: null, brands: null },
-    ]);
-    expect(await read(counted)).toEqual([
-      { query: 'acme pricing', event_count: 1, share: 1, change: null, brands: acme },
-    ]);
+    const read = async () =>
+      (await get(tenant, route(tenant, '/fanout'), { audit_id: run })).status;
+    expect(await read()).toBe(200);
+    await db
+      .updateTable('audit_fanout_terms')
+      .set({ terms: JSON.stringify([{ term: 'acme', searches: 1 }]) })
+      .where('audit_id', '=', run)
+      .execute();
+    expect(await read()).toBe(500);
   });
 
   it('compares only with a comparable whole-set run that reported search text', async () => {
@@ -212,7 +205,6 @@ describe('GET /visibility/fanout share, change and brands', () => {
       tenant,
       '2026-03-15T00:00:00Z',
       [{ engine: 'chatgpt', queries: ['acme trial'] }],
-      true,
       { panel_hash: 'panel-subset', prompt_selection: 'selected' },
     );
     expect(await compared(selected)).toBe(false);
@@ -231,7 +223,6 @@ describe('GET /visibility/fanout share, change and brands', () => {
       tenant,
       '2026-05-01T00:00:00Z',
       [{ engine: 'chatgpt', queries: ['acme pricing'] }],
-      true,
       { panel_hash: 'panel-2' },
     );
     expect(await compared(changed)).toBe(false);

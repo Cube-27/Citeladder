@@ -23,7 +23,6 @@ import { notFound } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { taskProject, type Executor } from '../queue/executor.ts';
 import { syncActions } from './action-sync.ts';
-import { CONFIGURED_RULES } from './actions.ts';
 import {
   buildSnapshot,
   newOpportunity,
@@ -182,19 +181,6 @@ async function writeRefresh(
   return projectSnapshot(written!);
 }
 
-/** Whether a live Opportunity has a rule that is not an enabled configured one. */
-async function hasLeftovers(db: Database, scope: Scope) {
-  const found = await new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'opportunities')
-    .select('id')
-    .where('project_id', '=', scope.projectId)
-    .where('superseded_at', 'is', null)
-    .where('rule_id', 'not in', CONFIGURED_RULES)
-    .limit(1)
-    .executeTakeFirst();
-  return found !== undefined;
-}
-
 /**
  * Recompute a project's Opportunities from its latest usable sources and
  * return the snapshot that describes them. `skipIfCurrent` returns the latest
@@ -215,9 +201,8 @@ export async function recomputeOpportunities(
   const at = new Date();
   const sources = await resolve(db, scope, at);
   const prior = await latestSnapshot(db, scope);
-  // Leftover findings of an unconfigured rule retire on every refresh, even over unchanged sources.
-  const skip = options.skipIfCurrent && !(await hasLeftovers(db, scope));
-  if (skip && snapshotIsCurrent(prior, sources.identity)) return projectSnapshot(prior!);
+  if (options.skipIfCurrent && snapshotIsCurrent(prior, sources.identity))
+    return projectSnapshot(prior!);
   const collected = await collectFamilies(db, scope, sources, sources.identity);
   const scored = scoreHits(collected.hits);
   return db.transaction().execute(async (trx) => {
@@ -233,7 +218,8 @@ export async function recomputeOpportunities(
     const empty =
       !collected.present && !readAgingSource(record(record(current?.coverage).source_identity));
     if (current !== null && empty) return projectSnapshot(current);
-    if (skip && snapshotIsCurrent(current, sources.identity)) return projectSnapshot(current!);
+    if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
+      return projectSnapshot(current!);
     return writeRefresh(trx, scope, { collected, sources, scored });
   });
 }

@@ -206,7 +206,7 @@ describe('Answer dialog', () => {
             run_at: '2026-03-16T00:00:00Z',
             logical_engine: 'chatgpt',
             brands: [],
-            first_named: { kind: 'unavailable' },
+            first_named: { kind: 'none' },
             brand_mentioned: false,
             position: null,
             cited: false,

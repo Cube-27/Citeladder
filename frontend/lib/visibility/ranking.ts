@@ -9,7 +9,7 @@ export function competitorHref(name: string): `/${string}` {
 
 /**
  * Why a win rate is missing (AV-7): no answer naming a tracked brand is not
- * applicable; a run finalized without first-named data is not measured.
+ * applicable; a brand with no ranking row is not measured.
  */
 export function winRateAbsence(
   row: Pick<WinCounts, 'win_answers'> | undefined,

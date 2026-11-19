@@ -187,7 +187,7 @@ function namesFirst(page: PromptAnswerPage | undefined): boolean {
   return Boolean(page?.items.some((answer) => firstOf(answer.brands, answer.first_named)));
 }
 
-/** The shown brand the stored value says was named first; none when unavailable or none. */
+/** The shown brand the stored value says was named first; none when no tracked brand was. */
 function firstOf(brands: readonly Brand[], first: FirstNamed): Brand | undefined {
   if (first.kind !== 'brand' && first.kind !== 'competitor') return undefined;
   const key = first.name.trim().toLowerCase();

@@ -202,7 +202,7 @@ describe('topic dimension', () => {
     ]);
   });
 
-  it('keeps Commerce topics out of brand reads and a run that froze no topic apart from not run', async () => {
+  it('keeps Commerce topics out of brand reads and reads a topic no run asked as not run', async () => {
     const t = await tenant();
     const pricing = await topic(db, t.projectId, 'Pricing');
     const grinders = await topic(db, t.projectId, 'Grinders');
@@ -224,13 +224,13 @@ describe('topic dimension', () => {
         created_at: new Date(),
       })
       .execute();
-    // The road prompt is unfiled, so the run freezes no topic, as runs before AV-5 did.
+    // The road prompt is unfiled, so the run freezes no topic.
     const unrecorded = await finalizedRun(t, ['https://review.example/a']);
     const rows = async (path: string) =>
       ((await read(t, t.projectId, path)).json.items as { name: string; kind: string }[]).map(
         (row) => [row.name, row.kind],
       );
-    expect(await rows('/topics')).toEqual([['Pricing', 'not_recorded']]);
+    expect(await rows('/topics')).toEqual([['Pricing', 'not_run']]);
     const topicList = (await get(t, `/api/v1/projects/${t.projectId}/topics`)).json;
     expect((topicList as unknown as { name: string }[]).map((row) => row.name)).toEqual([
       'Pricing',
@@ -242,8 +242,8 @@ describe('topic dimension', () => {
     };
     expect(matrix.axes.topic.map((item) => item.name)).toEqual(['Pricing']);
     expect([matrix.grids.topic_market, matrix.rankings.topic]).toEqual([
-      [[{ kind: 'not_recorded' }]],
-      [{ kind: 'not_recorded' }],
+      [[{ kind: 'not_run' }]],
+      [{ kind: 'not_run' }],
     ]);
     expect(matrix.rankings.engine.map((row) => row.kind)).toEqual(['measured']);
     // An engine that run never asked is not run, whatever it froze.
@@ -253,7 +253,7 @@ describe('topic dimension', () => {
     };
     expect(gemini.grids.topic_market).toEqual([[{ kind: 'not_run' }]]);
 
-    // Filed now: the next run records Pricing; only the run that froze no topic leaves Onboarding unknown.
+    // Filed now: the next run records Pricing; Onboarding was never asked.
     await db
       .updateTable('prompts')
       .set({ topic_id: pricing })
@@ -266,7 +266,7 @@ describe('topic dimension', () => {
       ['Pricing', 'measured'],
     ]);
     expect(await rows('/topics?selection_mode=range')).toEqual([
-      ['Onboarding', 'not_recorded'],
+      ['Onboarding', 'not_run'],
       ['Pricing', 'measured'],
     ]);
 

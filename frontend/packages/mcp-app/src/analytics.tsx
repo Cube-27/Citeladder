@@ -102,7 +102,7 @@ function Overview({
           ? projection.model_provenance
               .map(
                 (route) =>
-                  `${route.logical_engine}: ${route.transport_model}, retrieval ${route.retrieval_enabled ?? 'unknown'}`,
+                  `${route.logical_engine}: ${route.transport_model}, retrieval ${route.retrieval_enabled}`,
               )
               .join(' · ')
           : 'Model and retrieval provenance unavailable'}

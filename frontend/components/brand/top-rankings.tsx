@@ -11,8 +11,7 @@ import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
-import { StateBlock } from '@/components/ui/state-block';
-import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
+import { READING_LABELS } from '@/lib/visibility/matrix';
 import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
 
 const PLACES = 5;
@@ -36,11 +35,9 @@ export function TopRankings({
   const axisText = useAxisText();
   const data = query.data;
   const segments = data ? axisText(data.axes, by) : [];
-  // A segment whose topic the run never recorded has no ranking to show, so it is left out.
   const rows = data
     ? segments.flatMap((text, i) => {
         const ranking = data.rankings[by][i];
-        if (ranking?.kind === 'not_recorded') return [];
         return [
           {
             key: `${by}-${i}`,
@@ -66,10 +63,6 @@ export function TopRankings({
     : [];
   function body() {
     if (!data) return null;
-    if (by === 'topic' && noTopicsRecorded(data.rankings.topic))
-      return (
-        <StateBlock kind="empty" inline message={noTopicsMessage(data.source_audit_ids.length)} />
-      );
     return (
       <RankTable
         labelledBy="insights-rankings"

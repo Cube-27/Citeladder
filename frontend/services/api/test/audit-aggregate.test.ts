@@ -113,10 +113,6 @@ describe('versioned audit aggregates', () => {
       win_answers: 2,
       win_rate: 0,
     });
-    // An answer analysed before the derivation leaves the tally unavailable.
-    const stale = { ...execution('Acme'), first_named: { kind: 'unavailable' as const } };
-    expect(aggregateRun([execution('Acme'), stale], config).win_tally).toBeNull();
-    expect(winCounts(null, 'Acme')).toEqual({ win_count: null, win_answers: null, win_rate: null });
     // A tracked name that is also an Object.prototype key counts like any other.
     const shadow = winTally([{ kind: 'competitor', name: 'constructor' }], 'Acme');
     expect(shadow).toEqual({ answers: 1, first: { constructor: 1 } });

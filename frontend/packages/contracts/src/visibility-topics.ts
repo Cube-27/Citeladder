@@ -6,8 +6,7 @@ import { winCountsSchema } from './visibility.ts';
 // prompt had when its run froze it (AV-5), so `topic_id` names a topic across
 // renames: `name` is its current name and `renamed_from` the other names the
 // selected runs froze, newest first. A topic the selected runs never asked is
-// `not_run`, never zero; `not_recorded` when a selected run froze no topic, so
-// it may have asked the topic unrecorded.
+// `not_run`, never zero.
 const topicIdentity = {
   topic_id: z.uuid(),
   name: z.string(),
@@ -16,7 +15,6 @@ const topicIdentity = {
 
 const visibilityTopicRowSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('not_run'), ...topicIdentity }),
-  z.object({ kind: z.literal('not_recorded'), ...topicIdentity }),
   z.object({
     kind: z.literal('measured'),
     ...topicIdentity,
@@ -28,7 +26,7 @@ const visibilityTopicRowSchema = z.discriminatedUnion('kind', [
     // no tracked brand was named.
     rank: z.number().int().nullable(),
     ranked_brands: z.number().int(),
-    // The brand's win counts (AV-7) over the topic's answers; null before the derivation.
+    // The brand's win counts (AV-7) over the topic's answers.
     ...winCountsSchema.shape,
   }),
 ]);

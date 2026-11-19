@@ -78,42 +78,6 @@ describe('Finding Actions by name', () => {
     expect(theirs.items.map((item) => item.id)).toEqual([actionId(foreign, promptRule)]);
   });
 
-  it('neither lists nor counts an Action whose every live finding has an unconfigured rule', async () => {
-    const s = await seed();
-    const list = `/api/v1/projects/${s.project_id}/actions`;
-    const read = async (query = '') =>
-      actionsPageSchema.parse(await (await request(s, `${list}${query}`)).json());
-    const before = await read();
-    expect(before.status_counts.open).toBe(3);
-    // A per-page Site Health finding left live from before its rule was retired (IA1).
-    await db
-      .updateTable('opportunities')
-      .set({ rule_id: 'missing_structured_data' })
-      .where('action_id', '=', actionId(s, pageRule))
-      .execute();
-    const after = await read();
-    expect([after.items.map((item) => item.id).toSorted(), after.status_counts.open]).toEqual([
-      before.items
-        .map((item) => item.id)
-        .filter((id) => id !== actionId(s, pageRule))
-        .toSorted(),
-      2,
-    ]);
-    expect((await read('?q=acme.test/&status=any')).items.map((item) => item.id)).toEqual([
-      actionId(s, otherRule),
-    ]);
-    // One live finding of a configured rule beside the leftover keeps the Action listed.
-    await db
-      .updateTable('opportunities')
-      .set({ action_id: actionId(s, pageRule) })
-      .where('action_id', '=', actionId(s, otherRule))
-      .where('superseded_at', 'is', null)
-      .execute();
-    expect(
-      (await read('?q=acme.test/&status=any')).items.map((item) => item.id).toSorted(),
-    ).toEqual([actionId(s, pageRule), actionId(s, otherRule)].toSorted());
-  });
-
   it('lets the Agent find a measuring Action by name with read_actions and search, only in its project', async () => {
     const scope = await fixtures.scope();
     const sibling = await fixtures.project(scope.workspaceId);

@@ -241,7 +241,7 @@ export type TrendSource = {
   completedAt: string;
   logicalEngine: string | null;
   transportModel: string | null;
-  retrievalEnabled: boolean | null;
+  retrievalEnabled: boolean;
   modelProvenance: ModelProvenance[];
   panelHash: string | null;
   /** False for a run of selected prompts: its panel is a subset, not a change. */

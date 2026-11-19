@@ -86,9 +86,9 @@ const searchRequestShape = {
 /** A search-surface task's frozen request (`request_snapshot`), read field by field. */
 export const readFrozenSearchRequest = (value: unknown) => readFields(searchRequestShape, value);
 
-/** Whether a run asked its whole prompt set; a run frozen before the key existed did. */
+/** Whether a run asked its whole prompt set; every frozen run records which. */
 export const askedWholeSet = (configuration: unknown) =>
-  readFrozenConfiguration(configuration).prompt_selection !== 'selected';
+  configurationShape.prompt_selection.parse(record(configuration).prompt_selection) === 'set';
 
 /** A stored configuration's typed fields; anything missing or malformed is unavailable. */
 export function readFrozenConfiguration(value: unknown): FrozenConfiguration {

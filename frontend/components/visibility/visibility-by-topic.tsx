@@ -12,7 +12,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
-import { READING_LABELS, noTopicsMessage, noTopicsRecorded } from '@/lib/visibility/matrix';
+import { READING_LABELS } from '@/lib/visibility/matrix';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'topic', label: 'Topic' },
@@ -41,22 +41,13 @@ function topicsState(query: UseQueryResult<VisibilityTopics>): DataTableState | 
   if (query.isPending) return { kind: 'loading', label: 'Loading topics…' };
   if (query.data.items.length === 0)
     return { kind: 'empty', headingLevel: 3, icon: Tags, heading: 'No topics yet' };
-  if (noTopicsRecorded(query.data.items))
-    return {
-      kind: 'empty',
-      headingLevel: 3,
-      icon: Tags,
-      heading: 'No topics recorded',
-      description: noTopicsMessage(query.data.source_audit_ids.length),
-    };
   return undefined;
 }
 
 /**
  * The selection by project topic (AV-5): answers group by the topic their
  * prompt had when the run froze it. A renamed topic shows its current name
- * and the name the runs froze; a topic the runs never asked reads "Not run",
- * and one a pre-topic run may have asked reads "Topic not recorded".
+ * and the name the runs froze; a topic the runs never asked reads "Not run".
  */
 export function VisibilityByTopic({
   query,

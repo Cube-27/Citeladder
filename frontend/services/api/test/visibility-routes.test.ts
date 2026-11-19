@@ -146,10 +146,6 @@ describe('GET /executions/{execution_id}', () => {
     const auditId = await fixtures.audit(tenant);
     const { taskId } = await fixtures.execution(tenant, { auditId });
 
-    // Analysed before the win-rate derivation: unavailable, never a guessed winner.
-    expect((await get(tenant, `/api/v1/executions/${taskId}`)).body.first_named).toEqual({
-      kind: 'unavailable',
-    });
     const foreign = await get(outsider, `/api/v1/executions/${taskId}`);
     expect(foreign.status).toBe(404);
     expect(record(foreign.body.error).message).toBe('Execution not found');

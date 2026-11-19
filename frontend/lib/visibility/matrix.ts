@@ -17,7 +17,6 @@ export type MatrixMetric = (typeof MATRIX_METRICS)[number]['value'];
 
 export type CellReading =
   | { kind: 'not_run' }
-  | { kind: 'not_recorded' }
   | { kind: 'too_few'; answers: number }
   | { kind: 'not_measured'; answers: number }
   | { kind: 'value'; value: number; text: string; answers: number };
@@ -116,23 +115,8 @@ export function matrixCsvRows({
   );
 }
 
-/**
- * Every topic reads `not_recorded`: the selected runs predate topic snapshots,
- * so the section says so once instead of once per topic.
- */
-export function noTopicsRecorded(rows: readonly Readonly<{ kind: string }>[]): boolean {
-  return rows.length > 0 && rows.every((row) => row.kind === 'not_recorded');
-}
-
-export function noTopicsMessage(runs: number): string {
-  return runs > 1
-    ? "These runs didn't record topics. The next run will."
-    : "This run didn't record topics. The next run will.";
-}
-
 export const READING_LABELS = {
   not_run: availabilityLabel('not_run'),
-  not_recorded: 'Topic not recorded for this run',
   too_few: availabilityLabel('too_few'),
   not_measured: availabilityLabel('not_measured'),
 } as const;

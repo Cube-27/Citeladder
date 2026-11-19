@@ -38,14 +38,10 @@ const axesSchema = z.object({
   ),
 });
 
-// A segment pair with no answers is `not_run`, never zero; a topic segment of a
-// run that froze no topic is `not_recorded`. A measured value is
+// A segment pair with no answers is `not_run`, never zero. A measured value is
 // null when it does not apply: position when the brand was never named, win
 // rate when no tracked business was, sentiment when the run was not perceived.
-const unmeasured = [
-  z.object({ kind: z.literal('not_run') }),
-  z.object({ kind: z.literal('not_recorded') }),
-] as const;
+const unmeasured = [z.object({ kind: z.literal('not_run') })] as const;
 const matrixCellSchema = z.discriminatedUnion('kind', [
   ...unmeasured,
   z.object({

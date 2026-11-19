@@ -25,6 +25,7 @@ export function frozen(overrides: Record<string, unknown> = {}): Json {
     language_code: 'en',
     benchmark_mode: 'standard',
     panel_hash: 'panel-1',
+    prompt_selection: 'set',
     engine_routes: {
       chatgpt: { transport_provider: 'test', transport_model: 'model-a', retrieval_enabled: true },
     },

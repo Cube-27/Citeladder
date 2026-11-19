@@ -167,25 +167,8 @@ export function actionItem(row: ActionRow) {
   };
 }
 
-/** The enabled configured Opportunity rules: a live finding of any other is a leftover. */
-export const CONFIGURED_RULES = Object.values(
-  policy.opportunity.opportunities.OPPORTUNITY_RULES_BY_ID,
-)
-  .filter((rule) => rule.enabled)
-  .map((rule) => rule.rule_id);
-
-/**
- * Not an Action whose every live finding has an unconfigured rule (such as a
- * per-page Site Health finding from before IA1): the next refresh retires
- * those findings and clears the Action, and until then no list or count shows it.
- * One probe of `ix_opportunities_live_action`; no live finding reads as true.
- */
-export const NOT_LEFTOVER_ACTION = sql<SqlBool>`coalesce((select bool_or(o.rule_id = any(${CONFIGURED_RULES}::text[]))
-  from opportunities o where o.workspace_id = actions.workspace_id and o.action_id = actions.id
-    and o.superseded_at is null), true)`;
-
 /** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
-export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT}) and ${NOT_LEFTOVER_ACTION}`;
+export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT})`;
 
 function listed(db: Database, scope: Scope) {
   return db

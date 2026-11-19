@@ -86,13 +86,9 @@ export function issueImpact(ruleId: string, findingClass: string, severity: stri
   };
 }
 
-/**
- * One issue group's stable identity within a crawl. Links to defect groups
- * predate the finding-class suffix, so a defect keeps the unsuffixed name.
- */
+/** One issue group's stable identity within a crawl. */
 export function issueGroupId(crawlId: string, ruleId: string, findingClass: string) {
-  const suffix = findingClass === 'defect' ? '' : `:${findingClass}`;
-  return uuidV5(crawlId, `site-issue-group:${ruleId}${suffix}`);
+  return uuidV5(crawlId, `site-issue-group:${ruleId}:${findingClass}`);
 }
 
 /** Link problems judged once on the crawl root for every page that carries the link. */
