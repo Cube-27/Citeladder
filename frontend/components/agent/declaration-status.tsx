@@ -123,7 +123,8 @@ export function DeclarationStatus({
       ) : null}
       {declaration.checks.length > 0 ? (
         <p className={textRole('caption')}>
-          Read until <DisplayTime value={declaration.measured_until} dateOnly />
+          Read until <DisplayTime value={declaration.measured_until} dateOnly />. A met check does
+          not prove this Action caused the movement.
         </p>
       ) : null}
       <VerificationObservations implementation={declaration} showAuditLink={hasVisibility} />

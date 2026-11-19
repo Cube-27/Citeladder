@@ -70,7 +70,7 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
             : {
                 kind: 'empty',
                 icon: SearchX,
-                heading: 'No AI referral landing pages in this report',
+                heading: 'No identifiable AI referral landing pages in this report',
               }
         }
       >
