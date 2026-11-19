@@ -169,9 +169,22 @@
     margin: 0 16px 16px;
   }
 
-  /* The actions and their reserved message width drop under the title rather than overflow. */
+  /* A phone has no room for the message beside the buttons: the actions drop
+     under the title and the message takes a reserved line under the buttons. */
   .cl-tool-bar {
     flex-wrap: wrap;
+  }
+
+  .cl-tool-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .cl-tool-copy-status {
+    order: 1;
+    flex-basis: 100%;
+    min-height: var(--text-label--line-height);
   }
 }
 
