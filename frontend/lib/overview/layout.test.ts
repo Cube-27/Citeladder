@@ -41,7 +41,7 @@ describe('Overview layout edits', () => {
     expect(
       keys([
         { key: 'project_state', size: 'half' },
-        { key: 'citation_share', size: 'half' },
+        { key: 'top_movers', size: 'half' },
         { key: 'movement', size: 'half' },
         { key: 'company_facts', size: 'full' },
         { key: 'next_action', size: 'half' },
@@ -49,7 +49,7 @@ describe('Overview layout edits', () => {
         { key: 'missing_prompts', size: 'half' },
       ]),
     ).toEqual([
-      ['project_state', 'citation_share'],
+      ['project_state', 'top_movers'],
       ['movement'],
       ['company_facts'],
       ['next_action', 'ranked_actions'],
@@ -69,7 +69,6 @@ describe('Overview layout edits', () => {
 
   it('offers only widgets not shown, and adds one at half width at the end', () => {
     expect(addableWidgets(layout)).toEqual([
-      'citation_share',
       'next_action',
       'missing_prompts',
       'ranked_actions',

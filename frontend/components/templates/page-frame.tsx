@@ -73,13 +73,6 @@ export function PageFrame({
   const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
-  // The page's actions end its last strip: the filters, else the tabs, else a strip of their own.
-  const actionsIn = actions ? (filters || !tabs ? 'filters' : 'tabs') : null;
-  const rowActions = actions ? (
-    <RowActions moreLabel="More actions" className="ms-auto">
-      {actions}
-    </RowActions>
-  ) : null;
   return (
     <PageEmptyOfferProvider>
       <div
@@ -108,22 +101,7 @@ export function PageFrame({
           end={shell?.agentTrigger}
         />
         <div className={cn('flex min-w-0 flex-1 flex-col', PAGE_COLUMN[width])}>
-          {tabs ? (
-            // The tabs fill the strip, so the current tab's underline sits on its rule.
-            <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end gap-2')}>
-              <div className="flex min-w-0 flex-1 items-end">{tabs}</div>
-              {actionsIn === 'tabs' ? <div className="self-center">{rowActions}</div> : null}
-            </div>
-          ) : null}
-          {actionsIn === 'filters' || filters ? (
-            <div
-              data-page-band="filters"
-              className={cn(STRIP_RULE, 'flex items-center gap-2 py-2')}
-            >
-              {filters ? <div className="flex min-w-0 flex-1 items-center">{filters}</div> : null}
-              {actionsIn === 'filters' ? rowActions : null}
-            </div>
-          ) : null}
+          <PageStrips tabs={tabs} filters={filters} actions={actions} />
           <div
             data-page-body=""
             className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]"
@@ -133,6 +111,40 @@ export function PageFrame({
         </div>
       </div>
     </PageEmptyOfferProvider>
+  );
+}
+
+/**
+ * The tab strip, then the filter strip. The page's actions end the last
+ * strip: the filters, else the tabs, else a filter strip of their own.
+ */
+function PageStrips({
+  tabs,
+  filters,
+  actions,
+}: Pick<PageFrameSlots, 'tabs' | 'filters' | 'actions'>) {
+  const actionsIn = actions ? (filters || !tabs ? 'filters' : 'tabs') : null;
+  const rowActions = actions ? (
+    <RowActions moreLabel="More actions" className="ms-auto">
+      {actions}
+    </RowActions>
+  ) : null;
+  return (
+    <>
+      {tabs ? (
+        // The tabs fill the strip, so the current tab's underline sits on its rule.
+        <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end gap-2')}>
+          <div className="flex min-w-0 flex-1 items-end">{tabs}</div>
+          {actionsIn === 'tabs' ? <div className="self-center">{rowActions}</div> : null}
+        </div>
+      ) : null}
+      {actionsIn === 'filters' || filters ? (
+        <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center gap-2 py-2')}>
+          {filters ? <div className="flex min-w-0 flex-1 items-center">{filters}</div> : null}
+          {actionsIn === 'filters' ? rowActions : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 

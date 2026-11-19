@@ -24,8 +24,11 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import { Avatar } from '@/components/ui/avatar';
+import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import { SettingRow } from '@/components/ui/setting-row';
+import { IdentityRow } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
@@ -231,22 +234,30 @@ export function SettingsScreen() {
               <SectionTitle id="settings-profile-title">Profile</SectionTitle>
               <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
             </SectionHeader>
-            <Stack gap="workspace">
-              <SettingRow label="Email" description={user.email} />
-              {activeWorkspace ? (
-                <SettingRow
-                  label="Workspace role"
-                  description={
-                    activeWorkspace.role === 'owner'
-                      ? `Owner of ${activeWorkspace.name}`
-                      : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`
-                  }
+            {/* Facts with no action keep the identity row and ruled facts. */}
+            <Stack gap="item">
+              <IdentityRow
+                media={<Avatar name={user.email} placement="profile" />}
+                title={<div className={textRole('body', 'truncate')}>{user.email}</div>}
+                caption={
+                  activeWorkspace ? (
+                    <div className="type-body text-ink-2">
+                      {activeWorkspace.role === 'owner'
+                        ? `Owner of ${activeWorkspace.name}`
+                        : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                    </div>
+                  ) : null
+                }
+              />
+              {createdLabel || updatedLabel ? (
+                <FactList
+                  layout="ruled"
+                  facts={[
+                    ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
+                    ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
+                  ]}
                 />
               ) : null}
-              {createdLabel ? (
-                <SettingRow label="Account created" description={createdLabel} />
-              ) : null}
-              {updatedLabel ? <SettingRow label="Last updated" description={updatedLabel} /> : null}
             </Stack>
           </Section>
           <TimeZoneSetting />

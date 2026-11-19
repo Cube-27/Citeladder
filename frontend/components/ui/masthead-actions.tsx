@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
  * Where a masthead draws its one primary action: `undefined` outside a
  * masthead, `null` until the slot has mounted.
  */
-export const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>(undefined);
+const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>(undefined);
 
 /**
  * The page's one primary action, wherever the actions component renders it:
@@ -124,7 +124,7 @@ type FoldedEntry = Readonly<{
  * (hidden) so their dialogs and state survive; each More item presses its
  * control, and a folded menu (Manage project) becomes a submenu.
  */
-export function MastheadOverflow({
+function MastheadOverflow({
   moreLabel = 'More',
   children,
 }: Readonly<{ moreLabel?: string; children: ReactNode }>) {
@@ -395,7 +395,25 @@ function rowDeficit(header: HTMLElement): number {
   const edge =
     header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
   const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;
-  return squeezed + past;
+  return squeezed + past + wrapDeficit(header);
+}
+
+/**
+ * A strip's filter bar that has wrapped onto a second line (a strip is one
+ * line, owner 2026-11-18): the width its items lack on one line, so the
+ * strip's actions fold first. Zero for a bar stacked by design below `rail`.
+ */
+function wrapDeficit(row: HTMLElement): number {
+  const bar = row.querySelector<HTMLElement>('[data-filter-bar]');
+  if (!bar) return 0;
+  const style = getComputedStyle(bar);
+  const items = [...bar.children].filter((item) => item.getClientRects().length > 0);
+  const first = items[0]?.getBoundingClientRect();
+  const last = items.at(-1)?.getBoundingClientRect();
+  if (style.flexDirection !== 'row' || !first || !last || last.top <= first.top) return 0;
+  const gap = Number.parseFloat(style.columnGap) || 0;
+  const line = items.reduce((sum, item) => sum + item.getBoundingClientRect().width, 0);
+  return Math.max(1, line + gap * (items.length - 1) - bar.clientWidth);
 }
 
 /**

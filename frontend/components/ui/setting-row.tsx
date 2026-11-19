@@ -25,9 +25,9 @@ export function SettingRow({
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="grid min-w-0 flex-1 basis-60 gap-1">
           <div className={textRole('label')}>{label}</div>
-          {description ? (
+          {description === undefined || description === null ? null : (
             <div className={textRole('body', 'text-ink-2 min-w-0 break-words')}>{description}</div>
-          ) : null}
+          )}
         </div>
         {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
       </div>

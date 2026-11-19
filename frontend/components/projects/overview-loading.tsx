@@ -19,8 +19,7 @@ import { useOptionalProjectContext } from '@/lib/project/project-scope';
 
 /** Each widget's body as it loads: the shape of what its card shows. */
 const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
-  project_state: { kind: 'figures', count: 3 },
-  citation_share: { kind: 'figures', count: 1 },
+  project_state: { kind: 'figures', count: 4 },
   movement: { kind: 'chart', height: 'sm' },
   next_action: { kind: 'list', rows: 3 },
   missing_prompts: { kind: 'list', rows: 3 },
@@ -37,8 +36,7 @@ const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
 
 /** The layout a project shows before it saves one: the API's `overview_default_layout`. */
 const DEFAULT_WIDGETS: readonly OverviewWidget[] = [
-  { key: 'project_state', size: 'half' },
-  { key: 'citation_share', size: 'half' },
+  { key: 'project_state', size: 'full' },
   { key: 'movement', size: 'half' },
   { key: 'next_action', size: 'half' },
   { key: 'missing_prompts', size: 'full' },

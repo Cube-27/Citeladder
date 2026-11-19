@@ -40,8 +40,6 @@ export type ReportContext = {
   prompts: PromptMetricItem[] | null;
   /** How many brands the latest run ranked; null before the first completed run. */
   brands: number | null;
-  /** The widgets on the saved layout. */
-  shown: ReadonlySet<OverviewWidgetKey>;
 };
 export type Section = (context: ReportContext) => Promise<void> | void;
 

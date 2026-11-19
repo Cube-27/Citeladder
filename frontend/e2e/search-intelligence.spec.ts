@@ -228,13 +228,8 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    // A narrow page folds its actions into More actions, a real menu.
-    if (viewport.width < 900) {
-      await page.getByRole('button', { name: 'More actions', exact: true }).click();
-      await page.getByRole('menuitem', { name: 'New analysis' }).click();
-    } else {
-      await page.getByRole('button', { name: 'New analysis' }).click();
-    }
+    // The page's primary stays in its strip at every width; only secondary actions fold.
+    await page.getByRole('button', { name: 'New analysis' }).click();
     await expect(page.getByRole('combobox', { name: 'Market' })).toHaveText('Australia');
     expect(writes).toEqual([]);
   });

@@ -26,7 +26,6 @@ describe('RouteLoadingScreen', () => {
     const widgets = [...container.querySelectorAll<HTMLElement>('[data-loading-widget]')];
     expect(widgets.map((widget) => widget.dataset.loadingWidget)).toEqual([
       'project_state',
-      'citation_share',
       'movement',
       'next_action',
       'missing_prompts',
@@ -35,16 +34,15 @@ describe('RouteLoadingScreen', () => {
     ]);
     // Half widgets pair up in a row's grid; a full widget takes a row alone.
     expect(widgets.map((widget) => widget.parentElement?.hasAttribute('data-app-grid'))).toEqual([
-      true,
-      true,
+      false,
       true,
       true,
       false,
       false,
       false,
     ]);
-    expect(widgets[0]?.querySelectorAll('[data-figure-cell]')).toHaveLength(3);
-    expect(widgets[1]?.querySelectorAll('[data-figure-cell]')).toHaveLength(1);
+    // Project state's four figures, owned citation rate the fourth.
+    expect(widgets[0]?.querySelectorAll('[data-figure-cell]')).toHaveLength(4);
   });
 
   it('draws a chat as its thread over the docked composer, never as cards', () => {

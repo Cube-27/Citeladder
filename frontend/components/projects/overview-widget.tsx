@@ -3,13 +3,7 @@ import type { ReactNode } from 'react';
 import type { OverviewWidgetKey } from '@citeladder/contracts/overview';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 
-import {
-  CompanyFacts,
-  Movement,
-  ProjectStateCard,
-  RankedActionsCard,
-  Track,
-} from './dashboard-sections';
+import { CompanyFacts, Movement, ProjectStateCard, RankedActionsCard } from './dashboard-sections';
 import { NextAction } from './next-action-card';
 import { reached } from './overview-start';
 import { MissingPrompts } from './missing-prompts';
@@ -33,7 +27,6 @@ type WidgetProps = {
 /** Every widget by its layout key; a key with no entry fails the type check. */
 const WIDGETS: Record<OverviewWidgetKey, (props: WidgetProps) => ReactNode> = {
   project_state: ({ data }) => <ProjectStateCard data={data} />,
-  citation_share: ({ data }) => <Track data={data} />,
   movement: ({ data }) => <Movement data={data} />,
   next_action: ({ data }) => <NextAction data={data} />,
   missing_prompts: ({ project }) => (

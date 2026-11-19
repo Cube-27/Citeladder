@@ -143,6 +143,47 @@ describe('Masthead', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Edit active project' }));
     expect(edited).toBe(1);
   });
+
+  it("folds a strip's actions while its filter bar wraps, and keeps them while it fits", async () => {
+    const user = userEvent.setup();
+    render(
+      <div data-page-band="filters">
+        <fieldset
+          data-filter-bar=""
+          style={{ display: 'flex', flexDirection: 'row', columnGap: '8px' }}
+        >
+          <span>Status</span>
+          <span>Search</span>
+        </fieldset>
+        <RowActions moreLabel="More actions">
+          <Button>Export</Button>
+        </RowActions>
+      </div>,
+    );
+    const band = document.querySelector<HTMLElement>('[data-page-band]')!;
+    const bar = document.querySelector<HTMLElement>('[data-filter-bar]')!;
+    const [status, search] = [...bar.children] as HTMLElement[];
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 500 });
+    Object.defineProperty(band, 'clientWidth', { configurable: true, value: 600 });
+    const place = (element: HTMLElement, top: number) => {
+      vi.spyOn(element, 'getClientRects').mockReturnValue([
+        new DOMRect(),
+      ] as unknown as DOMRectList);
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, top, 300, 32));
+    };
+
+    // One line: Export stays in the strip.
+    place(status!, 0);
+    place(search!, 0);
+    act(() => emitResize(band));
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+
+    // Wrapped: the 608px line lacks 108, so Export folds behind More actions.
+    place(search!, 40);
+    act(() => emitResize(band));
+    const menu = await openMore(user, await screen.findByRole('button', { name: 'More actions' }));
+    expect(within(menu).getByRole('menuitem', { name: 'Export' })).toBeVisible();
+  });
 });
 
 async function openMore(user: ReturnType<typeof userEvent.setup>, more: HTMLElement) {

@@ -31,8 +31,7 @@ async function call(
 }
 
 const DEFAULT_WIDGETS = [
-  { key: 'project_state', size: 'half' },
-  { key: 'citation_share', size: 'half' },
+  { key: 'project_state', size: 'full' },
   { key: 'movement', size: 'half' },
   { key: 'next_action', size: 'half' },
   { key: 'missing_prompts', size: 'full' },
