@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { Avatar } from '@/components/ui/avatar';
-import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
@@ -26,8 +24,10 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import { Avatar } from '@/components/ui/avatar';
 import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
+import { SettingRow } from '@/components/ui/setting-row';
 import { IdentityRow } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
@@ -112,18 +112,10 @@ function ProjectDeletionControls() {
         <Stack gap="item">
           {activeProject ? (
             <>
-              <IdentityRow
-                media={
-                  <BrandMark
-                    name={activeProject.brand_name}
-                    logoUrl={activeProject.brand?.logo_url}
-                    websiteUrl={activeProject.website_url}
-                    placement="header"
-                  />
-                }
-                title={<div className={textRole('body', 'truncate')}>{activeProject.name}</div>}
-                caption={<p className="type-caption">Brand: {activeProject.brand_name}</p>}
-                actions={
+              <SettingRow
+                label={activeProject.name}
+                description={`Brand: ${activeProject.brand_name}`}
+                action={
                   <Button
                     variant="danger"
                     onClick={() => setConfirmOpen(true)}
@@ -242,6 +234,7 @@ export function SettingsScreen() {
               <SectionTitle id="settings-profile-title">Profile</SectionTitle>
               <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
             </SectionHeader>
+            {/* Facts with no action keep the identity row and ruled facts. */}
             <Stack gap="item">
               <IdentityRow
                 media={<Avatar name={user.email} placement="profile" />}

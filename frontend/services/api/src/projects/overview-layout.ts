@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import {
+  overviewWidgetKeySchema,
   overviewWidgetSchema,
   type OverviewLayout,
   type OverviewWidget,
@@ -20,7 +21,16 @@ import { ApiError, notFound } from '../errors.ts';
 import type { ProjectScope } from './brand-profile.ts';
 
 const CONFLICT = asApiErrorCode(policy.projects.CODE_OVERVIEW_LAYOUT_CONFLICT);
-const storedWidgets = z.array(overviewWidgetSchema);
+// A saved layout can still name a widget since retired from the catalog; it
+// drops on read so the rest of the layout still loads.
+const storedWidgets = z
+  .array(overviewWidgetSchema.extend({ key: z.string() }))
+  .transform((widgets) =>
+    widgets.flatMap(({ key, size }) => {
+      const known = overviewWidgetKeySchema.safeParse(key);
+      return known.success ? [{ key: known.data, size }] : [];
+    }),
+  );
 
 function defaultOverviewLayout(): OverviewWidget[] {
   return policy.projects.overview_default_layout.map((widget) => ({ ...widget }));
@@ -36,7 +46,8 @@ export async function readOverviewLayout(
     .select(['widgets', 'version', 'updated_at'])
     .where('project_id', '=', scope.projectId)
     .executeTakeFirst();
-  const widgets = row?.widgets == null ? null : storedWidgets.parse(row.widgets);
+  const saved = row?.widgets == null ? [] : storedWidgets.parse(row.widgets);
+  const widgets = saved.length ? saved : null;
   return {
     widgets: widgets ?? defaultOverviewLayout(),
     version: row?.version ?? 0,

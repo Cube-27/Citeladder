@@ -208,8 +208,7 @@ function renderDashboard(ui: ReactElement) {
 
 const DEFAULT_LAYOUT = {
   widgets: [
-    { key: 'project_state', size: 'half' },
-    { key: 'citation_share', size: 'half' },
+    { key: 'project_state', size: 'full' },
     { key: 'movement', size: 'half' },
     { key: 'next_action', size: 'half' },
     { key: 'missing_prompts', size: 'full' },
@@ -268,7 +267,7 @@ describe('DashboardScreen', () => {
     expect(rankChange).toHaveAttribute('data-outcome', 'improved');
     expect(screen.queryByText('vs previous')).toBeNull();
     expect(
-      within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('32.5%'),
+      within(screen.getByRole('region', { name: 'Project state' })).getByText('32.5%'),
     ).toBeVisible();
     expect(
       within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%'),
@@ -386,13 +385,16 @@ describe('DashboardScreen', () => {
       '8 of 12 answers comparable',
     );
     expect(state.getByText('8 of 12 answers comparable')).not.toBeVisible();
-    const track = within(screen.getByRole('region', { name: 'Owned citation rate' }));
+    // Owned citation rate is the strip's fourth figure; its label opens Insights.
     expect(
-      track.getByRole('button', { name: 'About Owned citation rate' }),
-    ).toHaveAccessibleDescription('Answers that link to a page you own');
-    expect(
-      track.getByRole('button', { name: 'Basis of Owned citation rate' }),
-    ).toHaveAccessibleDescription(/^Across \d+ engines? · 8 of 12 answers comparable$/);
+      state.getByRole('button', { name: 'Basis of Owned citation rate' }),
+    ).toHaveAccessibleDescription(
+      /^Answers that link to a page you own · Across \d+ engines? · 8 of 12 answers comparable$/,
+    );
+    expect(state.getByRole('link', { name: 'Owned citation rate' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/insights?metric=owned_citation_rate'),
+    );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
     expect(
       movement.getByText(
@@ -673,7 +675,6 @@ describe('DashboardScreen', () => {
     expect(next.getByRole('button', { name: 'Launch run' })).toBeVisible();
     expect(start.getAllByRole('listitem')[0]).toHaveTextContent('Add prompts, Done');
     expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
-    expect(screen.queryByRole('region', { name: 'Owned citation rate' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Project state' })).not.toBeInTheDocument();
     // A widget with something to show stays.
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
@@ -722,7 +723,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     expect(
-      within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('Unavailable'),
+      within(screen.getByRole('region', { name: 'Project state' })).getByText('Unavailable'),
     ).toBeVisible();
   });
   it('keeps observed zero distinct from an unavailable value', () => {

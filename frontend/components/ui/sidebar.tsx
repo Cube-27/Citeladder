@@ -193,6 +193,8 @@ export function SidebarNavGroup({
 /** The current row's tile, the accent mark at its start and `ink` at 500. */
 const CURRENT_TILE = 'bg-[var(--nav-current-fill)] text-ink before:bg-accent';
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
+/** A nav row at rest stays `ink`; only group labels and the mode switch are `ink-2` (owner, 2026-11-19). */
+const NAV_AT_REST = 'text-ink hover:overlay-hover';
 
 /**
  * A row's face: 32 tall (44 in the drawer below 900px), `label` type at the
@@ -204,7 +206,7 @@ export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
     'focus-ring type-label rounded-control relative flex font-normal h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
     'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
-    active ? CURRENT_TILE : AT_REST,
+    active ? CURRENT_TILE : NAV_AT_REST,
     className,
   );
 }
@@ -246,7 +248,7 @@ const RAIL_BUTTON = cn(
  * accent mark.
  */
 export function sidebarRailButtonClasses(current: boolean) {
-  return cn(RAIL_BUTTON, current ? CURRENT_TILE : AT_REST);
+  return cn(RAIL_BUTTON, current ? CURRENT_TILE : NAV_AT_REST);
 }
 
 /**

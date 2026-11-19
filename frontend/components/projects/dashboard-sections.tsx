@@ -257,6 +257,7 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
             metric: data.state.brand_rank,
             kind: 'rank',
           }),
+          ownedCitationSegment(data),
         ]}
       />
     </WidgetFrame>
@@ -264,48 +265,31 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
 }
 
 /**
- * The brand's owned citation rate: the share of answers that link to a page
- * the brand owns. The projection's `track.citation_share` is the brand row's
- * `citation_rate`, which the API reads from the run's `owned_citation_rate`,
- * so it carries AI Visibility's name for that metric.
+ * The brand's owned citation rate, Project state's fourth figure (owner,
+ * 2026-11-19): the share of answers that link to a page the brand owns. The
+ * projection's `track.citation_share` is the brand row's `citation_rate`,
+ * which the API reads from the run's `owned_citation_rate`, so it carries AI
+ * Visibility's name for that metric. Its label links to Insights.
  */
-export function Track({ data }: Readonly<{ data: CommandCenter }>) {
-  const { track } = data;
+function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSegment {
   const observed = Boolean(track.observed_at);
-  return (
-    <WidgetFrame
-      id="citation-share-track"
-      title="Owned citation rate"
-      description="Answers that link to a page you own"
-      link={{ href: '/insights?metric=owned_citation_rate', label: 'Open Insights' }}
-      fill="figure"
-    >
-      <FigureStrip
-        segments={[
-          {
-            key: 'citation-share',
-            label: 'Owned citation rate',
-            labelHidden: true,
-            caption: observed
-              ? `Across ${pluralCount(track.engine_coverage, 'engine')}`
-              : 'All engines',
-            value:
-              track.citation_share.value === null
-                ? null
-                : percentFigure(track.citation_share.value),
-            missingLabel: availabilityLabel(observed ? 'unavailable' : 'not_run'),
-            // No comparable run means no change; the Movement card says so once.
-            delta:
-              observed && track.citation_share.delta !== null ? (
-                <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
-              ) : undefined,
-            // Why no change is shown, or which answers a partial change uses.
-            sub: track.limitations[0],
-          },
-        ]}
-      />
-    </WidgetFrame>
-  );
+  return {
+    key: 'citation-share',
+    label: 'Owned citation rate',
+    action: { href: '/insights?metric=owned_citation_rate', label: 'Open Insights' },
+    caption: `Answers that link to a page you own · ${
+      observed ? `Across ${pluralCount(track.engine_coverage, 'engine')}` : 'All engines'
+    }`,
+    value: track.citation_share.value === null ? null : percentFigure(track.citation_share.value),
+    missingLabel: availabilityLabel(observed ? 'unavailable' : 'not_run'),
+    // No comparable run means no change; the Movement card says so once.
+    delta:
+      observed && track.citation_share.delta !== null ? (
+        <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
+      ) : undefined,
+    // Why no change is shown, or which answers a partial change uses.
+    sub: track.limitations[0],
+  };
 }
 
 /**

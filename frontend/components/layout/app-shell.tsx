@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 
 import { AgentNav, AgentRail } from '@/components/agent/agent-nav';
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
@@ -9,9 +10,12 @@ import {
   CommandPaletteTrigger,
 } from '@/components/ui/command-palette-launcher';
 import { SidebarCollapseToggle, SidebarFrame, SidebarRailList } from '@/components/ui/sidebar';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
 import { navigationMode, resolveTitle } from '@/lib/navigation/app-routes';
+import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 
@@ -95,7 +99,14 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
     );
   return (
     <SidebarFrame
-      ident={<ProjectSwitcher />}
+      ident={
+        <>
+          <div className="min-w-0 flex-1">
+            <ProjectSwitcher />
+          </div>
+          {rail ? null : <SettingsLink />}
+        </>
+      }
       mode={<ModeSwitch rail={rail} />}
       nav={nav}
       foot={
@@ -107,6 +118,30 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
         </>
       }
     />
+  );
+}
+
+/**
+ * Settings, beside the project (owner, 2026-11-19, restoring the gear PR 482 added).
+ * Not in the rail: its 56 cell holds the project's mark alone, and the
+ * account menu still opens Settings there.
+ */
+function SettingsLink() {
+  const { activeProjectId, activeWorkspaceId } = useProjectContext();
+  const to = scopedNavigationDestination(
+    '/settings',
+    'workspace',
+    activeProjectId,
+    activeWorkspaceId,
+  );
+  return (
+    <Tooltip content="Settings" describe={false}>
+      <Button variant="quiet" asChild className="w-[var(--control-md)] shrink-0 gap-0 px-0">
+        <Link to={to} aria-label="Settings">
+          <Icon icon={Settings} />
+        </Link>
+      </Button>
+    </Tooltip>
   );
 }
 

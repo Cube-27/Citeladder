@@ -1,9 +1,8 @@
-import { createContext, use, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SectionDescription } from '@/components/ui/section';
-import { frameClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -18,12 +17,6 @@ export type WidgetLink = Readonly<{ href: string; label: string; name?: string }
  */
 type WidgetFill = 'figure' | 'chart' | 'list';
 
-/**
- * Whether the grid cell frames its widget. Full-width widgets sit on the
- * surface as sections; half-width tiles keep their frames (owner, 2026-11-18).
- */
-export const WidgetFramedContext = createContext(true);
-
 type WidgetHeadProps = Readonly<{
   id: string;
   title: ReactNode;
@@ -34,10 +27,11 @@ type WidgetHeadProps = Readonly<{
 }>;
 
 /**
- * One Overview widget: a light frame with one head (its title in `heading` at the
+ * One Overview widget, unboxed on the surface (owner, 2026-11-19: the page's
+ * section rules separate widgets): one head (its title in `heading` at the
  * left, its status or link at the right), then a figure, a chart or a short
  * list. A `figure` widget keeps its description in a hint after the title, so
- * its card is the head and one figure. Widgets in a row share a height.
+ * it is the head and one figure. Widgets in a row share a height.
  */
 export function WidgetFrame({
   id,
@@ -59,8 +53,6 @@ export function WidgetFrame({
   children: ReactNode;
 }>) {
   const figure = fill === 'figure';
-  const framed = use(WidgetFramedContext);
-  const layout = 'flex h-full min-w-0 flex-col';
   const linkElement = link ? (
     <TextLink href={link.href} underline="hover">
       {link.name ? <span className="sr-only">{link.name}: </span> : null}
@@ -73,7 +65,7 @@ export function WidgetFrame({
       gap="workspace"
       aria-labelledby={id}
       data-overview-widget=""
-      className={framed ? frameClasses(layout) : layout}
+      className="flex h-full min-w-0 flex-col"
     >
       <WidgetHead
         id={id}

@@ -6,7 +6,7 @@
    content mounted only while an animation runs. Each moves from
    `--popup-from` (4px from its side, a tooltip a 2px rise, the dock 8px up)
    and grows from `--popup-scale` (a menu, select list or info hint from 96%
-   at its anchor), over --motion-tint. */
+   at its anchor), over --motion-tint (a menu over --motion-open). */
 .menu-panel,
 .tooltip-panel {
   --popup-from: 0 -4px;
@@ -42,9 +42,13 @@
     scale: var(--popup-scale, 1);
   }
 }
-:is(.menu-panel, .tooltip-panel)[data-state$='open'],
-.menu-panel[data-open] {
+.tooltip-panel[data-state$='open'] {
   animation: popup-in var(--motion-tint) var(--ease-standard);
+}
+/* A menu or select list opens over --motion-open and closes over
+   --motion-close (owner: 200 in, 160 out). */
+.menu-panel:is([data-state$='open'], [data-open]) {
+  animation: popup-in var(--motion-open) var(--ease-standard);
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
   animation: popup-out var(--motion-close) var(--ease-exit) both;

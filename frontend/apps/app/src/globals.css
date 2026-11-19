@@ -421,8 +421,10 @@
   --sidebar-rail-width: calc(var(--control-md) + 24px);
 
   /* Component geometry the components read. Each derives from a system token. */
-  /* What sticks under the app's top bar starts below it. */
-  --sticky-header-offset: var(--masthead-height);
+  /* What sticks under the app's top bar and page strips starts below them. */
+  --sticky-header-offset: calc(
+    var(--masthead-block-size, var(--masthead-height)) + var(--strips-block-size, 0px)
+  );
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
@@ -564,10 +566,6 @@
 }
 @utility shadow-control {
   box-shadow: var(--shadow-control);
-}
-/* A `rule` hairline drawn inside an element's foot, so a tab row keeps its height. */
-@utility rule-below {
-  box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
@@ -1062,9 +1060,9 @@ html {
   scrollbar-width: thin;
 }
 
-/* In-page focus and anchors clear the app's sticky masthead. */
+/* In-page focus and anchors clear the app's sticky masthead and page strips. */
 html:not([data-public-surface]) {
-  scroll-padding-top: calc(var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap));
+  scroll-padding-top: calc(var(--sticky-header-offset) + var(--page-top-gap));
 }
 
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter
@@ -2273,7 +2271,10 @@ label {
 
 /* Control states on HeroUI v3's timings (owner 2026-11-18). A held press
    scales a control (`--press`: buttons and triggers .97, menu rows .98,
-   radios .95, checkboxes .92), never on the website or under reduced motion. */
+   radios .95, checkboxes .92), never on the website or under reduced motion.
+   Never on a popup's trigger: its menu opens on press, anchored to the
+   trigger's scaling box, and slid 3px with it on a first open (owner,
+   2026-11-19: "it dances on first click"). */
 :root:not([data-public-surface]) .press {
   transition:
     scale 250ms,
@@ -2283,7 +2284,8 @@ label {
     box-shadow 100ms;
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-public-surface]) .press:active:not(:disabled, [data-disabled], [aria-busy='true']) {
+  :root:not([data-public-surface])
+    .press:active:not(:disabled, [data-disabled], [aria-busy='true'], [aria-haspopup], [role='combobox']) {
     scale: var(--press, 0.97);
   }
 }

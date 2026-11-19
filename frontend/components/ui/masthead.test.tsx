@@ -60,7 +60,7 @@ describe('Masthead', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
-    ).toEqual(['Search', 'Crawl schedule', 'Export', 'Ask agent']);
+    ).toEqual(['Crawl schedule', 'Export', 'Search', 'Ask agent']);
     expect(menu.querySelector('button')).toBeNull();
     expect(within(menu).queryByRole('menuitem', { name: 'Run new crawl' })).toBeNull();
 
@@ -142,7 +142,7 @@ describe('Masthead', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
-    ).toEqual(['Run Website crawl', 'Search', 'Manage project']);
+    ).toEqual(['Run Website crawl', 'Manage project', 'Search']);
     const manage = within(menu).getByRole('menuitem', { name: 'Manage project' });
     expect(manage).toHaveAttribute('aria-haspopup', 'menu');
     act(() => manage.focus());

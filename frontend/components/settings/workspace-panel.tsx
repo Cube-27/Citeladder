@@ -2,12 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 
-import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Stack } from '@/components/ui/layout';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingRow } from '@/components/ui/setting-row';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -42,39 +42,42 @@ export function WorkspacePanel() {
   return (
     <>
       <Section aria-labelledby="workspace-panel-title">
-        <SectionHeader actions={<Tag>{roleLabel(activeWorkspace.role)}</Tag>}>
+        <SectionHeader>
           <SectionTitle id="workspace-panel-title">{activeWorkspace.name}</SectionTitle>
-          {/* What the role allows and, for the Owner, the way out: one line. */}
-          <SectionDescription>
-            {ROLE_SUMMARY[activeWorkspace.role]}
-            {isOwner ? ' To leave, first make another member the owner.' : null}
-          </SectionDescription>
         </SectionHeader>
-        {/* An Owner who manages members has nothing here but the head. */}
-        {isOwner && mayManage && !leave.isError ? null : (
-          <Stack gap="compact">
-            {isOwner ? null : (
-              <Inline>
+        <Stack gap="workspace">
+          <SettingRow
+            label={`Your role: ${roleLabel(activeWorkspace.role)}`}
+            description={ROLE_SUMMARY[activeWorkspace.role]}
+          />
+          <SettingRow
+            label="Leave workspace"
+            description={
+              isOwner
+                ? 'To leave, first make another member the owner.'
+                : `You lose access to ${activeWorkspace.name} and its projects immediately.`
+            }
+            action={
+              isOwner ? null : (
                 <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
                   <Icon icon={LogOut} />
                   Leave workspace
                 </Button>
-              </Inline>
-            )}
-            {leave.isError ? (
-              <Notice
-                kind="mutation"
-                notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
-              />
-            ) : null}
-            {mayManage ? null : (
-              <Notice tone="info">
-                The owner and admins manage who belongs to this workspace and what each person may
-                do.
-              </Notice>
-            )}
-          </Stack>
-        )}
+              )
+            }
+          />
+          {leave.isError ? (
+            <Notice
+              kind="mutation"
+              notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
+            />
+          ) : null}
+          {mayManage ? null : (
+            <Notice tone="info">
+              The owner and admins manage who belongs to this workspace and what each person may do.
+            </Notice>
+          )}
+        </Stack>
       </Section>
 
       {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}

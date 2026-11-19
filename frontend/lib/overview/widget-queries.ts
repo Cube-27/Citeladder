@@ -138,7 +138,6 @@ type WidgetWarmup = (client: QueryClient, project: WidgetProject) => Promise<voi
  */
 const WIDGET_WARMUPS: Readonly<Record<OverviewWidgetKey, WidgetWarmup | null>> = {
   project_state: null,
-  citation_share: null,
   movement: null,
   next_action: null,
   ranked_actions: null,

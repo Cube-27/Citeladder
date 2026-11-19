@@ -27,11 +27,6 @@ export function slipClasses(className?: string) {
 /** The light frame's edge, for a box that clips its own rows. */
 export const FRAME_FACE = 'border border-rule rounded-card';
 
-/** A frame padded like a slip; it counts as a container, so what sits inside draws no second frame. */
-export function frameClasses(className?: string) {
-  return cn('surface-slip p-[var(--card-padding)]', FRAME_FACE, className);
-}
-
 /** A reply's tool-step group: a slip 12 down and 16 across, apart from the prose on the ground. */
 export const STEP_SLIP = cn('surface-slip min-w-0 px-4 py-3', SLIP_FACE);
 

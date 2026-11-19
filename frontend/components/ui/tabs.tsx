@@ -16,16 +16,16 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Tabs and Segmented: text on a hairline. The strip is
- * one row with a 1px `rule` drawn inside its foot (`rule-below`, so the row
- * keeps its height) that scrolls sideways inside itself (its scrollbar
- * hidden) when its items overflow; each item is `body` in `ink-2`, and the
- * current one is `ink` at `label` weight with the 2px accent underline
- * ("you are here") on the hairline, sliding from item to item. One face for page tabs, in-section tabs
- * and the Segmented view switch.
+ * Tabs and Segmented: text with one underline. The strip is one row that
+ * scrolls sideways inside itself (its scrollbar hidden) when its items
+ * overflow, with no hairline of its own (owner, 2026-11-19: only the current
+ * item's underline; a page strip's band draws the strip rule); each item is
+ * `body` in `ink-2`, and the current one is `ink` at `label` weight with the
+ * 2px accent underline ("you are here"), sliding from item to item. One face
+ * for page tabs, in-section tabs and the Segmented view switch.
  */
 const TAB_STRIP =
-  'rule-below relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** Past the edge fade, so the cue never covers the item it reveals. */
 const REVEAL_PADDING = 32;
@@ -131,7 +131,7 @@ function StripFrame({
 }
 
 /**
- * One item: the label, and the current item's accent rung on the hairline.
+ * One item: the label, and the current item's accent rung at its foot.
  * A page tab fills the page's tab strip (as high as the filter strip, its
  * label centred), a section tab is one control high (32, 44 below 900px or
  * under a coarse pointer); both take 12 each side and hover on a 6% tile one

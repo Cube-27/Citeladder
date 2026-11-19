@@ -24,11 +24,14 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
 
 /**
  * Masthead: the head of every shell page, 56 tall on `chrome`, sticky with a
- * rule under it, one row at every width. From the left: the menu button
- * below 900px and a record page's back link (`lead`), the page title in
- * `title` type; at the right the search trigger, the page's secondary
- * actions, its one primary action (`actions`, the primary inside
- * `MastheadPrimary`), then "Ask agent" (`end`), each with its text label.
+ * rule under it, one row at every width, across the whole main column. From
+ * the left, at the page's own start (`--page-start`, so a narrow page's title
+ * lines up with its content): the menu button below 900px and a record
+ * page's back link (`lead`), the page title in `title` type; at the right the
+ * page's secondary actions, its one primary action (`actions`, the primary
+ * inside `MastheadPrimary`), then the search trigger and "Ask agent" (`end`)
+ * on the column's right edge on every page (owner, 2026-11-19), each with its
+ * text label.
  *
  * The title is one line: a longer name is cut with an ellipsis, and only then
  * does it take keyboard focus and show the full name in the tooltip. Its
@@ -51,7 +54,7 @@ export function Masthead({
   lead?: ReactNode;
   /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */
   crumb?: ReactNode;
-  /** The shell's search trigger, first at the right. */
+  /** The shell's search trigger, after the page's actions. */
   search?: ReactNode;
   /** The page's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
@@ -72,7 +75,8 @@ export function Masthead({
       ref={header}
       className={cn(
         BAR_LAYER,
-        'z-sticky sticky top-0 isolate flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 rail:h-[var(--masthead-height)]',
+        // As wide as the main column, past the page's 1440 cap, so search and "Ask agent" end on its edge.
+        'z-sticky sticky top-0 isolate flex min-h-[var(--masthead-height)] w-[100cqw] min-w-0 items-center gap-2 ps-[var(--page-start,0px)] rail:h-[var(--masthead-height)]',
       )}
     >
       {/* Below `rail` the title side keeps its content's minimum; the actions give way. */}
@@ -102,9 +106,9 @@ export function Masthead({
         {hasControls ? (
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow>
-              {search}
               {actions}
-              {/* "Ask agent" comes after the primary in the row. */}
+              {/* Search and "Ask agent" come after the primary, pinned at the right. */}
+              {search ? <div className="rail:order-1 flex flex-col">{search}</div> : null}
               {end ? <div className="rail:order-1 flex flex-col">{end}</div> : null}
             </MastheadOverflow>
           </MastheadPrimarySlot>
@@ -140,25 +144,29 @@ export function MastheadBack({
 }
 
 /**
- * Publishes the masthead's drawn height on the document as
- * `--masthead-block-size`, so a screen that fills the viewport and the scroll
- * padding allow for its second row below `rail`.
+ * Publishes a sticky bar's drawn height on the document (the masthead's as
+ * `--masthead-block-size`, the page strips' as `--strips-block-size`), so a
+ * screen that fills the viewport, the scroll padding and what sticks below
+ * allow for it, its second row below `rail` included.
  */
-function usePublishedHeight(ref: RefObject<HTMLElement | null>) {
+export function usePublishedHeight(
+  ref: RefObject<HTMLElement | null>,
+  property = '--masthead-block-size',
+) {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     const root = document.documentElement;
     const update = () =>
-      root.style.setProperty('--masthead-block-size', `${node.getBoundingClientRect().height}px`);
+      root.style.setProperty(property, `${node.getBoundingClientRect().height}px`);
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => {
       observer.disconnect();
-      root.style.removeProperty('--masthead-block-size');
+      root.style.removeProperty(property);
     };
-  }, [ref]);
+  }, [ref, property]);
 }
 
 /**

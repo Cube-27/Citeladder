@@ -267,17 +267,23 @@ vertical gap.
 **Page anatomy**, identical on every shell page. The top strips are the same
 height on every page and each closes on a hairline across the whole main
 column, a narrow page's included: rules span the width, only content is
-inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
+inset (owner, 2026-11-18). The tab and filter strips stick under the
+masthead on `ground`, rules included (owner, 2026-11-19). `PageFrame` draws
+them; a page sets none.
 
-1. **Masthead** (52, sticky): the menu button below 900px, the back link on
-   a record, the page title, then search, secondary actions, at most one
-   primary action and Ask agent.
+1. **Masthead** (52, sticky), as wide as the main column on every page: the
+   menu button below 900px, the back link on a record and the page title,
+   starting on the page column's left edge; then the page's secondary
+   actions and at most one primary action, then search (Ctrl K) and Ask
+   agent at the column's right edge, the same x on every page and page width
+   (owner, 2026-11-19). Filters and search fields never sit in it.
 2. **Tab strip** (optional): as high as the filter strip (owner,
    2026-11-18), the tabs filling it with their labels centred, so the
    current tab's underline sits on the strip's rule. Tabs come before
    filters because a tab changes the filters and the strip above it must
    not change (owner, 2026-11-18).
-3. **Filter strip** (optional): 8 around 32 controls, 8 apart, one line:
+3. **Filter strip** (optional, the first strip on a page without tabs): 8
+   around 32 controls, 8 apart, one line:
    view (Prompts' Active | Archived), search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
@@ -301,11 +307,13 @@ the filter bar when it scopes the page, a table's toolbar when it scopes one
 table, a section's head when it changes how that section draws.
 
 **Width.** Content fills the main column inside its gutter, so collapsing the
-sidebar grows it, except on reading pages: the Agent chat, Settings and
-Billing, Issues, Actions, Skills and Context sit whole, masthead included, in
-the centred `container-thread` column the Agent thread uses, so their side
-space matches the chat's (owner, 2026-11-16). A route opts in
-with `width: 'narrow'` in
+sidebar grows it, except on reading pages: the Agent chat, Billing, Issues,
+Actions and Skills sit in the centred `container-thread` column the Agent
+thread uses, so their side space matches the chat's (owner, 2026-11-16), and
+Settings and Context, pages of rows, in the narrower `container-prose`
+(owner, 2026-11-19). Only the masthead's title follows the column; its search
+and Ask agent stay at the main column's edge. A route opts in with
+`width: 'narrow'` or `'compact'` in
 [`app-routes.ts`](../frontend/lib/navigation/app-routes.ts) and `PageFrame`
 applies it; a workbench (a chat's page document) still fills the column.
 Reading columns, forms and flows take `container-prose`, `container-form` and
@@ -356,7 +364,8 @@ screen stays rendered while it refreshes.
   inset `surface` panel at `rounded-card`, 4 in from the shell's sides and
   foot; its title, tabs, filters and actions sit on the surface above it. A
   **Frame** (a `rule` edge at `rounded-card`, no fill, no shadow) holds a
-  plotted chart (its key inside), an Overview widget or a box of rows. A **Slip** (`surface`, a `rule` edge,
+  plotted chart (its key inside) or a box of rows; Overview widgets are page
+  sections, unboxed (owner, 2026-11-19). A **Slip** (`surface`, a `rule` edge,
   `rounded-card`, `shadow-card`) is one object you can act on: a clickable
   card (`IconCard`, which takes the `control-edge`), a plan or add-on with its
   buttons. A **Well** (`well`, radius 6) holds quoted or raw material. A
@@ -424,8 +433,9 @@ its own spacing, size or radius on them.
   no edge; a draft tag is dashed.
 - **StatusMark** is the only way to show a status, priority or severity: a
   glyph and a word, with an optional tone.
-- **Tabs and segments** are text on a hairline; the current one carries the
-  accent mark. A count follows the label in brackets, in the mono face:
+- **Tabs and segments** are text with no hairline of their own; the current
+  one carries the accent mark, and a page tab strip's rule is its band's
+  (owner, 2026-11-19). A count follows the label in brackets, in the mono face:
   "All signals (107)".
 - **Filter chips** (owner, 2026-11-18): a chip is sized to its value and
   prints the value only; the filter's name is its tooltip and its menu's

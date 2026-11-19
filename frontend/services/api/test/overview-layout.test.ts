@@ -31,8 +31,7 @@ async function call(
 }
 
 const DEFAULT_WIDGETS = [
-  { key: 'project_state', size: 'half' },
-  { key: 'citation_share', size: 'half' },
+  { key: 'project_state', size: 'full' },
   { key: 'movement', size: 'half' },
   { key: 'next_action', size: 'half' },
   { key: 'missing_prompts', size: 'full' },
@@ -82,6 +81,39 @@ describe('Overview layout', () => {
     });
     expect(repeated.status).toBe(422);
     expect((await call(tenant, tenant.projectId)).body).toMatchObject({ widgets, version: 1 });
+  });
+
+  it('drops a widget retired from the catalog when it reads a saved layout', async () => {
+    const tenant = await fixtures.tenant();
+    const store = async (widgets: unknown[]) =>
+      db
+        .updateTable('overview_layouts')
+        .set({ widgets: JSON.stringify(widgets) })
+        .where('project_id', '=', tenant.projectId)
+        .execute();
+    await call(tenant, tenant.projectId, { widgets: DEFAULT_WIDGETS, expected_version: 0 });
+
+    await store([
+      { key: 'project_state', size: 'half' },
+      { key: 'citation_share', size: 'half' },
+      { key: 'movement', size: 'half' },
+    ]);
+    expect(await call(tenant, tenant.projectId)).toMatchObject({
+      status: 200,
+      body: {
+        widgets: [
+          { key: 'project_state', size: 'half' },
+          { key: 'movement', size: 'half' },
+        ],
+        customized: true,
+      },
+    });
+
+    await store([{ key: 'citation_share', size: 'half' }]);
+    expect(await call(tenant, tenant.projectId)).toMatchObject({
+      status: 200,
+      body: { widgets: DEFAULT_WIDGETS, version: 1, customized: false },
+    });
   });
 
   it('lets viewers read but not edit, and hides another workspace project', async () => {

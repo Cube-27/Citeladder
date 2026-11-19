@@ -111,20 +111,14 @@ function citationStat({ view }: ReportContext): Stat {
 
 const commandCenterSections: Partial<Record<OverviewWidgetKey, Section>> = {
   project_state: (context) => {
-    const { view, report, shown } = context;
+    const { view, report } = context;
     heading(report, 'project_state');
-    // The owned citation rate joins the headline figures when both widgets are shown.
     report.stats([
       percentStat(view, 'Visibility', view.state.visibility, 'of answers name you'),
       percentStat(view, 'Share of voice', view.state.share_of_voice, 'of brand mentions'),
-      ...(shown.has('citation_share') ? [citationStat(context)] : []),
+      citationStat(context),
       rankStat(context),
     ]);
-  },
-  citation_share: (context) => {
-    if (context.shown.has('project_state')) return;
-    heading(context.report, 'citation_share');
-    context.report.stats([citationStat(context)]);
   },
   movement: ({ view, report }) => {
     heading(report, 'movement');
@@ -282,7 +276,6 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
     report,
     prompts,
     brands: ranked?.rankings.length ?? null,
-    shown: new Set(layout.widgets.map((widget) => widget.key)),
   };
   const sections = { ...commandCenterSections, ...librarySections };
   for (const widget of layout.widgets) {

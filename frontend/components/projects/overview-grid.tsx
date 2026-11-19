@@ -5,15 +5,14 @@ import { overviewWidgetTitles, type OverviewWidget } from '@citeladder/contracts
 import { AppGrid } from '@/components/ui/app-grid';
 import { IconButton } from '@/components/ui/button';
 import { FloatingToolbar } from '@/components/ui/workspace';
-import { loneHalves, moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
-import { cn } from '@/lib/utils';
-
-import { WidgetFramedContext } from './widget-frame';
+import { moveWidget, overviewRows, removeWidget, toggleWidth } from '@/lib/overview/layout';
 
 /**
- * The Overview's two-column grid. Half widgets share a row and its height;
- * full widgets span it. While editing, each widget carries its controls in an
- * overlay, so entering or leaving edit mode never moves a widget.
+ * The Overview's rows, as page sections: two half widgets share a row (a
+ * halves grid, one height), a full or lone widget takes one. The page's
+ * section rules separate them (owner, 2026-11-19: dividers, not boxes). While
+ * editing, each widget carries its controls in an overlay, so entering or
+ * leaving edit mode never moves a widget.
  */
 export function OverviewGrid({
   widgets,
@@ -28,36 +27,36 @@ export function OverviewGrid({
   onChange: (widgets: OverviewWidget[]) => void;
   render: (widget: OverviewWidget) => ReactNode;
 }>) {
-  const lone = loneHalves(widgets);
-  return (
-    <AppGrid layout="halves">
-      {widgets.map((widget, index) => (
-        // The widget's own card names its region; this cell only places it.
-        <div
-          key={widget.key}
-          data-widget={widget.key}
-          className={cn(
-            'relative min-w-0',
-            (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
-          )}
-        >
-          <WidgetFramedContext value={widget.size !== 'full'}>{render(widget)}</WidgetFramedContext>
-          {editing ? (
-            <WidgetControls
-              widget={widget}
-              first={index === 0}
-              last={index === widgets.length - 1}
-              only={widgets.length === 1}
-              pending={pending}
-              onMove={(to) => onChange(moveWidget(widgets, index, to))}
-              onResize={() => onChange(toggleWidth(widgets, index))}
-              onRemove={() => onChange(removeWidget(widgets, index))}
-              index={index}
-            />
-          ) : null}
-        </div>
-      ))}
-    </AppGrid>
+  const cell = (widget: OverviewWidget) => {
+    const index = widgets.indexOf(widget);
+    return (
+      // A section, so the page's section rules count it; the widget's own heading names its region.
+      <section key={widget.key} data-widget={widget.key} className="relative min-w-0">
+        {render(widget)}
+        {editing ? (
+          <WidgetControls
+            widget={widget}
+            first={index === 0}
+            last={index === widgets.length - 1}
+            only={widgets.length === 1}
+            pending={pending}
+            onMove={(to) => onChange(moveWidget(widgets, index, to))}
+            onResize={() => onChange(toggleWidth(widgets, index))}
+            onRemove={() => onChange(removeWidget(widgets, index))}
+            index={index}
+          />
+        ) : null}
+      </section>
+    );
+  };
+  return overviewRows(widgets).map((row) =>
+    row.length === 1 ? (
+      cell(row[0])
+    ) : (
+      <AppGrid key={row.map((widget) => widget.key).join()} layout="halves">
+        {row.map(cell)}
+      </AppGrid>
+    ),
   );
 }
 
