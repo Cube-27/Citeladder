@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+import { bandBox, type Box } from './helpers/band-box';
 
 const BASE = `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions`;
 
@@ -106,8 +107,6 @@ async function stubActions(page: Page) {
   });
 }
 
-type Box = readonly number[] | null;
-
 /** The bands above and beside what a click on the tree changes: x, y, width and height. */
 async function layout(page: Page): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
@@ -116,13 +115,9 @@ async function layout(page: Page): Promise<Record<string, Box>> {
     goals: page.getByRole('group', { name: 'Goals' }),
     firstGroup: page.locator('[data-tree-group]').first(),
   };
-  const scrolled = await page.evaluate(() => window.scrollY);
   const boxes: Record<string, Box> = {};
-  for (const [name, part] of Object.entries(parts)) {
-    const box = (await part.count()) >= 1 ? await part.boundingBox() : null;
-    const top = name === 'masthead' ? 0 : scrolled;
-    boxes[name] = box && [box.x, box.y + top, box.width, box.height];
-  }
+  for (const [name, part] of Object.entries(parts))
+    boxes[name] = (await part.count()) >= 1 ? await bandBox(part.first()) : null;
   return boxes;
 }
 
@@ -277,14 +272,8 @@ for (const width of [1280, 1600])
       dock,
     };
     const boxes = async () => {
-      const scrolled = await page.evaluate(() => window.scrollY);
       const out: Record<string, Box> = {};
-      for (const [name, part] of Object.entries(parts)) {
-        const box = await part.boundingBox();
-        // The masthead and dock hold to the viewport; the rest scroll with the page.
-        const top = name === 'masthead' || name === 'dock' ? 0 : scrolled;
-        out[name] = box && [box.x, box.y + top, box.width, box.height];
-      }
+      for (const [name, part] of Object.entries(parts)) out[name] = await bandBox(part);
       return out;
     };
     const before = await boxes();
