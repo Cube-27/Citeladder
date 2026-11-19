@@ -10,7 +10,6 @@ import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -136,48 +135,37 @@ function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }
   );
 }
 
-function SearchDemandView({
-  tabs,
-  snapshot,
-  refreshError,
-  onRetry,
-  retrying,
-}: Readonly<{
-  tabs: ReactNode;
-  snapshot: DemandSnapshot;
-  refreshError?: Error | null;
-  onRetry?: () => void;
-  retrying?: boolean;
-}>) {
+/**
+ * The Keyword research page's Demand state, held by the page so its frame,
+ * masthead and tab row stay mounted while the tabs change.
+ */
+export function useDemand() {
   const { workspaceId, projectId } = useProjectScope();
   const queryClient = useQueryClient();
-
+  const latest = useQuery({
+    ...demandQueries.latest({ workspaceId, projectId }),
+    // Deliberately NO `keepPreviousData`: the key's only variable is the
+    // project, so keeping previous data would render the PREVIOUS project's
+    // snapshot as a success (placeholder data is not `isLoading`) while
+    // recompute targets the CURRENT project id.
+  });
   const [activeTab, setActiveTab] = useUrlState('view', DEMAND_TAB_CODEC, {
     clearKeys: ['signal'],
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSignalId, setSelectedSignalId] = useUrlState('signal', optionalStringUrlCodec);
-  const selectedSignal = snapshot.signals.find((signal) => signal.id === selectedSignalId) ?? null;
-
   // Recompute is queued: the screen reports that the work was queued and lets
   // the reader check for the new snapshot once it lands.
-  const recomputeMutation = useMutation(demandMutations.recompute({ workspaceId, projectId }));
+  const recompute = useMutation(demandMutations.recompute({ workspaceId, projectId }));
   const canRun = useWorkspaceCapability('run');
-  const refreshSnapshot = () => refreshDemandSnapshot(queryClient, projectId);
-
-  const handleInspect = (signal: DemandSignal) => {
-    setSelectedSignalId(signal.id);
-  };
-
-  const windowLabel = `${formatStripDay(snapshot.window_start)} – ${formatStripDay(snapshot.window_end)}`;
-
+  const snapshot = latest.data?.coverage.search === 'observed' ? latest.data : null;
+  const signals = snapshot?.signals;
   // Counts for every tab in one pass, recomputed only when the snapshot does —
   // not on every keystroke in the search box.
   const tabCounts = useMemo(
-    () => new Map(FILTER_TABS.map(({ tab }) => [tab, countByTab(snapshot.signals, tab)] as const)),
-    [snapshot.signals],
+    () => new Map(FILTER_TABS.map(({ tab }) => [tab, countByTab(signals ?? [], tab)] as const)),
+    [signals],
   );
-
   /**
    * The API returns signals ordered by priority, so a signal's rank is its
    * index in the FULL list. Pairing it here keeps the rank stable when a
@@ -185,12 +173,8 @@ function SearchDemandView({
    */
   const filteredSignals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return snapshot.signals.reduce<RankedSignal[]>((matches, signal, index) => {
+    return (signals ?? []).reduce<RankedSignal[]>((matches, signal, index) => {
       if (!matchesTab(signal, activeTab)) return matches;
-      if (!query) {
-        matches.push({ signal, rank: index + 1 });
-        return matches;
-      }
       const haystack = [
         signalTarget(signal),
         signal.page_url,
@@ -198,11 +182,120 @@ function SearchDemandView({
       ]
         .join(' ')
         .toLowerCase();
-      if (haystack.includes(query)) matches.push({ signal, rank: index + 1 });
+      if (!query || haystack.includes(query)) matches.push({ signal, rank: index + 1 });
       return matches;
     }, []);
-  }, [snapshot.signals, activeTab, searchQuery]);
+  }, [signals, activeTab, searchQuery]);
+  return {
+    latest,
+    snapshot,
+    recompute,
+    canRun,
+    refresh: () => refreshDemandSnapshot(queryClient, projectId),
+    filter: { activeTab, setActiveTab, searchQuery, setSearchQuery, tabCounts, filteredSignals },
+    selection: { selectedSignalId, setSelectedSignalId },
+  };
+}
 
+type Demand = ReturnType<typeof useDemand>;
+
+/** Demand's masthead action; recomputing is a run, so a role without it reads the snapshot as is. */
+export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
+  const { snapshot, recompute, canRun } = demand;
+  if (!canRun || !snapshot) return null;
+  return (
+    <RecomputeAction
+      mutation={recompute}
+      onRecompute={() =>
+        recompute.mutate({ window_start: snapshot.window_start, window_end: snapshot.window_end })
+      }
+      onCheck={() => {
+        recompute.reset();
+        void demand.refresh();
+      }}
+    />
+  );
+}
+
+/** Demand's control strip; the first load holds it, so the table starts where it lands. */
+export function demandControls(demand: Demand): ReactNode {
+  const { snapshot, filter } = demand;
+  if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
+  const windowLabel = `${formatStripDay(snapshot.window_start)} – ${formatStripDay(snapshot.window_end)}`;
+  return (
+    <FilterBar
+      // Which signals the table lists is the tab's view, leading its control strip.
+      view={
+        <DemandSignalFilters
+          activeTab={filter.activeTab}
+          onTabChange={filter.setActiveTab}
+          tabCounts={filter.tabCounts}
+        />
+      }
+      search={
+        <SearchField
+          value={filter.searchQuery}
+          onValueChange={filter.setSearchQuery}
+          placeholder="Filter queries or pages…"
+          aria-label="Filter queries or pages"
+        />
+      }
+      // What the table holds, and over which window, closes the row.
+      status={
+        // Below 900 each piece wraps to its own line, never overprinting; from 900 the strip's meta is one line.
+        <Inline
+          as="span"
+          gap="status"
+          data-demand-status=""
+          className="rail:flex-nowrap rail:whitespace-nowrap items-baseline whitespace-normal"
+        >
+          <span>
+            <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
+            {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
+          </span>
+          <Inline as="span" gap="tight" className="shrink-0">
+            <Icon icon={Calendar} />
+            <span className="tabular-nums">{windowLabel}</span>
+          </Inline>
+          <DemandLatentDemand snapshot={snapshot} />
+        </Inline>
+      }
+    />
+  );
+}
+
+/** The Demand tab's panel content in every state. */
+export function DemandPanel({ demand }: Readonly<{ demand: Demand }>) {
+  const { latest, snapshot } = demand;
+  if (!snapshot) return demandFallback(latest);
+  // A refresh that fails over evidence we already hold keeps the evidence and
+  // says so. Returning the error instead would blank a working screen; saying
+  // nothing would present a stale snapshot as current.
+  return (
+    <>
+      {latest.error ? (
+        <Notice
+          kind="read"
+          error={latest.error}
+          fallback="Demand could not be refreshed."
+          title="Demand could not be refreshed"
+          onRetry={() => void latest.refetch()}
+          pending={latest.isFetching}
+        />
+      ) : null}
+      <RecomputeFailure mutation={demand.recompute} />
+      <RecomputeStatus mutation={demand.recompute} />
+      <SignalsFeed demand={demand} snapshot={snapshot} />
+    </>
+  );
+}
+
+function SignalsFeed({
+  demand: { filter, selection },
+  snapshot,
+}: Readonly<{ demand: Demand; snapshot: DemandSnapshot }>) {
+  const selectedSignal =
+    snapshot.signals.find((signal) => signal.id === selection.selectedSignalId) ?? null;
   // What the figures mean, and how far each detector ran: the table's caption,
   // and the reason an empty snapshot is empty.
   const caption = (
@@ -214,160 +307,40 @@ function SearchDemandView({
   );
   // An empty feed has two different causes, and they need different words:
   // nothing was detected at all, or the filter hid everything that was.
-  const signalsFeed: ReactNode =
-    snapshot.signals.length === 0 ? (
-      <DemandEmpty>
-        <StateBlock
-          kind="empty"
-          icon={Sparkles}
-          heading="No qualifying search gaps observed"
-          description="Search Console data was observed, but no configured detector emitted a signal in this window."
-          headingLevel={2}
-        />
-        <p className="type-caption">{caption}</p>
-      </DemandEmpty>
-    ) : (
-      <DemandSignalTable
-        rows={filteredSignals}
-        filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
-        onInspect={handleInspect}
-        description={caption}
-        onClearFilters={() => {
-          setActiveTab('all');
-          setSearchQuery('');
-        }}
-      />
-    );
-
   return (
-    <ReportPage
-      actions={
-        // Recomputing is a run; a role without it reads the snapshot as is.
-        canRun ? (
-          <RecomputeAction
-            mutation={recomputeMutation}
-            onRecompute={() =>
-              recomputeMutation.mutate({
-                window_start: snapshot.window_start,
-                window_end: snapshot.window_end,
-              })
-            }
-            onCheck={() => {
-              recomputeMutation.reset();
-              void refreshSnapshot();
-            }}
+    <>
+      {snapshot.signals.length === 0 ? (
+        <DemandEmpty>
+          <StateBlock
+            kind="empty"
+            icon={Sparkles}
+            heading="No qualifying search gaps observed"
+            description="Search Console data was observed, but no configured detector emitted a signal in this window."
+            headingLevel={2}
           />
-        ) : undefined
-      }
-      tabs={tabs}
-      filters={
-        <FilterBar
-          // Which signals the table lists is the tab's view, leading its control strip.
-          view={
-            <DemandSignalFilters
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              tabCounts={tabCounts}
-            />
-          }
-          search={
-            <SearchField
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              placeholder="Filter queries or pages…"
-              aria-label="Filter queries or pages"
-            />
-          }
-          // What the table holds, and over which window, closes the row.
-          status={
-            // Below 900 each piece wraps to its own line, never overprinting; from 900 the strip's meta is one line.
-            <Inline
-              as="span"
-              gap="status"
-              data-demand-status=""
-              className="rail:flex-nowrap rail:whitespace-nowrap items-baseline whitespace-normal"
-            >
-              <span>
-                <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
-                {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
-              </span>
-              <Inline as="span" gap="tight" className="shrink-0">
-                <Icon icon={Calendar} />
-                <span className="tabular-nums">{windowLabel}</span>
-              </Inline>
-              <DemandLatentDemand snapshot={snapshot} />
-            </Inline>
-          }
-        />
-      }
-    >
-      <>
-        {refreshError ? (
-          <Notice
-            kind="read"
-            error={refreshError}
-            fallback="Demand could not be refreshed."
-            title="Demand could not be refreshed"
-            onRetry={onRetry ?? (() => undefined)}
-            pending={Boolean(retrying)}
-          />
-        ) : null}
-        <RecomputeFailure mutation={recomputeMutation} />
-        <RecomputeStatus mutation={recomputeMutation} />
-        {signalsFeed}
-
-        <DemandEvidenceDrawer
-          signal={selectedSignal}
-          policy={snapshot.detector_policy}
-          open={selectedSignal !== null}
-          onOpenChange={(open) => {
-            if (!open) setSelectedSignalId(null);
+          <p className="type-caption">{caption}</p>
+        </DemandEmpty>
+      ) : (
+        <DemandSignalTable
+          rows={filter.filteredSignals}
+          filterKey={`${filter.activeTab}\u0000${filter.searchQuery.trim().toLowerCase()}`}
+          onInspect={(signal: DemandSignal) => selection.setSelectedSignalId(signal.id)}
+          description={caption}
+          onClearFilters={() => {
+            filter.setActiveTab('all');
+            filter.setSearchQuery('');
           }}
         />
-      </>
-    </ReportPage>
-  );
-}
-
-/** The Keywords page's Demand tab; `tabs` is the page's tab row, kept in every state. */
-export function DemandProjection({ tabs }: Readonly<{ tabs: ReactNode }>) {
-  const { workspaceId, projectId } = useProjectScope();
-  const latest = useQuery({
-    ...demandQueries.latest({ workspaceId, projectId }),
-    // Deliberately NO `keepPreviousData`: the key's only variable is the
-    // project, so keeping previous data would render the PREVIOUS project's
-    // snapshot as a success (placeholder data is not `isLoading`) while
-    // `SearchDemandView` recomputes against the CURRENT project id.
-  });
-
-  // The loaded view owns its own bands. Every other state is the same page
-  // with an empty content region, so it keeps its identity band rather than
-  // losing the heading and the rule above the work.
-  const snapshot = latest.data;
-  if (snapshot?.coverage.search === 'observed') {
-    // The route already wraps this subtree in a TooltipProvider.
-    //
-    // A refresh that fails over evidence we already hold keeps the evidence and
-    // says so. Returning the error instead would blank a working screen; saying
-    // nothing would present a stale snapshot as current.
-    return (
-      <SearchDemandView
-        tabs={tabs}
-        snapshot={snapshot}
-        refreshError={latest.error}
-        onRetry={() => void latest.refetch()}
-        retrying={latest.isFetching}
+      )}
+      <DemandEvidenceDrawer
+        signal={selectedSignal}
+        policy={snapshot.detector_policy}
+        open={selectedSignal !== null}
+        onOpenChange={(open) => {
+          if (!open) selection.setSelectedSignalId(null);
+        }}
       />
-    );
-  }
-  // The first load holds the control strip, so the table starts where it lands.
-  return (
-    <ReportPage
-      tabs={tabs}
-      filters={latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
-    >
-      {demandFallback(latest)}
-    </ReportPage>
+    </>
   );
 }
 

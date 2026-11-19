@@ -14,7 +14,8 @@ import { makeProject } from '@/test/fixtures/project';
 import { focusByKeyboard } from '@/test/keyboard-focus';
 import { roles } from '@/services/api/src/config/workspaces.json';
 
-import { DemandProjection } from './demand-projection';
+import { ReportPage } from '@/components/templates/report-page';
+import { DemandActions, DemandPanel, demandControls, useDemand } from './demand-projection';
 
 function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <MemoryRouter initialEntries={['/search-intelligence']}>{children}</MemoryRouter>;
@@ -76,13 +77,23 @@ vi.mock('@/lib/project/project-context', () => {
   };
 });
 
+/** The Demand tab's parts in the page's Report frame. */
+function DemandTab() {
+  const demand = useDemand();
+  return (
+    <ReportPage actions={<DemandActions demand={demand} />} filters={demandControls(demand)}>
+      <DemandPanel demand={demand} />
+    </ReportPage>
+  );
+}
+
 /** The Demand tab as the project route's gate hands it the currently selected project. */
 function DemandRoute() {
   return (
     <ActiveProjectScopeProvider
       project={makeProject({ id: project.id, workspace_id: project.workspace_id })}
     >
-      <DemandProjection tabs={null} />
+      <DemandTab />
     </ActiveProjectScopeProvider>
   );
 }
@@ -206,7 +217,7 @@ beforeEach(() => {
 const findSignalCount = (text: string) =>
   screen.findByText((_, element) => element?.tagName === 'SPAN' && element.textContent === text);
 
-describe('DemandProjection', () => {
+describe('Demand tab', () => {
   beforeEach(() => {
     // The filter and selection live in the address, which outlives a render.
     window.history.replaceState(null, '', '/search-intelligence');

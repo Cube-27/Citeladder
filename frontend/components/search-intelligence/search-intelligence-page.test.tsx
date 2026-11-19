@@ -1,5 +1,5 @@
 import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
@@ -78,7 +78,13 @@ const readiness: SearchIntelligenceReadiness = {
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 // The page opens on Demand; these cases read Keyword Research from its Overview.
-beforeEach(() => window.history.replaceState(null, '', '/search-intelligence?tab=overview'));
+// Demand's read is held in flight: these cases read only Keyword Research.
+beforeEach(() => {
+  window.history.replaceState(null, '', '/search-intelligence?tab=overview');
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/demand/latest`, () => new Promise(() => {})),
+  );
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -214,6 +220,32 @@ it('offers citation matching only for the website whose list is on screen', asyn
   expect(
     await screen.findByRole('button', { name: 'Match with Visibility citations' }),
   ).toBeInTheDocument();
+});
+
+it('moves between Demand and the research tabs on one tab row, keeping focus and the masthead', async () => {
+  window.history.replaceState(null, '', '/search-intelligence');
+  renderPage({
+    ...readiness,
+    datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
+  });
+  const masthead = () => document.querySelector('header[data-masthead]') as HTMLElement;
+  const actionNames = () =>
+    within(masthead())
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+  const demand = await screen.findByRole('tab', { name: 'Demand' });
+  await within(masthead()).findByRole('button', { name: 'New analysis' });
+  const onDemand = actionNames();
+  expect(onDemand).toEqual(expect.arrayContaining(['Cost details', 'Refresh', 'New analysis']));
+  demand.focus();
+  await userEvent.keyboard('{ArrowRight}');
+  const overview = screen.getByRole('tab', { name: 'Overview' });
+  expect(overview).toHaveFocus();
+  expect(overview).toHaveAttribute('aria-selected', 'true');
+  expect(actionNames()).toEqual(onDemand);
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(screen.getByRole('tab', { name: 'Demand' })).toHaveFocus();
+  expect(actionNames()).toEqual(onDemand);
 });
 
 it('keeps the tab row when Keyword Research cannot be read', async () => {
