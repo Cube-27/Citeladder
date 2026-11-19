@@ -63,7 +63,14 @@ describe('SidebarScrollList', () => {
     row.getBoundingClientRect = () => DOMRect.fromRect({ y: 352 - scrollTop, height: 32 });
 
     rerender(list('/performance'));
-
     expect(scrollTop).toBe(16);
+
+    // A list 60 high has no room for both fades: the row is centred, never pushed out.
+    rerender(list('/projects'));
+    scrollTop = 0;
+    scroller.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 60 });
+    row.getBoundingClientRect = () => DOMRect.fromRect({ y: 28 - scrollTop, height: 32 });
+    rerender(list('/performance'));
+    expect(scrollTop).toBe(14);
   });
 });

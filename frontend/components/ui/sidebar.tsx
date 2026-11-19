@@ -114,8 +114,10 @@ function revealCurrent(list: HTMLElement) {
   if (!current) return;
   const listBox = list.getBoundingClientRect();
   const rowBox = current.getBoundingClientRect();
-  const above = listBox.top + LIST_FADE - rowBox.top;
-  const below = rowBox.bottom - (listBox.bottom - LIST_FADE);
+  // A list too short for both fades centres the row instead.
+  const inset = Math.max(0, Math.min(LIST_FADE, (listBox.height - rowBox.height) / 2));
+  const above = listBox.top + inset - rowBox.top;
+  const below = rowBox.bottom - (listBox.bottom - inset);
   if (above > 0) list.scrollTop -= above;
   else if (below > 0) list.scrollTop += below;
 }
