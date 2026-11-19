@@ -6,7 +6,8 @@ import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
-import { StepChart, type TrendEvent } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
+import { type TrendEvent } from '@/components/ui/series-data';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
 import type {
@@ -313,7 +314,7 @@ function HistoryLineChart({
   const events = toTrendEvents(points, { timeZone, engineLabel });
   return (
     <Stack aria-busy={busy}>
-      <StepChart
+      <AreaChart
         label={`${metricLabel} over time`}
         name={focused ?? 'You'}
         mark={

@@ -16,6 +16,7 @@ import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { TrendChart } from './trend-chart';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Select } from '@/components/ui/select';
 
 describe('Button', () => {
   it('defaults to a non-submitting button', () => {
@@ -95,6 +96,25 @@ describe('Input + Field', () => {
     const ref = createRef<HTMLInputElement>();
     render(<Input ref={ref} aria-label="Search" startContent={<span>S</span>} />);
     expect(ref.current).toBe(screen.getByRole('textbox', { name: 'Search' }));
+  });
+});
+
+describe('Select', () => {
+  it('shows the placeholder for an empty value, and an empty option when one exists', () => {
+    const choices = [{ value: 'b2b' as const, label: 'Businesses' }];
+    const { rerender } = render(
+      <Select<'' | 'b2b'> ariaLabel="Buyer" value="" placeholder="Not set" options={choices} />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Buyer' })).toHaveTextContent('Not set');
+    rerender(
+      <Select<'' | 'b2b'>
+        ariaLabel="Buyer"
+        value=""
+        placeholder="Not set"
+        options={[{ value: '' as const, label: 'Anyone' }, ...choices]}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Buyer' })).toHaveTextContent('Anyone');
   });
 });
 

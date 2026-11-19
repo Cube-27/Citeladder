@@ -12,11 +12,10 @@ import {
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
@@ -26,7 +25,6 @@ import { projectMutations } from '@/lib/api/projects';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 
 const TOPIC_OPTIONS = factTopicSchema.options.map((topic) => ({
   value: topic,
@@ -69,7 +67,6 @@ export function BrandFactsPanel({
   const retired = list.facts.filter((fact) => fact.status === 'retired');
   return (
     <Stack gap="workspace">
-      {mayEdit ? <AddFact pending={create.isPending} onAdd={addFact} /> : null}
       {create.isError ? (
         <Notice
           kind="mutation"
@@ -89,7 +86,7 @@ export function BrandFactsPanel({
           message="No facts yet. Add pricing, plans, integrations or other facts to check."
         />
       ) : (
-        <LedgerList label="Brand facts">
+        <SettingRows label="Brand facts">
           {active.map((fact) => (
             <FactRow
               key={fact.id}
@@ -99,7 +96,7 @@ export function BrandFactsPanel({
               onChange={(update) => changeFact({ fact, update })}
             />
           ))}
-        </LedgerList>
+        </SettingRows>
       )}
       {retired.length ? (
         <p className={textRole('caption')}>
@@ -107,10 +104,12 @@ export function BrandFactsPanel({
           checked.
         </p>
       ) : null}
+      {mayEdit ? <AddFact pending={create.isPending} onAdd={addFact} /> : null}
     </Stack>
   );
 }
 
+/** The add form as setting rows under its own heading, after the facts it adds to. */
 function AddFact({
   pending,
   onAdd,
@@ -129,62 +128,63 @@ function AddFact({
   };
   const empty = !draft.statement.trim();
   return (
-    <Stack
-      as="form"
-      gap="compact"
-      className={wellClasses()}
+    <form
+      aria-labelledby="add-brand-fact"
       onSubmit={(event) => {
         event.preventDefault();
         if (pending || empty) return;
         void submit();
       }}
     >
-      <Field label="Topic">
-        {(props) => (
-          <Select
-            {...props}
-            ariaLabel="Topic"
-            value={draft.topic}
-            options={TOPIC_OPTIONS}
-            onValueChange={(topic) => setDraft({ ...draft, topic })}
-          />
-        )}
-      </Field>
-      <Field
-        label="Fact"
-        hint="One statement, as you want an answer to say it. For example: Orders over $50 ship free."
-      >
-        {(props) => (
-          <Textarea
-            {...props}
-            rows={2}
-            maxLength={300}
-            value={draft.statement}
-            onChange={(event) => setDraft({ ...draft, statement: event.target.value })}
-          />
-        )}
-      </Field>
-      <Field
-        label="Source page (optional)"
-        hint="The full address of the page that states it, starting with https://"
-      >
-        {(props) => (
-          <Input
-            {...props}
-            type="url"
-            value={draft.source_url}
-            onChange={(event) => setDraft({ ...draft, source_url: event.target.value })}
-          />
-        )}
-      </Field>
-      <Inline>
-        <Button type="submit" variant="primary" disabled={pending || empty}>
-          <Icon icon={Plus} />
-          Add draft fact
-        </Button>
-        {empty ? <span className={textRole('caption')}>Write the fact to add it.</span> : null}
-      </Inline>
-    </Stack>
+      <SettingRows title="Add a fact" titleId="add-brand-fact">
+        <SettingField label="Topic">
+          {(props) => (
+            <Select
+              id={props.id}
+              ariaLabel="Topic"
+              value={draft.topic}
+              options={TOPIC_OPTIONS}
+              onValueChange={(topic) => setDraft({ ...draft, topic })}
+            />
+          )}
+        </SettingField>
+        <SettingField
+          wide
+          label="Fact"
+          hint="One statement, as you want an answer to say it. For example: Orders over $50 ship free."
+        >
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={2}
+              maxLength={300}
+              value={draft.statement}
+              onChange={(event) => setDraft({ ...draft, statement: event.target.value })}
+            />
+          )}
+        </SettingField>
+        <SettingField
+          label="Source page (optional)"
+          hint="The full address of the page that states it, starting with https://"
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="url"
+              value={draft.source_url}
+              onChange={(event) => setDraft({ ...draft, source_url: event.target.value })}
+            />
+          )}
+        </SettingField>
+        <Inline className="flex-wrap justify-end">
+          {empty ? <span className={textRole('caption')}>Write the fact to add it.</span> : null}
+          <Button type="submit" variant="primary" disabled={pending || empty}>
+            <Icon icon={Plus} />
+            Add draft fact
+          </Button>
+        </Inline>
+      </SettingRows>
+    </form>
   );
 }
 
@@ -202,10 +202,10 @@ function FactRow({
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
-    <LedgerItem
-      title={
+    <SettingRow
+      label={
         editing === null ? (
-          fact.statement
+          <span className={textRole('body')}>{fact.statement}</span>
         ) : (
           <Textarea
             aria-label="Edit fact"
@@ -216,8 +216,8 @@ function FactRow({
           />
         )
       }
-      meta={
-        <>
+      description={
+        <Inline as="span" gap="status">
           <Tag>{TOPIC_LABELS[fact.topic]}</Tag>
           {fact.status === 'confirmed' ? (
             <StatusMark variant="status" value="success">
@@ -228,10 +228,12 @@ function FactRow({
               Draft · not used until confirmed
             </StatusMark>
           )}
-        </>
+          {fact.source_url ? (
+            <span className={textRole('caption', 'min-w-0 truncate')}>{fact.source_url}</span>
+          ) : null}
+        </Inline>
       }
-      caption={fact.source_url ?? undefined}
-      links={
+      action={
         mayEdit ? (
           <FactActions
             fact={fact}

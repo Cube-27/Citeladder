@@ -131,7 +131,7 @@ function WorkspaceSchedules({
 
 /** A form field in the Settings convention: the label at the left, the control at the right. */
 function FormRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
-  return <SettingRow variant="field" label={label} action={children} />;
+  return <SettingRow label={label} control={children} />;
 }
 
 /** The new-schedule form and its outcome, for a role that may write schedules. */

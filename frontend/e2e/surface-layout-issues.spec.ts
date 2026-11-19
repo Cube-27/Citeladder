@@ -19,7 +19,7 @@ const summary = {
   section_counts: { technical: 30, content: 9, aeo: 3 },
 };
 
-/** Each view lists a different number of rows, so a short page has to keep the full one's footprint. */
+/** Each view lists a different number of rows; the bands above the rows must not move. */
 function rowsFor(params: URLSearchParams): number {
   if (params.get('finding_class') === 'advisory') return 2;
   if (params.get('severity')) return 4;
@@ -101,7 +101,11 @@ async function stubIssues(page: Page) {
   await page.route(new RegExp(`/api/v1/site-crawls/${CRAWL}/issues(\\?|$)`), issuesPage);
 }
 
-/** Every band of the page a click could move: x, y, width and height. */
+/**
+ * Every band above the rows a click could move: x, y, width and height. The
+ * table ends at its last row (owner, 2026-11-19: no blank space under a short
+ * view), so its height, its pager and the page height follow the rows.
+ */
 async function layout(page: Page, table: Locator): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
@@ -113,13 +117,10 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
     summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').first(),
-    pager: table.locator('[data-data-table-foot]'),
-    table,
   };
   const boxes: Record<string, Box> = {};
   for (const [name, part] of Object.entries(parts))
     boxes[name] = (await part.count()) === 1 ? await bandBox(part) : null;
-  boxes.document = [await page.evaluate(() => document.documentElement.scrollHeight)];
   return boxes;
 }
 
@@ -132,7 +133,9 @@ function moved(before: Box, after: Box): boolean {
 const print = (box: Box) => (box ? box.map(Math.round).join(',') : 'absent');
 
 for (const width of [1280, 1600])
-  test(`no click on the Issues page moves its bands at ${width}px`, async ({ page }) => {
+  test(`no click on the Issues page moves the bands above its rows at ${width}px`, async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width, height: 900 });
     await stubIssues(page);

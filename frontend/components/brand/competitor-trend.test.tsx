@@ -47,8 +47,9 @@ describe('Competitor focus chart', () => {
       isFetching: false,
     } as unknown as UseQueryResult<VisibilityTrendPoint[]>;
     const { container } = render(<CompetitorTrend name="Globex" query={query} />);
-    const marks = (selector: string) => container.querySelectorAll(`${selector} circle`).length;
-    expect(marks('[data-trend-line="you"]')).toBe(3);
-    expect(marks('[data-trend-line^="rival"]')).toBe(1);
+    // Each measured point is marked; the rival only where it was measured.
+    const marks = (selector: string) => container.querySelectorAll(selector).length;
+    expect(marks('[data-trend-point="you"]')).toBe(3);
+    expect(marks('[data-trend-point^="rival"]')).toBe(1);
   });
 });

@@ -4,7 +4,8 @@ import { BusyRung } from '@/components/ui/rung-meter';
 import { ChartFrame } from '@/components/ui/chart-frame';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartDonut, type Part } from '@/components/ui/part-donut';
-import { StepChart, type TrendSeries } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
+import { type TrendSeries } from '@/components/ui/series-data';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { hostOf, seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
@@ -93,7 +94,7 @@ function UsagePlot({
     );
   }
   return (
-    <StepChart
+    <AreaChart
       label={label}
       name={first.label}
       mark={<SourceMark source={first.key} />}

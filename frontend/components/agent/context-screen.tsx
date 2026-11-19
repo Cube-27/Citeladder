@@ -28,12 +28,12 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const CONTEXT_TABS = [
-  // Short labels: six tabs share one row on the owner's 982px desktop.
+  // Short labels: six tabs fit the compact column on one row.
   { id: 'facts', label: 'Company' },
-  { id: 'audience', label: 'Audience & Offerings' },
+  { id: 'audience', label: 'Audience' },
   { id: 'map', label: 'Business map' },
   { id: 'competitors', label: 'Competitors' },
-  { id: 'instructions', label: 'Agent instructions' },
+  { id: 'instructions', label: 'Instructions' },
   // Last, and only once the pilot gate answers: it joins the end of the row,
   // so its arrival moves no other tab.
   { id: 'brand-facts', label: 'Brand facts' },
@@ -51,8 +51,8 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
  * What the agent knows about the business before it reads any evidence, one
  * tab per subject: the company facts, audience and offerings, the read-only
  * business map the Prompt Builder edits, the tracked competitors, the pilot's
- * Brand facts, and the project's Agent instructions. Each tab's content sits
- * on a card; a form card carries its own Save in its foot.
+ * Brand facts, and the project's Agent instructions. Each tab is one or two
+ * sections of setting rows; a form section carries its own Save in its foot.
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();

@@ -1,15 +1,14 @@
-import { useState, type KeyboardEvent } from 'react';
+import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
 
+import { CHART_HEIGHT_PX, useChartWidth, type ChartHeight } from '@/components/ui/chart';
+import { ChartFrame, ChartTable } from '@/components/ui/chart-frame';
 import {
-  CHART_HEIGHT_PX,
-  CHART_PLOT_FRAME,
-  chartTicks,
-  useChartWidth,
-  type ChartHeight,
-} from '@/components/ui/chart';
-import { ChartFrame, ChartTable, chartTipLeft } from '@/components/ui/chart-frame';
-import { SHEET_FACE } from '@/components/ui/slip';
-import { AXIS_TEXT } from '@/components/ui/step-chart-parts';
+  AXIS_PROPS,
+  BAR_CURSOR,
+  ChartTooltipCard,
+  GRID_PROPS,
+  roleColor,
+} from '@/components/ui/chart-tooltip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -28,15 +27,13 @@ export type StackedBar = Readonly<{
   breakBefore?: boolean;
 }>;
 
-const PAD = { left: 40, right: 8, top: 12, bottom: 24 } as const;
-
 /**
- * StackedBarChart — counts per period, stacked, in plain SVG: `chart-grid`
- * gridlines, a key under the plot, and a tooltip card on hover or on focus
- * with the arrow keys. A bar not comparable with the one before
- * (`breakBefore`) carries the trend charts' method-change marker, a dashed
- * `warning` rule with a dot at the top, before it. A visually hidden table
- * carries every value.
+ * StackedBarChart — counts per period, stacked, drawn with Recharts in
+ * HeroUI's chart style (owner, 2026-11-19): a faint dashed grid, no axis
+ * lines, bars at most 32 wide with a rounded top, a key under the plot and a
+ * tooltip card on hover or with the arrow keys. A bar not comparable with the
+ * one before (`breakBefore`) has a dashed `warning` rule at its start. A
+ * visually hidden table carries every value.
  */
 export function StackedBarChart({
   label,
@@ -54,25 +51,12 @@ export function StackedBarChart({
   height?: ChartHeight;
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
-  const [active, setActive] = useState<number | null>(null);
   const height = CHART_HEIGHT_PX[heightRole];
-  const ticks = chartTicks(0, Math.max(1, ...bars.map((bar) => sum(bar.values))), 4);
-  const top = ticks.at(-1) ?? 1;
-  const plotHeight = height - PAD.top - PAD.bottom;
-  const step = (width - PAD.left - PAD.right) / Math.max(1, bars.length);
-  const barWidth = Math.max(4, Math.min(32, step * 0.6));
-  const center = (index: number) => PAD.left + step * (index + 0.5);
-  const y = (value: number) => PAD.top + plotHeight * (1 - value / top);
-  const labelEvery = Math.ceil(bars.length / Math.max(1, Math.floor(width / 72)));
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const from = active ?? bars.length - 1;
-    if (event.key === 'ArrowRight') setActive(Math.min(bars.length - 1, from + 1));
-    else if (event.key === 'ArrowLeft') setActive(Math.max(0, from - 1));
-    else if (event.key === 'Escape') setActive(null);
-    else return;
-    event.preventDefault();
-  };
-  const shown = active === null ? undefined : bars[active];
+  const rows = bars.map((bar) => ({
+    key: bar.key,
+    axisLabel: bar.axisLabel,
+    ...Object.fromEntries(series.map((_, part) => [`s${part}`, bar.values[part] ?? 0])),
+  }));
   const marked = bars.some((bar) => bar.breakBefore);
   return (
     <ChartFrame
@@ -80,130 +64,71 @@ export function StackedBarChart({
       summary={`${label}: ${bars.length} ${bars.length === 1 ? 'period' : 'periods'}.`}
     >
       <div className="flex min-w-0 flex-col gap-4">
-        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the plot is a keyboard-readable group */}
-        <div // NOSONAR -- a keyboard-readable plot has no native element
+        <div
           ref={plotRef}
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element reads a plot bar by bar
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element names a plot as one group
           role="group"
-          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the arrow keys need focus on the plot
-          tabIndex={bars.length ? 0 : undefined} // NOSONAR -- the arrow keys need focus on the plot
-          aria-label={`${label}. Use the left and right arrow keys to read each bar.`}
-          onKeyDown={onKeyDown}
-          onMouseMove={(event) => {
-            if (!bars.length) return;
-            const x = event.clientX - event.currentTarget.getBoundingClientRect().left;
-            const index = Math.floor((x - PAD.left) / step);
-            setActive(Math.min(bars.length - 1, Math.max(0, index)));
-          }}
-          onMouseLeave={() => setActive(null)}
-          onBlur={() => setActive(null)}
-          className={CHART_PLOT_FRAME}
+          aria-label={`${label}. Focus the chart and use the arrow keys to read each bar.`}
+          className="w-full"
           style={{ height }}
         >
-          <svg
-            aria-hidden
-            focusable="false"
-            width="100%"
+          <BarChart
+            width={width}
             height={height}
-            viewBox={`0 0 ${width} ${height}`}
-            className="block overflow-visible"
+            data={rows}
+            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
           >
-            {ticks.map((tick) => {
-              const at = Math.round(y(tick)) + 0.5;
-              return (
-                <g key={`tick-${tick}`}>
-                  <line
-                    x1={PAD.left}
-                    x2={width - PAD.right}
-                    y1={at}
-                    y2={at}
-                    shapeRendering="crispEdges"
-                    className="stroke-rule"
+            <CartesianGrid {...GRID_PROPS} />
+            <XAxis
+              {...AXIS_PROPS}
+              dataKey="key"
+              tickFormatter={(_, index) => rows[index]?.axisLabel ?? ''}
+            />
+            <YAxis {...AXIS_PROPS} width="auto" allowDecimals={false} tickCount={4} />
+            {bars.map((bar) =>
+              bar.breakBefore ? (
+                <ReferenceLine
+                  key={`break-${bar.key}`}
+                  x={bar.key}
+                  position="start"
+                  stroke="var(--color-warning)"
+                  strokeDasharray="4 3"
+                />
+              ) : null,
+            )}
+            <Tooltip
+              cursor={BAR_CURSOR}
+              isAnimationActive={false}
+              content={({ active, payload }) => {
+                const key = (payload?.[0]?.payload as { key?: string } | undefined)?.key;
+                const bar = bars.find((entry) => entry.key === key);
+                if (!active || !bar) return null;
+                return (
+                  <ChartTooltipCard
+                    title={bar.label}
+                    note={bar.breakBefore ? breakNote : undefined}
+                    rows={series.map((entry, part) => ({
+                      name: entry.name,
+                      color: roleColor(entry.fill, 'fill'),
+                      value: String(bar.values[part] ?? 0),
+                    }))}
                   />
-                  <text
-                    x={PAD.left - 8}
-                    y={at}
-                    textAnchor="end"
-                    dominantBaseline="middle"
-                    className={AXIS_TEXT}
-                  >
-                    {tick}
-                  </text>
-                </g>
-              );
-            })}
-            {bars.map((bar, index) => {
-              const edge = center(index) - step / 2;
-              let base = 0;
-              return (
-                <g
-                  key={bar.key}
-                  className={cn(active !== null && active !== index && 'opacity-60')}
-                >
-                  {bar.breakBefore ? (
-                    <g data-version-marker="">
-                      <line
-                        x1={edge}
-                        x2={edge}
-                        y1={PAD.top}
-                        y2={PAD.top + plotHeight}
-                        strokeDasharray="4 3"
-                        className="stroke-warning"
-                      />
-                      <circle cx={edge} cy={PAD.top} r={3} className="fill-warning" />
-                    </g>
-                  ) : null}
-                  {bar.values.map((value, part) => {
-                    const from = base;
-                    base += value;
-                    return value ? (
-                      <rect
-                        key={series[part]?.name ?? part}
-                        x={center(index) - barWidth / 2}
-                        y={y(base)}
-                        width={barWidth}
-                        height={y(from) - y(base)}
-                        className={series[part]?.fill}
-                      />
-                    ) : null;
-                  })}
-                  {index % labelEvery === 0 ? (
-                    <text
-                      x={center(index)}
-                      y={height - 6}
-                      textAnchor="middle"
-                      className={AXIS_TEXT}
-                    >
-                      {bar.axisLabel}
-                    </text>
-                  ) : null}
-                </g>
-              );
-            })}
-          </svg>
-          {shown && active !== null ? (
-            <div
-              aria-hidden
-              className={cn(
-                SHEET_FACE,
-                'rounded-card pointer-events-none absolute z-20 flex w-54 flex-col gap-1 p-3',
-              )}
-              style={{ left: chartTipLeft(center(active), width), top: PAD.top }}
-            >
-              <p className="type-caption tabular-nums">{shown.label}</p>
-              {series.map((entry, part) => (
-                <div
-                  key={entry.name}
-                  className={textRole('caption', 'flex items-center gap-2 text-ink')}
-                >
-                  <Swatch fill={entry.fill} />
-                  <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                  <span className="tabular-nums">{shown.values[part]}</span>
-                </div>
-              ))}
-              {shown.breakBefore ? <p className={textRole('caption')}>{breakNote}</p> : null}
-            </div>
-          ) : null}
+                );
+              }}
+            />
+            {series.map((entry, part) => (
+              <Bar
+                key={entry.name}
+                dataKey={`s${part}`}
+                name={entry.name}
+                stackId="stack"
+                maxBarSize={32}
+                fill={roleColor(entry.fill, 'fill')}
+                radius={part === series.length - 1 ? [4, 4, 0, 0] : 0}
+                isAnimationActive={false}
+              />
+            ))}
+          </BarChart>
         </div>
         <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
           {series.map((entry) => (
@@ -234,9 +159,5 @@ export function StackedBarChart({
 }
 
 function Swatch({ fill }: Readonly<{ fill: string }>) {
-  return <span className={cn('rounded-mark inline-block size-2.5 shrink-0', fill)} />;
-}
-
-function sum(values: readonly number[]) {
-  return values.reduce((total, value) => total + value, 0);
+  return <span className={cn('inline-block size-2 shrink-0 rounded-full', fill)} />;
 }

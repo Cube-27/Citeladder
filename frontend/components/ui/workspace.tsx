@@ -76,41 +76,6 @@ export function MetaFooter({
 }
 
 /**
- * Who or what a screen or section is about: the 40px mark (a `BrandMark` at
- * its `header` placement or an `Avatar` at `profile`), the title, one caption line under
- * it, and the actions that act on it at the row's end, wrapping under the
- * text when the row is full. The page supplies the text in its roles; the
- * row owns the alignment and every gap.
- */
-export function IdentityRow({
-  media,
-  title,
-  caption,
-  actions,
-}: Readonly<{
-  media: ReactNode;
-  title: ReactNode;
-  caption?: ReactNode;
-  actions?: ReactNode;
-}>) {
-  return (
-    <div
-      data-identity-row=""
-      className="flex min-w-0 flex-wrap items-center justify-between gap-[var(--compact-gap)]"
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-[var(--compact-gap)]">
-        {media}
-        <div className="grid min-w-0 flex-1 gap-1">
-          {title}
-          {caption}
-        </div>
-      </div>
-      {actions}
-    </div>
-  );
-}
-
-/**
  * The heading of a block inside a section or card: a label, one line of
  * caption under it, and an optional trailing fact (a count) or control on the
  * label's row. The label/caption pair is 4 apart, like every label and the

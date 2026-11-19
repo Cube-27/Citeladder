@@ -9,7 +9,7 @@ import { percentText } from '@/lib/format';
  * `TrendChart` and the sparkline (the website's product screens) take a
  * series' colour from its position: 1 your brand, 2 the leader, 3 the next,
  * 4 an item flagged `other` (dashed), 5 a further series (dotted). The app's
- * `StepChart` colours rivals by identity (`SeriesTonesContext`).
+ * `AreaChart` colours rivals by identity (`SeriesTonesContext`).
  */
 export type ChartTone = 1 | 2 | 3 | 4 | 5;
 

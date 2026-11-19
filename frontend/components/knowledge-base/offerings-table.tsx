@@ -1,10 +1,9 @@
-import type { MouseEvent, ReactNode } from 'react';
+import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Absence } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { DraftSheet } from '@/components/ui/draft-sheet';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -26,7 +25,13 @@ const FACTS = [
 // Below `desktop` the three fact columns fold into a caption under the offering.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'offering', label: 'Offering', kind: 'identity' },
-  ...FACTS.map((fact) => ({ key: fact.key, label: fact.label, desktopOnly: true })),
+  // Low priority: a column that does not fit hides, so the table never scrolls sideways.
+  ...FACTS.map((fact) => ({
+    key: fact.key,
+    label: fact.label,
+    desktopOnly: true,
+    priority: 'low' as const,
+  })),
 ];
 
 const isSuggested = (entry: MapEntryDraft) => entry.review_state === 'suggested';
@@ -83,40 +88,27 @@ function OfferingRow({ map }: Readonly<{ map: OfferingMap }>) {
 /**
  * Every offering's facts as one table: a row per offering, its buyers,
  * situations and attributes across. A row opens that offering in the Prompt
- * Builder, which owns editing; while any entry is a suggestion the card is a
- * draft (law 1).
+ * Builder, which owns editing; a suggested entry says so in its cell.
  */
-export function OfferingsTable({
-  maps,
-  action,
-}: Readonly<{ maps: readonly OfferingMap[]; action: ReactNode }>) {
+export function OfferingsTable({ maps }: Readonly<{ maps: readonly OfferingMap[] }>) {
   if (maps.length === 0) return null;
-  const title = 'Offerings';
-  const caption = `${pluralCount(maps.length, 'offering')}. Who buys each one, when, and what matters to them.`;
-  const table = (
-    <DataTable label="Offering facts" columns={COLUMNS}>
-      {maps.map((map) => (
-        <OfferingRow key={map.offering} map={map} />
-      ))}
-    </DataTable>
-  );
   const suggested = maps.some((map) => FACTS.some((fact) => map[fact.key].some(isSuggested)));
-  if (suggested)
-    return (
-      <DraftSheet title={title} state="draft" actions={action}>
-        <p className={textRole('caption', 'max-w-[72ch]')}>
-          {caption} Entries marked suggested came from discovery and are not yet confirmed.
-        </p>
-        {table}
-      </DraftSheet>
-    );
   return (
-    <Section aria-label={title}>
-      <SectionHeader actions={action}>
-        <SectionTitle>{title}</SectionTitle>
-        <SectionDescription>{caption}</SectionDescription>
+    <Section aria-labelledby="offerings">
+      <SectionHeader>
+        <SectionTitle id="offerings">Offerings</SectionTitle>
+        <SectionDescription>
+          {`${pluralCount(maps.length, 'offering')}. Who buys each one, when, and what matters to them.`}
+          {suggested
+            ? ' Entries marked suggested came from discovery and are not yet confirmed.'
+            : null}
+        </SectionDescription>
       </SectionHeader>
-      {table}
+      <DataTable label="Offering facts" columns={COLUMNS}>
+        {maps.map((map) => (
+          <OfferingRow key={map.offering} map={map} />
+        ))}
+      </DataTable>
     </Section>
   );
 }

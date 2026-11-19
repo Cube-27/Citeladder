@@ -164,6 +164,7 @@ export const APP_ROUTES = [
   // The application shell, in the order of the product loop (the sidebar's).
   page({
     path: '/projects',
+    width: 'narrow',
     title: 'Overview',
     screen: screens.projects,
     loading: { kind: 'overview' },

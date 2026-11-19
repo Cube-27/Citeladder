@@ -1,13 +1,21 @@
 import type { ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
-import { FRAME_FACE } from '@/components/ui/slip';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * A tree leaf's work rows in a light frame: a column-head row, then
+ * The table shell every app table takes (owner, 2026-11-19): a `well` shell
+ * at the overlay radius holding the column heads, and the rows on a
+ * `surface` panel inset 4 from its sides and foot.
+ */
+export const ROWS_SHELL =
+  'rounded-overlay bg-[var(--table-head-ground)] px-[var(--table-inset)] pb-[var(--table-inset)]';
+export const ROWS_PANEL = 'bg-surface rounded-card overflow-hidden';
+
+/**
+ * A tree leaf's work rows in the table shell: a column-head row, then
  * 56px rows of tick, title (with a muted line), scope, impact and source.
  * The columns are fixed, so no row moves another; below desktop, scope and
  * source fold away.
@@ -31,10 +39,10 @@ export function WorkRows({
 }>) {
   const [title, scope, impact, source] = heads;
   return (
-    <div className={cn(FRAME_FACE, 'overflow-hidden')}>
+    <div className={ROWS_SHELL}>
       <table aria-label={label} className="block w-full">
         <thead className="block">
-          <tr className={cn(GRID, textRole('captionStrong', 'bg-ground h-8'))}>
+          <tr className={cn(GRID, textRole('captionStrong', 'text-ink-2 h-8'))}>
             <th aria-label="Select" />
             <th className="text-left">{title}</th>
             <th className={cn(WIDE, 'text-left')}>{scope}</th>
@@ -42,9 +50,12 @@ export function WorkRows({
             <th className={cn(WIDE, 'text-left')}>{source}</th>
           </tr>
         </thead>
-        <tbody className="block">{children}</tbody>
+        <tbody className={cn(ROWS_PANEL, 'block')}>{children}</tbody>
       </table>
-      {more}
+      {/* Show more is a second inset panel under the rows, in the same shell. */}
+      {more ? (
+        <div className={cn(ROWS_PANEL, 'mt-[var(--table-inset)] *:border-t-0')}>{more}</div>
+      ) : null}
     </div>
   );
 }
@@ -71,7 +82,9 @@ export function WorkRow({
   source: string;
 }>) {
   return (
-    <tr className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-14 border-t')}>
+    <tr
+      className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-14 not-first:border-t')}
+    >
       <td className="relative z-10 flex">{tick}</td>
       <td className="min-w-0">
         <TextLink

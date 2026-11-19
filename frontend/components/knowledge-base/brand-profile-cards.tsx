@@ -2,15 +2,16 @@ import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
-import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
-import { ChipInput, ChipList } from '@/components/ui/chip-input';
-import { Field } from '@/components/ui/field';
+import { Absence } from '@/components/ui/absence';
+import { ChipInput } from '@/components/ui/chip-input';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
-import { RadioGroup } from '@/components/ui/radio-group';
+import { Inline } from '@/components/ui/layout';
+import { Select } from '@/components/ui/select';
+import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { StateBlock } from '@/components/ui/state-block';
 import { Textarea } from '@/components/ui/textarea';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { Project } from '@citeladder/contracts';
@@ -49,7 +50,8 @@ function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
 /**
  * Category, buyer type and market scope decide which questions prompt
  * generation asks, so a wrong onboarding answer must stay correctable here,
- * beside the description and positioning.
+ * beside the description and positioning. Short facts are rows with their
+ * control at the right; long text takes the row's width under its label.
  */
 export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, identity, saving } = form;
@@ -63,8 +65,8 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             : 'The canonical facts used across CiteLadder, including by the agent.'}
         </SectionDescription>
       </SectionHeader>
-      <Stack gap="workspace">
-        <Field
+      <SettingRows>
+        <SettingField
           label="What you sell"
           hint="The category buyers would search for. Generated questions are built from it."
         >
@@ -76,54 +78,58 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
               onChange={(event) => form.setIdentity({ ...identity, category: event.target.value })}
             />
           )}
-        </Field>
-        <AppGrid layout="halves">
-          <FacetChoice
-            label="Who buys it"
-            value={identity.buyer_type}
-            options={BUYER_TYPE_CHOICES}
-            disabled={saving}
-            onPick={(buyer_type) => form.setIdentity({ ...identity, buyer_type })}
-          />
-          <FacetChoice
-            label="Where they buy it"
-            value={identity.market_scope}
-            options={MARKET_SCOPE_CHOICES}
-            disabled={saving}
-            onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
-          />
-        </AppGrid>
-        <Field label="Description" hint="Core mission, value proposition, and brand summary.">
+        </SettingField>
+        <FacetChoice
+          label="Who buys it"
+          value={identity.buyer_type}
+          options={BUYER_TYPE_CHOICES}
+          disabled={saving}
+          onPick={(buyer_type) => form.setIdentity({ ...identity, buyer_type })}
+        />
+        <FacetChoice
+          label="Where they buy it"
+          value={identity.market_scope}
+          options={MARKET_SCOPE_CHOICES}
+          disabled={saving}
+          onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
+        />
+        <SettingField
+          wide
+          label="Description"
+          hint="Core mission, value proposition, and brand summary."
+        >
           {(field) => (
             <Textarea
               {...field}
-              rows={6}
+              rows={4}
               disabled={saving}
               value={draft.description}
               onChange={(event) => form.setDraft({ ...draft, description: event.target.value })}
             />
           )}
-        </Field>
-        <Field
+        </SettingField>
+        <SettingField
+          wide
           label="Positioning"
           hint="Include price tier, differentiation, and competitive segment."
         >
           {(field) => (
             <Textarea
               {...field}
-              rows={6}
+              rows={4}
               disabled={saving}
               value={draft.positioning}
               onChange={(event) => form.setDraft({ ...draft, positioning: event.target.value })}
             />
           )}
-        </Field>
-      </Stack>
+        </SettingField>
+      </SettingRows>
       <ProfileSaveFoot form={form} />
     </Section>
   );
 }
 
+/** A single choice of the identity, as a row with its select at the right. */
 function FacetChoice<T extends string>({
   label,
   value,
@@ -137,23 +143,23 @@ function FacetChoice<T extends string>({
   disabled: boolean;
   onPick: (value: T) => void;
 }>) {
-  // A form's single choice is a radio group with the field label's weight;
-  // the segmented control is a view switch and read as plain text here.
   return (
-    <Stack gap="tight">
-      <span className="type-label" aria-hidden>
-        {label}
-      </span>
-      <RadioGroup<T | ''>
-        ariaLabel={label}
-        value={value ?? ''}
-        options={options.map((option) => ({ ...option, disabled }))}
-        variant="inline"
-        onValueChange={(next) => {
-          if (next && !disabled) onPick(next);
-        }}
-      />
-    </Stack>
+    <SettingField label={label}>
+      {(field) => (
+        <Select<T | ''>
+          id={field.id}
+          ariaLabel={label}
+          aria-describedby={field['aria-describedby']}
+          value={value ?? ''}
+          placeholder="Not set"
+          options={options}
+          disabled={disabled}
+          onValueChange={(next) => {
+            if (next) onPick(next);
+          }}
+        />
+      )}
+    </SettingField>
   );
 }
 
@@ -171,21 +177,22 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
         <SectionTitle id="audience-offerings">Audience and offerings</SectionTitle>
         <SectionDescription>Who you sell to, and what you sell.</SectionDescription>
       </SectionHeader>
-      <Stack gap="workspace">
-        <Field
+      <SettingRows>
+        <SettingField
+          wide
           label="Target audience"
           hint="Key demographics, customer personas, and ideal buyers."
         >
           {(field) => (
             <Textarea
               {...field}
-              rows={6}
+              rows={4}
               disabled={saving}
               value={draft.target_audience}
               onChange={(event) => form.setDraft({ ...draft, target_audience: event.target.value })}
             />
           )}
-        </Field>
+        </SettingField>
         <ChipInput
           label="Products and services"
           hint="One offering per entry, named as a buyer would."
@@ -197,14 +204,14 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
           onPendingChange={form.setPendingOffering}
           disabled={saving}
         />
-      </Stack>
+      </SettingRows>
       <ProfileSaveFoot form={form} />
     </Section>
   );
 }
 
 /**
- * The project's tracked competitors as one wrapping row of marked chips. They
+ * The project's tracked competitors, one row each with its domains. They
  * are edited with the rest of the project's configuration, which this opens.
  */
 export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project }>) {
@@ -225,20 +232,34 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
         <SectionTitle id="tracked-competitors">Tracked competitors</SectionTitle>
         <SectionDescription>The brands CiteLadder measures you against.</SectionDescription>
       </SectionHeader>
-      <ChipList
-        label="Tracked competitors"
-        items={(project.competitors ?? []).map((competitor) => ({
-          key: `${competitor.name}:${competitor.domains[0] ?? ''}`,
-          value: competitor.name,
-          media: (
-            <BrandMark
-              name={competitor.name}
-              logoUrl={competitor.logo_url}
-              websiteUrl={competitor.domains[0]}
+      {(project.competitors ?? []).length === 0 ? (
+        <StateBlock kind="empty" inline message="No competitors tracked yet." />
+      ) : (
+        <SettingRows label="Tracked competitors">
+          {(project.competitors ?? []).map((competitor) => (
+            <SettingRow
+              key={`${competitor.name}:${competitor.domains[0] ?? ''}`}
+              label={
+                <Inline as="span">
+                  <BrandMark
+                    name={competitor.name}
+                    logoUrl={competitor.logo_url}
+                    websiteUrl={competitor.domains[0]}
+                  />
+                  <span className="truncate">{competitor.name}</span>
+                </Inline>
+              }
+              value={
+                competitor.domains.length ? (
+                  competitor.domains.join(', ')
+                ) : (
+                  <Absence state="not_set" />
+                )
+              }
             />
-          ),
-        }))}
-      />
+          ))}
+        </SettingRows>
+      )}
       {editing ? <ProjectEditPanel project={project} open onOpenChange={setEditing} /> : null}
     </Section>
   );

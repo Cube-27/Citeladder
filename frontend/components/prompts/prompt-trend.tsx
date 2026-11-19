@@ -5,7 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
 import { SectionContent, TitledSection } from '@/components/ui/section';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -32,7 +32,7 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
     >
       <SectionContent>
         <Stack gap="workspace">
-          <StepChart
+          <AreaChart
             label="Visibility over time"
             name="Visibility"
             data={mentionRatePoints(points, timeZone)}

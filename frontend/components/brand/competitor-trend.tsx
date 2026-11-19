@@ -5,7 +5,7 @@ import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { StepChart } from '@/components/ui/step-chart';
+import { AreaChart } from '@/components/ui/area-chart';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
@@ -102,7 +102,7 @@ function TrendChart({
   const events = toTrendEvents(points, { timeZone, engineLabel });
   return (
     <Stack aria-busy={busy}>
-      <StepChart
+      <AreaChart
         label={`${metricLabel} over time`}
         name="You"
         mark={<RankedBrandMark rows={points.at(-1)?.rankings} name={null} />}

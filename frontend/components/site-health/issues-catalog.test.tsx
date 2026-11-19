@@ -297,12 +297,11 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-    // Tallest tab (24) plus four: the one issue, then 27 rows held as one blank space.
-    // The open drawer hides the page behind it.
-    const held = screen
-      .getByRole('region', { name: 'Issues', hidden: true })
-      .querySelector('tbody + tbody tr');
-    expect(held?.getAttribute('style')).toMatch(/--data-table-rows: 27;/);
+    // The table ends at its last issue: no blank space is held under it (owner,
+    // 2026-11-19). The open drawer hides the page behind it.
+    const table = screen.getByRole('region', { name: 'Issues', hidden: true });
+    expect(table.querySelectorAll('tbody tr').length).toBe(1);
+    expect(table.querySelector('tbody + tbody')).toBeNull();
   });
 
   it('switches tabs and ordering as server params, from the first page', async () => {

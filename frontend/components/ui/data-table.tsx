@@ -546,7 +546,10 @@ function TitleRow({
           <FilterBar {...toolbar} />
         </div>
       ) : null}
-      {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+      {/* Hidden while the table fits, so an empty slot takes no gap beside the toolbar. */}
+      {steppers ? (
+        <div className={cn('empty:hidden', !toolbar && 'rail:ms-auto')}>{steppers}</div>
+      ) : null}
     </div>
   );
 }

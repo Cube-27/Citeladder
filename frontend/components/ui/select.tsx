@@ -8,6 +8,15 @@ import { cn } from '@/lib/utils';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';
 
+/** An empty value with no empty option shows the placeholder (Radix's `''`). */
+function shownValue(
+  value: string | undefined,
+  options: readonly { value: string }[],
+): string | undefined {
+  if (value === '' && !options.some((option) => option.value === '')) return '';
+  return radixValue(value);
+}
+
 function radixValue(value: string | undefined): string | undefined {
   return value === '' ? EMPTY_VALUE : value;
 }
@@ -71,7 +80,7 @@ export function Select<T extends string>({
   const detailId = useId();
   return (
     <SelectPrimitive.Root
-      value={radixValue(value)}
+      value={shownValue(value, options)}
       defaultValue={radixValue(defaultValue)}
       onValueChange={(next) => onValueChange?.((next === EMPTY_VALUE ? '' : next) as T)}
       disabled={disabled}

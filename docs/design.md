@@ -283,8 +283,9 @@ them; a page sets none.
    filters because a tab changes the filters and the strip above it must
    not change (owner, 2026-11-18).
 3. **Filter strip** (optional, the first strip on a page without tabs): 8
-   around 28 controls (44 high, owner 2026-11-19), 8 apart, one line:
-   view (Prompts' Active | Archived), search, filter chips, **Filters** and
+   around 28 controls (44 high, owner 2026-11-19), 8 apart: a view switch
+   (Prompts' Active | Archived) on a line of its own, then one line of
+   search, filter chips, **Filters** and
    the chips of what is set in it, Clear, then at the end the muted meta
    (the data window, "Latest run · 18 Nov 09:12" in the one short form, the
    count or a live note), cut before the strip wraps, and one action.
@@ -307,8 +308,8 @@ the filter bar when it scopes the page, a table's toolbar when it scopes one
 table, a section's head when it changes how that section draws.
 
 **Width.** Content fills the main column inside its gutter, so collapsing the
-sidebar grows it, except on reading pages: the Agent chat, Billing, Issues,
-Actions and Skills sit in the centred `container-thread` column the Agent
+sidebar grows it, except on reading pages: Overview, the Agent chat, Billing,
+Issues, Actions and Skills sit in the centred `container-thread` column the Agent
 thread uses, so their side space matches the chat's (owner, 2026-11-16), and
 Settings and Context, pages of rows, in the narrower `container-prose`
 (owner, 2026-11-19). Only the masthead's title follows the column; its search
@@ -332,7 +333,8 @@ grids measure the column instead of the viewport (`column-split`,
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint: a table with views (`reserveRows`) keeps
 its tallest view's height (plain space, never blank rows) and its pager in
-every view and state, a section that appears after a read or a condition
+every view and state, except Issues, which ends at its last row (owner,
+2026-11-19: no empty space under a short view), a section that appears after a read or a condition
 reserves its settled height from the first frame, a count holds its widest
 value's width, and a pending button keeps its width. A press may scale a
 control in place; it never moves its neighbours. A page the window scrolls
@@ -433,10 +435,17 @@ its own spacing, size or radius on them.
   no edge; a draft tag is dashed.
 - **StatusMark** is the only way to show a status, priority or severity: a
   glyph and a word, with an optional tone.
-- **Tabs and segments** are text with no hairline of their own; the current
-  one carries the accent mark, and a page tab strip's rule is its band's
-  (owner, 2026-11-19). A count follows the label in brackets, in the mono face:
+- **Tabs** are text with no hairline of their own; the current one carries
+  the accent mark, and a page tab strip's rule is its band's (owner,
+  2026-11-19). A **segmented switch** (a view, a range) has no underline: its
+  segments sit on a `well` track and the current one is a `surface` pill
+  (owner, 2026-11-19) at the same weight, so switching never changes its width. A count follows the label in brackets, in the mono face:
   "All signals (107)".
+- **Setting rows** (`SettingRows`, owner 2026-11-19, after a reference
+  account page): Settings and Context are rows divided by `rule` lines, the
+  name and a muted line at the left, the value in `ink-2` or the control at
+  the right; a form field's control takes one 320 column there, and long
+  text (a description, a list) goes under its name across the row.
 - **Filter chips** (owner, 2026-11-18): a chip is sized to its value and
   prints the value only; the filter's name is its tooltip and its menu's
   heading, the menu marks the default option and offers "Reset to …" once
@@ -473,9 +482,14 @@ its own spacing, size or radius on them.
   region.
 - **Links** in a list, table or card underline on hover and focus; a link
   inside a sentence keeps its underline.
-- **Charts** draw time series as steps, your series in the accent and last.
-  A missing period is a gap with a `well` band, never a zero and never
-  interpolated. Charts carry a written description for assistive tech.
+- **Charts** in the app are Recharts in HeroUI's chart style (owner,
+  2026-11-19; `chart-tooltip.tsx` holds the shared look): monotone areas with a
+  gradient fill, a faint dashed horizontal grid, no axis or tick lines, round
+  y steps, a tooltip card on hover and the arrow keys, donuts with rounded,
+  gapped segments. The website keeps its stepped charts. Your series is the
+  accent and drawn last. A missing period is a gap under a `well` band, never
+  a zero and never interpolated. Charts carry a written description and a
+  table for assistive tech.
 - **Focus** is one ring on every interactive element but an app field (which
   glows, above), in both themes: 2px solid `focus` (ink), 2px out. Never removed, never the
   accent. After a pointer press only text fields keep it
