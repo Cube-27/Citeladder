@@ -198,13 +198,13 @@ function missingCoverageNotice(
   comparisonMissing: boolean,
 ): string | null {
   if (selectedMissing && comparisonMissing) {
-    return 'No imported data covers this range or its comparison period yet. Sync to import it, or choose a range inside the covered history.';
+    return 'No imported data covers this range or its comparison period yet.';
   }
   if (selectedMissing) {
-    return 'No imported data covers this range yet. Sync to import it, or choose a range inside the covered history.';
+    return 'No imported data covers this range yet.';
   }
   if (comparisonMissing) {
-    return 'The comparison period has no imported data, so its columns show a dash.';
+    return 'The comparison period has no imported data.';
   }
   return null;
 }
@@ -283,13 +283,13 @@ export function performanceNotices({
     messages.push({
       key: 'sync-failed',
       tone: 'warning',
-      text: 'Sync finished with errors. Previously imported data is unchanged. Check Settings → Integrations for details.',
+      text: 'Sync finished with errors. Previously imported data is unchanged.',
     });
   if (sync.syncing)
     messages.push({
       key: 'syncing',
       tone: 'info',
-      text: 'Sync in progress. Importing the dates not yet covered.',
+      text: 'Sync in progress.',
     });
   if (sync.notice) messages.push({ key: 'sync-notice', tone: 'info', text: sync.notice });
   if (projecting)

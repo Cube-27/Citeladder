@@ -104,7 +104,7 @@ function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>
       <Notice tone="info">
         {mutation.data.status === 'already_queued'
           ? 'A recompute for this window is already queued.'
-          : 'Recompute queued. Signals refresh once the job finishes.'}
+          : 'Recompute queued.'}
       </Notice>
     );
   return null;
@@ -314,7 +314,6 @@ function SignalsFeed({
             kind="empty"
             icon={Sparkles}
             heading="No qualifying search gaps observed"
-            description="Search Console data was observed, but no configured detector emitted a signal in this window."
             headingLevel={2}
           />
           <p className="type-caption">{caption}</p>
@@ -381,7 +380,6 @@ function SearchConsoleSetup() {
             kind="empty"
             icon={Search}
             heading="Demand appears after the next Search Console import"
-            description="Queries and pages where search demand outruns your clicks are listed here once Search Console has imported a window."
             headingLevel={2}
           />
         </DemandEmpty>

@@ -152,7 +152,6 @@ function FirstUseEmptyState({ action }: Readonly<{ action: ReactNode }>) {
         kind="empty"
         icon={ChartNoAxesColumn}
         heading="No Search Console history yet"
-        description="Performance charts the clicks and impressions Search Console reports. Sync to import your history."
         action={action}
       />
     </Section>
@@ -173,7 +172,6 @@ function PerformanceEmptyState({
           kind="empty"
           icon={ChartNoAxesColumn}
           heading="Building this performance range"
-          description="CiteLadder is preparing this view from the traffic evidence already imported."
         />
       </Section>
     );
@@ -182,12 +180,7 @@ function PerformanceEmptyState({
   if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
   return (
     <Section>
-      <StateBlock
-        kind="empty"
-        icon={ChartNoAxesColumn}
-        heading="No performance evidence here"
-        description="Choose a range inside the imported history, or sync the missing dates."
-      />
+      <StateBlock kind="empty" icon={ChartNoAxesColumn} heading="No performance evidence here" />
     </Section>
   );
 }
