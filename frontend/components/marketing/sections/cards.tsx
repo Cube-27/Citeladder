@@ -2,10 +2,8 @@ import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
-import { Rungs, type RungLevel } from '@/components/ui/rungs';
 import { cn } from '@/lib/utils';
 
-import { Eyebrow, columnsFor } from './site-parts';
 import './cards.css';
 
 const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
@@ -52,48 +50,15 @@ export function RelatedCards({
   );
 }
 
-export type QuestionCard = Readonly<{
-  question: string;
-  /** Defaults to "Buyer prompt"; `false` for a question that is not a prompt. */
-  eyebrow?: ReactNode;
-  /** The citation level the brand reached on this prompt. */
-  rungs?: RungLevel;
-  meta?: ReactNode;
-}>;
-
-/**
- * QuestionCards: the buyer prompts a capability answers, as quiet cards, or
- * with `layout="list"` the bare questions in ruled columns (two or three, by count).
- */
-export function QuestionCards({
-  items,
-  layout = 'cards',
-}: Readonly<{ items: readonly QuestionCard[]; layout?: 'cards' | 'list' }>) {
-  if (layout === 'list') {
-    // Two columns where three would leave a short last row (4 or 8 questions).
-    const cols = items.length % 3 !== 0 && items.length % 2 === 0 ? 2 : 3;
-    return (
-      <ul className="cl-qlist" data-cols={cols}>
-        {items.map((item) => (
-          <li key={item.question}>
-            <p className="cl-qcard-q">{item.question}</p>
-          </li>
-        ))}
-      </ul>
-    );
-  }
+/** QuestionCards: the questions a capability answers, bare, in ruled columns (two or three, by count). */
+export function QuestionCards({ questions }: Readonly<{ questions: readonly string[] }>) {
+  // Two columns where three would leave a short last row (4 or 8 questions).
+  const cols = questions.length % 3 !== 0 && questions.length % 2 === 0 ? 2 : 3;
   return (
-    <ul className={cn('cl-qcards', `cl-cols-${columnsFor(items.length)}`)}>
-      {items.map((item) => (
-        <li key={item.question} className="cl-qcard">
-          {item.eyebrow !== false && <Eyebrow>{item.eyebrow ?? 'Buyer prompt'}</Eyebrow>}
-          <p className="cl-qcard-q">{item.question}</p>
-          {(item.rungs !== undefined || item.meta) && (
-            <div className="cl-qcard-foot">
-              {item.rungs === undefined ? <span /> : <Rungs level={item.rungs} showLabel />}
-              {item.meta && <span className="cl-qcard-meta">{item.meta}</span>}
-            </div>
-          )}
+    <ul className="cl-qlist" data-cols={cols}>
+      {questions.map((question) => (
+        <li key={question}>
+          <p className="cl-qcard-q">{question}</p>
         </li>
       ))}
     </ul>

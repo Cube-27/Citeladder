@@ -11,7 +11,7 @@ import { PageHighlight } from './page-highlight';
 import { PageSection, SectionHeader } from './page-section';
 import { PagePlans, PricingCard, PricingTable } from './pricing';
 import { columnsFor } from './site-parts';
-import { CtaBand, FaqList, Steps } from './steps-faq-cta';
+import { CtaBand, FaqList } from './steps-faq-cta';
 import { ToolPanel } from './tool-panel';
 
 describe('chrome parts', () => {
@@ -186,12 +186,6 @@ describe('feature sections', () => {
       ['See visibility', '/platform/ai-visibility'],
     ]);
   });
-
-  it('numbers steps from 01 in order', () => {
-    render(<Steps items={[{ title: 'Add a brand' }, { title: 'Pick prompts' }]} />);
-    const steps = screen.getAllByRole('listitem');
-    expect(steps.map((step) => step.textContent)).toEqual(['01Add a brand', '02Pick prompts']);
-  });
 });
 
 describe('FaqList', () => {
@@ -239,14 +233,11 @@ describe('cards and strips', () => {
     );
   });
 
-  it('labels a buyer prompt and says its citation level in words', () => {
-    render(
-      <QuestionCards items={[{ question: 'Best analytics tool?', rungs: 2, meta: '3 engines' }]} />,
-    );
-    const card = screen.getByRole('listitem');
-    expect(card).toHaveTextContent('Buyer prompt');
-    expect(card).toHaveTextContent('Cited');
-    expect(card).toHaveTextContent('3 engines');
+  it('lays four or eight questions in two columns and other counts in three', () => {
+    const { container, rerender } = render(<QuestionCards questions={['a', 'b', 'c', 'd']} />);
+    expect(container.querySelector('ul')).toHaveAttribute('data-cols', '2');
+    rerender(<QuestionCards questions={['a', 'b', 'c', 'd', 'e']} />);
+    expect(container.querySelector('ul')).toHaveAttribute('data-cols', '3');
   });
 
   it('names an engine tile for screen readers when the name is hidden', () => {
