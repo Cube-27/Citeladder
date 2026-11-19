@@ -122,7 +122,7 @@ function RowFrame({
             <div className="type-caption">{status}</div>
           </div>
         </Inline>
-        {action ? <Inline className="shrink-0">{action}</Inline> : null}
+        {action ? <Inline className="max-w-full shrink-0 flex-wrap">{action}</Inline> : null}
       </Inline>
       {children}
     </Stack>

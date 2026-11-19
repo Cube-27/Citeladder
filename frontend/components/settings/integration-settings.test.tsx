@@ -325,7 +325,8 @@ describe('IntegrationSettings — grant cards', () => {
     renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
-    await ue.click(within(row).getByRole('button', { name: 'Test Google Search Console' }));
+    await ue.click(within(row).getByRole('button', { name: 'Google Search Console actions' }));
+    await ue.click(await screen.findByRole('menuitem', { name: 'Test' }));
     expect(await within(row).findByText('Connection succeeded.')).toBeInTheDocument();
   });
 
@@ -341,8 +342,8 @@ describe('IntegrationSettings — grant cards', () => {
       expect(
         within(row).getByRole('button', { name: 'Sync Google Search Console now' }),
       ).toBeEnabled();
-      expect(within(row).queryByRole('button', { name: /^Test / })).toBeNull();
-      expect(within(row).queryByRole('button', { name: /^Remove / })).toBeNull();
+      // Change, Test and Remove live in the More menu, which a Member is not offered.
+      expect(within(row).queryByRole('button', { name: / actions$/ })).toBeNull();
       const googleCard = screen.getByTestId('grant-card-google');
       expect(within(googleCard).queryByRole('button', { name: 'Reconnect' })).toBeNull();
       expect(within(googleCard).queryByRole('button', { name: /^Disconnect/ })).toBeNull();
@@ -387,7 +388,7 @@ describe('IntegrationSettings — disconnect and remove', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it("removes only this project's property from a row", async () => {
+  it("folds Change, Test and Remove into the row's More menu, Remove removing only this project's property", async () => {
     const ue = userEvent.setup();
     let removed = '';
     mockList([gscConnection, ga4Connection]);
@@ -400,11 +401,19 @@ describe('IntegrationSettings — disconnect and remove', () => {
     renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
-    await ue.click(
-      await within(row).findByRole('button', {
-        name: 'Remove Google Search Console property from this project',
-      }),
-    );
+    // Sync now stays on the row; the rest share More.
+    expect(
+      await within(row).findByRole('button', { name: 'Sync Google Search Console now' }),
+    ).toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: /^(Change|Test|Remove)\b/ })).toBeNull();
+    await ue.click(within(row).getByRole('button', { name: 'Google Search Console actions' }));
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Change', 'Test', 'Remove']);
+    await ue.click(within(menu).getByRole('menuitem', { name: 'Remove' }));
     await waitFor(() => expect(removed).toBe(MAPPING_ID));
   });
 });

@@ -1,17 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlugZap } from 'lucide-react';
+import { MoreHorizontal, Pencil, PlugZap, Trash2 } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { BackfillHistory } from '@/components/settings/backfill-progress';
 import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import {
-  PropertyPicker,
   SelectedPropertyMark,
   useActiveMapping,
+  usePropertyPicker,
 } from '@/components/settings/property-picker';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import {
   integrationsApi,
   integrationsMutations,
@@ -28,6 +28,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { ItemRow } from '@/components/ui/list-row';
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 
 type ConnectionMutation = {
@@ -105,15 +106,18 @@ function SyncButton({
   );
 }
 
+/**
+ * Sync now on the row; Change, Test and Remove share its More menu (owner,
+ * 2026-11-19), so the property beside them has the room to show. Select
+ * stays a button until a property is chosen: it is the row's next step.
+ */
 function ConnectionActions({
   connection,
   label,
   busy,
   hasProperty,
   syncDisabled,
-  testPending,
   syncPending,
-  removePending,
   onTest,
   onSync,
   onRemove,
@@ -123,9 +127,7 @@ function ConnectionActions({
   busy: boolean;
   hasProperty: boolean;
   syncDisabled: boolean;
-  testPending: boolean;
   syncPending: boolean;
-  removePending: boolean;
   onTest: () => void;
   onSync: () => void;
   onRemove: () => void;
@@ -134,20 +136,13 @@ function ConnectionActions({
   // offered only to a role that may do it.
   const canManage = useWorkspaceCapability('manage_credentials');
   const canRun = useWorkspaceCapability('run');
+  const picker = usePropertyPicker(connection);
 
   return (
     <>
-      <PropertyPicker connection={connection} disabled={busy} />
-      {canManage ? (
-        <Button
-          variant="quiet"
-          className="min-w-14"
-          onClick={onTest}
-          disabled={busy}
-          aria-label={`Test ${label}`}
-        >
-          <Icon icon={PlugZap} />
-          {testPending ? 'Testing…' : 'Test'}
+      {picker.allowed && !hasProperty ? (
+        <Button onClick={picker.open} disabled={busy || picker.pending} aria-label={picker.label}>
+          {picker.verb}
         </Button>
       ) : null}
       {canRun ? (
@@ -159,18 +154,36 @@ function ConnectionActions({
           onSync={onSync}
         />
       ) : null}
-      {hasProperty && canManage ? (
-        <Button
-          variant="danger"
-          onClick={onRemove}
-          disabled={busy}
-          pending={removePending}
-          pendingLabel="Removing…"
-          aria-label={`Remove ${label} property from this project`}
-        >
-          Remove
-        </Button>
+      {canManage ? (
+        <Menu>
+          <MenuTrigger asChild>
+            <IconButton icon={MoreHorizontal} label={`${label} actions`} disabled={busy} />
+          </MenuTrigger>
+          <MenuContent align="end">
+            {picker.allowed && hasProperty ? (
+              <MenuItem
+                icon={<Icon icon={Pencil} />}
+                disabled={picker.pending}
+                onSelect={picker.open}
+              >
+                Change
+              </MenuItem>
+            ) : null}
+            <MenuItem icon={<Icon icon={PlugZap} />} onSelect={onTest}>
+              Test
+            </MenuItem>
+            {hasProperty ? (
+              <>
+                <MenuSeparator />
+                <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={onRemove}>
+                  Remove
+                </MenuItem>
+              </>
+            ) : null}
+          </MenuContent>
+        </Menu>
       ) : null}
+      {picker.dialog}
     </>
   );
 }
@@ -232,18 +245,27 @@ function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: bool
  * wins: starting a sync clears the test result).
  */
 function ConnectionStatus({
+  working,
   actionError,
   testState,
   activeRun,
   runActive,
   grantConnected,
 }: Readonly<{
+  /** A test or removal in flight, run from the More menu. */
+  working: string | null;
   actionError: unknown;
   testState: { ok: boolean; message: string } | null;
   activeRun: SyncRun | null;
   runActive: boolean;
   grantConnected: boolean;
 }>) {
+  if (working)
+    return (
+      <StatusMark variant="run-status" value="running">
+        {working}
+      </StatusMark>
+    );
   if (actionError) {
     return (
       <MarkLine
@@ -305,10 +327,14 @@ function ConnectionRowView({
   const { label, Icon: SourceIcon } = PROVIDER_META[connection.provider];
   const actionError = syncMutation.error ?? removeMutation.error;
   const grantConnected = grant.status === 'connected';
+  let working: string | null = null;
+  if (testMutation.isPending) working = 'Testing…';
+  else if (removeMutation.isPending) working = 'Removing…';
   // Until a property is chosen the row's only state is that it has none.
   const status =
-    hasProperty || actionError || testState || activeRun ? (
+    hasProperty || working || actionError || testState || activeRun ? (
       <ConnectionStatus
+        working={working}
         actionError={actionError}
         testState={testState}
         activeRun={activeRun}
@@ -336,9 +362,7 @@ function ConnectionRowView({
           busy={busy}
           hasProperty={hasProperty}
           syncDisabled={busy || runInFlight || !hasProperty || !grantConnected}
-          testPending={testMutation.isPending}
           syncPending={syncMutation.isPending}
-          removePending={removeMutation.isPending}
           onTest={testMutation.mutate}
           onSync={syncMutation.mutate}
           onRemove={removeMutation.mutate}

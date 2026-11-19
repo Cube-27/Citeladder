@@ -42,16 +42,31 @@ vi.mock('@/lib/project/project-context', () => ({
   }),
 }));
 
-import { PropertyPicker, SelectedPropertyMark } from './property-picker';
+import { SelectedPropertyMark, usePropertyPicker } from './property-picker';
 
-/** The picker as its row shows it: the chosen property (or none), then Select or Change. */
-function renderPicker(subject: IntegrationConnection) {
-  return renderWithProviders(
+/** The picker's action as a plain button beside the chosen property (or none). */
+function Picker({ connection }: Readonly<{ connection: IntegrationConnection }>) {
+  const picker = usePropertyPicker(connection);
+  return (
     <>
-      <SelectedPropertyMark connection={subject} />
-      <PropertyPicker connection={subject} />
-    </>,
+      <SelectedPropertyMark connection={connection} />
+      {picker.allowed ? (
+        <button
+          type="button"
+          onClick={picker.open}
+          disabled={picker.pending}
+          aria-label={picker.label}
+        >
+          {picker.verb}
+        </button>
+      ) : null}
+      {picker.dialog}
+    </>
   );
+}
+
+function renderPicker(subject: IntegrationConnection) {
+  return renderWithProviders(<Picker connection={subject} />);
 }
 
 function connection(overrides: Partial<IntegrationConnection> = {}): IntegrationConnection {
