@@ -62,7 +62,8 @@ function ownBrand(evidence: ExecutionEvidence, named: Named, project: Project | 
     position: named.position,
     logoUrl: project?.brand.logo_url ?? mark?.logoUrl ?? null,
     websiteUrl: project?.website_url || mark?.websiteUrl || null,
-    phrases: [name, ...(project?.brand.aliases ?? [])],
+    // The name the run matched too: a brand renamed since keeps its chip in older answers.
+    phrases: [...new Set([name, named.name, ...(project?.brand.aliases ?? [])].filter(Boolean))],
   };
 }
 

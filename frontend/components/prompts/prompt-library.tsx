@@ -263,6 +263,7 @@ export function PromptLibrary() {
   const measured = measurementsOf(measurements);
   const evidence = usePromptEvidence();
   const toast = useToast();
+  // Per-call promises, not mutate's callbacks: those fire only for the latest of overlapping calls.
   const failedTo = (action: string) => (error: unknown) =>
     toast.notify(`Couldn't ${action}`, mutationNoticeForError(error, { action }).message, {
       tone: 'negative',
@@ -321,9 +322,8 @@ export function PromptLibrary() {
       case 'topic':
         return topicMutations.remove.mutate(pending.topic);
       case 'prompt':
-        return deleteMutation.mutate(pending.prompt.id, {
-          onError: failedTo('delete this prompt'),
-        });
+        void deleteMutation.mutateAsync(pending.prompt.id).catch(failedTo('delete this prompt'));
+        return;
       case 'prompts':
         return bulk.run({ kind: 'delete' }, pending.prompts);
       default: {
@@ -376,10 +376,9 @@ export function PromptLibrary() {
           onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
           onToggleEnabled: toggle.press,
           onSetStatus: (prompt: Prompt, status: PromptStatus) =>
-            rowMutation.mutate(
-              { promptId: prompt.id, input: { status } },
-              { onError: failedTo(ROW_CHANGE_FAILED[status]) },
-            ),
+            void rowMutation
+              .mutateAsync({ promptId: prompt.id, input: { status } })
+              .catch(failedTo(ROW_CHANGE_FAILED[status])),
         },
         add: addPrompts,
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
