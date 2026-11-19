@@ -1,12 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { CalendarPlus, Play } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { SettingRow } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { Absence } from '@/components/ui/absence';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
@@ -25,7 +25,6 @@ import { textRole } from '@/components/ui/typography';
 import { Inline, Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { StatusMark } from '@/components/ui/status-mark';
-import { insetClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
@@ -33,7 +32,13 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionHeader,
+  SectionTitle,
+  TitledSection,
+} from '@/components/ui/section';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -74,57 +79,59 @@ function WorkspaceSchedules({
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
   const canWrite = useWorkspaceCapability('write');
 
+  // Two page sections in the compact column, the page's rule between them:
+  // the schedules as one-line rows, then the new-schedule form as its own block.
   return (
-    <div data-settings-sections="">
+    <>
       <TitledSection
         title="Scheduled audits"
         description="Runs use the selected prompt set and your connected engines."
       >
         <SectionContent>
-          {/* The schedules on the left, the new-schedule form in a third-width panel beside them. */}
-          <Stack className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start">
-            <Stack>
-              {schedulesQuery.isError ? (
-                <Notice
-                  kind="read"
-                  {...readErrorProps(schedulesQuery)}
-                  title="Couldn't load the scheduled runs"
-                  fallback="The request failed or timed out."
-                />
-              ) : null}
-              {schedulesQuery.data?.length ? (
-                <LedgerList>
-                  {schedulesQuery.data.map((schedule) => (
-                    <ScheduleRow
-                      key={schedule.id}
-                      schedule={schedule}
-                      promptSets={promptSets}
-                      markets={markets}
-                      resuming={resumeMutation.isPending}
-                      onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
-                    />
-                  ))}
-                </LedgerList>
-              ) : null}
-              {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
-                <StateBlock kind="empty" inline message="No scheduled audits yet." />
-              ) : null}
-              <ResumeNotice
-                error={resumeMutation.error}
-                onRetry={() => {
-                  if (resumeMutation.variables) resumeMutation.mutate(resumeMutation.variables);
-                }}
+          <Stack>
+            {schedulesQuery.isError ? (
+              <Notice
+                kind="read"
+                {...readErrorProps(schedulesQuery)}
+                title="Couldn't load the scheduled runs"
+                fallback="The request failed or timed out."
               />
-            </Stack>
-            {/* Scheduling is offered only to a role that may write schedules. */}
-            {canWrite ? (
-              <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} />
             ) : null}
+            {schedulesQuery.data?.length ? (
+              <LedgerList>
+                {schedulesQuery.data.map((schedule) => (
+                  <ScheduleRow
+                    key={schedule.id}
+                    schedule={schedule}
+                    promptSets={promptSets}
+                    markets={markets}
+                    resuming={resumeMutation.isPending}
+                    onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
+                  />
+                ))}
+              </LedgerList>
+            ) : null}
+            {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
+              <StateBlock kind="empty" inline message="No scheduled audits yet." />
+            ) : null}
+            <ResumeNotice
+              error={resumeMutation.error}
+              onRetry={() => {
+                if (resumeMutation.variables) resumeMutation.mutate(resumeMutation.variables);
+              }}
+            />
           </Stack>
         </SectionContent>
       </TitledSection>
-    </div>
+      {/* Scheduling is offered only to a role that may write schedules. */}
+      {canWrite ? <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} /> : null}
+    </>
   );
+}
+
+/** A form field in the Settings convention: the label at the left, the control at the right. */
+function FormRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return <SettingRow variant="field" label={label} action={children} />;
 }
 
 /** The new-schedule form and its outcome, for a role that may write schedules. */
@@ -163,101 +170,89 @@ function ScheduleForm({
     scheduleReady(promptSetId, engines, marketIds);
 
   return (
-    <Stack>
-      {/* The Runs screen mounts schedules only once an active prompt exists. */}
-      <div className={insetClasses()}>
-        <Stack gap="workspace">
-          <Field label="Prompt set">
-            {({ id }) => (
-              <Select
-                id={id}
-                ariaLabel="Prompt set"
-                value={promptSetId}
-                onValueChange={setPromptSetId}
-                options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
+    <Section aria-labelledby="new-schedule-title">
+      <SectionHeader>
+        <SectionTitle id="new-schedule-title">New schedule</SectionTitle>
+      </SectionHeader>
+      <Stack gap="item">
+        <FormRow label="Prompt set">
+          <Select
+            ariaLabel="Prompt set"
+            value={promptSetId}
+            onValueChange={setPromptSetId}
+            options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
+          />
+        </FormRow>
+        <FormRow label="Measurement scope">
+          <Select
+            ariaLabel="Measurement scope"
+            value={auditScope}
+            onValueChange={setAuditScope}
+            options={Object.entries(SCOPE_LABELS).map(([value, label]) => ({
+              value: value as AuditSchedule['audit_scope'],
+              label,
+            }))}
+          />
+        </FormRow>
+        <FormRow label="Cadence">
+          <Select
+            ariaLabel="Cadence"
+            value={cadence}
+            onValueChange={setCadence}
+            options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
+              value: value as AuditScheduleCadence,
+              label,
+            }))}
+          />
+        </FormRow>
+        {cadence === 'every_n_minutes' ? (
+          <FormRow label="Minutes">
+            <Input
+              aria-label="Minutes"
+              min="5"
+              type="number"
+              value={intervalMinutes}
+              onChange={(event) => setIntervalMinutes(event.target.value)}
+            />
+          </FormRow>
+        ) : null}
+        <FormRow label="Engines">
+          <Inline as="fieldset" aria-label="Engines" className="flex-wrap">
+            {catalog.order.map((engine) => (
+              <Checkbox
+                key={engine}
+                label={catalog.label(engine)}
+                checked={engines.includes(engine)}
+                onCheckedChange={() =>
+                  setEngines((current) =>
+                    current.includes(engine)
+                      ? current.filter((value) => value !== engine)
+                      : [...current, engine],
+                  )
+                }
               />
-            )}
-          </Field>
-          <Field label="Measurement scope">
-            {({ id }) => (
-              <Select
-                id={id}
-                ariaLabel="Measurement scope"
-                value={auditScope}
-                onValueChange={setAuditScope}
-                options={Object.entries(SCOPE_LABELS).map(([value, label]) => ({
-                  value: value as AuditSchedule['audit_scope'],
-                  label,
-                }))}
-              />
-            )}
-          </Field>
-          <Field label="Cadence">
-            {({ id }) => (
-              <Select
-                id={id}
-                ariaLabel="Cadence"
-                value={cadence}
-                onValueChange={setCadence}
-                options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
-                  value: value as AuditScheduleCadence,
-                  label,
-                }))}
-              />
-            )}
-          </Field>
-          {cadence === 'every_n_minutes' ? (
-            <Field label="Minutes">
-              {(props) => (
-                <Input
-                  {...props}
-                  min="5"
-                  type="number"
-                  value={intervalMinutes}
-                  onChange={(event) => setIntervalMinutes(event.target.value)}
-                />
-              )}
-            </Field>
-          ) : null}
-          <Stack as="fieldset" gap="item">
-            <legend className={textRole('label')}>Engines</legend>
-            <Inline className="flex-wrap">
-              {catalog.order.map((engine) => (
-                <Checkbox
-                  key={engine}
-                  label={catalog.label(engine)}
-                  checked={engines.includes(engine)}
-                  onCheckedChange={() =>
-                    setEngines((current) =>
-                      current.includes(engine)
-                        ? current.filter((value) => value !== engine)
-                        : [...current, engine],
-                    )
-                  }
-                />
-              ))}
-            </Inline>
-          </Stack>
-          <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
-          <div className="flex justify-end">
-            {/* The masthead's Launch run is the page's one primary. */}
-            <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
-              <Icon icon={CalendarPlus} />
-              {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
-            </Button>
-          </div>
-        </Stack>
-      </div>
-      {createMutation.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(createMutation.error, {
-            action: 'schedule the audit',
-          })}
-          onRetry={createSchedule}
-        />
-      ) : null}
-    </Stack>
+            ))}
+          </Inline>
+        </FormRow>
+        <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
+        <div className="flex justify-end">
+          {/* The masthead's Launch run is the page's one primary. */}
+          <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
+            <Icon icon={CalendarPlus} />
+            {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
+          </Button>
+        </div>
+        {createMutation.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(createMutation.error, {
+              action: 'schedule the audit',
+            })}
+            onRetry={createSchedule}
+          />
+        ) : null}
+      </Stack>
+    </Section>
   );
 }
 
@@ -279,9 +274,8 @@ function MarketChecklist({
 }>) {
   if (markets.length < 2) return null;
   return (
-    <Stack as="fieldset" gap="item">
-      <legend className={textRole('label')}>Markets</legend>
-      <Inline className="flex-wrap">
+    <FormRow label="Markets">
+      <Inline as="fieldset" aria-label="Markets" className="flex-wrap">
         {markets.map((market) => (
           <Checkbox
             key={market.id ?? 'default'}
@@ -291,7 +285,7 @@ function MarketChecklist({
           />
         ))}
       </Inline>
-    </Stack>
+    </FormRow>
   );
 }
 
