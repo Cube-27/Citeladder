@@ -195,10 +195,7 @@ function BrandFactsTab({
     <Section aria-labelledby="brand-facts">
       <SectionHeader>
         <SectionTitle id="brand-facts">Brand facts</SectionTitle>
-        <SectionDescription>
-          Statements of record that AI answers about you are checked against. Runs check the facts
-          confirmed when they start.
-        </SectionDescription>
+        <SectionDescription>Runs check the facts confirmed when they start.</SectionDescription>
       </SectionHeader>
       {facts.data?.enabled ? (
         <BrandFactsPanel

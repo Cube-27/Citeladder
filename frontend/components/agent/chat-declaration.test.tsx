@@ -192,9 +192,7 @@ describe('ChatScreen implementation declaration', () => {
     const card = await screen.findByRole('region', {
       name: 'Mark https://acme.test/pricing implemented?',
     });
-    expect(card).toHaveTextContent(
-      'Work done outside CiteLadder, live since 2026-09-24. You confirm the details before anything is declared.',
-    );
+    expect(card).toHaveTextContent('Work done outside CiteLadder, live since 2026-09-24');
     expect(within(card).queryByRole('button', { name: 'Mark implemented' })).toBeNull();
     load();
     await user.click(await within(card).findByRole('button', { name: 'Mark implemented' }));

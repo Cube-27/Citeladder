@@ -77,10 +77,6 @@ export function ActionsScreen() {
         <Stack gap="workspace" className="min-w-0">
           <Stack gap="tight">
             <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
-            <p className={textRole('body', 'text-ink-2')}>
-              Start with site fixes. Then improve your pages, correct wrong claims and get mentioned
-              elsewhere.
-            </p>
           </Stack>
           <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
           <div>

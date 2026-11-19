@@ -183,7 +183,6 @@ function LinkDeclaration({
         revision={null}
         recommendationIds={selected}
         disabled={!selected.length}
-        selectionDescription="Declare that the selected internal links are live on this source page."
       />
     </Stack>
   );

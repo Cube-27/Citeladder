@@ -83,14 +83,12 @@ export function SeoPanel({
           Page checks
         </h3>
         <p className={textRole('caption')}>
-          Website’s checks on the page as fetched
           {fetch?.fetched_at ? (
             <>
-              {' '}
-              on <DisplayTime value={fetch.fetched_at} />
+              Fetched <DisplayTime value={fetch.fetched_at} />.{' '}
             </>
           ) : null}
-          . Editing the page doesn’t rerun them.
+          Editing the page doesn’t rerun them.
         </p>
         {failing.length > 0 ? (
           <ul aria-label="Checks to fix" className={ledgerClasses()}>

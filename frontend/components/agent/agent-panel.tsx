@@ -15,7 +15,7 @@ import { DockedThread } from '@/components/ui/chat-dock';
 import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { ICONS } from '@/lib/icons';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
@@ -111,7 +111,6 @@ function PanelStart({
   const commands = useComposerCommands({ workspaceId, projectId });
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);
-  const hasContext = contextChips(context).length > 0;
   const skill = useSkillChoice({
     value: skillId,
     onChange: setSkillId,
@@ -140,14 +139,7 @@ function PanelStart({
         />
       }
     >
-      <Stack gap="tight">
-        <p className={textRole('heading')}>Ask about this screen</p>
-        <p className={textRole('caption')}>
-          {hasContext
-            ? 'The references below go with your question; remove any you do not need.'
-            : 'The agent reads your CiteLadder evidence and answers with sources.'}
-        </p>
-      </Stack>
+      <p className={textRole('heading')}>Ask about this screen</p>
       {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
       {create.failure ? <AgentFailureNotice failure={create.failure} /> : null}
     </DockedThread>
