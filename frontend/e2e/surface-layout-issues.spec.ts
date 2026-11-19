@@ -121,6 +121,9 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
   const boxes: Record<string, Box> = {};
   for (const [name, part] of Object.entries(parts))
     boxes[name] = (await part.count()) === 1 ? await bandBox(part) : null;
+  // The controls after the view are right-aligned (owner, 2026-11-19), so the
+  // search moves sideways as what follows it widens; it keeps its line and size.
+  boxes.search = boxes.search?.slice(1) ?? null;
   return boxes;
 }
 
@@ -150,6 +153,11 @@ for (const width of [1280, 1600])
       return layout(page, table);
     };
     const before = await settled();
+    // One row: the view switch and the search share the filter bar's one line.
+    const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
+    const [searchY = 0, , searchHeight = 0] = before.search ?? [];
+    expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
+    expect(Math.abs((before.filters?.[3] ?? 0) - tabsHeight)).toBeLessThanOrEqual(1);
     const shifts: string[] = [];
     const check = async (step: string) => {
       const after = await settled();
@@ -227,3 +235,34 @@ for (const width of [1280, 1600])
 
     expect(shifts).toEqual([]);
   });
+
+test('at phone width the search takes a line and the other controls share the next', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stubIssues(page);
+  await page.goto(fixtureProjectPath('/issues'));
+  const table = page.getByRole('region', { name: 'Issues', exact: true });
+  await expect(table.locator('tbody tr').first()).toContainText('technical issue 1');
+  const bar = table.locator('[data-filter-bar]');
+  const filters = bar.getByRole('button', { name: /^Filters/ });
+  await filters.click();
+  await page.getByRole('menuitem', { name: /^Severity/ }).click();
+  await page.getByRole('menuitemradio', { name: 'High' }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  const clear = bar.getByRole('button', { name: 'Clear' });
+  await expect(clear).toBeVisible();
+  const box = async (part: Locator) => (await part.boundingBox())!;
+  const [search, filtersBox, clearBox, barBox] = await Promise.all([
+    box(page.getByRole('searchbox', { name: 'Search issues' })),
+    box(filters),
+    box(clear),
+    box(bar),
+  ]);
+  // The search fills its line; Filters and Clear sit side by side on the line under it.
+  expect(search.width).toBeGreaterThan(barBox.width / 2);
+  expect(filtersBox.y).toBeGreaterThanOrEqual(search.y + search.height);
+  expect(Math.abs(filtersBox.y - clearBox.y)).toBeLessThanOrEqual(1);
+  expect(clearBox.x).toBeGreaterThan(filtersBox.x + filtersBox.width);
+});

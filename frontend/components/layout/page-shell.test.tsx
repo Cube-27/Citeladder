@@ -51,12 +51,12 @@ describe('RouteLoadingScreen', () => {
     expect(container.querySelector('[data-loading-shape]')).toBeNull();
   });
 
-  it('draws Issues as its summary, then the table under its switch and search rows', () => {
+  it('draws Issues as its summary, then the table under its one control row', () => {
     const { container } = renderAt('/issues');
     expect(container.querySelector('[data-page-band="filters"]')).toBeNull();
     const order = [
       container.querySelector('[data-skeleton="summary"]'),
-      container.querySelector('[data-filter-bar-rows] [data-filter-bar]'),
+      container.querySelector('[data-filter-bar]'),
       container.querySelector('[data-loading-shape="table"]'),
     ];
     expect(order).not.toContain(null);

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * A DataTable with a toolbar before its first read: the header bar's held
- * toolbar (DataTable's inset and 12 under it; a view's row over the search row
+ * toolbar (DataTable's inset and 12 under it; a view leading the search's row
  * when it has a `view`), then the table's blocks in its frame. Light, so a
  * route's loading frame can draw it without loading the table.
  */
