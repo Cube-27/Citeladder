@@ -39,7 +39,7 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 const SOURCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source' },
   { key: 'collection', label: 'Collection and sampling', priority: 'low' },
-  { key: 'freshness', label: 'Freshness', width: 'stamp' },
+  { key: 'freshness', label: 'Freshness', width: 'stamp', priority: 'low' },
   { key: 'diagnostics', label: 'Diagnostics' },
   { key: 'manage', label: 'Manage', width: 'rowActions' },
 ];

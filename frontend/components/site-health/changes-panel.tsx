@@ -225,9 +225,10 @@ function comparisonState(
 }
 
 // Page is the one flexible column; the evidence is a button at the row's end.
+// The field is the secondary column the fit hides at 982.
 const CHANGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'page', label: 'Page', kind: 'identity' },
-  { key: 'field', label: 'Field', kind: 'text', width: 'name' },
+  { key: 'field', label: 'Field', kind: 'text', width: 'category', priority: 'low' },
   { key: 'class', label: 'Class', kind: 'text', width: 'name' },
   { key: 'evidence', label: 'Evidence', kind: 'text', width: 'category' },
 ];

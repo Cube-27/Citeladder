@@ -214,10 +214,13 @@ export function rankThemes(
     .slice(0, limit);
 }
 
-/** A theme's negative share of its polar mentions (0–1), or null with none. */
-export function themeNegativeShare(theme: Pick<Theme, 'negative' | 'positive'>): number | null {
+/** A theme's negative share of its polar mentions (0–1), or null below the classified minimum. */
+export function themeNegativeShare(
+  theme: Pick<Theme, 'negative' | 'positive'>,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+): number | null {
   const polar = theme.negative + theme.positive;
-  return polar ? theme.negative / polar : null;
+  return meetsMinimum(polar, minimum) ? theme.negative / polar : null;
 }
 
 /**

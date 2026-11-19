@@ -99,7 +99,7 @@ export function PageKindScores({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'kind', label: 'Page kind', kind: 'identity' },
-  { key: 'analyzed', label: 'Pages analyzed', kind: 'number' },
+  { key: 'analyzed', label: 'Pages analyzed', kind: 'number', priority: 'low' },
   { key: 'web', label: 'Web fundamentals', kind: 'number' },
   { key: 'aeo', label: 'AEO readiness', kind: 'number' },
   { key: 'coverage', label: 'AEO checklist completion', kind: 'number', width: 'metric' },

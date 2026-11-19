@@ -18,7 +18,13 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { textRole } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
+import {
+  TableActionsCell,
+  TableCell,
+  TableCellLines,
+  TableRow,
+  TableTime,
+} from '@/components/ui/table';
 import type {
   ApiKey,
   ApiKeyCreated,
@@ -108,16 +114,16 @@ function KeyRow({
         </div>
       </TableCell>
       <TableCell>
-        <KeyStateMark state={apiKey.state} />
+        <TableCellLines
+          primary={<KeyStateMark state={apiKey.state} />}
+          secondary={<TableTime value={apiKey.last_used_at} fallback="Not used yet" />}
+        />
       </TableCell>
       <TableCell>
         <ClampText>{apiKey.scopes.join(', ')}</ClampText>
       </TableCell>
       <TableCell>
         <ClampText lines={1}>{projects}</ClampText>
-      </TableCell>
-      <TableCell>
-        <TableTime value={apiKey.last_used_at} fallback="Not used yet" />
       </TableCell>
       <TableActionsCell>
         {apiKey.state === 'active' ? (
@@ -130,10 +136,10 @@ function KeyRow({
 
 const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
-  { key: 'status', label: 'Status', kind: 'status' },
+  // The last use sits under the state: a narrow page has no room for its own column.
+  { key: 'status', label: 'Status', sublabel: 'Last used', kind: 'status', width: 'category' },
   { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
   { key: 'projects', label: 'Projects', kind: 'text', width: 'status', priority: 'low' },
-  { key: 'used', label: 'Last used', kind: 'date' },
   { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
 ];
 
@@ -328,7 +334,7 @@ function ApiKeysBody({
 }>) {
   if (query.isPending)
     return (
-      <StateBlock kind="loading" label="Loading API keys…" shape={{ kind: 'table', columns: 6 }} />
+      <StateBlock kind="loading" label="Loading API keys…" shape={{ kind: 'table', columns: 5 }} />
     );
   if (query.isError)
     return (

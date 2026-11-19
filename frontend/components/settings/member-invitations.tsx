@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { TitledSection } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { DisplayTime } from '@/components/ui/display-time';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 import { pluralCount } from '@/lib/format';
 
@@ -190,18 +190,23 @@ export function PendingInvitations({
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}
+        rowLines={2}
         state={invitationsState(read)}
       >
         {invitations.map((invitation) => (
           <TableRow key={invitation.id}>
             <TableCell>
-              <ClampText lines={1}>{invitation.email}</ClampText>
+              <TableCellLines
+                primary={invitation.email}
+                secondary={
+                  <>
+                    Link expires <DisplayTime value={invitation.expires_at} />
+                  </>
+                }
+              />
             </TableCell>
             <TableCell className="whitespace-nowrap">
               <Tag>{roleLabel(invitation.role)}</Tag>
-            </TableCell>
-            <TableCell>
-              <TableTime value={invitation.expires_at} />
             </TableCell>
             <TableActionsCell>
               <Button
@@ -243,7 +248,6 @@ function invitationsState(
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee', kind: 'identity' },
   { key: 'role', label: 'Workspace role', kind: 'status' },
-  { key: 'expires', label: 'Link expires', kind: 'date' },
   // Two buttons: the row-actions width, under a visually hidden head.
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];

@@ -2,6 +2,7 @@ import { Users } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { useShownSpan } from '@/components/ui/data-table-fit';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Pressable } from '@/components/ui/pressable';
@@ -94,9 +95,7 @@ export function SearchIntelligenceCompetitors({
           return (
             <TableRow key={competitor.identity}>
               {identity}
-              <TableCell colSpan={COMPETITOR_COLUMNS.length - 1}>
-                <SearchValue value={null} fetched={false} />
-              </TableCell>
+              <NotFetchedCell />
             </TableRow>
           );
         return (
@@ -145,7 +144,18 @@ export function SearchIntelligenceCompetitors({
 const COMPETITOR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'competitor', label: 'Competitor', kind: 'identity' },
   { key: 'organic', label: 'Organic keywords', kind: 'number' },
-  { key: 'traffic', label: 'Est. monthly traffic', kind: 'number' },
+  { key: 'traffic', label: 'Est. monthly traffic', kind: 'number', priority: 'low' },
   { key: 'missing', label: 'Missing keywords', kind: 'number' },
   { key: 'shared', label: 'Shared keywords', kind: 'number' },
 ];
+
+const FIGURE_KEYS = COMPETITOR_COLUMNS.slice(1).map((column) => column.key);
+
+/** One note across the figure columns the table shows. */
+function NotFetchedCell() {
+  return (
+    <TableCell colSpan={useShownSpan(FIGURE_KEYS)}>
+      <SearchValue value={null} fetched={false} />
+    </TableCell>
+  );
+}
