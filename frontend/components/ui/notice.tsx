@@ -180,8 +180,8 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
 
 /**
  * The headline names what failed ("Couldn't load runs"); a server's words
- * never are. A sentence a person can act on follows it, and a server failure's status
- * text is secondary text (2.9).
+ * never are. A sentence a person can act on follows it; a server fault shows
+ * the notice's own fallback, never its status text.
  */
 function ReadFailureNotice({
   error,
@@ -194,7 +194,7 @@ function ReadFailureNotice({
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
-  const { sentence, status } = failureLines(detail, [title, fallback]);
+  const sentence = failureSentence(detail, { title, fallback });
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
@@ -212,20 +212,22 @@ function ReadFailureNotice({
     >
       {sentence ? <p>{sentence}</p> : null}
       {next ? <p>{next}</p> : null}
-      {status ? <p className={textRole('caption', 'text-ink-2')}>{status}</p> : null}
     </MessageNoticeView>
   );
 }
 
 /**
- * Where a failure's own words go: a person's sentence under the headline, or,
- * for a server fault, secondary text: a status text ("Internal Server Error")
- * is never the sentence. Words repeating the headline drop.
+ * The sentence under the headline: the failure's own words when a person wrote
+ * them, the notice's fallback for a server fault ("Internal Server Error" is
+ * never shown). Words repeating the headline drop.
  */
-function failureLines(detail: ReturnType<typeof humanizeApiError>, shown: readonly string[]) {
-  const said = shown.includes(detail.message) ? null : detail.message;
+function failureSentence(
+  detail: ReturnType<typeof humanizeApiError>,
+  { title, fallback }: Readonly<{ title: string; fallback: string }>,
+) {
   const serverFault = detail.status !== undefined && detail.status >= 500;
-  return { sentence: serverFault ? null : said, status: serverFault ? said : null };
+  const said = serverFault ? fallback : detail.message;
+  return said === title ? null : said;
 }
 
 /** The failure's actions, then the support reference as a quiet copy control. */

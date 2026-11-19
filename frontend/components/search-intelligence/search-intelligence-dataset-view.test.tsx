@@ -478,9 +478,10 @@ it('does not show a previous query page after a sort read fails', async () => {
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
-  // The read's subject heads the failure; the server's words follow, the reference is copied.
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the saved rows");
-  expect(screen.getByText('Read failed')).toBeInTheDocument();
+  // The read's subject heads the failure with the screen's own sentence, never the server's words.
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    "Couldn't load the saved rowsThe request failed or timed out.Retry",
+  );
   expect(screen.getByRole('button', { name: 'Copy reference' })).toBeInTheDocument();
   expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
 });

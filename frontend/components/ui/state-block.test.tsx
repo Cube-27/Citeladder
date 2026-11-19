@@ -61,8 +61,10 @@ describe('screenState with StateBlock', () => {
     renderScreen(load);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent("Couldn't load crawl coverage");
-    expect(alert).toHaveTextContent('Service unavailable');
+    // The screen's own sentence, never the server's status text.
+    expect(alert).toHaveTextContent(
+      "Couldn't load crawl coverageThe request failed or timed out.Retry",
+    );
     expect(screen.getByRole('button', { name: 'Copy reference' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 

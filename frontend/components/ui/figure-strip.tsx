@@ -300,8 +300,13 @@ function FigureValue({ segment }: FigurePart) {
   }
   const absent = absenceOf(value);
   if (absent) return <Absence state={absent} />;
+  // Cut inside its cell; the whole value stays in the text and on hover.
   if (typeof value === 'string' || typeof value === 'number')
-    return <span className={VALUE_TEXT}>{String(value)}</span>;
+    return (
+      <span className={cn(VALUE_TEXT, 'min-w-0 truncate')} title={String(value)}>
+        {String(value)}
+      </span>
+    );
   return <div className={cn(VALUE_TEXT, 'flex min-w-0 items-center gap-2')}>{value}</div>;
 }
 
@@ -348,7 +353,7 @@ function FigureLabelLink({
   if (action.onSelect)
     return (
       <TextLink asChild underline="hover" className="text-ink-2">
-        <button type="button" onClick={action.onSelect}>
+        <button type="button" className="text-start" onClick={action.onSelect}>
           {children}
         </button>
       </TextLink>
