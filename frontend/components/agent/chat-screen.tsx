@@ -37,8 +37,9 @@ export function ChatScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const query = useChatDetail(workspaceId, chatId);
 
+  // A 404 means the chat is gone, even with a cached copy on screen.
+  if (isNotFound(query.error)) return <NotFoundScreen />;
   // A failed background refresh keeps the chat on screen; only a first load fails the page.
-  if (isNotFound(query.error) && !query.data) return <NotFoundScreen />;
   if (query.isError && !query.data)
     return (
       <ThreadPage>
