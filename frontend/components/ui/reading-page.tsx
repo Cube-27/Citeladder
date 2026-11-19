@@ -4,9 +4,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { textRole } from '@/components/ui/typography';
 
 /**
- * A record's reading page (the Actions v3 Action and URL pages): one prose
- * column (the route is `compact`) of labelled sections and a Details card,
- * under the frame's h1. Its frame is `fitted`: the column holds the page's end space
+ * A record's reading page (the Actions v3 Action and URL pages): labelled
+ * sections and a Details card across the route's narrow column, on the same
+ * edge as the masthead's trail and the frame's h1. Its frame is `fitted`: the column holds the page's end space
  * itself and is at least the window's height, so a dock after it stays at the
  * window's foot however short the page and however far it is scrolled.
  */

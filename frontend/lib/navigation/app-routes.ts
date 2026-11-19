@@ -280,7 +280,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/actions/:actionId',
-    width: 'compact',
+    width: 'narrow',
     title: 'Action',
     collection: '/actions',
     screen: screens.action,
@@ -289,7 +289,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/actions/urls/:siteUrlId',
-    width: 'compact',
+    width: 'narrow',
     title: 'URL',
     collection: '/actions',
     screen: screens.actionUrl,
