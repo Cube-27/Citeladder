@@ -533,7 +533,7 @@ export function routeLoading(pathname: string): RouteLoading {
 }
 
 /** A page's width: its section's, else the main column's. */
-export function routeWidth(pathname: string): 'narrow' | 'compact' | 'full' {
+export function routeWidth(pathname: string): NonNullable<AppRouteRecord['width']> | 'full' {
   return sectionRoute(pathname)?.width ?? 'full';
 }
 

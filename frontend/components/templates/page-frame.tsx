@@ -160,7 +160,7 @@ type PageWidth = ReturnType<typeof routeWidth>;
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   full: false,
   narrow: 'max-w-thread mx-auto w-full',
-  compact: 'mx-auto w-full max-w-[var(--container-prose)]',
+  compact: 'max-w-prose mx-auto w-full',
 };
 
 /** Where the masthead's title starts: on the page column's left edge. */
