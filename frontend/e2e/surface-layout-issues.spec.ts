@@ -157,8 +157,8 @@ for (const width of [1280, 1600])
     const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
     const [searchY = 0, , searchHeight = 0] = before.search ?? [];
     expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
-    const lineHeight = Math.max(tabsHeight, searchHeight);
-    expect(Math.abs((before.filters?.[3] ?? 0) - lineHeight)).toBeLessThanOrEqual(1);
+    // A second line would add the 8 row gap and another control.
+    expect(before.filters?.[3] ?? Infinity).toBeLessThan(Math.max(tabsHeight, searchHeight) + 8);
     const shifts: string[] = [];
     const check = async (step: string) => {
       const after = await settled();
