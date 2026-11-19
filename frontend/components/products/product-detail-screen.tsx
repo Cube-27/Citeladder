@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { FilterControls } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
@@ -13,6 +14,7 @@ import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
+import { isNotFound } from '@/lib/api/errors';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { promptsQueries } from '@/lib/api/prompts';
 import { formatCount } from '@/lib/format';
@@ -174,6 +176,7 @@ function HolderDetail({
     promptSets: promptSets.data?.prompt_sets ?? [],
   });
   const trail = trailFrom(scopeFilters);
+  if (isNotFound(detail.error)) return <NotFoundScreen />;
   if (detail.isError)
     return (
       <RecordPage trail={trail}>

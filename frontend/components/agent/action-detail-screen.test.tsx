@@ -151,7 +151,7 @@ const GROUP_URLS = {
 };
 
 function renderDetail() {
-  renderWithProviders(
+  return renderWithProviders(
     <Routes>
       <Route path="/actions/:actionId" element={<ActionDetailScreen />} />
     </Routes>,
@@ -257,6 +257,29 @@ const metCheck = {
   source_id: null,
   subject: 'Missing structured data',
 };
+
+describe('A missing Action', () => {
+  it('reads Not found on a 404, and Couldn’t load on any other failure', async () => {
+    mswServer.use(
+      http.get(`/api/v1/actions/${ACTION}`, () =>
+        HttpResponse.json({ detail: 'Not found' }, { status: 404 }),
+      ),
+    );
+    const first = renderDetail();
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load this Action")).toBeNull();
+    first.unmount();
+
+    mswServer.use(
+      http.get(`/api/v1/actions/${ACTION}`, () =>
+        HttpResponse.json({ detail: 'Unavailable' }, { status: 503 }),
+      ),
+    );
+    renderDetail();
+    expect(await screen.findByText("Couldn't load this Action")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Page not found' })).toBeNull();
+  });
+});
 
 describe('A Done Action’s status', () => {
   it.each([

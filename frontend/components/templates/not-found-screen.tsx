@@ -2,6 +2,7 @@ import { SearchX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
+import { HOME_PATH } from '@/lib/navigation/app-routes';
 
 import { NoticePage } from './notice-page';
 
@@ -18,7 +19,7 @@ export function NotFoundScreen() {
       heading="Page not found"
       actions={
         <Button asChild variant="primary">
-          <ProjectLink href="/projects">Go to Overview</ProjectLink>
+          <ProjectLink href={HOME_PATH}>Go to Overview</ProjectLink>
         </Button>
       }
     >

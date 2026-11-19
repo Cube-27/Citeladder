@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { RunActions, useRunExport } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { isNotFound } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -63,6 +65,7 @@ export function RunDetailScreen() {
   const timeZone = useDisplayTimeZone();
   const title = audit ? runTitle(audit, timeZone) : undefined;
 
+  if (isNotFound(auditQuery.error) && !audit) return <NotFoundScreen />;
   return (
     <RecordPage
       title={title}

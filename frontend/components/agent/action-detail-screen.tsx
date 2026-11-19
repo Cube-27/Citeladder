@@ -16,6 +16,7 @@ import { ActionUrls } from '@/components/agent/action-urls';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { DeveloperTicketButton } from '@/components/agent/developer-ticket';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { PageFrame } from '@/components/templates/page-frame';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -25,6 +26,7 @@ import { actionTarget, withShortTarget } from '@/lib/agent/action-title';
 import { actionHandoffHref } from '@/lib/agent/handoff';
 import { issueFamilyBrief, type IssueFamilyBrief } from '@/lib/agent/issue-family-brief';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
+import { isNotFound } from '@/lib/api/errors';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -47,6 +49,7 @@ export function ActionDetailScreen() {
       <ReadingColumn>{body}</ReadingColumn>
     </PageFrame>
   );
+  if (isNotFound(query.error)) return <NotFoundScreen />;
   if (query.isError)
     return fallback(
       <StateBlock

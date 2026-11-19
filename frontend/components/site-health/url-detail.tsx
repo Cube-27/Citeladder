@@ -13,12 +13,13 @@ import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError, isNotFound } from '@/lib/api/errors';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 import { PAGE_DETAIL_TRAIL, UrlDetailView } from './url-detail-view';
+import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -89,6 +90,7 @@ export function UrlDetail({
         />
       </RecordPage>
     );
+  if (isNotFound(detailQuery.error)) return <NotFoundScreen />;
   if (detailQuery.isError || !detailQuery.data) {
     return (
       <RecordPage trail={PAGE_DETAIL_TRAIL}>

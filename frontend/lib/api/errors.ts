@@ -104,6 +104,11 @@ function isStructuredParseFailure(error: Error): boolean {
 }
 
 /** Extract an HTTP status from an ApiError or a duck-typed `{ status }` error. */
+/** The API answered 404: the record was deleted or belongs to another workspace. */
+export function isNotFound(error: unknown): boolean {
+  return httpErrorStatus(error) === 404;
+}
+
 export function httpErrorStatus(error: unknown): number | undefined {
   if (error instanceof ApiError) return error.status > 0 ? error.status : undefined;
   if (typeof error === 'object' && error !== null && 'status' in error) {
