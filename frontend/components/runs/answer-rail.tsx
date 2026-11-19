@@ -12,6 +12,7 @@ import {
   YouMark,
 } from '@/components/ui/answer-chat';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -171,6 +172,7 @@ export function LinksRail({
 
 type FanoutRead =
   | { kind: 'loading' }
+  | { kind: 'failed'; read: RetryableRead }
   | { kind: 'found'; item: VisibilityExecutionEvidence }
   | { kind: 'missing' };
 
@@ -188,8 +190,9 @@ function useAnswerFanout(evidence: ExecutionEvidence, promptId: string | undefin
       },
     ),
   );
+  if (read.isError && !read.data) return { kind: 'failed', read };
   if (read.isPending) return { kind: 'loading' };
-  const item = read.data?.items.find((entry) => entry.task_id === evidence.id);
+  const item = read.data.items.find((entry) => entry.task_id === evidence.id);
   return item ? { kind: 'found', item } : { kind: 'missing' };
 }
 
@@ -208,6 +211,15 @@ function FanoutBody({
   evidence,
 }: Readonly<{ read: FanoutRead; evidence: ExecutionEvidence }>) {
   if (read.kind === 'loading') return <Skeleton lines={2} />;
+  if (read.kind === 'failed')
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(read.read)}
+        title="Couldn't load this answer's searches"
+        fallback="The request failed or timed out."
+      />
+    );
   // Without the fanout row only the count is known, not whether the engine withheld the words.
   if (read.kind === 'missing')
     return evidence.search_query_count > 0 ? (

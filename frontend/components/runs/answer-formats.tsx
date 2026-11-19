@@ -3,7 +3,8 @@ import { Absence } from '@/components/ui/absence';
 import { Inline } from '@/components/ui/layout';
 import { Tag } from '@/components/ui/tag';
 
-const LABELS = {
+/** Each answer format's one label, wherever an answer's formats are named. */
+export const ANSWER_FORMAT_LABELS = {
   shopping: 'Shopping',
   map: 'Map',
   comparison: 'Comparison',
@@ -18,7 +19,7 @@ export function AnswerFormatTags({ formats }: Readonly<{ formats: AnswerFormats 
       return (
         <Inline as="span" gap="tight">
           {formats.formats.map((format) => (
-            <Tag key={format}>{LABELS[format]}</Tag>
+            <Tag key={format}>{ANSWER_FORMAT_LABELS[format]}</Tag>
           ))}
         </Inline>
       );

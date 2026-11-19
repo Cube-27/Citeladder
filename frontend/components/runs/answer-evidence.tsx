@@ -74,6 +74,39 @@ function inTextLinks(formats: ExecutionEvidence['answer_formats']) {
   return <Absence state={formats.kind} />;
 }
 
+/** The searches the answer ran; a surface that reports none is its own state, never "No". */
+function searchesValue(evidence: ExecutionEvidence) {
+  switch (evidence.search) {
+    case 'used':
+      return evidence.search_query_count;
+    case 'not_used':
+      return 'Not used';
+    case 'not_reported':
+      return <Absence state="unavailable" label="Not reported" />;
+    default: {
+      const unreachable: never = evidence.search;
+      return unreachable;
+    }
+  }
+}
+
+function searchDetail(evidence: ExecutionEvidence): string {
+  switch (evidence.search) {
+    case 'used': {
+      const noun = evidence.search_query_count === 1 ? 'search' : 'searches';
+      return `${evidence.search_query_count} ${noun} recorded`;
+    }
+    case 'not_used':
+      return 'The engine ran no web search';
+    case 'not_reported':
+      return 'Not reported: this engine does not say whether it searched the web';
+    default: {
+      const unreachable: never = evidence.search;
+      return unreachable;
+    }
+  }
+}
+
 /** How the answer was measured, and what the analysis counted in it. */
 function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const engines = useEngineCatalog();
@@ -96,10 +129,7 @@ function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidenc
           },
           { label: 'In-text links', value: inTextLinks(evidence.answer_formats) },
           { label: 'Citations', value: evidence.citation_count },
-          {
-            label: 'Searches',
-            value: evidence.search_used ? evidence.search_query_count : 'Not used',
-          },
+          { label: 'Searches', value: searchesValue(evidence) },
         ]}
       />
     </Stack>
@@ -114,10 +144,6 @@ function brandOutcomeDetail(evidence: ExecutionEvidence): string {
 
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
-  const searchNoun = evidence.search_query_count === 1 ? 'search' : 'searches';
-  const searchDetail = evidence.search_used
-    ? `${evidence.search_query_count} ${searchNoun} recorded`
-    : 'The provider did not report web search';
   const competitorDetail =
     evidence.competitors_mentioned.length > 0
       ? evidence.competitors_mentioned.join(', ')
@@ -140,7 +166,11 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
           detail={`${evidence.owned_citation_count} owned ${ownedNoun} found`}
           passed={evidence.owned_domain_cited}
         />
-        <Outcome label="Grounded with search" detail={searchDetail} passed={evidence.search_used} />
+        <Outcome
+          label="Grounded with search"
+          detail={searchDetail(evidence)}
+          passed={evidence.search === 'used'}
+        />
         <Outcome
           label="Competitor pressure"
           detail={competitorDetail}

@@ -146,7 +146,7 @@ export function PromptPastAnswers({
         ))}
       </DataTable>
       <AnswerDialog
-        execution={opened ? { id: opened, prompt_text: promptText } : null}
+        execution={opened ? { id: opened, prompt_text: promptText, prompt_id: promptId } : null}
         open={opened !== null}
         onOpenChange={(next) => {
           if (!next) setOpened(null);

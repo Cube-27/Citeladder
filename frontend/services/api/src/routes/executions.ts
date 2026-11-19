@@ -6,11 +6,8 @@
  * execution (`AuditTask`) id from `GET /audits/{id}/executions` or the
  * prompt's list; both reads are workspace-scoped and projection-only.
  */
-import { executionEvidenceSchema } from '@citeladder/contracts/audits';
-import {
-  promptAnswerPageSchema,
-  promptAnswerSearchSchema,
-} from '@citeladder/contracts/visibility-prompt-answers';
+import { executionEvidenceSchema, promptAnswerSearchSchema } from '@citeladder/contracts/audits';
+import { promptAnswerPageSchema } from '@citeladder/contracts/visibility-prompt-answers';
 
 import { policy } from '../config.ts';
 import { notFound } from '../errors.ts';

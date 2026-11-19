@@ -1,13 +1,7 @@
 import { z } from 'zod';
 
-import { answerFormatsSchema, firstNamedSchema } from './audits.ts';
+import { answerFormatsSchema, firstNamedSchema, promptAnswerSearchSchema } from './audits.ts';
 import { namedBrandSchema } from './visibility.ts';
-
-/**
- * Whether one answer searched the web. `not_reported`: the surface exposes no
- * search signal at all (an AI Overview is observed, not asked), which is not "no".
- */
-export const promptAnswerSearchSchema = z.enum(['used', 'not_used', 'not_reported']);
 
 // A tracked brand one answer named, in the order the answer named them.
 export const promptAnswerBrandSchema = namedBrandSchema.omit({ responses: true });
@@ -37,6 +31,5 @@ export const promptAnswerPageSchema = z.object({
   next_cursor: z.string().nullable(),
 });
 
-export type PromptAnswerSearch = z.infer<typeof promptAnswerSearchSchema>;
 export type PromptAnswer = z.infer<typeof promptAnswerSchema>;
 export type PromptAnswerPage = z.infer<typeof promptAnswerPageSchema>;

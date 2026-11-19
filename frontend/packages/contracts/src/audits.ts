@@ -380,6 +380,21 @@ export const answerFormatsSchema = z.discriminatedUnion('kind', [
 export type AnswerFormat = z.infer<typeof answerFormatSchema>;
 export type AnswerFormats = z.infer<typeof answerFormatsSchema>;
 
+/**
+ * Whether one answer searched the web. `not_reported`: the surface exposes no
+ * search signal at all (an AI Overview is observed, not asked), which is not "no".
+ */
+export const promptAnswerSearchSchema = z.enum(['used', 'not_used', 'not_reported']);
+
+// A tracked business one answer named, with its first-mention offset and its
+// rank among the named businesses (1 = named first); null when none was kept.
+const executionNamedSchema = responseObject({
+  name: z.string(),
+  kind: z.enum(['brand', 'competitor']),
+  offset: z.number().int().nullable(),
+  position: z.number().int().nullable(),
+});
+
 // One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
@@ -416,9 +431,12 @@ export const executionEvidenceSchema = responseObject({
   unintended_domain_cited: z.boolean(),
   citation_count: z.number().int(),
   search_used: z.boolean(),
+  search: promptAnswerSearchSchema,
   search_query_count: z.number().int(),
   avg_position: z.number().nullable(),
   first_named: markedFirstNamedSchema,
+  // Named first first; one without an offset has no rank and comes last.
+  named: z.array(executionNamedSchema),
   answer_formats: answerFormatsSchema,
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
@@ -444,6 +462,7 @@ export type ExecutionStatus = z.infer<typeof executionStatusSchema>;
 export type CitationClassification = z.infer<typeof citationClassificationSchema>;
 export type Execution = z.infer<typeof executionSchema>;
 export type ExecutionEvidence = z.infer<typeof executionEvidenceSchema>;
+export type PromptAnswerSearch = z.infer<typeof promptAnswerSearchSchema>;
 export type SearchSurfaceEvidence = z.infer<typeof searchSurfaceEvidenceSchema>;
 export type SurfaceEntity = z.infer<typeof surfaceEntitySchema>;
 export type AioRate = z.infer<typeof aioRateSchema>;
