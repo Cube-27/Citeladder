@@ -68,9 +68,6 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
         <Link asChild>
           <a className="cl-mega-foot focus-ring" href={PLATFORM_OVERVIEW.href}>
             <span className="cl-mega-title">{PLATFORM_OVERVIEW.title}</span>
-            <span className="cl-mega-desc">
-              How measurement, diagnosis and action connect in one project.
-            </span>
             <ArrowRight aria-hidden className="cl-mega-foot-arrow size-4" />
           </a>
         </Link>

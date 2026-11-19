@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import './steps-faq-cta.css';
 
 /**
- * Steps: a numbered process, side by side (two up under 1024, stacked on
- * phones) or as a vertical list with the number in its own column.
+ * Steps: an ordered process, side by side (two up under 1024, stacked on
+ * phones) or as a vertical list.
  */
 export function Steps({
   items,
@@ -18,11 +18,8 @@ export function Steps({
 }>) {
   return (
     <ol className={cn('cl-steps', `cl-steps--${direction}`)}>
-      {items.map((step, index) => (
+      {items.map((step) => (
         <li key={step.title} className="cl-step">
-          <span className="cl-step-n" aria-hidden>
-            {String(index + 1).padStart(2, '0')}
-          </span>
           <div className="cl-step-body">
             <h3 className="cl-step-title">{step.title}</h3>
             {step.body && <p className="cl-step-text">{step.body}</p>}

@@ -310,10 +310,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         title="Questions you can answer"
         lead="CiteLadder answers each one from the AI answers and site data it has recorded."
       >
-        <QuestionCards
-          layout="list"
-          items={page.questions.map((question) => ({ question, eyebrow: false }))}
-        />
+        <QuestionCards questions={page.questions} />
       </PageSection>
 
       {overview && (

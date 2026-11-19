@@ -252,7 +252,7 @@
 /* A short last row (five cards at three a row) starts at the column edge,
    like every row above it. */
 
-:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+.cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: flex;
   flex-wrap: wrap;
 }
@@ -277,7 +277,7 @@
 
 /* `height: auto` lets a card that is itself the list item stretch to its row. */
 
-:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
+.cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
   flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
   height: auto;
 }

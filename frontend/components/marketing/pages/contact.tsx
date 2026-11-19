@@ -191,7 +191,6 @@ function ContactForm() {
               rows={5}
               minLength={CONTACT_LIMITS.messageMin}
               maxLength={CONTACT_LIMITS.message}
-              placeholder="Tell us what you're looking to accomplish."
             />
           )}
         </Field>

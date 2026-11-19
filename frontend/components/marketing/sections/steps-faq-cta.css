@@ -20,23 +20,6 @@
   border-top: 1px solid var(--color-line);
 }
 
-/* A number tile: ink on a grey chip, an orange corner. */
-
-.cl-step-n {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-accent) 0 8px, transparent 8px), var(--site-chip);
-  color: var(--site-chip-ink);
-  font-family: var(--font-mono);
-  font-size: var(--text-label);
-  font-weight: 500;
-  line-height: var(--text-label--line-height);
-}
-
 /* A step's note is a sentence, so it is the sans face. */
 
 .cl-step-meta {
@@ -70,18 +53,11 @@
 }
 
 .cl-steps--vertical .cl-step {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 16px;
   padding: 24px 0;
 }
 
 .cl-steps--vertical .cl-step:last-child {
   border-bottom: 1px solid var(--color-line);
-}
-
-.cl-steps--vertical .cl-step-n {
-  margin-top: -8px;
 }
 
 .cl-steps--vertical .cl-step-text {
@@ -107,8 +83,7 @@
   }
 }
 
-/* On a phone every Steps is a list: one hairline row per step, its number
-   beside its title and text. */
+/* On a phone every Steps is a list: one hairline row per step. */
 
 @media (max-width: 767px) {
   .cl-steps--horizontal {
@@ -117,18 +92,11 @@
   }
 
   .cl-steps .cl-step {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
-    gap: 16px;
     padding: 24px 0;
   }
 
   .cl-steps .cl-step:last-child {
     border-bottom: 1px solid var(--color-line);
-  }
-
-  .cl-steps .cl-step-n {
-    margin-top: -8px;
   }
 }
 

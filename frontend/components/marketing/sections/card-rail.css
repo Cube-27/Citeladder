@@ -104,7 +104,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 28px 28px 0;
+  padding: 24px 24px 0;
 }
 
 /* The headline keeps the closed card's measure, so opening never moves or
@@ -184,13 +184,13 @@
 }
 
 /* The miniature: in flow 24px under the header, inset by the card's own
-   28px padding on the sides, the card's foot 24px under it. It keeps its
+   24px padding on the sides, the card's foot 24px under it. It keeps its
    place while hidden, so an open card keeps the closed card's height. */
 
 .cl-railcard-shot {
   position: relative;
-  width: calc(var(--cl-card-w) - 56px);
-  margin: 24px 28px;
+  width: calc(var(--cl-card-w) - 48px);
+  margin: 24px;
 }
 
 /* The open card's image (the reference's open panel): the feature's page in
@@ -223,8 +223,8 @@
 /* The open card's paragraph and button, at the foot of its left half. */
 
 .cl-railcard-more {
-  bottom: 28px;
-  left: 28px;
+  bottom: 24px;
+  left: 24px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
