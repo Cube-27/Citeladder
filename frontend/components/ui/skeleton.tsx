@@ -32,8 +32,8 @@ type SkeletonProps = Readonly<{
  *   `text`  — two or three blocks of unequal width.
  *   `table` — the real column count: a head row and `rows` rows (40).
  *   `stat`  — `count` metric cards: a label block over a value block.
- *   `facts` — `rows` name and value rows (40), a record's identity.
- *   `list`  — `rows` rows (48) of a tile and one block.
+ *   `facts` — `rows` rows (40) of a label block beside a value block.
+ *   `list`  — `rows` rows (48) of a tile, a title block and a caption block.
  *   `chart` — one block at the chart's height.
  *
  * The blocks are drawing, not content: only the verb is announced, after a beat.
