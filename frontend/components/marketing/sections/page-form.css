@@ -12,8 +12,7 @@
   border-radius: var(--site-radius-stage);
   color: var(--color-ink);
   background-color: var(--tint-neutral);
-  background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
 }
 
 .cl-page-form-head {

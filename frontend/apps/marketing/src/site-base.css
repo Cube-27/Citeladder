@@ -47,14 +47,7 @@
   --site-rule-from: var(--color-site-rule-from);
   --site-rule-to: var(--color-site-rule-to);
   --tint-neutral: var(--color-site-well);
-  --site-well-shade: linear-gradient(180deg, var(--color-site-well-shade), transparent 12px);
   --site-band-vignette: var(--color-site-vignette);
-
-  /* Film-grain noise: grey speckle centred on mid-grey, so an `overlay`
-     blend lightens and darkens a gradient pixel by pixel without shifting its
-     hue (the backdrop and the closing band use it). */
-  --site-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
-    0 0 / 220px 220px;
 
   background: var(--site-page);
   color: var(--color-ink);

@@ -32,14 +32,10 @@
   isolation: isolate;
   border-radius: var(--site-radius-stage);
   background:
-    radial-gradient(120% 110% at 50% 45%, transparent 55%, var(--color-spot-vignette)),
     radial-gradient(60% 55% at 50% 0%, var(--color-spot-glow), transparent),
     radial-gradient(70% 75% at 50% 50%, var(--color-spot-halo), transparent),
-    radial-gradient(45% 60% at 100% 100%, var(--color-spot-warm), transparent),
     linear-gradient(180deg, var(--color-spot-from), var(--color-spot-to));
-  box-shadow:
-    inset 0 0 0 1px var(--color-site-well-edge),
-    inset 0 1px 0 var(--color-site-well-highlight);
+  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
 }
 
 /* The well holds the screen; its height is the screen's. In a cell taller

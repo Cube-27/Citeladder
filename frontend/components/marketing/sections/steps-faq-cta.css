@@ -203,16 +203,11 @@
   border-top: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
   background:
-    radial-gradient(34% 70% at 50% 50%, var(--color-site-band-scrim), transparent 80%),
-    radial-gradient(45% 120% at 6% 0%, var(--color-site-band-mist), transparent 70%),
-    linear-gradient(115deg, transparent 16%, var(--color-site-band-streak) 28%, transparent 44%),
-    linear-gradient(115deg, transparent 52%, var(--color-site-band-warm) 66%, transparent 82%),
     radial-gradient(50% 120% at 100% 100%, var(--color-site-band-glow), transparent 70%),
     linear-gradient(
       115deg,
       var(--color-site-band-from) 0%,
-      var(--color-site-band-mid) 45%,
-      var(--color-site-band-mid) 65%,
+      var(--color-site-band-mid) 50%,
       var(--color-site-band-to) 100%
     );
   content: '';

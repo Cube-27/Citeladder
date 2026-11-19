@@ -6,8 +6,7 @@
   padding: 8px;
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
-  background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
 }
 
 .cl-tool-form {
@@ -56,8 +55,7 @@
   overflow: hidden;
   border-radius: var(--site-radius-inner);
   background: var(--tint-neutral);
-  background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
 }
 
 .cl-tool-bar {
