@@ -89,13 +89,7 @@ export function HierarchyCard({
   return (
     <TitledSection
       title="Observed hierarchy"
-      description={
-        <>
-          Each page sits under its parent in the URL path unless its breadcrumb or the site’s
-          structure says otherwise. Pages with no known parent sit at the top.
-          {origin ? ` Paths are on ${readableUrl(origin)}.` : ''}
-        </>
-      }
+      description={origin ? `Paths are on ${readableUrl(origin)}.` : undefined}
     >
       <SectionContent>
         {roots.length === 0 ? (

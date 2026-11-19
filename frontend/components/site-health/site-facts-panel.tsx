@@ -78,10 +78,6 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
       >
         <SectionTitle>AI crawler robots policy</SectionTitle>
         <SectionDescription>
-          What robots.txt permits over known URLs. This does not prove that a crawler retrieved a
-          page.
-        </SectionDescription>
-        <SectionDescription>
           robots.txt: {robotsStatusLabels[view.robots.status]}
           {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
           {llmsStatus}

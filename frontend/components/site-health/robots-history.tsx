@@ -170,10 +170,6 @@ function RobotsDiff({
   );
   return (
     <>
-      <p className={textRole('caption')}>
-        Lines removed since the Before observation and added in the After observation. Choose two
-        observations on this page.
-      </p>
       {lines ? (
         <LineDiff lines={lines} label="robots.txt line diff" />
       ) : (

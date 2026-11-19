@@ -97,7 +97,7 @@ export function ChangesPanel({
       {counts ? (
         <TitledSection
           title="Tracked field changes since the previous crawl"
-          description="Counts tracked field changes on pages present in both crawls, comparing your latest crawl with the one before it. Expected means the change matches an implementation you declared."
+          description="Expected means the change matches an implementation you declared."
         >
           <SectionContent>
             <FigureStrip
@@ -202,8 +202,6 @@ function comparisonState(
       icon: GitCompare,
       headingLevel: 3,
       heading: 'Changes need two completed crawls',
-      description:
-        'Changes compare the pages of your latest crawl with the crawl before it. Run a new crawl to start comparing.',
     };
   if (summary.data.state === 'non_comparable')
     return {

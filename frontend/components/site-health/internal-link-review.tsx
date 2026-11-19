@@ -60,7 +60,6 @@ export function InternalLinkReview({
         if (!open) onClose();
       }}
       title="Review internal link"
-      description="Add a contextual link from the source page to the destination."
     >
       {link ? (
         <Stack gap="section">
@@ -91,10 +90,7 @@ export function InternalLinkReview({
             <p className="type-caption">
               {link.target.contextual_inbound === null
                 ? "Existing contextual links to the destination weren't counted."
-                : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}{' '}
-              {link.placement
-                ? 'Link the highlighted phrase in the captured passage. Check the current page before editing.'
-                : 'Verify the source text before using this historical suggestion.'}
+                : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}
             </p>
           </Stack>
           {/* One primary: the ready-to-paste link. Its parts are secondary. */}
@@ -121,9 +117,7 @@ export function InternalLinkReview({
               <ActionButton action="openAction" href={`/actions/${link.action_id}`} />
             ) : null}
           </Inline>
-          <p className="type-caption">
-            Make the edit in your site editor. Copying does not mark it implemented.
-          </p>
+          <p className="type-caption">Copying does not mark it implemented.</p>
           <LinkDeclaration
             key={`${link.source.analysis_id}:${links.map((item) => item.id).join(',')}`}
             link={link}
@@ -161,10 +155,7 @@ function LinkDeclaration({
   const selectedIds = new Set(selected);
   return (
     <Stack as="section">
-      <EditorialSectionHeader
-        title="Which links are live on this page?"
-        description="Select every link you have added before declaring this page Action."
-      />
+      <EditorialSectionHeader title="Which links are live on this page?" />
       {related.map((item) => (
         <Checkbox
           key={item.id}

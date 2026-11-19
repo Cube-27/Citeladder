@@ -22,12 +22,7 @@ import { sharedOrigin } from '@/lib/format';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { PAGE_KINDS } from '@/lib/site-health/page-kinds';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import {
-  CRAWL_STATES,
-  DEFAULT_PAGES_SORT,
-  statusLabel,
-  type InventoryMode,
-} from '@/lib/site-health/status';
+import { DEFAULT_PAGES_SORT, statusLabel, type InventoryMode } from '@/lib/site-health/status';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -115,14 +110,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 
   const origin = sharedOrigin(page?.items.map((row) => row.display_url) ?? []);
   return (
-    <DataTable
-      label="Pages discovered so far"
-      columns={DISCOVERED_COLUMNS}
-      {...table}
-      footer={
-        CRAWL_STATES[crawl.status].active ? 'More URLs appear as discovery continues.' : undefined
-      }
-    >
+    <DataTable label="Pages discovered so far" columns={DISCOVERED_COLUMNS} {...table}>
       {page?.items.map((row) => (
         <TableRow key={row.site_url_id}>
           <TableCell>

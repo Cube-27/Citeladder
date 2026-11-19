@@ -182,12 +182,7 @@ function IssueHistoryButton(target: HistoryTarget) {
         <Icon icon={History} />
         History
       </Button>
-      <Drawer
-        open={open}
-        onOpenChange={setOpen}
-        title="Issue history"
-        description="Issues found on this page before that this crawl no longer reports."
-      >
+      <Drawer open={open} onOpenChange={setOpen} title="Issue history">
         {requested ? <IssueHistory {...target} /> : null}
       </Drawer>
     </>
