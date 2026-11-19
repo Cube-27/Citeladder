@@ -130,7 +130,7 @@ function DialogHeader({
  * top edge fixed at 12dvh, so content that changes inside it (a tab, a picked
  * file) grows or shrinks it downward and nothing above moves: the sheet face
  * (`raised`, 1px `rule` edge, radius 12, `shadow-sheet`), 16 padding and gaps, 480 wide
- * (640 `wide`; the overlay widths are 480, 560 and 640).
+ * (640 `wide`, 720 `prose`; the overlay widths are 480, 560, 640 and 720).
  * The title is the section title (500, 22/28), the description
  * `ink-2`, the footer right-aligned (Cancel first, then the action).
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
@@ -162,9 +162,10 @@ export function Dialog({
   /**
    * `wide` (640px) only for a side-by-side review the narrow panel cannot
    * hold (two calendar months, a CSV preview); a long form is a Drawer.
+   * `prose` (720px) is a label-left form whose controls need the width (Launch a run).
    * `answer` is the answer view alone: most of the viewport, up to `--container-answer`.
    */
-  width?: 'narrow' | 'wide' | 'answer';
+  width?: 'narrow' | 'wide' | 'prose' | 'answer';
 }>) {
   const returnFocus = useReturnFocus(open);
   const danger = tone === 'danger';
@@ -190,7 +191,7 @@ export function Dialog({
             answer
               ? 'max-w-answer top-16 h-full max-h-[calc(100dvh-8rem)]'
               : 'top-[12dvh] max-h-[calc(88dvh-1.5rem)]',
-            !answer && (!danger && width === 'wide' ? 'max-w-form' : 'max-w-flow'),
+            !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
           )}
         >
           <DialogHeader
@@ -227,6 +228,22 @@ export function Dialog({
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
+}
+
+function overlayWidth(width: 'narrow' | 'wide' | 'prose'): string {
+  switch (width) {
+    case 'narrow':
+      return 'max-w-flow';
+    case 'wide':
+      return 'max-w-form';
+    case 'prose':
+      // Tailwind's own `max-w-prose` is 65ch, not the 720 token.
+      return 'max-w-[var(--container-prose)]';
+    default: {
+      const unhandled: never = width;
+      return unhandled;
+    }
+  }
 }
 
 export type ConfirmRequest = {

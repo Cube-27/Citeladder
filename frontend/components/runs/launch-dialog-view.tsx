@@ -5,7 +5,7 @@ import { ProviderList } from '@/components/providers/provider-list';
 import { ACTIONS } from '@/components/ui/actions';
 import { Button, IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { Field } from '@/components/ui/field';
+import { Field, FieldRow } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -66,7 +66,7 @@ function PromptSetField({
     promptSets.find((set) => set.id === promptSetId)?.name ??
     'Commerce Product Visibility';
   return (
-    <Field label="Prompt set" required>
+    <Field label="Prompt set" required layout="row">
       {(props) => {
         if (locked) {
           return <p className={textRole('body', 'text-ink-2')}>{label}</p>;
@@ -128,6 +128,7 @@ function BatchField({
   return (
     <Field
       label="Prompts to run"
+      layout="row"
       hint="Run the whole set, or one batch at a time to keep a run short and its cost predictable."
     >
       {(props) => (
@@ -151,9 +152,9 @@ function BatchField({
 
 /**
  * Provider setup inside the launch dialog, instead of a second dialog stacked
- * on this one. It scrolls on its own so the launch controls stay in reach, and
- * a verified save refreshes the shared connections query, which turns the
- * engine chips on without leaving the dialog.
+ * on this one. It grows inside the dialog body, the one scroll, and a verified
+ * save refreshes the shared connections query, which turns the engine chips on
+ * without leaving the dialog.
  */
 function InlineProviderSetup({
   connecting,
@@ -166,10 +167,8 @@ function InlineProviderSetup({
         <p className={textRole('body', 'text-ink-2')}>Connect a provider</p>
         <IconButton icon={X} label="Close provider setup" onClick={onClose} />
       </Inline>
-      <div className="max-h-80 overflow-y-auto overscroll-contain">
-        {/* Keyed by engine so clicking another engine opens its provider. */}
-        <ProviderList key={engine ?? 'any'} expandEngine={engine} />
-      </div>
+      {/* Keyed by engine so clicking another engine opens its provider. */}
+      <ProviderList key={engine ?? 'any'} expandEngine={engine} />
     </Stack>
   );
 }
@@ -189,13 +188,7 @@ function MarketsField({
 }>) {
   if (markets.length < 2) return null;
   return (
-    <Stack as="fieldset" gap="item">
-      <legend className={textRole('label')}>
-        Markets <span className="text-ink-2">*</span>
-      </legend>
-      <p className="type-caption">
-        Each market runs separately. An engine that cannot measure a market is skipped there.
-      </p>
+    <ChoiceRow label="Markets">
       <Inline className="flex-wrap">
         {markets.map((market) => (
           <ChoiceChip
@@ -207,7 +200,25 @@ function MarketsField({
           </ChoiceChip>
         ))}
       </Inline>
-    </Stack>
+      <p className="type-caption">
+        Each market runs separately. An engine that cannot measure a market is skipped there.
+      </p>
+    </ChoiceRow>
+  );
+}
+
+/**
+ * A required chip group as a label-left row: the fieldset is the control
+ * column, named by the label beside it.
+ */
+function ChoiceRow({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
+  const labelId = useId();
+  return (
+    <FieldRow label={label} required labelId={labelId}>
+      <Stack as="fieldset" gap="item" aria-labelledby={labelId}>
+        {children}
+      </Stack>
+    </FieldRow>
   );
 }
 
@@ -284,6 +295,7 @@ function RepetitionsField({
   return (
     <Field
       label="Repetitions"
+      layout="row"
       hint={
         limits
           ? `How many times to run each prompt per engine (${limits.audit_repetitions_min}–${limits.audit_repetitions_max}).`
@@ -400,7 +412,7 @@ export function LaunchDialogView({
       open={open}
       onOpenChange={onOpenChange}
       title="Launch a run"
-      width="wide"
+      width="prose"
       footer={
         <LaunchFooter
           blocker={blocker}
@@ -421,10 +433,12 @@ export function LaunchDialogView({
           promptSelectionLabel={promptSelectionLabel}
         />
         <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
-        <Stack as="fieldset" gap="item">
-          <legend className={textRole('label')}>
-            Engines <span className="text-ink-2">*</span>
-          </legend>
+        <RepetitionsField
+          repetitions={repetitions}
+          setRepetitions={setRepetitions}
+          limits={repetitionLimits}
+        />
+        <ChoiceRow label="Engines">
           {noEngines ? (
             <Stack gap="item">
               <p className="type-body text-ink-2">
@@ -474,13 +488,8 @@ export function LaunchDialogView({
           {connecting ? (
             <InlineProviderSetup connecting={connecting} onClose={() => setConnecting(null)} />
           ) : null}
-        </Stack>
+        </ChoiceRow>
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
-        <RepetitionsField
-          repetitions={repetitions}
-          setRepetitions={setRepetitions}
-          limits={repetitionLimits}
-        />
         {estimate ? <EstimateNote estimate={estimate} /> : null}
         <p className="type-caption text-ink-2">
           Answers that mention you or a competitor are also classified for sentiment. No credits are
