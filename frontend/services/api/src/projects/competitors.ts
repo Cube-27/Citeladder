@@ -93,6 +93,47 @@ export async function listCompetitors(db: Database, scope: ProjectScope): Promis
   return (await competitorsOf(db, scope)).map((row) => competitorView(scope.projectId, row));
 }
 
+/**
+ * Add one competitor to a roster the caller has locked (`lockProject`) and
+ * read, within the project ceiling. Adding and accepting a suggestion both
+ * insert through here.
+ */
+export async function insertCompetitor(
+  trx: Database,
+  {
+    scope,
+    tracked,
+    fields,
+  }: Readonly<{
+    scope: ProjectScope;
+    tracked: number;
+    fields: Readonly<{ name: string; aliases: readonly string[]; domains: readonly string[] }>;
+  }>,
+): Promise<Selectable<Competitors>> {
+  if (tracked >= MAX_COMPETITORS)
+    throw new ApiError(
+      409,
+      `This project tracks the maximum of ${MAX_COMPETITORS} competitors. Remove one to add another.`,
+      { code: 'competitor_limit' },
+    );
+  const now = new Date();
+  return trx
+    .insertInto('competitors')
+    .values({
+      id: randomUUID(),
+      workspace_id: scope.workspaceId,
+      project_id: scope.projectId,
+      name: fields.name,
+      aliases: JSON.stringify(cleanList(fields.aliases)),
+      domains: JSON.stringify(cleanList(fields.domains)),
+      logo_asset_id: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
 export function addCompetitor(
   db: Database,
   scope: ProjectScope,
@@ -102,24 +143,11 @@ export function addCompetitor(
     await lockProject(trx, scope);
     const rows = await competitorsOf(trx, scope);
     refuseDuplicate(rows, input.name);
-    if (rows.length >= MAX_COMPETITORS)
-      throw new ApiError(409, `A project can have at most ${MAX_COMPETITORS} competitors`);
-    const now = new Date();
-    const row = await trx
-      .insertInto('competitors')
-      .values({
-        id: randomUUID(),
-        workspace_id: scope.workspaceId,
-        project_id: scope.projectId,
-        name: input.name,
-        aliases: JSON.stringify(cleanList(input.aliases)),
-        domains: JSON.stringify(cleanList(input.domains)),
-        logo_asset_id: null,
-        created_at: now,
-        updated_at: now,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const row = await insertCompetitor(trx, {
+      scope,
+      tracked: rows.length,
+      fields: { name: input.name, aliases: input.aliases, domains: input.domains },
+    });
     return competitorView(scope.projectId, row);
   });
 }

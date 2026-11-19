@@ -650,6 +650,7 @@ describe('competitor suggestions', () => {
     const overflow = await suggestion({ name: 'Six', domain: 'six.example', auditId });
     const refused = await call(`/competitor-suggestions/${overflow}/accept`, { method: 'POST' });
     expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ error: { code: 'competitor_limit' } });
     const competitors = await db
       .selectFrom('competitors')
       .select('name')

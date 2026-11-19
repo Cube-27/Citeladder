@@ -1,4 +1,9 @@
-import { useMutation, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { UserPlus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -12,6 +17,9 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/compone
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import type { ObservedCompetitor } from '@citeladder/contracts';
+import { ProjectLink } from '@/components/ui/project-link';
+import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
 import { formatCount, pluralCount } from '@/lib/format';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -49,9 +57,12 @@ const engines = ({ engine_count: count, engine_total: total }: ObservedCompetito
  */
 export function CompetitorSuggestions({
   projectId,
+  tracked,
   suggestionsQuery,
 }: Readonly<{
   projectId: string;
+  /** How many competitors the project tracks now. */
+  tracked: number;
   suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
 }>) {
   const workspaceId = useActiveWorkspaceId();
@@ -62,22 +73,31 @@ export function CompetitorSuggestions({
   const rejectMutation = useMutation(
     visibilityMutations.rejectCompetitorSuggestion({ workspaceId, projectId }),
   );
+  // The same ceiling the server enforces; while it loads, the server still guards Accept.
+  const limit = useQuery(brandDiscoveryQueries.catalog(workspaceId)).data?.maximum_competitors;
+  const full = limit !== undefined && tracked >= limit;
   // Adding a competitor edits the project; a role without write reads the list.
   const canWrite = useWorkspaceCapability('write');
   const rows = suggestionsQuery.data ?? [];
   const deciding = acceptMutation.isPending || rejectMutation.isPending;
   return (
-    <TitledSection
-      title={TITLE}
-      description="Suggestions never join your competitors until you accept them."
-    >
+    <TitledSection title={TITLE} description={sectionDescription(tracked, limit)}>
       <Stack>
-        {acceptMutation.isError ? (
-          <Notice tone="negative">Could not add that competitor. Try again.</Notice>
+        {canWrite && full && rows.length > 0 ? (
+          <Notice
+            tone="info"
+            standing
+            action={
+              <Button variant="secondary" asChild>
+                <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
+              </Button>
+            }
+          >
+            {`Your project tracks the maximum of ${formatCount(limit)} competitors. Remove one to accept a suggestion.`}
+          </Notice>
         ) : null}
-        {rejectMutation.isError ? (
-          <Notice tone="negative">Could not reject that suggestion. Try again.</Notice>
-        ) : null}
+        <DecisionFailure mutation={acceptMutation} action="add that competitor" />
+        <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
         <DataTable
           label={TITLE}
           columns={columns(canWrite)}
@@ -115,7 +135,7 @@ export function CompetitorSuggestions({
                         onSuccess: () => notify(`${candidate.name} added to your competitors`),
                       })
                     }
-                    disabled={deciding}
+                    disabled={deciding || full}
                     aria-label={`Accept ${candidate.name} as a competitor`}
                   >
                     Accept
@@ -140,6 +160,32 @@ export function CompetitorSuggestions({
         </DataTable>
       </Stack>
     </TitledSection>
+  );
+}
+
+function sectionDescription(tracked: number, limit: number | undefined): string {
+  const lead = 'Suggestions never join your competitors until you accept them.';
+  return limit === undefined
+    ? lead
+    : `${lead} ${formatCount(tracked)} of ${formatCount(limit)} competitors tracked.`;
+}
+
+/** A failed accept or reject in the server's words; Try again only for a transient failure. */
+function DecisionFailure({
+  mutation,
+  action,
+}: Readonly<{
+  mutation: UseMutationResult<unknown, Error, string>;
+  action: string;
+}>) {
+  const candidateId = mutation.variables;
+  if (!mutation.isError || candidateId === undefined) return null;
+  return (
+    <Notice
+      kind="mutation"
+      notice={mutationNoticeForError(mutation.error, { action })}
+      onRetry={() => mutation.mutate(candidateId)}
+    />
   );
 }
 

@@ -1,8 +1,20 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+import { http, HttpResponse } from 'msw';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vite-plus/test';
 
+import { ApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
+import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { CompetitorSuggestions } from './prompt-insights';
@@ -16,7 +28,19 @@ vi.mock('@/lib/api/visibility', () => ({
   visibilityApi: { acceptCompetitorSuggestion, rejectCompetitorSuggestion },
 }));
 
-afterEach(() => vi.clearAllMocks());
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
+beforeEach(() =>
+  mswServer.use(
+    http.get('/api/v1/brand-discovery-catalog', () =>
+      HttpResponse.json({ maximum_competitors: 5, industries: [], subindustries: {} }),
+    ),
+  ),
+);
+afterEach(() => {
+  vi.clearAllMocks();
+  mswServer.resetHandlers();
+});
+afterAll(() => mswServer.close());
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const shared = {
@@ -55,9 +79,13 @@ const suggestionsQuery = {
   isLoading: false,
 } as never;
 
-function renderSuggestions() {
+function renderSuggestions(tracked = 2) {
   const rendered = renderWithProviders(
-    <CompetitorSuggestions projectId={projectId} suggestionsQuery={suggestionsQuery} />,
+    <CompetitorSuggestions
+      projectId={projectId}
+      tracked={tracked}
+      suggestionsQuery={suggestionsQuery}
+    />,
   );
   const facts = queryKeys.projects.commandCenter({ workspaceId: null, projectId });
   const suggestions = queryKeys.visibility.competitorSuggestions({ workspaceId: null, projectId });
@@ -90,6 +118,50 @@ describe('CompetitorSuggestions', () => {
     await waitFor(() => expect(stale()).toEqual([true, true]));
   });
 
+  it('holds Accept at the competitor limit and says how to make room, while Reject stays open', async () => {
+    const { unmount } = renderWithProviders(
+      <CompetitorSuggestions
+        projectId={projectId}
+        tracked={5}
+        suggestionsQuery={suggestionsQuery}
+      />,
+    );
+    expect(
+      await screen.findByText(
+        'Your project tracks the maximum of 5 competitors. Remove one to accept a suggestion.',
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Accept Northstar as a competitor' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reject Northstar as a competitor' })).toBeEnabled();
+    expect(screen.getByRole('link', { name: 'Edit competitors' })).toBeVisible();
+    unmount();
+
+    renderSuggestions(4);
+    expect(await screen.findByText(/4 of 5 competitors tracked/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Accept Northstar as a competitor' })).toBeEnabled();
+  });
+
+  it('shows the reason the server gives when an accept is refused, without Try again', async () => {
+    const user = userEvent.setup({ delay: null });
+    acceptCompetitorSuggestion.mockRejectedValueOnce(
+      new ApiError(
+        'This project tracks the maximum of 5 competitors. Remove one to add another.',
+        409,
+        '',
+        undefined,
+        { code: 'competitor_limit' },
+      ),
+    );
+    renderSuggestions();
+    await user.click(screen.getByRole('button', { name: 'Accept Northstar as a competitor' }));
+    expect(
+      await screen.findByText(
+        'This project tracks the maximum of 5 competitors. Remove one to add another.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Try again/ })).toBeNull();
+  });
+
   it('re-reads only the suggestions after a rejection', async () => {
     const user = userEvent.setup({ delay: null });
     const { stale } = renderSuggestions();
@@ -111,14 +183,14 @@ describe('CompetitorSuggestions', () => {
     const answered = { data: [], isError: false, isSuccess: true } as never;
 
     const { unmount } = renderWithProviders(
-      <CompetitorSuggestions projectId={projectId} suggestionsQuery={failed} />,
+      <CompetitorSuggestions projectId={projectId} tracked={0} suggestionsQuery={failed} />,
     );
     expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
     expect(screen.queryByText('No suggested competitors yet.')).toBeNull();
     unmount();
 
     renderWithProviders(
-      <CompetitorSuggestions projectId={projectId} suggestionsQuery={answered} />,
+      <CompetitorSuggestions projectId={projectId} tracked={0} suggestionsQuery={answered} />,
     );
     expect(screen.getByText('No suggested competitors yet.')).toBeVisible();
   });

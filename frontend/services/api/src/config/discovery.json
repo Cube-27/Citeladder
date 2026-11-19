@@ -25,13 +25,6 @@
       "default": 30.0,
       "exclusive_minimum": 0
     },
-    "maximum_competitors": {
-      "env": ["BRAND_DISCOVERY_MAXIMUM_COMPETITORS"],
-      "type": "int",
-      "default": 5,
-      "minimum": 1,
-      "maximum": 5
-    },
     "competitor_suggestion_maximum": {
       "env": ["BRAND_DISCOVERY_COMPETITOR_SUGGESTION_MAXIMUM"],
       "type": "int",
