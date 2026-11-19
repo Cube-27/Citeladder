@@ -89,8 +89,8 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
  */
 function brandChips(brands: readonly AnswerBrand[]): PhraseChip[] {
   const seen = new Set<string>();
-  return brands.flatMap((brand) =>
-    brand.offset === null
+  return brands.flatMap(({ position, ...brand }) =>
+    position === null
       ? []
       : brand.phrases.flatMap((text) => {
           if (!text.trim() || seen.has(text)) return [];
@@ -104,7 +104,12 @@ function brandChips(brands: readonly AnswerBrand[]): PhraseChip[] {
             />
           );
           const node = (
-            <MentionChip data-brand-chip={brand.name} mark={mark} you={brand.you}>
+            <MentionChip
+              data-brand-chip={brand.name}
+              position={position}
+              mark={mark}
+              you={brand.you}
+            >
               {text}
             </MentionChip>
           );

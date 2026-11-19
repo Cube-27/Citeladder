@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { ExecutionEvidence, Project } from '@citeladder/contracts';
+import { hostOf } from '@/lib/visibility/sources';
 
 /** One tracked business the answer named, as the answer view draws it. */
 export type AnswerBrand = Readonly<{
@@ -27,6 +28,9 @@ export type AnswerSource = Readonly<{
   you: boolean;
   citation: ExecutionEvidence['citations'][number];
 }>;
+
+/** One address the answer text links to, listed once however often it is written. */
+export type AnswerLink = Readonly<{ href: string; domain: string; count: number; you: boolean }>;
 
 const storedOffsets = z.object({
   competitor_first_offsets: z.record(z.string(), z.number().int().nullable()),
@@ -120,6 +124,40 @@ export function answerBrands(
           (b.brand.position ?? Number.POSITIVE_INFINITY) || a.index - b.index,
     )
     .map(({ brand }) => brand);
+}
+
+// The analysis's own in-text link pattern: a markdown link that is not an image.
+const MARKDOWN_LINK = /(?<!!)\[[^\]]*\]\((https?:\/\/[^\s)]+)/gu;
+
+const bareHost = (host: string) =>
+  host
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./u, '');
+
+function ownHosts(project: Project | null): readonly string[] {
+  if (!project) return [];
+  const site = hostOf(project.website_url);
+  return [...project.owned_domains.map(bareHost), ...(site ? [site] : [])].filter(Boolean);
+}
+
+/** Each address the answer text links to once, in first-written order, with how often. */
+export function answerLinks(answerText: string, project: Project | null): readonly AnswerLink[] {
+  const own = ownHosts(project);
+  const byHref = new Map<string, AnswerLink>();
+  for (const [, target = ''] of answerText.matchAll(MARKDOWN_LINK)) {
+    const href = safeCitationUrl(target);
+    if (!href) continue;
+    const seen = byHref.get(href);
+    if (seen) {
+      byHref.set(href, { ...seen, count: seen.count + 1 });
+      continue;
+    }
+    const domain = hostOf(href) ?? '';
+    const you = own.some((host) => domain === host || domain.endsWith(`.${host}`));
+    byHref.set(href, { href, domain, count: 1, you });
+  }
+  return [...byHref.values()];
 }
 
 /** Each cited address once, in first-cited order, with how often the answer cites it. */

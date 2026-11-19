@@ -22,7 +22,7 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
 import { pluralCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import type { AnswerBrand, AnswerSource } from '@/lib/runs/answer-transcript';
+import type { AnswerBrand, AnswerLink, AnswerSource } from '@/lib/runs/answer-transcript';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 
 /** Each tracked business the answer named, by first mention: 1 is named first. */
@@ -119,6 +119,51 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
           icon={Quote}
           heading="No citations were captured from this response"
         />
+      )}
+    </RailSection>
+  );
+}
+
+/**
+ * Each address the answer text links to, once with how often. Only a page whose
+ * formats were observed tells its links apart; without one the state is shown,
+ * and an observed answer with no links has no section.
+ */
+export function LinksRail({
+  links,
+  formats,
+}: Readonly<{ links: readonly AnswerLink[]; formats: ExecutionEvidence['answer_formats'] }>) {
+  if (formats.kind === 'observed' && links.length === 0) return null;
+  return (
+    <RailSection
+      title="Links"
+      trailing={formats.kind === 'observed' ? pluralCount(links.length, 'link') : null}
+    >
+      {formats.kind === 'observed' ? (
+        <RailList label="Links in the answer">
+          {links.map((link) => (
+            <RailItem key={link.href}>
+              <RailLine>
+                <BrandMark name={link.domain} websiteUrl={link.href} placement="inline" />
+                <span className={textRole('emphasis', 'min-w-0 truncate')}>{link.domain}</span>
+                {link.you ? <YouMark /> : null}
+                <RailNote>
+                  {link.count === 1 ? 'Linked once' : `Linked ${link.count} times`}
+                </RailNote>
+              </RailLine>
+              <TextLink
+                variant="external"
+                text="caption"
+                href={link.href}
+                className="[overflow-wrap:anywhere]"
+              >
+                <span>{link.href}</span>
+              </TextLink>
+            </RailItem>
+          ))}
+        </RailList>
+      ) : (
+        <Absence state={formats.kind} />
       )}
     </RailSection>
   );

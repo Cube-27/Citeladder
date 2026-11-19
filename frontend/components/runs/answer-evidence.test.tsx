@@ -160,7 +160,11 @@ describe('Answer transcript', () => {
     // The prompt is your message; the answer's brands with offsets are chips in its text.
     expect(within(conversation).getByText('best plumber')).toBeVisible();
     const chips = [...conversation.querySelectorAll('[data-brand-chip]')];
-    expect(chips.map((chip) => chip.getAttribute('data-brand-chip'))).toEqual(['Acme', 'Rival Co']);
+    // Each chip carries its brand's first-mention position, the same number as the rail.
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      'Position 1AAcmeYou',
+      'Position 2RRival Co',
+    ]);
     expect(chips[0]?.closest('strong')).not.toBeNull();
     expect(within(chips[0] as HTMLElement).getByText('You')).toBeVisible();
     // Other Brand has no stored offset: plain text in the answer, listed in the rail.
@@ -190,6 +194,42 @@ describe('Answer transcript', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['plumbers near me']);
+  });
+
+  it('lists each address the answer text links to once, with its count and a You on your own site', () => {
+    const { unmount } = renderAnswer({
+      answer_text: [
+        'See [Rival](https://rival.example/a), [our page](https://www.acme.example/plans)',
+        'and [Rival again](https://rival.example/a), not ![a picture](https://img.example/p.png)',
+        'or [a script](javascript:alert(1)).',
+      ].join(' '),
+      answer_formats: { kind: 'observed', formats: [], in_text_links: 2 },
+    });
+    const links = screen.getByRole('list', { name: 'Links in the answer' });
+    expect(
+      within(links)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Rrival.exampleLinked 2 timeshttps://rival.example/a (opens in a new tab)',
+      'Aacme.exampleYouLinked oncehttps://www.acme.example/plans (opens in a new tab)',
+    ]);
+    unmount();
+
+    // An observed answer without links has no section; an unobserved one says why it has none.
+    const { unmount: second } = renderAnswer({
+      answer_text: 'No links here.',
+      answer_formats: { kind: 'observed', formats: [], in_text_links: 0 },
+    });
+    expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Links' })).toBeNull();
+    second();
+    renderAnswer({
+      answer_text: 'See [Rival](https://rival.example/a).',
+      answer_formats: { kind: 'unavailable' },
+    });
+    const section = screen.getByRole('heading', { name: 'Links' }).closest('section');
+    expect(section?.textContent).toBe('Links—Unavailable');
   });
 
   it('says when no searches ran, apart from when their wording is unavailable', async () => {

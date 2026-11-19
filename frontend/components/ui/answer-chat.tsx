@@ -102,25 +102,37 @@ const CHIP =
   'type-caption inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
 
 /**
- * A name the reply mentions, where it mentions it: a mark, the words, a dashed
- * accent edge. Plain text, so its accessible name is its words.
+ * A name the reply mentions, where it mentions it: its first-mention position,
+ * a mark, the words, a dashed accent edge. Plain text, never cut: the answer is
+ * shown whole.
  */
 export function MentionChip({
+  position,
   mark,
   you,
   children,
   ...data
-}: Readonly<{ mark: ReactNode; you: boolean; children: ReactNode; 'data-brand-chip'?: string }>) {
+}: Readonly<{
+  position: number;
+  mark: ReactNode;
+  you: boolean;
+  children: ReactNode;
+  'data-brand-chip'?: string;
+}>) {
   return (
     <span {...data} className={cn(CHIP, 'border-accent text-ink bg-surface border-dashed')}>
+      <span className="text-accent-text font-medium tabular-nums">
+        <span className="sr-only">Position </span>
+        {position}
+      </span>
       {mark}
-      <span className="min-w-0 truncate font-medium">{children}</span>
+      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{children}</span>
       {you ? <YouMark /> : null}
     </span>
   );
 }
 
-/** A source the reply cites, where it cites it: favicon, the link's words, the new-tab arrow. */
+/** A source the reply cites, where it cites it: favicon, the link's words (never cut), the new-tab arrow. */
 export function CitationChip({
   href,
   mark,
@@ -144,7 +156,7 @@ export function CitationChip({
       )}
     >
       {mark}
-      <span className="min-w-0 truncate">{children}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
       {you ? <YouMark /> : null}
       <ArrowUpRight aria-hidden className="text-ink-2 size-3 shrink-0" />
       {href ? <span className="sr-only">(opens in a new tab)</span> : null}

@@ -1,7 +1,7 @@
 import { CheckCircle2, Search, XCircle } from 'lucide-react';
 
 import { AnswerTranscript } from '@/components/runs/answer-transcript';
-import { BrandsRail, FanoutRail, SourcesRail } from '@/components/runs/answer-rail';
+import { BrandsRail, FanoutRail, LinksRail, SourcesRail } from '@/components/runs/answer-rail';
 import { AnswerFormatTags } from '@/components/runs/answer-formats';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
@@ -20,7 +20,7 @@ import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { answerBrands, answerSources } from '@/lib/runs/answer-transcript';
+import { answerBrands, answerLinks, answerSources } from '@/lib/runs/answer-transcript';
 
 function Outcome({
   label,
@@ -194,11 +194,15 @@ export function AnswerEvidence({
   const sources = answerSources(evidence.citations);
   return (
     <AnswerLayout
-      railLabel="Brands, sources and searches"
+      railLabel="Brands, sources, links and searches"
       rail={
         <>
           <BrandsRail brands={brands} />
           <SourcesRail sources={sources} />
+          <LinksRail
+            links={answerLinks(evidence.answer_text, project)}
+            formats={evidence.answer_formats}
+          />
           <FanoutRail evidence={evidence} promptId={promptId} />
         </>
       }
