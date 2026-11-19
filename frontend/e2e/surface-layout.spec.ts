@@ -46,7 +46,7 @@ const overview = {
     audit_id: '33333333-3333-4333-8333-333333333333',
     completed_at: evidence.observed_at,
     benchmark_mode: 'consumer_like',
-    logical_engines: ['chatgpt', 'perplexity'],
+    logical_engines: ['chatgpt', 'claude'],
     comparable_audit_id: null,
     comparison_status: 'no_baseline',
     comparison_answers: null,
@@ -60,7 +60,7 @@ const overview = {
     brand_rank: { value: 2, delta: -1 },
   },
   movements: [
-    { label: 'visibility', direction: 'positive', current: 72.5, previous: 68.3, delta: 4.2 },
+    { label: 'chatgpt', direction: 'positive', current: 72.5, previous: 68.3, delta: 4.2 },
   ],
   active_prompt_count: 1,
   actions: [],

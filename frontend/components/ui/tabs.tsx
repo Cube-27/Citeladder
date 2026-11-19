@@ -11,7 +11,7 @@ import {
 } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
-import { ScrollFrame, type ScrollRegionProps } from '@/components/ui/scroll-edges';
+import { ScrollFrame } from '@/components/ui/scroll-edges';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -109,24 +109,6 @@ function TabMark() {
       data-tab-mark=""
       className="bg-accent pointer-events-none absolute bottom-0 left-0 hidden"
     />
-  );
-}
-
-/**
- * The strip's `ScrollFrame`: the edge that hides more items fades, and one
- * stepper at the row's end, outside the tabs, moves it along, so a strip cut
- * at a narrow width says more exists and no label sits under a button. The
- * items take focus themselves, so the frame is no tab stop.
- */
-function StripFrame({
-  children,
-}: Readonly<{
-  children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
-}>) {
-  return (
-    <ScrollFrame stepper="row-end" className="inline-flex max-w-full shrink-0">
-      {children}
-    </ScrollFrame>
   );
 }
 
@@ -345,7 +327,7 @@ function TabStrip<T extends string>({
   const strip = useRevealSelected(active);
   useTabMark(strip, active);
   return (
-    <StripFrame>
+    <ScrollFrame stepper="row">
       {(ref, region) => (
         <TabsPrimitive.List
           {...region}
@@ -376,7 +358,7 @@ function TabStrip<T extends string>({
           <TabMark />
         </TabsPrimitive.List>
       )}
-    </StripFrame>
+    </ScrollFrame>
   );
 }
 
@@ -500,7 +482,7 @@ export function SegmentedControl<T extends string>({
     select((from + delta + options.length) % options.length);
 
   return (
-    <StripFrame>
+    <ScrollFrame stepper="row">
       {(ref, region) => (
         <div
           {...region}
@@ -571,7 +553,7 @@ export function SegmentedControl<T extends string>({
           {trailing}
         </div>
       )}
-    </StripFrame>
+    </ScrollFrame>
   );
 }
 

@@ -178,6 +178,7 @@ function ScheduleForm({
         <FormRow label="Prompt set">
           <Select
             ariaLabel="Prompt set"
+            placeholder="Choose a prompt set"
             value={promptSetId}
             onValueChange={setPromptSetId}
             options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
@@ -217,7 +218,7 @@ function ScheduleForm({
           </FormRow>
         ) : null}
         <FormRow label="Engines">
-          <Inline as="fieldset" aria-label="Engines" className="flex-wrap">
+          <Stack as="fieldset" aria-label="Engines" gap="item" className="grid-cols-2">
             {catalog.order.map((engine) => (
               <Checkbox
                 key={engine}
@@ -232,7 +233,7 @@ function ScheduleForm({
                 }
               />
             ))}
-          </Inline>
+          </Stack>
         </FormRow>
         <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
         <div className="flex justify-end">

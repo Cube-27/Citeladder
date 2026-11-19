@@ -127,8 +127,11 @@ export function DashboardActions({
     // A fragment: the identity band owns the gap between route actions.
     <>
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
-      {layoutMenu}
-      <PdfButton downloading={downloading} onDownload={onDownload} />
+      {/* Six controls crowd the bar: More holds Layout and Export PDF at every width (masthead-actions.tsx). */}
+      <div data-in-more="" hidden>
+        {layoutMenu}
+        <PdfButton downloading={downloading} onDownload={onDownload} />
+      </div>
       {/* The one primary: the run the Overview's figures come from. */}
       {launch ? (
         <MastheadPrimary>

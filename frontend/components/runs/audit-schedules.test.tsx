@@ -86,6 +86,32 @@ describe('AuditSchedules', () => {
     await waitFor(() => expect(listSchedules).toHaveBeenCalledTimes(2));
   });
 
+  it('asks for a prompt set when none is chosen, and schedules once one is', async () => {
+    const user = userEvent.setup();
+    // No brand set: nothing is preselected.
+    renderWithProviders(
+      <RoutedSchedules
+        projectId="11111111-1111-4111-8111-111111111111"
+        promptSets={[
+          {
+            id: '66666666-6666-4666-8666-666666666666',
+            name: 'Commerce Buyer Prompts',
+            kind: 'commerce',
+            created_at: '2026-10-01T00:00:00Z',
+          } as never,
+        ]}
+      />,
+    );
+    const select = screen.getByRole('combobox', { name: 'Prompt set' });
+    expect(select).toHaveTextContent('Choose a prompt set');
+    expect(screen.getByRole('button', { name: 'Schedule audit' })).toBeDisabled();
+
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'Commerce Buyer Prompts' }));
+    expect(select).toHaveTextContent('Commerce Buyer Prompts');
+    expect(screen.getByRole('button', { name: 'Schedule audit' })).toBeEnabled();
+  });
+
   it('cannot schedule while the engine catalogue offers no engine to choose', async () => {
     const { queryClient } = renderWithProviders(
       <RoutedSchedules

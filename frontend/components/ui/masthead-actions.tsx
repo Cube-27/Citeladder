@@ -85,6 +85,9 @@ type FoldedEntry = Readonly<{
     | Readonly<{ kind: 'menu'; items: ReactNode }>;
 }>;
 
+/** A hidden box of secondary actions More holds at every width (the Overview's Layout and Export PDF). */
+const ALWAYS = '[data-in-more]';
+
 /**
  * The masthead's controls other than the primary (search, secondary actions,
  * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
@@ -100,18 +103,13 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const [menus] = useState(() => new Map<string, ReactNode>());
   const rowSlot = useContext(MastheadPrimarySlot) ?? null;
   const fold = useFold({ group, rowSlot, foldedSlot });
+  // The always-folded box renders with the group's first children, so it is there once `group` is.
+  const more = group?.querySelector(ALWAYS) ? 'always' : fold.more;
   // A folded control's overlay returns focus here (`returnTargetFor` in dialog.tsx).
   const moreId = useId();
 
   return (
     <>
-      {fold.more === 'none' ? null : (
-        <MoreMenu
-          id={moreId}
-          trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
-          read={() => foldedEntries([foldedSlot, group], menus)}
-        />
-      )}
       <span ref={setFoldedSlot} data-masthead-folded-primary="" data-folded-by={moreId} hidden />
       <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
         <MenuFold.Provider value={menus}>
@@ -125,6 +123,14 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
           </div>
         </MenuFold.Provider>
       </MastheadPrimarySlot.Provider>
+      {/* After the secondary actions left in the row, before the primary. */}
+      {more === 'none' ? null : (
+        <MoreMenu
+          id={moreId}
+          trigger={more === 'always' ? undefined : 'rail:hidden'}
+          read={() => foldedEntries([foldedSlot, group], menus)}
+        />
+      )}
     </>
   );
 }
@@ -251,13 +257,11 @@ function foldedEntries(
   boxes: readonly (HTMLElement | null)[],
   menus: ReadonlyMap<string, ReactNode>,
 ): FoldedEntry[] {
-  return boxes.flatMap((box) =>
+  return boxes.flatMap((box, at) =>
     box
       ? [...box.querySelectorAll<HTMLElement>(CONTROL)]
           .filter((node) => !node.parentElement?.closest(CONTROL))
-          .flatMap((node, index) =>
-            foldedEntry(node, menus, `${box.dataset.mastheadOverflow ?? 'p'}${index}`),
-          )
+          .flatMap((node, index) => foldedEntry(node, menus, `${at}-${index}`))
       : [],
   );
 }
@@ -271,7 +275,8 @@ function foldedEntry(
   const control = menuId ? node.querySelector<HTMLElement>('button, a[href]') : node;
   if (!control) return [];
   const label = (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
-  if (!label) return [];
+  // A control still drawn in the row (beside an always-folded box) is no row of More.
+  if (!label || control.checkVisibility?.()) return [];
   const items = menuId ? menus.get(menuId) : undefined;
   return [
     {

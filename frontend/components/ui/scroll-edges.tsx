@@ -113,9 +113,10 @@ export function ScrollSteppers({ state }: Readonly<{ state: ScrollFrameState }>)
 /**
  * ScrollFrame — a region that scrolls sideways outside a table card (a tab
  * row, a table in an Agent reply). The content fades out at the edge it can
- * scroll towards. `stepper="row-end"` (a tab row) puts one button at the
- * row's end, outside the content, stepping towards the side with more;
- * `stepper="below"` puts the pair under the content, end-aligned. While it
+ * scroll towards. `stepper="row"` is a tab strip (`tabs.tsx`): as wide as its
+ * tabs, with a button outside the content at each edge that hides more, so
+ * the start mirrors the end once scrolled; `stepper="below"` puts the pair
+ * under the content, end-aligned. While it
  * scrolls, a `label`led frame is a named region with a tab stop, so the
  * arrow keys scroll it; a frame whose content takes focus itself (a tab
  * list) passes no label. Scrollbars are left as they are.
@@ -127,23 +128,25 @@ export function ScrollFrame({
   children,
 }: Readonly<{
   label?: string;
-  stepper?: 'row-end' | 'below';
+  stepper?: 'row' | 'below';
   className?: string;
   children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
   const state = useScrollFrame({ label });
-  if (stepper === 'row-end') {
-    const forward = state.edges.end || !state.edges.start;
+  if (stepper === 'row') {
+    const edge = (side: 'start' | 'end') =>
+      state.edges[side] ? (
+        <ScrollStep
+          side={side}
+          onStep={() => state.step(side === 'end' ? 1 : -1)}
+          className="min-h-[var(--control-md)]"
+        />
+      ) : null;
     return (
-      <div {...state.frame} className={cn('flex min-w-0 items-center', className)}>
+      <div {...state.frame} className="inline-flex max-w-full min-w-0 shrink-0 items-center">
+        {edge('start')}
         <div className="flex min-w-0 flex-1">{children(state.ref, state.region)}</div>
-        {state.scrolls ? (
-          <ScrollStep
-            side={forward ? 'end' : 'start'}
-            onStep={() => state.step(forward ? 1 : -1)}
-            className="min-h-[var(--control-md)]"
-          />
-        ) : null}
+        {edge('end')}
       </div>
     );
   }
