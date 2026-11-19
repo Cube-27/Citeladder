@@ -1,0 +1,54 @@
+name: Bake the product app's public build config
+description: >-
+  Validates and exports the public values the product app bakes into its
+  bundle, as deployed. The app deploy and CI's bundle-budget build both use it,
+  so the budget always measures the build that ships.
+
+inputs:
+  logo-dev-publishable:
+    description: Public logo.dev publishable key (vars.LOGO_DEV_PUBLISHABLE).
+    required: true
+  turnstile-site-key:
+    description: Public Turnstile site key for sign-up and email-link forms (vars.APP_TURNSTILE_SITE_KEY).
+    required: true
+  self-serve-signup:
+    description: >-
+      vars.SELF_SERVE_SIGNUP; empty means closed. Sign-up opens only together
+      with the API's PUBLIC_SIGNUP_ENABLED.
+    required: false
+    default: ''
+
+outputs:
+  fingerprint:
+    description: SHA-256 of every baked value, naming the deploy artifact.
+    value: ${{ steps.config.outputs.fingerprint }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set baked public origins
+      id: config
+      shell: bash
+      env:
+        LOGO_DEV_PUBLISHABLE: ${{ inputs.logo-dev-publishable }}
+        # The API holds the Turnstile secret (TURNSTILE_SECRET_KEY in gcp-deploy.yml).
+        TURNSTILE_SITE_KEY: ${{ inputs.turnstile-site-key }}
+        SELF_SERVE_SIGNUP: ${{ inputs.self-serve-signup || 'false' }}
+      run: |
+        test -n "$LOGO_DEV_PUBLISHABLE"
+        if [ -z "$TURNSTILE_SITE_KEY" ]; then
+          echo '::error::Set the APP_TURNSTILE_SITE_KEY repository variable; sign-up and email links need it.'
+          exit 1
+        fi
+        [[ "$SELF_SERVE_SIGNUP" =~ ^(true|false)$ ]]
+        {
+          echo 'NEXT_PUBLIC_DEMO_MODE=false'
+          echo "NEXT_PUBLIC_SELF_SERVE_SIGNUP=$SELF_SERVE_SIGNUP"
+          echo "NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=$LOGO_DEV_PUBLISHABLE"
+          echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com'
+          echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com'
+          echo 'PUBLIC_API_ORIGIN=https://api.citeladder.com'
+          echo "PUBLIC_TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY"
+        } >> "$GITHUB_ENV"
+        values=$'https://citeladder.com\nhttps://app.citeladder.com\nhttps://api.citeladder.com'
+        echo "fingerprint=$(printf 'origins=%s\ndemo=false\nlogo=%s\nsignup=%s\nturnstile=%s\n' "$values" "$LOGO_DEV_PUBLISHABLE" "$SELF_SERVE_SIGNUP" "$TURNSTILE_SITE_KEY" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"

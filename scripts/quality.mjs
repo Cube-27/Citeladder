@@ -197,9 +197,9 @@ function pnpm(name, commandArgs, env = process.env) {
   return step(name, 'pnpm', commandArgs, frontendRoot, env);
 }
 
-// Production-mode quality builds require both public origins. CI sets the
-// accepted values on the frontend job; a local check falls back to the same
-// ones so it builds the artifact CI builds, while an explicit value still wins.
+// Production-mode quality builds require the public origins. CI exports the
+// deploy's baked values (.github/actions/app-build-config); a local check falls
+// back to the same origins, while an explicit value still wins.
 const QUALITY_BUILD_ENV = {
   ...process.env,
   PUBLIC_WEBSITE_ORIGIN: process.env.PUBLIC_WEBSITE_ORIGIN || 'https://citeladder.com',

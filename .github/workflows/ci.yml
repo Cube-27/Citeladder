@@ -66,11 +66,6 @@ jobs:
     name: Frontend (quality, docs)
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    env:
-      # Production-mode quality builds use the accepted public origins.
-      PUBLIC_WEBSITE_ORIGIN: https://citeladder.com
-      PUBLIC_APP_ORIGIN: https://app.citeladder.com
-      PUBLIC_API_ORIGIN: https://api.citeladder.com
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -84,6 +79,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
+      # The bundle budget measures the app as deployed: the same baked
+      # public values as workers-app-deploy.yml, all public variables.
+      - uses: ./.github/actions/app-build-config
+        with:
+          logo-dev-publishable: ${{ vars.LOGO_DEV_PUBLISHABLE }}
+          turnstile-site-key: ${{ vars.APP_TURNSTILE_SITE_KEY }}
+          self-serve-signup: ${{ vars.SELF_SERVE_SIGNUP }}
       - name: Design policy tests
         run: node --test ../scripts/frontend/*.test.mjs
       - name: Frontend quality
