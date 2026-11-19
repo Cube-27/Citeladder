@@ -10,8 +10,7 @@ import { Button, buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
 import { humanizeApiError } from '@/lib/api/errors';
-import { DisplayTime } from '@/components/ui/display-time';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 import { AnalysisRead } from '@/components/visibility/selection-gate';
@@ -60,23 +59,11 @@ function FactCheckingLede({
   data,
   exporting,
 }: Readonly<{ data: AccuracyResponse; exporting: FactViews['exporting'] }>) {
-  const latest = data.trend.at(-1)?.completed_at;
   return (
     <Inline className="items-start justify-between">
-      <Stack gap="tight">
-        <p className={textRole('caption', 'text-ink-2')}>
-          Fact-checking pilot
-          {latest ? (
-            <>
-              {' · latest run '}
-              <DisplayTime value={latest} dateOnly />
-            </>
-          ) : null}
-        </p>
-        <h2 className={textRole('heading')}>
-          {contradictedHeadline(data.score.coverage.contradicted)}
-        </h2>
-      </Stack>
+      <h2 className={textRole('heading')}>
+        {contradictedHeadline(data.score.coverage.contradicted)}
+      </h2>
       <FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />
     </Inline>
   );

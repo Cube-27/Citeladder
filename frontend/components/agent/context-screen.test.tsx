@@ -492,13 +492,9 @@ describe('Business map', () => {
         .map((item) => item.textContent),
     ).toEqual(['Club coachSuggested', 'ParentSuggested']);
     expect(details).toHaveTextContent('Business modelProducts sold direct');
-    // Discovery's roles are marked Suggested, and the section says what that means once.
     const map = screen.getByRole('region', { name: 'Business map' });
-    expect(map).toHaveTextContent('Entries marked Suggested came from discovery');
-    // Every offering is one row of one table; a wholly suggested list says so once.
+    // Every offering is one row of one table.
     const offerings = screen.getByRole('region', { name: 'Offerings' });
-    expect(offerings).toHaveTextContent('1 offering.');
-    expect(offerings).toHaveTextContent('Entries marked suggested came from discovery');
     const [, row] = within(within(offerings).getByRole('table')).getAllByRole('row');
     if (!row) throw new Error('The offering renders as a row');
     expect(

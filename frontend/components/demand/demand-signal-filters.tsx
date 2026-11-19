@@ -75,7 +75,7 @@ export function DemandDetectorCoverage({ snapshot }: Readonly<{ snapshot: Demand
   return (
     <Inline as="span" gap="tight">
       {byStatus.size === 0
-        ? 'Every detector ran in full'
+        ? null
         : [...byStatus]
             .map(([status, detectors]) => `${status}: ${detectors.map((d) => d.label).join(', ')}`)
             .join(' · ')}

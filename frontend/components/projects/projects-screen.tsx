@@ -79,14 +79,7 @@ export function ProjectsScreen() {
           ) : undefined
         }
       >
-        <StateBlock
-          kind="empty"
-          icon={FolderOpen}
-          heading="No projects yet"
-          description={
-            mayCreate ? undefined : 'Ask the workspace owner or an admin to add a project.'
-          }
-        />
+        <StateBlock kind="empty" icon={FolderOpen} heading="No projects yet" />
       </ReportPage>
     );
   }

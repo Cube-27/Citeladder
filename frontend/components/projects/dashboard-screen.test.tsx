@@ -399,7 +399,7 @@ describe('DashboardScreen', () => {
     // Owned citation rate is the strip's fourth figure; its label opens Insights.
     expect(
       state.getByRole('button', { name: 'Basis of Owned citation rate' }),
-    ).toHaveAccessibleDescription(/^Across \d+ engines? · 8 of 12 answers comparable$/);
+    ).toHaveAccessibleDescription(/^\d+ engines? · 8 of 12 answers comparable$/);
     expect(state.getByRole('link', { name: 'Owned citation rate' })).toHaveAttribute(
       'href',
       expect.stringContaining('/insights?metric=owned_citation_rate'),

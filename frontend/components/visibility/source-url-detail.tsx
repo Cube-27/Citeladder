@@ -90,14 +90,7 @@ export function SourceUrlDetail({
 
       <SourceUrlPageCard url={url} page={data?.page} loading={pending} />
 
-      <UsageCard
-        dimension="url"
-        query={usage}
-        heading={{
-          title: 'Use over time',
-          description: 'Share of answers in each period.',
-        }}
-      />
+      <UsageCard dimension="url" query={usage} heading="Use over time" />
 
       <AppGrid layout="halves">
         <EnginesCard engines={data?.engines} loading={pending} errored={query.isError} />

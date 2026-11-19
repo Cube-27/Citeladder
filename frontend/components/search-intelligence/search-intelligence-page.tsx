@@ -202,12 +202,7 @@ function useKeywordResearch({
   const data = readiness.data;
   const overlays = (
     <>
-      <Drawer
-        open={citationOpen}
-        onOpenChange={setCitationOpen}
-        title="Match Visibility citations"
-        description="Find the sources AI answers cite that already link to your website."
-      >
+      <Drawer open={citationOpen} onOpenChange={setCitationOpen} title="Match Visibility citations">
         <SearchIntelligenceCitationMatcher
           key={citationOrigin}
           datasets={datasets}

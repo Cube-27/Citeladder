@@ -213,6 +213,6 @@ describe('Overview library widgets', () => {
     renderWithProviders(<RetrievalWidget project={project} />);
     const region = screen.getByRole('region', { name: 'Retrieved versus cited' });
     expect(within(region).getByText('4 read · 1 cited')).toBeVisible();
-    expect(within(region).getByText('Across 12 answers that show what they read.')).toBeVisible();
+    expect(within(region).getByText('12 answers')).toBeVisible();
   });
 });

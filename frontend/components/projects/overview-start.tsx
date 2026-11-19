@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */
@@ -58,11 +58,6 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
         <SectionTitle id="overview-start">
           {firstRun ? 'Get your first results' : 'Track prompts again'}
         </SectionTitle>
-        {firstRun ? null : (
-          <SectionDescription>
-            No prompt is active, so the next run has nothing to measure.
-          </SectionDescription>
-        )}
       </SectionHeader>
       <SetupSteps label="Steps to your first results" steps={startSteps(data)} />
     </Section>

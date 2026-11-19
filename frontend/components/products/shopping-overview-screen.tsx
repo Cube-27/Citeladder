@@ -52,8 +52,7 @@ const rankingCodec = stringUrlCodec<Ranking>(
 type Overview = CommerceShoppingOverview;
 
 /** A card's empty state in place of its table: what belongs here and why it is empty. */
-const emptyTable = (heading: string, description?: string) =>
-  ({ kind: 'empty', icon: ShoppingBag, heading, description }) as const;
+const emptyTable = (heading: string) => ({ kind: 'empty', icon: ShoppingBag, heading }) as const;
 
 const VISIBILITY: DataTableColumn = {
   key: 'visibility',
@@ -250,17 +249,16 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
 function fanoutCoverage(fanout: Overview['fanout']) {
   const unknown = fanout.answers - fanout.answers_with_queries - fanout.answers_without_search;
   const parts = [
-    `${formatCount(fanout.answers_with_queries)} with readable search queries`,
+    pluralCount(fanout.answers, 'answer'),
+    `${formatCount(fanout.answers_with_queries)} with queries`,
     `${formatCount(fanout.answers_without_search)} without a search`,
     ...(unknown ? [`${formatCount(unknown)} unknown`] : []),
   ];
-  return `From the ${pluralCount(fanout.answers, 'answer')} that named a product: ${parts.join(', ')}.`;
+  return parts.join(' · ');
 }
 
 function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
-  const empty = fanout.answers
-    ? emptyTable('No fan-out queries yet', 'No answer exposed its search queries.')
-    : emptyTable('No fan-out queries yet', 'No answer in this window named a product.');
+  const empty = emptyTable('No fan-out queries yet');
   return (
     <DataTable
       title="Top fan-out queries"
@@ -324,17 +322,14 @@ function CategoryShelf({
       description={
         shelf ? (
           <>
-            Latest Commerce run, <DisplayTime value={shelf.measured_at} dateOnly />, from{' '}
-            {pluralCount(shelf.successful_execution_count, 'answer')} and{' '}
-            {pluralCount(shelf.recognized_slot_count, 'recognized recommendation')}.
+            <DisplayTime value={shelf.measured_at} dateOnly /> ·{' '}
+            {pluralCount(shelf.successful_execution_count, 'answer')} ·{' '}
+            {pluralCount(shelf.recognized_slot_count, 'recommendation')}
           </>
         ) : (
-          <>
-            No Commerce run has measured this category yet.{' '}
-            <TextLink href={targetHref(categoryId)} text="inherit" underline="hover">
-              Set up its shopping prompts
-            </TextLink>
-          </>
+          <TextLink href={targetHref(categoryId)} text="inherit" underline="hover">
+            Set up its shopping prompts
+          </TextLink>
         )
       }
     >

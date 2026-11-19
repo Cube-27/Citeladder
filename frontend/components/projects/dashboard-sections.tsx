@@ -280,7 +280,7 @@ function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSe
     key: 'citation-share',
     label: 'Owned citation rate',
     action: { href: '/insights?metric=owned_citation_rate', label: 'Open Insights' },
-    caption: observed ? `Across ${pluralCount(track.engine_coverage, 'engine')}` : 'All engines',
+    caption: observed ? pluralCount(track.engine_coverage, 'engine') : undefined,
     value: track.citation_share.value === null ? null : percentFigure(track.citation_share.value),
     missingState: observed ? 'unavailable' : 'not_run',
     // No comparable run means no change; the Movement card says so once.

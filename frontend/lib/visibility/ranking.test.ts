@@ -59,12 +59,9 @@ describe('Insights headline', () => {
       { headline: "You're #1 in AI visibility", sub: "You're named more often than Rival." },
     ],
     [
-      'asks for competitors when none are tracked',
+      'says no competitors are tracked',
       [row('You', 0.3, true)],
-      {
-        headline: "You aren't tracking any competitors yet",
-        sub: 'Add competitors in Context to see where you rank.',
-      },
+      { headline: "You aren't tracking any competitors yet", sub: null },
     ],
     [
       'keeps tracked but unmeasured competitors apart from none tracked',

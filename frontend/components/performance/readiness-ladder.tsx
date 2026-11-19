@@ -41,17 +41,11 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
   { stage: 'analysis_ready', label: 'Analysis ready' },
 ] as const;
 
-/** What the user should understand, in one line, at each stage. */
-/** `not_connected` belongs to the data source setup, which can act on it. */
-const EXPLANATION: Record<
-  Exclude<ProjectReadinessStage, 'not_connected' | 'analysis_ready'>,
-  string
-> = {
-  connected: 'The first history import has not started yet.',
+/** The two stages whose figures carry a caveat; the ladder itself names the rest. */
+const EXPLANATION = {
   importing: 'Numbers below are not final.',
   import_failed: 'The history import finished without importing anything.',
-  core_data_ready: 'CiteLadder’s own analysis is still computing.',
-};
+} satisfies Partial<Record<ProjectReadinessStage, string>>;
 
 function stageIndex(stage: ProjectReadinessStage): number {
   const index = LADDER.findIndex((step) => step.stage === stage);
@@ -111,6 +105,12 @@ export function ReadinessLadder({
   }
 
   const reached = stageIndex(data.stage);
+  const note = [
+    data.stage === 'importing' ? EXPLANATION.importing : null,
+    data.imported_through ? `Imported through ${formatWindowDate(data.imported_through)}.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
   return (
     <Section aria-label="Data readiness" data-testid="readiness-ladder">
       <Stack gap="compact">
@@ -123,12 +123,7 @@ export function ReadinessLadder({
             status: ladderStepState(index, reached),
           }))}
         />
-        <p className={textRole('caption')}>
-          {EXPLANATION[data.stage]}
-          {data.imported_through
-            ? ` Imported through ${formatWindowDate(data.imported_through)}.`
-            : ''}
-        </p>
+        {note ? <p className={textRole('caption')}>{note}</p> : null}
       </Stack>
     </Section>
   );

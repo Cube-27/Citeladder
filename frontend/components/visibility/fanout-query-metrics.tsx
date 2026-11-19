@@ -150,12 +150,11 @@ function missingMark(lookup: LookupState) {
   }
 }
 
-const empty = (heading: string, description?: string): DataTableState => ({
+const empty = (heading: string): DataTableState => ({
   kind: 'empty',
   headingLevel: 3,
   icon: Search,
   heading,
-  description,
 });
 
 /** Rising and Falling's own empty states; undefined when the list has rows. */
@@ -170,11 +169,7 @@ export function movedState(
       title: "Couldn't load query changes",
       fallback: 'Check your connection and try again.',
     };
-  if (!queries.compared)
-    return empty(
-      'Nothing to compare yet',
-      'Changes show for one run once an earlier run reported searches.',
-    );
+  if (!queries.compared) return empty('Nothing to compare yet');
   if (queries.rows.length) return undefined;
   return view === 'rising' ? empty('No query rose') : empty('No query fell');
 }

@@ -279,7 +279,7 @@ export function DimensionTable({
           kind: 'empty',
           icon: SearchX,
           heading: `No ${tab.noun} imported`,
-          description: `Search Console does not provide ${tab.noun} with a date range.`,
+          description: 'Not provided for a date range.',
         }}
       />
     );

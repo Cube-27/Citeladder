@@ -164,7 +164,6 @@ export function SearchIntelligenceReviewDrawer({
         onOpenChange(nextOpen);
       }}
       title={action === 'seed' ? 'Research a keyword' : 'Review analysis cost'}
-      description="Nothing is fetched or charged until you confirm the estimate."
       footer={
         <ReviewFooter
           review={review}

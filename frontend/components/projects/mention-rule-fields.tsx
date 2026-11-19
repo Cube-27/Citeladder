@@ -65,10 +65,7 @@ export function MentionRuleFields({
         </span>
       </Inline>
       {rule.mode === 'context_required' ? (
-        <Field
-          label="Context words"
-          hint="Comma separated. A mention counts only when one of these appears near the name."
-        >
+        <Field label="Context words" hint="Comma separated">
           {(props) => (
             <Input
               {...props}

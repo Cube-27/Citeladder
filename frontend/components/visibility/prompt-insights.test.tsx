@@ -137,7 +137,7 @@ describe('CompetitorSuggestions', () => {
     unmount();
 
     renderSuggestions(4);
-    expect(await screen.findByText(/4 of 5 competitors tracked/)).toBeVisible();
+    expect(await screen.findByText(/4 of 5 tracked/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Accept Northstar as a competitor' })).toBeEnabled();
   });
 

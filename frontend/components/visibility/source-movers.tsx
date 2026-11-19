@@ -166,10 +166,7 @@ export function TopMoversCard({
   const shared = { dimension, state, busy: query.isFetching };
   return (
     <Stack as="section" aria-label="Top movers">
-      <EditorialSectionHeader
-        title="Top movers"
-        description="Percentage points against the previous comparable period."
-      />
+      <EditorialSectionHeader title="Top movers" />
       <AppGrid layout="halves">
         <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
         <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />

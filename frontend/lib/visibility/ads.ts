@@ -14,9 +14,6 @@ import type { ClassificationValue } from '@/components/ui/status-mark';
 import { availabilityLabel } from '@/lib/format';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 
-export const ADS_COVERAGE_NOTE =
-  "Ads seen in ChatGPT sessions collected for this project's market. What your buyers see depends on their plan, account and country.";
-
 export const AD_OWNERSHIP: Record<AdOwnership, { label: string; badge: ClassificationValue }> = {
   owned: { label: 'You', badge: 'owned' },
   competitor: { label: 'Competitor', badge: 'competitor' },
@@ -42,28 +39,14 @@ export function landingLabel(url: string): string {
   return `${parsed.host}${path}`;
 }
 
-/** The heading and sentence for a read that has no ads to show. */
-export function adsStateCopy(state: Exclude<VisibilityAdsResponse['state'], 'value'>): {
-  heading: string;
-  description: string;
-} {
+/** The heading for a read that has no ads to show. */
+export function adsStateHeading(state: Exclude<VisibilityAdsResponse['state'], 'value'>): string {
   switch (state) {
     case 'not_applicable':
-      return {
-        heading: AD_APPLICABILITY.not_applicable,
-        description:
-          'Only ChatGPT Search shows ads. Choose ChatGPT Search or all surfaces to see them.',
-      };
+      return AD_APPLICABILITY.not_applicable;
     case 'unavailable':
-      return {
-        heading: AD_APPLICABILITY.unavailable,
-        description:
-          'These ChatGPT Search answers were collected before ads were read. Ads appear from the next audit.',
-      };
+      return AD_APPLICABILITY.unavailable;
     case 'no_answers':
-      return {
-        heading: 'No ChatGPT Search answers',
-        description: 'Ads are read from ChatGPT Search answers. Add ChatGPT Search to an audit.',
-      };
+      return 'No ChatGPT Search answers';
   }
 }

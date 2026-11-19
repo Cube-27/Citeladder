@@ -7,7 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StateBlock } from '@/components/ui/state-block';
 import { AreaChart } from '@/components/ui/area-chart';
-import { type TrendEvent, type TrendSeries } from '@/components/ui/series-data';
+import { type TrendSeries } from '@/components/ui/series-data';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
 import { textRole } from '@/components/ui/typography';
 import type {
@@ -33,8 +33,8 @@ import {
   trendAxis,
 } from '@/lib/visibility/trends';
 import { noObservations } from '@/lib/visibility/vocabulary';
-import { coverageSummary } from '@/lib/visibility/coverage';
-import { type Absent, formatCount, formatDisplayDate } from '@/lib/format';
+import { selectionBasis } from '@/lib/visibility/coverage';
+import { type Absent, formatCount } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
   SHARE_OF_VOICE_HINT,
@@ -63,15 +63,12 @@ const ALL_BRANDS = '__all__';
  * the Competitors table draws, computed in code.
  */
 export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
-  const timeZone = useDisplayTimeZone();
-  const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
+  const shortfall = selectionBasis(selected);
   const { headline, sub } = standingHeadline(brandStanding(selected.rankings));
   return (
     <Section aria-labelledby="insights-headline">
       <SectionHeader>
-        <p className={textRole('caption')}>
-          {summary.answers} {summary.change}
-        </p>
+        {shortfall ? <p className={textRole('caption')}>{shortfall}</p> : null}
         <h2 id="insights-headline" className={textRole('title')}>
           {headline}
         </h2>
@@ -98,7 +95,7 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   if (Object.keys(groups).length < 2 || pooled >= total) return null;
   return (
     <Notice tone="info">
-      {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here. Open them individually from the measurement menu.`}
+      {`Counts ${pooled} of ${total} runs; ${total - pooled} used a different setup.`}
     </Notice>
   );
 }
@@ -111,7 +108,6 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
     const change = deltas?.[key];
     return {
       value: unmeasured ?? formatRate(value ?? null),
-      // No comparable run means no change line; the caption states why once.
       delta: change == null ? null : <Delta value={change} unit=" pp" />,
     };
   };
@@ -245,14 +241,7 @@ export function BrandTrend({
         <SectionTitle id="insights-trend">Your brand over time</SectionTitle>
       </SectionHeader>
       <SectionContent>
-        <TrendSection
-          query={query}
-          metric={metric}
-          lines={lines}
-          caption={trendCaption}
-          keyed
-          lonePoint="plot"
-        />
+        <TrendSection query={query} metric={metric} lines={lines} keyed lonePoint="plot" />
       </SectionContent>
     </Section>
   );
@@ -271,7 +260,6 @@ type TrendSectionProps = Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   metric: Metric;
   lines: (points: readonly VisibilityTrendPoint[], timeZone: string) => TrendLines;
-  caption: (runs: number, events: readonly TrendEvent[]) => string;
   /** Whether the loading chart draws a key, as the drawn chart will. */
   keyed: boolean;
   lonePoint: 'list' | 'plot';
@@ -302,7 +290,6 @@ function TrendChart({
   points,
   metric,
   lines,
-  caption,
   lonePoint,
   busy,
 }: Omit<TrendSectionProps, 'query' | 'keyed'> &
@@ -343,19 +330,6 @@ function TrendChart({
         format={(plotted) => axis.format(axis.unplot(plotted))}
         lonePoint={lonePoint}
       />
-      <p className={textRole('caption')}>{caption(points.length, events)}</p>
     </Stack>
   );
-}
-
-/** The non-causality notice wherever an implementation marker is plotted. */
-export function markerNote(events: readonly TrendEvent[]): string {
-  return events.some((event) => event.kind === 'action')
-    ? ' A marker shows when work went live, not that it changed these rates.'
-    : '';
-}
-
-function trendCaption(runs: number, events: readonly TrendEvent[]): string {
-  if (runs === 1) return 'The trend appears after the next comparable run.';
-  return `Lines break between runs that are not comparable.${markerNote(events)}`;
 }

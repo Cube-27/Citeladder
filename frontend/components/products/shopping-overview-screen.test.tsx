@@ -162,9 +162,7 @@ describe('Shopping overview', () => {
     ]);
     const fanout = table('Top fan-out queries');
     // The third answer searched without exposing its queries: unknown, not "no search".
-    expect(fanout).toHaveTextContent(
-      'From the 3 answers that named a product: 1 with readable search queries, 1 without a search, 1 unknown.',
-    );
+    expect(fanout).toHaveTextContent('3 answers · 1 with queries · 1 without a search · 1 unknown');
     expect(rowCells(fanout, 'best road running shoes')).toEqual(['best road running shoes', '2']);
     // No category chosen: no category shelf.
     expect(screen.queryByText('Category shelf')).not.toBeInTheDocument();
@@ -184,7 +182,6 @@ describe('Shopping overview', () => {
     renderWithProviders(<Harness />, projectRoute);
 
     const shelf = (await screen.findByText('Category shelf')).closest('section')!;
-    expect(shelf).toHaveTextContent('No Commerce run has measured this category yet.');
     // The one next step: the category's own page, where its shopping prompts are set up.
     const setUp = within(shelf).getByRole('link', { name: 'Set up its shopping prompts' });
     expect(new URL(setUp.getAttribute('href')!, 'https://app.test').pathname).toBe(
@@ -201,7 +198,7 @@ describe('Shopping overview', () => {
     expect(screen.getAllByRole('link', { name: 'Open Products' })).toHaveLength(1);
     expect(screen.queryByRole('region', { name: 'Ranking' })).not.toBeInTheDocument();
     expect(screen.queryByText('Acme Merino Sock')).not.toBeInTheDocument();
-    expect(screen.queryByText(/From the 0 answers/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 answers ·/)).not.toBeInTheDocument();
   });
   it('gives an empty table its own empty state, without its head', async () => {
     serve({
@@ -214,7 +211,7 @@ describe('Shopping overview', () => {
     const merchants = await screen.findByRole('region', { name: 'Top merchants' });
     expect(merchants).toHaveTextContent('No merchant yet');
     expect(within(merchants).queryByRole('columnheader')).not.toBeInTheDocument();
-    expect(table('Top fan-out queries')).toHaveTextContent('No answer exposed its search queries.');
+    expect(table('Top fan-out queries')).toHaveTextContent('3 answers · 0 with queries');
   });
 
   it('reads the category shelf from its latest Commerce run', async () => {
@@ -235,7 +232,7 @@ describe('Shopping overview', () => {
     renderWithProviders(<Harness />, projectRoute);
 
     const shelf = (await screen.findByText('Category shelf')).closest('section')!;
-    expect(shelf).toHaveTextContent('from 5 answers and 8 recognized recommendations');
+    expect(shelf).toHaveTextContent('5 answers · 8 recommendations');
     expect(within(shelf).getByText('40.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('25.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('2.0')).toBeInTheDocument();

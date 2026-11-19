@@ -94,7 +94,7 @@ export function CsvImportDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
-      description="Columns: topic, prompt. New topic names are created; rows without a topic import without one."
+      description="Columns: topic, prompt."
       width="wide"
       footer={
         <>

@@ -355,7 +355,7 @@ describe('PerformanceScreen evidence states', () => {
 
     const { unmount } = renderPerformance();
     expect(await screen.findByTestId('performance-coverage')).toHaveTextContent(
-      'Imported history Aug 1, 2026 – Aug 28, 2026 · 28 days',
+      'Aug 1, 2026 – Aug 28, 2026 · 28 days',
     );
     expect(screen.queryByTestId('performance-status')).toBeNull();
     // The freshness note reads in the same date style, not as an ISO key.

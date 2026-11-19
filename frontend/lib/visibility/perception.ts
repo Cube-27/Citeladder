@@ -135,18 +135,12 @@ const REASON_COPY: Record<NonNullable<PerceptionResponse['reason']>, string> = {
 export function stateCopy(
   state: Exclude<PerceptionResponse['state'], 'value'>,
   reason: PerceptionResponse['reason'],
-): { heading: string; description: string } {
+): { heading: string; description: string | null } {
   switch (state) {
     case 'pending':
-      return {
-        heading: 'Classifying answers…',
-        description: 'Answers that name you are being read for sentiment. Check back shortly.',
-      };
+      return { heading: 'Classifying answers…', description: null };
     case 'no_mentions':
-      return {
-        heading: 'No answers named you',
-        description: 'Perception needs answers that mention your brand in the selected runs.',
-      };
+      return { heading: 'No answers named you', description: null };
     case 'unavailable':
       return {
         heading: 'Perception unavailable',
@@ -183,18 +177,6 @@ export function negativeHeadline(
     return null;
   if (score.negative === 0) return 'AI says nothing negative about you in classified mentions';
   return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of classified mentions`;
-}
-
-/** The themes with more negative mentions than positive, named in one sentence. */
-export function negativeThemesLine(themes: readonly Theme[]): string {
-  const worse = themes
-    .filter((theme) => theme.negative > theme.positive)
-    .map((theme) => theme.theme);
-  if (!worse.length) return 'No theme draws more negative mentions than positive.';
-  const names = worse.map(themeLabel);
-  const last = names.pop();
-  const listed = names.length ? `${names.join(', ')} and ${last}` : last;
-  return `${listed} ${worse.length === 1 ? 'draws' : 'draw'} more negative mentions than positive.`;
 }
 
 /** Themes ranked by their negative or positive mentions, the top `limit` with any. */
@@ -272,11 +254,19 @@ export function breakdownRow(
 
 /** "N of M mentions classified", then every other bucket that is non-empty. */
 export function coverageLine(coverage: PerceptionCoverage): string {
-  const parts = [`${coverage.classified} of ${coverage.mentions} mentions classified`];
+  return [
+    `${coverage.classified} of ${coverage.mentions} mentions classified`,
+    ...coverageExtras(coverage),
+  ].join(' · ');
+}
+
+/** Every non-empty bucket besides the classified mentions. */
+export function coverageExtras(coverage: PerceptionCoverage): string[] {
+  const parts: string[] = [];
   if (coverage.pending) parts.push(`${coverage.pending} pending`);
   if (coverage.low_confidence) parts.push(`${coverage.low_confidence} low confidence`);
   if (coverage.not_assessable) parts.push(`${coverage.not_assessable} not assessable`);
   for (const { reason, count } of coverage.unavailable)
     parts.push(`${count} unavailable (${UNAVAILABLE_SHORT[reason]})`);
-  return parts.join(' · ');
+  return parts;
 }

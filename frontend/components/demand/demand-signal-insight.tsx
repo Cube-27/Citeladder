@@ -95,10 +95,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
       <Stack>
         <Stack gap="tight">
           <span className={textRole('body', 'text-ink-2')}>Query relevance</span>
-          <p className="type-caption">
-            {relevance.statement ??
-              'Query-term coverage measured against the currently inspected page.'}
-          </p>
+          {relevance.statement ? <p className="type-caption">{relevance.statement}</p> : null}
         </Stack>
         <AppGrid as="dl" layout="thirds" className="type-caption">
           <div>

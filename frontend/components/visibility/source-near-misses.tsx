@@ -101,7 +101,7 @@ function nearMissState(
     icon: Link2Off,
     heading: 'Every page of yours that an engine read, it also cited',
     description: unavailable.length
-      ? `Not known for ${unavailable.map(engineLabel).join(', ')}, which do not expose what they read.`
+      ? `Unknown for ${unavailable.map(engineLabel).join(', ')}`
       : undefined,
   };
 }

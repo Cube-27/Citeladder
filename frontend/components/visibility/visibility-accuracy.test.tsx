@@ -57,7 +57,7 @@ describe('AccuracyView', () => {
   it('shows accuracy with its coverage and each contradiction beside the fact it contradicts', () => {
     render(<AccuracyView allClaims={null} byFact={null} data={response()} />);
     expect(screen.getByText('66.7%')).toBeInTheDocument();
-    expect(screen.getByText('4 of 5 claims checked · 1 pending')).toBeInTheDocument();
+    expect(screen.getByText('1 pending')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '“Acme Pro costs $49 per month”' })).toHaveAttribute(
       'href',
       `/runs/${RUN}?execution=${EXECUTION}`,

@@ -6,7 +6,6 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
 import { isImeComposing } from '@/lib/accessibility/ime';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { TopicRow } from '@/lib/prompts/builder-topics';
@@ -96,10 +95,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
   };
   return (
     <Stack gap="workspace">
-      <Inline className="flex-wrap justify-between">
-        <p className={textRole('body', 'text-ink-2')}>
-          A removed topic&apos;s prompts stay in your library without a topic.
-        </p>
+      <Inline className="flex-wrap justify-end">
         <Button
           variant="secondary"
           onClick={() => topics.preview.mutate()}

@@ -243,7 +243,6 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
   ]);
   const bold = [...table.querySelectorAll('tbody strong')].map((name) => name.textContent);
   expect(bold).toEqual(['Acme, named first']);
-  expect(screen.getByText('Bold brand was named first')).toBeVisible();
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),
     PROMPT,
@@ -293,7 +292,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
     .setup()
     .click(states.getByRole('button', { name: 'Basis of Mentioned and cited' }));
   expect(
-    await screen.findAllByText(/Mentioned only: 0 · Cited only: \d+ · Neither: 1\./u),
+    await screen.findAllByText(/Mentioned only: 0 · Cited only: \d+ · Neither: 1$/u),
   ).not.toHaveLength(0);
   // Answered of asked, then the answers naming and citing you, summed from the states.
   const coverage = within(screen.getByRole('table', { name: 'Engine coverage' }));

@@ -98,7 +98,6 @@ export function CategoryMatrixSheet({
       onOpenChange={onOpenChange}
       title="Shopping prompts"
       eyebrow={categoryLabel}
-      description="Generated prompts stay disabled until you approve them."
       footer={
         canRun ? (
           <Button

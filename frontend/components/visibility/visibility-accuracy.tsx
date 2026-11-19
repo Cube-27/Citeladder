@@ -19,6 +19,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
+  accuracyCoverageExtras,
   accuracyCoverageLine,
   accuracyStateCopy,
   contradictedChange,
@@ -118,25 +119,22 @@ function AccuracyState({
   coverage?: AccuracyCoverage;
 }>) {
   const copy = accuracyStateCopy(state, reason);
-  // One state box at the shared footprint: the coverage it read is part of
-  // the same sentence, not a caption that grows the box.
+  const counted = coverage?.claims ? accuracyCoverageLine(coverage) : null;
   return (
     <StateBlock
       kind="empty"
       headingLevel={3}
       icon={ShieldCheck}
       heading={copy.heading}
-      description={
-        coverage?.claims
-          ? `${copy.description} ${accuracyCoverageLine(coverage)}.`
-          : copy.description
-      }
+      description={[copy.description, counted].filter(Boolean).join(' ') || undefined}
     />
   );
 }
 
 function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
-  return <p className={textRole('caption', 'text-ink-2')}>{accuracyCoverageLine(coverage)}</p>;
+  const extras = accuracyCoverageExtras(coverage);
+  if (!extras.length) return null;
+  return <p className={textRole('caption', 'text-ink-2')}>{extras.join(' · ')}</p>;
 }
 
 function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
@@ -154,7 +152,6 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                 key: 'claims',
                 label: 'Claims',
                 value: String(coverage.claims),
-                sub: 'In answers that named you',
               },
               {
                 key: 'contradicted',
@@ -176,12 +173,9 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                 value: data.score.accuracy === null ? null : percentText(data.score.accuracy),
                 missingState: 'unavailable',
                 sub: (
-                  <>
-                    Supported of checked ·{' '}
-                    <Tooltip content="Verdicts a person changed">
-                      <span>{coverage.edited} edited</span>
-                    </Tooltip>
-                  </>
+                  <Tooltip content="Verdicts a person changed">
+                    <span>{coverage.edited} edited</span>
+                  </Tooltip>
                 ),
               },
               // The two findings stay apart on the line: no confirmed fact on
@@ -296,7 +290,6 @@ function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongsi
           { key: 'domain', label: 'Domain' },
           { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
         ]}
-        footer="Cited alongside, not shown to be the source."
         state={
           cited.length
             ? undefined

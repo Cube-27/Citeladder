@@ -3,7 +3,6 @@ import type { PerceptionResponse } from '@citeladder/contracts/visibility-percep
 import { CompetitorThemes } from '@/components/perception/competitor-themes';
 import { PerceptionBreakdown } from '@/components/perception/perception-breakdown';
 import { AppGrid } from '@/components/ui/app-grid';
-import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
@@ -22,12 +21,11 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
-  coverageLine,
+  coverageExtras,
   formatNet,
   gatedFigure,
   negativeHeadline,
   shareReading,
-  negativeThemesLine,
   rankThemes,
   sentimentTrend,
   themeLabel,
@@ -74,7 +72,6 @@ function Lede({
 }: Readonly<{ data: PerceptionResponse; factFigure?: FigureSegment }>) {
   const score = data.brand?.score;
   const { recommended, coverage } = data;
-  const latest = data.trend.at(-1)?.completed_at;
   const share = (key: 'positive' | 'negative', label: string): FigureSegment =>
     score
       ? {
@@ -89,7 +86,7 @@ function Lede({
       key: 'describing',
       label: 'Describing you',
       value: `${coverage.classified} / ${coverage.mentions}`,
-      sub: coverageLine(coverage),
+      sub: coverageExtras(coverage).join(' · ') || undefined,
     },
     share('positive', 'Positive'),
     share('negative', 'Negative'),
@@ -108,17 +105,9 @@ function Lede({
     <Section>
       <SectionContent>
         <Stack gap="item">
-          <Stack gap="tight">
-            {latest ? (
-              <p className={textRole('caption', 'text-ink-2')}>
-                Latest run <DisplayTime value={latest} dateOnly />
-              </p>
-            ) : null}
-            <h2 className={textRole('heading')}>
-              {negativeHeadline(score) ?? 'How AI describes you'}
-            </h2>
-            <p className={textRole('body', 'text-ink-2')}>{negativeThemesLine(data.themes)}</p>
-          </Stack>
+          <h2 className={textRole('heading')}>
+            {negativeHeadline(score) ?? 'How AI describes you'}
+          </h2>
           <FigureStrip
             label="Brand perception"
             segments={factFigure ? [...segments, factFigure] : segments}
@@ -217,10 +206,7 @@ function SentimentParts({
 function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend'] }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <TitledSection
-      title="Net sentiment over time"
-      description="A break is a run that can’t be compared with the one before."
-    >
+    <TitledSection title="Net sentiment over time">
       <SectionContent>
         {trend.length > 1 ? (
           <AreaChart

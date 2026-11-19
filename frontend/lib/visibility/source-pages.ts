@@ -94,23 +94,16 @@ export function absenceBasis(
  */
 export type PageStanding = z.infer<typeof pageStandingSchema> | 'untracked';
 
-/** A competitor's own page has no card, so it has no sentence. */
-type SentencedStanding = Exclude<PageStanding, 'competitor'>;
-
-const STANDING_SENTENCES: Record<SentencedStanding, string> = {
-  untracked: 'This page has not been added to your source inventory yet.',
-  yours: 'This is one of your own pages.',
-  blocked: 'The publisher blocks automated access, so this page has not been read.',
-  unreadable: 'The last attempt to read this page failed. It will be tried again.',
-  not_read: 'This page has not been read yet. It is read after a visibility run.',
-  gap: 'Competitors are listed on this page and you are not.',
-  listed: 'You are on this page.',
-  read: 'No tracked competitor is listed on this page.',
-  not_assessable: 'Your name is too short to find reliably on a page, so this page is not judged.',
+/** Why a page's listings are not shown: a read that failed, never happened or cannot judge. */
+const UNREAD_REASONS: Partial<Record<PageStanding, string>> = {
+  blocked: 'Publisher blocks automated access',
+  unreadable: 'Last read failed',
+  not_read: 'Not read yet',
+  not_assessable: 'Name too short to judge on a page',
 };
 
-export function standingSentence(standing: SentencedStanding): string {
-  return STANDING_SENTENCES[standing];
+export function unreadReason(standing: PageStanding): string | undefined {
+  return UNREAD_REASONS[standing];
 }
 
 /** The same standing in a word or two, for a table cell. */

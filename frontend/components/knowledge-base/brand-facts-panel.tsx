@@ -224,7 +224,7 @@ function FactRow({
             </StatusMark>
           ) : (
             <StatusMark variant="status" value="warning">
-              Draft · not used until confirmed
+              Draft
             </StatusMark>
           )}
           {fact.source_url ? (

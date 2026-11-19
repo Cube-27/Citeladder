@@ -16,7 +16,7 @@ import { businessDraft, showsServiceAreas } from '@/lib/prompts/builder-business
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { StateBlock, screenState } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 import { OfferingsTable } from './offerings-table';
 
@@ -68,9 +68,6 @@ function fieldValue(field: MapField) {
   );
 }
 
-const hasSuggestion = (fields: readonly MapField[]) =>
-  fields.some((field) => field.items.some((item) => item.suggested));
-
 /**
  * The map's details as setting rows: each field's name at the left and its
  * entries at the right. An entry discovery suggested and no person has
@@ -89,11 +86,6 @@ function MapGroup({
     <Section aria-labelledby="business-map">
       <SectionHeader actions={action}>
         <SectionTitle id="business-map">{title}</SectionTitle>
-        {hasSuggestion(fields) ? (
-          <SectionDescription>
-            Entries marked Suggested came from discovery and are not yet confirmed.
-          </SectionDescription>
-        ) : null}
       </SectionHeader>
       <SettingRows label="Business details">
         {fields.map((field) => (

@@ -98,7 +98,6 @@ function ThemeTable({
       actions={actions}
       label="Perception by theme"
       columns={THEME_COLUMNS}
-      footer={`Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
       state={themes.length ? undefined : noneHere('No themes in these answers.')}
     >
       {themes.map((theme) => {
@@ -202,7 +201,6 @@ function SegmentTable({
       actions={actions}
       label={`Perception by ${segment}`}
       columns={segmentColumns(segment)}
-      footer={`Shares show from ${PERCEPTION_MIN_CLASSIFIED} classified mentions.`}
       state={rows.length ? undefined : noneHere('No answers in this selection named you.')}
     >
       {rows.map((row) => {
@@ -246,7 +244,6 @@ function SourceTable({
         { key: 'answers', label: 'Answers with criticism', width: 'metric', kind: 'number' },
         { key: 'example', label: 'Example', kind: 'url' },
       ]}
-      footer="Cited alongside the criticism, never shown to have caused it."
       state={drivers.length ? undefined : noneHere('No sources cited alongside criticism.')}
     >
       {drivers.map((driver) => (

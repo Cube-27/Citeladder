@@ -10,13 +10,7 @@ import { formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /**
@@ -136,9 +130,6 @@ export function SurfaceRatesPanel({
       <BusyRung active={query.isFetching} label="Updating AI Overview rates" />
       <SectionHeader>
         <SectionTitle>Google AI Overview</SectionTitle>
-        <SectionDescription>
-          {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview.`}
-        </SectionDescription>
       </SectionHeader>
       <SectionContent>
         <Stack gap="workspace">

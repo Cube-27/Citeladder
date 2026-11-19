@@ -77,7 +77,6 @@ export function PromptPastAnswers({
     <>
       <DataTable
         title="Past answers"
-        description={namesFirst(page) ? 'Bold brand was named first' : undefined}
         columns={COLUMNS}
         pageSize={PAGE_SIZE}
         rowCount={page?.items.length}
@@ -174,18 +173,11 @@ function tableState(
       headingLevel: 3,
       icon: ICONS.runs,
       heading: 'No answers to show',
-      description:
-        'No finished run has a successful answer to this prompt that matches the filters.',
     };
   return undefined;
 }
 
 type Brand = PromptAnswer['brands'][number];
-
-/** The page names a first brand somewhere: only then does the bold mean something. */
-function namesFirst(page: PromptAnswerPage | undefined): boolean {
-  return Boolean(page?.items.some((answer) => firstOf(answer.brands, answer.first_named)));
-}
 
 /** The shown brand the stored value says was named first; none when no tracked brand was. */
 function firstOf(brands: readonly Brand[], first: FirstNamed): Brand | undefined {

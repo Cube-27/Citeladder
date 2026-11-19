@@ -21,7 +21,6 @@ import {
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
-import { TextLineSkeleton } from '@/components/ui/loading-parts';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
 
@@ -38,8 +37,7 @@ const POSITION_HINT =
  * share of voice, where it lands among the brands an answer names, and how
  * that moved. Rows run highest visibility first, so the order is the rank.
  *
- * A missing change is an em dash and the reason is stated once above the
- * table, not in every row. The table is never paged: it holds at most six
+ * A missing change is an em dash. The table is never paged: it holds at most six
  * brands (owner, 2026-10-21).
  */
 export function RankingRowsTable({
@@ -47,7 +45,7 @@ export function RankingRowsTable({
   description,
 }: Readonly<{
   rows: readonly RankingRow[];
-  /** What the Change column compares against, stated once. */
+  /** The shared-answer basis when the change covers only part of the selection. */
   description?: string;
 }>) {
   const navigate = useNavigate();
@@ -164,7 +162,7 @@ function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
  */
 export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
   return (
-    <TitledSection title={TITLE} description={<TextLineSkeleton text="body" width="long" />}>
+    <TitledSection title={TITLE}>
       <DataTable
         label={TITLE}
         columns={rankingColumns({ anyPosition: true, anySentiment: true })}

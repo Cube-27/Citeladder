@@ -105,11 +105,9 @@ export function SetupPrompts({
         }
       >
         <SectionTitle level={level}>Prompts that measure it</SectionTitle>
-        <SectionDescription>
-          {approvedIds.length
-            ? 'Generated prompts stay disabled until you approve them.'
-            : `Approve at least one prompt to launch an audit for this ${target.kind}.`}
-        </SectionDescription>
+        {approvedIds.length ? null : (
+          <SectionDescription>Approve a prompt to launch.</SectionDescription>
+        )}
       </SectionHeader>
       <SectionContent>
         <Stack>

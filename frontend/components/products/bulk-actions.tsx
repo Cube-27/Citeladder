@@ -24,9 +24,7 @@ export function BulkActions({
 }>) {
   const noun = count === 1 ? 'product' : 'products';
   const tooMany = count > COMMERCE_TARGETS_MAX;
-  const hint = tooMany
-    ? `Competitors can be found for up to ${COMMERCE_TARGETS_MAX} products at a time.`
-    : null;
+  const hint = tooMany ? `Up to ${COMMERCE_TARGETS_MAX} products at a time` : null;
   return (
     <Section>
       <Inline gap="compact" className="flex-wrap justify-between">

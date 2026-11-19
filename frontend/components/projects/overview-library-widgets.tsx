@@ -13,7 +13,7 @@ import { Absence, printed } from '@/components/ui/absence';
 import { ValueLedger } from '@/components/ui/facts';
 import type { Project } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 import {
   useLatestMovers,
   useLatestNearMisses,
@@ -262,8 +262,8 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
             <>
               <p className={textRole('caption')}>
                 {data.responses
-                  ? `Across ${formatCount(data.responses)} answers that show what they read.`
-                  : 'No engine in this run shows what it read.'}
+                  ? pluralCount(data.responses, 'answer')
+                  : 'No engine shows what it read'}
               </p>
               <Rows
                 rows={data.items.map((item) => ({

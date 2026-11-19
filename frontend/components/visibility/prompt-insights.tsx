@@ -164,7 +164,7 @@ export function CompetitorSuggestions({
 function sectionDescription(tracked: number, limit: number | undefined): string | undefined {
   return limit === undefined
     ? undefined
-    : `${formatCount(tracked)} of ${formatCount(limit)} competitors tracked.`;
+    : `${formatCount(tracked)} of ${formatCount(limit)} tracked`;
 }
 
 /** A failed accept or reject in the server's words; Try again only for a transient failure. */

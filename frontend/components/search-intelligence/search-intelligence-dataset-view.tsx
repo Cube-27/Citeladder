@@ -238,7 +238,7 @@ function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset
       kind="empty"
       icon={SearchX}
       heading={emptyDatasetHeading(dataset)}
-      description="Requests can incur charges even when no results are returned."
+      description="Charged even with no results."
     />
   );
 }
@@ -283,17 +283,6 @@ function datasetSummary(dataset: SearchIntelligenceDataset) {
       : `${searchNumber(dataset.provider_total)} available from the provider`,
     dataset.truncated ? 'Truncated' : null,
   ].filter((part) => part !== null);
-  const actions = dataset.dataset_kind === 'missing_keywords';
-  if (!coverage.length && !actions) return null;
-  return (
-    <>
-      {coverage.length ? <p className={textRole('caption')}>{coverage.join(' · ')}</p> : null}
-      {actions ? (
-        <p className={textRole('caption')}>
-          Gaps with real search volume where a competitor ranks in the top 10 become{' '}
-          <TextLink href="/actions">Actions</TextLink>.
-        </p>
-      ) : null}
-    </>
-  );
+  if (!coverage.length) return null;
+  return <p className={textRole('caption')}>{coverage.join(' · ')}</p>;
 }

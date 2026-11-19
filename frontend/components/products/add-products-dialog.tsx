@@ -190,10 +190,7 @@ function SourceStep({
         spaced
       >
         <TabPanel value="shopify">
-          <Field
-            label="Store domain"
-            hint="Your own domain or your store’s .myshopify.com address. Its public product list is read once."
-          >
+          <Field label="Store domain" hint="Your domain or .myshopify.com address">
             {(props) => (
               <Input
                 {...props}
@@ -406,14 +403,7 @@ export function AddProductsDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={close}
-      title="Add products"
-      description="Products go live only after you confirm their categories."
-      width="wide"
-      footer={footer}
-    >
+    <Dialog open={open} onOpenChange={close} title="Add products" width="wide" footer={footer}>
       {body}
     </Dialog>
   );

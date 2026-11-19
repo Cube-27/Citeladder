@@ -30,17 +30,14 @@ export function PerceptionState({
   coverage?: PerceptionCoverage;
 }>) {
   const copy = stateCopy(state, reason);
-  // One state box at the shared footprint: the coverage it read is part of
-  // the same sentence, not a caption that grows the box.
+  const counted = coverage?.mentions ? coverageLine(coverage) : null;
   return (
     <StateBlock
       kind="empty"
       headingLevel={3}
       icon={MessageSquareQuote}
       heading={copy.heading}
-      description={
-        coverage?.mentions ? `${copy.description} ${coverageLine(coverage)}.` : copy.description
-      }
+      description={[copy.description, counted].filter(Boolean).join(' ') || undefined}
     />
   );
 }

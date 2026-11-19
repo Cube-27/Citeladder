@@ -75,9 +75,6 @@ describe('Ads view', () => {
     expect(
       tiles.getByRole('button', { description: '3 of 4 ChatGPT Search answers showed an ad' }),
     ).toHaveAccessibleName(/^Basis of /);
-    expect(
-      tiles.getByRole('button', { description: /No ads of yours were seen\./ }),
-    ).toHaveAccessibleName(/^Basis of /);
     expect(screen.getByText('Claude API: Not applicable')).toBeVisible();
     expect(screen.getByText('1 of 3 answers')).toBeVisible();
     expect(screen.getByRole('columnheader', { name: 'Mentioned you' })).toBeVisible();
