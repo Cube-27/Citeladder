@@ -136,8 +136,12 @@ state without checking `isSuccess`. `isError` ignored whenever `data` exists.
 ### Absence goes through `Absence` and nowhere else
 
 **Rule:** A missing value renders through `Absence` and the vocabulary in
-`lib/format.ts`. No component or `lib/` module writes its own absence word,
-map or `missingLabel` string. Which word or mark to use belongs to
+`lib/format.ts`. A nullable formatter returns `Formatted` (`string | Absent`),
+never an absence word: `TableCell`, `FigureStrip`, `ChartKey` and `Value` draw
+the mark for an `Absent` and print every string verbatim, so text that reads
+"None" stays text. A figure's absence kind is `missingState`; `missingLabel`
+is only for a word the state's own word is not. Prose (summaries, CSV, aria
+labels) takes `formattedText`. Which word or mark to use belongs to
 [design](design.md) and the owner.
 **Why:** The rule changed four times (#112 one dash; #865 and #874 words;
 #1009 a muted dash again), and every change missed some of the parallel
@@ -145,10 +149,15 @@ vocabularies. CodeAnt's custom rule caught collapsed absence states in about
 50 of the last 150 PRs. `prompt-table.tsx`, `lib/visibility/matrix.ts` and
 `ai-traffic/url-panel.tsx` were each flagged in four PRs. #1014 routed the
 local vocabularies through `lib/format.ts`; job statuses (`rung-trail.tsx`,
-`INTERNAL_LINK_STATES`) are workflow states, not absent values.
+`INTERNAL_LINK_STATES`) are workflow states, not absent values. Until
+2026-11-19 the components matched the printed word back to a state, so a
+topic or plan label equal to an absence word printed as a dash; the tagged
+`Absent` type replaced that (`tsc` rejects an object JSX child).
 **Check:**
 `rg "'(Not measured|Unavailable|Not available|No data|Not run)'" frontend/components frontend/lib`
-outside `lib/format.ts`. Any `missingLabel:` literal.
+outside `lib/format.ts`; `availabilityLabel(` passed as a value or
+`missingLabel`; a nullable formatter inside a template literal, which `tsc`
+does not catch (use `formattedText`).
 
 ### Unknown never becomes zero on its way to the screen
 

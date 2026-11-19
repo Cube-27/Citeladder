@@ -15,12 +15,13 @@ import {
   availabilityLabel,
   formatDisplayDate,
   formatDisplayShortDate,
+  formattedText,
   formatShortDate,
   formatWindowDate,
   percentText,
   pluralCount,
 } from '@/lib/format';
-import { formatPositionExact, PLACEHOLDER } from '@/lib/visibility/dashboard';
+import { formatPositionExact } from '@/lib/visibility/dashboard';
 import { formatNet, sentimentReading } from '@/lib/visibility/perception';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
@@ -86,7 +87,8 @@ export function trendAxis(metric: TrendMetric, lines: readonly (readonly Plotted
       yMax: 100,
       tick: (value: number) => `${Math.round(value)}%`,
       // The key and the tooltips read at the figures' precision (2.5%, not 3%).
-      format: (value: Plotted) => (value === null ? PLACEHOLDER : percentText(value / 100)),
+      format: (value: Plotted) =>
+        value === null ? availabilityLabel('not_measured') : percentText(value / 100),
     };
   const values = lines.flat().filter((value): value is number => value !== null);
   return {
@@ -95,7 +97,7 @@ export function trendAxis(metric: TrendMetric, lines: readonly (readonly Plotted
     yMin: -Math.max(2, Math.ceil(Math.max(1, ...values))),
     yMax: -1,
     tick: (value: number) => String(Math.round(-value)),
-    format: formatPositionExact,
+    format: (value: Plotted) => formattedText(formatPositionExact(value)),
   };
 }
 

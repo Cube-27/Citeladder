@@ -13,7 +13,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
-import { availabilityLabel, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -284,7 +284,7 @@ function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSe
       observed ? `Across ${pluralCount(track.engine_coverage, 'engine')}` : 'All engines'
     }`,
     value: track.citation_share.value === null ? null : percentFigure(track.citation_share.value),
-    missingLabel: availabilityLabel(observed ? 'unavailable' : 'not_run'),
+    missingState: observed ? 'unavailable' : 'not_run',
     // No comparable run means no change; the Movement card says so once.
     delta:
       observed && track.citation_share.delta !== null ? (

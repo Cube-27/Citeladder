@@ -1,7 +1,7 @@
 import { Absence } from '@/components/ui/absence';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import type { DataAvailabilityState } from '@/lib/format';
+import { type DataAvailabilityState, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** Where a value is printed: a key figure, or a row's data. */
@@ -15,7 +15,7 @@ const SLOT: Record<ValueText, string> = {
 
 export type ValueProps = Readonly<{
   /** The formatted value (from lib/format), or null when it is absent. */
-  value: string | null;
+  value: Formatted | null;
   /** Which absence a null value is. */
   absent?: DataAvailabilityState;
   /** The absence's word, when the state's own word is not the reader's. */
@@ -47,10 +47,10 @@ export function Value({
         <Spinner label="Loading" />
       </span>
     );
-  if (value === null)
+  if (value === null || isAbsent(value))
     return (
       <span className={slot}>
-        <Absence state={absent} label={absentLabel} />
+        <Absence state={value?.absent ?? absent} label={absentLabel} />
       </span>
     );
   return (

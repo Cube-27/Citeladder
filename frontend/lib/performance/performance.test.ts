@@ -46,8 +46,7 @@ describe('metric formatting', () => {
 
   it('renders a null metric as not measured, never as zero', () => {
     for (const card of METRIC_CARDS) {
-      expect(formatMetric(card.key, null)).not.toBe('0');
-      expect(formatMetric(card.key, null)).toMatch(/not measured/i);
+      expect(formatMetric(card.key, null)).toEqual({ absent: 'not_measured' });
     }
   });
 });

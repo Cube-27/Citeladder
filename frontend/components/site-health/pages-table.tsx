@@ -8,7 +8,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@citeladder/contracts';
@@ -16,7 +16,6 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import {
   DEFAULT_PAGES_SORT,
-  PLACEHOLDER,
   formatIssueCount,
   formatScore,
   pageDisplayTitle,
@@ -180,7 +179,7 @@ export function PagesTable({
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
             <TableCell numeric className="tabular-nums">
-              <Measured value={formatIssueCount(page.issue_count)} />
+              {formatIssueCount(page.issue_count)}
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.web_fundamentals_score)}>
               <MeasurementValue
@@ -205,21 +204,12 @@ export function PagesTable({
 }
 
 /**
- * A formatted string, or the shared mark when the formatter had nothing to
- * format. The formatters answer in words so the value carries its own meaning;
- * this is where those words become the mark that the rest of the table uses.
- */
-function Measured({ value }: Readonly<{ value: string }>) {
-  return value === PLACEHOLDER ? <Absence state="not_measured" /> : <>{value}</>;
-}
-
-/**
  * A measured score is the number alone (owner, 2026-11-10: no evidence
  * caption under it); only a score with no value names its state.
  */
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
   if (score === null) return measurementStateValue(state);
-  return formatScore(score);
+  return printed(formatScore(score));
 }
 
 function measurementStateValue(state: string) {

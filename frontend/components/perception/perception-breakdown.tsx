@@ -16,10 +16,10 @@ import { QuoteLink } from '@/components/visibility/visibility-perception';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
+import { formatPercent, percentText } from '@/lib/format';
 import {
   breakdownRow,
   formatNet,
-  formatShare,
   themeLabel,
   themeNegativeShare,
 } from '@/lib/visibility/perception';
@@ -104,7 +104,7 @@ function ThemeTable({
       {themes.map((theme) => {
         const expanded = open === theme.theme;
         const share = themeNegativeShare(theme);
-        const shown = formatShare(share);
+        const shown = share === null ? null : percentText(share);
         return (
           <Fragment key={theme.theme}>
             <TableRow>
@@ -219,9 +219,9 @@ function SegmentTable({
               </TableCell>
             ) : (
               <>
-                <TableCell numeric>{formatShare(cells.positive)}</TableCell>
-                <TableCell numeric>{formatShare(cells.neutral)}</TableCell>
-                <TableCell numeric>{formatShare(cells.negative)}</TableCell>
+                <TableCell numeric>{formatPercent(cells.positive)}</TableCell>
+                <TableCell numeric>{formatPercent(cells.neutral)}</TableCell>
+                <TableCell numeric>{formatPercent(cells.negative)}</TableCell>
                 <TableCell numeric>{formatNet(cells.net) ?? <Absence />}</TableCell>
               </>
             )}

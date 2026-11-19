@@ -8,10 +8,9 @@ import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatCount, formatDisplayDate, formatPercent } from '@/lib/format';
+import { formatCount, formatDisplayDate, formatMean, formatPercent } from '@/lib/format';
 import { ANSWER_STATES } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { formatPositionExact } from '@/lib/visibility/dashboard';
 import type { AnswerStates, PromptHistory, PromptMetricItem } from '@citeladder/contracts';
 
 /** No run has measured the prompt: the muted dash, its words in the tooltip and name. */
@@ -110,7 +109,7 @@ function PositionValue({
   visibility,
 }: Readonly<{ latest: PromptMetricItem | null; visibility: number | null }>) {
   if (!latest) return NOT_MEASURED;
-  if (latest.avg_position != null) return formatPositionExact(latest.avg_position);
+  if (latest.avg_position != null) return formatMean(latest.avg_position);
   return positionAbsence(visibility);
 }
 

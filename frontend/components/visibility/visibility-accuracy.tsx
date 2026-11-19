@@ -17,7 +17,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { Absence } from '@/components/ui/absence';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   accuracyCoverageLine,
@@ -28,8 +27,7 @@ import {
   VERDICT_TONE,
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { availabilityLabel } from '@/lib/format';
-import { formatShare } from '@/lib/visibility/perception';
+import { formatPercent, percentText } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -175,8 +173,8 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
               {
                 key: 'accuracy',
                 label: 'Accuracy',
-                value: formatShare(data.score.accuracy),
-                missingLabel: availabilityLabel('unavailable'),
+                value: data.score.accuracy === null ? null : percentText(data.score.accuracy),
+                missingState: 'unavailable',
                 sub: (
                   <>
                     Supported of checked ·{' '}
@@ -284,7 +282,7 @@ function BreakdownTable({
             <TableCell numeric>{row.score.coverage.claims}</TableCell>
             <TableCell numeric>{row.score.coverage.supported}</TableCell>
             <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
-            <TableCell numeric>{formatShare(row.score.accuracy) ?? <Absence />}</TableCell>
+            <TableCell numeric>{formatPercent(row.score.accuracy)}</TableCell>
           </TableRow>
         ))}
       </DataTable>

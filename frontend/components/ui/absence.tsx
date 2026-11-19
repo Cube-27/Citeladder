@@ -1,7 +1,13 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { Tooltip } from '@/components/ui/tooltip';
-import { ABSENCE_MARK, availabilityLabel, type DataAvailabilityState } from '@/lib/format';
+import {
+  ABSENCE_MARK,
+  availabilityLabel,
+  type DataAvailabilityState,
+  type Formatted,
+  isAbsent,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type AbsenceProps = Readonly<
@@ -13,6 +19,11 @@ type AbsenceProps = Readonly<
     label?: string;
   }
 >;
+
+/** A formatter's result where no table cell or figure prints it: the text, or its Absence. */
+export function printed(value: Formatted): ReactNode {
+  return isAbsent(value) ? <Absence state={value.absent} /> : value;
+}
 
 /**
  * Absence — a missing value in a value position: the muted em dash in `ink-2`

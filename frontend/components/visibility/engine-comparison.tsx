@@ -8,13 +8,7 @@ import { TextLink } from '@/components/ui/text-link';
 import type { Visibility } from '@citeladder/contracts';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatCount } from '@/lib/format';
-import {
-  formatRate,
-  measured,
-  visibleEngines,
-  type VisibilityFilters,
-} from '@/lib/visibility/dashboard';
-import { Absence } from '@/components/ui/absence';
+import { formatRate, visibleEngines, type VisibilityFilters } from '@/lib/visibility/dashboard';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'model', label: 'Model' },
@@ -71,12 +65,8 @@ export function EngineComparison({
                 secondary={modelsOf(visibility, engine.logical_engine, catalog) || undefined}
               />
             </TableCell>
-            <TableCell numeric>
-              {measured(formatRate(engine.brand_mention_rate)) ?? <Absence />}
-            </TableCell>
-            <TableCell numeric>
-              {measured(formatRate(engine.owned_citation_rate)) ?? <Absence />}
-            </TableCell>
+            <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
+            <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
             {/* This read "N measured / M expected", or "expected count
               unavailable" — the run's own bookkeeping. How many answers
               a rate is drawn from is the reader's business; how many we

@@ -10,7 +10,8 @@ import { CellMeter } from '@/components/ui/meter';
 import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
-import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
+import { percentText } from '@/lib/format';
+import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import {
   competitorHref,
   orderByVisibility,
@@ -112,13 +113,9 @@ export function RankingRowsTable({
               <TableCell numeric>
                 <VisibilityValue row={row} />
               </TableCell>
-              <TableCell numeric>
-                {measured(formatRate(row.share_of_voice)) ?? <Absence />}
-              </TableCell>
+              <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
               {anyPosition ? (
-                <TableCell numeric>
-                  {row.avg_position == null ? <Absence /> : formatPositionExact(row.avg_position)}
-                </TableCell>
+                <TableCell numeric>{formatPositionExact(row.avg_position ?? null)}</TableCell>
               ) : null}
               <TableCell numeric>
                 <WinRateValue row={row} />
@@ -141,8 +138,8 @@ export function RankingRowsTable({
 
 /** The rate beside its bar; an unmeasured rate is an absence, never an empty bar. */
 function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
-  const value = measured(formatRate(row.mention_rate));
-  if (row.mention_rate == null || value == null) return <Absence />;
+  if (row.mention_rate == null) return <Absence />;
+  const value = percentText(row.mention_rate);
   return (
     <Inline as="span" className="justify-end">
       <CellMeter
@@ -159,7 +156,7 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
 
 /** No answer naming a tracked brand is not applicable, not zero. */
 function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
-  if (row.win_rate != null) return <span>{formatRate(row.win_rate)}</span>;
+  if (row.win_rate != null) return <span>{percentText(row.win_rate)}</span>;
   return <Absence state={winRateAbsence(row)} />;
 }
 

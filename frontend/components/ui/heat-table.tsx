@@ -8,12 +8,12 @@ import {
   TableRow,
   TableRowHeader,
 } from '@/components/ui/table';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { absenceOf } from '@/lib/format';
+import type { DataAvailabilityState, Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** A heat tint from 0 (low) to 1 (high): the accent washed in up to half strength, as `HeatValue`. */
@@ -24,7 +24,7 @@ const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-
 export type HeatValue =
   | { kind: 'value'; text: string; detail: string; tint: number }
   /** Not run, too few, not measured: hatched, never tinted as a value. */
-  | { kind: 'void'; label: string };
+  | { kind: 'void'; state: DataAvailabilityState; label: string };
 
 type HeatTableProps = Readonly<{
   labelledBy: string;
@@ -62,7 +62,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     style={{ backgroundImage: HATCH }}
                   >
                     <i className={textRole('caption')}>
-                      <Absence state={absenceOf(cell.label) ?? 'not_measured'} label={cell.label} />
+                      <Absence state={cell.state} label={cell.label} />
                     </i>
                   </div>
                 ) : (
@@ -152,7 +152,13 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
   );
 }
 
-export type RankChip = { key: string; mark: ReactNode; name: string; detail: string; own: boolean };
+export type RankChip = {
+  key: string;
+  mark: ReactNode;
+  name: string;
+  detail: Formatted;
+  own: boolean;
+};
 
 /**
  * RankTable — each segment's leaders as chips in place columns; your own chip
@@ -207,7 +213,7 @@ export function RankTable({
                         >
                           {chip.mark}
                           <span className="min-w-0 truncate">{chip.name}</span>
-                          <span className="opacity-80">{chip.detail}</span>
+                          <span className="opacity-80">{printed(chip.detail)}</span>
                         </div>
                       ) : null}
                     </td>

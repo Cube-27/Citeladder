@@ -6,6 +6,7 @@ import {
   lastMeasured,
   plottedLines,
   SeriesTable,
+  type Shown,
   shownWith,
   SingleMeasurements,
   summarise,
@@ -13,6 +14,7 @@ import {
   type TrendPoint,
   type TrendSeries,
 } from '@/components/ui/series-data';
+import { formattedText, isAbsent } from '@/lib/format';
 
 export type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/series-data';
 import {
@@ -172,10 +174,12 @@ export function StepChart({
     const at = lastMeasured(line.values);
     const asOf = at >= 0 && at < data.length - 1 ? data[at] : undefined;
     const value = shown(line.values[at]);
-    return asOf ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
+    return asOf && !isAbsent(value) ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
   };
-  const labelText = (line: Pick<Line, 'name' | 'values'>) =>
-    toned.length === 1 ? latestText(line) : `${line.name} ${latestText(line)}`;
+  const labelText = (line: Pick<Line, 'name' | 'values'>) => {
+    const latest = formattedText(latestText(line));
+    return toned.length === 1 ? latest : `${line.name} ${latest}`;
+  };
   const gutter = onGrid(
     Math.min(
       width * 0.35,
@@ -338,7 +342,7 @@ function StepChartTip({
   scale: TrendScale;
   width: number;
   keyed: boolean;
-  shown: (value: number | null | undefined) => string;
+  shown: Shown;
 }>) {
   const point = active === null ? undefined : data[active];
   if (active === null || !point) return null;

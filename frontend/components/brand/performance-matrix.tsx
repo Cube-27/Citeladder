@@ -97,7 +97,11 @@ export function PerformanceMatrix({
           detail: pluralCount(reading.answers, 'answer'),
           tint: place(reading.value),
         }
-      : { kind: 'void', label: READING_LABELS[reading.kind] };
+      : {
+          kind: 'void',
+          state: reading.kind === 'not_recorded' ? 'unavailable' : reading.kind,
+          label: READING_LABELS[reading.kind],
+        };
 
   function body() {
     const state = matrixBodyState(

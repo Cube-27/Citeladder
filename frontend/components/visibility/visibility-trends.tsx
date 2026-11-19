@@ -32,9 +32,9 @@ import {
   toTrendEvents,
   trendAxis,
 } from '@/lib/visibility/trends';
-import { observationLabel } from '@/lib/visibility/vocabulary';
+import { noObservations } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
-import { availabilityLabel, formatCount, formatDisplayDate } from '@/lib/format';
+import { type Absent, formatCount, formatDisplayDate } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
   SHARE_OF_VOICE_HINT,
@@ -112,7 +112,7 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
 function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
   const brand = selected.rankings.find((row) => row.is_brand);
   const deltas = selected.comparison?.deltas;
-  const unmeasured = observationLabel(selected.counts?.state);
+  const unmeasured = noObservations(selected.counts?.state);
   const rate = (key: string, value: number | null | undefined) => {
     const change = deltas?.[key];
     return {
@@ -174,7 +174,7 @@ function sentimentFigure(sentiment: NetSentiment): FigureSegment {
 }
 
 /** Win rate (AV-7): of the answers naming a brand you track, the share naming yours first. */
-function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null): FigureSegment {
+function winRateSegment(brand: RankingRow | undefined, unmeasured: Absent | null): FigureSegment {
   const answers = brand?.win_answers ?? null;
   const rate = brand?.win_rate ?? null;
   const wins = brand?.win_count ?? null;
@@ -183,7 +183,7 @@ function winRateSegment(brand: RankingRow | undefined, unmeasured: string | null
     label: 'Win rate',
     marker: <InfoHint label="Win rate">{WIN_RATE_HINT}</InfoHint>,
     value: unmeasured ?? (rate === null ? null : formatRate(rate)),
-    missingLabel: availabilityLabel(winRateAbsence(brand)),
+    missingState: winRateAbsence(brand),
     delta:
       answers && wins !== null ? (
         <span className={textRole('caption')}>

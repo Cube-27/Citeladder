@@ -4,7 +4,7 @@ import type { EventKind } from '@/components/ui/step-chart-parts';
 import { ChartTable } from '@/components/ui/chart-frame';
 import { textRole } from '@/components/ui/typography';
 import { Value } from '@/components/ui/value';
-import { availabilityLabel } from '@/lib/format';
+import { absent, type Formatted, formattedText } from '@/lib/format';
 
 /* What a time-series chart says without drawing: its data types, its lines,
    the sentence and table a reader who cannot see it gets, and one period's rows.
@@ -64,11 +64,13 @@ export function plottedLines({
   ];
 }
 
-/** A value as the chart prints it, its absence in words. */
+/** A value as the chart prints it, or its absence. */
 export function shownWith(format: (value: number) => string) {
-  return (value: number | null | undefined) =>
-    value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
+  return (value: number | null | undefined): Formatted =>
+    value === null || value === undefined ? absent() : format(value);
 }
+
+export type Shown = (value: number | null | undefined) => Formatted;
 
 export function SeriesTable({
   label,
@@ -80,7 +82,7 @@ export function SeriesTable({
   label: string;
   data: readonly TrendPoint[];
   lines: readonly Readonly<{ name: string; values: readonly (number | null)[] }>[];
-  shown: (value: number | null | undefined) => string;
+  shown: Shown;
   eventLabels: readonly string[];
 }>) {
   return (
@@ -89,7 +91,7 @@ export function SeriesTable({
       columns={data.map((entry) => entry.label)}
       rows={lines.map((line) => ({
         name: line.name,
-        values: data.map((_, index) => shown(line.values[index])),
+        values: data.map((_, index) => formattedText(shown(line.values[index]))),
       }))}
       notes={[
         ...data.flatMap((entry) =>
@@ -108,14 +110,15 @@ export function summarise(
   label: string,
   data: readonly TrendPoint[],
   lines: readonly Readonly<{ name: string; values: readonly (number | null)[] }>[],
-  shown: (value: number | null | undefined) => string,
+  shown: Shown,
 ) {
+  const text = (value: number | null | undefined) => formattedText(shown(value));
   const parts = lines.flatMap((line) => {
     const first = line.values.findIndex((value) => value !== null);
     const last = lastMeasured(line.values);
     if (first < 0) return [`${line.name}: not measured`];
     return [
-      `${line.name}: ${shown(line.values[first])} on ${data[first]?.label ?? ''} to ${shown(line.values[last])} on ${data[last]?.label ?? ''}`,
+      `${line.name}: ${text(line.values[first])} on ${data[first]?.label ?? ''} to ${text(line.values[last])} on ${data[last]?.label ?? ''}`,
     ];
   });
   return `${label}. ${parts.join('; ')}.`;

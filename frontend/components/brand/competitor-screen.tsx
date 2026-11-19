@@ -23,8 +23,8 @@ import {
 } from '@/components/visibility/selection-page';
 import { ApiError } from '@/lib/api/errors';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
-import { formatPositionExact, formatRate, measured } from '@/lib/visibility/dashboard';
-import { availabilityLabel } from '@/lib/format';
+import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import { absent, type Formatted, isAbsent } from '@/lib/format';
 import { sentimentFigureValue } from '@/lib/visibility/perception';
 import { winRateAbsence } from '@/lib/visibility/ranking';
 import { selectionEnabled, topicSelectionParams } from '@/lib/visibility/use-source-analysis';
@@ -122,34 +122,36 @@ function CompetitorBody({
   );
 }
 
-type Reading = { value: string | null; missingLabel?: string };
+type Reading = { value: Formatted | null; missingLabel?: string };
 type Figure = { key: string; label: string; read: (row: RankingRow) => Reading };
 
-const plain = (value: string | null): Reading => ({ value });
+const plain = (value: Formatted | null): Reading => ({ value });
 
 const FIGURES: readonly Figure[] = [
   {
     key: 'visibility',
     label: 'Visibility',
-    read: (row) => plain(measured(formatRate(row.mention_rate))),
+    read: (row) => plain(formatRate(row.mention_rate)),
   },
   {
     key: 'sov',
     label: 'Share of voice',
-    read: (row) => plain(measured(formatRate(row.share_of_voice))),
+    read: (row) => plain(formatRate(row.share_of_voice)),
   },
   {
     key: 'position',
     label: 'Position',
-    read: (row) => plain(measured(formatPositionExact(row.avg_position))),
+    read: (row) => plain(formatPositionExact(row.avg_position)),
   },
   {
     key: 'win',
     label: 'Win rate',
-    read: (row) => ({
-      value: measured(formatRate(row.win_rate ?? null)),
-      missingLabel: availabilityLabel(winRateAbsence(row)),
-    }),
+    read: (row) =>
+      plain(
+        row.win_rate === null || row.win_rate === undefined
+          ? absent(winRateAbsence(row))
+          : formatRate(row.win_rate),
+      ),
   },
   {
     key: 'sentiment',
@@ -167,11 +169,21 @@ function FocusFigures({
   const yours = rankings.find((row) => row.is_brand);
   const segments = FIGURES.map((figure): FigureSegment => {
     const mine = yours ? figure.read(yours) : plain(null);
+    const yourValue = mine.value ?? absent();
     return {
       key: figure.key,
       label: figure.label,
       ...(theirs ? figure.read(theirs) : plain(null)),
-      sub: <>You: {mine.value ?? <Absence state="not_measured" label={mine.missingLabel} />}</>,
+      sub: (
+        <>
+          You:{' '}
+          {isAbsent(yourValue) ? (
+            <Absence state={yourValue.absent} label={mine.missingLabel} />
+          ) : (
+            yourValue
+          )}
+        </>
+      ),
     };
   });
   return <FigureStrip label={`${name} against you`} segments={segments} subLine />;

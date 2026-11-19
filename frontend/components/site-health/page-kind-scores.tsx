@@ -1,6 +1,6 @@
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
 import { ICONS } from '@/lib/icons';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
@@ -115,7 +115,7 @@ function MeasurementValue({
     const caveat = measurementCaveat(state, coverage);
     return (
       <span>
-        <span>{formatScore(score)}</span>
+        <span>{printed(formatScore(score))}</span>
         {caveat ? <span className="sr-only">{caveat}</span> : null}
       </span>
     );

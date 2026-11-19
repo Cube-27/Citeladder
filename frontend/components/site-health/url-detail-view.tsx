@@ -19,8 +19,8 @@ import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
 import type { DeliveryFacts, PageDetail } from '@citeladder/contracts';
+import { formatDisplayTimestamp } from '@/lib/format';
 import {
-  formatAudited,
   pageDisplayTitle,
   pageStatusBadgeValue,
   isFetchFailure,
@@ -152,7 +152,7 @@ function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; action
     {
       label: 'Audited',
       value: detail.last_audited ? (
-        formatAudited(detail.last_audited, timeZone)
+        formatDisplayTimestamp(detail.last_audited, timeZone)
       ) : (
         <Absence state="not_measured" />
       ),
@@ -238,7 +238,7 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
   );
 }
 
-function measured(value: string | null): ReactNode {
+function factValue(value: string | null): ReactNode {
   return value ?? <Absence state="not_measured" />;
 }
 
@@ -265,7 +265,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     <FactList
       layout="ruled"
       label="Delivery"
-      facts={facts.map((fact) => ({ label: fact.label, value: measured(fact.value) }))}
+      facts={facts.map((fact) => ({ label: fact.label, value: factValue(fact.value) }))}
     />
   );
 }

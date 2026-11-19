@@ -24,16 +24,14 @@ import type {
   PerformanceWindow,
 } from '@/lib/api/performance';
 import {
-  availabilityLabel,
+  absent,
   formatCount,
   formatCountry,
   formatMean,
+  type Formatted,
   formatWindowDate,
   percentText,
 } from '@/lib/format';
-
-/** The not-measured placeholder (null metrics — never a fabricated zero). */
-const NOT_MEASURED = availabilityLabel('not_measured');
 
 // ---------------------------------------------------------------------------
 // Range and compare vocabularies
@@ -216,8 +214,10 @@ function isInvertedMetric(key: PerformanceMetricKey): boolean {
 }
 
 /** One metric's display string, or the not-measured placeholder for null. */
-export function formatMetric(key: PerformanceMetricKey, value: number | null): string {
-  if (value === null) return NOT_MEASURED;
+export function formatMetric(key: PerformanceMetricKey, value: number): string;
+export function formatMetric(key: PerformanceMetricKey, value: number | null): Formatted;
+export function formatMetric(key: PerformanceMetricKey, value: number | null): Formatted {
+  if (value === null) return absent();
   if (key === 'ctr') return percentText(value);
   if (key === 'position') return formatMean(value);
   return formatCount(value);
@@ -237,15 +237,6 @@ export function metricDifference(
   if (selected === null || comparison === null || comparison === undefined) return null;
   return selected - comparison;
 }
-
-/**
- * A formatted metric, or `null` where nothing was measured.
- *
- * Same split as the visibility formatters: the words belong on the metric
- * cards above this table, the mark belongs in its cells. See `measured` in
- * `lib/visibility/dashboard.ts`.
- */
-export { measured } from '@/lib/format';
 
 /** What the shared `Delta` needs to draw one metric's difference. */
 export type MetricDelta = {

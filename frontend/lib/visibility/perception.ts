@@ -5,7 +5,7 @@
  */
 import type { NetSentiment } from '@citeladder/contracts';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
-import { availabilityLabel, formatPercent, measured } from '@/lib/format';
+import { availabilityLabel, percentText } from '@/lib/format';
 import type {
   PerceptionCoverage,
   PerceptionResponse,
@@ -57,11 +57,6 @@ export function sentimentFigureValue(sentiment: NetSentiment | null | undefined)
   return { value: reading.kind === 'value' ? reading.net : null, missingLabel };
 }
 
-/** A 0–1 share as a whole percentage, or null. */
-export function formatShare(value: number | null): string | null {
-  return measured(formatPercent(value));
-}
-
 /**
  * A share or net value computed over `basis` counted items (classified
  * mentions, or answers for Recommended): too few below the minimum, never a
@@ -86,7 +81,7 @@ export function shareReading(
   basis: number,
   minimum = PERCEPTION_MIN_CLASSIFIED,
 ): GatedReading {
-  return gated(formatShare(share ?? null), basis, minimum);
+  return gated(share == null ? null : percentText(share), basis, minimum);
 }
 
 export function netReading(

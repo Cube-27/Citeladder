@@ -8,7 +8,7 @@ import { AreaChart } from '@/components/ui/area-chart';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatCount, formatDisplayDate, formatPercent } from '@/lib/format';
+import { formatCount, formatDisplayDate, formatPercent, formattedText } from '@/lib/format';
 import {
   implementationEvents,
   mentionRatePoints,
@@ -47,7 +47,7 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
             events={implementationEvents(history.implementations, timeZone)}
             eventsLabel="Marked implemented"
             yMax={100}
-            yFormat={formatWholePercent}
+            yFormat={(value) => formattedText(formatWholePercent(value))}
             lonePoint="plot"
           />
           <RunData points={points} />

@@ -9,9 +9,8 @@ import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
-import { pluralCount, readableUrl } from '@/lib/format';
+import { percentText, pluralCount, readableUrl } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { formatRate } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
 
@@ -26,12 +25,11 @@ export const VS_PREVIOUS_RUN = {
 
 /**
  * The Command Center's rates arrive already in percent (0–100). They print
- * with AI Visibility's one decimal (`formatRate`), so one run never reads
+ * with AI Visibility's one decimal (`percentText`), so one run never reads
  * 31.3% here and 31% there; a rank prints as AI Visibility prints it
  * (`formatRank`, "#3").
  */
-export const percentFigure = (value: number | null) =>
-  formatRate(value === null ? null : value / 100);
+export const percentFigure = (value: number) => percentText(value / 100);
 
 /**
  * Each engine's brand mention rate in the previous and the current comparable

@@ -33,6 +33,7 @@ import {
   lastMeasured,
   plottedLines,
   SeriesTable,
+  type Shown,
   shownWith,
   SingleMeasurements,
   summarise,
@@ -40,6 +41,7 @@ import {
   type TrendPoint,
   type TrendSeries,
 } from '@/components/ui/series-data';
+import { isAbsent } from '@/lib/format';
 import {
   EventLegend,
   MARKER_SHAPES,
@@ -145,7 +147,7 @@ export function AreaChart({
     const at = lastMeasured(line.values);
     const asOf = at >= 0 && at < data.length - 1 ? data[at] : undefined;
     const value = shown(line.values[at]);
-    return asOf ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
+    return asOf && !isAbsent(value) ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
   };
   const placed = eventsInSpan(data, events);
   return (
@@ -200,7 +202,7 @@ function AreaPlot({
   yMin?: number;
   yMax?: number;
   yFormat: (value: number) => string;
-  shown: (value: number | null | undefined) => string;
+  shown: Shown;
 }>) {
   const id = useId().replaceAll(':', '');
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
@@ -389,7 +391,7 @@ function AreaTip({
   row: ChartRow | undefined;
   data: readonly TrendPoint[];
   lines: readonly Line[];
-  shown: (value: number | null | undefined) => string;
+  shown: Shown;
 }>) {
   if (!active || !row || row.break) return null;
   const point = data[row.index];

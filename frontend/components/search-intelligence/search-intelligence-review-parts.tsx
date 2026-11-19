@@ -17,7 +17,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { formatCount, pluralCount } from '@/lib/format';
+import { formatCount, formattedText, pluralCount } from '@/lib/format';
 import { isRecord } from '@/lib/utils';
 import type { SearchDatasetSelectionRequest } from '@citeladder/contracts/search-intelligence-requests';
 import type {
@@ -288,7 +288,7 @@ export function ReviewFooter({
           Back
         </Button>
         <Button variant="primary" disabled={busy} onClick={onConfirm}>
-          Confirm {runEstimate(review)} analysis
+          Confirm {formattedText(runEstimate(review))} analysis
         </Button>
       </Inline>
     );

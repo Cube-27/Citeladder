@@ -22,7 +22,7 @@ function CoverageScreen({ load }: Readonly<{ load: () => Promise<Coverage> }>) {
   const read = screenState(useQuery({ queryKey: ['coverage'], queryFn: load }), {
     subject: 'crawl coverage',
     shape: { kind: 'figures', count: 1 },
-    measured: isMeasured,
+    hasMeasurement: isMeasured,
     notMeasured: { description: 'Coverage appears after the first crawl finishes.' },
   });
   if (read.kind === 'state') return <StateBlock {...read.state} />;

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import type { Visibility } from '@citeladder/contracts';
 import {
-  PLACEHOLDER,
   brandRuns,
   findActiveRun,
   formatRate,
@@ -97,11 +96,11 @@ describe('visibility dashboard helpers', () => {
     expect(findActiveRun([])).toBeNull();
   });
 
-  it('formats rates and scores, falling back to the placeholder', () => {
+  it('formats rates and scores, a missing one as not measured', () => {
     expect(formatRate(0.5)).toBe('50.0%');
-    expect(formatRate(null)).toBe(PLACEHOLDER);
+    expect(formatRate(null)).toEqual({ absent: 'not_measured' });
     expect(formatScore(72.4)).toBe('72');
-    expect(formatScore(null)).toBe(PLACEHOLDER);
+    expect(formatScore(null)).toEqual({ absent: 'not_measured' });
   });
 
   it('orders engines by canonical order and applies the engine filter', () => {

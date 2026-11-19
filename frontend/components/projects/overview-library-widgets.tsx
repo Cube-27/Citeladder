@@ -9,7 +9,7 @@ import { Delta } from '@/components/ui/delta';
 import { Inline } from '@/components/ui/layout';
 import { AreaChart } from '@/components/ui/area-chart';
 import { textRole } from '@/components/ui/typography';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
 import { ValueLedger } from '@/components/ui/facts';
 import type { Project } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
@@ -188,7 +188,7 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
                     {row.is_brand ? <strong>{row.name}</strong> : row.name}
                   </Inline>
                 ),
-                value: formatRate(row.share_of_voice),
+                value: printed(formatRate(row.share_of_voice)),
               }))}
             />
           ) : (

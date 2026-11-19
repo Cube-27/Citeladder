@@ -48,13 +48,27 @@ export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
 
-const absenceByWord = new Map<unknown, DataAvailabilityState>(
-  ABSENCE_STATES.map((state) => [availabilityLabels[state], state]),
-);
+/**
+ * A formatter's missing value. Tagged, not null and not a word: JSX rejects an
+ * object child, so printing one raw fails the type check, and real text that
+ * equals an absence word ("None") still prints as text.
+ */
+export type Absent = Readonly<{ absent: DataAvailabilityState }>;
 
-/** The kind of absence a formatter's word names, or null for a printed value. */
-export function absenceOf(text: unknown): DataAvailabilityState | null {
-  return absenceByWord.get(text) ?? null;
+/** What a nullable formatter returns: the text, or which absence it is. */
+export type Formatted = string | Absent;
+
+export function absent(state: DataAvailabilityState = 'not_measured'): Absent {
+  return { absent: state };
+}
+
+export function isAbsent(value: unknown): value is Absent {
+  return typeof value === 'object' && value !== null && 'absent' in value;
+}
+
+/** A formatted value as prose (a summary, a label, a CSV cell): absence as its word. */
+export function formattedText(value: Formatted): string {
+  return isAbsent(value) ? availabilityLabel(value.absent) : value;
 }
 
 /**
@@ -67,8 +81,10 @@ export const ABSENCE_MARK = '—';
  * A persisted fraction (0.125) as a percentage ("12.5%"), always one decimal
  * so "92.0%" and "10.0%" read as one format; null is not measured.
  */
-export function formatPercent(fraction: number | null): string {
-  if (fraction === null) return availabilityLabel('not_measured');
+export function formatPercent(fraction: number): string;
+export function formatPercent(fraction: number | null): Formatted;
+export function formatPercent(fraction: number | null): Formatted {
+  if (fraction === null) return absent();
   return percentText(fraction);
 }
 
@@ -273,15 +289,8 @@ export function formatDisplayShortDate(timestamp: string, timeZone: string): str
   }
 }
 
-export function formatScore(score: number | null): string {
-  return score === null || Number.isNaN(score)
-    ? availabilityLabel('not_measured')
-    : `${Math.round(score)}`;
-}
-
-/** Convert the shared unavailable sentinel to a nullable display value. */
-export function measured(value: string): string | null {
-  return value === availabilityLabel('not_measured') ? null : value;
+export function formatScore(score: number | null): Formatted {
+  return score === null || Number.isNaN(score) ? absent() : `${Math.round(score)}`;
 }
 
 const numberFormat = new Intl.NumberFormat('en-US');

@@ -55,7 +55,7 @@ export function SelectionGate({
   const state = screenState(query, {
     subject: 'the selected measurement',
     shape: { kind: 'figures' },
-    measured: isMeasured,
+    hasMeasurement: isMeasured,
     notMeasured: {
       description: 'Results appear here once a run in this selection finishes measuring.',
     },

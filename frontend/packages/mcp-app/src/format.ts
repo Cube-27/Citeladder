@@ -1,5 +1,7 @@
-export const rate = (value: unknown) =>
-  typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'Unavailable';
+import { absent, type Formatted, percentText } from '@/lib/format';
+
+export const rate = (value: unknown): Formatted =>
+  typeof value === 'number' ? percentText(value) : absent('unavailable');
 
 const dayFormat = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',

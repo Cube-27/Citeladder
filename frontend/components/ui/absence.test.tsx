@@ -1,7 +1,9 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { ABSENCE_STATES, absenceOf } from '@/lib/format';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { ABSENCE_STATES } from '@/lib/format';
+import { formatRate } from '@/lib/visibility/dashboard';
 
 import { Absence } from './absence';
 
@@ -14,11 +16,27 @@ describe('Absence', () => {
       const name = face?.querySelector('.sr-only')?.textContent;
       unmount();
       expect(shown).toBe('—');
-      // A formatter's word for the state reads back as that state, so it prints the dash too.
-      expect(absenceOf(name)).toBe(state);
       return name;
     });
     expect(new Set(names).size).toBe(ABSENCE_STATES.length);
-    expect(absenceOf('12.5%')).toBeNull();
+  });
+
+  it('draws the mark for a formatter absence and prints text that reads like one', () => {
+    render(
+      <Table>
+        <TableBody>
+          <TableRow>
+            <TableCell>None</TableCell>
+            <TableCell numeric>{formatRate(null)}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+    const [text, missing] = screen.getAllByRole('cell');
+    expect(text).toHaveTextContent('None');
+    expect(text?.querySelector('[data-absence]')).toBeNull();
+    expect(missing?.querySelector('[data-absence="not_measured"]')).toHaveTextContent(
+      '—Not measured',
+    );
   });
 });

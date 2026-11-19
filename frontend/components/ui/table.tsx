@@ -18,7 +18,13 @@ import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { absenceOf, formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
+import {
+  type Absent,
+  formatTableTimestamp,
+  isAbsent,
+  readableUrl,
+  urlCellText,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -210,10 +216,12 @@ const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
     desktopOnly && desktopOnlyClasses,
   );
 
-/** A formatter's absence word prints as the Absence mark, not the word. */
-function CellContent({ children, numeric }: Readonly<{ children: ReactNode; numeric?: boolean }>) {
-  const absent = absenceOf(children);
-  if (absent) return <Absence state={absent} />;
+/** A formatter's absence prints as the Absence mark; text prints as it is. */
+function CellContent({
+  children,
+  numeric,
+}: Readonly<{ children: ReactNode | Absent; numeric?: boolean }>) {
+  if (isAbsent(children)) return <Absence state={children.absent} />;
   return !numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children;
 }
 
@@ -233,8 +241,9 @@ export function TableCell({
   nested,
   ...props
 }: Readonly<
-  TdHTMLAttributes<HTMLTableCellElement> &
+  Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children'> &
     CellOptions & {
+      children?: ReactNode | Absent;
       /**
        * The first cell of a row grouped under a group-label row: inset one
        * step; `2` for a row under a group nested in another.
