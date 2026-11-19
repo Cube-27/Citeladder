@@ -102,14 +102,22 @@ function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
   return ends;
 }
 
-/** Scrolls the list just enough to show its current row (never the page). */
+/** The list's fade at either end (globals.css `[data-sidebar-scroll]`). */
+const LIST_FADE = 32;
+
+/**
+ * Scrolls the list just enough to show its current row clear of the fades
+ * (never the page); at either end of the list the fade is gone anyway.
+ */
 function revealCurrent(list: HTMLElement) {
   const current = list.querySelector<HTMLElement>('[aria-current="page"]');
   if (!current) return;
   const listBox = list.getBoundingClientRect();
   const rowBox = current.getBoundingClientRect();
-  if (rowBox.top < listBox.top) list.scrollTop -= listBox.top - rowBox.top + 8;
-  else if (rowBox.bottom > listBox.bottom) list.scrollTop += rowBox.bottom - listBox.bottom + 8;
+  const above = listBox.top + LIST_FADE - rowBox.top;
+  const below = rowBox.bottom - (listBox.bottom - LIST_FADE);
+  if (above > 0) list.scrollTop -= above;
+  else if (below > 0) list.scrollTop += below;
 }
 
 /**
@@ -127,7 +135,17 @@ export function SidebarScrollList({
   const ref = useRef<HTMLDivElement>(null);
   const ends = useScrollEnds(ref);
   useEffect(() => {
-    if (ref.current) revealCurrent(ref.current);
+    const list = ref.current;
+    if (!list) return;
+    revealCurrent(list);
+    // The faces loading can move the row; show it again once they have.
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) revealCurrent(list);
+    });
+    return () => {
+      live = false;
+    };
   }, [revealKey]);
   return (
     <div
@@ -259,16 +277,16 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-well rounded-control flex h-[var(--control-md)] p-0.5';
+    : 'bg-well rounded-control flex h-[var(--control-md)] w-full min-w-0 p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
   if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
-  // Each segment is as wide as its label plus 12 a side, and the two share
-  // what is left, so Dashboard's is wider than Agent's; a narrow sidebar cuts the label.
+  // Labelled, a segment is its word (no icon) plus 12 a side, the two sharing
+  // what is left: both fit the 200 sidebar; wider text spacing ends in an ellipsis.
   return cn(
-    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center gap-2 rounded-sm px-3 transition-colors [&_svg]:size-4',
+    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center rounded-sm px-3 transition-colors',
     current ? 'bg-surface text-ink shadow-card' : AT_REST,
   );
 }

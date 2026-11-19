@@ -150,8 +150,8 @@ function PlaceholderSidebar() {
         <div className={sidebarModeTrackClasses(rail)}>
           {MODES.map(({ mode: key, label, icon: Icon }) => (
             <span key={key} className={sidebarModeSegmentClasses(key === mode, rail)}>
-              <Icon aria-hidden />
-              <span className="labelled:not-sr-only sr-only">{label}</span>
+              {rail ? <Icon aria-hidden /> : null}
+              <span className={rail ? 'sr-only' : 'min-w-0 truncate'}>{label}</span>
             </span>
           ))}
         </div>

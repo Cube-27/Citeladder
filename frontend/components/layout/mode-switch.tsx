@@ -11,7 +11,11 @@ import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigatio
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
-/** The two segments; Dashboard's glyph is its own, not Overview's. */
+/**
+ * The two segments. Labelled they are words only (owner, 2026-11-19); the
+ * glyph is the collapsed rail's, where no label shows. Dashboard's is its own,
+ * not Overview's.
+ */
 export const MODES: readonly { mode: NavigationMode; label: string; icon: LucideIcon }[] = [
   { mode: 'dashboard', label: 'Dashboard', icon: PanelsTopLeft },
   { mode: 'agent', label: 'Agent', icon: ICONS.agent },
@@ -41,8 +45,8 @@ export function ModeSwitch({ rail }: Readonly<{ rail: boolean }>) {
               aria-current={selected ? 'true' : undefined}
               className={sidebarModeSegmentClasses(selected, rail)}
             >
-              <Icon aria-hidden />
-              <span data-sidebar-text="title" className="labelled:not-sr-only sr-only truncate">
+              {rail ? <Icon aria-hidden /> : null}
+              <span data-sidebar-text="title" className={rail ? 'sr-only' : 'min-w-0 truncate'}>
                 {label}
               </span>
             </Link>
