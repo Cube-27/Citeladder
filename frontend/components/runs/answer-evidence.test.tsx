@@ -200,7 +200,7 @@ describe('Answer transcript', () => {
     const { unmount } = renderAnswer({
       answer_text: [
         'See [Rival](https://rival.example/a), [our page](https://www.acme.example/plans)',
-        'and [Rival again](https://rival.example/a), not ![a picture](https://img.example/p.png)',
+        'and [Rival [again](https://rival.example/a), not ![a picture](https://img.example/p.png)',
         'or [a script](javascript:alert(1)).',
       ].join(' '),
       answer_formats: { kind: 'observed', formats: [], in_text_links: 2 },

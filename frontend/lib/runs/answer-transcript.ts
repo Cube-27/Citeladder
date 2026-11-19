@@ -126,8 +126,9 @@ export function answerBrands(
     .map(({ brand }) => brand);
 }
 
-// The analysis's own in-text link pattern: a markdown link that is not an image.
-const MARKDOWN_LINK = /(?<!!)\[[^\]]*\]\((https?:\/\/[^\s)]+)/gu;
+// A markdown link that is not an image, as the analysis counts them. The text
+// excludes `[` so the scan stays linear; a nested `[` still yields the same URL.
+const MARKDOWN_LINK = /(?<!!)\[[^[\]]*\]\((https?:\/\/[^\s)]+)/gu;
 
 const bareHost = (host: string) =>
   host
