@@ -37,23 +37,9 @@
     radial-gradient(70% 75% at 50% 50%, var(--color-spot-halo), transparent),
     radial-gradient(45% 60% at 100% 100%, var(--color-spot-warm), transparent),
     linear-gradient(180deg, var(--color-spot-from), var(--color-spot-to));
-  box-shadow: none;
-}
-
-/* Heavy film grain over the backdrop's soft gradient, blended with
-   `overlay` so it speckles the colour rather than greying it. It sits under
-   the well. */
-
-.cl-frame-card::before {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--site-noise);
-  content: '';
-  mix-blend-mode: overlay;
-  opacity: 0.7;
-  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px var(--color-site-well-edge),
+    inset 0 1px 0 var(--color-site-well-highlight);
 }
 
 /* The well holds the screen; its height is the screen's. In a cell taller
@@ -211,14 +197,14 @@
   border: 0;
 }
 
-/* The picture's own white card, edged by a hairline ring, never a shadow;
-   the backdrop's centred halo lights it from behind. */
+/* The picture's own elevated app card, framed by a hairline ring and soft
+   ambient depth over the studio backdrop. */
 
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
   background: var(--color-surface);
-  box-shadow: 0 0 0 1px var(--color-line);
+  box-shadow: var(--shadow-pop);
 }
 
 @media (max-width: 767px) {
@@ -240,6 +226,11 @@
 
 .cl-frame--hero > .cl-frame-card {
   padding-bottom: 0;
+}
+
+.cl-frame--hero > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
 }
 
 .cl-frame--hero .cl-frame-screen > .cl-screen {

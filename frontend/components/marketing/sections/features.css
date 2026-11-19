@@ -13,16 +13,18 @@
   padding: 16px;
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
-  background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
   color: var(--color-ink);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
   a.cl-fcard:hover {
-    background-color: color-mix(in oklch, var(--color-ink) 5%, var(--cl-tint));
+    background-color: color-mix(in oklch, var(--color-ink) 3%, var(--cl-tint));
+    box-shadow: var(--shadow-xs);
   }
 }
 
@@ -82,7 +84,7 @@
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
-  letter-spacing: var(--text-heading-lg--letter-spacing);
+  letter-spacing: -0.015em;
 }
 
 .cl-fcard-text {

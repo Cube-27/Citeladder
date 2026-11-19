@@ -41,7 +41,7 @@
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
-  letter-spacing: var(--text-heading-lg--letter-spacing);
+  letter-spacing: -0.015em;
 }
 
 .cl-step-text {
@@ -200,6 +200,8 @@
   position: absolute;
   z-index: -1;
   inset: 0 calc(50% - 50vw);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
   background:
     radial-gradient(34% 70% at 50% 50%, var(--color-site-band-scrim), transparent 80%),
     radial-gradient(45% 120% at 6% 0%, var(--color-site-band-mist), transparent 70%),
@@ -214,20 +216,6 @@
       var(--color-site-band-to) 100%
     );
   content: '';
-}
-
-/* Heavy film grain over the whole band, blended with `overlay` so the
-   gradient reads as a grainy print. */
-
-.cl-cta::after {
-  position: absolute;
-  z-index: -1;
-  inset: 0 calc(50% - 50vw);
-  background: var(--site-noise);
-  content: '';
-  mix-blend-mode: overlay;
-  opacity: 0.6;
-  pointer-events: none;
 }
 
 .cl-cta-copy {
@@ -247,7 +235,7 @@
   font-size: var(--text-site-section);
   font-weight: 400;
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 

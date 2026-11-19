@@ -74,11 +74,12 @@
   overflow: hidden;
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
-  background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
   color: var(--color-ink);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 /* Once mounted, a closed card opens on a press anywhere on it. */
@@ -94,7 +95,8 @@
 
 @media (hover: hover) and (pointer: fine) {
   .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
-    background-color: color-mix(in oklch, var(--color-ink) 5%, var(--cl-tint));
+    background-color: color-mix(in oklch, var(--color-ink) 3%, var(--cl-tint));
+    box-shadow: var(--shadow-xs);
   }
 
   .cl-railcard-link:hover {
@@ -127,7 +129,7 @@
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
-  letter-spacing: var(--text-heading-lg--letter-spacing);
+  letter-spacing: -0.015em;
 }
 
 /* The plus turns a quarter to a close when the card is open. Before the
@@ -141,11 +143,14 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--color-line-strong);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-full);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-ink);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .cl-rail:not([data-ready]) .cl-railcard-toggle {
@@ -264,12 +269,17 @@
   line-height: var(--text-body--line-height);
 }
 
-/* Both images: the bare screen with its shadow. */
+/* Both images: the bare screen with its crisp inner card elevation. */
 
 :is(.cl-railcard-shot, .cl-railcard-page) :is(.cl-frame, .cl-frame-card) {
   padding: 0;
   border-radius: 0;
   background: none;
+  box-shadow: none;
+}
+
+:is(.cl-railcard-shot, .cl-railcard-page) .cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  box-shadow: var(--shadow-xs);
 }
 
 /* A miniature, as in the reference: the screen lays out at 1/0.7 of the

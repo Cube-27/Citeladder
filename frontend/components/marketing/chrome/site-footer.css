@@ -174,14 +174,15 @@
   gap: 4px;
   min-height: 24px;
   border-radius: var(--radius-xs);
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .cl-footer-col a svg {
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-muted);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -214,7 +215,7 @@
 
 .cl-footer-copy {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

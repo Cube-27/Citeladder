@@ -5,10 +5,9 @@
   height: 100%;
   border-radius: var(--site-radius-card);
   background:
-    var(--site-well-shade),
     radial-gradient(120% 120% at 50% 40%, transparent 50%, var(--site-band-vignette)),
     var(--tint-neutral);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: var(--shadow-edge);
   container-type: inline-size;
 }
 

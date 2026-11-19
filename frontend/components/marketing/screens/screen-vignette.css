@@ -23,11 +23,12 @@
   text-align: left;
 }
 
-/* On a FeatureCard's well the vignette is its own white inner card (12px). */
+/* On a FeatureCard's well the vignette is its own elevated inner card. */
 
 .cl-fcard .cl-vig {
   border-radius: var(--site-radius-inner);
   background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .cl-vig p {

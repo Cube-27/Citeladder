@@ -71,10 +71,10 @@
   background: var(--color-ground);
 }
 
-/* In dark the website's sunken fill is above its cards, so the ground is the paper. */
+/* In dark the canvas sits deeper than the sidebar chrome, so cards step up cleanly. */
 :root[data-theme='dark'] .cl-screen--app {
-  --color-ground: var(--color-paper);
-  --color-chrome: color-mix(in oklch, var(--color-paper), var(--color-surface) 55%);
+  --color-ground: var(--color-surface-sunken);
+  --color-chrome: var(--color-site-well);
 }
 
 /* Insights runs past the hero frame's foot, which cuts it inside the competitors table. */

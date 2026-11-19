@@ -889,8 +889,8 @@
    a docs article title keeps its own fallback. */
 [data-marketing-surface] {
   /* Surfaces take three radii, so an inner card stays concentric in a card's
-     8px inset; controls and chips take the system's 2–8. */
-  --site-radius-inner: 4px;
+     inset; controls and chips take the system's 2–8. */
+  --site-radius-inner: 8px;
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
   --text-heading-lg: 1.25rem;
@@ -941,68 +941,109 @@
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
-/* The marketing site's effects palette (docs and the app keep theirs): big
-   effects are soft warm light drawn from the accent; small marks, rails and
-   wells are zero-chroma grey (owner, 2026-11-19). */
+/* The marketing site's refined neutral studio palette: crisp three-tier ink
+   hierarchy, clean elevated surfaces with subtle top specular rims, and
+   quiet studio backdrops behind product images (light and dark). */
 :root[data-marketing-surface] {
-  --color-site-mark: oklch(55.6% 0 0);
-  --color-site-chip: oklch(94.6% 0 0);
-  --color-site-chip-ink: oklch(26.9% 0 0);
-  --color-site-guide: oklch(43.9% 0 0 / 16%);
-  --color-site-rule-from: oklch(80.8% 0.11 55 / 55%);
-  --color-site-rule-to: oklch(63.4% 0.1973 37.5 / 55%);
-  --color-site-well: oklch(97% 0 0);
-  --color-site-well-shade: oklch(25% 0 0 / 7%);
-  --color-site-well-edge: oklch(25% 0 0 / 7%);
-  --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
-  --color-spot-from: oklch(95% 0.03 55);
-  --color-spot-to: oklch(97.6% 0.012 65);
-  --color-spot-glow: oklch(76% 0.15 45 / 35%);
-  --color-spot-halo: oklch(86% 0.08 55 / 35%);
-  --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
-  --color-spot-vignette: oklch(55% 0.12 40 / 10%);
-  /* The closing band: pale warm silk with ink text. Contrast is checked over
-     every stop with any two layers stacked. */
-  --color-site-band-from: oklch(97.6% 0.018 70);
-  --color-site-band-mid: oklch(94.4% 0.04 58);
-  --color-site-band-to: oklch(91% 0.06 50);
-  --color-site-band-mist: oklch(100% 0 0 / 70%);
-  --color-site-band-streak: oklch(100% 0 0 / 60%);
-  --color-site-band-warm: oklch(88% 0.07 48 / 35%);
-  --color-site-band-glow: oklch(86.5% 0.08 46 / 50%);
-  --color-site-band-scrim: oklch(99% 0.008 70 / 55%);
-  --color-site-band-ink-secondary: oklch(43.9% 0 0);
-  --color-site-band-line: oklch(17.8% 0 0 / 80%);
+  --color-ink: oklch(16.5% 0.005 265);
+  --color-ink-hover: oklch(26% 0.006 265);
+  --color-ink-secondary: oklch(43.5% 0.008 265);
+  --color-ink-muted: oklch(51% 0.008 265);
+  --color-line: oklch(91.5% 0.003 260);
+  --color-line-strong: oklch(84.5% 0.004 260);
+  --color-site-mark: oklch(52% 0.006 265);
+  --color-site-chip: oklch(94.8% 0.003 260);
+  --color-site-chip-ink: oklch(28% 0.006 265);
+  --color-site-guide: oklch(0% 0 0 / 6%);
+  --color-site-rule-from: oklch(0% 0 0 / 7%);
+  --color-site-rule-to: oklch(0% 0 0 / 12%);
+  --color-site-well: oklch(97.3% 0.002 260);
+  --color-site-well-shade: transparent;
+  --color-site-well-highlight: oklch(100% 0 0 / 90%);
+  --color-site-well-edge: oklch(0% 0 0 / 7%);
+  --color-site-vignette: oklch(72% 0.12 42 / 5%);
+  --color-spot-from: oklch(97.4% 0.003 260);
+  --color-spot-to: oklch(94.6% 0.005 258);
+  --color-spot-glow: oklch(100% 0 0 / 90%);
+  --color-spot-halo: oklch(98.5% 0.006 55 / 40%);
+  --color-spot-warm: oklch(72% 0.12 42 / 8%);
+  --color-spot-vignette: oklch(20% 0.008 260 / 4%);
+  /* The closing band: clean luminous studio surface with whisper-warm light. */
+  --color-site-band-from: oklch(97.6% 0.004 260);
+  --color-site-band-mid: oklch(96.4% 0.005 258);
+  --color-site-band-to: oklch(95.6% 0.012 56);
+  --color-site-band-mist: oklch(100% 0 0 / 85%);
+  --color-site-band-streak: oklch(100% 0 0 / 55%);
+  --color-site-band-warm: oklch(90% 0.035 50 / 20%);
+  --color-site-band-glow: oklch(86% 0.05 46 / 20%);
+  --color-site-band-scrim: oklch(99% 0.002 260 / 50%);
+  --color-site-band-ink-secondary: oklch(43.5% 0.008 265);
+  --color-site-band-line: oklch(16.5% 0.005 265 / 22%);
+  --shadow-edge:
+    inset 0 0 0 1px var(--color-site-well-edge),
+    inset 0 1px 0 var(--color-site-well-highlight),
+    0 1px 2px oklch(0% 0 0 / 2.5%);
+  --shadow-xs:
+    0 0 0 1px oklch(0% 0 0 / 7%),
+    0 2px 6px oklch(0% 0 0 / 4%),
+    0 10px 24px -8px oklch(15% 0.01 260 / 9%);
+  --shadow-pop:
+    0 0 0 1px oklch(0% 0 0 / 7%),
+    0 2px 6px oklch(0% 0 0 / 4%),
+    0 20px 48px -12px oklch(15% 0.01 260 / 13%);
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
-  --color-site-mark: oklch(70.8% 0 0);
-  --color-site-chip: oklch(26.9% 0 0);
-  --color-site-chip-ink: oklch(92.2% 0 0);
-  --color-site-guide: oklch(100% 0 0 / 9%);
-  --color-site-rule-from: oklch(55% 0.13 40 / 55%);
-  --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
-  --color-site-well: oklch(18.2% 0 0);
-  --color-site-well-shade: oklch(0% 0 0 / 55%);
-  --color-site-well-edge: oklch(100% 0 0 / 6%);
-  --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
-  --color-spot-from: oklch(22% 0.04 40);
-  --color-spot-to: oklch(15% 0.015 40);
-  --color-spot-glow: oklch(70.3% 0.194 39.3 / 35%);
-  --color-spot-halo: oklch(60% 0.15 40 / 22%);
-  --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
-  --color-spot-vignette: oklch(0% 0 0 / 55%);
-  /* Deep, low-glow warm on near-black with light text. */
-  --color-site-band-from: oklch(17% 0.03 45);
-  --color-site-band-mid: oklch(13% 0.018 42);
-  --color-site-band-to: oklch(10% 0.008 40);
-  --color-site-band-mist: oklch(32% 0.09 40 / 30%);
-  --color-site-band-streak: oklch(100% 0 0 / 5%);
-  --color-site-band-warm: oklch(70.3% 0.194 39.3 / 10%);
-  --color-site-band-glow: oklch(24% 0.06 40 / 55%);
-  --color-site-band-scrim: oklch(9% 0 0 / 50%);
-  --color-site-band-ink-secondary: oklch(88% 0 0);
-  --color-site-band-line: oklch(100% 0 0 / 45%);
+  --color-site-page: oklch(10% 0.003 265);
+  --color-paper: oklch(10% 0.003 265);
+  --color-surface: oklch(20.4% 0.005 265);
+  --color-surface-sunken: oklch(13% 0.004 265);
+  --color-ink: oklch(97.2% 0.002 265);
+  --color-ink-hover: oklch(88% 0.004 265);
+  --color-ink-secondary: oklch(76.5% 0.006 265);
+  --color-ink-muted: oklch(65.5% 0.006 265);
+  --color-line: oklch(27% 0.005 265);
+  --color-line-strong: oklch(34% 0.006 265);
+  --color-site-mark: oklch(66% 0.006 265);
+  --color-site-chip: oklch(23% 0.005 265);
+  --color-site-chip-ink: oklch(93% 0.003 265);
+  --color-site-guide: oklch(100% 0 0 / 6%);
+  --color-site-rule-from: oklch(100% 0 0 / 8%);
+  --color-site-rule-to: oklch(100% 0 0 / 14%);
+  --color-site-well: oklch(15.6% 0.005 265);
+  --color-site-well-shade: transparent;
+  --color-site-well-highlight: oklch(100% 0 0 / 7%);
+  --color-site-well-edge: oklch(100% 0 0 / 9%);
+  --color-site-vignette: oklch(70.3% 0.194 39.3 / 6%);
+  --color-spot-from: oklch(17.2% 0.006 265);
+  --color-spot-to: oklch(12.2% 0.004 265);
+  --color-spot-glow: oklch(100% 0 0 / 6%);
+  --color-spot-halo: oklch(70.3% 0.194 39.3 / 8%);
+  --color-spot-warm: oklch(70.3% 0.194 39.3 / 7%);
+  --color-spot-vignette: oklch(0% 0 0 / 45%);
+  /* Sleek dark obsidian closing band with quiet ambient sheen. */
+  --color-site-band-from: oklch(14.5% 0.006 265);
+  --color-site-band-mid: oklch(12.5% 0.005 265);
+  --color-site-band-to: oklch(14% 0.012 45);
+  --color-site-band-mist: oklch(100% 0 0 / 4%);
+  --color-site-band-streak: oklch(100% 0 0 / 3%);
+  --color-site-band-warm: oklch(70.3% 0.194 39.3 / 7%);
+  --color-site-band-glow: oklch(70.3% 0.194 39.3 / 10%);
+  --color-site-band-scrim: oklch(10% 0.003 265 / 45%);
+  --color-site-band-ink-secondary: oklch(78% 0.006 265);
+  --color-site-band-line: oklch(100% 0 0 / 28%);
+  --shadow-edge:
+    inset 0 0 0 1px var(--color-site-well-edge),
+    inset 0 1px 0 var(--color-site-well-highlight),
+    0 1px 2px oklch(0% 0 0 / 30%);
+  --shadow-xs:
+    0 0 0 1px oklch(100% 0 0 / 11%),
+    0 2px 8px oklch(0% 0 0 / 40%),
+    0 12px 28px -8px oklch(0% 0 0 / 60%);
+  --shadow-pop:
+    0 0 0 1px oklch(100% 0 0 / 11%),
+    0 2px 8px oklch(0% 0 0 / 45%),
+    0 24px 56px -12px oklch(0% 0 0 / 75%);
 }
 
 /* A secondary (outline) button's edge is the control line, at least 3:1 on

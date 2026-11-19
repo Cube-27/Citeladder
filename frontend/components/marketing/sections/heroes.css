@@ -49,7 +49,7 @@
   font-size: var(--text-site-title);
   font-weight: 400;
   line-height: var(--text-site-title--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
