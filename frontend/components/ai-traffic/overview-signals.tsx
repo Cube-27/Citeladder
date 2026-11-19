@@ -138,9 +138,9 @@ export function overviewMeasured(data: Overview): boolean {
 const CRAWL_REQUESTS = 'Crawler requests';
 
 const CRAWL_EMPTY = {
-  not_connected: 'Connect crawl logs to observe recognized automated requests.',
-  awaiting_data: 'Source connected. Awaiting the first accepted batch.',
-  connected: 'No matching requests were observed in the available logs. Coverage is incomplete.',
+  not_connected: 'Crawl logs are not connected.',
+  awaiting_data: 'Awaiting the first accepted batch.',
+  connected: 'No matching requests were observed. Coverage is incomplete.',
 } as const;
 
 function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] {
@@ -153,8 +153,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
         missingState: 'unavailable',
         marker: (
           <WhyAbsent label={CRAWL_REQUESTS}>
-            Crawl log collection is not available for this workspace yet. AI referrals and tracked
-            citations are measured without it.
+            Crawl log collection is not available for this workspace yet.
           </WhyAbsent>
         ),
       },
@@ -165,7 +164,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       : connectionLabel(crawl.connection);
   const failed = crawl.failed_verification_requests ?? 0;
   const failedNote =
-    failed > 0 ? `${formatCount(failed)} failed verification requests are shown separately.` : null;
+    failed > 0 ? `${formatCount(failed)} failed verification requests shown separately.` : null;
   if (crawl.requests === null)
     return [noRequestsFigure({ connection: crawl.connection, status, failedNote })];
   return [
@@ -190,9 +189,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       label: 'Error share',
       value: crawl.error_share === null ? null : errorShare(crawl.error_share),
       missingState: 'unavailable',
-      sub: failedNote
-        ? `Within the selected requests. ${failedNote}`
-        : 'Within the selected requests.',
+      sub: failedNote ?? undefined,
     },
   ];
 }
@@ -298,19 +295,19 @@ function referralSetup(ga4: SourceStep | null): { note: string; action: string |
   switch (ga4.kind) {
     case 'connect':
       return {
-        note: 'Connect GA4 and sync a source/medium report to measure referral sessions.',
+        note: 'GA4 is not connected.',
         action: 'Connect GA4',
       };
     case 'reconnect':
       return { note: 'GA4 needs your consent again.', action: 'Reconnect GA4' };
     case 'choose':
       return {
-        note: 'GA4 is connected. Choose its property to import referral sessions.',
+        note: 'No GA4 property chosen.',
         action: 'Choose GA4 property',
       };
     case 'ready':
       return {
-        note: 'GA4 is connected. Referral sessions appear after its next import.',
+        note: 'Awaiting the next GA4 import.',
         action: null,
       };
     default:
@@ -331,8 +328,8 @@ function citationFigure(citations: Overview['citations']): FigureSegment {
 }
 
 const COVERAGE_NOTE: Partial<Record<CrawlSummary['coverage'], string>> = {
-  partial: 'Coverage is incomplete. These are observations within the available logs.',
-  declared_complete: 'Complete within the client-reported file scan.',
+  partial: 'Coverage is incomplete.',
+  declared_complete: 'Complete within the reported file scan.',
 };
 
 /** What qualifies every crawl figure in the window: its coverage and when it was processed. */
@@ -346,8 +343,7 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
       {coverage && crawl.last_processed_at ? ' ' : null}
       {crawl.last_processed_at ? (
         <>
-          Reporting timezone: {crawl.reporting_timezone}. Processed{' '}
-          <DisplayTime value={crawl.last_processed_at} />.
+          {crawl.reporting_timezone} · Processed <DisplayTime value={crawl.last_processed_at} />.
         </>
       ) : null}
     </SectionDescription>

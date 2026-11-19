@@ -118,7 +118,7 @@ it('keeps failed verification requests and unavailable active bots visible', () 
     figures({ crawl: { ...crawl, failed_verification_requests: 3 } }),
   );
   expect(whyAbsent('Crawler requests')).toHaveAccessibleDescription(
-    'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
+    'No matching requests were observed. Coverage is incomplete. 3 failed verification requests shown separately.',
   );
   view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: null } }));
   expect(basis('Path-level pages')).toHaveAccessibleDescription(/Active bots unavailable/);

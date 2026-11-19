@@ -26,7 +26,6 @@ import {
 import {
   Section,
   SectionContent,
-  SectionDescription,
   SectionHeader,
   SectionStack,
   SectionTitle,
@@ -87,7 +86,6 @@ export function AiReferralsDashboard({
  */
 function TrendCard({
   title,
-  description,
   badge,
   points,
   unit,
@@ -95,7 +93,6 @@ function TrendCard({
   formatTick,
 }: Readonly<{
   title: string;
-  description?: string;
   badge: string;
   points: TrendPoint[];
   /** What the line counts: its name in the legend and the table. */
@@ -107,7 +104,6 @@ function TrendCard({
     <Section>
       <SectionHeader actions={<span className="type-caption">{badge}</span>}>
         <SectionTitle>{title}</SectionTitle>
-        {description ? <SectionDescription>{description}</SectionDescription> : null}
       </SectionHeader>
       <SectionContent>
         <AreaChart
@@ -145,7 +141,6 @@ function ReferralShareCard({ data }: Readonly<{ data: AiReferrals }>) {
   return (
     <TrendCard
       title="Share of GA4 sessions"
-      description="AI-referred sessions divided by all sessions in the same GA4 source report"
       badge={bucketCountLabel(data.granularity, data.referral_share.length)}
       points={toPercentChartPoints(data.referral_share, {
         granularity: data.granularity,
@@ -167,9 +162,8 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
         <>
           {formatCount(total)} identified sessions
           {data.window_start && data.window_end
-            ? ` for ${formatWindowDate(data.window_start)} – ${formatWindowDate(data.window_end)}`
+            ? ` · ${formatWindowDate(data.window_start)} – ${formatWindowDate(data.window_end)}`
             : ''}
-          . Shares use all GA4 source-report sessions as the denominator.
         </>
       }
     >
@@ -183,8 +177,8 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
                 kind: 'empty',
                 icon: SearchX,
                 heading: measured
-                  ? 'GA4 data was measured, but no sessions matched a known AI source in this window'
-                  : 'AI-referral classification is not complete for this window, so source totals are unavailable',
+                  ? 'No sessions matched a known AI source in this window'
+                  : 'Source totals unavailable: classification is not complete for this window',
               }
         }
       >

@@ -196,7 +196,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = await openEmptySetup();
     await user.click(await screen.findByRole('radio', { name: /Upload file/ }));
-    expect(screen.getByText(/First, create an upload source/)).toBeVisible();
+    expect(screen.getByText('Create an upload source first.')).toBeVisible();
     expect(screen.queryByRole('combobox', { name: 'Upload source' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create source' }));
     expect(await screen.findByRole('combobox', { name: 'Upload source' })).toHaveTextContent(

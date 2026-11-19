@@ -34,11 +34,9 @@ const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], st
     'Map timestamp, host, path, method, status and user_agent to the documented JSON fields. Batch at least 60 seconds apart; send empty heartbeat batches when no crawler requests occur.',
 };
 const UPLOAD_PROCESSING_COPY: Record<UploadProcessing, string> = {
-  processing:
-    'Upload complete. Results appear here once processing finishes, usually within a few minutes.',
-  delayed:
-    'Upload complete. Processing is taking longer than usual; reload this page later to see the results.',
-  processed: 'Upload processed. Coverage for these days is declared by the file.',
+  processing: 'Upload complete. Processing…',
+  delayed: 'Upload complete. Processing is taking longer than usual.',
+  processed: 'Upload processed.',
 };
 export function CrawlLogSetup({
   model,
@@ -305,12 +303,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
     (s) => s.kind === 'upload' && s.status === 'active',
   );
   if (!uploadSources.length) {
-    return (
-      <Notice tone="info">
-        First, create an upload source using the settings above and Create source below. Then choose
-        your log file here to upload recognized requests.
-      </Notice>
-    );
+    return <Notice tone="info">Create an upload source first.</Notice>;
   }
   return (
     <Stack gap="workspace">

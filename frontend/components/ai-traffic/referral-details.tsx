@@ -28,10 +28,7 @@ const LANDING_COLUMNS: readonly DataTableColumn[] = [
 
 export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {
   return (
-    <TitledSection
-      title="Property-wide channel comparison"
-      description="GA4 sessions, engagement rate and key events as configured in your property."
-    >
+    <TitledSection title="Property-wide channel comparison">
       <DataTable label="Property-wide channel comparison" columns={COMPARISON_COLUMNS}>
         {data.channel_comparison.map((r) => (
           <TableRow key={r.channel}>
@@ -57,10 +54,10 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
       title="AI referral landing pages"
       description={
         <>
-          Pages on your site · {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
+          {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
           {data.unattributed_landing === null
-            ? 'Sessions whose landing page could not be identified: unavailable.'
-            : `${formatCount(data.unattributed_landing)} sessions whose landing page could not be identified.`}
+            ? 'Unidentified landing pages: unavailable'
+            : `${formatCount(data.unattributed_landing)} sessions with an unidentified landing page`}
         </>
       }
     >
@@ -73,8 +70,7 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
             : {
                 kind: 'empty',
                 icon: SearchX,
-                heading:
-                  'No identifiable AI referrals to joinable landing paths were observed in the saved report',
+                heading: 'No AI referral landing pages in this report',
               }
         }
       >
@@ -121,14 +117,10 @@ export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {
   return (
     <>
       <p className="type-caption">
-        Property-wide source report · {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
-        {excluded}
+        {data.reporting_timezone ?? 'Timezone unavailable'} · {excluded}
       </p>
       {flags.length ? (
-        <Notice tone="info">
-          GA4 quality: {flags.map(reasonLabel).join('; ')}. Missing or flagged observations are
-          unavailable.
-        </Notice>
+        <Notice tone="info">GA4 quality: {flags.map(reasonLabel).join('; ')}.</Notice>
       ) : null}
     </>
   );

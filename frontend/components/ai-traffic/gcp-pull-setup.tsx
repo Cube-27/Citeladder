@@ -36,11 +36,7 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
   const { subscription, setSubscription, sampleRate, setSampleRate } = model;
   return (
     <>
-      <Field
-        label="Pub/Sub subscription"
-        hint="The full path. The commands shown after you create the source create it."
-        className="desktop:col-span-2"
-      >
+      <Field label="Pub/Sub subscription" hint="Full path" className="desktop:col-span-2">
         {(field) => (
           <Input
             {...field}
@@ -52,7 +48,7 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
       </Field>
       <Field
         label="Load balancer logging sample rate"
-        hint="Between 0.001 and 1, as set on the backend service. Below 1, coverage stays partial."
+        hint="0.001–1, as set on the backend service. Below 1, coverage stays partial."
       >
         {(field) => (
           <Input
@@ -71,10 +67,7 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
 export function GcpSteps() {
   return (
     <p className="type-body text-ink-2">
-      CiteLadder pulls a Pub/Sub subscription in your Google Cloud project that a Cloud Logging sink
-      fills with crawler requests to your load balancer or Cloud Run services. Create the source
-      first: the setup commands then include its verification label. You pay Google for log routing
-      and Pub/Sub, which the crawler-only filter keeps small.
+      Create the source first to get its setup commands. You pay Google for log routing and Pub/Sub.
     </p>
   );
 }
@@ -93,8 +86,7 @@ export function GcpSourceSetup({
   return (
     <Stack>
       <p className="type-body text-ink-2">
-        Run these in Cloud Shell, then enable logging on each load balancer backend service. The
-        label lets CiteLadder confirm the subscription is yours.
+        Run these in Cloud Shell, then enable logging on each load balancer backend service.
       </p>
       <CodeText
         label="Copy commands"
@@ -115,11 +107,7 @@ export function GcpSourceSetup({
       >
         Verify subscription
       </Button>
-      {outcome?.verified ? (
-        <Notice tone="positive">
-          Verified. CiteLadder pulls the subscription every few minutes.
-        </Notice>
-      ) : null}
+      {outcome?.verified ? <Notice tone="positive">Verified.</Notice> : null}
       {outcome && !outcome.verified ? (
         <Notice tone="negative">
           {verificationFailureLabel(outcome.failure ?? 'unavailable')}
@@ -179,10 +167,7 @@ function SinkFilterUpdate({
   const { confirmFilter } = useGcpPullActions(projectId, workspaceId);
   return (
     <Stack as="section" aria-label={`Sink filter update for ${source.host}`}>
-      <Notice tone="warning">
-        Update your sink filter. CiteLadder recognizes new crawlers; until the sink uses this
-        filter, coverage stays partial.
-      </Notice>
+      <Notice tone="warning">Update your sink filter. Until then, coverage stays partial.</Notice>
       <CodeText label="Copy filter" value={gcp.log_filter} />
       {canManage ? (
         <Button

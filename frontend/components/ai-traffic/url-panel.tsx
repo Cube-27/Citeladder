@@ -92,7 +92,6 @@ export function UrlPanel({
         if (!open) onClose();
       }}
       title={page ? <UrlText url={page.display_path} /> : 'Path-level AI traffic'}
-      description="Requests, sessions and citations are counted separately."
     >
       {query.isLoading ? (
         <StateBlock
@@ -152,13 +151,7 @@ function UrlEvidence({
 }>) {
   const page = data.page;
   if (!page)
-    return (
-      <StateBlock
-        kind="empty"
-        inline
-        message="No joinable evidence is available for this path in the selected window."
-      />
-    );
+    return <StateBlock kind="empty" inline message="No evidence for this path in this window." />;
   const tab = (name: string) =>
     projectDestination('/ai-traffic', new URLSearchParams({ tab: name }), projectId);
   const website = projectDestination('/site', null, projectId);
@@ -228,15 +221,11 @@ function UrlEvidence({
         ]}
       />
       <p className={textRole('caption')}>
-        Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
-        {data.provenance.bounded ? ' It reached its display bound.' : null}
+        {data.provenance.bounded ? 'Timeline reached its display bound. ' : null}
         {data.provenance.crawl_id ? (
-          <>
-            {' '}
-            <PanelLink to={website}>View Site health pages</PanelLink>
-          </>
+          <PanelLink to={website}>View Site health pages</PanelLink>
         ) : (
-          ' Inventory unavailable'
+          'Inventory unavailable'
         )}
       </p>
     </Stack>
