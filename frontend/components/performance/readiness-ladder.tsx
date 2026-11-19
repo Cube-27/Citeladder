@@ -43,12 +43,14 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
 
 /** What the user should understand, in one line, at each stage. */
 /** `not_connected` belongs to the data source setup, which can act on it. */
-const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, string | null> = {
+const EXPLANATION: Record<
+  Exclude<ProjectReadinessStage, 'not_connected' | 'analysis_ready'>,
+  string
+> = {
   connected: 'The first history import has not started yet.',
   importing: 'Numbers below are not final.',
   import_failed: 'The history import finished without importing anything.',
   core_data_ready: 'CiteLadder’s own analysis is still computing.',
-  analysis_ready: null,
 };
 
 function stageIndex(stage: ProjectReadinessStage): number {
@@ -121,18 +123,12 @@ export function ReadinessLadder({
             status: ladderStepState(index, reached),
           }))}
         />
-        {EXPLANATION[data.stage] || data.imported_through ? (
-          <p className={textRole('caption')}>
-            {[
-              EXPLANATION[data.stage],
-              data.imported_through
-                ? `Imported through ${formatWindowDate(data.imported_through)}.`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          </p>
-        ) : null}
+        <p className={textRole('caption')}>
+          {EXPLANATION[data.stage]}
+          {data.imported_through
+            ? ` Imported through ${formatWindowDate(data.imported_through)}.`
+            : ''}
+        </p>
       </Stack>
     </Section>
   );

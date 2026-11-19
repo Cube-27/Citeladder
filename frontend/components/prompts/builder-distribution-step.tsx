@@ -45,7 +45,7 @@ function PercentField({
   onChange,
 }: Readonly<{
   label: string;
-  hint: string;
+  hint?: string;
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;

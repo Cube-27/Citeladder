@@ -340,10 +340,9 @@ function CategoryShelf({
     >
       <SectionContent>
         <FigureStrip
-          segments={segments.map(({ label, sub, value }) => ({
+          segments={segments.map(({ label, value }) => ({
             key: label,
             label,
-            sub,
             value: value ?? <Absence state={missing} />,
           }))}
         />
