@@ -136,8 +136,7 @@ describe('Perception view', () => {
     expect(within(screen.getByLabelText('Brand perception')).getByText('4 / 6')).toBeVisible();
     expect(
       screen.getByRole('button', {
-        description:
-          '4 of 6 mentions classified · 1 pending · 1 unavailable (platform limit reached)',
+        description: '1 pending · 1 unavailable (platform limit reached)',
       }),
     ).toHaveAccessibleName(/^Basis of /);
     // One link in the criticism list until the theme is opened.

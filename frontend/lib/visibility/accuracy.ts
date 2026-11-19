@@ -65,30 +65,16 @@ const REASON_COPY: Record<Reason, string> = {
 export function accuracyStateCopy(
   state: Exclude<AccuracyResponse['state'], 'value'>,
   reason: AccuracyResponse['reason'],
-): { heading: string; description: string } {
+): { heading: string; description: string | null } {
   switch (state) {
     case 'not_enabled':
-      return {
-        heading: 'Fact-checking is not enabled',
-        description: 'Fact-checking is in a limited pilot and is not enabled for this workspace.',
-      };
+      return { heading: 'Fact-checking is not enabled', description: 'Limited pilot.' };
     case 'no_facts':
-      return {
-        heading: 'No confirmed facts for these runs',
-        description:
-          'Confirm brand facts in Agent → Context. Runs started after that are checked against them.',
-      };
+      return { heading: 'No confirmed facts for these runs', description: null };
     case 'no_claims':
-      return {
-        heading: 'No factual claims about you',
-        description:
-          'Answers in these runs named you without a checkable claim about pricing, plans, integrations or other facts.',
-      };
+      return { heading: 'No factual claims about you', description: null };
     case 'pending':
-      return {
-        heading: 'Checking claims…',
-        description: 'Claims answers made about you are being checked. Check back shortly.',
-      };
+      return { heading: 'Checking claims…', description: null };
     case 'unavailable':
       return {
         heading: 'Fact-checking unavailable',
@@ -162,7 +148,15 @@ export function contradictedChange(
 export function accuracyCoverageLine(coverage: AccuracyCoverage): string {
   const verdicts =
     coverage.supported + coverage.contradicted + coverage.inconclusive + coverage.not_covered;
-  const parts = [`${verdicts} of ${coverage.claims} claims checked`];
+  return [
+    `${verdicts} of ${coverage.claims} claims checked`,
+    ...accuracyCoverageExtras(coverage),
+  ].join(' · ');
+}
+
+/** Every non-empty pending or unread bucket besides the checked claims. */
+export function accuracyCoverageExtras(coverage: AccuracyCoverage): string[] {
+  const parts: string[] = [];
   if (coverage.pending) parts.push(`${coverage.pending} pending`);
   if (coverage.low_confidence) parts.push(`${coverage.low_confidence} low confidence`);
   for (const { reason, count } of coverage.unavailable)
@@ -170,5 +164,5 @@ export function accuracyCoverageLine(coverage: AccuracyCoverage): string {
   if (coverage.answers_pending) parts.push(`${coverage.answers_pending} answers still being read`);
   if (coverage.answers_unavailable)
     parts.push(`${coverage.answers_unavailable} answers could not be read`);
-  return parts.join(' · ');
+  return parts;
 }

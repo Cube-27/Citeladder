@@ -2,10 +2,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
-import type { TrendEvent } from '@/components/ui/series-data';
 import { SegmentedControl } from '@/components/ui/tabs';
 import {
-  markerNote,
   metricCodec,
   type TrendLines,
   TrendSection,
@@ -48,19 +46,8 @@ export function CompetitorTrend({
         <SectionTitle id="competitor-trend">{name} against you</SectionTitle>
       </SectionHeader>
       <SectionContent>
-        <TrendSection
-          query={query}
-          metric={metric}
-          lines={lines}
-          caption={competitorCaption}
-          keyed={false}
-          lonePoint="list"
-        />
+        <TrendSection query={query} metric={metric} lines={lines} keyed={false} lonePoint="list" />
       </SectionContent>
     </Section>
   );
-}
-
-function competitorCaption(_runs: number, events: readonly TrendEvent[]): string {
-  return `A line breaks between runs that are not comparable.${markerNote(events)}`;
 }

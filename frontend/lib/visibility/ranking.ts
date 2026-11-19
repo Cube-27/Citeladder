@@ -98,10 +98,7 @@ export function standingHeadline(standing: BrandStanding): {
     case 'unmeasured':
       return { headline: 'No AI visibility readings for you in this selection', sub: null };
     case 'alone':
-      return {
-        headline: "You aren't tracking any competitors yet",
-        sub: 'Add competitors in Context to see where you rank.',
-      };
+      return { headline: "You aren't tracking any competitors yet", sub: null };
     case 'competitors_unmeasured':
       return {
         headline: 'No visibility readings for your competitors in this selection',

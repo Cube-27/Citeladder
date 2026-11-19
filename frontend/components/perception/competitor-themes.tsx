@@ -40,7 +40,7 @@ export function CompetitorThemes({
     })),
   ];
   return (
-    <TitledSection title={TITLE} description="Competitor quotes are never shown.">
+    <TitledSection title={TITLE}>
       <SectionContent>
         <Stack gap="item">
           <FigureStrip
@@ -70,7 +70,6 @@ export function CompetitorThemes({
                 ? undefined
                 : { kind: 'empty', inline: true, message: 'No themes in these answers.' }
             }
-            footer={`A brand with fewer than ${PERCEPTION_MIN_CLASSIFIED} classified mentions reads too few.`}
           >
             {map.rows.map((row) => {
               const mark = marks.get(`${row.isBrand}:${row.name}`);

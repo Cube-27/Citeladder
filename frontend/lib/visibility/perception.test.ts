@@ -4,7 +4,6 @@ import {
   coverageLine,
   formatNet,
   negativeHeadline,
-  negativeThemesLine,
   rankThemes,
   sentimentFigureValue,
   sentimentReading,
@@ -59,19 +58,6 @@ describe('perception derivations', () => {
     // 4 classified is below the minimum: no headline, never "nothing negative".
     expect(negativeHeadline(score(3, 1, 0))).toBeNull();
     expect(negativeHeadline(score(0, 0, 0))).toBeNull();
-  });
-
-  it('names only the themes that lean negative', () => {
-    const themes = [theme('pricing', 1, 4), theme('support', 3, 3), theme('reliability', 0, 2)];
-    expect(negativeThemesLine(themes)).toBe(
-      'Pricing and Reliability draw more negative mentions than positive.',
-    );
-    expect(negativeThemesLine([theme('ease_of_use', 2, 3)])).toBe(
-      'Ease of use draws more negative mentions than positive.',
-    );
-    expect(negativeThemesLine([theme('support', 3, 3)])).toBe(
-      'No theme draws more negative mentions than positive.',
-    );
   });
 
   it('ranks themes by the chosen side and leaves out those with none on it', () => {
