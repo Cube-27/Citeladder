@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const CONTACT_EMAIL = 'contact@citeladder.com';
-const CONTACT_PATH = '/contact';
 export const CONTACT_API_PATH = '/api/v1/contact';
 export const CONTACT_SENDER = 'CiteLadder Website <notifications@citeladder.com>';
 export const CONTACT_MAX_BODY_BYTES = 32_768;
@@ -43,19 +42,3 @@ export type ContactSubmission = z.infer<typeof contactSubmissionSchema>;
 export const contactRequestSchema = contactSubmissionSchema.extend({
   turnstile_token: z.string().max(TURNSTILE_TOKEN_MAX).optional().default(''),
 });
-
-/** Retained published catalogs can still carry the former CiteLadder intake URL. */
-export function contactSalesHref(href: string | null | undefined, fallback = CONTACT_PATH): string {
-  if (!href) return fallback;
-  try {
-    const url = new URL(href);
-    if (
-      ['cube27.com', 'www.cube27.com'].includes(url.hostname) &&
-      /^\/contact\/?$/.test(url.pathname)
-    )
-      return fallback;
-  } catch {
-    // Other catalog destinations retain their existing meaning.
-  }
-  return href;
-}

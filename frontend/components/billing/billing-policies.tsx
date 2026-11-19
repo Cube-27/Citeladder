@@ -1,7 +1,7 @@
 import type { BillingCatalog } from '@/lib/api/billing';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { contactSalesHref } from '@/lib/config/contact';
+import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';

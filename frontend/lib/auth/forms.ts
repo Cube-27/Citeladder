@@ -8,6 +8,7 @@
  */
 import { z } from 'zod';
 import { humanizeApiError } from '@/lib/api/errors';
+import { TERMS_CHANGED_CODE } from '@/lib/auth/account-transition';
 import { authFormPolicy } from '@/lib/config/auth';
 
 /** Shared email + password rules reused by both forms. */
@@ -79,9 +80,6 @@ export function signupEmailFieldError(error: unknown): string | undefined {
  * gets a message rather than a silent, unexplained bounce back to /login.
  */
 const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Please try again.';
-
-/** The sign-in notice for a session ended because the published Terms changed. */
-export const TERMS_CHANGED_CODE = 'terms_changed';
 
 // A Map, not an object literal: the code comes straight off the query string,
 // and a plain-object lookup of `__proto__` or `constructor` returns an

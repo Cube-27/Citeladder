@@ -19,7 +19,7 @@ import {
 } from '@/lib/billing/catalog';
 import { publicPricingSelectionHref } from '@/lib/billing/public-pricing-selection';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
-import { contactSalesHref } from '@/lib/config/contact';
+import { contactSalesHref } from '@/lib/config/contact-sales';
 import type { PublicTrial } from '@/lib/config/public-trial';
 import { countWord } from '@/lib/marketing-content/count-words';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';

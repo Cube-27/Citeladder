@@ -15,7 +15,7 @@ import {
 } from '@/lib/billing/catalog';
 import { billingReasonMessage } from '@/lib/billing/reason-copy';
 import { websiteHref } from '@/lib/config/app-link';
-import { contactSalesHref } from '@/lib/config/contact';
+import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
 import { ControlRow } from '@/components/ui/control-row';

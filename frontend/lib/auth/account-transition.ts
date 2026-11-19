@@ -2,9 +2,14 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { authApi } from '@/lib/api/auth';
 import { httpErrorStatus } from '@/lib/api/errors';
-import { TERMS_CHANGED_CODE } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { clearActiveProjectSelection } from '@/lib/project/active-project-storage';
+
+/**
+ * The sign-in notice for a session ended because the published Terms changed.
+ * Defined here, not beside the form schemas, so the eager shell never loads them.
+ */
+export const TERMS_CHANGED_CODE = 'terms_changed';
 
 /** Query clients whose document is already leaving across an identity boundary. */
 const departing = new WeakSet<QueryClient>();

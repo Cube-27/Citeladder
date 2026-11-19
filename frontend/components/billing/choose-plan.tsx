@@ -24,7 +24,7 @@ import type {
 import { newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { websiteHref } from '@/lib/config/app-link';
-import { contactSalesHref } from '@/lib/config/contact';
+import { contactSalesHref } from '@/lib/config/contact-sales';
 import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
 

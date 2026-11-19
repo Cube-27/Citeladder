@@ -13,7 +13,7 @@ import { workspaceAccessSchema as accessSchema } from '@citeladder/contracts/aut
 import { useProjectContext } from '@/lib/project/project-context';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { routePath } from '@/lib/navigation/route-path';
-import { contactSalesHref } from '@/lib/config/contact';
+import { contactSalesHref } from '@/lib/config/contact-sales';
 import { websiteHref } from '@/lib/config/app-link';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
