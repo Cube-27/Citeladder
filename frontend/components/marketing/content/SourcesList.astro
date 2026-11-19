@@ -67,9 +67,13 @@ const { title = 'Sources', count } = Astro.props;
     color: var(--color-ink-secondary);
     transition: transform var(--motion-fast) var(--ease-standard);
   }
-  .cl-sources-summary:hover .cl-sources-icon,
   .cl-sources-details[open] .cl-sources-icon {
     color: var(--color-ink);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .cl-sources-summary:hover .cl-sources-icon {
+      color: var(--color-ink);
+    }
   }
   .cl-sources-details[open] .cl-sources-icon {
     transform: rotate(45deg);
@@ -130,8 +134,10 @@ const { title = 'Sources', count } = Astro.props;
     text-underline-offset: 3px;
     border-radius: var(--radius-xs);
   }
-  .cl-source-body a:hover {
-    text-decoration-color: currentColor;
+  @media (hover: hover) and (pointer: fine) {
+    .cl-source-body a:hover {
+      text-decoration-color: currentColor;
+    }
   }
   .cl-source-meta {
     margin: 0;

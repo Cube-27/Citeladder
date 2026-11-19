@@ -350,10 +350,6 @@
   --motion-reveal: 700ms;
   --motion-reveal-step: 80ms;
   --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The website's module rail, as the reference moves it: an open card
-     widens to the right while its layers cross-fade, all over 400ms. */
-  --motion-card: 400ms;
-  --ease-card: ease-in-out;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* The app's one "working" mark: a single accent
@@ -888,15 +884,25 @@
 
 /* The marketing site's responsive display sizes (owner, 2026-11-14): the
    page title (H1) is 48 and a section heading 32 from 768px up, the owner's
-   982px desktop included, and 32 and 26 on phones. Marketing pages only, so
+   982px desktop included, and 32 and 24 on phones; the home title keeps 60
+   (owner, 2026-11-19). Marketing pages only, so
    a docs article title keeps its own fallback. */
 [data-marketing-surface] {
+  /* Surfaces take three radii, so an inner card stays concentric in a card's
+     8px inset; controls and chips take the system's 2–8. */
+  --site-radius-inner: 4px;
+  --site-radius-card: 12px;
+  --site-radius-stage: 16px;
+  --text-heading-lg: 1.25rem;
+  --text-heading-lg--line-height: 1.5rem;
   --text-site-home: 3.75rem;
   --text-site-home--line-height: 4rem;
   --text-site-title: 3rem;
   --text-site-title--line-height: 3.25rem;
   --text-site-section: 2rem;
   --text-site-section--line-height: 2.5rem;
+  --text-site-feature: 1.5rem;
+  --text-site-feature--line-height: 1.875rem;
 }
 
 @media (max-width: 767px) {
@@ -905,10 +911,10 @@
     --text-site-home--line-height: 2.5rem;
     --text-site-title: 2rem;
     --text-site-title--line-height: 2.5rem;
-    --text-site-section: 1.625rem;
-    --text-site-section--line-height: 2.125rem;
-    --text-site-feature: 1.375rem;
-    --text-site-feature--line-height: 1.875rem;
+    --text-site-section: 1.5rem;
+    --text-site-section--line-height: 2rem;
+    --text-site-feature: 1.25rem;
+    --text-site-feature--line-height: 1.75rem;
     --text-body-lg: 1rem;
     --text-body-lg--line-height: 1.625rem;
     --text-body: 0.875rem;

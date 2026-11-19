@@ -29,6 +29,9 @@ type Pill = Readonly<{ x: number; width: number; visible: boolean; jump: boolean
 
 const HIDDEN_PILL: Pill = { x: 0, width: 0, visible: false, jump: true };
 
+/** The pill keeps one layout width and scales to its trigger, so it moves by transform alone. */
+const PILL_BASE_WIDTH = 100;
+
 /**
  * The pill under the hovered or focused trigger. It slides between
  * triggers, but its first appearance jumps into place rather than sliding in
@@ -64,8 +67,11 @@ function dropCurrent(path: string, drop: NavDrop): boolean {
   );
 }
 
-/** Where the popup hangs: its x offset from the trigger row, and whether it slides there. */
-type Stage = Readonly<{ shift: number; slide: boolean }>;
+/**
+ * Where the popup hangs: its x offset from the trigger row, whether it slides
+ * there, and the x of its trigger's centre, which it scales from.
+ */
+type Stage = Readonly<{ shift: number; slide: boolean; origin: number }>;
 
 /**
  * The popup's x offset: a multi-column menu (Platform, Resources)
@@ -90,7 +96,7 @@ function stageShift(key: string, root: HTMLElement | null): number {
 export function DesktopNav({ path }: Readonly<{ path: string }>) {
   const [value, setValue] = useState('');
   const { pill, showAt, hide } = usePill();
-  const [stage, setStage] = useState<Stage>({ shift: 0, slide: false });
+  const [stage, setStage] = useState<Stage>({ shift: 0, slide: false, origin: 0 });
   const root = useRef<HTMLDivElement>(null);
   const triggers = useRef(new Map<string, HTMLElement>());
   const hovering = useRef(false);
@@ -110,9 +116,13 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
   const onValueChange = (next: string) => {
     // A closing popup stays where it is; an opening one jumps into place,
     // and switching between open menus slides with the morph.
-    if (next !== '') setStage({ shift: stageShift(next, root.current), slide: value !== '' });
-    setValue(next);
     const trigger = triggers.current.get(next);
+    if (next !== '') {
+      const shift = stageShift(next, root.current);
+      const centre = trigger ? trigger.offsetLeft + trigger.offsetWidth / 2 : 0;
+      setStage({ shift, slide: value !== '', origin: centre - shift });
+    }
+    setValue(next);
     if (trigger) showAt(trigger);
     else if (!hovering.current) hide();
   };
@@ -154,7 +164,10 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
             className="cl-navmenu-pill"
             data-visible={pill.visible ? '' : undefined}
             data-jump={pill.jump ? '' : undefined}
-            style={{ width: pill.width, transform: `translateX(${pill.x}px)` }}
+            style={{
+              width: PILL_BASE_WIDTH,
+              transform: `translateX(${pill.x}px) scaleX(${pill.width / PILL_BASE_WIDTH})`,
+            }}
           />
           {NAV_DROPS.map((drop) => (
             <Item key={drop.key} value={drop.key}>
@@ -203,7 +216,10 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
           data-slide={stage.slide ? '' : undefined}
           style={{ transform: `translateX(${stage.shift}px)` }}
         >
-          <Viewport className="cl-navmenu-viewport" />
+          <Viewport
+            className="cl-navmenu-viewport"
+            style={{ transformOrigin: `${stage.origin}px 0` }}
+          />
         </div>
       </div>
     </Root>

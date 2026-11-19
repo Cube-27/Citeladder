@@ -7,7 +7,7 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost' | 'soft';
-type VisualProps = Readonly<{ variant?: Variant; size?: 'lg' | 'marketing'; className?: string }>;
+type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
 
 /** `dark` and `nav` are marketing-only skins over the shared secondary. */
 const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
@@ -21,12 +21,11 @@ const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
 const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 
 /** A marketing button link's attributes. */
-function buttonLinkAttributes({ variant = 'primary', size = 'lg', className }: VisualProps) {
+function buttonLinkAttributes({ variant = 'primary', className }: VisualProps) {
   const shared = sharedVariant(variant);
   return {
     'data-marketing-cta': '',
     'data-button-variant': shared,
-    'data-button-size': size,
     className: cn(
       buttonClasses(shared),
       '[&_svg]:size-4 [&_svg]:shrink-0',
@@ -40,7 +39,6 @@ function buttonLinkAttributes({ variant = 'primary', size = 'lg', className }: V
 export function ButtonLink({
   href,
   variant,
-  size,
   className,
   children,
   ...rest
@@ -49,7 +47,7 @@ export function ButtonLink({
     'href' | 'className' | 'children'
   >) {
   return (
-    <a href={href} {...buttonLinkAttributes({ variant, size, className })} {...rest}>
+    <a href={href} {...buttonLinkAttributes({ variant, className })} {...rest}>
       {children}
     </a>
   );
@@ -92,12 +90,8 @@ export function SiteActions() {
   const signup = selfServeSignupOpen();
   return (
     <>
-      {signup ? (
-        <ButtonLink href={appHref('/register')} size="marketing">
-          Start free trial
-        </ButtonLink>
-      ) : null}
-      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size="marketing" />
+      {signup ? <ButtonLink href={appHref('/register')}>Start free trial</ButtonLink> : null}
+      <DemoButtonLink variant={signup ? 'soft' : 'primary'} />
     </>
   );
 }

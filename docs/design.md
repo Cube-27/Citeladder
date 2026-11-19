@@ -186,7 +186,7 @@ typography:
   type-subheading: { fontSize: 14px, lineHeight: 20px }
   type-title: { fontSize: 22px, lineHeight: 28px }
   cl-body: { fontSize: 16px, lineHeight: 26px }
-  cl-fcard-title: { fontSize: 22px, lineHeight: 28px }
+  cl-fcard-title: { fontSize: 20px, lineHeight: 24px }
   cl-lead: { fontSize: 18px, lineHeight: 30px }
   cl-lhero-title: { fontSize: 48px, lineHeight: 52px }
   cl-note: { fontSize: 14px, lineHeight: 20px }
@@ -212,8 +212,10 @@ typography:
   height; 12 is the floor. Weights 400 and 500, never 600 (350 and 450 in
   the app's dark, where light text reads heavier). Emphasis inside text is
   500, never colour. At most one `figure-xl` per page.
-- **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, normally no more
-  than three on a page, nothing heavier than 500. Prose holds to 65ch.
+- **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, plus the home
+  title's 60 (owner, 2026-11-19), normally no more than three on a page,
+  nothing heavier than 500. Phones step headings down the same scale (title
+  32, section 24, feature 20); a stat is 24. Prose holds to 65ch.
 - **Sizes are rem.** Type tokens are declared in rem (the px here ÷ 16), so
   they follow the reader's text size; spacing stays px, and controls take
   their height as a minimum so larger text grows them.
@@ -426,7 +428,15 @@ its own spacing, size or radius on them.
   (ink fill) is the one action a view exists for, and lives only in the
   masthead's primary slot or last in a sheet or form footer. Every other
   action is secondary (`control-fill`, `control-edge`), quiet (no edge), danger,
-  or a link. Controls in one row share one height.
+  or a link. Controls in one row share one height. Website calls to action
+  are these same buttons (owner, 2026-11-19): rounded, sentence case, the
+  sans face, no trailing glyph but an external link's arrow, one 44 height
+  on a page and in the phone sheet.
+- **Website touch targets** (owner, 2026-11-19): under a coarse pointer
+  every website control is a 44 target (shared buttons through
+  `control-coarse`, small icons and text links by a hit area, their drawn
+  size kept); everywhere, every link and button is at least 24 tall.
+  Hover effects sit under `(hover: hover) and (pointer: fine)`.
 - **Fields** (input, textarea): `surface`, a 1px `control-line` edge, label
   above and help below; search and select fields take `control-fill` and
   `control-edge`. No edge in the app is ever near-white or near-black: every

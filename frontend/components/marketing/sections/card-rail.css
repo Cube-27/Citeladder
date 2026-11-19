@@ -50,8 +50,10 @@
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-.cl-rail-btn:hover:not(:disabled) {
-  background: var(--tint-neutral);
+@media (hover: hover) and (pointer: fine) {
+  .cl-rail-btn:hover:not(:disabled) {
+    background: var(--tint-neutral);
+  }
 }
 
 .cl-rail-btn:disabled {
@@ -85,20 +87,21 @@
   cursor: pointer;
 }
 
-.cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
-  background-color: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
-}
-
 .cl-railcard-link {
   color: inherit;
   text-decoration: none;
 }
 
-.cl-railcard-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
+@media (hover: hover) and (pointer: fine) {
+  .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
+    background-color: color-mix(in oklch, var(--color-ink) 5%, var(--cl-tint));
+  }
 
+  .cl-railcard-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
 .cl-railcard-head {
   display: flex;
   align-items: flex-start;
@@ -139,7 +142,7 @@
   height: 32px;
   padding: 0;
   border: 1px solid var(--color-line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-ink);
   cursor: pointer;
@@ -149,8 +152,22 @@
   visibility: hidden;
 }
 
+/* Under a coarse pointer the plus keeps its size and takes a 44px target. */
+
+@media (pointer: coarse) {
+  .cl-railcard-toggle {
+    position: relative;
+  }
+
+  .cl-railcard-toggle::after {
+    position: absolute;
+    inset: calc(50% - 22px);
+    content: '';
+  }
+}
+
 .cl-railcard-toggle > svg {
-  transition: transform var(--motion-card) var(--ease-card);
+  transition: transform var(--cl-card-motion) var(--cl-card-ease);
 }
 
 .cl-railcard-toggle[aria-expanded='true'] > svg {
@@ -170,8 +187,8 @@
   opacity: 0;
   visibility: hidden;
   transition:
-    opacity var(--motion-card) var(--ease-card),
-    visibility 0s var(--ease-card) var(--motion-card);
+    opacity var(--cl-card-motion) var(--cl-card-ease),
+    visibility 0s var(--cl-card-ease) var(--cl-card-motion);
 }
 
 .cl-railcard:not([data-expanded]) .cl-railcard-shot,
@@ -179,7 +196,7 @@
   opacity: 1;
   visibility: visible;
   transition:
-    opacity var(--motion-card) var(--ease-card),
+    opacity var(--cl-card-motion) var(--cl-card-ease),
     visibility 0s;
 }
 
@@ -195,12 +212,12 @@
 
 /* The open card's image (the reference's open panel): the feature's page in
    the app, sidebar first, at 70% of its real size, in the right half under
-   the close, running off the card's right edge and ending 28px above its
-   foot. */
+   the close, running off the card's right edge and ending on the card's
+   24px padding. */
 
 .cl-railcard-page {
   top: 100px;
-  bottom: 28px;
+  bottom: 24px;
   left: calc(var(--cl-open-w) / 2 + 16px);
   width: 1000px;
   overflow: hidden;
@@ -216,7 +233,7 @@
    layer's foot. */
 
 .cl-railcard-page .cl-screen {
-  height: calc((var(--cl-card-h) - 128px) / 0.7);
+  height: calc((var(--cl-card-h) - 124px) / 0.7);
   zoom: 0.7;
 }
 
@@ -303,13 +320,22 @@
   }
 }
 
+/* A card opens over --motion-open, easing out, and closes over
+   --motion-close, easing in; its layers and plus move on the same clock. */
+
 .cl-rail-item {
+  --cl-card-motion: var(--motion-close);
+  --cl-card-ease: var(--ease-exit);
+
   flex: 0 0 var(--cl-card-w);
   scroll-snap-align: start;
-  transition: flex-basis var(--motion-card) var(--ease-card);
+  transition: flex-basis var(--cl-card-motion) var(--cl-card-ease);
 }
 
 .cl-rail-item:has(> [data-expanded]) {
+  --cl-card-motion: var(--motion-open);
+  --cl-card-ease: var(--ease-standard);
+
   flex-basis: var(--cl-open-w);
 }
 
@@ -353,8 +379,10 @@
     box-shadow: none;
   }
 
-  .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
-    background: none;
+  @media (hover: hover) and (pointer: fine) {
+    .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
+      background: none;
+    }
   }
 
   .cl-railcard-head {

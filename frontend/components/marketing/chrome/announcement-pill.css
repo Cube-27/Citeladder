@@ -19,8 +19,10 @@
   padding-left: 12px;
 }
 
-a.cl-announce:hover {
-  color: var(--color-ink);
+@media (hover: hover) and (pointer: fine) {
+  a.cl-announce:hover {
+    color: var(--color-ink);
+  }
 }
 
 .cl-announce-tag {

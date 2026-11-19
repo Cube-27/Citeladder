@@ -28,10 +28,8 @@ export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
   if (cta !== 'mcp') return <SiteActions />;
   return (
     <>
-      <ButtonLink href={docsHref('/mcp/')} size="marketing">
-        Read the MCP docs
-      </ButtonLink>
-      <DemoButtonLink variant="soft" size="marketing" />
+      <ButtonLink href={docsHref('/mcp/')}>Read the MCP docs</ButtonLink>
+      <DemoButtonLink variant="soft" />
     </>
   );
 }

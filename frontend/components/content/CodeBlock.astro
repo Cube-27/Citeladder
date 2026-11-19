@@ -63,9 +63,18 @@
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
-  .cl-code-copy:hover {
-    background: var(--color-surface);
-    color: var(--color-ink);
+  @media (hover: hover) and (pointer: fine) {
+    .cl-code-copy:hover {
+      background: var(--color-surface);
+      color: var(--color-ink);
+    }
+  }
+  /* Under a coarse pointer the bar and its Copy are a 44px target. */
+  @media (pointer: coarse) {
+    .cl-code-bar,
+    .cl-code-copy {
+      height: 44px;
+    }
   }
   .cl-code-copy .cl-code-icon-check,
   .cl-code-copy[data-copied] .cl-code-icon-copy {

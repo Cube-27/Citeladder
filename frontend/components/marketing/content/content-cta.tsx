@@ -22,8 +22,8 @@ export function ContentCta({
         lead={lead}
         actions={
           <>
-            <DemoButtonLink size="marketing" />
-            <ButtonLink href={secondary.href} variant="soft" size="marketing">
+            <DemoButtonLink />
+            <ButtonLink href={secondary.href} variant="soft">
               {secondary.label}
             </ButtonLink>
           </>

@@ -31,19 +31,10 @@
   --text-lead--line-height: var(--text-body-lg--line-height);
   --text-title: 1.25rem;
   --text-title--line-height: 1.5rem;
-  --text-heading-lg: 1.25rem;
-  --text-heading-lg--line-height: 1.5rem;
+  --text-stat: 1.5rem;
+  --text-stat--line-height: 2rem;
   --text-display-md: 1.5rem;
   --text-display-md--line-height: 1.875rem;
-  --text-site-feature: var(--text-display-md);
-  --text-site-feature--line-height: var(--text-display-md--line-height);
-
-  /* Surfaces take three radii (each 8px under the former 12/20/24, so
-     an inner card stays concentric in a card's 8px inset), controls and
-     chips the system's 2–8. */
-  --site-radius-inner: 4px;
-  --site-radius-card: 12px;
-  --site-radius-stage: 16px;
 
   /* The site's colours (globals.css owns their light and dark values).
      Panels are wells: a shade under the page, darker along their top edge
@@ -276,77 +267,15 @@
   height: auto;
 }
 
-/* ---------- The page-size website button and the standalone arrow link ---------- */
+/* ---------- Calls to action and the standalone arrow link ---------- */
+/* Calls to action are the app's buttons (owner, 2026-11-19): rounded, sentence
+   case, the sans face, the shared primary and secondary faces. A page's and the
+   phone sheet's take one 44px height (marketing.css); the bar's are its row. */
 .cl-btn-lg {
-  min-height: 40px;
+  min-height: 44px;
   padding-inline: 16px;
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-}
-
-/* Calls to action (the page's, the bar's sign-up and the menu sheet's) are
-   square blocks with a mono, uppercase label and a small play triangle after
-   it; the secondary is a flat grey block with no edge. An external link keeps
-   its up-right arrow instead of the triangle. */
-
-.cl-site
-  :is(.marketing-cta-button, .cl-navbar-end > a:not(.cl-navbar-hide-sm), .cl-sheet-foot > a) {
-  gap: 8px;
-  border-radius: 0;
-  font-family: var(--font-mono);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.cl-site .marketing-cta-button {
-  min-height: 44px;
-}
-
-.cl-site
-  :is(
-    .marketing-cta-button,
-    .cl-navbar-end > a:not(.cl-navbar-hide-sm),
-    .cl-sheet-foot > a
-  )[data-button-variant='secondary'] {
-  border-color: transparent;
-  background: var(--tint-neutral);
-}
-
-.cl-site
-  :is(
-    .marketing-cta-button,
-    .cl-navbar-end > a:not(.cl-navbar-hide-sm),
-    .cl-sheet-foot > a
-  )[data-button-variant='secondary']:hover {
-  background: color-mix(in srgb, var(--color-ink) 8%, var(--tint-neutral));
-}
-
-/* On the closing band the secondary is a translucent block in the ink; 9% at
-   most keeps its label at 4.5:1 on the dark band. */
-
-.cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary'] {
-  background: color-mix(in srgb, var(--color-ink) 6%, transparent);
-}
-
-.cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary']:hover {
-  background: color-mix(in srgb, var(--color-ink) 9%, transparent);
-}
-
-.cl-site
-  :is(.marketing-cta-button, .cl-navbar-end > a:not(.cl-navbar-hide-sm), .cl-sheet-foot > a):not(
-    :has(.lucide-arrow-up-right)
-  )::after {
-  flex: none;
-  width: 6px;
-  height: 8px;
-  background: currentColor;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-  content: '';
-}
-
-.cl-site .marketing-cta-button > svg.lucide-arrow-right {
-  display: none;
 }
 
 .cl-arrowlink {
@@ -375,24 +304,35 @@
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
-a.cl-arrowlink:hover .cl-arrowlink-text,
-a:hover .cl-arrowlink .cl-arrowlink-text {
-  text-decoration-color: currentColor;
-}
-
-a.cl-arrowlink:hover .cl-arrowlink-icon,
-a:hover .cl-arrowlink .cl-arrowlink-icon {
-  transform: translateX(2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cl-arrowlink-icon {
-    transition: none;
+@media (hover: hover) and (pointer: fine) {
+  a.cl-arrowlink:hover .cl-arrowlink-text,
+  a:hover .cl-arrowlink .cl-arrowlink-text {
+    text-decoration-color: currentColor;
   }
 
   a.cl-arrowlink:hover .cl-arrowlink-icon,
   a:hover .cl-arrowlink .cl-arrowlink-icon {
-    transform: none;
+    transform: translateX(2px);
+  }
+}
+
+/* ---------- Touch: 44px under a coarse pointer, 24px everywhere ----------
+   (owner, 2026-11-19). The shared buttons grow through --control-coarse; other
+   controls grow beside their component, and a text link keeps its size and
+   takes a 44px hit area. */
+@media (pointer: coarse) {
+  :root[data-marketing-surface] {
+    --control-coarse: 44px;
+  }
+
+  .cl-arrowlink {
+    position: relative;
+  }
+
+  .cl-arrowlink::after {
+    position: absolute;
+    inset: calc(50% - 22px) 0;
+    content: '';
   }
 }
 

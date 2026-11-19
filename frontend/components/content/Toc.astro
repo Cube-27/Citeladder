@@ -26,7 +26,7 @@ const unbroken = (label: string) =>
       items.map((item) => (
         <li>
           <a
-            class:list={['cl-toc-link', { 'cl-toc-link--sub': item.level === 3 }]}
+            class:list={['cl-toc-link focus-ring-inset', { 'cl-toc-link--sub': item.level === 3 }]}
             href={`#${item.id}`}
           >
             {unbroken(item.label)}
@@ -61,11 +61,14 @@ const unbroken = (label: string) =>
   .cl-toc-link--sub {
     padding-left: 32px;
   }
-  .cl-toc-link:hover,
   .cl-toc-link[aria-current='location'] {
     color: var(--color-ink);
   }
-  .cl-toc-link[aria-current='location']::before {
+  @media (hover: hover) and (pointer: fine) {
+    .cl-toc-link:hover {
+      color: var(--color-ink);
+    }
+  }  .cl-toc-link[aria-current='location']::before {
     content: '';
     position: absolute;
     top: 0;

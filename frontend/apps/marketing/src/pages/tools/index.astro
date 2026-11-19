@@ -11,7 +11,6 @@ import { SiteHealthCta, ToolFacts, toolGroups } from '@/components/marketing/con
 import { ButtonLink } from '@/components/marketing/primitives/button';
 import { PageHero } from '@/components/marketing/sections/heroes';
 import { PageSection } from '@/components/marketing/sections/page-section';
-import { ArrowRight } from 'lucide-react';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 ---
 
@@ -25,8 +24,8 @@ import MarketingLayout from '../../layouts/MarketingLayout.astro';
       title="Free tools for crawler rules and page markup"
       lead="Test robots.txt rules, inspect indexing directives and build cleaner markup. All six tools run in your browser on the input you supply."
     >
-      <ButtonLink slot="actions" href="/tools/ai-crawler-checker" size="marketing">
-        Test your rules <ArrowRight aria-hidden="true" />
+      <ButtonLink slot="actions" href="/tools/ai-crawler-checker">
+        Test your rules
       </ButtonLink>
     </PageHero>
     <PageSection title="Pick the task in front of you" lead="Paste text, enter details or choose a local file.">

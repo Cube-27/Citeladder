@@ -107,7 +107,7 @@
      the last column is in view; the shade stays on the frame's edge. */
   background:
     linear-gradient(to left, var(--site-page) 40%, transparent) right / 48px 100% no-repeat local,
-    linear-gradient(to left, color-mix(in srgb, var(--color-ink) 20%, transparent), transparent)
+    linear-gradient(to left, color-mix(in oklch, var(--color-ink) 20%, transparent), transparent)
       right / 24px 100% no-repeat scroll;
 }
 
@@ -215,11 +215,20 @@
   text-decoration: none;
 }
 
-.cl-site .cl-icite a:is(:hover, :focus-visible),
-.cl-site .cl-prose .cl-icite a:is(:hover, :focus-visible) {
+.cl-site .cl-icite a:focus-visible,
+.cl-site .cl-prose .cl-icite a:focus-visible {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cl-site .cl-icite a:hover,
+  .cl-site .cl-prose .cl-icite a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
 }
 
 /* A 24px hit area round each marker; the glyph keeps its size. */

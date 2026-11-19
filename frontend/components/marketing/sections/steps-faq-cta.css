@@ -133,8 +133,10 @@
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
-.cl-faq-q:hover .cl-faq-icon {
-  color: var(--color-accent);
+@media (hover: hover) and (pointer: fine) {
+  .cl-faq-q:hover .cl-faq-icon {
+    color: var(--color-accent);
+  }
 }
 
 .cl-faq-item[open] .cl-faq-icon {

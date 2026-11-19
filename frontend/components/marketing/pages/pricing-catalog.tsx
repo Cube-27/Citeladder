@@ -1,5 +1,4 @@
 import { useId, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import type {
@@ -99,7 +98,6 @@ function PlanAction({
         href={href}
         rel={CHECKOUT_REL}
         variant={highlighted ? 'primary' : 'soft'}
-        size="marketing"
         className="w-full"
       >
         Choose {plan.name}
@@ -111,7 +109,6 @@ function PlanAction({
       <ButtonLink
         href={contactSalesHref(plan.contact_url, CONTACT_SALES_HREF)}
         variant="soft"
-        size="marketing"
         className="w-full"
       >
         Contact sales
@@ -190,13 +187,7 @@ function ExtraCard({
       }
       cta={
         href ? (
-          <ButtonLink
-            href={href}
-            rel={CHECKOUT_REL}
-            variant="soft"
-            size="marketing"
-            className="w-full"
-          >
+          <ButtonLink href={href} rel={CHECKOUT_REL} variant="soft" className="w-full">
             Choose {entry.name}
           </ButtonLink>
         ) : (
@@ -225,7 +216,8 @@ function ByokSwitch({
         }}
         label={BYOK_SWITCH_LABEL}
         describedBy={hint}
-        className="mt-0.5"
+        // Under a coarse pointer its hit area grows to 44px; the track keeps its size.
+        className="mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3"
       />
       <span className="grid gap-1">
         {/* The switch's aria-label already names it; this is the visible click target. */}
@@ -263,10 +255,8 @@ function TrialButton({ appOrigin, primary }: Readonly<{ appOrigin: string; prima
     <ButtonLink
       href={new URL('/register', appOrigin).toString()}
       variant={primary ? 'primary' : 'soft'}
-      size="marketing"
     >
-      <span>Start free trial</span>
-      <ArrowRight aria-hidden />
+      Start free trial
     </ButtonLink>
   );
 }
@@ -294,12 +284,7 @@ function PricingTrial({
       <PageSection
         title="Paid plans are not open for self-serve checkout"
         lead="Contact us to discuss early access and the volume your team needs."
-        action={
-          <DemoButtonLink variant="primary" size="marketing">
-            <span>Request early access</span>
-            <ArrowRight aria-hidden />
-          </DemoButtonLink>
-        }
+        action={<DemoButtonLink variant="primary">Request early access</DemoButtonLink>}
       />
     );
   }

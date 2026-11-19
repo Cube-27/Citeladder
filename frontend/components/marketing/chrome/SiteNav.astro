@@ -73,7 +73,7 @@ const register = appHref('/register');
         </div>
       </nav>
 
-      <div id="mobile-menu" class="cl-navbar-sheet" hidden>
+      <div id="mobile-menu" class="cl-navbar-sheet" role="dialog" aria-label="Menu" hidden>
         <ul class="cl-sheet-list">
           {
             NAV_DROPS.map(({ key, label, groups }) => (
@@ -146,7 +146,7 @@ const register = appHref('/register');
           <div class="cl-sheet-actions">
             <ThemeSwitch client:load />
           </div>
-          <a href={login} class={buttonClasses('secondary', 'cl-btn-lg')} data-button-variant="secondary">
+          <a href={login} class={buttonClasses('quiet', 'cl-btn-lg')}>
             Log in
           </a>
           {

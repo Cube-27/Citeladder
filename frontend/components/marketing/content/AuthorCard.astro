@@ -99,9 +99,11 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     text-decoration: none;
     border-radius: var(--radius-xs);
   }
-  .cl-author-links a:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  @media (hover: hover) and (pointer: fine) {
+    .cl-author-links a:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
   }
   @media (max-width: 767px) {
     .cl-author {

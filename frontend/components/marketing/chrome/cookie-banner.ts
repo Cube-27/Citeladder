@@ -35,17 +35,27 @@ function isDecision(value: string | undefined): value is ConsentDecision {
 
 /** Attach the banner's behaviour to its region. Returns a stop function. */
 export function mountCookieBanner(region: HTMLElement): () => void {
-  let editing = false;
+  // The control that reopened the panel; null while an undecided visitor is asked.
+  let trigger: HTMLElement | null = null;
 
   const render = () => {
-    region.hidden = readConsent() !== null && !editing;
+    region.hidden = readConsent() !== null && trigger === null;
+  };
+  // A reopened panel closes on an answer or Escape and hands focus back.
+  const closeReopened = () => {
+    const opener = trigger;
+    if (!opener) return;
+    trigger = null;
+    render();
+    opener.focus();
   };
 
   // The footer control is static markup, so the banner listens by delegation.
   const reopen = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return;
-    if (!event.target.closest(`[${COOKIE_PREFERENCES_ATTRIBUTE}]`)) return;
-    editing = true;
+    const control = event.target.closest<HTMLElement>(`[${COOKIE_PREFERENCES_ATTRIBUTE}]`);
+    if (!control) return;
+    trigger = control;
     render();
     region.focus();
   };
@@ -56,18 +66,23 @@ export function mountCookieBanner(region: HTMLElement): () => void {
         .closest(`[${CONSENT_CHOICE_ATTRIBUTE}]`)
         ?.getAttribute(CONSENT_CHOICE_ATTRIBUTE) ?? undefined;
     if (!isDecision(choice)) return;
-    editing = false;
     // Writing notifies the consent subscription below, which re-renders.
     writeConsent(choice);
+    closeReopened();
+  };
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') closeReopened();
   };
 
   document.addEventListener('click', reopen);
+  document.addEventListener('keydown', onKeyDown);
   region.addEventListener('click', decide);
   const unsubscribe = subscribeToConsent(render);
   render();
   return () => {
     unsubscribe();
     document.removeEventListener('click', reopen);
+    document.removeEventListener('keydown', onKeyDown);
     region.removeEventListener('click', decide);
   };
 }

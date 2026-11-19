@@ -161,7 +161,8 @@
     animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
   }
 
-  .mk-hero-in > h1 {
+  /* The title sits in the head block with its crumbs or announcement. */
+  .mk-hero-in > :is(h1, :has(> h1)) {
     animation-name: mk-focus-in;
   }
 

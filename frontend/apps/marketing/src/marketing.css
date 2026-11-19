@@ -28,25 +28,18 @@
 @source '../../../components/ui';
 @source '../../../lib';
 
-/* Public CTAs: the website's buttons are control-md; the page size (hero,
-   sections, the closing band) is 40px with the label role. Only the website
-   renders them, so they sit here, straight after the shared globals, rather
-   than in the app's stylesheet. */
+/* Public CTAs: the app's button face at the app's 44px flow height, one
+   height for every page-level call to action (hero, sections, the closing
+   band, the phone sheet). Only the website renders them, so they sit here,
+   straight after the shared globals, rather than in the app's stylesheet. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
-  min-height: var(--control-md);
-  padding-inline: 1rem;
+  min-height: 44px;
+  padding-inline: 16px;
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
   font-weight: 500;
   transition-property: transform, background-color, color, border-color, box-shadow;
-}
-
-[data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
-  min-height: 40px;
-  padding-inline: 16px;
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
 }
 
 @media (max-width: 540px) {
@@ -94,6 +87,8 @@
   }
 }
 
-[data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-up-right {
-  transform: translate(2px, -2px);
+@media (hover: hover) and (pointer: fine) {
+  [data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-up-right {
+    transform: translate(2px, -2px);
+  }
 }

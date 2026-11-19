@@ -45,14 +45,15 @@ export function RailCard({
         <div className="cl-railcard-copy">
           <Eyebrow>{label}</Eyebrow>
           <h3 className="cl-railcard-title">
-            <a href={href} className="cl-railcard-link focus-ring">
+            {/* The track scrolls and the card clips, so its rings draw inside. */}
+            <a href={href} className="cl-railcard-link focus-ring-inset">
               {title}
             </a>
           </h3>
         </div>
         <button
           type="button"
-          className="cl-railcard-toggle focus-ring"
+          className="cl-railcard-toggle focus-ring-inset"
           aria-expanded={false}
           aria-controls={moreId}
           aria-label={`More about ${label}`}
@@ -72,9 +73,7 @@ export function RailCard({
       </div>
       <div id={moreId} className="cl-railcard-more" aria-hidden inert>
         <p className="cl-railcard-body">{body}</p>
-        <ButtonLink href={href} size="marketing">
-          Explore {label}
-        </ButtonLink>
+        <ButtonLink href={href}>Explore {label}</ButtonLink>
       </div>
     </article>
   );

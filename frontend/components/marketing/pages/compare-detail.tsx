@@ -30,7 +30,12 @@ const FURTHER_READING = [
 function SourceLink({ source }: Readonly<{ source: Competitor['sources'][number] }>) {
   return (
     <TextLink asChild text="inherit">
-      <a href={source.url} target="_blank" rel="noreferrer">
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex min-h-6 items-center"
+      >
         {source.label}
       </a>
     </TextLink>

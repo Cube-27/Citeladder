@@ -116,23 +116,38 @@ export function productContractViolations(root) {
 
 /** The landing page's theme rules, on every website stylesheet: the shared base, components and product screens. */
 export function landingThemeViolations(root) {
-  return marketingCssFiles(root).flatMap((file) => {
-    const css = readFileSync(join(root, ...file.split('/')), 'utf8').replace(
-      /\/\*[\s\S]*?\*\//g,
-      '',
-    );
-    const violations = [];
-    if (/#[\da-f]{3,8}\b/i.test(css))
-      violations.push(`${file}: component colours must use semantic tokens`);
-    if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
-      violations.push(`${file}: rendered text must be at least 12px`);
-    const transitionDeclarations = css.matchAll(
-      /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
-    );
-    if ([...transitionDeclarations].some(([, value]) => /(?:^|[\s,])all(?=$|[\s,])/i.test(value)))
-      violations.push(`${file}: transitions must name their properties`);
-    return violations;
-  });
+  return marketingCssFiles(root).flatMap((file) =>
+    websiteStyleViolations(readFileSync(join(root, ...file.split('/')), 'utf8'), file),
+  );
+}
+
+/** A non-zero length literal: a radius written as a number rather than a token. */
+const LENGTH_LITERAL = /(?<![\w.-])(?:\d*[1-9]\d*(?:\.\d+)?|\d*\.\d*[1-9]\d*)(?:px|rem|em|%)/i;
+
+/**
+ * The website's theme rules for one stylesheet or Astro `<style>` text:
+ * colours and radii come from the token file, text is at least 12px and
+ * transitions name their properties.
+ * @public — also imported by check-design-system.mjs for Astro styles.
+ */
+export function websiteStyleViolations(source, file) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const violations = [];
+  if (/#[\da-f]{3,8}\b/i.test(css) || /(?<![\w-])(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/i.test(css))
+    violations.push(`${file}: component colours must use semantic tokens`);
+  const radii = css.matchAll(
+    /(?:^|[;{\s])(?:border(?:-[a-z]+)*-radius|--[\w-]*radius[\w-]*)\s*:\s*([^;{}]*)/gi,
+  );
+  if ([...radii].some(([, value]) => LENGTH_LITERAL.test(value)))
+    violations.push(`${file}: radii must come from the token file's radius tokens`);
+  if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
+    violations.push(`${file}: rendered text must be at least 12px`);
+  const transitionDeclarations = css.matchAll(
+    /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
+  );
+  if ([...transitionDeclarations].some(([, value]) => /(?:^|[\s,])all(?=$|[\s,])/i.test(value)))
+    violations.push(`${file}: transitions must name their properties`);
+  return violations;
 }
 
 /** The index just past the `}` that balances the `{` at `open`, or -1 when unbalanced. */
