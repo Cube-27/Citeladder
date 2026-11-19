@@ -12,7 +12,8 @@ import { RelatedCards } from '@/components/marketing/sections/cards';
 import { PageHero } from '@/components/marketing/sections/heroes';
 import { PageSection } from '@/components/marketing/sections/page-section';
 import { BLOG_EMPTY_STATE, BLOG_START_PATHS, POSTS } from '@/lib/marketing-content/blog';
-import { formatBlogDate, newestFirst, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { newestFirst, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import { STUDY_INDEXES } from '@/lib/marketing-content/studies/indexes';
@@ -105,7 +106,7 @@ const [featured, ...rest] = newestFirst(POSTS);
                   title: frontmatter.title,
                   href: frontmatter.slug,
                   body: frontmatter.meta_description,
-                  meta: `Reviewed ${formatBlogDate(frontmatter.reviewed_at)}`,
+                  meta: `Reviewed ${formatSiteDate(frontmatter.reviewed_at)}`,
                 })),
               },
             ]}

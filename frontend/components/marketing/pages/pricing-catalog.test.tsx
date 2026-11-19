@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { BillingCatalog } from '@/lib/api/billing';
@@ -58,6 +59,24 @@ describe('public pricing handoff', () => {
     );
     expect(screen.getByRole('link', { name: 'Choose Starter' })).toHaveAttribute('rel', 'nofollow');
     expect(screen.queryByRole('link', { name: 'Request early access' })).not.toBeInTheDocument();
+  });
+
+  it('toggles the price mode from the visible label text and announces it', async () => {
+    render(
+      <PublicPricingCatalog
+        catalog={catalog}
+        appOrigin="https://app.citeladder.com"
+        initialByok
+        trial={trial}
+      />,
+    );
+    const toggle = screen.getByRole('switch', { name: 'Use your own API keys' });
+    expect(screen.getByRole('status')).toHaveTextContent('');
+    await userEvent.click(screen.getByText('Use your own API keys', { selector: 'label' }));
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Showing prices with provider usage included.',
+    );
   });
 
   it.each(['true', 'false'])(

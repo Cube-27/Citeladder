@@ -16,6 +16,7 @@ import { Linkify } from '@/components/marketing/primitives/linkify';
 import { PageSection } from '@/components/marketing/sections/page-section';
 import type { LegalDocument } from '@/lib/marketing-content/legal';
 import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal-documents';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import MarketingLayout from './MarketingLayout.astro';
 
 interface Props {
@@ -23,17 +24,8 @@ interface Props {
 }
 const { document } = Astro.props;
 
-const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 const { updated, path } = document;
-const updatedDate = new Date(`${updated}T00:00:00Z`);
-const updatedLabel = Number.isNaN(updatedDate.getTime())
-  ? updated
-  : UPDATED_DATE_FORMATTER.format(updatedDate);
+const updatedLabel = formatSiteDate(updated);
 
 const clauses = document.sections.map((section, index) => ({
   ...section,

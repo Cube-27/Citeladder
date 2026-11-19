@@ -18,6 +18,8 @@ export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
 };
 
 export const BYOK_SWITCH_LABEL = 'Use your own API keys';
+export const BYOK_ON_ANNOUNCEMENT = 'Showing prices for using your own API keys.';
+export const BYOK_OFF_ANNOUNCEMENT = 'Showing prices with provider usage included.';
 export const BYOK_DISCLOSURE =
   'Provider usage is billed directly to your accounts with no CiteLadder markup. ' +
   "Run speed depends on your providers' rate limits.";

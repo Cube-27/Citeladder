@@ -47,14 +47,3 @@ export function newestFirst<T extends Pick<BlogPost, 'date'>>(posts: readonly T[
     })
     .map(({ post }) => post);
 }
-
-const blogDateFormat = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
-export function formatBlogDate(date: string): string {
-  return blogDateFormat.format(new Date(date));
-}

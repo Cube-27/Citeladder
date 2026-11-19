@@ -22,7 +22,7 @@ import { ContentCta } from '@/components/marketing/content/content-cta';
 import { RelatedCards } from '@/components/marketing/sections/cards';
 import { PageSection } from '@/components/marketing/sections/page-section';
 import { POSTS, type BlogPost } from '@/lib/marketing-content/blog';
-import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import { blogPostingJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import ResearchLayout from '../../layouts/ResearchLayout.astro';
@@ -54,9 +54,9 @@ function postView(post: BlogPost) {
     posting: { ...blogPostingJsonLd(post), articleSection: post.tags, keywords: post.tags },
     meta: [
       ...(post.date
-        ? [{ prefix: 'Published', text: formatBlogDate(post.date), dateTime: post.date }]
+        ? [{ prefix: 'Published', text: formatSiteDate(post.date), dateTime: post.date }]
         : []),
-      ...(updated ? [{ prefix: 'Updated', text: formatBlogDate(updated), dateTime: updated }] : []),
+      ...(updated ? [{ prefix: 'Updated', text: formatSiteDate(updated), dateTime: updated }] : []),
       ...(post.readTime ? [{ text: post.readTime }] : []),
     ],
     related: post.relatedSlugs
@@ -137,7 +137,7 @@ const view = route.kind === 'post' ? postView(route.post) : null;
                           {source.title}
                         </a>
                         {`, ${source.publisher}`}
-                        {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
+                        {source.publishedDate ? ` (${formatSiteDate(source.publishedDate)})` : null}
                       </p>
                     </SourceRow>
                   ))}

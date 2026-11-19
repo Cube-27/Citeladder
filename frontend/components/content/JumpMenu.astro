@@ -80,8 +80,30 @@ const { label } = Astro.props;
     padding: 12px 12px 12px 8px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-pop);
+    /* The website's inner radius; docs, which lack it, keep their own. */
+    border-radius: var(--site-radius-inner, var(--radius-lg));
+    opacity: 0;
+    translate: 0 var(--cl-jump-shift, -4px);
+    transition:
+      opacity var(--motion-close) var(--ease-exit),
+      translate var(--motion-close) var(--ease-exit);
+  }
+  /* The shared open/close motion: the details content stays rendered while it fades out. */
+  .cl-jump::details-content {
+    transition: content-visibility var(--motion-close) allow-discrete;
+  }
+  .cl-jump[open]::details-content {
+    transition-duration: var(--motion-open);
+  }
+  .cl-jump[open] .cl-jump-panel {
+    opacity: 1;
+    translate: 0;
+    transition-duration: var(--motion-open);
+    transition-timing-function: var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--cl-jump-shift, -4px);
+    }
   }
   .cl-jump + .cl-jump .cl-jump-panel {
     right: 0;
@@ -93,6 +115,9 @@ const { label } = Astro.props;
   @media (prefers-reduced-motion: reduce) {
     .cl-jump :global(.cl-jump-caret) {
       transition: none;
+    }
+    .cl-jump {
+      --cl-jump-shift: 0;
     }
   }
 </style>

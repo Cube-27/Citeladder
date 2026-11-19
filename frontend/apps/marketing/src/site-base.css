@@ -127,12 +127,6 @@
   border-radius: var(--site-radius-card);
 }
 
-/* A section's note (a disclaimer, an unavailable notice) is held to the text
-   measure as a whole box, not a full-width box with short lines. */
-.cl-page-section-body > [data-callout-tone] {
-  max-width: 760px;
-}
-
 /* The lead under a heading: body-lg 18/30 at every width. */
 
 .cl-lead {

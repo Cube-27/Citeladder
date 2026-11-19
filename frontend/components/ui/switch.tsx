@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
  * focus and disabled semantics; `aria-checked` carries the state.
  */
 export function Switch({
+  id,
   checked,
   onCheckedChange,
   label,
@@ -18,6 +19,8 @@ export function Switch({
   disabled = false,
   className,
 }: Readonly<{
+  /** Lets a visible `<label htmlFor>` toggle the switch. */
+  id?: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   /** The accessible name. Rendered by the caller if it should also be visible. */
@@ -28,6 +31,7 @@ export function Switch({
 }>) {
   return (
     <button
+      id={id}
       type="button"
       role="switch"
       aria-checked={checked}

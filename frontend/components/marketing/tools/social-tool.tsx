@@ -29,7 +29,7 @@ export function SocialPreview() {
     return () => reader.abort();
   }, [file]);
   const preview = (
-    <div className="bg-surface border-line overflow-hidden rounded-lg border" data-ui>
+    <div className="cl-tool-preview" data-ui>
       {file && localImage ? (
         <img
           src={localImage}

@@ -12,7 +12,7 @@ import Prose from '@/components/content/Prose.astro';
 import '@/components/marketing/content/reading.css';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
-import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { formatSiteDate } from '@/lib/marketing-content/site-date';
 import { PAGES, type PageRecord } from '@/lib/marketing-content/pages';
 import MarketingLayout from './MarketingLayout.astro';
 
@@ -42,7 +42,7 @@ const index = REFERENCES.findIndex((reference) => reference.title === title);
         meta={[
           {
             prefix: 'Last updated',
-            text: formatBlogDate(page.updated),
+            text: formatSiteDate(page.updated),
             dateTime: page.updated,
           },
         ]}

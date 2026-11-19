@@ -29,6 +29,11 @@ it('associates validation errors with fields and focuses the first invalid contr
   const name = screen.getByRole('textbox', { name: /^Name/ });
   expect(name).toHaveFocus();
   expect(name).toHaveAccessibleDescription('Enter your name.');
+  const email = screen.getByRole('textbox', { name: /^Work email/ });
+  expect(email).toHaveAccessibleDescription(/email/i);
+  await userEvent.type(name, 'A');
+  expect(name).not.toHaveAccessibleDescription('Enter your name.');
+  expect(email).toHaveAccessibleDescription(/email/i);
   expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -49,6 +54,9 @@ it('prevents duplicate submissions, sends without optional company and announces
   const button = screen.getByRole('button', { name: 'Send message' });
   await user.click(button);
   expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleName('Sending…');
+  // The idle label stays laid out (invisible) so the button keeps its width.
+  expect(button).toHaveTextContent('Send message');
   fireEvent.submit(button.closest('form')!);
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(fetch.mock.calls[0]).toMatchObject(['/api/v1/contact', { method: 'POST' }]);
