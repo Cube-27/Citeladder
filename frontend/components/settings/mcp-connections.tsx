@@ -31,6 +31,7 @@ function ConnectionRow({
   onRevoke,
 }: Readonly<{ connection: McpConnection; adminView: boolean; onRevoke: () => void }>) {
   const workspaces = connection.workspaces.map((workspace) => workspace.name).join(', ');
+  const verb = connection.access === 'read_and_change' ? 'Reads and changes' : 'Reads';
   return (
     <TableRow>
       <TableCell>
@@ -42,7 +43,7 @@ function ConnectionRow({
           <ClampText className={textRole('body', 'text-ink-2')}>
             {connection.requires_consent
               ? 'Reconnect to choose workspaces.'
-              : `${connection.access === 'read_and_change' ? 'Reads and changes' : 'Reads'} ${workspaces || 'no workspace you can still access'}.`}
+              : `${verb} ${workspaces || 'no workspace you can still access'}.`}
           </ClampText>
           <p className={textRole('caption', 'truncate')}>
             {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}

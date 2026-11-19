@@ -44,7 +44,7 @@ import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { Notice } from '@/components/ui/notice';
+import { Notice, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 function mutationFailure(
@@ -81,6 +81,19 @@ function usePromptToggle(scope: ProjectScope) {
 /** Each topic's name by id; none until the topic list is read. */
 function topicNamesOf(topics: readonly Topic[] | undefined) {
   return topics && new Map(topics.map((topic) => [topic.id, topic.name]));
+}
+
+/** The topics read to report, unless a failed library read already says the page failed. */
+function topicsLoadError<Read extends RetryableRead & { isError: boolean }>(
+  read: Read,
+  pageFailed: boolean,
+): Read | null {
+  return read.isError && !pageFailed ? read : null;
+}
+
+/** Clear filters, offered only while the tab holds prompts the filters hide. */
+function clearWhenNarrowed(tabRows: number, clear: () => void) {
+  return tabRows ? clear : undefined;
 }
 
 /** A failed Enable/Disable; the row's status has already rolled back. */
@@ -362,15 +375,11 @@ export function PromptLibrary() {
           setNames={setNames}
           topicNames={topicNamesOf(topicsQuery.data)}
           commerceSetIds={commerceSetIds}
-          onClearFilters={
-            byStatus.length
-              ? () => {
-                  setSearch('');
-                  setFilters(emptyFilters);
-                  setSelectedTopicId(null);
-                }
-              : undefined
-          }
+          onClearFilters={clearWhenNarrowed(byStatus.length, () => {
+            setSearch('');
+            setFilters(emptyFilters);
+            setSelectedTopicId(null);
+          })}
         />
         {/* The zero-height dock goes after the table: before it, it doubled the section gap. */}
         <PromptBulkBar
@@ -454,8 +463,7 @@ export function PromptLibrary() {
             onDialogChange={setTopicDialog}
             topics={topics}
             mutations={topicMutations}
-            // One error per region: a failed library read already says the page failed.
-            loadError={topicsQuery.isError && !failedEmpty ? topicsQuery : null}
+            loadError={topicsLoadError(topicsQuery, failedEmpty)}
             onAdd={openAddTopic}
             onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
           />

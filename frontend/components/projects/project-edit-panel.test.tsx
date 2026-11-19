@@ -52,16 +52,22 @@ const project = makeProject({
   ],
 });
 
+/** The body of the project update the panel sends, once it is sent. */
+function captureSave() {
+  const sent: { body?: Record<string, unknown> } = {};
+  mswServer.use(
+    http.patch(`/api/v1/projects/${PROJECT_ID}`, async ({ request }) => {
+      sent.body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({ ...project, ...sent.body });
+    }),
+  );
+  return sent;
+}
+
 describe('ProjectEditPanel', () => {
   it('sends the edited fields and keeps the id and aliases of a renamed competitor', async () => {
     const user = userEvent.setup();
-    let body: Record<string, unknown> | undefined;
-    mswServer.use(
-      http.patch(`/api/v1/projects/${PROJECT_ID}`, async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...project, ...body });
-      }),
-    );
+    const sent = captureSave();
 
     renderWithProviders(<ProjectEditPanel project={project} open onOpenChange={vi.fn()} />);
 
@@ -73,11 +79,11 @@ describe('ProjectEditPanel', () => {
     await user.type(competitorName, 'Globex Group');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    await waitFor(() => expect(body).toBeDefined());
-    expect(body?.brand).toEqual({ aliases: ['Acme Inc', 'Acme Co'] });
+    await waitFor(() => expect(sent.body).toBeDefined());
+    expect(sent.body?.brand).toEqual({ aliases: ['Acme Inc', 'Acme Co'] });
     // The panel does not edit per-competitor aliases, so a rename must keep
     // the ones the project already had, and the id keeps the competitor.
-    expect(body?.competitors).toEqual([
+    expect(sent.body?.competitors).toEqual([
       {
         id: '44444444-4444-4444-8444-444444444444',
         name: 'Globex Group',
@@ -89,13 +95,7 @@ describe('ProjectEditPanel', () => {
 
   it('drops blank entries from the comma-separated lists', async () => {
     const user = userEvent.setup();
-    let body: Record<string, unknown> | undefined;
-    mswServer.use(
-      http.patch(`/api/v1/projects/${PROJECT_ID}`, async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...project, ...body });
-      }),
-    );
+    const sent = captureSave();
 
     renderWithProviders(<ProjectEditPanel project={project} open onOpenChange={vi.fn()} />);
 
@@ -104,8 +104,8 @@ describe('ProjectEditPanel', () => {
     await user.type(owned, 'acme.com, , shop.acme.com,');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    await waitFor(() => expect(body).toBeDefined());
-    expect(body?.owned_domains).toEqual(['acme.com', 'shop.acme.com']);
+    await waitFor(() => expect(sent.body).toBeDefined());
+    expect(sent.body?.owned_domains).toEqual(['acme.com', 'shop.acme.com']);
   });
 
   it('shows a common-word brand its mention rule and saves only the rule that changed', async () => {
@@ -172,13 +172,7 @@ describe('ProjectEditPanel', () => {
 
   it('blocks Save on an emptied project name until a name is entered', async () => {
     const user = userEvent.setup();
-    let body: Record<string, unknown> | undefined;
-    mswServer.use(
-      http.patch(`/api/v1/projects/${PROJECT_ID}`, async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...project, ...body });
-      }),
-    );
+    const sent = captureSave();
 
     renderWithProviders(<ProjectEditPanel project={project} open onOpenChange={vi.fn()} />);
 
@@ -191,6 +185,6 @@ describe('ProjectEditPanel', () => {
 
     await user.type(name, 'Acme EU');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
-    await waitFor(() => expect(body?.name).toBe('Acme EU'));
+    await waitFor(() => expect(sent.body?.name).toBe('Acme EU'));
   });
 });

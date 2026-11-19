@@ -317,9 +317,11 @@ export function ManageTopicsDialog({
             />
           ))}
         </TreeList>
-      ) : (
+      ) : null}
+      {/* A failed read is not zero topics: its notice above stands alone. */}
+      {!ordered.length && !loadError ? (
         <StateBlock kind="empty" inline message="No topics yet." />
-      )}
+      ) : null}
     </Dialog>
   );
 }
