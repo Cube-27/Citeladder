@@ -412,7 +412,7 @@ describe('DataTable', () => {
       cols: ['rest', '224.0', '128.0', '224.0', '96.0'],
     });
     // A sorted head wider than its figure role, a date in a figure role that
-    // opens on a 16px gutter after the figure, and two flexible columns that
+    // opens on a 12px gutter after the figure, and two flexible columns that
     // split what is left evenly, each at the wider floor.
     expect(
       layout({
@@ -428,7 +428,7 @@ describe('DataTable', () => {
           { key: 'breakdown', label: 'Folder and resource breakdown' },
         ],
       }),
-    ).toEqual({ narrow: '865.6', desktop: '865.6', cols: ['rest', '184.0', '208.0', 'rest'] });
+    ).toEqual({ narrow: '861.6', desktop: '861.6', cols: ['rest', '184.0', '204.0', 'rest'] });
     // The Prompts table: figures at their label or 96px, mark stacks at 104px
     // plus the gutter where they follow a right-aligned figure, and the spare
     // width left to the reading column alone.
@@ -447,9 +447,9 @@ describe('DataTable', () => {
         ],
       }),
     ).toEqual({
-      narrow: '936.0',
-      desktop: '936.0',
-      cols: ['rest', '128.0', '96.0', '120.0', '96.0', '120.0', '96.0', '80.0'],
+      narrow: '928.0',
+      desktop: '928.0',
+      cols: ['rest', '128.0', '96.0', '116.0', '96.0', '116.0', '96.0', '80.0'],
     });
   });
 

@@ -111,7 +111,7 @@
 [data-gutter-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
 [data-gutter-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
 [data-gutter-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
-  padding-inline-start: calc(var(--table-cell-padding-x) + 16px);
+  padding-inline-start: calc(var(--table-cell-padding-x) + 12px);
 }
 [data-tabular-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
 [data-tabular-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),

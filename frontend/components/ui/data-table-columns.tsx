@@ -227,7 +227,7 @@ const HEAD_MARK_PX = 16;
 const CELL_PAD_PX = 12;
 const EDGE_PAD_PX = 16;
 /** The extra start padding of a column that opens on a gutter (`gutters`), as in data-table.css. */
-const GUTTER_PX = 16;
+const GUTTER_PX = 12;
 /** A date-time on one line ("Sep 30, 2026, 12:59 PM") with its padding: dates never cut. */
 const DATE_FLOOR_STEPS = 48;
 
