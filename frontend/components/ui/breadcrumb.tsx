@@ -16,9 +16,9 @@ export type Crumb = Readonly<{
 /**
  * Where a page sits, one line in the masthead: each step up is a quiet link
  * cut at 272px, the last is the page itself. The whole trail cuts rather
- * than wraps, so a long title never changes the masthead's height: the first
- * crumb stays whole, the page's own name cuts first (down to 96px), then the
- * middle crumbs. A page
+ * than wraps, so a long title never changes the masthead's height: the page's
+ * own name cuts first (down to 48px), then the middle crumbs, and the first
+ * crumb only when nothing else is left to cut. A page
  * whose body has no h1 of its own passes `heading`: the page's name in the
  * trail is then its h1, drawn the same.
  */
@@ -34,7 +34,7 @@ export function Breadcrumb({
       <ol className={textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2')}>
         {parts.slice(0, -1).map((part, index) => (
           <Fragment key={part.label}>
-            <li className={index === 0 ? 'shrink-0' : 'min-w-0 shrink'}>
+            <li className={index === 0 ? 'min-w-0 shrink-[0.001]' : 'min-w-0 shrink'}>
               {part.href ? (
                 <ProjectLink
                   href={part.href}
@@ -55,7 +55,7 @@ export function Breadcrumb({
         {current ? (
           <li
             aria-current="page"
-            className="text-ink flex min-w-24 shrink-[1000] items-center gap-2"
+            className="text-ink flex min-w-12 shrink-[1000] items-center gap-2"
           >
             {current.mark}
             <Name className="min-w-0 truncate">{current.label}</Name>
