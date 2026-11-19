@@ -34,6 +34,7 @@ const FAILURE_COPY = {
 type Failure = keyof typeof FAILURE_COPY;
 type FormState = 'idle' | 'sending' | 'success' | Failure;
 const isFailure = (state: FormState): state is Failure => state in FAILURE_COPY;
+const SUBMIT_LABELS = ['Send message', 'Sending…'] as const;
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
 
 function EmailLink() {
@@ -58,6 +59,15 @@ function ContactForm() {
     if (state === 'idle' && sent.current)
       panel.current?.querySelector<HTMLElement>('[name="name"]')?.focus();
   }, [state, failure]);
+
+  function clearError({ target }: FormEvent<HTMLDivElement>) {
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+    setErrors((current) =>
+      target.name in current
+        ? Object.fromEntries(Object.entries(current).filter(([field]) => field !== target.name))
+        : current,
+    );
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,7 +140,7 @@ function ContactForm() {
     );
 
   return (
-    <div ref={panel}>
+    <div ref={panel} onInput={clearError}>
       <PageForm
         onSubmit={submit}
         busy={state === 'sending'}
@@ -153,7 +163,20 @@ function ContactForm() {
         turnstile={<div ref={turnstileContainer} className="w-full" />}
         submit={
           <Button type="submit" variant="primary" disabled={state === 'sending'}>
-            {state === 'sending' ? 'Sending…' : 'Send message'}
+            <span className="inline-grid justify-items-center">
+              {SUBMIT_LABELS.map((reserved) => (
+                <span
+                  key={reserved}
+                  aria-hidden="true"
+                  className="invisible col-start-1 row-start-1"
+                >
+                  {reserved}
+                </span>
+              ))}
+              <span className="col-start-1 row-start-1">
+                {state === 'sending' ? 'Sending…' : 'Send message'}
+              </span>
+            </span>
           </Button>
         }
       >

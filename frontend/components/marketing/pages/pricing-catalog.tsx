@@ -27,6 +27,8 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { formatCount } from '@/lib/format';
 import {
   BYOK_DISCLOSURE,
+  BYOK_OFF_ANNOUNCEMENT,
+  BYOK_ON_ANNOUNCEMENT,
   BYOK_SWITCH_LABEL,
   PLAN_PRESENTATION,
   capabilityLabel,
@@ -209,24 +211,34 @@ function ByokSwitch({
   byok,
   onChange,
 }: Readonly<{ byok: boolean; onChange: (value: boolean) => void }>) {
+  const id = useId();
   const hint = useId();
+  const [changed, setChanged] = useState(false);
   return (
     <div className="flex max-w-xl items-start gap-3">
       <Switch
+        id={id}
         checked={byok}
-        onCheckedChange={onChange}
+        onCheckedChange={(value) => {
+          setChanged(true);
+          onChange(value);
+        }}
         label={BYOK_SWITCH_LABEL}
         describedBy={hint}
         className="mt-0.5"
       />
       <span className="grid gap-1">
-        <span aria-hidden className="text-body text-ink">
+        {/* The switch's aria-label already names it; this is the visible click target. */}
+        <label htmlFor={id} aria-hidden className="text-body text-ink cursor-pointer">
           {BYOK_SWITCH_LABEL}
-        </span>
+        </label>
         <span id={hint} className="text-body-sm text-ink-muted">
           {BYOK_DISCLOSURE}
         </span>
       </span>
+      <output aria-live="polite" className="sr-only">
+        {changed && (byok ? BYOK_ON_ANNOUNCEMENT : BYOK_OFF_ANNOUNCEMENT)}
+      </output>
     </div>
   );
 }
