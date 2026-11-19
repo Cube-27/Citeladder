@@ -144,25 +144,29 @@ export function MastheadBack({
 }
 
 /**
- * Publishes the masthead's drawn height on the document as
- * `--masthead-block-size`, so a screen that fills the viewport and the scroll
- * padding allow for its second row below `rail`.
+ * Publishes a sticky bar's drawn height on the document (the masthead's as
+ * `--masthead-block-size`, the page strips' as `--strips-block-size`), so a
+ * screen that fills the viewport, the scroll padding and what sticks below
+ * allow for it, its second row below `rail` included.
  */
-function usePublishedHeight(ref: RefObject<HTMLElement | null>) {
+export function usePublishedHeight(
+  ref: RefObject<HTMLElement | null>,
+  property = '--masthead-block-size',
+) {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     const root = document.documentElement;
     const update = () =>
-      root.style.setProperty('--masthead-block-size', `${node.getBoundingClientRect().height}px`);
+      root.style.setProperty(property, `${node.getBoundingClientRect().height}px`);
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => {
       observer.disconnect();
-      root.style.removeProperty('--masthead-block-size');
+      root.style.removeProperty(property);
     };
-  }, [ref]);
+  }, [ref, property]);
 }
 
 /**

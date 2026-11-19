@@ -421,8 +421,10 @@
   --sidebar-rail-width: calc(var(--control-md) + 24px);
 
   /* Component geometry the components read. Each derives from a system token. */
-  /* What sticks under the app's top bar starts below it. */
-  --sticky-header-offset: var(--masthead-height);
+  /* What sticks under the app's top bar and page strips starts below them. */
+  --sticky-header-offset: calc(
+    var(--masthead-block-size, var(--masthead-height)) + var(--strips-block-size, 0px)
+  );
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
@@ -1058,9 +1060,9 @@ html {
   scrollbar-width: thin;
 }
 
-/* In-page focus and anchors clear the app's sticky masthead. */
+/* In-page focus and anchors clear the app's sticky masthead and page strips. */
 html:not([data-public-surface]) {
-  scroll-padding-top: calc(var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap));
+  scroll-padding-top: calc(var(--sticky-header-offset) + var(--page-top-gap));
 }
 
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter

@@ -1,10 +1,10 @@
-import { useContext, useLayoutEffect, type ReactNode } from 'react';
+import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
-import { Masthead, MastheadBack } from '@/components/ui/masthead';
+import { Masthead, MastheadBack, usePublishedHeight } from '@/components/ui/masthead';
 import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { cn } from '@/lib/utils';
@@ -36,11 +36,12 @@ export type PageFrameSlots = Readonly<{
 }>;
 
 /**
- * A strip's closing hairline, across the whole main column like the
- * masthead's, so a narrow page's strips still span it.
+ * A strip's `ground` and closing hairline, across the whole main column like
+ * the masthead's, so a narrow page's strips still span it and content
+ * scrolls under them unseen.
  */
 const STRIP_RULE =
-  'before:border-rule relative isolate min-w-0 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b';
+  'before:bg-ground before:border-rule relative isolate min-w-0 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b';
 
 /**
  * The anatomy every shell page shares (owner, 2026-11-18): the masthead
@@ -52,7 +53,7 @@ const STRIP_RULE =
  * actions sit just left of them, and they keep the main column's right edge
  * on every page (owner, 2026-11-19). A narrow route (its
  * manifest `width`) centres its strips and body in `max-w-thread`, a compact
- * one in `max-w-prose`, and starts the masthead's title on that column's
+ * one in `--container-prose`, and starts the masthead's title on that column's
  * edge; `fill` keeps a workbench across the main column. A page the window scrolls ends in
  * `--page-end-space` of empty space; a `fitted` one (a thread, a workbench)
  * fills the window and scrolls inside itself, so it has none.
@@ -102,17 +103,7 @@ export function PageFrame({
           end={shell?.agentTrigger}
         />
         <div className={cn('flex min-w-0 flex-1 flex-col', PAGE_COLUMN[width])}>
-          {tabs ? (
-            // The tabs fill the strip, so the current tab's underline sits on its rule.
-            <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end')}>
-              {tabs}
-            </div>
-          ) : null}
-          {filters ? (
-            <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
-              {filters}
-            </div>
-          ) : null}
+          {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
           <div
             data-page-body=""
             className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]"
@@ -122,6 +113,35 @@ export function PageFrame({
         </div>
       </div>
     </PageEmptyOfferProvider>
+  );
+}
+
+/**
+ * The tab strip, then the filter strip, pinned together under the masthead
+ * on `ground` (owner, 2026-11-19: "the tabs and filters rows should be
+ * sticky"). Their height is published, so in-page scrolling and focus clear them.
+ */
+function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>) {
+  const strips = useRef<HTMLDivElement>(null);
+  usePublishedHeight(strips, '--strips-block-size');
+  return (
+    <div
+      ref={strips}
+      data-page-strips=""
+      className="z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] flex min-w-0 flex-col"
+    >
+      {tabs ? (
+        // The tabs fill the strip, so the current tab's underline sits on its rule.
+        <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end')}>
+          {tabs}
+        </div>
+      ) : null}
+      {filters ? (
+        <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
+          {filters}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

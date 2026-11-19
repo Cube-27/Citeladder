@@ -267,7 +267,9 @@ vertical gap.
 **Page anatomy**, identical on every shell page. The top strips are the same
 height on every page and each closes on a hairline across the whole main
 column, a narrow page's included: rules span the width, only content is
-inset (owner, 2026-11-18). `PageFrame` draws them; a page sets none.
+inset (owner, 2026-11-18). The tab and filter strips stick under the
+masthead on `ground`, rules included (owner, 2026-11-19). `PageFrame` draws
+them; a page sets none.
 
 1. **Masthead** (52, sticky), as wide as the main column on every page: the
    menu button below 900px, the back link on a record and the page title,
