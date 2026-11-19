@@ -2296,16 +2296,18 @@ label {
    radios .95, checkboxes .92), never on the website or under reduced motion.
    Never on a popup's trigger: its menu opens on press, anchored to the
    trigger's scaling box, and slid 3px with it on a first open (owner,
-   2026-11-19: "it dances on first click"). In the components layer, so a
-   control's own transition utility still wins over it. */
+   2026-11-19: "it dances on first click"). Its colours ease over
+   --motion-fast on every surface. In the components layer, so a control's
+   own transition utility still wins over it. */
 @layer components {
-  :root:not([data-public-surface]) .press {
+  .press {
     transition:
-      scale var(--motion-open) var(--ease-standard),
+      scale var(--motion-open),
       background-color var(--motion-fast),
       color var(--motion-fast),
       border-color var(--motion-fast),
       box-shadow var(--motion-fast);
+    transition-timing-function: var(--ease-standard);
   }
   @media (prefers-reduced-motion: no-preference) {
     :root:not([data-public-surface])
