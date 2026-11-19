@@ -210,8 +210,10 @@
   cursor: pointer;
 }
 
-.cl-tool input[type='file']:hover::file-selector-button {
-  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+@media (hover: hover) and (pointer: fine) {
+  .cl-tool input[type='file']:hover::file-selector-button {
+    background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+  }
 }
 
 /* A date field and its segments use the form's sans face, not the browser's. */

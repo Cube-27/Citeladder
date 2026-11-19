@@ -75,6 +75,28 @@ describe('CookieBanner', () => {
     await user.click(screen.getByRole('button', { name: 'Reject' }));
     expect(hasAnalyticsConsent()).toBe(false);
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+    expect(footer).toHaveFocus();
+    footer.remove();
+  });
+
+  it('closes a reopened panel on Escape and returns focus, but not a first ask', async () => {
+    const user = userEvent.setup();
+    renderBanner();
+    await screen.findByRole('region', { name: 'Cookie consent' });
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('region', { name: 'Cookie consent' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+
+    const footer = document.body.appendChild(document.createElement('button'));
+    footer.type = 'button';
+    footer.textContent = 'Cookie preferences';
+    footer.setAttribute(COOKIE_PREFERENCES_ATTRIBUTE, '');
+    await user.click(footer);
+    expect(screen.getByRole('region', { name: 'Cookie consent' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+    expect(footer).toHaveFocus();
+    expect(readConsent()).toBe('accepted');
     footer.remove();
   });
 

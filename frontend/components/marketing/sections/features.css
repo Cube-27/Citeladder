@@ -20,8 +20,10 @@
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-a.cl-fcard:hover {
-  background-color: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
+@media (hover: hover) and (pointer: fine) {
+  a.cl-fcard:hover {
+    background-color: color-mix(in oklch, var(--color-ink) 5%, var(--cl-tint));
+  }
 }
 
 .cl-fcard:has(> .cl-frame) {
@@ -235,10 +237,12 @@ a.cl-fcard:hover {
     justify-self: end;
   }
 
-  .cl-audience a.cl-fcard:hover .cl-fcard-title {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 4px;
+  @media (hover: hover) and (pointer: fine) {
+    .cl-audience a.cl-fcard:hover .cl-fcard-title {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
   }
 }
 

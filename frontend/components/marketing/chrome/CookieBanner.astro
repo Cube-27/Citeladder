@@ -5,11 +5,11 @@ import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
 import './cookie-banner.css';
 
 /**
- * The cookie consent banner (the system's CookieBanner): a surface card at
- * the bottom left, a slim bar along the bottom on a short or narrow screen,
- * with Reject and Accept as the same outlined button. Server-rendered
- * hidden; `cookie-banner.ts` reveals it only for an undecided visitor or a
- * reopened preference. A landmark section named "Cookie consent", not a
+ * The cookie consent banner (the system's CookieBanner): a slim bar docked
+ * along the bottom, with Reject and Accept as the same outlined button.
+ * Server-rendered hidden; `cookie-banner.ts` reveals it only for an undecided
+ * visitor or a reopened preference (which Escape closes). A landmark section
+ * named "Cookie consent", not a
  * dialog: it does not trap focus or block the page, and its title line is
  * text, not a heading of the page.
  *

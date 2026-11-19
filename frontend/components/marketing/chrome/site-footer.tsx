@@ -75,6 +75,7 @@ function DirectoryBadges() {
   return (
     <div className="cl-footer-badges">
       <a
+        className="focus-ring"
         href="https://www.codehype.ai/product/citeladder?utm_source=codehype_badge"
         target="_blank"
         rel="noopener noreferrer"
@@ -90,6 +91,7 @@ function DirectoryBadges() {
         />
       </a>
       <a
+        className="focus-ring"
         href="https://tools.launchllama.co/products/citeladder?utm_source=badge&utm_medium=referral"
         target="_blank"
         rel="noopener noreferrer"

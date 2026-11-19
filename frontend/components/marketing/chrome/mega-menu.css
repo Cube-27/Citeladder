@@ -48,9 +48,11 @@
   padding: 8px 12px;
 }
 
-.cl-mega-item:hover,
-.cl-mega-foot:hover {
-  background: var(--color-surface-sunken);
+@media (hover: hover) and (pointer: fine) {
+  .cl-mega-item:hover,
+  .cl-mega-foot:hover {
+    background: var(--color-surface-sunken);
+  }
 }
 
 /* A duotone tile: the orange glyph on a grey square. */

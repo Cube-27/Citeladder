@@ -70,7 +70,7 @@ describe('the mobile sheet', () => {
     document.body.innerHTML = '';
   });
 
-  it('holds the page behind it while open and releases it on Escape', () => {
+  it('holds the page and focus while open and hands both back on Escape', () => {
     renderNav();
     const toggle = button('button[aria-controls="mobile-menu"]');
     const main = document.querySelector('main');
@@ -79,11 +79,13 @@ describe('the mobile sheet', () => {
     expect(byId('mobile-menu').hidden).toBe(false);
     expect(toggle.getAttribute('aria-label')).toBe('Close menu');
     expect(main?.hasAttribute('inert')).toBe(true);
+    expect(document.activeElement).toBe(button('button[aria-controls="acc-platform"]'));
 
     press('Escape');
     expect(byId('mobile-menu').hidden).toBe(true);
     expect(toggle.getAttribute('aria-label')).toBe('Open menu');
     expect(main?.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(toggle);
   });
 
   it('opens one accordion at a time and closes it on a second tap', () => {

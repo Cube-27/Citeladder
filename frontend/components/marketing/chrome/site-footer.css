@@ -67,12 +67,12 @@
 .cl-footer-badges > a {
   display: block;
   flex: none;
+  border-radius: var(--radius-sm);
 }
 
 /* Third-party badges in their own colours would be the page's only colour.
    The transparent text keeps a failed load's alt text out of the layout. */
 .cl-footer-badge {
-  position: relative;
   display: block;
   width: 112px;
   height: 32px;
@@ -82,13 +82,16 @@
   filter: grayscale(1);
 }
 
-/* Drawn only when the image fails to load: it covers the browser's
-   broken-image icon, leaving an empty slot of the badge's size. */
-.cl-footer-badge::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--site-page);
+/* The badges are white slabs, so in dark each sits on a grey chip and turns
+   negative, screened onto it: the slab takes the chip's grey, its text stays light. */
+:root[data-theme='dark'] .cl-footer-badges > a {
+  padding: 4px;
+  background: var(--color-site-chip);
+}
+
+:root[data-theme='dark'] .cl-footer-badge {
+  filter: grayscale(1) invert(1);
+  mix-blend-mode: screen;
 }
 
 /* The social profiles, one row of icon links under the badges. The row
@@ -115,9 +118,29 @@
     color var(--motion-fast) var(--ease-standard);
 }
 
-.cl-footer-social-link:hover {
-  background: var(--color-state-hover);
-  color: var(--color-ink);
+@media (hover: hover) and (pointer: fine) {
+  .cl-footer-social-link:hover {
+    background: var(--color-state-hover);
+    color: var(--color-ink);
+  }
+}
+
+/* A 44px target under a coarse pointer; the icons keep their size and place,
+   12px apart so the targets meet without overlapping. */
+@media (pointer: coarse) {
+  .cl-footer-social {
+    gap: 12px;
+  }
+
+  .cl-footer-social-link {
+    position: relative;
+  }
+
+  .cl-footer-social-link::after {
+    position: absolute;
+    inset: calc(50% - 22px);
+    content: '';
+  }
 }
 
 .cl-footer-cols {
@@ -137,7 +160,7 @@
 .cl-footer-col ul {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -149,6 +172,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-height: 24px;
   border-radius: var(--radius-xs);
   color: var(--color-ink-secondary);
   font-size: var(--text-body-sm);
@@ -160,13 +184,15 @@
   color: var(--color-ink-secondary);
 }
 
-.cl-footer-col a:hover,
-.cl-footer-legal a:hover,
-.cl-footer-cookie:hover,
-.cl-footer-copy a:hover {
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@media (hover: hover) and (pointer: fine) {
+  .cl-footer-col a:hover,
+  .cl-footer-legal a:hover,
+  .cl-footer-cookie:hover,
+  .cl-footer-copy a:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 .cl-footer-bottom {

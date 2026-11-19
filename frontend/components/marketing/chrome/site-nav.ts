@@ -67,11 +67,10 @@ function mountSheet(chrome: HTMLElement) {
    * whole navbar is the boundary, so a tap on the toggle reaches its own
    * handler.
    */
+  const desktop = window.matchMedia('(min-width: 960px)');
   const holdPage = () => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      closeSheet();
-      if (toggle.getClientRects().length) toggle.focus();
+      if (event.key === 'Escape') closeSheet();
     };
     const onPointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node) || !chrome.contains(event.target)) closeSheet();
@@ -84,7 +83,6 @@ function mountSheet(chrome: HTMLElement) {
     for (const element of held) element.setAttribute('inert', '');
     // Widening past the sheet's breakpoint closes it, or the page would stay
     // inert behind a sheet nobody can see.
-    const desktop = window.matchMedia('(min-width: 960px)');
     const onDesktop = (event: MediaQueryListEvent) => {
       if (event.matches) closeSheet();
     };
@@ -105,6 +103,10 @@ function mountSheet(chrome: HTMLElement) {
     releasePage?.();
     releasePage = next ? holdPage() : null;
     render();
+    // The sheet is a dialog: focus moves in on open and back to the toggle
+    // on close, unless the bar has widened and hidden the toggle.
+    if (next) sheet.querySelector<HTMLElement>('a[href], button')?.focus();
+    else if (!desktop.matches) toggle.focus();
   };
   const closeSheet = () => {
     openAccordion = null;

@@ -142,9 +142,13 @@ const hasEnd = Astro.slots.has('end');
       color: var(--color-ink-secondary);
       text-wrap: pretty;
     }
-    .cl-site .cl-cpage-article-toc .cl-toc-link:hover,
     .cl-site .cl-cpage-article-toc .cl-toc-link[aria-current='location'] {
       color: var(--color-ink);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .cl-site .cl-cpage-article-toc .cl-toc-link:hover {
+        color: var(--color-ink);
+      }
     }
     /* A wrapped entry stays flush left; entries are 8px apart (their 4px
        padding each), and the bar spans the whole entry. */
@@ -180,9 +184,9 @@ const hasEnd = Astro.slots.has('end');
         linear-gradient(var(--color-line), var(--color-line)) left / 1px 100% no-repeat,
         linear-gradient(var(--site-page) 40%, transparent) top / 100% 32px no-repeat local,
         linear-gradient(transparent, var(--site-page) 60%) bottom / 100% 32px no-repeat local,
-        linear-gradient(color-mix(in srgb, var(--color-ink) 14%, transparent), transparent) top /
+        linear-gradient(color-mix(in oklch, var(--color-ink) 14%, transparent), transparent) top /
           100% 16px no-repeat scroll,
-        linear-gradient(transparent, color-mix(in srgb, var(--color-ink) 14%, transparent)) bottom /
+        linear-gradient(transparent, color-mix(in oklch, var(--color-ink) 14%, transparent)) bottom /
           100% 16px no-repeat scroll;
       scrollbar-width: thin;
       scrollbar-color: var(--color-line-strong) transparent;
@@ -217,7 +221,6 @@ const hasEnd = Astro.slots.has('end');
   .cl-cpage-article [data-callout-tone] {
     gap: 16px;
     padding: 20px 24px;
-    border-radius: var(--site-radius-inner);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }

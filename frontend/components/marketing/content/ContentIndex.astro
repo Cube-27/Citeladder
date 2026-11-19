@@ -153,10 +153,15 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     letter-spacing: var(--text-heading-lg--letter-spacing);
     text-wrap: pretty;
   }
-  .cl-cpage-index-link:hover .cl-cpage-index-name {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 4px;
+  @media (hover: hover) and (pointer: fine) {
+    .cl-cpage-index-link:hover .cl-cpage-index-name {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+    .cl-cpage-index-link:hover .cl-cpage-index-arrow {
+      color: var(--color-ink);
+    }
   }
   .cl-cpage-index-body {
     display: -webkit-box;
@@ -186,9 +191,6 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     align-self: center;
     color: var(--color-ink-muted);
     transition: color var(--motion-fast) var(--ease-standard);
-  }
-  .cl-cpage-index-link:hover .cl-cpage-index-arrow {
-    color: var(--color-ink);
   }
   /* An untitled next group's top hairline closes this one, so only one line falls between. */
   .cl-cpage-index-group:has(+ .cl-cpage-index-group--untitled) .cl-cpage-index-list > li:last-child > .cl-cpage-index-link {
