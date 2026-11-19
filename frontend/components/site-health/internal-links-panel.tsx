@@ -51,12 +51,7 @@ export function InternalLinksPanel({
     <Stack gap="workspace" className="min-w-0">
       <Notices read={read} />
       {analysis ? (
-        <LinksResult
-          analysis={analysis}
-          links={links}
-          onSelect={(id) => update('link', id)}
-          canAnalyze={Boolean(read.data?.crawl_id)}
-        />
+        <LinksResult analysis={analysis} links={links} onSelect={(id) => update('link', id)} />
       ) : (
         <StartState read={read} />
       )}
@@ -115,10 +110,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   if (!data.crawl_id)
     return (
       <Section>
-        <StateBlock
-          kind="not_measured"
-          description="Internal links can be analyzed once the crawl finishes."
-        />
+        <StateBlock kind="not_measured" description="Available once the crawl finishes." />
       </Section>
     );
   return (
@@ -143,12 +135,10 @@ function LinksResult({
   analysis,
   links,
   onSelect,
-  canAnalyze,
 }: Readonly<{
   analysis: InternalLinkAnalysis;
   links: InternalLink[];
   onSelect: (id: string) => void;
-  canAnalyze: boolean;
 }>) {
   const summary = analysis.diagnostics;
   const notice = internalLinkStateNotice(analysis);
@@ -164,12 +154,7 @@ function LinksResult({
     );
   return (
     <>
-      {analysis.stale ? (
-        <Notice tone="warning">
-          These suggestions use an earlier crawl.{' '}
-          {canAnalyze ? 'Analyze again before making edits.' : null}
-        </Notice>
-      ) : null}
+      {analysis.stale ? <Notice tone="warning">From an earlier crawl.</Notice> : null}
       {notice ? <Notice tone="info">{notice}</Notice> : null}
       {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
@@ -219,10 +204,9 @@ const LINK_COLUMNS: readonly DataTableColumn[] = [
 /** Distinguish "nothing to compare" from "compared and nothing qualified". */
 function emptyReason(analysis: InternalLinkAnalysis): string {
   const summary = analysis.diagnostics;
-  if (analysis.recommendations.length) return 'No suggestions match these filters.';
-  if (!summary?.candidates)
-    return 'No supported source placements for unlinked destinations were found in this crawl.';
-  return `${formatCount(summary.completed)} page pairs were checked and none qualified for a contextual link.`;
+  if (analysis.recommendations.length) return 'No matches.';
+  if (!summary?.candidates) return 'No candidate placements.';
+  return `${formatCount(summary.completed)} page pairs checked, none qualified`;
 }
 
 function LinksTable({

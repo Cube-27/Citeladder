@@ -9,7 +9,7 @@ import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
-import { endSentence, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { SearchField } from '@/components/ui/search-field';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -216,17 +216,14 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           <SectionTitle>Members</SectionTitle>
           {membersQuery.data ? (
             <SectionDescription>
-              {endSentence(
-                pluralCount(membersQuery.data.length, 'member') + ' in ' + workspaceName,
-              )}
+              {pluralCount(membersQuery.data.length, 'member')}
             </SectionDescription>
           ) : null}
         </SectionHeader>
         <Stack gap="workspace">
           {mayInvite ? null : (
             <Notice tone="info">
-              Inviting team members is part of a paid plan. During the trial, this workspace is
-              yours alone. <TextLink href={PLANS_HREF}>See plans</TextLink>
+              Inviting members needs a paid plan. <TextLink href={PLANS_HREF}>See plans</TextLink>
             </Notice>
           )}
           <MemberFailure failure={failure} onRetry={refresh} />

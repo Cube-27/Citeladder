@@ -73,7 +73,7 @@ it('describes a connection by name and revokes it only after confirmation', asyn
   renderTab();
   const row = (await screen.findByText('Reads Acme, Beta.')).closest('tr');
   expect(row).toHaveTextContent('Claude · name not verified');
-  expect(row).toHaveTextContent('Read · Connected Oct 1, 2026 · Not used yet');
+  expect(row).toHaveTextContent('Connected Oct 1, 2026 · Not used yet');
   expect(row?.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
 
   await user.click(within(row!).getByRole('button', { name: 'Revoke' }));
@@ -107,7 +107,7 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
   const section = heading.closest('section')!;
   await within(section).findByRole('button', { name: 'Remove workspace access' });
   expect(section).toHaveTextContent('Reads and changes Acme.');
-  expect(section).toHaveTextContent('Read and change · Connected by ana@example.test');
+  expect(section).toHaveTextContent('Connected by ana@example.test');
   expect(section).toHaveTextContent('Last used');
   expect(section).not.toHaveTextContent('Not used yet');
 

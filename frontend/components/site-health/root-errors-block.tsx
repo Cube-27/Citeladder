@@ -21,9 +21,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   const keyOccurrences = new Map<string, number>();
   return (
     <Stack gap="item" data-testid="root-errors-block">
-      <p className={textRole('body', 'text-ink-2')}>
-        The start URL could not be fetched, so the crawl never reached any page.
-      </p>
+      <p className={textRole('body', 'text-ink-2')}>The start URL could not be fetched.</p>
       <ul className={ledgerClasses()}>
         {errors.map((error) => {
           const signature = JSON.stringify([

@@ -120,7 +120,7 @@ type CrawlTableScope = TrafficTableScope & Readonly<{ onClearFilters: () => void
  */
 function noMatches(
   { filters, onClearFilters }: CrawlTableScope,
-  copy: Readonly<{ heading: string; description: string }>,
+  copy: Readonly<{ heading: string }>,
 ): DataTableState {
   if (trafficNarrowed(filters)) return { kind: 'filtered', onClear: onClearFilters };
   return { kind: 'empty', icon: SearchX, ...copy };
@@ -142,12 +142,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
     noun: 'crawlers',
     loading: 'Loading crawlers…',
     subject: 'the crawlers',
-    empty: () =>
-      noMatches(scope, {
-        heading: 'No matching requests were observed',
-        description:
-          'Check coverage on Overview before interpreting absence in the available logs.',
-      }),
+    empty: () => noMatches(scope, { heading: 'No matching requests were observed' }),
   });
   return (
     <TabPanel value="crawlers">
@@ -236,11 +231,7 @@ export function TrafficActivity(scope: CrawlTableScope) {
     noun: 'requests',
     loading: 'Loading request activity…',
     subject: 'the request activity',
-    empty: () =>
-      noMatches(scope, {
-        heading: 'No matching requests',
-        description: 'Nothing in the available retained logs matches these filters.',
-      }),
+    empty: () => noMatches(scope, { heading: 'No matching requests' }),
   });
   return (
     <TabPanel value="activity">

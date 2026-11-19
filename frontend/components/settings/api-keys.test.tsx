@@ -88,7 +88,7 @@ it('sends the end of the chosen day in the display time zone and lists that day'
   renderTab();
   await user.click(await screen.findByRole('button', { name: 'Create key' }));
   const dialog = screen.getByRole('dialog', { name: 'Create an API key' });
-  expect(dialog).toHaveTextContent('The key stops working at the end of this day (Asia/Kolkata).');
+  expect(dialog).toHaveTextContent('Ends at midnight, Asia/Kolkata');
   await user.type(within(dialog).getByLabelText(/Name/u), 'CI export');
   const expiry = within(dialog).getByRole('textbox', { name: 'Expiry date' });
   // A day that does not exist is refused in the field, before any request.
@@ -138,7 +138,7 @@ it('creates a key for chosen projects and shows its secret once', async () => {
   });
   const shown = await screen.findByRole('dialog', { name: 'Copy your API key' });
   expect(shown).toHaveTextContent(SHOWN_ONCE);
-  expect(shown).toHaveTextContent('You won’t see this key again.');
+  expect(shown).toHaveTextContent('Shown once.');
   await user.click(within(shown).getByRole('button', { name: 'Done' }));
   expect(screen.queryByText(SHOWN_ONCE)).toBeNull();
 });

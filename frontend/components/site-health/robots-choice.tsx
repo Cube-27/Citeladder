@@ -11,7 +11,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 /** A page fetched although robots.txt excludes it, because its crawl ignored robots.txt. */
 export function RobotsExcludedBadge() {
   return (
-    <Tooltip content="robots.txt excludes this page. It was fetched because the crawl ignored robots.txt.">
+    <Tooltip content="Fetched because the crawl ignored robots.txt.">
       <StatusMark tone="warning">Robots.txt excluded</StatusMark>
     </Tooltip>
   );
@@ -51,9 +51,8 @@ export function StartCrawlControl({
       title: 'Ignore robots.txt for this crawl?',
       body: (
         <>
-          The crawl will also fetch pages on {siteUrl} that robots.txt disallows. Crawl delay, rate
-          limits and access controls still apply. Continue only if you are authorized to crawl this
-          site. Your confirmation is recorded on the crawl, and later and scheduled crawls keep it.
+          Also fetches pages on {siteUrl} that robots.txt disallows. Only if you are authorized to
+          crawl this site. Later and scheduled crawls keep this choice.
         </>
       ),
       confirmLabel: 'I am authorized, run crawl',

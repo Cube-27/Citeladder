@@ -36,7 +36,6 @@ export function TrafficSetupState({
           kind="empty"
           icon={Unplug}
           heading="Connect a traffic source"
-          description="AI traffic shows visits from AI answers and AI crawler requests once GA4 or your crawl logs are connected."
           action={
             <>
               {/* The Overview's first figures need GA4, so it is the one primary. */}
@@ -59,7 +58,6 @@ export function TrafficSetupState({
           kind="empty"
           icon={Unplug}
           heading="Connect crawl logs"
-          description="Connect your CDN or server logs to see which AI crawlers request your pages."
           action={connectCrawl ?? undefined}
         />
       )}

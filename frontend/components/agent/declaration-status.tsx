@@ -46,15 +46,13 @@ function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration 
   if (declaration.resolved_before_snapshot_id)
     return (
       <p className={textRole('body', 'text-ink-2')}>
-        These findings were already resolved before this went live, so the outcome is not credited
-        to this change and nothing is measured.
+        Resolved before go-live: not credited, not measured.
       </p>
     );
   if (declaration.checks.length === 0)
     return (
       <p className={textRole('body', 'text-ink-2')}>
-        No automatic check applies to these findings, so CiteLadder records the work but cannot
-        verify it.
+        No automatic check applies. Recorded, not verified.
       </p>
     );
   return (
@@ -125,8 +123,8 @@ export function DeclarationStatus({
       ) : null}
       {declaration.checks.length > 0 ? (
         <p className={textRole('caption')}>
-          New evidence is read until <DisplayTime value={declaration.measured_until} dateOnly />. A
-          met check does not prove this Action caused any movement.
+          Read until <DisplayTime value={declaration.measured_until} dateOnly />. A met check does
+          not prove this Action caused the movement.
         </p>
       ) : null}
       <VerificationObservations implementation={declaration} showAuditLink={hasVisibility} />
@@ -299,14 +297,14 @@ function LegWait({ leg }: Readonly<{ leg: MeasurementLeg }>) {
         Waiting · expected <DisplayTime value={leg.due_at} dateOnly />.
       </>
     ) : (
-      <>Waiting for the next reading; its date is not known.</>
+      <>Waiting for the next reading.</>
     );
   }
   return <>{NOT_SCHEDULED[leg.leg]}</>;
 }
 
 const NOT_SCHEDULED: Record<MeasurementLeg['leg'], string> = {
-  next_visibility_run: 'No visibility run is scheduled. Run or schedule one to measure.',
+  next_visibility_run: 'No visibility run is scheduled.',
   next_search_console_window: 'Waiting for the next complete window.',
-  next_crawl: 'Crawls run when you start one.',
+  next_crawl: 'Measured on your next crawl.',
 };

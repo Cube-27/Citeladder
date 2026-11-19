@@ -377,11 +377,7 @@ function withoutTrailingSlashes(value: string): string {
 
 function CompletionStateAlert({ failed }: Readonly<{ failed: boolean }>) {
   if (failed) {
-    return (
-      <Notice tone="negative">
-        Project creation did not finish. Go back, confirm the website again, and retry.
-      </Notice>
-    );
+    return <Notice tone="negative">Project creation did not finish.</Notice>;
   }
   return null;
 }
@@ -392,33 +388,24 @@ const RERUN_WARNINGS = new Set(['research_degraded', 'competitors_not_found']);
 const SITE_FAILURES = new Set(['invalid_url', 'site_not_found', 'ssrf_blocked', 'out_of_scope']);
 
 function failureMessage(code: string): string {
-  if (code === 'invalid_url')
-    return 'The website address is invalid. Correct it, or run discovery again.';
-  if (SITE_FAILURES.has(code))
-    return 'We could not open this website. Check the address, or run discovery again.';
-  return 'Research did not finish. Run discovery again; your brand details are kept.';
+  if (code === 'invalid_url') return 'The website address is invalid.';
+  if (SITE_FAILURES.has(code)) return 'We could not open this website.';
+  return 'Research did not finish.';
 }
+
+const PARTIAL_RESEARCH = 'Some website details could not be confirmed.';
 
 function warningMessage(code: string): string {
   const messages: Record<string, string> = {
-    research_degraded:
-      'We used the website details we could confirm. Review them before continuing.',
-    competitors_not_found:
-      'No competitors were confirmed. You can continue with none or add them yourself.',
-    external_research_unavailable:
-      'We used the website details we could confirm. Review them before continuing.',
-    external_research_no_results:
-      'We used the website details we could confirm. Review them before continuing.',
-    conflicting_evidence:
-      'Sources disagreed about this business. Review the suggested positioning carefully.',
-    insufficient_evidence:
-      'Too little evidence was found to confirm this business. Review the suggested positioning carefully.',
-    site_health_deferred: 'The project is ready; its Website review will need to be started later.',
+    research_degraded: PARTIAL_RESEARCH,
+    competitors_not_found: 'No competitors were confirmed.',
+    external_research_unavailable: PARTIAL_RESEARCH,
+    external_research_no_results: PARTIAL_RESEARCH,
+    conflicting_evidence: 'Sources disagreed about this business.',
+    insufficient_evidence: 'Too little evidence to confirm this business.',
+    site_health_deferred: 'The Website review was not started.',
   };
-  return (
-    messages[code] ??
-    'Some research could not be confirmed. Review the suggestions before continuing.'
-  );
+  return messages[code] ?? 'Some research could not be confirmed.';
 }
 
 function toggleCompetitor(

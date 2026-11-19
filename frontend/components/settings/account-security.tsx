@@ -269,7 +269,6 @@ export default function AccountSecurity() {
           />
           <SettingRow
             label="Sign out and disconnect"
-            description="Also disconnects your MCP clients and revokes your API keys."
             action={
               <Button variant="danger" onClick={() => setConfirm('disconnect')}>
                 Sign out and disconnect
@@ -292,7 +291,7 @@ export default function AccountSecurity() {
           </Button>
         }
       >
-        <p>This signs out every device, including this one.</p>
+        <p>Includes this device.</p>
       </Dialog>
       <Dialog
         open={confirm === 'disconnect'}
@@ -308,11 +307,7 @@ export default function AccountSecurity() {
           </Button>
         }
       >
-        <p>
-          This signs out every device, including this one. It also disconnects every MCP client you
-          connected and revokes every API key you created. Integrations that use them stop working
-          until you connect them again.
-        </p>
+        <p>Signs out every device, disconnects your MCP clients and revokes your API keys.</p>
       </Dialog>
     </>
   );

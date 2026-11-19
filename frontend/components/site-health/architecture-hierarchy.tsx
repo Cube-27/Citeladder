@@ -89,7 +89,7 @@ export function HierarchyCard({
   return (
     <TitledSection
       title="Observed hierarchy"
-      description={origin ? `Paths are on ${readableUrl(origin)}.` : undefined}
+      description={origin ? readableUrl(origin) : undefined}
     >
       <SectionContent>
         {roots.length === 0 ? (

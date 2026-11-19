@@ -34,39 +34,12 @@ const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {
 /** The path and its three signals fit at 982; the rest come last and scroll. */
 const PAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'path', label: 'Path', kind: 'identity' },
-  {
-    key: 'crawl',
-    label: 'Requests',
-    kind: 'number',
-    hint: 'Recognized AI crawler requests for this path.',
-  },
-  {
-    key: 'referrals',
-    label: 'Referrals',
-    kind: 'number',
-    hint: 'AI referral sessions GA4 reported for this path.',
-  },
-  {
-    key: 'citations',
-    label: 'Citations',
-    kind: 'number',
-    hint: 'Tracked citations of this path in AI answers.',
-  },
-  {
-    key: 'coverage',
-    label: 'Coverage',
-    kind: 'status',
-    width: 'category',
-    hint: 'Whether a figure in this row counts only part of the window.',
-  },
+  { key: 'crawl', label: 'Requests', kind: 'number' },
+  { key: 'referrals', label: 'Referrals', kind: 'number' },
+  { key: 'citations', label: 'Citations', kind: 'number' },
+  { key: 'coverage', label: 'Coverage', kind: 'status', width: 'category' },
   { key: 'key-events', label: 'Key events', kind: 'number', priority: 'low' },
-  {
-    key: 'findings',
-    label: 'Findings',
-    kind: 'number',
-    priority: 'low',
-    hint: 'Open Site health findings on this path.',
-  },
+  { key: 'findings', label: 'Findings', kind: 'number', priority: 'low' },
   { key: 'last-crawl', label: 'Last crawl', kind: 'date', priority: 'low' },
   { key: 'errors', label: '4xx / 5xx', kind: 'number', priority: 'low' },
 ];
@@ -120,8 +93,7 @@ function pageColumns(
 
 const NOTHING_MEASURED: DataTableState = {
   kind: 'not_measured',
-  description:
-    'No signal measured these paths in this window. Connect crawl logs, GA4 or citation tracking to measure them.',
+  description: 'No signal measured these paths in this window.',
 };
 
 /**
@@ -151,7 +123,6 @@ export function TrafficPages({
       kind: 'empty',
       icon: SearchX,
       heading: 'No joinable paths were observed',
-      description: 'Check each signal’s coverage for this window before interpreting absence.',
     }),
   });
   const rows = page?.items ?? [];
@@ -234,7 +205,7 @@ const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
   'key-events': (r) => (
     <TableCell numeric>
       {r.key_events === null ? (
-        <Unavailable reason="Key events are unavailable for this path in the selected window." />
+        <Unavailable reason="Key events unavailable for this window." />
       ) : (
         formatCount(r.key_events)
       )}
@@ -250,7 +221,7 @@ const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
       {r.last_crawl ? (
         <TableTime value={r.last_crawl} />
       ) : (
-        <Unavailable reason="Last crawl is unavailable for this path in the selected window." />
+        <Unavailable reason="Last crawl unavailable for this window." />
       )}
     </TableCell>
   ),

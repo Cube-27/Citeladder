@@ -218,8 +218,8 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
       ) : (
         <div className={wellClasses('type-body text-ink-2 min-w-0')}>
           {evidence.aio_present === false
-            ? 'There was nothing to compose: no overview appeared, so no brand could appear in one.'
-            : 'No presence can be reported for a search that was never retrieved. This is a gap in our measurement, not an absence of the brand.'}
+            ? 'No overview appeared.'
+            : 'Search not retrieved: a measurement gap, not brand absence.'}
         </div>
       )}
       <SurfaceFooter evidence={evidence} />

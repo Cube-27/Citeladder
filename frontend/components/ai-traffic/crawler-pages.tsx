@@ -21,7 +21,6 @@ export function CrawlerPages({
         if (!open) onClose();
       }}
       title="Observed crawler pages"
-      description="Joinable path observations for the selected crawler."
     >
       {botId ? (
         <TrafficPages

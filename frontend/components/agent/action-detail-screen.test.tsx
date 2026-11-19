@@ -462,10 +462,10 @@ describe('An Action page’s sections and hand-off', () => {
     const overview = await screen.findByRole('region', { name: 'Overview' });
     expect(within(overview).getByText('Suggested by the agent')).toBeVisible();
     expect(
-      within(screen.getByRole('region', { name: 'What to do' })).getByText(
+      within(screen.getByRole('region', { name: 'What to do' })).queryByText(
         'Suggested by the agent',
       ),
-    ).toBeVisible();
+    ).toBeNull();
   });
 
   it('copies the hand-off message and steps as a prompt', async () => {

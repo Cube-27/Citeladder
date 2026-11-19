@@ -372,8 +372,7 @@ function PageHead({
       </Inline>
       {draft.moved && !draft.failure ? (
         <Notice tone="warning">
-          The page changed since you started editing. Saving will be refused; discard your edits to
-          see the latest version.
+          The page changed since you started editing. Saving will be refused.
         </Notice>
       ) : null}
       {draft.failure ? <Notice kind="mutation" notice={draft.failure} /> : null}

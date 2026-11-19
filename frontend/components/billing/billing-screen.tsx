@@ -202,7 +202,7 @@ export function BillingScreen() {
           kind="error"
           title="Couldn't load billing"
           {...readErrorProps(entitlementQuery)}
-          fallback="Your entitlement could not be resolved, so no billing change is offered. No paid capability is active until it does."
+          fallback="Entitlement unresolved. No paid capability is active."
         />
       </SettingsPage>
     );
@@ -237,11 +237,7 @@ export function BillingScreen() {
       }
     >
       <CheckoutStatus checkout={checkout} />
-      {canManage ? null : (
-        <Notice tone="info">
-          Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
-        </Notice>
-      )}
+      {canManage ? null : <Notice tone="info">Plan changes: Owner or Admin only.</Notice>}
       <CurrentPlan
         entitlement={entitlement}
         currentPlan={currentPlanOf(catalog, entitlement)}

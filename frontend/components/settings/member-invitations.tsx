@@ -16,7 +16,6 @@ import { Select } from '@/components/ui/select';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
-import { pluralCount } from '@/lib/format';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
@@ -31,10 +30,10 @@ function acceptanceLink(token: string): string {
 
 function deliveryNotice(delivery: 'accepted' | 'failed' | undefined): string {
   if (delivery === 'accepted') {
-    return 'The email provider accepted the invitation. Inbox delivery is not confirmed. ';
+    return 'Email sent; delivery not confirmed. ';
   }
-  if (delivery === 'failed') return 'The email provider did not accept the invitation. ';
-  return 'Email delivery status is unavailable. ';
+  if (delivery === 'failed') return 'Email not sent. ';
+  return 'Email status unknown. ';
 }
 
 /** Why the invite form cannot send to this address, or null when it can. */
@@ -140,8 +139,7 @@ export function InviteDialog({
               <Stack gap="compact" className="justify-items-start">
                 <span>
                   {deliveryNotice(delivery)}
-                  Share this one-time acceptance link. It is shown once and cannot be retrieved
-                  again. Resending issues a new link and invalidates this one.
+                  One-time link, shown once.
                 </span>
                 <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
                   {acceptanceLink(issuedToken)}
@@ -178,14 +176,7 @@ export function PendingInvitations({
   if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
     // The table is the named region; the section only heads it.
-    <TitledSection
-      title="Pending invitations"
-      description={
-        invitations.length
-          ? `${pluralCount(invitations.length, 'invitation')} not yet accepted.`
-          : undefined
-      }
-    >
+    <TitledSection title="Pending invitations">
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}

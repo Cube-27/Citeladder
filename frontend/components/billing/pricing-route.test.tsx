@@ -98,8 +98,8 @@ const scaleSubscription = {
 
 describe('app pricing continuation', () => {
   it.each([
-    [null, 'Choose a plan', 'Test Workspace has no plan yet.'],
-    [scaleSubscription, 'Change plan', 'Test Workspace is on Scale.'],
+    [null, 'Choose a plan', 'No plan yet'],
+    [scaleSubscription, 'Change plan', 'Current plan: Scale'],
     // An ended plan is neither the current plan nor "no plan yet".
     [{ ...scaleSubscription, status: 'expired' }, 'Choose a plan', null],
   ])(
@@ -117,7 +117,7 @@ describe('app pricing continuation', () => {
       renderWithProviders(<PricingRoute />);
       expect(await screen.findByRole('heading', { name: heading })).toBeVisible();
       if (sentence) expect(screen.getByText(sentence)).toBeVisible();
-      else expect(screen.queryByText(/no plan yet|is on /u)).toBeNull();
+      else expect(screen.queryByText(/no plan yet|Current plan:/iu)).toBeNull();
       expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
       expect(screen.queryByText(/^Workspace:/u)).toBeNull();
     },
@@ -134,13 +134,13 @@ describe('app pricing continuation', () => {
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
     );
     const { queryClient } = renderWithProviders(<PricingRoute />);
-    expect(await screen.findByText(/is on Scale\./u)).toBeVisible();
+    expect(await screen.findByText('Current plan: Scale')).toBeVisible();
 
     mswServer.use(
       http.get('/api/v1/billing/entitlement', () => new HttpResponse(null, { status: 500 })),
     );
     await queryClient.refetchQueries({ type: 'active' });
-    await waitFor(() => expect(screen.queryByText(/is on Scale/u)).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Current plan: Scale')).toBeNull());
   });
 
   it('keeps the public pricing link in the masthead when the workspace read fails', async () => {

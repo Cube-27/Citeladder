@@ -34,9 +34,7 @@ function emptyState(unmeasured: boolean, rowCount: number) {
     kind: 'empty',
     icon: ICONS.siteHealth,
     headingLevel: 3,
-    heading: unmeasured
-      ? 'Scores by page kind appear after the first analysis'
-      : 'Per-page-kind scores appear once the analysis classifies your pages',
+    heading: unmeasured ? 'No analysis yet' : 'Pages not classified yet',
   } as const;
 }
 

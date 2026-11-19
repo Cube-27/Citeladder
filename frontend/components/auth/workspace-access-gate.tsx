@@ -240,7 +240,6 @@ function AccessEnded({
           </>
         }
       >
-        <p>Your data is retained.</p>
         {activeWorkspaceId && canRestore ? (
           <LazyIsland
             loading={<StateBlock kind="loading" shape={{ kind: 'list' }} />}

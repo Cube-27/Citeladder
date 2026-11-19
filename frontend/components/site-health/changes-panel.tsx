@@ -95,10 +95,7 @@ export function ChangesPanel({
       ) : null}
       {/* Without a comparable pair the table's own state says why, once. */}
       {counts ? (
-        <TitledSection
-          title="Tracked field changes since the previous crawl"
-          description="Expected means the change matches an implementation you declared."
-        >
+        <TitledSection title="Tracked field changes since the previous crawl">
           <SectionContent>
             <FigureStrip
               segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({

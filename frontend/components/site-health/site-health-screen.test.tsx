@@ -602,9 +602,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
     await waitFor(() => expect(createBody).toMatchObject({ project_id: PROJECT }));
 
     expect(
-      await screen.findByText(
-        'Auditing monitored pages while discovery re-scans the site in the background',
-      ),
+      await screen.findByText('Auditing monitored pages; discovery is re-scanning'),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText('Monitor https://acme.com/pricing')).not.toBeInTheDocument();
     expect(screen.getByTestId('site-health-canonical')).toBe(canonical);

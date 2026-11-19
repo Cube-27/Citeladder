@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useId, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,8 +15,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GoogleMark } from '@/components/ui/google-glyph';
-import { InfoHint } from '@/components/ui/info-hint';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { ItemList } from '@/components/ui/list-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatTimeZoneNote } from '@/lib/format';
@@ -32,7 +31,6 @@ import { Notice } from '@/components/ui/notice';
 import {
   Section,
   SectionContent,
-  SectionDescription,
   SectionHeader,
   SectionTitle,
   SectionTitleLine,
@@ -63,37 +61,11 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   const title = FAMILY_META[family].title;
 
   if (status === 'needs_reauth') {
-    return (
-      <Notice tone="warning">
-        {title} needs you to sign in again. Reconnect to resume syncing. Previously imported data is
-        unaffected.
-      </Notice>
-    );
+    return <Notice tone="warning">{title} needs you to sign in again.</Notice>;
   }
   if (status === 'error') {
-    return (
-      <Notice tone="negative">
-        The last connection test failed: {title}&nbsp;rejected CiteLadder&rsquo;s access. Reconnect
-        to resume syncing.
-      </Notice>
-    );
+    return <Notice tone="negative">{title} rejected CiteLadder&rsquo;s access.</Notice>;
   }
-  if (status === 'pending_revocation') {
-    return (
-      <Notice tone="warning">
-        Disconnect is finishing. CiteLadder is retrying the {title} revocation in the background.
-        Previously imported data is kept.
-      </Notice>
-    );
-  }
-  if (status === 'revoked') {
-    return (
-      <Notice tone="info">
-        {title} is disconnected. Imported data is kept; reconnect to resume syncing.
-      </Notice>
-    );
-  }
-
   return null;
 }
 
@@ -119,7 +91,6 @@ function GrantHeader({
           <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
         )}
       </SectionTitleLine>
-      <SectionDescription>{meta.blurb}</SectionDescription>
     </SectionHeader>
   );
 }
@@ -144,7 +115,6 @@ function ConnectCard({
   workspaceId,
   family,
 }: Readonly<{ workspaceId: string; family: GrantFamily }>) {
-  const meta = FAMILY_META[family];
   const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
@@ -156,37 +126,24 @@ function ConnectCard({
       />
       {canManage ? null : (
         <SectionContent>
-          <p className={textRole('body', 'text-ink-2')}>
-            A workspace Owner or Admin can connect {meta.title}.
-          </p>
+          <p className={textRole('body', 'text-ink-2')}>Owner or Admin only.</p>
         </SectionContent>
       )}
     </Section>
   );
 }
 
-/** Reconnect, with what it does as its description (an info hint beside it). */
 function ReconnectButton({
   workspaceId,
   family,
 }: Readonly<{ workspaceId: string; family: GrantFamily }>) {
   const meta = FAMILY_META[family];
-  const noteId = useId();
   return (
-    <Inline gap="tight">
-      <Button
-        aria-describedby={noteId}
-        onClick={() =>
-          hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
-        }
-      >
-        Reconnect
-      </Button>
-      <span id={noteId} hidden>
-        {meta.reconnectNote}
-      </span>
-      <InfoHint label="About reconnecting">{meta.reconnectNote}</InfoHint>
-    </Inline>
+    <Button
+      onClick={() => hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))}
+    >
+      Reconnect
+    </Button>
   );
 }
 
@@ -234,17 +191,14 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
           </>
         }
       >
-        <Stack gap="compact">
-          <p className={textRole('body', 'text-ink-2')}>Previously imported data is kept.</p>
-          {disconnect.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(disconnect.error, {
-                action: 'disconnect the integration',
-              })}
-            />
-          ) : null}
-        </Stack>
+        {disconnect.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(disconnect.error, {
+              action: 'disconnect the integration',
+            })}
+          />
+        ) : null}
       </Dialog>
     </>
   );

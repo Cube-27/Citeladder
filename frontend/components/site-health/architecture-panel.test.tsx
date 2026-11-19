@@ -205,9 +205,7 @@ describe('Architecture panel', () => {
     expect(screen.queryByText(/withheld/i)).toBeNull();
     // The scope note is what keeps the number honest: it is a claim about the
     // pages this crawl fetched, not about the whole site.
-    expect(
-      screen.getAllByText('not linked from any page this crawl fetched').length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('within this crawl').length).toBeGreaterThan(0);
   });
 
   it('renders an observed zero', async () => {

@@ -133,7 +133,5 @@ function proposalDetail(proposal: Proposal) {
 }
 
 function unavailable(mayWrite: boolean) {
-  return mayWrite
-    ? 'This Action can no longer be declared.'
-    : 'Only members who can edit this workspace can declare it.';
+  return mayWrite ? 'This Action can no longer be declared.' : 'Editors only.';
 }

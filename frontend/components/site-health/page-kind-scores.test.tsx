@@ -45,18 +45,12 @@ describe('PageKindScores', () => {
   it('keeps its section with an empty state before any score summary exists', () => {
     render(<PageKindScores crawl={null} dashboard={undefined} />);
     expect(screen.getByRole('heading', { name: 'Scores by page kind' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Scores by page kind appear after the first analysis' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No analysis yet' })).toBeInTheDocument();
   });
 
   it('says the pages are not classified yet, distinct from no summary', () => {
     render(<PageKindScores crawl={null} dashboard={dashboard(summary())} />);
-    expect(
-      screen.getByRole('heading', {
-        name: 'Per-page-kind scores appear once the analysis classifies your pages',
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pages not classified yet' })).toBeInTheDocument();
   });
 
   it('renders one row per classified type with analyzed count + mean scores', () => {

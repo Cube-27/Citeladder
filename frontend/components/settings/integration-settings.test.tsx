@@ -510,7 +510,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     // A success notice is a polite status; only failures are alerts.
     const notice = await screen.findByRole('status');
     expect(notice).toHaveTextContent('Google connected.');
-    expect(notice.textContent).toMatch(/linked through one Google connection/);
+    expect(notice.textContent).toMatch(/Nothing imports until you choose a property/);
     expect(notice.textContent).not.toMatch(/OAuth|grant/);
     await waitFor(() =>
       expect(replaceState).toHaveBeenCalledWith(null, '', '/settings?tab=integrations'),

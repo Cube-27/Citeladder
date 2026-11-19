@@ -145,7 +145,7 @@ describe('ChatScreen implementation declaration', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
     await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
 
-    expect(await within(pane).findByText(/Crawls run when you start one/)).toBeVisible();
+    expect(await within(pane).findByText(/Measured on your next crawl/)).toBeVisible();
     // The dialog's trigger is gone; focus lands on what replaced it.
     expect(within(pane).getByRole('heading', { name: 'Measurement' })).toHaveFocus();
     expect(

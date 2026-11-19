@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { UsageTable } from '@/components/billing/usage-meter';
-import { textRole } from '@/components/ui/typography';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -35,17 +34,6 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
 type UsageRead = ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
 
 /**
- * Every quota measured, and none used or held: a measured zero, never an
- * unresolved allowance, an unread count or a reservation, which never read as no usage.
- */
-function nothingUsed(items: readonly UsageItem[]): boolean {
-  return (
-    items.length > 0 &&
-    items.every((item) => item.limit_state !== 'unknown' && item.consumed === 0 && !item.reserved)
-  );
-}
-
-/**
  * Account usage, extracted from `BillingScreen` so plan orchestration and
  * meter rendering have separate owners.
  *
@@ -56,15 +44,11 @@ function nothingUsed(items: readonly UsageItem[]): boolean {
 export function UsageMeters() {
   const workspaceId = useActiveWorkspaceId();
   const usageQuery = useQuery(billingQueries.usage(workspaceId));
-  const idle = usageQuery.data?.status === 'resolved' && nothingUsed(usageQuery.data.items);
 
   return (
     <Section aria-labelledby="usage-title">
       <SectionHeader>
         <SectionTitle id="usage-title">Usage</SectionTitle>
-        {idle ? (
-          <p className={textRole('caption', 'text-ink-2')}>No usage yet this period</p>
-        ) : null}
       </SectionHeader>
       <SectionContent>
         <UsageBody query={usageQuery} />
@@ -90,18 +74,11 @@ function UsageBody({ query }: Readonly<{ query: UsageRead }>) {
     );
   }
   if (query.data.status !== 'resolved') {
-    return (
-      <Notice tone="warning">
-        Your entitlement could not be resolved, so usage is unavailable. Contact support if this
-        persists.
-      </Notice>
-    );
+    return <Notice tone="warning">Entitlement unresolved, so usage is unavailable.</Notice>;
   }
   const items = ordered(query.data.items);
   if (items.length === 0) {
-    return (
-      <StateBlock kind="empty" inline message="No measurable allowances on this account yet." />
-    );
+    return <StateBlock kind="empty" inline message="No allowances." />;
   }
   return <UsageTable items={items} />;
 }

@@ -56,11 +56,7 @@ export function PageIssues({
             <StateBlock
               kind="empty"
               inline
-              message={
-                audited
-                  ? 'No issues found on this page.'
-                  : 'Issues appear here once this page’s audit finishes.'
-              }
+              message={audited ? 'No issues found.' : 'Audit not finished.'}
             />
           ) : (
             <IssueList issues={defects} crawlId={crawlId} />

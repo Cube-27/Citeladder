@@ -80,7 +80,7 @@ describe('AcceptInvitationScreen', () => {
     // The title says what happened; the code is reference text, never the headline.
     await screen.findByRole('heading', { level: 1, name: "This invitation can't be used" });
     expect(screen.queryByRole('heading', { name: 'Joining workspace' })).toBeNull();
-    expect(screen.getByText(/Ask the person who invited you for a new link\./u)).toBeVisible();
+    expect(screen.getByText(/Ask for a new link\./u)).toBeVisible();
     expect(screen.getByText('Reference: workspace_invitation_invalid · req-1')).toBeInTheDocument();
     expect(screen.queryByText('invitation_invalid')).toBeNull();
     expect(screen.getByRole('button', { name: 'Go to your workspace' })).toBeVisible();

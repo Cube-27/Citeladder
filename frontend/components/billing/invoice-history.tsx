@@ -67,7 +67,7 @@ function invoicesState(read: InvoicesRead, count: number): DataTableState | unde
     kind: 'empty',
     icon: ICONS.billing,
     headingLevel: 3,
-    heading: 'No invoices have been issued yet',
+    heading: 'No invoices yet',
   };
 }
 

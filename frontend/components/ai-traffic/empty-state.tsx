@@ -13,14 +13,7 @@ export function AiReferralsEmptyState() {
     <DataSourceSetup
       required={['ga4']}
       title="Connect Google Analytics 4"
-      whenReady={
-        <StateBlock
-          kind="empty"
-          icon={BarChart3}
-          heading="No AI-referral data yet"
-          description="Referrals appear here once GA4 sessions have been imported."
-        />
-      }
+      whenReady={<StateBlock kind="empty" icon={BarChart3} heading="No AI-referral data yet" />}
     />
   );
 }

@@ -153,11 +153,7 @@ function Connections({
           if (!next) setIssued(null);
         }}
         title="Connect crawl logs"
-        description={
-          setupAvailable
-            ? 'Choose the collection method you operate. One live source per host; uploads are backfill.'
-            : 'Crawl log collection availability'
-        }
+        description={setupAvailable ? 'One live source per host. Uploads are backfill.' : undefined}
         width="wide"
         footer={setupAvailable ? <CrawlLogSetupSubmit model={model} /> : undefined}
       >
@@ -192,7 +188,6 @@ function ConnectionsHead({ empty, connect }: Readonly<{ empty: boolean; connect:
         kind="empty"
         icon={ICONS.connect}
         heading="No crawl logs connected"
-        description="Connect your server or CDN logs to see which AI crawlers fetch your pages and how often."
         action={connect}
       />
     );
@@ -211,7 +206,7 @@ function revokeRequest(
   if (!source) return null;
   return {
     title: 'Revoke crawl log source',
-    body: `Stop accepting logs for ${source.host}? New batches and uploads for this host are refused. Requests already received stay in your reports.`,
+    body: `Stop accepting logs for ${source.host}? New batches and uploads for this host are refused.`,
     confirmLabel: 'Revoke source',
     destructive: true,
     onConfirm: () => onRevoke(source.id),

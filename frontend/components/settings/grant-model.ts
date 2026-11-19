@@ -74,16 +74,11 @@ export const FAMILY_META: Record<
   {
     title: string;
     connectProvider: IntegrationProvider;
-    blurb: string;
-    /** What reconnecting does, said beside Reconnect rather than in the head. */
-    reconnectNote: string;
   }
 > = {
   google: {
     title: 'Google',
     connectProvider: 'gsc',
-    blurb: 'One consent links Search Console and Analytics 4.',
-    reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
   // Titled for the product the user is actually connecting, not the identity
   // provider behind it: a Google grant cannot authorize Bing, and saying
@@ -91,7 +86,5 @@ export const FAMILY_META: Record<
   microsoft: {
     title: 'Bing',
     connectProvider: 'bing',
-    blurb: 'A Google grant cannot authorize Bing Webmaster Tools.',
-    reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
 };

@@ -306,12 +306,7 @@ function SiteHealthNotices({
           onRetry={screen.cancelCrawl}
         />
       ) : null}
-      {screen.stalled ? (
-        <Notice tone="warning">
-          This crawl stopped making progress. It resumes automatically if it can; results so far are
-          shown below.
-        </Notice>
-      ) : null}
+      {screen.stalled ? <Notice tone="warning">This crawl stopped making progress.</Notice> : null}
     </>
   );
 }
@@ -413,7 +408,7 @@ function FirstCrawl({
             ? undefined
             : {
                 id: noteId,
-                text: "Your plan's crawl limits couldn't be checked. Reload to try again.",
+                text: "Couldn't check your plan's crawl limits.",
               }
         }
       />
@@ -459,12 +454,7 @@ function screenBlockingState({
   if (resolverStatus === 'entitlement_unresolved')
     return {
       kind: 'state',
-      node: (
-        <Notice tone="warning">
-          Site health access could not be resolved. Refresh to try again, or contact your workspace
-          administrator if this continues.
-        </Notice>
-      ),
+      node: <Notice tone="warning">Site health access could not be resolved.</Notice>,
     };
   if (entitlement.isLoading || dashboard.isLoading || phase === 'resolving')
     return {

@@ -163,7 +163,7 @@ describe('Workspace panel', () => {
     renderPanel();
     expect(await screen.findByText(ALEX.email)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Invite' })).toBeNull();
-    expect(screen.getByText(/Inviting team members is part of a paid plan/u)).toBeVisible();
+    expect(screen.getByText(/Inviting members needs a paid plan/u)).toBeVisible();
   });
 
   it('filters members out when the search matches no one', async () => {
@@ -188,6 +188,6 @@ describe('Workspace panel', () => {
     view.unmount();
     renderPanel();
     expect(screen.queryByRole('button', { name: 'Leave workspace' })).toBeNull();
-    expect(screen.getByText('To leave, first make another member the owner.')).toBeVisible();
+    expect(screen.getByText('Transfer ownership first.')).toBeVisible();
   });
 });

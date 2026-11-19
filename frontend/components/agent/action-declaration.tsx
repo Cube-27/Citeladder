@@ -130,7 +130,7 @@ export function useMarkImplemented({
       <Stack gap="workspace">
         <Field
           label="When did it go live?"
-          hint={`Any day from ${range.min} to today. Readings before this day are not counted.`}
+          hint={`From ${range.min}. Earlier readings are not counted.`}
           error={valid ? undefined : `Choose a day from ${range.min} to ${range.max}.`}
         >
           {(field) => (
@@ -174,9 +174,8 @@ export function useMarkImplemented({
         <MeasurementPreview action={action} />
         {recommendationIds ? (
           <p className={textRole('body', 'text-ink-2')}>
-            Only these {recommendationIds.length} selected links will be measured, together with the
-            page&apos;s other findings. Include every link you want to declare now; this page Action
-            can be declared once.
+            Measures only these {recommendationIds.length} links and the page&apos;s other findings.
+            Declared once.
           </p>
         ) : null}
         {declare.isError ? (
@@ -294,11 +293,7 @@ export function OutputDeclaration({
   const revision = output.latest_revision;
   if (!revision) return null;
   if (!output.action_id)
-    return (
-      <p className={textRole('caption')}>
-        Name the page or topic this output is for to declare it implemented.
-      </p>
-    );
+    return <p className={textRole('caption')}>Name a page or topic to declare it implemented.</p>;
   if (output.named_target)
     return (
       <TargetChoice

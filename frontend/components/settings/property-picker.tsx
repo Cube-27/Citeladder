@@ -13,7 +13,6 @@ import {
   type IntegrationProperty,
 } from '@/lib/api/integrations';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { endSentence } from '@/lib/format';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
@@ -122,12 +121,7 @@ function DiscoveryState({
       />
     );
   if (properties?.length !== 0) return null;
-  return (
-    <Notice tone="info">
-      This account has no {noun} available. Verify the property in the provider&rsquo;s own console
-      first, then reopen this dialog.
-    </Notice>
-  );
+  return <Notice tone="info">No {noun} on this account.</Notice>;
 }
 
 /**
@@ -225,19 +219,9 @@ export function usePropertyPicker(connection: IntegrationConnection) {
         if (!selectMutation.isPending) setOpen(next);
       }}
       title={`Choose a ${noun}`}
-      description={
-        activeProject
-          ? endSentence(`Data for the selected property is imported into ${activeProject.name}`)
-          : 'Select a project before choosing a property.'
-      }
     >
       <Stack gap="compact">
-        {!activeProject ? (
-          <Notice tone="warning">
-            No active project. Create or select a project first. A property must be imported into
-            one.
-          </Notice>
-        ) : null}
+        {!activeProject ? <Notice tone="warning">No active project.</Notice> : null}
         <DiscoveryState
           pending={discovery.isPending}
           error={discovery.error}

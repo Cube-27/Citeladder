@@ -3,7 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
-import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
+import {
+  FAMILY_META,
+  GRANT_FAMILY,
+  type GrantFamily,
+  type GrantModel,
+} from '@/components/settings/grant-model';
 import { IntegrationCardView } from '@/components/settings/integration-card-view';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
 import {
@@ -69,27 +74,10 @@ function CallbackNotice({
       notice.connected === 'gsc' || notice.connected === 'ga4' || notice.connected === 'bing'
         ? GRANT_FAMILY[notice.connected]
         : null;
-    if (family === 'google') {
-      return (
-        <Notice tone="positive">
-          <strong>Google connected.</strong> Search Console and Analytics 4 are now linked through
-          one Google connection. Select a property for each below to start importing. Nothing syncs
-          until a property is chosen.
-        </Notice>
-      );
-    }
-    if (family === 'microsoft') {
-      return (
-        <Notice tone="positive">
-          <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Select a property
-          below to start importing. Nothing syncs until a property is chosen.
-        </Notice>
-      );
-    }
     return (
       <Notice tone="positive">
-        <strong>Integration connected.</strong> Select a property below to start importing. Nothing
-        syncs until a property is chosen.
+        <strong>{family ? FAMILY_META[family].title : 'Integration'} connected.</strong> Nothing
+        imports until you choose a property.
       </Notice>
     );
   }

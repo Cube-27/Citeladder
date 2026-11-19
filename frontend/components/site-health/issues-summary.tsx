@@ -59,7 +59,6 @@ export function IssuesSummary({
 function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
   const titleId = useId();
   const total = summary.defect_issue_type_count;
-  const high = severityCount(summary.severity_counts, 'high');
   const counts = SEVERITIES.map((severity) => ({
     ...severity,
     count: severityCount(summary.severity_counts, severity.key),
@@ -86,7 +85,11 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
         <h2 id={titleId} className={textRole('figure')}>
           {issueTypesLabel(total, summary.advisory_issue_type_count)}
         </h2>
-        <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
+        {total > 0 ? (
+          <SectionDescription>
+            {pluralCount(summary.affected_url_count, 'page')} affected
+          </SectionDescription>
+        ) : null}
       </SectionHeader>
     </Section>
   );
@@ -106,13 +109,6 @@ function issueTypesLabel(total: number, advisories: number): string {
   return `${defects} · ${formatCount(advisories)} ${advisories === 1 ? 'advisory' : 'advisories'}`;
 }
 
-/** How many are high severity, and how many pages the issue types reach. */
-function attentionLine(high: number, summary: SiteIssuesPage['summary']): string {
-  const pages = summary.affected_url_count;
-  if (summary.defect_issue_type_count === 0) return 'This crawl found nothing to fix.';
-  return `${formatCount(high)} high severity · ${pluralCount(pages, 'page')} affected`;
-}
-
 /** The worst issues, worst first, each opening its own detail. */
 function FixFirst({
   issues,
@@ -128,7 +124,6 @@ function FixFirst({
     <Section aria-labelledby="issues-fix-first">
       <SectionHeader>
         <SectionTitle id="issues-fix-first">Fix these first</SectionTitle>
-        <SectionDescription>Top 3 by severity, then reach</SectionDescription>
       </SectionHeader>
       <ol className={ledgerClasses()}>
         {issues.map((issue) => {

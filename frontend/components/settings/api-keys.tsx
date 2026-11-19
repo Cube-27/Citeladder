@@ -214,7 +214,7 @@ function CreateKeyDialog({
     >
       {created ? (
         <Stack gap="compact">
-          <Notice tone="warning">You won’t see this key again. Store it somewhere safe now.</Notice>
+          <Notice tone="warning">Shown once.</Notice>
           {/* The secret is shown once, whole, so it may wrap anywhere to stay readable. */}
           <code className="type-code break-all">{created.secret}</code>
           <div>
@@ -244,9 +244,7 @@ function CreateKeyDialog({
                 onCheckedChange={(on) => setScopes(toggle(scopes, scope.value, on === true))}
               />
             ))}
-            <p className={textRole('caption')}>
-              A key never does more than the role of the person who created it allows.
-            </p>
+            <p className={textRole('caption')}>Capped at your role.</p>
           </Stack>
           <RadioGroup
             ariaLabel="Projects the key can reach"
@@ -272,7 +270,7 @@ function CreateKeyDialog({
           ) : null}
           <Field
             label="Expires"
-            hint={`Optional. The key stops working at the end of this day (${timeZone}).`}
+            hint={`Optional. Ends at midnight, ${timeZone}`}
             error={expiryValid ? undefined : 'Enter a date as YYYY-MM-DD.'}
           >
             {(props) => (
@@ -350,7 +348,7 @@ function ApiKeysBody({
     <Stack gap="workspace">
       {available ? null : (
         <Notice tone="info">
-          The REST API is included in paid plans.{' '}
+          The REST API needs a paid plan.{' '}
           <TextLink asChild>
             <Link to={workspaceDestination('/billing', null, workspaceId)}>Choose a plan</Link>
           </TextLink>
@@ -392,7 +390,6 @@ export function ApiKeys() {
         >
           <SectionTitle>API keys</SectionTitle>
           <SectionDescription>
-            Call the REST API at{' '}
             <code className={textRole('code', 'break-words')}>{API_BASE_URL}</code>{' '}
             <CopyButton
               value={API_BASE_URL}
@@ -429,7 +426,7 @@ export function ApiKeys() {
             onConfirm: () => revoke.mutate(pending.id, { onSuccess: () => setPending(null) }),
             body: (
               <Stack gap="compact">
-                <p>Requests with this key are refused at once. This cannot be undone.</p>
+                <p>Cannot be undone.</p>
                 {revoke.isError ? (
                   <Notice
                     kind="mutation"

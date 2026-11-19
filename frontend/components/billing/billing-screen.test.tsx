@@ -421,10 +421,9 @@ describe('BillingScreen', () => {
     expect(runs?.textContent).toMatch(/^Prompt runs.*Unavailable/u);
     expect(runs?.textContent).not.toMatch(/\b0\b/u);
     expect(within(table).getAllByRole('meter')).toHaveLength(1);
-    expect(screen.queryByText('No usage yet this period')).toBeNull();
   });
 
-  it('drops the usage meters and says so when nothing is used', async () => {
+  it('drops the usage meters when nothing is used', async () => {
     entitlementValue = resolvedEntitlement();
     const idle = (prompts: object = { resets_at: '2026-12-01T00:00:00Z' }) => ({
       ...USAGE,
@@ -438,7 +437,6 @@ describe('BillingScreen', () => {
     const view = renderWithProviders(<BillingScreen />);
 
     const table = await screen.findByRole('table', { name: 'Usage limits' });
-    expect(screen.getByText('No usage yet this period')).toBeVisible();
     const rows = within(table).getAllByRole('row');
     expect(rows.map((row) => row.textContent?.replace(/Resets .+\./u, ''))).toEqual([
       'QuotaUsedAllowanceRemaining',
@@ -456,7 +454,6 @@ describe('BillingScreen', () => {
     renderWithProviders(<BillingScreen />);
     const held = await screen.findByRole('table', { name: 'Usage limits' });
     expect(within(held).getByRole('meter', { name: 'Prompts' })).toBeInTheDocument();
-    expect(screen.queryByText('No usage yet this period')).toBeNull();
   });
 
   it('requires the cancellation dialog before mutating', async () => {
@@ -520,7 +517,7 @@ describe('BillingScreen', () => {
     );
 
     renderWithProviders(<BillingScreen />);
-    expect(await screen.findByText(/You can resume until/)).toBeInTheDocument();
+    expect(await screen.findByText(/Resumable until/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Resume plan' }));
     await waitFor(() => expect(resumed).toBe(1));
@@ -674,7 +671,7 @@ describe('BillingScreen', () => {
     renderWithProviders(<BillingScreen />);
     await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('No invoices have been issued yet')).toBeVisible();
+    expect(await screen.findByText('No invoices yet')).toBeVisible();
     expect(invoiceReads).toBe(2);
   });
 
@@ -789,7 +786,7 @@ describe('BillingScreen', () => {
       },
     });
 
-    expect(await screen.findByText(/Only a workspace Owner or Admin/)).toBeInTheDocument();
+    expect(await screen.findByText('Plan changes: Owner or Admin only.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade to Growth' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Buy Extra project' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();

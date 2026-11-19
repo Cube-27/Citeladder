@@ -15,16 +15,12 @@ export function CrawlLogAvailabilityNotice({
 }: Readonly<{ availability: z.infer<typeof crawlLogAvailabilitySchema>; workspaceId: string }>) {
   if (availability === 'disabled')
     return (
-      <Notice tone="info">
-        Collection is paused by CiteLadder. Sources keep their settings and reports stay readable;
-        new log batches are refused until collection resumes.
-      </Notice>
+      <Notice tone="info">Collection is paused by CiteLadder. New log batches are refused.</Notice>
     );
   if (availability === 'not_in_plan')
     return (
       <Notice tone="info">
-        AI crawler logs are included in paid plans. They show which AI crawlers fetch your pages,
-        straight from your CDN or server logs.{' '}
+        AI crawler logs are included in paid plans.{' '}
         <TextLink asChild text="inherit">
           <Link to={workspaceDestination('/billing', null, workspaceId)}>Choose a plan</Link>
         </TextLink>

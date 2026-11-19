@@ -257,9 +257,7 @@ export function useOnboardingFlow(transactionKey: string) {
           { workspaceId: activeWorkspaceId, timeoutMs: ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS },
         );
         if (!result.project_id) {
-          throw new Error(
-            'Project creation did not return a project. Try Create project again; your reviewed details are preserved.',
-          );
+          throw new Error('Project creation did not return a project.');
         }
         return result;
       } finally {

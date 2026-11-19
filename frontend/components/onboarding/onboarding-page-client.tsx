@@ -61,9 +61,7 @@ function ProjectSetupGate() {
         title="Your workspace could not be loaded"
         onRetry={retry}
         projectsHref={projectsHref}
-      >
-        We could not confirm which workspace to create this project in. Retry to load it again.
-      </ProjectSetupBlocked>
+      />
     );
   }
   if (setsUpOwnWorkspace(status, workspaces, searchParams.get('setup'))) return <WorkspaceSetup />;
@@ -71,11 +69,7 @@ function ProjectSetupGate() {
     // Reached by linking here with a `?project=` that is missing, unauthorized,
     // or contradicts the workspace. Creating a project is not the answer to a
     // request that named a different one.
-    return (
-      <ProjectSetupBlocked title="That project is unavailable" projectsHref={projectsHref}>
-        The project this link names could not be opened. Go back to your projects to continue.
-      </ProjectSetupBlocked>
-    );
+    return <ProjectSetupBlocked title="That project is unavailable" projectsHref={projectsHref} />;
   }
   if (status === 'resolving' || activeWorkspaceId === null || entitlementLoading) {
     return <ProjectSetupLoading onRetry={retry} projectsHref={projectsHref} />;
@@ -86,15 +80,13 @@ function ProjectSetupGate() {
         title="Project access unavailable"
         onRetry={retry}
         projectsHref={projectsHref}
-      >
-        Your project allowance is unresolved. Retry to check for updated access.
-      </ProjectSetupBlocked>
+      />
     );
   }
   if (remainingProjectSlots === 0) {
     return (
       <ProjectSetupBlocked title="Project limit reached" projectsHref={projectsHref} plans>
-        Your plan does not include another project. Choose a bigger plan to add one.
+        Your plan does not include another project.
       </ProjectSetupBlocked>
     );
   }
@@ -136,9 +128,7 @@ function ProjectSetupLoading({
         setAttempt((current) => current + 1);
         onRetry();
       }}
-    >
-      Retry the workspace and project-access checks to continue.
-    </ProjectSetupBlocked>
+    />
   );
 }
 
@@ -150,7 +140,7 @@ function ProjectSetupBlocked({
   plans = false,
 }: Readonly<{
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
   onRetry?: () => void;
   projectsHref: string;
   /** A limit a bigger plan lifts: offer the plans first. */

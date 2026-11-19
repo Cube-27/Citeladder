@@ -61,7 +61,7 @@ export function BillingSupport({
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
         <p className={textRole('body')}>
-          Questions about a charge, a refund or cancelling? Email{' '}
+          Email{' '}
           <TextLink asChild text="inherit">
             <a href={`mailto:${email}`}>{email}</a>
           </TextLink>
@@ -71,7 +71,7 @@ export function BillingSupport({
               contact form
             </a>
           </TextLink>
-          {'. '}Include your workspace name and the invoice number; never send card details.
+          .
         </p>
         <p className={textRole('caption')}>
           <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}

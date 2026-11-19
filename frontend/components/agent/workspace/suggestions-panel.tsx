@@ -247,9 +247,7 @@ function SuggestionCard({
       ) : null}
       <RuleSource guidance={suggestion.guidance} />
       {suggestion.choose_one ? (
-        <p className={textRole('caption')}>
-          It overlaps another suggestion, so Apply all leaves it for you to choose.
-        </p>
+        <p className={textRole('caption')}>Overlaps another suggestion. Apply all skips it.</p>
       ) : null}
       {canChange ? <Actions suggestion={suggestion} textId={textId} {...actions} /> : null}
     </DraftSheet>
@@ -475,8 +473,7 @@ export function SuggestionsPanel({
       ) : null}
       {counts.stale > 0 ? (
         <p className={textRole('caption')}>
-          {pluralCount(counts.stale, 'suggestion')} no longer fit the page after later edits, so{' '}
-          {counts.stale === 1 ? 'it is' : 'they are'} not shown.
+          {pluralCount(counts.stale, 'suggestion')} hidden: no longer fit the page.
         </p>
       ) : null}
       <CoverageGaps gaps={gaps} onAddToContext={canChange ? onAddToContext : undefined} />

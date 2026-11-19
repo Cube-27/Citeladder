@@ -215,9 +215,7 @@ describe('UrlDetail', () => {
     );
     const table = within(drawer).getByRole('region', { name: 'Resolved issues' });
     expect(
-      await within(table).findByRole('heading', {
-        name: 'Resolved issues are known once this page’s current analysis finishes',
-      }),
+      await within(table).findByRole('heading', { name: 'Analysis not finished' }),
     ).toBeInTheDocument();
   });
 
@@ -588,7 +586,7 @@ describe('UrlDetail', () => {
     expect(within(disclosure).getByText('840ms')).toBeVisible();
     // Inbound and main-content inbound are different facts and both are shown.
     expect(within(disclosure).getByText('Main-content inbound')).toBeVisible();
-    expect(screen.getByText('Modelled over 7 pages crawled')).toBeInTheDocument();
+    expect(screen.getByText('7 pages crawled')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL}/pages/dddddddd-1111-4111-8111-111111111111`,
@@ -740,7 +738,7 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     expect(await screen.findByRole('heading', { name: 'All issues (0)' })).toBeInTheDocument();
-    expect(screen.getByText('No issues found on this page.')).toBeInTheDocument();
+    expect(screen.getByText('No issues found.')).toBeInTheDocument();
   });
 
   it('does not call a page clean before its audit finishes', async () => {
@@ -748,9 +746,7 @@ describe('UrlDetail', () => {
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    expect(
-      await screen.findByText('Issues appear here once this page’s audit finishes.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('No issues found on this page.')).not.toBeInTheDocument();
+    expect(await screen.findByText('Audit not finished.')).toBeInTheDocument();
+    expect(screen.queryByText('No issues found.')).not.toBeInTheDocument();
   });
 });

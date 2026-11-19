@@ -17,13 +17,12 @@ export function CohortCompositionContext({
   const clauses = [
     kindClause('Added page kinds', composition.added_page_kinds),
     kindClause('Removed page kinds', composition.removed_page_kinds),
-    'Score movement is not split into quality versus cohort effects.',
   ].filter((clause) => clause !== null);
 
   return (
     <Stack gap="item" className={wellClasses('type-caption')}>
       <p className={textRole('emphasis', 'text-ink')}>Scored cohort composition changed.</p>
-      <p className="text-ink-2">{clauses.join(' ')}</p>
+      {clauses.length > 0 ? <p className="text-ink-2">{clauses.join(' ')}</p> : null}
       <Stack as="dl" gap="item">
         <CompositionRow label="Previous counts" counts={composition.previous_page_count_by_kind} />
         <CompositionRow label="Current counts" counts={composition.current_page_count_by_kind} />

@@ -428,9 +428,7 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
           <p className={textRole('caption')}>Action: {context.action.label}</p>
         ) : null}
         {omissions.length > 0 ? (
-          <p className={textRole('caption')}>
-            Some older messages or context were left out to fit this turn.
-          </p>
+          <p className={textRole('caption')}>Some older context was left out to fit this turn.</p>
         ) : null}
       </Stack>
     </Disclosure>

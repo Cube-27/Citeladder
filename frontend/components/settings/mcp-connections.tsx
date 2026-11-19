@@ -13,7 +13,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -46,7 +45,6 @@ function ConnectionRow({
               : `${verb} ${workspaces || 'no workspace you can still access'}.`}
           </ClampText>
           <p className={textRole('caption', 'truncate')}>
-            {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
             {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
             Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
             {connection.last_used_at ? (
@@ -168,19 +166,12 @@ function RevokeDialog({
         </Button>
       }
     >
-      <Stack gap="compact">
-        <p className={textRole('body', 'text-ink-2')}>
-          {adminView
-            ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
-            : 'The assistant stops reading or changing CiteLadder at once.'}
-        </p>
-        {revoke.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
-          />
-        ) : null}
-      </Stack>
+      {revoke.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
+        />
+      ) : null}
     </Dialog>
   );
 }

@@ -91,7 +91,7 @@ describe('IssuesCatalog', () => {
     expect(
       await screen.findByRole('heading', { name: '47 issue types · 2 advisories' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('12 high severity · 50 pages affected')).toBeInTheDocument();
+    expect(screen.getByText('50 pages affected')).toBeInTheDocument();
     // Each severity reads as its count; the ring beside them is decorative.
     const severities = screen.getByRole('group', { name: 'Issue types by severity' });
     expect(
@@ -106,7 +106,6 @@ describe('IssuesCatalog', () => {
     ).toEqual(['12', '23', '12']);
     expect(screen.queryByRole('img', { name: '47 issue types' })).toBeNull();
     const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
-    expect(within(fixFirst).getByText('Top 3 by severity, then reach')).toBeInTheDocument();
     // Each names its fix in one sentence.
     const [first, second] = within(fixFirst).getAllByRole('listitem');
     expect(within(first!).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();

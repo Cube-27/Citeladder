@@ -139,14 +139,13 @@ export default function MailboxScreen() {
 }
 
 const MAILBOX_DESCRIPTIONS: Record<MailboxOperation, string | null> = {
-  'verify-email': 'Your trial starts when you set up your workspace.',
+  'verify-email': null,
   'resend-verification': null,
   'reset-password': 'Password resets sign out all sessions.',
   'forgot-password': 'Password resets sign out all sessions.',
 };
 
 function mailboxDescription(operation: MailboxOperation, incomplete: boolean): string | null {
-  if (incomplete)
-    return 'This link is incomplete. Open the whole link from your email, or request a new one.';
+  if (incomplete) return 'This link is incomplete. Request a new one.';
   return MAILBOX_DESCRIPTIONS[operation];
 }

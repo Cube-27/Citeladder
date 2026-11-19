@@ -302,11 +302,7 @@ function SiteLevelList({
       <StateBlock
         kind="empty"
         inline
-        message={
-          evidence.total > 0
-            ? 'This finding did not record which pages it affects.'
-            : 'No affected URLs found.'
-        }
+        message={evidence.total > 0 ? 'Affected pages not recorded.' : 'No affected URLs found.'}
       />
     );
   const hidden = evidence.total - evidence.pages.length;
@@ -371,11 +367,7 @@ function DuplicateSetList({
       <StateBlock
         kind="empty"
         inline
-        message={
-          evidence.total === 0
-            ? 'No affected URLs found.'
-            : 'This finding did not record which pages it affects.'
-        }
+        message={evidence.total === 0 ? 'No affected URLs found.' : 'Affected pages not recorded.'}
       />
     );
   const shown = evidence.sets.reduce((sum, set) => sum + set.pages.length, 0);
@@ -437,11 +429,7 @@ function LinkTargetList({
       <StateBlock
         kind="empty"
         inline
-        message={
-          evidence.total === 0
-            ? 'No affected links found.'
-            : 'This finding did not record which links it affects.'
-        }
+        message={evidence.total === 0 ? 'No affected links found.' : 'Affected links not recorded.'}
       />
     );
   return (

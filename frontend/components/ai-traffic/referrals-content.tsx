@@ -82,8 +82,7 @@ function AiReferralsDataRegion({
 function AiReferralsNoSnapshot({ range }: Readonly<{ range: AiReferralsRange }>) {
   return (
     <Notice tone="info">
-      No synced AI-referral snapshot covers {rangeLabel(range).toLowerCase()} yet. Switch to the
-      latest synced window, or run a sync from Performance.
+      No synced AI-referral snapshot covers {rangeLabel(range).toLowerCase()} yet.
     </Notice>
   );
 }

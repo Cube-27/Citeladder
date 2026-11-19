@@ -11,7 +11,6 @@ import { McpConnections } from '@/components/settings/mcp-connections';
 import { ApiKeys } from '@/components/settings/api-keys';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
-import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { SettingsPage } from '@/components/templates/settings-page';
@@ -99,7 +98,6 @@ function ProjectDeletionControls() {
             <>
               <SettingRow
                 label={activeProject.name}
-                description={`Brand: ${activeProject.brand_name}`}
                 action={
                   <Button
                     variant="danger"
@@ -111,10 +109,6 @@ function ProjectDeletionControls() {
                   </Button>
                 }
               />
-              <Notice tone="negative" standing>
-                Deleting a project removes all of its prompts, topics, audits, visibility history,
-                and generated content. This cannot be undone.
-              </Notice>
               {deleteMutation.isError ? (
                 <Notice
                   kind="mutation"
@@ -156,8 +150,8 @@ function ProjectDeletionControls() {
         }
       >
         <p className={textRole('body', 'text-ink-2')}>
-          This permanently deletes the project and all of its prompts, topics, audits, visibility
-          history, and generated content. This cannot be undone.
+          Deletes its prompts, topics, audits, visibility history and generated content. Cannot be
+          undone.
         </p>
       </Dialog>
     </>
@@ -214,13 +208,6 @@ export function SettingsScreen() {
             <SettingRows>
               <SettingRow
                 label={user.email}
-                description={
-                  activeWorkspace
-                    ? activeWorkspace.role === 'owner'
-                      ? `Owner of ${activeWorkspace.name}`
-                      : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`
-                    : null
-                }
                 action={<Avatar name={user.email} placement="profile" />}
               />
               {createdLabel ? <SettingRow label="Account created" value={createdLabel} /> : null}

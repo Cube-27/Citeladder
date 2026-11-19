@@ -44,7 +44,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
       </Stack>
       {india ? (
         <>
-          <Field label="Billing state code" hint="GSTIN is optional for Indian customers.">
+          <Field label="Billing state code">
             {(field) => (
               <Input
                 {...field}

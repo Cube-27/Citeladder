@@ -138,9 +138,9 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('says who you are in the selected workspace without internal identifiers', () => {
+  it('names you by email without internal identifiers', () => {
     renderScreen();
-    expect(screen.getByText('Owner of Test Workspace')).toBeVisible();
+    expect(screen.getByText(user.email)).toBeVisible();
     expect(screen.queryByText(user.id)).toBeNull();
     expect(screen.queryByText('User ID')).toBeNull();
   });

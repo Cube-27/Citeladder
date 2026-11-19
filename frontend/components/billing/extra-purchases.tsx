@@ -8,13 +8,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type {
   BillingCatalog,
@@ -226,9 +220,6 @@ export function ExtraPurchases({
     <Section aria-labelledby="extras-title">
       <SectionHeader>
         <SectionTitle id="extras-title">Add-ons and top-ups</SectionTitle>
-        <SectionDescription>
-          One-time purchases. They work only while your paid plan is active and never renew.
-        </SectionDescription>
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
         {extras.length > 0 ? (

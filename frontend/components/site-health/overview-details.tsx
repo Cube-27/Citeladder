@@ -276,7 +276,7 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
 
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
   return (
-    <TitledSection title="Score change" description="Against the previous comparable crawl.">
+    <TitledSection title="Score change">
       <SectionContent>
         <Stack>
           {data.metrics.map((metric) => (
@@ -286,11 +286,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
             </Inline>
           ))}
           {data.state === 'unavailable' ? (
-            <StateBlock
-              kind="empty"
-              inline
-              message="No previous comparable crawl to compare with yet."
-            />
+            <StateBlock kind="empty" inline message="No comparable crawl yet." />
           ) : null}
           <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
         </Stack>

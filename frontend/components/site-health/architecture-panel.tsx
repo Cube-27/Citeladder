@@ -147,7 +147,7 @@ function pageKindDescription(coverage: CoverageState, reasons: readonly string[]
   // A complete crawl carries a completion reason, not a limit.
   if (coverage === 'complete' || named.length === 0) return null;
   const why = named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ');
-  return `Why coverage is limited: ${why}.`;
+  return `Limited: ${why}`;
 }
 
 /**

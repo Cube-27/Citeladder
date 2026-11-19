@@ -55,14 +55,7 @@ export function InventorySection({
 }>) {
   let content: ReactNode;
   if (mode === 'none' || !crawl) {
-    content = (
-      <StateBlock
-        kind="empty"
-        icon={FileText}
-        heading="Pages appear here as discovery finds them"
-        headingLevel={3}
-      />
-    );
+    content = <StateBlock kind="empty" icon={FileText} heading="No pages yet" headingLevel={3} />;
   } else if (mode === 'discovering') {
     content = <DiscoveringInventory crawl={crawl} />;
   } else {
@@ -104,7 +97,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       kind: 'empty',
       icon: FileText,
       headingLevel: 3,
-      heading: 'Discovering pages: scanning sitemaps and internal links',
+      heading: 'Discovering pages…',
     }),
   });
 
@@ -345,7 +338,7 @@ function ScoredInventoryState({
 /** An empty view: no page matched the search, none reached yet, or none in it. */
 function emptyPagesHeading(query: string, active: boolean): string {
   if (query) return `No pages match “${query}”`;
-  return active ? 'Pages appear here as the audit reaches them' : 'No pages in this view';
+  return active ? 'No pages yet' : 'No pages in this view';
 }
 
 /** The orders the table offers a header for: URL, else the default (status). */

@@ -40,9 +40,7 @@ export function LoginScreen({
 }>) {
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const description =
-    searchParams.get('registered') === '1'
-      ? 'Check your email to verify your account. Your trial starts when you set up your workspace.'
-      : undefined;
+    searchParams.get('registered') === '1' ? 'Check your email to verify your account.' : undefined;
   // The Google callback is a full-page navigation, so it reports failure as a
   // coded query parameter rather than a response body.
   const oauthError = oauthSignInErrorMessage(searchParams.get('error'));
