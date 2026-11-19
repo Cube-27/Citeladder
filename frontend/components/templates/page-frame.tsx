@@ -123,7 +123,8 @@ function PageStrips({
   filters,
   actions,
 }: Pick<PageFrameSlots, 'tabs' | 'filters' | 'actions'>) {
-  const actionsIn = actions ? (filters || !tabs ? 'filters' : 'tabs') : null;
+  const inTabs = Boolean(actions && tabs && !filters);
+  const inFilters = Boolean(actions) && !inTabs;
   const rowActions = actions ? (
     <RowActions moreLabel="More actions" className="ms-auto">
       {actions}
@@ -135,10 +136,10 @@ function PageStrips({
         // The tabs fill the strip, so the current tab's underline sits on its rule.
         <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end gap-2')}>
           <div className="flex min-w-0 flex-1 items-end">{tabs}</div>
-          {actionsIn === 'tabs' ? <div className="self-center">{rowActions}</div> : null}
+          {inTabs ? <div className="self-center">{rowActions}</div> : null}
         </div>
       ) : null}
-      {actionsIn === 'filters' || filters ? (
+      {inFilters || filters ? (
         // Below `rail` the filter bar stacks full width, so the actions take the next line.
         <div
           data-page-band="filters"
@@ -147,7 +148,7 @@ function PageStrips({
           {filters ? (
             <div className="not-rail:basis-full flex min-w-0 flex-1 items-center">{filters}</div>
           ) : null}
-          {actionsIn === 'filters' ? rowActions : null}
+          {inFilters ? rowActions : null}
         </div>
       ) : null}
     </>
