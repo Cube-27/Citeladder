@@ -136,7 +136,11 @@ describe('UrlDetail', () => {
     );
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
     expect(
-      await screen.findByText('Page temporarily unavailable', {}, { timeout: 4500 }),
+      await screen.findByText(
+        "Couldn't load this page. It may not exist in this crawl.",
+        {},
+        { timeout: 4500 },
+      ),
     ).toBeInTheDocument();
     const beforeRetry = reads;
     available = true;
