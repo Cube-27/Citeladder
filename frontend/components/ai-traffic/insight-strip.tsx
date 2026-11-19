@@ -5,17 +5,9 @@ import { TextLink } from '@/components/ui/text-link';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
-import { formatWindowDate } from '@/lib/format';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
-
-/** Nothing observed is a measured absence only when both sources were complete. */
-function nothingObservedLine(coverage: Readonly<{ crawl: string; ga4_complete: boolean }>) {
-  return coverage.crawl === 'complete' && coverage.ga4_complete
-    ? 'No patterns were observed in this window.'
-    : 'No patterns were observed in the data covered so far; coverage is incomplete.';
-}
 
 export function InsightStrip({
   projectId,
@@ -33,14 +25,6 @@ export function InsightStrip({
     <Section aria-labelledby="observed-patterns">
       <SectionHeader>
         <SectionTitle id="observed-patterns">Observed patterns</SectionTitle>
-        {data ? (
-          // An honest limit: the two sources were seen together, not linked.
-          <SectionDescription>
-            {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)}. Crawls and
-            AI visits seen in the same window, which does not show that one caused the other. Some
-            AI apps hide where a visit came from.
-          </SectionDescription>
-        ) : null}
       </SectionHeader>
       {query.isError ? (
         <StateBlock
@@ -56,11 +40,7 @@ export function InsightStrip({
       {/* Coverage limits are this card's own caveat, said in the card rather
           than as a banner that repeats the key figures' connect buttons. */}
       {data && !data.patterns.length ? (
-        <StateBlock
-          kind="empty"
-          inline
-          message={data.coverage.notice ?? nothingObservedLine(data.coverage)}
-        />
+        <StateBlock kind="empty" inline message={data.coverage.notice ?? 'No patterns'} />
       ) : null}
       {data?.patterns.length && data.coverage.notice ? (
         <SectionDescription>{data.coverage.notice}</SectionDescription>
