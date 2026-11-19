@@ -1,14 +1,17 @@
 import { useLocation } from 'react-router-dom';
 
 import { OverviewLoading } from '@/components/projects/overview-loading';
+import { IssuesPageLoading } from '@/components/site-health/issues-summary-loading';
 import { PageFrame } from '@/components/templates/page-frame';
 import { ReportPage } from '@/components/templates/report-page';
 import { NewChatLoading, ThreadPageLoading } from '@/components/templates/thread-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import { TextLineSkeleton } from '@/components/ui/loading-parts';
 import { HeldTabRow } from '@/components/ui/tabs';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { FRAME_FACE } from '@/components/ui/slip';
 import { routeLoading } from '@/lib/navigation/app-routes';
+import type { HeldTabs } from '@/lib/navigation/route-types';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,17 +24,24 @@ export const RESERVED_CONTROLS: FilterBarProps = {};
 /**
  * RouteLoadingScreen — the frame a route shows before its own page can draw,
  * from its manifest entry (`routeLoading`): the masthead titled from the path,
- * the route's real tab labels and held filter row, then its first screen's
- * shapes 32 apart; the Overview's widget grid, a chat and a new chat in their
- * own templates. The page arrives without moving them.
+ * the route's real tabs with the URL's current, its held filter row, then its
+ * first screen's shapes; the Overview's widget grid, the Issues summary, a
+ * chat and a new chat in their own templates. The page arrives without moving them.
  */
 export function RouteLoadingScreen() {
-  const loading = routeLoading(useLocation().pathname);
+  const location = useLocation();
+  const loading = routeLoading(location.pathname);
   switch (loading.kind) {
     case 'overview':
       return (
         <ReportPage>
           <OverviewLoading />
+        </ReportPage>
+      );
+    case 'issues':
+      return (
+        <ReportPage>
+          <IssuesPageLoading />
         </ReportPage>
       );
     case 'thread':
@@ -41,14 +51,25 @@ export function RouteLoadingScreen() {
     case 'cards':
       return (
         <PageFrame
-          tabs={loading.tabs ? <HeldTabRow labels={loading.tabs} /> : undefined}
+          tabs={
+            loading.tabs ? <RouteTabs tabs={loading.tabs} search={location.search} /> : undefined
+          }
           filters={loading.filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
         >
           <SkeletonFrame
             label="Loading…"
             variant="route"
-            className="flex flex-col gap-[var(--page-section-gap)]"
+            className={cn(
+              'flex flex-col',
+              loading.stacked ? 'gap-[var(--workspace-gap)]' : 'gap-[var(--page-section-gap)]',
+            )}
           >
+            {loading.intro ? (
+              <span data-loading-shape="intro" className="flex flex-col gap-1">
+                <TextLineSkeleton text="heading" width="long" />
+                <TextLineSkeleton text="body" width="long" />
+              </span>
+            ) : null}
             {loading.shapes.map((shape, index) => (
               <ShapeBox key={index} shape={shape} />
             ))}
@@ -60,6 +81,17 @@ export function RouteLoadingScreen() {
       return exhaustive;
     }
   }
+}
+
+/** The page's tab row with the tab its URL names current. */
+function RouteTabs({ tabs, search }: Readonly<{ tabs: HeldTabs; search: string }>) {
+  const value = new URLSearchParams(search).get(tabs.param);
+  return (
+    <HeldTabRow
+      labels={tabs.items.map((item) => item.label)}
+      selected={tabs.items.find((item) => item.value === value)?.label}
+    />
+  );
 }
 
 /** A shape as the page draws it: a table or a chart in its light frame, the rest on the surface. */

@@ -111,6 +111,10 @@ function awaitingFirstLoad(
 }
 
 const promptStatusCodec = stringUrlCodec<PromptStatus>(['active', 'archived'], 'active');
+const STATUS_LABELS = { active: 'Active', archived: 'Archived' } satisfies Record<
+  PromptStatus,
+  string
+>;
 /** The prompt table's page (`PromptTable`). */
 const PAGE_KEYS = ['page'];
 
@@ -385,7 +389,15 @@ export function PromptLibrary() {
     })
   ) {
     return (
-      <ReportPage tabs={<HeldTabRow labels={['Active', 'Archived']} />} filters={<FilterBar />}>
+      <ReportPage
+        tabs={
+          <HeldTabRow
+            labels={Object.values(STATUS_LABELS)}
+            selected={STATUS_LABELS[statusFilter]}
+          />
+        }
+        filters={<FilterBar />}
+      >
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
     );

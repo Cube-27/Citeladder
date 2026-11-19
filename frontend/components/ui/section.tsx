@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { StateHeadingLevelContext } from '@/components/ui/state-block';
+import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 

@@ -37,11 +37,8 @@ import {
 import { Table, TableTitleLinesContext } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-import {
-  StateBlock,
-  StateHeadingLevelContext,
-  type HeadingLevel,
-} from '@/components/ui/state-block';
+import { StateBlock } from '@/components/ui/state-block';
+import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
 

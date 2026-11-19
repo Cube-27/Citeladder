@@ -4,12 +4,11 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Stack } from '@/components/ui/layout';
-import { OpenRow, OpenRowSkeleton } from '@/components/ui/list-row';
+import { OpenRow } from '@/components/ui/list-row';
 import { CountDonut } from '@/components/ui/part-donut';
 import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
-import { SectionHeaderSkeleton } from '@/components/ui/loading-parts';
-import { SkeletonFrame } from '@/components/ui/skeleton-block';
+import { IssuesSummaryLoading } from '@/components/site-health/issues-summary-loading';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -53,33 +52,6 @@ export function IssuesSummary({
       <SeverityCard summary={summary} />
       {items.length > 0 ? <FixFirst issues={items} fixes={fixes} onOpen={onOpen} /> : null}
     </Stack>
-  );
-}
-
-/**
- * The loaded layout's two sections at their loaded height (the severity ring
- * sets the first, three captioned rows the second), so the table below does
- * not move.
- */
-export function IssuesSummaryLoading() {
-  return (
-    <SkeletonFrame label="Loading the issue summary" variant="summary">
-      <Stack gap="workspace" className="min-w-0">
-        <Section>
-          <SectionHeaderSkeleton title="figure" ring />
-        </Section>
-        <Section>
-          <SectionHeaderSkeleton title="heading" />
-          <ol aria-hidden className={ledgerClasses()}>
-            {[0, 1, 2].map((row) => (
-              <li key={row} className={ledgerItemClasses()}>
-                <OpenRowSkeleton />
-              </li>
-            ))}
-          </ol>
-        </Section>
-      </Stack>
-    </SkeletonFrame>
   );
 }
 

@@ -12,6 +12,7 @@ import type { LoadingShape } from '@/components/ui/skeleton-block';
 import type { IconName } from '@/lib/icons';
 import type {
   AppRouteRecord,
+  HeldTabs,
   NavDestination,
   NavEntry,
   NavPlacement,
@@ -143,8 +144,13 @@ const facts = (rows: number, tagRows?: readonly number[]): LoadingShape => ({
 });
 const cards = (
   shapes: readonly LoadingShape[],
-  frame: Readonly<{ tabs?: readonly string[]; filters?: boolean }> = {},
+  frame: Omit<Extract<RouteLoading, { kind: 'cards' }>, 'kind' | 'shapes'> = {},
 ): RouteLoading => ({ kind: 'cards', shapes, ...frame });
+/** A page's tabs as `?param=value` names them, in the row's order: `{ value: label }`. */
+const held = (param: string, items: Readonly<Record<string, string>>): HeldTabs => ({
+  param,
+  items: Object.entries(items).map(([value, label]) => ({ value, label })),
+});
 /** A record: its identity card. */
 const RECORD_LOADING = cards([facts(3)]);
 
@@ -175,7 +181,14 @@ export const APP_ROUTES = [
     title: 'Site health',
     screen: screens.site,
     loading: cards([figures(), table(6)], {
-      tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
+      tabs: held('tab', {
+        overview: 'Overview',
+        pages: 'Pages',
+        architecture: 'Architecture',
+        'aeo-readiness': 'AEO readiness',
+        'internal-links': 'Internal links',
+        changes: 'Changes',
+      }),
     }),
     nav: [listed('Site health', 'site', 'website')],
   }),
@@ -192,7 +205,8 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Issues',
     screen: screens.issues,
-    loading: cards([table(4)], { filters: true }),
+    // The summary, then the table under its switch and search row.
+    loading: { kind: 'issues' },
     nav: [listed('Issues', 'issues', 'website')],
   }),
   page({
@@ -209,7 +223,13 @@ export const APP_ROUTES = [
     screen: screens.keywords,
     // Opens on Demand: its signals table under a held control strip.
     loading: cards([table(8)], {
-      tabs: ['Demand', 'Overview', 'Keywords', 'Organic competitors', 'Backlinks'],
+      tabs: held('tab', {
+        demand: 'Demand',
+        overview: 'Overview',
+        keywords: 'Keywords',
+        competitors: 'Organic competitors',
+        backlinks: 'Backlinks',
+      }),
       filters: true,
     }),
     nav: [listed('Keyword research', 'searchIntelligence', 'search')],
@@ -220,14 +240,16 @@ export const APP_ROUTES = [
     path: '/products/overview',
     title: 'Shopping',
     screen: screens.shoppingOverview,
-    loading: cards([figures(4), table(4)]),
+    // Answers and Product recommendations, then the five-column ranking.
+    loading: cards([figures(2), table(5)], { filters: true }),
     nav: [listed('Shopping', 'reports', 'commerce')],
   }),
   page({
     path: '/products',
     title: 'Products',
     screen: screens.products,
-    loading: cards([table(4)], { filters: true }),
+    // The catalog's four figures, then the product and its seven metrics.
+    loading: cards([figures(4), table(8)], { filters: true }),
     nav: [listed('Products', 'products', 'commerce')],
   }),
   page({
@@ -235,16 +257,16 @@ export const APP_ROUTES = [
     title: 'Product',
     collection: '/products',
     screen: screens.product,
-    // The product's identity, then its six KPIs.
-    loading: cards([facts(3), figures(6)]),
+    // The product's one-row identity, then its six KPIs.
+    loading: cards([facts(1), figures(6)]),
   }),
   page({
     path: '/actions',
     width: 'narrow',
     title: 'Actions',
     screen: screens.actions,
-    // The goal strip, then Action, Priority and Source.
-    loading: cards([figures(4), table(3)], { filters: true }),
+    // The intro, the goal strip, then Action, Priority and Source: one stack.
+    loading: cards([figures(4), table(3)], { filters: true, intro: true, stacked: true }),
     // A Dashboard page: every Action in the app, Issues included (owner, 2026-11-16).
     nav: [
       {
@@ -286,8 +308,8 @@ export const APP_ROUTES = [
     path: '/perception',
     title: 'Perception',
     screen: screens.perception,
-    // Fact-checking, shown only to the pilot, is last and arrives after.
-    loading: cards([figures(5), chart], { tabs: ['Brand'], filters: true }),
+    // Fact-checking, shown only to the pilot, is last and arrives after; so does its fifth figure.
+    loading: cards([figures(4), chart], { tabs: held('tab', { brand: 'Brand' }), filters: true }),
     nav: [
       listed('Perception', 'perception', 'brand'),
       // A non-pilot project opens on Brand: the page owns the pilot gate.
@@ -303,8 +325,8 @@ export const APP_ROUTES = [
     path: '/competitors',
     title: 'Competitors',
     screen: screens.competitors,
-    // The ranking, then the suggestions.
-    loading: cards([table(5), table(5)], { filters: true }),
+    // The ranking (as its own pending table, seven columns), then the suggestions.
+    loading: cards([table(7), table(4)], { filters: true }),
     nav: [listed('Competitors', 'competitors', 'brand')],
   }),
   page({
@@ -345,15 +367,15 @@ export const APP_ROUTES = [
     width: 'compact',
     title: 'Context',
     screen: screens.context,
-    // The Company facts form's five fields.
+    // The Company facts form's five fields. Brand facts, for the pilot only, joins the row's end.
     loading: cards([facts(5)], {
-      tabs: [
-        'Company',
-        'Audience & Offerings',
-        'Business map',
-        'Competitors',
-        'Agent instructions',
-      ],
+      tabs: held('tab', {
+        facts: 'Company',
+        audience: 'Audience',
+        map: 'Business map',
+        competitors: 'Competitors',
+        instructions: 'Instructions',
+      }),
     }),
     nav: [listed('Context', 'context', 'agent')],
   }),
@@ -361,7 +383,10 @@ export const APP_ROUTES = [
     path: '/prompts',
     title: 'Prompts',
     screen: screens.prompts,
-    loading: cards([table(8)], { tabs: ['Active', 'Archived'], filters: true }),
+    loading: cards([table(8)], {
+      tabs: held('status', { active: 'Active', archived: 'Archived' }),
+      filters: true,
+    }),
     nav: [listed('Prompts', 'prompts', 'tracking')],
   }),
   // Before `/prompts/:promptId`, so `build` is never read as a prompt id.
@@ -379,16 +404,22 @@ export const APP_ROUTES = [
     title: 'Prompt',
     collection: '/prompts',
     screen: screens.prompt,
-    // Titled by the prompt itself: no identity card, its visibility figures first.
-    loading: cards([figures(2), chart]),
+    // Titled by the prompt itself: its market and engine filters, then its seven figures.
+    loading: cards([figures(7), chart], { filters: true }),
   }),
   page({
     path: '/visibility',
     title: 'Sources',
     screen: screens.visibility,
     // Domains, the default tab, opens on its cited-domain table and charts.
-    loading: cards([table(6), chart], {
-      tabs: ['Domains', 'URLs', 'Read, not cited', 'Query fanouts', 'Ads'],
+    loading: cards([table(8), chart], {
+      tabs: held('tab', {
+        domains: 'Domains',
+        urls: 'URLs',
+        'read-not-cited': 'Read, not cited',
+        'query-fanout': 'Query fanouts',
+        ads: 'Ads',
+      }),
       filters: true,
     }),
     nav: [
@@ -406,7 +437,14 @@ export const APP_ROUTES = [
     width: 'compact',
     title: 'Runs',
     screen: screens.runs,
-    loading: cards([table(5)], { tabs: ['All', 'Completed', 'Running', 'Failed'] }),
+    loading: cards([table(5)], {
+      tabs: held('status', {
+        all: 'All',
+        completed: 'Completed',
+        running: 'Running',
+        failed: 'Failed',
+      }),
+    }),
     nav: [listed('Runs', 'runs', 'tracking')],
   }),
   page({
@@ -414,14 +452,23 @@ export const APP_ROUTES = [
     title: 'Run',
     collection: '/runs',
     screen: screens.run,
-    loading: cards([facts(3), table(7)]),
+    // Requested, Completed and Failed, then the five-column executions.
+    loading: cards([figures(3), table(5)]),
   }),
   page({
     path: '/ai-traffic',
     title: 'AI traffic',
     screen: screens.aiTraffic,
-    loading: cards([figures(3), chart], {
-      tabs: ['Overview', 'Crawlers', 'Referrals', 'Pages', 'Activity'],
+    // Overview's key figures under the filter row, then the crawl trend.
+    loading: cards([figures(5), chart], {
+      filters: true,
+      tabs: held('tab', {
+        overview: 'Overview',
+        crawlers: 'Crawlers',
+        referrals: 'Referrals',
+        pages: 'Pages',
+        activity: 'Activity',
+      }),
     }),
     nav: [listed('AI traffic', 'aiTraffic', 'website')],
   }),
@@ -435,7 +482,14 @@ export const APP_ROUTES = [
     screen: screens.settings,
     // Account's Profile card: the identity row, then two facts.
     loading: cards([facts(3)], {
-      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      tabs: held('tab', {
+        account: 'Account',
+        workspace: 'Workspace',
+        providers: 'Providers',
+        integrations: 'Integrations',
+        connections: 'MCP connections',
+        'api-keys': 'API keys',
+      }),
     }),
     nav: [
       {

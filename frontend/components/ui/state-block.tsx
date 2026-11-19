@@ -1,25 +1,18 @@
-import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { CircleDashed, Inbox, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
+import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const;
-
-export type HeadingLevel = keyof typeof HEADING_TAG;
+const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const satisfies Record<HeadingLevel, string>;
 
 /** Why the block's action is disabled: visible caption text the control names in `aria-describedby`. */
 type ActionNote = Readonly<{ id: string; text: string }>;
-
-/**
- * The heading level a block state takes when its caller names none: 2 on a
- * page, 3 inside a Card, Section or DataTable whose own title is the h2 rung.
- */
-export const StateHeadingLevelContext = createContext<HeadingLevel>(2);
 
 type BlockEmpty = Readonly<{
   kind: 'empty';
