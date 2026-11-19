@@ -191,31 +191,9 @@ function PageField({
       />
     );
   if (query.data.crawl_id === null)
-    return (
-      <StateBlock
-        kind="empty"
-        inline
-        message={
-          <>
-            <span className="type-emphasis">No crawl yet</span> Analyze a page reads the content
-            pages of your latest crawl. Run a crawl in Website first.
-          </>
-        }
-      />
-    );
+    return <StateBlock kind="empty" inline message="No crawl yet" />;
   if (pages.length === 0 && search.trim() === '')
-    return (
-      <StateBlock
-        kind="empty"
-        inline
-        message={
-          <>
-            <span className="type-emphasis">No content pages</span> Your latest crawl found no
-            articles, guides or other content pages.
-          </>
-        }
-      />
-    );
+    return <StateBlock kind="empty" inline message="No content pages in your latest crawl." />;
   return (
     <Field label="Page" hint={pageHint(items.length, query.data.truncated)}>
       {(control) => (
@@ -242,8 +220,8 @@ function PageField({
 }
 
 function pageHint(count: number, truncated: boolean) {
-  if (truncated) return `Showing the first ${count} matches. Search to narrow them.`;
-  return count === 0 ? 'No content pages match this search.' : undefined;
+  if (truncated) return `First ${count} matches`;
+  return count === 0 ? 'No matches.' : undefined;
 }
 
 function TopicField({

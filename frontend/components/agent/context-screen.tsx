@@ -26,7 +26,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type ProfileRead = UseQueryResult<BrandProfile>;
 
@@ -195,7 +195,6 @@ function BrandFactsTab({
     <Section aria-labelledby="brand-facts">
       <SectionHeader>
         <SectionTitle id="brand-facts">Brand facts</SectionTitle>
-        <SectionDescription>Runs check the facts confirmed when they start.</SectionDescription>
       </SectionHeader>
       {facts.data?.enabled ? (
         <BrandFactsPanel

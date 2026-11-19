@@ -62,11 +62,7 @@ export function ActionDetailScreen() {
   if (!query.data)
     return fallback(<StateBlock kind="loading" shape={{ kind: 'facts', rows: 5 }} />);
   if (query.data.project_id !== projectId)
-    return fallback(
-      <Notice tone="negative">
-        This Action belongs to another project. Choose an Action from the current project.
-      </Notice>,
-    );
+    return fallback(<Notice tone="negative">This Action belongs to another project.</Notice>);
   // Keyed so ticks and a decision's state never outlive their Action.
   return <ActionPage key={query.data.id} action={query.data} workspaceId={workspaceId} />;
 }
@@ -118,7 +114,7 @@ function ActionPage({
           </Labelled>
         ) : null}
         {todo.length > 0 ? (
-          <Labelled title="What to do" caption={suggested}>
+          <Labelled title="What to do">
             <Checklist items={todo} />
           </Labelled>
         ) : null}

@@ -239,7 +239,7 @@ describe('OnboardingScreen', () => {
         competitors: [],
         warnings: ['research_degraded', 'competitors_not_found'],
       },
-      message: 'No competitors were confirmed. You can continue with none or add them yourself.',
+      message: 'No competitors were confirmed.',
     },
     {
       label: 'failed research',
@@ -248,7 +248,7 @@ describe('OnboardingScreen', () => {
         warnings: ['research_degraded'],
         error_code: 'brand_identity_unavailable',
       },
-      message: 'Research did not finish. Run discovery again; your brand details are kept.',
+      message: 'Research did not finish.',
     },
   ])('runs discovery again after $label and follows the new run', async ({ finished, message }) => {
     useRealDiscovery = true;

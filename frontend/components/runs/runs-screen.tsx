@@ -183,11 +183,7 @@ function RunsContent({
     <RunsTable
       audits={filteredAudits}
       emptyHeading={`No ${filterLabel} runs`}
-      status={
-        anyActive ? (
-          <Spinner label="Updating every 3 seconds while a run is active" showLabel />
-        ) : null
-      }
+      status={anyActive ? <Spinner label="Updating live" showLabel /> : null}
     />
   );
 }

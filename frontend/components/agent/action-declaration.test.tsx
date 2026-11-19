@@ -208,7 +208,7 @@ describe('Declaration status', () => {
       <DeclarationStatus declaration={declaration([])} workspaceId={WORKSPACE} />,
       { projectSelection: selection },
     );
-    expect(screen.getByText(/No automatic check applies to these findings/)).toBeVisible();
+    expect(screen.getByText('No automatic check applies. Recorded, not verified.')).toBeVisible();
     unmeasured.unmount();
     renderWithProviders(
       <DeclarationStatus
@@ -220,11 +220,7 @@ describe('Declaration status', () => {
       />,
       { projectSelection: selection },
     );
-    expect(
-      screen.getByText(
-        'These findings were already resolved before this went live, so the outcome is not credited to this change and nothing is measured.',
-      ),
-    ).toBeVisible();
+    expect(screen.getByText('Resolved before go-live: not credited, not measured.')).toBeVisible();
     expect(screen.queryByText(/No automatic check applies/)).not.toBeInTheDocument();
   });
 
