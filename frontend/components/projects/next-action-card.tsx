@@ -34,7 +34,7 @@ const NEXT_ACTION_COPY: Record<
   },
   crawl: {
     ...RECOMMENDED,
-    link: 'Open Website',
+    link: 'Open Site health',
     reason: 'A crawl finds the page issues behind later Actions.',
   },
   configure_prompts: {

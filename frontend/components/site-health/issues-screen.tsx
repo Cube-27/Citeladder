@@ -55,13 +55,13 @@ function IssuesDataRegion({
           error={dashboard.error}
           fallback={
             accessDenied
-              ? 'Website is unavailable for this project.'
-              : "Couldn't load the latest Website crawl."
+              ? 'Site health is unavailable for this project.'
+              : "Couldn't load the latest Site health crawl."
           }
           title={
             accessDenied
-              ? 'Website is unavailable for this project'
-              : "Couldn't load the latest Website crawl"
+              ? 'Site health is unavailable for this project'
+              : "Couldn't load the latest Site health crawl"
           }
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
@@ -95,8 +95,8 @@ function IssuesLoadedRegion({
           <Notice
             kind="read"
             {...readErrorProps(dashboard)}
-            fallback="Could not refresh the latest Website crawl."
-            title="Could not refresh the latest Website crawl"
+            fallback="Could not refresh the latest Site health crawl."
+            title="Could not refresh the latest Site health crawl"
           />
         }
       />
@@ -105,8 +105,8 @@ function IssuesLoadedRegion({
         <StateBlock
           kind="error"
           {...readErrorProps(dashboard)}
-          fallback="Could not refresh the latest Website crawl."
-          title="Could not refresh the latest Website crawl"
+          fallback="Could not refresh the latest Site health crawl."
+          title="Could not refresh the latest Site health crawl"
         />
       </ReportPage>
     );
@@ -117,11 +117,11 @@ function IssuesLoadedRegion({
         <StateBlock
           kind="empty"
           icon={ICONS.issues}
-          heading="No Website crawl yet"
-          description="Issue types appear here once a Website crawl finishes. Run one from Website."
+          heading="No Site health crawl yet"
+          description="Issue types appear here once a Site health crawl finishes. Run one from Site health."
           action={
             <Button asChild>
-              <ProjectLink href="/site">Go to Website</ProjectLink>
+              <ProjectLink href="/site">Go to Site health</ProjectLink>
             </Button>
           }
         />

@@ -233,9 +233,9 @@ describe('CatalogHeader', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Run Website crawl' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'Run Site health crawl' })).toBeInTheDocument(),
     );
-    expect(statValue('Website')).toHaveTextContent('Not run yet');
+    expect(statValue('Site health')).toHaveTextContent('Not run yet');
     expect(statValue('Pages analyzed')).toHaveTextContent('Not run yet');
   });
 
@@ -260,11 +260,11 @@ describe('CatalogHeader', () => {
       projectSelection: selectionAs('member'),
     });
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Run Website crawl' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Run Site health crawl' })).toBeEnabled(),
     );
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Add products',
-      'Run Website crawl',
+      'Run Site health crawl',
     ]);
     expect(screen.getByText('unconfirmed')).toBeInTheDocument();
     unmount();
@@ -286,12 +286,12 @@ describe('CatalogHeader', () => {
       />,
     );
 
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
+    await waitFor(() => expect(statValue('Site health')).toHaveTextContent('Unavailable'));
     expect(statValue('Pages analyzed')).toHaveTextContent('Unavailable');
     expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
     // With no other notice on the page, the header names the failure itself.
     expect(screen.getByRole('button', { name: 'Refresh again' })).toBeInTheDocument();
-    const refresh = screen.getByRole('button', { name: 'Refresh from Website' });
+    const refresh = screen.getByRole('button', { name: 'Refresh from Site health' });
 
     getDashboard.mockResolvedValue(crawl());
     await user.click(refresh);
@@ -308,14 +308,14 @@ describe('CatalogHeader', () => {
         query={catalogQuery()}
       />,
     );
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Not run yet'));
+    await waitFor(() => expect(statValue('Site health')).toHaveTextContent('Not run yet'));
 
     getDashboard.mockRejectedValue(new ApiError('Bad request', 400, ''));
     await act(() => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }));
 
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
+    await waitFor(() => expect(statValue('Site health')).toHaveTextContent('Unavailable'));
     expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh from Website' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh from Site health' })).toBeInTheDocument();
   });
 
   it('leaves a failed read to the table when the table already reports one', async () => {
@@ -329,7 +329,7 @@ describe('CatalogHeader', () => {
       />,
     );
 
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
+    await waitFor(() => expect(statValue('Site health')).toHaveTextContent('Unavailable'));
     expect(statValue('Products')).toHaveTextContent('Unavailable');
     expect(screen.queryByRole('button', { name: 'Refresh again' })).toBeNull();
   });

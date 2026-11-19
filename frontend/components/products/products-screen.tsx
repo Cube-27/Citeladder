@@ -146,8 +146,8 @@ function noProducts({
 /** The page's one empty state carries its actions; the masthead repeats none of them. */
 function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHeader>['empty'] }>) {
   const lead = empty.actions
-    ? 'Add your products or run a Website crawl so CiteLadder can track how AI answers mention and price them.'
-    : 'A workspace owner, admin or member can add products or run a Website crawl so CiteLadder can track how AI answers mention and price them.';
+    ? 'Add your products or run a Site health crawl so CiteLadder can track how AI answers mention and price them.'
+    : 'A workspace owner, admin or member can add products or run a Site health crawl so CiteLadder can track how AI answers mention and price them.';
   return (
     <ReportPage actions={empty.dialog}>
       {empty.notices}
@@ -158,8 +158,8 @@ function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHea
         description={
           empty.businessModelUnconfirmed ? (
             <>
-              {lead} Website pages become products once your business model is confirmed.{' '}
-              <ConfirmBusinessModelLink />
+              {lead} Pages from the Site health crawl become products once your business model is
+              confirmed. <ConfirmBusinessModelLink />
             </>
           ) : (
             lead

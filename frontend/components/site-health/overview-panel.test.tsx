@@ -482,7 +482,7 @@ describe('OverviewPanel', () => {
     expect(scoreOf('Answerability')).toBe('—Not measured');
   });
 
-  const ALERT = "Couldn't load the Website overview";
+  const ALERT = "Couldn't load the Site health overview";
 
   function renderTerminal() {
     renderWithProviders(

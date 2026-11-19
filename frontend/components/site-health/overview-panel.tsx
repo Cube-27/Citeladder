@@ -59,7 +59,7 @@ export function OverviewPanel({
         kind="error"
         {...readErrorProps(overview)}
         fallback={READ_FAILED}
-        title="Couldn't load the Website overview"
+        title="Couldn't load the Site health overview"
       />
     );
   } else if (data) {

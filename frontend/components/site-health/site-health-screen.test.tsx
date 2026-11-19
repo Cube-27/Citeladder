@@ -207,7 +207,7 @@ describe('SiteHealthScreen — loading failures', () => {
 
     // A failed first read says so in place of the panel; the tabs stay usable.
     expect(await screen.findByText('Dashboard unavailable')).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
     available = true;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
@@ -245,7 +245,7 @@ describe('SiteHealthScreen — loading failures', () => {
     void refreshSiteHealthDashboard(queryClient, PROJECT);
 
     expect(await screen.findByText('Dashboard refresh failed')).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
   });
 
   it('keeps cached evidence but removes crawl mutations after entitlement refresh fails', async () => {
@@ -271,7 +271,7 @@ describe('SiteHealthScreen — loading failures', () => {
     });
 
     expect(await screen.findByText('Entitlement refresh failed')).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
   });
 
@@ -286,7 +286,7 @@ describe('SiteHealthScreen — loading failures', () => {
     renderScreen();
 
     expect(await screen.findByText('Access unavailable')).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
   });
 
@@ -300,8 +300,8 @@ describe('SiteHealthScreen — loading failures', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/Website access could not be resolved/)).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(await screen.findByText(/Site health access could not be resolved/)).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
   });
 });
@@ -358,7 +358,7 @@ describe('SiteHealthScreen — loading frames', () => {
     renderScreen();
 
     // The crawl is still being read: the loaded page's tab row, one box.
-    expect(await screen.findByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(await screen.findByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(loadingShapes()).toEqual(['figures', 'table']);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
@@ -405,7 +405,7 @@ describe('SiteHealthScreen — loading frames', () => {
     expect(
       screen.getByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
     ).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();
   });

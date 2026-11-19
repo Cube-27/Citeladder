@@ -65,7 +65,7 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
     const missingLabel = loading ? undefined : availabilityLabel('unavailable');
     return [
       { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingLabel },
-      { key: 'site-health', label: 'Website', value: null, loading, missingLabel },
+      { key: 'site-health', label: 'Site health', value: null, loading, missingLabel },
     ];
   }
   const { crawl } = read;
@@ -78,7 +78,7 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
     },
     {
       key: 'site-health',
-      label: 'Website',
+      label: 'Site health',
       value: crawl ? <CrawlStatusBadge crawl={crawl} /> : null,
       missingLabel: availabilityLabel('not_run'),
     },
@@ -204,7 +204,7 @@ export function useCatalogHeader({
   // Importing products and starting a crawl are runs; re-reading is not.
   const canRun = useWorkspaceCapability('run');
   const refreshBusy = discover.isPending || dashboard.isPending;
-  const refreshLabel = noCrawl ? 'Run Website crawl' : 'Refresh from Website';
+  const refreshLabel = noCrawl ? 'Run Site health crawl' : 'Refresh from Site health';
   const dialog = canRun ? (
     <AddProductsDialog
       workspaceId={workspaceId}
@@ -263,8 +263,8 @@ export function useCatalogHeader({
         {refreshNotice}
         {businessModelUnconfirmed(projection) ? (
           <Notice tone="warning" title="Business model unconfirmed">
-            Website pages become catalog products once your business model is confirmed as one that
-            sells products. <ConfirmBusinessModelLink />
+            Pages from the Site health crawl become catalog products once your business model is
+            confirmed as one that sells products. <ConfirmBusinessModelLink />
           </Notice>
         ) : null}
       </>
@@ -299,7 +299,7 @@ function CatalogNotices({
     <Notice
       kind="mutation"
       notice={mutationNoticeForError(refreshError, {
-        action: 'refresh Website progress',
+        action: 'refresh Site health progress',
       })}
       recovery={
         <Button type="button" variant="secondary" onClick={onRefresh}>
