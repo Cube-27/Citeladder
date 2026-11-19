@@ -34,4 +34,43 @@ describe('SidebarScrollList', () => {
     expect(list.dataset.fadeBottom).toBe('true');
     expect(list.dataset.fadeTop).toBeUndefined();
   });
+
+  it('scrolls a current row under the bottom fade clear of it on navigation', () => {
+    const list = (key: string) => (
+      <SidebarScrollList label="Pages" revealKey={key}>
+        <SidebarNavGroup>
+          <li>
+            <a href="/performance" aria-current={key === '/performance' ? 'page' : undefined}>
+              Performance
+            </a>
+          </li>
+        </SidebarNavGroup>
+      </SidebarScrollList>
+    );
+    const { container, rerender } = render(list('/projects'));
+    const scroller = container.querySelector<HTMLElement>('[data-sidebar-scroll]')!;
+    const row = container.querySelector('a')!;
+    let scrollTop = 0;
+    Object.defineProperty(scroller, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    });
+    // The list spans 0–400; the row sits inside it but under the 32px fade.
+    scroller.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 400 });
+    row.getBoundingClientRect = () => DOMRect.fromRect({ y: 352 - scrollTop, height: 32 });
+
+    rerender(list('/performance'));
+    expect(scrollTop).toBe(16);
+
+    // A list 60 high has no room for both fades: the row is centred, never pushed out.
+    rerender(list('/projects'));
+    scrollTop = 0;
+    scroller.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 60 });
+    row.getBoundingClientRect = () => DOMRect.fromRect({ y: 28 - scrollTop, height: 32 });
+    rerender(list('/performance'));
+    expect(scrollTop).toBe(14);
+  });
 });

@@ -16,9 +16,12 @@
         shell's places, until React replaces #root. The sidebar is 224 from
         1280px, 200 from 900, none below, or the stored width; 56 with no rows
         when the preference script finds it collapsed. The switcher's and the
-        account's blocks (44, or 40 in the rail) and the switch's 24 above and
-        12 below keep the rows at their hydrated y. Rows are 32 on a 34
-        pitch (44 under a coarse pointer). /boot-title.js marks a shell path
+        account's blocks (44, or 40 in the rail) sit in a 48 cell; the switch is 28
+        centred in a 44 row closed by a rule (44 in 48 under a coarse
+        pointer), so the rows keep their hydrated y. Rows are 32 on a 34
+        pitch (44 under a coarse pointer), at the regular weight; group titles
+        and the switch at medium. boot-shell.test.ts holds these to the live
+        tokens. /boot-title.js marks a shell path
         (data-boot-shell) and shows the rows and the title; a flow path
         (sign-in, setup, the chooser) keeps the bare ground (PR 524). -->
     <style>
@@ -29,7 +32,7 @@
         background: #f5f6f8;
         color: #565c69;
         font:
-          500 0.875rem/1.25rem var(--font-face-sans),
+          400 0.875rem/1.25rem var(--font-face-sans),
           system-ui,
           sans-serif;
       }
@@ -55,7 +58,7 @@
       .boot-mast,
       .boot-ident {
         flex: none;
-        height: 56px;
+        height: 48px;
         background: #fbfbfc;
         border-block-end: 1px solid rgb(22 24 29 / 11%);
       }
@@ -109,11 +112,22 @@
       .boot-mode {
         flex: none;
         grid-template-columns: 1fr 1fr;
-        height: 32px;
-        margin: 24px 8px 12px;
+        position: relative;
+        height: 28px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        margin-inline: 8px;
         padding: 2px;
         border-radius: 6px;
         background: #f1f2f5;
+        font-weight: 500;
+      }
+      .boot-mode::after {
+        content: '';
+        position: absolute;
+        inset-inline: -8px;
+        bottom: -8px;
+        border-block-end: 1px solid rgb(22 24 29 / 11%);
       }
       .boot-mode span {
         display: flex;
@@ -154,9 +168,13 @@
       .boot-row {
         padding-inline: 32px 8px;
       }
+      .boot-group + .boot-group {
+        margin-top: -8px;
+      }
       .boot-group-title {
         padding-inline: 8px;
         font-size: 0.75rem;
+        font-weight: 500;
       }
       .boot-foot {
         flex: none;
@@ -172,6 +190,10 @@
         }
       }
       @media (pointer: coarse) {
+        .boot-mode {
+          margin-top: 2px;
+          margin-bottom: 2px;
+        }
         .boot-mode,
         .boot-row,
         .boot-group-title {
@@ -201,12 +223,17 @@
       [data-theme='dark'] .boot-shell {
         background: #121213;
         color: #b0b0b0;
+        font-weight: 350;
       }
       [data-theme='dark'] :is(.boot-side, .boot-mast, .boot-ident) {
         background: #161617;
         border-color: #252526;
       }
-      [data-theme='dark'] .boot-foot {
+      [data-theme='dark'] :is(.boot-mode, .boot-group-title) {
+        font-weight: 450;
+      }
+      [data-theme='dark'] .boot-foot,
+      [data-theme='dark'] .boot-mode::after {
         border-color: #252526;
       }
       [data-theme='dark'] .boot-title,
