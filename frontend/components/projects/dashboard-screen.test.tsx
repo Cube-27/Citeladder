@@ -2,7 +2,7 @@ import { render as raw, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vite-plus/test';
 const { project, downloadOverviewReport, queryResult, promptsResult, layoutResult, role } =
   vi.hoisted(() => ({
     project: {
@@ -204,16 +204,6 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 
 function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
-}
-
-/** A window from `rail` (900px) up, where the masthead draws its row of controls. */
-function stubDesktop() {
-  vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: query === '(min-width: 900px)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }));
 }
 
 /** The masthead's More menu, opened. */
@@ -584,7 +574,17 @@ describe('DashboardScreen', () => {
     expect(screen.queryByRole('heading', { name: 'Movement' })).not.toBeInTheDocument();
   });
   it('keeps Layout and Export PDF behind More at desktop width, Layout for editors only', async () => {
-    stubDesktop();
+    // jsdom loads no Tailwind, so the masthead's row is drawn as at desktop width;
+    // it has no `checkVisibility`, so it answers as a browser would here.
+    Object.defineProperty(HTMLElement.prototype, 'checkVisibility', {
+      configurable: true,
+      value(this: HTMLElement) {
+        return !this.closest('[hidden]');
+      },
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'checkVisibility');
+    });
     const user = userEvent.setup();
     const editor = renderDashboard(
       <TooltipProvider>

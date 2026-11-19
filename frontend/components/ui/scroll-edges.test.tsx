@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { ScrollFrame } from './scroll-edges';
 
-describe('ScrollFrame row-edges', () => {
+describe('ScrollFrame row', () => {
   it('cues each edge that hides more, the start only once scrolled from it', () => {
     const { container } = render(
-      <ScrollFrame stepper="row-edges">
+      <ScrollFrame stepper="row">
         {(ref, region) => (
           <div ref={ref} {...region}>
             <span>Tabs</span>
