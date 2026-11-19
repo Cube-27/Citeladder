@@ -16,6 +16,7 @@ import { ContextScreen } from './context-screen';
 const project = makeProject();
 const instructionsEndpoint = `/api/v1/projects/${project.id}/agent/instructions`;
 const profileEndpoint = `/api/v1/projects/${project.id}/brand-profile`;
+const limits = { statement_max_chars: 300, facts_import_max_rows: 150 };
 const saved = (text: string) => ({ text, revision: 1, created_at: '2026-09-26T10:00:00Z' });
 /** The instructions read as the harness's active workspace caches it. */
 const instructionsKey = queryKeys.agent.instructions({
@@ -87,7 +88,7 @@ function renderContext({
     http.get(instructionsEndpoint, () => HttpResponse.json(saved('Original'))),
     http.get('/api/v1/projects/:id/brand-profile', () => HttpResponse.json(profile)),
     http.get('/api/v1/projects/:id/brand-facts', () =>
-      HttpResponse.json({ enabled: false, facts: [] }),
+      HttpResponse.json({ enabled: false, facts: [], limits }),
     ),
   );
   mswServer.use(...handlers);
@@ -182,7 +183,7 @@ describe('Context layout', () => {
       handlers: [
         http.get('/api/v1/projects/:id/brand-facts', async () => {
           await gate;
-          return HttpResponse.json({ enabled: true, facts: [] });
+          return HttpResponse.json({ enabled: true, facts: [], limits });
         }),
       ],
     });
@@ -222,7 +223,7 @@ describe('Context layout', () => {
       handlers: [
         http.get('/api/v1/projects/:id/brand-facts', async () => {
           await gate;
-          return HttpResponse.json({ enabled: true, facts: [] });
+          return HttpResponse.json({ enabled: true, facts: [], limits });
         }),
       ],
     });
@@ -254,6 +255,7 @@ describe('Context layout', () => {
                 updated_at: '2026-11-01T00:00:00Z',
               },
             ],
+            limits,
           }),
         ),
       ],
@@ -607,7 +609,7 @@ describe('Agent instruction drafts', () => {
       http.get('/api/v1/projects/:id/brand-profile', () => HttpResponse.json(emptyProfile)),
       http.get('/api/v1/projects/:id/competitor-suggestions', () => HttpResponse.json([])),
       http.get('/api/v1/projects/:id/brand-facts', () =>
-        HttpResponse.json({ enabled: false, facts: [] }),
+        HttpResponse.json({ enabled: false, facts: [], limits }),
       ),
     );
     window.history.replaceState(null, '', '/agent/context?tab=instructions');

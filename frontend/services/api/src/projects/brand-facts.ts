@@ -76,8 +76,12 @@ export async function listBrandFacts(
   scope: ProjectScope,
   entitlements: WorkspaceEntitlements,
 ): Promise<BrandFactList> {
+  const formLimits = {
+    statement_max_chars: limits.statement_max_chars,
+    facts_import_max_rows: limits.facts_import_max_rows,
+  };
   if (!(await entitlements.grants(policy.entitlements.fact_checking)))
-    return { enabled: false, facts: [] };
+    return { enabled: false, facts: [], limits: formLimits };
   const rows = await db
     .selectFrom('brand_facts')
     .selectAll()
@@ -94,7 +98,7 @@ export async function listBrandFacts(
         (factTopicOrder.get(a.topic) ?? 0) - (factTopicOrder.get(b.topic) ?? 0) ||
         status.indexOf(a.status) - status.indexOf(b.status),
     );
-  return { enabled: true, facts };
+  return { enabled: true, facts, limits: formLimits };
 }
 
 function revisionOf(row: Selectable<BrandFacts>, userId: string | null) {

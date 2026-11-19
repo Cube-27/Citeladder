@@ -38,6 +38,11 @@ export const brandFactSchema = responseObject({
 export const brandFactListSchema = responseObject({
   enabled: z.boolean(),
   facts: z.array(brandFactSchema),
+  // The bounds the API enforces on the fact form and CSV import.
+  limits: responseObject({
+    statement_max_chars: z.number().int(),
+    facts_import_max_rows: z.number().int(),
+  }),
 });
 
 // A claim's verdict against the confirmed facts frozen when its run started.

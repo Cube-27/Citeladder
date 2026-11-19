@@ -25,6 +25,7 @@ import {
   type ParsedFactCsv,
   type ParsedFactRow,
 } from '@/lib/project/facts-csv';
+import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { pluralCount } from '@/lib/format';
 
 type Outcome = BrandFactImportResult['rows'][number];
@@ -48,8 +49,9 @@ export function FactsImportDialog({
   const { notify } = useToast();
   const importing = useMutation(projectMutations.importBrandFacts(useProjectScope()));
   const [outcomes, setOutcomes] = useState<Map<number, Outcome> | null>(null);
+  const maxRows = useBrandFacts().data?.limits.facts_import_max_rows ?? null;
   const { fileName, inputRef, parsed, readError, reading, reset, selectFile } =
-    useCsvImportFile<ParsedFactCsv>(parseFactCsv);
+    useCsvImportFile<ParsedFactCsv>((raw) => parseFactCsv(raw, maxRows));
   const ready = parsed?.rows.filter((row) => row.errors.length === 0) ?? [];
 
   const close = (next: boolean) => {

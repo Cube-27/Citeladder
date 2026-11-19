@@ -47,7 +47,11 @@ describe('brand facts', () => {
   it('is disabled outside the pilot: an empty list and refused writes', async () => {
     expect(await call(tenant, 'GET', '/brand-facts')).toEqual({
       status: 200,
-      body: { enabled: false, facts: [] },
+      body: {
+        enabled: false,
+        facts: [],
+        limits: { statement_max_chars: 300, facts_import_max_rows: 150 },
+      },
     });
     const refused = await call(tenant, 'POST', '/brand-facts', {
       topic: 'pricing',
@@ -126,7 +130,10 @@ describe('brand facts', () => {
     const id = await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
     const other = await fixtures.tenant();
     await enroll(other);
-    expect((await call(other, 'GET', '/brand-facts')).body).toEqual({ enabled: true, facts: [] });
+    expect((await call(other, 'GET', '/brand-facts')).body).toMatchObject({
+      enabled: true,
+      facts: [],
+    });
     const forged = await call(other, 'PATCH', `/brand-facts/${id}`, {
       expected_revision: 2,
       status: 'retired',
