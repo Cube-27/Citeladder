@@ -1,5 +1,5 @@
 /* ---------- PageHighlight: the page's lead tile ----------
-   A recessed well whose edges fade to a violet tint (a vignette), with ink
+   A recessed well whose edges fade to a faint warm tint (a vignette), with ink
    text in both themes; never an inverted ground. */
 .cl-page-hl {
   height: 100%;

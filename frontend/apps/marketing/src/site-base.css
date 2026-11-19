@@ -8,7 +8,7 @@
 /* ---------- Page root, container and section rhythm ---------- */
 /* Nothing floats (owner, 2026-11-14): depth comes from recessed wells, washes,
    gradient hairlines and a lit backdrop behind product images, never a raised
-   shadow. Orange is the brand colour; blue-violet is the second. */
+   shadow. Orange is the only hue: big effects are soft warm light, small marks grey. */
 
 .cl-site {
   /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
@@ -49,7 +49,7 @@
      Panels are wells: a shade under the page, darker along their top edge
      and ringed by a hairline, so they sit in it rather than on it. */
   --site-page: var(--color-site-page);
-  --site-violet: var(--color-site-violet);
+  --site-mark: var(--color-site-mark);
   --site-chip: var(--color-site-chip);
   --site-chip-ink: var(--color-site-chip-ink);
   --site-guide: var(--color-site-guide);
@@ -84,7 +84,7 @@
   padding-inline: var(--site-gutter);
 }
 
-/* The "Answers collected from" strip is framed by a violet-to-orange
+/* The "Answers collected from" strip is framed by a pale-warm-to-accent
    hairline above and below it (its own section's top and the next
    section's), across the content column, halfway down the section's top
    space. Other sections have no rule. It is 2px at a lighter alpha, so it
@@ -189,13 +189,13 @@
   line-height: var(--text-body--line-height);
 }
 
-/* Each mark is a small violet square, centred on the item's first line. */
+/* Each mark is a small grey square, centred on the item's first line. */
 
 .cl-checks-mark {
   width: 6px;
   height: 6px;
   margin-top: calc((1lh - 6px) / 2);
-  background: var(--site-violet);
+  background: var(--site-mark);
 }
 
 .cl-checks--sm {
@@ -336,7 +336,7 @@
 }
 
 .cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary']:hover {
-  background: color-mix(in srgb, var(--color-site-band-ink) 22%, transparent);
+  background: var(--color-site-band-soft-hover);
 }
 
 .cl-site
