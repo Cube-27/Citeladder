@@ -57,9 +57,11 @@
   --screen-natural: 1440px;
   --screen-w: var(--screen-natural);
   --screen-h: 820px;
-  /* The app's chrome sits one step above its ground; the website aliases
-     both to the paper, so the screen draws that step between paper and card. */
-  --color-chrome: color-mix(in oklch, var(--color-ground), var(--color-surface) 55%);
+  /* The app's ground, then its chrome a step lighter, then cards. The website
+     aliases ground and chrome to its paper (white in light), so the screen
+     draws the app's steps from the website's own fills. */
+  --color-ground: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 50%);
+  --color-chrome: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 20%);
 
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
@@ -67,6 +69,12 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-ground);
+}
+
+/* In dark the website's sunken fill is above its cards, so the ground is the paper. */
+:root[data-theme='dark'] .cl-screen--app {
+  --color-ground: var(--color-paper);
+  --color-chrome: color-mix(in oklch, var(--color-paper), var(--color-surface) 55%);
 }
 
 /* Insights runs past the hero frame's foot, which cuts it inside the competitors table. */
