@@ -178,7 +178,6 @@ describe('evidenceFacts', () => {
           {
             page_kind: 'product',
             page_count: 40,
-            duplicate_metadata_count: 2,
             pages: [
               {
                 site_url_id: 'a80abae1-a069-4f97-a5bd-76d3fc7d041b',

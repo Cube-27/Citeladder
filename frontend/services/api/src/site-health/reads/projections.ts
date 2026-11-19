@@ -376,8 +376,6 @@ export async function architecture(
         page_count: typeof row.page_count === 'number' ? row.page_count : 0,
         median_depth: row.median_depth ?? null,
         indexable_count: typeof row.indexable_count === 'number' ? row.indexable_count : 0,
-        duplicate_metadata_count:
-          typeof row.duplicate_metadata_count === 'number' ? row.duplicate_metadata_count : 0,
         orphan_count: row.orphan_count ?? null,
       })),
     nodes: list(model.hierarchy)

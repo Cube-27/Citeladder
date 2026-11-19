@@ -9,7 +9,6 @@ export const architecturePageKindSchema = responseObject({
   page_count: z.number().int(),
   median_depth: z.number().nullable(),
   indexable_count: z.number().int(),
-  duplicate_metadata_count: z.number().int(),
   orphan_count: z.number().int().nullable(),
 });
 

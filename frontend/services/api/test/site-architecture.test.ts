@@ -109,7 +109,7 @@ it('counts in-content links apart from the links that menus repeat on every page
   const { internal_linking } = buildArchitecture(pages, 'complete', context);
   expect(internal_linking).toMatchObject({ internal_link_count: 22, content_link_count: 5 });
 });
-it('keeps observed orphan and duplicate counts under partial coverage but gates absence and depth findings', () => {
+it('keeps observed orphan counts under partial coverage but gates absence and depth findings', () => {
   const pages = [
     page('home', '/', 'homepage', { depth: 0, inbound: 1 }),
     ...['a', 'b', 'c'].map((id) =>
@@ -122,9 +122,6 @@ it('keeps observed orphan and duplicate counts under partial coverage but gates 
   ];
   const model = buildArchitecture(pages, 'partial', context);
   expect(model.internal_linking.orphan_page_count).toBe(3);
-  expect(
-    model.page_kinds.find((row) => row.page_kind === 'product')!.duplicate_metadata_count,
-  ).toBe(3);
   const partial = architectureRules(model, pages, 'partial');
   // Depth over a partly observed graph is an upper bound, not a finding.
   expect(partial.find((row) => row.rule.rule_id.endsWith('excessive_depth'))).toMatchObject({
