@@ -136,7 +136,8 @@ colors:
   checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
   (and the primary button's fill, labelled `on-ink`), `ink-2` for what
   supports it; there is no third grey. Dark is designed, not inverted:
-  Linear's near-blacks (values in `globals.css`), each layer a step lighter than the one beneath.
+  neutral near-blacks (values in `globals.css`; owner's table reference,
+  2026-11-19), each layer at least 1.05 lighter than the one beneath.
   The shell keeps our structure: the chrome is lighter than the ground,
   never a darker frame around an inset page.
 - **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
@@ -241,7 +242,8 @@ spacing:
 
 The block lists the system's values. The app binds its own: controls 32
 (`control-md`) and 44 (`control-lg`, flow pages); below 900px or under a
-coarse pointer every primary target is 44 and table rows grow from 36 to 44.
+coarse pointer every primary target is 44. Table rows are 44 (56 for a value
+over its caption).
 Tags are 24 and live in running content (cells, facts, sheets), never in a
 row of controls. Navigation rows are 32 (44 in the drawer): links, not controls.
 
@@ -348,11 +350,13 @@ screen stays rendered while it refreshes.
   description and their content straight on the surface, with no box or
   padding box around them; a `rule` divides neighbouring sections (Page
   anatomy). An empty state, a figure row and an explainer are never boxed.
-- **What keeps a container.** A **Frame** (a `rule` edge at `rounded-card`,
-  no fill, no shadow) holds a table, a plotted chart (its key inside), an
-  Overview widget or a box of rows; a table's title, tabs, filters and
-  actions sit on the surface above its frame, and its column names are the
-  frame's first row, unfilled. A **Slip** (`surface`, a `rule` edge,
+- **What keeps a container.** Every table, in a container or not, is a
+  **Table shell** (owner, 2026-11-19, after HeroUI's table): a `well` shell
+  at `rounded-overlay` holds the column names, unruled, and the rows sit on an
+  inset `surface` panel at `rounded-card`, 4 in from the shell's sides and
+  foot; its title, tabs, filters and actions sit on the surface above it. A
+  **Frame** (a `rule` edge at `rounded-card`, no fill, no shadow) holds a
+  plotted chart (its key inside), an Overview widget or a box of rows. A **Slip** (`surface`, a `rule` edge,
   `rounded-card`, `shadow-card`) is one object you can act on: a clickable
   card (`IconCard`, which takes the `control-edge`), a plan or add-on with its
   buttons. A **Well** (`well`, radius 6) holds quoted or raw material. A
@@ -361,7 +365,7 @@ screen stays rendered while it refreshes.
   a modal sheet also sits on the `scrim`. The Agent composer keeps its card.
   A `framed` Section is the opt-in frame for any other block that earns one.
 - **Boxes are at most two deep** and a slip never holds a slip; inside a
-  container a table or chart draws no second frame. To separate a group, use
+  container a chart draws no second frame. To separate a group, use
   space and a heading; never wrap a section in a box.
 - **Every sheet keeps two separation cues in each theme:** the hairline and
   the shadow in light, the lighter `raised` fill and the hairline in dark.

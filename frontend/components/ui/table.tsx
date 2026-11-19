@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * Table — the app's data table:
- *  - the head is a `well` band of caption-strong column heads (`scope="col"`),
- *    `ink` while sorted
- *  - `table-row-height` rows (40 in the app) with `rule` lines between them;
+ *  - in the app a `well` shell holds the caption-strong column heads
+ *    (`scope="col"`, `ink` while sorted) over an inset `surface` body panel
+ *  - `table-row-height` rows (44 in the app) with `rule` lines between them;
  *    every row tints on hover as one piece, pinned cells included
  *    (globals.css "r3 data"); `highlight` marks your own row (one row per
  *    table, never for emphasis); no zebra stripes, no column rules
@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
  *  - `fixed` takes column widths from the header cells, never from the rows
  *    shown, so paging, sorting and loading never move the columns
  * The wrapper scrolls, so the sticky header pins on vertical scroll. On its
- * own in the app it is a card; inside a container or a DataTable it is plain.
+ * own in the app it draws the shell; inside a DataTable the DataTable's frame does.
  */
 const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
 export function Table({
@@ -170,8 +170,8 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
-        // The header is a square `surface-sunken` band, full-bleed like the
-        // rows under it; its opaque fill keeps a sticky header over scrolled rows.
+        // The website's head is a `surface-sunken` band; the app paints its shell
+        // (globals.css). The opaque fill keeps a sticky header over scrolled rows.
         'bg-well sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums text-right',
         desktopOnly && desktopOnlyClasses,
