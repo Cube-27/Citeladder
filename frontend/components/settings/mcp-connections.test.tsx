@@ -106,6 +106,7 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
   });
   const section = heading.closest('section')!;
   await within(section).findByRole('button', { name: 'Remove workspace access' });
+  expect(section).toHaveTextContent('Reads and changes Acme.');
   expect(section).toHaveTextContent('Read and change · Connected by ana@example.test');
   expect(section).toHaveTextContent('Last used');
   expect(section).not.toHaveTextContent('Not used yet');

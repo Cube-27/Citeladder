@@ -131,11 +131,11 @@ export function ProjectEditPanel({
   const save = useMutation(
     projectMutations.update({ workspaceId: project.workspace_id, projectId: project.id }),
   );
+  const nameMissing = name.trim() === '';
   const submit = () =>
     save.mutate(
       {
-        // An emptied name keeps the current one rather than failing the save.
-        name: name.trim() || project.name,
+        name: name.trim(),
         brand_name: brandName.trim(),
         website_url: websiteUrl.trim(),
         country_code: country.trim().toUpperCase(),
@@ -179,7 +179,7 @@ export function ProjectEditPanel({
             <Icon icon={X} />
             Cancel
           </Button>
-          <Button variant="primary" onClick={submit} disabled={save.isPending}>
+          <Button variant="primary" onClick={submit} disabled={save.isPending || nameMissing}>
             {save.isPending ? 'Saving…' : 'Save changes'}
           </Button>
         </>
@@ -194,7 +194,12 @@ export function ProjectEditPanel({
         ) : null}
 
         <Stack gap="workspace">
-          <Field label="Project name" hint="How this project appears in your project list.">
+          <Field
+            label="Project name"
+            hint="How this project appears in your project list."
+            error={nameMissing ? 'Enter a project name.' : undefined}
+            required
+          >
             {(props) => (
               <Input {...props} value={name} onChange={(event) => setName(event.target.value)} />
             )}

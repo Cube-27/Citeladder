@@ -723,7 +723,7 @@ describe('AI Traffic state and navigation', () => {
     const record = (name: string) =>
       within(panel).queryByText(name, { selector: 'dt' })?.nextElementSibling?.textContent;
     expect(within(panel).getByText(/^Sources:/)).toHaveTextContent(
-      'Sources: Crawlers · Referrals · Visibility · Website',
+      'Sources: Crawlers · Referrals · Visibility · Site health',
     );
     expect(record('Crawler requests')).toBeUndefined();
     expect(record('First and last observations')).toBe('—None');

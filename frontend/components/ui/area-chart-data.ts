@@ -95,12 +95,16 @@ export function niceTicks({
   return [...ticks, last];
 }
 
-/** Whether the value at `index` stands alone (no measured neighbour), so only a dot can show it. */
-export function isolated(values: readonly (number | null)[], index: number) {
-  return (
-    values[index] !== null &&
-    values[index] !== undefined &&
-    (values[index - 1] ?? null) === null &&
-    (values[index + 1] ?? null) === null
-  );
+/**
+ * Whether the value at `index` stands alone (no measured neighbour it is
+ * joined to, across no `breakBefore`), so only a dot can show it.
+ */
+export function isolated(
+  values: readonly (number | null)[],
+  index: number,
+  data: readonly TrendPoint[],
+) {
+  const joinedBefore = !data[index]?.breakBefore && (values[index - 1] ?? null) !== null;
+  const joinedAfter = !data[index + 1]?.breakBefore && (values[index + 1] ?? null) !== null;
+  return values[index] !== null && values[index] !== undefined && !joinedBefore && !joinedAfter;
 }

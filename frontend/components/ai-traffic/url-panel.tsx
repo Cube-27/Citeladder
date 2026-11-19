@@ -184,9 +184,9 @@ function UrlEvidence({
       link: { label: 'Visibility', to: projectDestination('/visibility', null, projectId) },
     },
     {
-      name: 'Open Website findings',
+      name: 'Open Site health findings',
       ...legRow(page.findings),
-      link: { label: 'Website', to: website },
+      link: { label: 'Site health', to: website },
     },
   ];
   return (
@@ -233,7 +233,7 @@ function UrlEvidence({
         {data.provenance.crawl_id ? (
           <>
             {' '}
-            <PanelLink to={website}>View Website pages</PanelLink>
+            <PanelLink to={website}>View Site health pages</PanelLink>
           </>
         ) : (
           ' Inventory unavailable'
@@ -260,12 +260,12 @@ function Observations({
       ))}
       {data.referrals.map((r) => (
         <span key={r.ai_source}>
-          {aiSourceLabel(r.ai_source)}: first referral {r.first_referral} ·{' '}
+          {aiSourceLabel(r.ai_source)}: first referral {formatWindowDate(r.first_referral)} ·{' '}
           {formatCount(r.sessions)} sessions
         </span>
       ))}
       {data.citations.map((r) => (
-        <span key={r.citation_id}>Tracked citation: {r.date}</span>
+        <span key={r.citation_id}>Tracked citation: {formatWindowDate(r.date)}</span>
       ))}
     </span>
   );

@@ -65,7 +65,7 @@ const PAGE_COLUMNS: readonly DataTableColumn[] = [
     label: 'Findings',
     kind: 'number',
     priority: 'low',
-    hint: 'Open Website findings on this path.',
+    hint: 'Open Site health findings on this path.',
   },
   { key: 'last-crawl', label: 'Last crawl', kind: 'date', priority: 'low' },
   { key: 'errors', label: '4xx / 5xx', kind: 'number', priority: 'low' },

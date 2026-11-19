@@ -37,7 +37,7 @@ describe('VisibilityEmptyState', () => {
       makeSetList([makeSet([makePrompt({ status })])]),
     );
     const project = makeProject();
-    render(<VisibilityEmptyState activeRun={null} />, {
+    render(<VisibilityEmptyState activeRun={null} view="insights" />, {
       projectSelection: {
         projects: [project],
         activeProject: project,
@@ -54,7 +54,7 @@ describe('VisibilityEmptyState', () => {
   });
 
   it('does not offer a viewer a step their role may not take', () => {
-    render(<VisibilityEmptyState activeRun={null} />, {
+    render(<VisibilityEmptyState activeRun={null} view="insights" />, {
       projectSelection: selectionAs('viewer'),
     });
 
@@ -64,7 +64,7 @@ describe('VisibilityEmptyState', () => {
   });
 
   it('links to the running run instead of inviting a duplicate', () => {
-    render(<VisibilityEmptyState activeRun={run} />);
+    render(<VisibilityEmptyState activeRun={run} view="insights" />);
 
     // Offering "launch" here would invite a second paid run for results that
     // are already on the way.

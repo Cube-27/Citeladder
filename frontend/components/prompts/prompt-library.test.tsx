@@ -475,6 +475,13 @@ describe('PromptLibrary topic filter', () => {
     await waitFor(() => expect(within(table).getByText('Best trail shoes?')).toBeVisible());
     expect(within(table).queryByText('Best road shoes?')).not.toBeInTheDocument();
     expect(await openFilterRow(user, 'Topic', 'Trail')).toBeVisible();
+    await user.keyboard('{Escape}');
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search prompts' }), 'boots');
+    await user.click(await screen.findByRole('button', { name: 'Clear filters' }));
+    expect(await within(table).findByText('Best road shoes?')).toBeVisible();
+    expect(within(table).getByText('Best trail shoes?')).toBeVisible();
+    expect(screen.getByRole('searchbox', { name: 'Search prompts' })).toHaveValue('');
   });
 
   it('opens on the status the URL names, so a linked Archived view shows the archived prompts', async () => {

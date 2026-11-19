@@ -9,6 +9,7 @@ import {
   TableRowHeader,
 } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
@@ -252,7 +253,7 @@ export function AxisItemLabel({
   return (
     <span className="inline-flex max-w-full min-w-0 items-center gap-2">
       {lead}
-      <span className="min-w-0 truncate">{text}</span>
+      <ClampText>{text}</ClampText>
       {trail}
       {note ? (
         <Tooltip content={note.tip}>

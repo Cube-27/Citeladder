@@ -101,7 +101,9 @@ function SiteHealthContent({
     <TabsRoot value={tab} onValueChange={selectTab}>
       <ReportPage
         actions={blocking?.kind === 'state' ? undefined : headerActions}
-        tabs={<TabRow items={ANALYSIS_TABS} ariaLabel="Website analysis" onIntent={prefetchTab} />}
+        tabs={
+          <TabRow items={ANALYSIS_TABS} ariaLabel="Site health analysis" onIntent={prefetchTab} />
+        }
         filters={controls ? <FilterBar {...controls} /> : undefined}
       >
         {blocking ? (
@@ -223,7 +225,7 @@ function SiteHealthRefreshFailures({
           kind="read"
           {...readErrorProps(screen.dashboardQuery)}
           fallback={READ_FAILED}
-          title="Couldn't load the latest Website crawl"
+          title="Couldn't load the latest Site health crawl"
         />
       ) : null}
       {screen.entitlementQuery.isError && screen.entitlementQuery.data ? (
@@ -231,7 +233,7 @@ function SiteHealthRefreshFailures({
           kind="read"
           {...readErrorProps(screen.entitlementQuery)}
           fallback={READ_FAILED}
-          title="Couldn't load your Website access"
+          title="Couldn't load your Site health access"
         />
       ) : null}
     </>
@@ -451,7 +453,7 @@ function screenBlockingState({
           kind="error"
           {...readErrorProps(dashboard)}
           fallback={READ_FAILED}
-          title="Couldn't load the latest Website crawl"
+          title="Couldn't load the latest Site health crawl"
         />
       ),
     };
@@ -463,7 +465,7 @@ function screenBlockingState({
           kind="error"
           {...readErrorProps(entitlement)}
           fallback={READ_FAILED}
-          title="Couldn't load your Website access"
+          title="Couldn't load your Site health access"
         />
       ),
     };
@@ -472,7 +474,7 @@ function screenBlockingState({
       kind: 'state',
       node: (
         <Notice tone="warning">
-          Website access could not be resolved. Refresh to try again, or contact your workspace
+          Site health access could not be resolved. Refresh to try again, or contact your workspace
           administrator if this continues.
         </Notice>
       ),
@@ -481,8 +483,8 @@ function screenBlockingState({
     return {
       kind: 'loading',
       label: entitlement.isLoading
-        ? 'Checking Website access…'
-        : 'Loading your latest Website crawl…',
+        ? 'Checking Site health access…'
+        : 'Loading your latest Site health crawl…',
     };
   return null;
 }

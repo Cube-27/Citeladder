@@ -252,7 +252,7 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
       <output className={textRole('caption')}>
         Crawl started. The checks update when it finishes.{' '}
         <TextLink href="/site" text="inherit">
-          Open Website
+          Open Site health
         </TextLink>
       </output>
     );

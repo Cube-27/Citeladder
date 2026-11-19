@@ -9,7 +9,7 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import { formatCount, formatWindowDate } from '@/lib/format';
+import { formatCount, formatMonth, formatWindowDate } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -83,8 +83,7 @@ function HistoryBody({
   const data = fillMonths(observations, first.date, last.date);
   const points = (value: (row: HistoryRow) => number | null): TrendPoint[] =>
     data.map((row) => ({
-      label: longMonth(row.date),
-      axisLabel: shortMonth(row.date),
+      label: formatMonth(row.date),
       value: value(row),
     }));
   return (
@@ -117,20 +116,6 @@ function HistoryBody({
       </Stack>
     </AppGrid>
   );
-}
-
-/** `2026-07` → `07/26`, under the axis. */
-function shortMonth(date: string): string {
-  return `${date.slice(5, 7)}/${date.slice(2, 4)}`;
-}
-
-/** `2026-07` → `Jul 2026`, in the hover card and the table. */
-function longMonth(date: string): string {
-  return new Date(`${date.slice(0, 7)}-01T00:00:00Z`).toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function compactCount(value: number): string {

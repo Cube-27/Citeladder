@@ -282,7 +282,7 @@ export function ProductsTable({
 const EMPTY_COPY = {
   catalog: {
     heading: 'No products yet',
-    description: 'Add products, or run a Website crawl to read them from your site.',
+    description: 'Add products, or run a Site health crawl to read them from your site.',
   },
   all: {
     heading: 'No products yet',

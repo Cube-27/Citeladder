@@ -7,7 +7,7 @@ import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import {
   isRowSurfaceClick,
   TableActionsCell,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import type { NamedBrand, NetSentiment, Prompt, PromptStatus } from '@citeladder/contracts';
@@ -71,6 +72,14 @@ export type PromptRowActions = Readonly<{
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
 
+function emptyState(rows: number, onClearFilters?: () => void): DataTableState | undefined {
+  if (rows > 0) return undefined;
+  const heading = 'No prompts match your search or filters';
+  return onClearFilters
+    ? { kind: 'filtered', headingLevel: 3, heading, onClear: onClearFilters }
+    : { kind: 'empty', icon: ICONS.prompts, headingLevel: 3, heading };
+}
+
 /**
  * Prompt table (F7). Questions, their topic and measured visibility, with a
  * per-row menu (edit, enable or disable, archive or restore when
@@ -93,8 +102,11 @@ export function PromptTable({
   topicNames,
   commerceSetIds,
   selection,
+  onClearFilters,
 }: Readonly<{
   prompts: Prompt[];
+  /** Set while search, topic or filters hide rows the tab has: an empty table offers to clear them. */
+  onClearFilters?: () => void;
   /** Each topic's name by id; omitted until the topic list is read. */
   topicNames?: ReadonlyMap<string, string>;
   /** Row checkboxes for bulk actions, for a role that may edit prompts. */
@@ -143,16 +155,7 @@ export function PromptTable({
             }
           : undefined
       }
-      state={
-        prompts.length === 0
-          ? {
-              kind: 'empty',
-              icon: ICONS.prompts,
-              headingLevel: 3,
-              heading: 'No prompts match your search or filters',
-            }
-          : undefined
-      }
+      state={emptyState(prompts.length, onClearFilters)}
       pager={{
         range: { from, to, total: prompts.length, noun: 'prompts' },
         ...pageNumberControls(page, pageCount, setPage),
@@ -249,11 +252,7 @@ function TopicName({
   if (!topicId) return <Absence state="none" label="No topic" />;
   const name = names?.get(topicId);
   if (name === undefined) return <Absence state="unavailable" />;
-  return (
-    <span className="text-ink-2 block truncate" title={name}>
-      {name}
-    </span>
-  );
+  return <ClampText className="text-ink-2">{name}</ClampText>;
 }
 
 /** The actions menu of one editable row. */
