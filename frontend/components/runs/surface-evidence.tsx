@@ -31,13 +31,6 @@ import { FigureStrip } from '@/components/ui/figure-strip';
  */
 
 /** Three states, because the surface has three, and only one is a finding. */
-function presenceCaption(evidence: SearchSurfaceEvidence): string {
-  if (evidence.aio_present === true) return 'Google showed an AI Overview for this search.';
-  if (evidence.aio_present === false) return 'Google showed no AI Overview for this search.';
-  return 'This search was never successfully retrieved, so nothing was observed.';
-}
-
-/** The same tri-state as `presenceCaption`, as a stat value rather than prose. */
 function presenceLabel(evidence: SearchSurfaceEvidence): string {
   if (evidence.aio_present === true) return 'Shown';
   if (evidence.aio_present === false) return 'Not shown';
@@ -134,12 +127,6 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
       <SubsectionHeader
         title="Inline links"
         trailing={<span className="type-caption">{pluralCount(links.length, 'link')}</span>}
-        description={
-          <>
-            Links inside the overview&rsquo;s own text. Separate from its references, which are
-            listed as citations.
-          </>
-        }
       />
       {links.length === 0 ? (
         <StateBlock
@@ -204,7 +191,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
   const shown = evidence.aio_present === true;
   return (
     <Stack as="section" gap="workspace" className="min-w-0">
-      <SubsectionHeader title="AI Overview details" description={presenceCaption(evidence)} />
+      <SubsectionHeader title="AI Overview details" />
       <FigureStrip
         segments={[
           { key: 'overview', label: 'Overview', value: presenceLabel(evidence) },
@@ -215,7 +202,6 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
               evidence.aio_serp_position === null
                 ? 'Not recorded'
                 : `#${evidence.aio_serp_position}`,
-            sub: 'On the results page',
           },
           { key: 'elements', label: 'Elements', value: evidence.element_count },
           { key: 'references', label: 'References', value: evidence.reference_count },
@@ -224,10 +210,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
       {shown ? (
         <>
           <Stack as="section" gap="compact">
-            <SubsectionHeader
-              title="Who appeared, and how"
-              description="Three independent observations."
-            />
+            <SubsectionHeader title="Who appeared, and how" />
             <PresenceTable entities={evidence.entities} />
           </Stack>
           <InlineLinks links={evidence.links} />

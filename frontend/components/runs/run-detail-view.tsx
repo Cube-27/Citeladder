@@ -79,7 +79,6 @@ function executionsState({
       headingLevel: 3,
       icon: ICONS.runs,
       heading: 'No executions yet',
-      description: 'They appear as the run is planned and processed.',
     };
   }
   return undefined;
