@@ -439,7 +439,7 @@ its own spacing, size or radius on them.
   the accent mark, and a page tab strip's rule is its band's (owner,
   2026-11-19). A **segmented switch** (a view, a range) has no underline: its
   segments sit on a `well` track and the current one is a `surface` pill
-  (owner, 2026-11-19). A count follows the label in brackets, in the mono face:
+  (owner, 2026-11-19) at the same weight, so switching never changes its width. A count follows the label in brackets, in the mono face:
   "All signals (107)".
 - **Setting rows** (`SettingRows`, owner 2026-11-19, after a reference
   account page): Settings and Context are rows divided by `rule` lines, the

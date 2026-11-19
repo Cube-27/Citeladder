@@ -136,7 +136,8 @@ function StripFrame({
  * label centred), a section tab is one control high (32, 44 below 900px or
  * under a coarse pointer); both take 12 each side and hover on a 6% tile one
  * control high less 4 top and bottom. A segment is a pill 4 less than a control,
- * so its track is one control high.
+ * so its track is one control high; the pill alone marks the current segment, at
+ * one weight, so a switch never changes width.
  */
 type TabKind = 'page' | 'section' | 'segment';
 
@@ -166,7 +167,7 @@ function tabFace({
             : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent',
         ]
       : selected
-        ? 'bg-surface text-ink shadow-card font-medium'
+        ? 'bg-surface text-ink shadow-card'
         : 'text-ink-2 not-disabled:hover:text-ink',
     className,
   );

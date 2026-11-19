@@ -102,10 +102,10 @@ const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
 /** A page's tab row fills its strip (`--page-tabs-height`); section tab rows are one control high. */
 const PAGE_TABS_HEIGHT = 44;
-/** Tabs are text on a hairline with 12 each side and 4 between; segments no padding and 16 between. */
+/** Tabs are text on a hairline with 12 each side and 4 between; segments are pills 2 apart on their track. */
 const TAB_PADDING_X = 12;
 const TAB_GAP = 4;
-const SEGMENT_GAP = 16;
+const SEGMENT_GAP = 2;
 /** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
 const SIDEBAR_IDENT_HEIGHT = 44;
 /**
@@ -131,6 +131,8 @@ const TABS_STRIP_TOP = 0;
 const TABS_STRIP_HEIGHT = 44;
 const FILTER_STRIP_PADDING_Y = 8;
 const FILTER_STRIP_HEIGHT = 44;
+/** A strip whose view takes its own row above search and filters (owner, 2026-11-19). */
+const FILTER_STRIP_HEIGHT_WITH_VIEW = 80;
 const BODY_TOP_GAP = 16;
 /** The content band's sections stand 32 apart on the page surface. */
 const CONTENT_GAP = 32;
@@ -166,10 +168,8 @@ const SCROLL_STEP_HEIGHT = 24;
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
 const ICON_TILE_SIZE = 40;
-/** A ControlRow holds its parts 8 apart (compact-gap). */
-const ROW_PART_GAP = 8;
-/** A ruled fact list pads each fact 8 above and below. */
-const FACT_ROW_PADDING_Y = 8;
+/** Setting rows pad each row 12 above and below, the list's ends flush. */
+const SETTING_ROW_PADDING_Y = 12;
 /** A field's end target (clear, reveal) is a 24px square, WCAG 2.5.8's minimum. */
 const FIELD_END_TARGET_SIZE = 24;
 /** An inline code token is padded 8 across and 4 down. */
@@ -341,7 +341,13 @@ function measure({ route }: { route: string }) {
     const style = getComputedStyle(band);
     add('filter-strip.padding-y', band, px(style.paddingTop));
     add('filter-strip.padding-y', band, px(style.paddingBottom));
-    add('filter-strip.height', band, band.getBoundingClientRect().height);
+    add(
+      band.querySelector('[data-filter-bar-rows] > [data-filter-bar]')
+        ? 'filter-strip.height.with-view'
+        : 'filter-strip.height',
+      band,
+      band.getBoundingClientRect().height,
+    );
   }
   // The main column's side padding (`--page-pad-inline`).
   for (const main of all('[data-main-column]')) {
@@ -451,29 +457,13 @@ function measure({ route }: { route: string }) {
     add('icon-tile.size', element, rect.width);
     add('icon-tile.size', element, rect.height);
   }
-  // A ControlRow's parts: the drawn space between the
-  // leading mark and the text, and (ControlRow) the gap the row keeps open
-  // between the text and its controls.
-  for (const row of all('[data-control-row]')) {
-    const [lead] = Array.from(row.children).filter(visible);
-    const parts = lead ? Array.from(lead.children).filter(visible) : [];
-    const [media, text] = parts;
-    if (media && text && parts.length === 2)
-      add(
-        'row-part.gap',
-        row,
-        text.getBoundingClientRect().left - media.getBoundingClientRect().right,
-      );
-    add('row-part.gap', row, px(getComputedStyle(row).columnGap));
-  }
-  // A ruled fact list: each rule has 8 on both sides — below every fact but
-  // the last, above every fact but the first (the list's ends sit flush).
-  for (const list of all('[data-fact-list="ruled"]')) {
-    const facts = Array.from(list.children).filter(visible);
-    for (const [index, fact] of facts.entries()) {
-      const style = getComputedStyle(fact);
-      if (index > 0) add('fact-row.padding-y', fact, px(style.paddingTop));
-      if (index < facts.length - 1) add('fact-row.padding-y', fact, px(style.paddingBottom));
+  // Setting rows: each rule has 12 on both sides; the list's ends sit flush.
+  for (const list of all('[data-setting-rows]')) {
+    const rows = Array.from(list.children).filter(visible);
+    for (const [index, row] of rows.entries()) {
+      const style = getComputedStyle(row);
+      if (index > 0) add('setting-row.padding-y', row, px(style.paddingTop));
+      if (index < rows.length - 1) add('setting-row.padding-y', row, px(style.paddingBottom));
     }
   }
   // A field's end target, in both axes.
@@ -798,6 +788,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'tabs-strip.height', TABS_STRIP_HEIGHT);
   expectOneValue(records, 'filter-strip.padding-y', FILTER_STRIP_PADDING_Y);
   expectOneValue(records, 'filter-strip.height', FILTER_STRIP_HEIGHT);
+  expectOneValue(records, 'filter-strip.height.with-view', FILTER_STRIP_HEIGHT_WITH_VIEW);
   expectOneValue(records, 'main.padding-x', PAGE_PAD_INLINE);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
   expectOneValue(records, 'slip.gap', SLIP_GAP);
@@ -815,8 +806,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'figure-cell.height', FIGURE_CELL_HEIGHT);
   expectOneValue(records, 'icon.size', ICON_SIZE);
   expectOneValue(records, 'icon-tile.size', ICON_TILE_SIZE);
-  expectOneValue(records, 'row-part.gap', ROW_PART_GAP);
-  expectOneValue(records, 'fact-row.padding-y', FACT_ROW_PADDING_Y);
+  expectOneValue(records, 'setting-row.padding-y', SETTING_ROW_PADDING_Y);
   expectOneValue(records, 'field-end-target.size', FIELD_END_TARGET_SIZE);
   expectOneValue(records, 'code-token.padding-x', CODE_TOKEN_PADDING_X);
   expectOneValue(records, 'code-token.padding-y', CODE_TOKEN_PADDING_Y);

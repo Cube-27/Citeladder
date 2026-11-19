@@ -141,7 +141,7 @@ export function DataTable({
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   useFlexibleColumnCheck({ columns, title, label });
   const replacing = replacingState(state);
-  const steppers = <ScrollSteppers state={scroll} />;
+  const steppers = scroll.scrolls ? <ScrollSteppers state={scroll} /> : null;
   const note = tableNote(footer, parts.zoned);
   const footed = Boolean(paging.pager ?? note);
   return (
