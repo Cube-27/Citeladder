@@ -179,7 +179,6 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
       steps={BUILDER_STEPS}
       current={step}
       onStep={setStep}
-      note="Only suggestions you accept are tracked."
       footerStart={<BuilderCancel />}
       footerEnd={
         <BuilderStepActions

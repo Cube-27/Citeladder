@@ -110,9 +110,7 @@ function PersonaChoices({
           />
         );
       })}
-      <span className="type-caption">
-        None chosen balances across the audiences each topic&apos;s offerings name. Up to {max}.
-      </span>
+      <span className="type-caption">Up to {max}.</span>
     </Stack>
   );
 }
@@ -219,21 +217,13 @@ export function BuilderDistributionStep({
       <AppGrid layout="halves">
         <PercentField
           label="Branded share"
-          hint={
-            Number.isFinite(branded)
-              ? `${Math.max(0, 100 - branded)}% unbranded. Branded prompts name your brand.`
-              : 'Branded prompts name your brand.'
-          }
+          hint={Number.isFinite(branded) ? `${Math.max(0, 100 - branded)}% unbranded` : undefined}
           value={settings.brandedPercent}
           onChange={(brandedPercent) => onChange({ ...settings, brandedPercent })}
         />
         <PercentField
           label="Competitor alternatives"
-          hint={
-            hasCompetitors
-              ? 'Prompts asking for alternatives to a competitor.'
-              : 'Not available until you track a competitor.'
-          }
+          hint={hasCompetitors ? undefined : 'Not available until you track a competitor.'}
           value={hasCompetitors ? settings.comparisonPercent : '0'}
           disabled={!hasCompetitors}
           onChange={(comparisonPercent) => onChange({ ...settings, comparisonPercent })}
@@ -245,7 +235,6 @@ export function BuilderDistributionStep({
             <PercentField
               key={key}
               label={INTENT_LABELS[key]}
-              hint="Relative weight."
               value={settings.intent[key]}
               onChange={(value) =>
                 onChange({ ...settings, intent: { ...settings.intent, [key]: value } })
@@ -275,11 +264,9 @@ export function BuilderDistributionStep({
                 onChange({ ...settings, seedSource, unticked: new Set() })
               }
             />
-            <span className="type-caption">
-              {sources.length > 1
-                ? 'Searches steer wording only: a query is never copied into a prompt, and no search volume is shown as AI volume.'
-                : 'No search data is connected. Connect Search Console or run a Keyword research analysis to ground wording in real searches.'}
-            </span>
+            {sources.length > 1 ? null : (
+              <span className="type-caption">No search data connected</span>
+            )}
             <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
           </>
         ) : (

@@ -378,7 +378,6 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     key: 'mentions',
     label: 'Mentions',
     width: 'marks',
-    hint: "The brands named in this prompt's answers: yours and your competitors'.",
   },
   {
     key: 'citations',
@@ -391,7 +390,6 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     key: 'sources',
     label: 'Sources',
     width: 'marks',
-    hint: "The sites this prompt's answers cited, most citations first.",
   },
   {
     key: 'position',

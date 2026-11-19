@@ -186,7 +186,6 @@ export function BuilderBusinessStep({
     <Stack gap="section">
       <ChipInput
         label="What you sell"
-        hint="One offering per entry, named as a buyer would."
         items={chips(draft.offerings)}
         onChange={(items) => business.setDraft(withOfferings(draft, values(items), map))}
         placeholder="e.g. golf practice nets"
@@ -194,7 +193,6 @@ export function BuilderBusinessStep({
       />
       <ChipInput
         label="Buyer roles"
-        hint="Who decides or pays, across everything you sell."
         items={chips(draft.buyerRoles)}
         onChange={(items) => set({ buyerRoles: values(items) })}
         placeholder="e.g. club coach"
@@ -213,7 +211,7 @@ export function BuilderBusinessStep({
       {showsServiceAreas(profile.business_context) ? (
         <ChipInput
           label="Service areas"
-          hint="Places you serve; prompts name them only for a local or regional business."
+          hint="Named only for a local or regional business."
           items={chips(draft.serviceAreas)}
           onChange={(items) => set({ serviceAreas: values(items) })}
           placeholder="e.g. Leeds"
@@ -223,7 +221,7 @@ export function BuilderBusinessStep({
       ) : null}
       <ChipInput
         label="Category terms"
-        hint="Words buyers use for what you sell, never a product-line name."
+        hint="Never a product-line name."
         items={chips(draft.categoryTerms)}
         onChange={(items) => set({ categoryTerms: values(items) })}
         placeholder="e.g. golf net"
@@ -232,7 +230,6 @@ export function BuilderBusinessStep({
       />
       <ChipInput
         label="Jobs to be done"
-        hint="What buyers are trying to get done."
         items={chips(draft.jobs)}
         onChange={(items) => set({ jobs: values(items) })}
         placeholder="e.g. practise driving at home"
@@ -252,10 +249,7 @@ export function BuilderBusinessStep({
           />
         )}
       </Field>
-      <Field
-        label="Anything else for this run"
-        hint="Applies to this run only; it is never saved as a business fact."
-      >
+      <Field label="Anything else for this run" hint="Never saved as a business fact.">
         {(field) => (
           <Input
             {...field}

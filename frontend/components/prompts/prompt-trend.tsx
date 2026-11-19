@@ -93,16 +93,7 @@ export function PromptImplementations({ history }: Readonly<{ history: PromptHis
   const timeZone = useDisplayTimeZone();
   if (!history.implementations.length) return null;
   return (
-    <DataTable
-      title="Work marked implemented"
-      columns={IMPLEMENTATION_COLUMNS}
-      footer={
-        <p className="type-caption">
-          A marker shows when work went live, not that it changed these rates: other changes and
-          answer-engine updates can overlap.
-        </p>
-      }
-    >
+    <DataTable title="Work marked implemented" columns={IMPLEMENTATION_COLUMNS}>
       {history.implementations.map((item) => (
         <TableRow key={`${item.action_id}:${item.implemented_at}`}>
           <TableCell>

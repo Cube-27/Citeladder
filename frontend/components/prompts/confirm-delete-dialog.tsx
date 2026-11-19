@@ -12,16 +12,14 @@ function copy(pending: PendingDelete): { title: string; description: string; con
     case 'prompt':
       return {
         title: 'Delete this prompt?',
-        description:
-          'Future runs stop measuring it. Results from past runs are kept. Archive it instead to keep it in the library.',
+        description: 'Results from past runs are kept.',
         confirm: 'Delete',
       };
     case 'prompts': {
       const prompts = pluralCount(pending.prompts.length, 'prompt');
       return {
         title: `Delete ${prompts}?`,
-        description:
-          'They stop running from the next audit. Answers already collected stay in past runs and their reports.',
+        description: 'Results from past runs are kept.',
         confirm: `Delete ${prompts}`,
       };
     }

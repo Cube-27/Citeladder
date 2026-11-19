@@ -77,7 +77,7 @@ export function PromptPastAnswers({
     <>
       <DataTable
         title="Past answers"
-        description={`Every answer this prompt got, newest first${namesFirst(page) ? ' · bold brand was named first' : ''}`}
+        description={namesFirst(page) ? 'Bold brand was named first' : undefined}
         columns={COLUMNS}
         pageSize={PAGE_SIZE}
         rowCount={page?.items.length}
