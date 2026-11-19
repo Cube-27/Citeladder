@@ -193,7 +193,7 @@ describe('ProductDetailScreen', () => {
     expect(
       screen.getByText('No search queries were captured for the answers that named it.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('The newest 1 of 3 answers that named it.')).toBeInTheDocument();
+    expect(screen.getByText('Newest 1 of 3')).toBeInTheDocument();
     expect(screen.getByText('Lost')).toBeInTheDocument();
 
     const setup = within(screen.getByRole('region', { name: 'Setup' }));

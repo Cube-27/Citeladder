@@ -135,7 +135,7 @@ function hasQualityFlags(quality: PerformanceDashboard['coverage']['analytics_qu
 /** The history the dashboard can draw from, or nothing before any rows. */
 function coverageSummary(coverage: PerformanceDashboard['coverage']): string | null {
   if (!coverage.earliest_date || !coverage.latest_date) return null;
-  return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
+  return `${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
   )} · ${pluralCount(coverage.covered_days, 'day')}`;
 }
@@ -259,9 +259,6 @@ function Ga4Workspace({
     <Section aria-labelledby="performance-ga4">
       <SectionHeader>
         <SectionTitle id="performance-ga4">Google Analytics 4</SectionTitle>
-        <SectionDescription>
-          Property-wide organic and AI sessions · Key events as configured in GA4
-        </SectionDescription>
       </SectionHeader>
       <Ga4SummaryRow
         selected={selected}

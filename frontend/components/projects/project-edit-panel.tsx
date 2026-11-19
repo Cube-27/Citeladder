@@ -171,7 +171,6 @@ export function ProjectEditPanel({
       open={open}
       onOpenChange={onOpenChange}
       title={`Edit ${project.brand_name || project.name}`}
-      description="Changes apply to future audits. Existing results keep the settings they ran with."
       width="wide"
       footer={
         <>
@@ -225,10 +224,7 @@ export function ProjectEditPanel({
               />
             )}
           </Field>
-          <Field
-            label="Brand aliases"
-            hint="Comma separated. A mention counts only when it matches one of these or your brand name."
-          >
+          <Field label="Brand aliases" hint="Comma separated">
             {(props) => (
               <Input
                 {...props}
@@ -280,7 +276,7 @@ export function ProjectEditPanel({
               />
             )}
           </Field>
-          <Field label="Unintended" hint="Domains that are not yours but get confused for you">
+          <Field label="Unintended">
             {(props) => (
               <Input
                 {...props}

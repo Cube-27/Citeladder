@@ -12,7 +12,7 @@ import {
   brandVerdict,
   onPageCompetitors,
   readingSentence,
-  standingSentence,
+  unreadReason,
 } from '@/lib/visibility/source-pages';
 import { pageFormatBasis, urlTypeLabel } from '@/lib/visibility/vocabulary';
 import { SectionContent, TitledSection } from '@/components/ui/section';
@@ -39,7 +39,7 @@ export function SourceUrlPageCard({
   if (standing === 'competitor') return null;
   const brand = brandVerdict(page?.entities);
   return (
-    <TitledSection title="On this page" description={standingSentence(standing)}>
+    <TitledSection title="On this page" description={unreadReason(standing)}>
       <SectionContent>
         <Stack gap="workspace">
           {standing === 'gap' ? <GetListed url={url} actionId={page?.action_id ?? null} /> : null}

@@ -12,13 +12,7 @@ import { hostOf, seriesCeiling, toChartSeries, type typeSlices } from '@/lib/vis
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The two cards above the Sources table: usage over time, and the type mix.
@@ -37,19 +31,16 @@ export function UsageCard({
 }: Readonly<{
   dimension: 'domain' | 'url';
   query: ReturnType<typeof useSourceSeries>;
-  /** A single page's own line titles itself; the inventory's names its leaders. */
-  heading?: { title: string; description: string };
+  /** A single page's own line titles itself. */
+  heading?: string;
 }>) {
   const urls = dimension === 'url';
-  const title = heading?.title ?? (urls ? 'Source usage by URL' : 'Source usage by domain');
+  const title = heading ?? (urls ? 'Source usage by URL' : 'Source usage by domain');
   return (
     <Section className="relative">
       <BusyRung active={query.isFetching} label="Updating usage" />
       <SectionHeader>
         <SectionTitle>{title}</SectionTitle>
-        <SectionDescription>
-          {heading?.description ?? 'Share of answers in each period.'}
-        </SectionDescription>
       </SectionHeader>
       <SectionContent>
         {/* Every state occupies the page-chart box, which holds the legend

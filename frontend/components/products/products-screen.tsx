@@ -145,9 +145,6 @@ function noProducts({
 
 /** The page's one empty state carries its actions; the masthead repeats none of them. */
 function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHeader>['empty'] }>) {
-  const lead = empty.actions
-    ? null
-    : 'A workspace owner, admin or member can add products or run a Site health crawl.';
   return (
     <ReportPage actions={empty.dialog}>
       {empty.notices}
@@ -155,16 +152,7 @@ function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHea
         kind="empty"
         icon={PackageOpen}
         heading="No products yet"
-        description={
-          empty.businessModelUnconfirmed ? (
-            <>
-              {lead} Pages from the Site health crawl become products once your business model is
-              confirmed. <ConfirmBusinessModelLink />
-            </>
-          ) : (
-            lead
-          )
-        }
+        description={empty.businessModelUnconfirmed ? <ConfirmBusinessModelLink /> : undefined}
         action={empty.actions}
       />
     </ReportPage>
@@ -305,7 +293,7 @@ function ProductsContent({
         description={
           selectedCategory ? (
             <TextLink href={targetHref(selectedCategory.id)} text="caption">
-              Open {selectedCategory.name}: its competitors and shopping prompts
+              Open {selectedCategory.name}
             </TextLink>
           ) : undefined
         }

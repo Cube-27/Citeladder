@@ -75,7 +75,6 @@ function ProductEditDrawer({
       open={open}
       onOpenChange={close}
       title="Edit product"
-      description="Your edits win over CSV imports and crawls until a later import changes the field."
       footer={
         <>
           <Button variant="quiet" onClick={() => close(false)}>

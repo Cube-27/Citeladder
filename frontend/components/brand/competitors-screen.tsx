@@ -15,10 +15,7 @@ import {
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { coverageSummary } from '@/lib/visibility/coverage';
 import {
   useVisibilityFilters,
   useVisibilityQueries,
@@ -34,8 +31,6 @@ export function CompetitorsScreen() {
   const state = selectionPageState(queries);
   const pageFilters = useSelectionPageFilters({ view: 'competitors', filters, queries });
   const { project } = useProjectScope();
-  const timeZone = useDisplayTimeZone();
-  const formatDate = (iso: string) => formatDisplayDate(iso, timeZone);
   const suggestions = useQuery(
     visibilityQueries.competitorSuggestions({
       workspaceId: queries.workspaceId,
@@ -61,12 +56,7 @@ export function CompetitorsScreen() {
             query={queries.visibilityQuery}
             pending={<RankingRowsPending brands={project.competitors.length + 1} />}
           >
-            {(selected) => (
-              <RankingRowsTable
-                rows={selected.rankings}
-                description={coverageSummary(selected, formatDate).change}
-              />
-            )}
+            {(selected) => <RankingRowsTable rows={selected.rankings} />}
           </SelectionGate>
           <CompetitorSuggestions
             projectId={queries.projectId}

@@ -191,7 +191,7 @@ export function AdvancedOptions({
           )}
         </Field>
       ) : null}
-      <Field label="Keyword language" hint="A two-letter code, such as en or de.">
+      <Field label="Keyword language" hint="e.g. en, de">
         {(field) => (
           <Input
             {...field}
@@ -200,10 +200,7 @@ export function AdvancedOptions({
           />
         )}
       </Field>
-      <Field
-        label="Keyword order"
-        hint="Which keywords are fetched first when there are more than you asked for."
-      >
+      <Field label="Keyword order">
         {(field) => (
           <Select
             {...field}
@@ -341,10 +338,9 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
           Scope: {searchScopeLabel(typeof scope === 'string' ? scope : undefined)}
         </p>
         <p className={textRole('caption')}>
-          The estimate is a ceiling: a request that could take the cost past it is not sent.{' '}
           {review.credential_mode === 'funded'
-            ? 'It is held from your AI credits; you are charged only for requests that succeed, never more than the estimate.'
-            : 'DataForSEO bills your own account.'}
+            ? 'Held from your AI credits; only successful requests are charged, never above the estimate.'
+            : 'Billed to your DataForSEO account; never above the estimate.'}
         </p>
       </Stack>
       {review.call_plan.length ? (

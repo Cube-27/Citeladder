@@ -229,7 +229,7 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
         title="Answers"
         description={
           more > 0
-            ? `The newest ${formatCount(detail.answers.length)} of ${pluralCount(detail.answer_total, 'answer')} that named it.`
+            ? `Newest ${formatCount(detail.answers.length)} of ${formatCount(detail.answer_total)}`
             : undefined
         }
         empty={detail.answers.length ? null : 'No answer named it in this window.'}

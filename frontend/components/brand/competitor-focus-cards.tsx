@@ -30,7 +30,6 @@ export function CompetitorSources({ focus }: Readonly<{ focus: CompetitorFocus }
       description={cappedCount(focus.sources.length, focus.sources_total)}
       label={`Sources when ${name} is named`}
       columns={SOURCE_COLUMNS}
-      footer="“You’re cited too”: the domain is also cited in answers that name you."
       state={
         focus.sources.length
           ? undefined

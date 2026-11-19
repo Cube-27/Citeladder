@@ -45,7 +45,6 @@ export function ProjectMarkets({
   return (
     <Stack as="section" gap="compact" aria-label="Additional markets">
       <p className={textRole('body', 'text-ink-2')}>Additional markets</p>
-      <p className="type-caption text-ink-2">Each market runs and reports separately.</p>
       {extra.length ? (
         <ul className={ledgerClasses()}>
           {extra.map((market) => (

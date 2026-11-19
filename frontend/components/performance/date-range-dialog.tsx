@@ -193,8 +193,8 @@ export function DateRangeDialog({
       width="wide"
       description={
         coverage.earliest && coverage.latest
-          ? `Imported history covers ${formatWindowDate(coverage.earliest)} to ${formatWindowDate(coverage.latest)}.`
-          : 'No imported history yet.'
+          ? `History: ${formatWindowDate(coverage.earliest)} to ${formatWindowDate(coverage.latest)}`
+          : undefined
       }
       footer={
         <>

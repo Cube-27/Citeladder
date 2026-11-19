@@ -211,7 +211,6 @@ export function BuilderBusinessStep({
       {showsServiceAreas(profile.business_context) ? (
         <ChipInput
           label="Service areas"
-          hint="Named only for a local or regional business."
           items={chips(draft.serviceAreas)}
           onChange={(items) => set({ serviceAreas: values(items) })}
           placeholder="e.g. Leeds"
@@ -221,7 +220,6 @@ export function BuilderBusinessStep({
       ) : null}
       <ChipInput
         label="Category terms"
-        hint="Never a product-line name."
         items={chips(draft.categoryTerms)}
         onChange={(items) => set({ categoryTerms: values(items) })}
         placeholder="e.g. golf net"
@@ -249,7 +247,7 @@ export function BuilderBusinessStep({
           />
         )}
       </Field>
-      <Field label="Anything else for this run" hint="Never saved as a business fact.">
+      <Field label="Anything else for this run">
         {(field) => (
           <Input
             {...field}

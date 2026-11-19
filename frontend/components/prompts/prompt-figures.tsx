@@ -68,7 +68,7 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
       key: BOTH.key,
       label: BOTH.label,
       value: stateValue(states, BOTH.key, latest),
-      sub: `${BOTH.meaning} ${otherStates(states, latest)}`,
+      sub: otherStates(states, latest),
     },
   ];
   return <FigureStrip label="Latest measurement" segments={segments} />;
@@ -85,7 +85,7 @@ function otherStates(states: AnswerStates | null, latest: PromptMetricItem | nul
   const parts = OTHER_STATES.map(
     (state) => `${state.label}: ${states ? formatCount(states[state.key]) : missing}`,
   );
-  return `${parts.join(' · ')}.`;
+  return parts.join(' · ');
 }
 
 function rateValue(rate: number | null | undefined, missing: ReactNode) {

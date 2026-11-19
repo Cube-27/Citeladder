@@ -51,25 +51,13 @@ export function implementationEvents(
   }));
 }
 
-/** The four answer states, in reading order, with what each one means. */
+/** The four answer states, in reading order. */
 export const ANSWER_STATES = [
-  {
-    key: 'mentioned_and_cited',
-    label: 'Mentioned and cited',
-    meaning: 'Named you and cited one of your pages.',
-  },
-  {
-    key: 'mentioned_only',
-    label: 'Mentioned only',
-    meaning: 'Named you without citing your site.',
-  },
-  {
-    key: 'cited_only',
-    label: 'Cited only',
-    meaning: 'Cited your page without naming you.',
-  },
-  { key: 'neither', label: 'Neither', meaning: 'Did not name you or cite your site.' },
-] as const satisfies readonly { key: keyof AnswerStates; label: string; meaning: string }[];
+  { key: 'mentioned_and_cited', label: 'Mentioned and cited' },
+  { key: 'mentioned_only', label: 'Mentioned only' },
+  { key: 'cited_only', label: 'Cited only' },
+  { key: 'neither', label: 'Neither' },
+] as const satisfies readonly { key: keyof AnswerStates; label: string }[];
 
 /** One competitor named in answers that left the brand out. */
 type CompetitorGap = { name: string; answers: number; engines: string[] };

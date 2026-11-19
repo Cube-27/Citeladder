@@ -6,10 +6,10 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { availabilityLabel, pluralCount } from '@/lib/format';
+import { availabilityLabel } from '@/lib/format';
 import type { BusinessDraft, MapEntryDraft } from '@/lib/prompts/builder-business';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { promptBuilderOfferingHref } from '@/lib/prompts/routes';
@@ -92,17 +92,10 @@ function OfferingRow({ map }: Readonly<{ map: OfferingMap }>) {
  */
 export function OfferingsTable({ maps }: Readonly<{ maps: readonly OfferingMap[] }>) {
   if (maps.length === 0) return null;
-  const suggested = maps.some((map) => FACTS.some((fact) => map[fact.key].some(isSuggested)));
   return (
     <Section aria-labelledby="offerings">
       <SectionHeader>
         <SectionTitle id="offerings">Offerings</SectionTitle>
-        <SectionDescription>
-          {`${pluralCount(maps.length, 'offering')}.`}
-          {suggested
-            ? ' Entries marked suggested came from discovery and are not yet confirmed.'
-            : null}
-        </SectionDescription>
       </SectionHeader>
       <DataTable label="Offering facts" columns={COLUMNS}>
         {maps.map((map) => (

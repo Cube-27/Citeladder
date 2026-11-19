@@ -91,7 +91,7 @@ export function SourcePrompts({
           busy={{ active: query.isFetching, label: 'Updating prompts' }}
           // The endpoint returns a bounded newest-first window. Without this a
           // source cited by more answers than fit simply looked like it had fewer.
-          footer={query.data?.truncated ? `Showing the newest ${EVIDENCE_LIMIT} executions.` : null}
+          footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
         >
           {(query.data?.items ?? []).map((item) => (
             <PromptRow key={item.analysis_id} item={item} onOpenAnswer={setOpened} />

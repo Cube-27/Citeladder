@@ -31,12 +31,7 @@ export function PromptBuilderPage() {
       {canWrite ? (
         <BuilderForProject />
       ) : (
-        <StateBlock
-          kind="empty"
-          icon={Lock}
-          heading="Your role can't build prompts"
-          description="Ask a workspace admin for edit access to add prompts."
-        />
+        <StateBlock kind="empty" icon={Lock} heading="Your role can't build prompts" />
       )}
     </PageFrame>
   );

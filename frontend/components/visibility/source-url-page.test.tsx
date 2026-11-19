@@ -48,7 +48,6 @@ describe('what a cited page means for you', () => {
   it('names the competitors listed where you are not, with their lines, and opens the Action', () => {
     render(<SourceUrlPageCard url={URL} page={page()} loading={false} />);
 
-    expect(screen.getByText('Competitors are listed on this page and you are not.')).toBeVisible();
     const listed = screen.getByText('Listed here').parentElement!;
     expect(
       within(listed).getByText('Globex', { selector: '[data-status-tone] span' }),
@@ -88,9 +87,7 @@ describe('what a cited page means for you', () => {
       />,
     );
 
-    expect(
-      screen.getByText('The publisher blocks automated access, so this page has not been read.'),
-    ).toBeVisible();
+    expect(screen.getByText('Publisher blocks automated access')).toBeVisible();
     expect(screen.queryByText(/not found on the page/i)).toBeNull();
     expect(screen.queryByRole('link', { name: /Action|request/ })).toBeNull();
   });

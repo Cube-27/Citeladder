@@ -200,7 +200,7 @@ export function BuilderDistributionStep({
   return (
     <Stack gap="section">
       {notices}
-      <Field label="Number of prompts" hint={`From 1 to ${limits.generation_count_max}.`}>
+      <Field label="Number of prompts" hint={`1 to ${limits.generation_count_max}`}>
         {(field) => (
           <Input
             {...field}
@@ -223,7 +223,7 @@ export function BuilderDistributionStep({
         />
         <PercentField
           label="Competitor alternatives"
-          hint={hasCompetitors ? undefined : 'Not available until you track a competitor.'}
+          hint={hasCompetitors ? undefined : 'Track a competitor first'}
           value={hasCompetitors ? settings.comparisonPercent : '0'}
           disabled={!hasCompetitors}
           onChange={(comparisonPercent) => onChange({ ...settings, comparisonPercent })}

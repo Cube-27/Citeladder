@@ -12,8 +12,7 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayShortDate, formatPercent, pluralCount } from '@/lib/format';
 import {
   AD_APPLICABILITY,
-  ADS_COVERAGE_NOTE,
-  adsStateCopy,
+  adsStateHeading,
   landingLabel,
   presenceLine,
 } from '@/lib/visibility/ads';
@@ -72,10 +71,6 @@ export function AdsView({
   );
 }
 
-function CoverageNote() {
-  return <p className={textRole('caption', 'text-ink-2')}>{ADS_COVERAGE_NOTE}</p>;
-}
-
 /** A read with no ads to show, with each engine's applicability named. */
 function AdsState({
   state,
@@ -84,10 +79,7 @@ function AdsState({
   state: Exclude<VisibilityAdsResponse['state'], 'value'>;
   engines?: VisibilityAdsResponse['engines'];
 }>) {
-  const copy = adsStateCopy(state);
   const { label: engineLabel } = useEngineCatalog();
-  // One state box at the shared footprint: each engine's applicability is
-  // part of the same sentence, not a footer that grows the box.
   const applicability = engines
     .map((engine) => `${engineLabel(engine.engine)}: ${AD_APPLICABILITY[engine.applicability]}`)
     .join(' · ');
@@ -96,8 +88,8 @@ function AdsState({
       kind="empty"
       headingLevel={3}
       icon={Megaphone}
-      heading={copy.heading}
-      description={applicability ? `${copy.description} ${applicability}.` : copy.description}
+      heading={adsStateHeading(state)}
+      description={applicability || undefined}
     />
   );
 }
@@ -138,19 +130,17 @@ function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
                 missingLabel: 'Not advertising',
                 sub:
                   data.brand.best_rank === null
-                    ? 'No ads of yours were seen.'
-                    : `${data.brand.appearances} of your ads; best position ${data.brand.best_rank}`,
+                    ? undefined
+                    : `${data.brand.appearances} of your ads · best position ${data.brand.best_rank}`,
               },
               {
                 key: 'advertisers',
                 label: 'Advertisers seen',
                 value: data.advertisers_seen,
-                sub: 'Distinct advertiser domains in these answers.',
               },
             ]}
           />
           <EngineApplicability engines={data.engines} />
-          <CoverageNote />
         </Stack>
       </SectionContent>
     </Section>
@@ -167,11 +157,7 @@ function AdvertiserTable({
       <DataTable
         label="Advertisers"
         columns={ADVERTISER_COLUMNS}
-        footer={
-          advertisers.length < total
-            ? `The ${advertisers.length} most frequent of ${total} advertisers.`
-            : undefined
-        }
+        footer={advertisers.length < total ? `Top ${advertisers.length} of ${total}` : undefined}
         state={advertisers.length ? undefined : noAds('No ads in these answers.')}
       >
         {advertisers.map((advertiser) => (
@@ -232,7 +218,6 @@ function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['pro
       <DataTable
         label="Prompts that surface ads"
         columns={PROMPT_COLUMNS}
-        footer="Counts only, not a cause."
         state={prompts.length ? undefined : noAds('No prompt surfaced an ad.')}
       >
         {prompts.map((row) => {
@@ -270,7 +255,7 @@ function CreativeList({
       title="Ad creatives"
       description={
         creatives.items.length < creatives.total
-          ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives.`
+          ? `Top ${creatives.items.length} of ${creatives.total}`
           : undefined
       }
     >

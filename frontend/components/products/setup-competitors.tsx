@@ -18,13 +18,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { sameTarget } from '@/lib/products/targets';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -82,7 +76,6 @@ export function SetupCompetitors({
         }
       >
         <SectionTitle level={level}>Competitors</SectionTitle>
-        <SectionDescription>Candidates do not enter measurement until approved.</SectionDescription>
       </SectionHeader>
       <SectionContent>
         <Stack>

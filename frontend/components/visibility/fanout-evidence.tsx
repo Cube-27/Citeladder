@@ -241,7 +241,7 @@ export function FanoutEvidence({
       columns={COLUMNS}
       state={tableState({ view, rows: visible.length, needle, matched, queries })}
       pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
-      footer={query.data?.truncated ? `Showing the newest ${limit} executions.` : null}
+      footer={query.data?.truncated ? `Newest ${limit} shown` : null}
     >
       <FanoutRows view={view} groups={paged} queries={queries} />
     </DataTable>

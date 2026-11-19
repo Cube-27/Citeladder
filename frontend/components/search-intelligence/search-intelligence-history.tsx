@@ -38,18 +38,12 @@ export function SearchIntelligenceHistory({
       <SectionHeader>
         <SectionTitle id="backlink-history">Backlink history</SectionTitle>
       </SectionHeader>
-      <HistoryBody dataset={dataset} query={query} />
+      <HistoryBody query={query} />
     </Section>
   );
 }
 
-function HistoryBody({
-  dataset,
-  query,
-}: Readonly<{
-  dataset: SearchIntelligenceDataset;
-  query: ReturnType<typeof useHistory>;
-}>) {
+function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> }>) {
   if (query.isError)
     return (
       <Notice
@@ -89,8 +83,7 @@ function HistoryBody({
   return (
     <AppGrid layout="halves">
       <p className={textRole('caption', 'shell:col-span-2')}>
-        {dataset.target_domain}, {formatWindowDate(first.date)} to {formatWindowDate(last.date)}.
-        May differ from the live summary.
+        {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
         <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>

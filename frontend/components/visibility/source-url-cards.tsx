@@ -30,14 +30,12 @@ type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 /** A card whose body is a table once there is one, and a sentence before then. */
 function SectionCard({
   title,
-  caption,
   loading,
   errored,
   empty,
   children,
 }: Readonly<{
   title: string;
-  caption?: string;
   loading: boolean;
   /** A read that FAILED has no data, so its empty sentence would be a lie. */
   errored?: boolean;
@@ -45,7 +43,7 @@ function SectionCard({
   children: ReactNode | null;
 }>) {
   return (
-    <TitledSection title={title} description={caption}>
+    <TitledSection title={title}>
       <SectionContent>
         <SectionBody loading={loading} errored={errored} empty={empty}>
           {children}
@@ -133,11 +131,8 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
 ];
 
 /**
- * The brands named in the answers that cited this page.
- *
- * The caption is load-bearing: this is co-occurrence in an answer, and the
- * page's own inspected presence is a different fact. Dropping the qualifier
- * would make the two indistinguishable on screen.
+ * The brands named in the answers that cited this page: co-occurrence in an
+ * answer, which the title names, not the page's own inspected presence.
  */
 export function BrandsCard({
   brands,
@@ -151,7 +146,6 @@ export function BrandsCard({
   return (
     <SectionCard
       title="Named in the answers"
-      caption="Named in the answers that cited this URL, not necessarily present on the page itself."
       loading={loading}
       errored={errored}
       empty="No tracked brand was named in the answers citing this URL."
