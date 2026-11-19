@@ -2,6 +2,7 @@ import { useContext, type ReactNode } from 'react';
 import { Cell, Pie, PieChart } from 'recharts';
 
 import { chartPercent } from '@/components/ui/chart';
+import { ChartTable } from '@/components/ui/chart-frame';
 import { roleColor, SERIES_COLOR } from '@/components/ui/chart-tooltip';
 import {
   SERIES_FILL,
@@ -55,8 +56,8 @@ function partInk(status: PartStatus | undefined, tone: SeriesTone): NonNullable<
  * and count), the whole counted in its hole. Segments run clockwise from the
  * top, divided by thin gaps; you take the accent, rivals their page-wide
  * identity colours (`SeriesTonesContext`, else in order), and the merged
- * remainder `data-other`. One image to assistive technology, named with every
- * share and count.
+ * remainder `data-other`. Assistive technology reads every share and count
+ * from the shared ChartTable; the ring and legend are hidden from it.
  *
  * When `total` exceeds the parts, the rest belongs to no part: it stays a
  * `well` segment listed as `remainderLabel`, so the parts are never stretched
@@ -98,19 +99,19 @@ export function PartDonut({
   });
   if (remainder > 0)
     rows.push({ label: remainderLabel, value: remainder, ink: null, share: remainder / whole });
-  const described = [
-    ...(totalLabel ? [`${format(whole)} ${totalLabel}`] : []),
-    ...rows.map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`),
-  ].join(', ');
   return (
     // The legend's floor keeps its names whole: a card too narrow for it puts the legend under the ring.
     <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
-      <div
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the ring and its total are one generated image; <img> cannot hold them
-        role="img" // NOSONAR -- the ring and its total are one generated image
-        aria-label={described ? `${label}: ${described}` : label}
-        className="relative w-36 shrink-0"
-      >
+      <ChartTable
+        label={totalLabel ? `${label}: ${format(whole)} ${totalLabel}` : label}
+        columns={['Share', 'Value']}
+        rows={rows.map((row) => ({
+          name: row.label,
+          values: [chartPercent(row.value, whole), format(row.value)],
+        }))}
+        notes={[]}
+      />
+      <div aria-hidden className="relative w-36 shrink-0">
         <DonutRing
           size={144}
           segments={rows.map((row) => ({

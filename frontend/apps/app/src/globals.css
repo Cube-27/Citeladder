@@ -32,6 +32,8 @@
 @custom-variant rail (@media (min-width: 900px));
 @custom-variant shell (@media (min-width: 1280px));
 @custom-variant desktop (@media (min-width: 981px));
+/* A phone (below 768): only what a 390 screen cannot fit changes; desktop never does. */
+@custom-variant phone (@media (max-width: 767px));
 @custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
 
 /* Grids in the app's main column switch on the column, not the viewport,
@@ -311,28 +313,23 @@
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
 
-  /* Motion: hover and colour over --motion-fast. Whatever opens eases out over
-     --motion-open and closes 20% faster, easing in; a literal so script can read it. */
+  /* Motion: hover and colour over --motion-fast. Whatever opens (a popup,
+     tooltip, dialog, drawer, toast, the palette, a disclosure's chevron) eases
+     out over --motion-open and closes over --motion-close (owner: 200 in, 160
+     out), starting fast too; a literal so script can read it. */
   --motion-fast: 120ms;
   --motion-open: 200ms;
   --motion-close: 160ms;
   --ease-standard: ease-out;
-  --ease-exit: ease-in;
+  --ease-exit: ease-out;
   /* Resizing what is already on screen (the sidebar) is no open or close:
      --motion-open both ways, on one symmetric curve. */
   --ease-resize: ease-in-out;
-  /* HeroUI v3's control timings: a menu, select list or tooltip enters
-     faster than a sheet; the switch thumb slides on the fluid ease. */
-  --motion-tint: 150ms;
+  /* HeroUI v3's control timings: the switch thumb and a meter's fill slide
+     over --motion-slide; the switch, drawers and toasts move on the fluid
+     ease. A loading shape's sweep crosses it every --motion-sweep. */
   --motion-slide: 300ms;
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
-  /* HeroUI v3's overlay timings: a dialog or drawer enters (and a toast
-     leaves, a disclosure's chevron turns) over --motion-overlay, a dialog or
-     info hint leaves over --motion-overlay-exit, a toast moves over
-     --motion-toast; a loading shape's sweep crosses it every --motion-sweep. */
-  --motion-overlay: 250ms;
-  --motion-overlay-exit: 100ms;
-  --motion-toast: 350ms;
   --motion-sweep: 2s;
   --ease-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-sweep: linear;
@@ -406,10 +403,12 @@
   --control-md: 32px;
   --control-lg: 48px;
   /* A primary target under a coarse pointer (the app binds 44); a tag; the
-     smallest target anywhere (WCAG 2.5.8). */
+     smallest target anywhere (WCAG 2.5.8), and the tap area around a small
+     control drawn in it (`hit-area`; the app binds 44 for touch). */
   --control-coarse: var(--control-md);
   --tag-height: 24px;
   --target-min: 24px;
+  --target-hit: var(--target-min);
   --row-app: 40px;
   --nav-height: 64px;
   /* The labelled sidebar's default and narrowest width; the reader may drag
@@ -618,6 +617,23 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
+/* A small control's tap area: centred on it and at least --target-hit square
+   (44 below 900px or under a coarse pointer); the drawn control keeps its size. */
+@layer components {
+  .hit-area {
+    position: relative;
+  }
+  .hit-area::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--target-hit));
+    height: max(100%, var(--target-hit));
+    translate: -50% -50%;
+  }
+}
+
 /* The app's system: paper and ink with one mark, a
    compact even density tuned for a 982x800 window. The app's document is
    the one without `data-public-surface`; the website and docs keep the
@@ -812,9 +828,12 @@
 }
 
 /* Primary targets are 44 below 900px as well as under a coarse pointer (2.2):
-   navigation rows, masthead and row actions, page tabs, sheet buttons. */
+   navigation rows, masthead and row actions, page tabs, sheet buttons. A
+   small control (checkbox, switch, a field's end button) keeps its drawn
+   size and grows its tap area to 44. */
 @media (max-width: 899px), (pointer: coarse) {
   :root:not([data-public-surface]) {
+    --target-hit: 44px;
     --control-sm: 44px;
     --control-md: 44px;
     --control-md-padding: 16px;
@@ -1023,7 +1042,7 @@
 }
 
 *:hover {
-  scrollbar-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--color-ink-2)35%, transparent) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -1043,23 +1062,24 @@
 }
 
 *:hover::-webkit-scrollbar-thumb {
-  background-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent);
+  background-color: color-mix(in oklch, var(--color-ink-2)35%, transparent);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in oklch, var(--color-ink-muted) 50%, transparent);
+  background-color: color-mix(in oklch, var(--color-ink-2)50%, transparent);
 }
 
-/* The app, login, onboarding and the website sit on `paper`; the docs
-   (`data-public-surface` alone on <html>) on the site's page colour. Wide content scrolls in its
-   owning region; document overflow stays observable. */
+/* The app, login, onboarding and the website sit on `ground` (the website's
+   paper); the docs (`data-public-surface` alone on <html>) on the site's page
+   colour. Wide content scrolls in its owning region; document overflow stays
+   observable. */
 html {
   min-height: 100%;
-  background: var(--color-paper);
+  background: var(--color-ground);
   /* Reserve the scrollbar track always, so short pages and long pages line up
      and locking body scroll for a modal doesn't shift layout sideways. */
   scrollbar-gutter: stable;
-  scrollbar-color: color-mix(in oklch, var(--color-ink-muted) 35%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--color-ink-2)35%, transparent) transparent;
   scrollbar-width: thin;
 }
 
@@ -1081,7 +1101,7 @@ html:not([data-public-surface]) {
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--color-paper);
+  background: var(--color-ground);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
@@ -1900,7 +1920,7 @@ samp {
   z-index: 100;
   /* Far enough up that its drop shadow stays off screen too. */
   transform: translateY(calc(-100% - 5rem));
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-ink);
   padding: 8px 12px;
@@ -2113,11 +2133,13 @@ label {
   box-shadow: none;
 }
 
-/* Every body row tints on hover as one piece: the tint is on the cells, so
-   the pinned first cell's opaque fill takes it too. A reserved page's blank
-   space and a state row do not answer the pointer. */
-:root:not([data-public-surface]) .table-frame tbody > tr:not([data-table-state], [aria-hidden='true']):hover > * {
-  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+/* A row that opens something (TableRow with `onClick`) tints under a fine
+   pointer as one piece: the tint is on the cells, so the pinned first cell's
+   opaque fill takes it too. Other rows do not answer the pointer. */
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .table-frame tbody > tr[data-pressable]:hover > * {
+    background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+  }
 }
 :root:not([data-public-surface]) .table-frame tbody > tr[aria-selected='true'] > * {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
@@ -2226,9 +2248,9 @@ label {
   line-height: var(--text-body-sm--line-height);
   font-weight: var(--weight-regular);
 }
-/* Loading: `well` blocks at radius 4. */
+/* Loading: `well` blocks at the mark radius. */
 [data-figure-block] {
-  border-radius: 4px;
+  border-radius: var(--radius-mark);
 }
 /* A pressable figure tints as one piece (its overlay-hover and -pressed
    utilities); a chosen one fills with the well, inside the row's lines. The
@@ -2236,8 +2258,13 @@ label {
 [data-figure-cell][data-selected] {
   background-color: var(--color-well);
 }
-[data-figure-cell] dt :is(a, button):is(:hover, :focus-visible) {
+[data-figure-cell] dt :is(a, button):focus-visible {
   text-decoration-line: underline;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-figure-cell] dt :is(a, button):hover {
+    text-decoration-line: underline;
+  }
 }
 [data-icon-tile] {
   display: grid;
@@ -2269,34 +2296,42 @@ label {
    radios .95, checkboxes .92), never on the website or under reduced motion.
    Never on a popup's trigger: its menu opens on press, anchored to the
    trigger's scaling box, and slid 3px with it on a first open (owner,
-   2026-11-19: "it dances on first click"). */
-:root:not([data-public-surface]) .press {
-  transition:
-    scale 250ms,
-    background-color 100ms,
-    color 100ms,
-    border-color 100ms,
-    box-shadow 100ms;
-}
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-public-surface])
-    .press:active:not(:disabled, [data-disabled], [aria-busy='true'], [aria-haspopup], [role='combobox']) {
-    scale: var(--press, 0.97);
+   2026-11-19: "it dances on first click"). Its colours ease over
+   --motion-fast on every surface. In the components layer, so a control's
+   own transition utility still wins over it. */
+@layer components {
+  .press {
+    transition:
+      scale var(--motion-open),
+      background-color var(--motion-fast),
+      color var(--motion-fast),
+      border-color var(--motion-fast),
+      box-shadow var(--motion-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-public-surface])
+      .press:active:not(:disabled, [data-disabled], [aria-busy='true'], [aria-haspopup], [role='combobox']) {
+      scale: var(--press, 0.97);
+    }
   }
 }
 
 /* A dropdown's chevron turns over while its list is open (not a disclosure's,
-   which points by itself). */
+   which points by itself), on the same --motion-open as every chevron. */
 :is([aria-haspopup], [role='combobox']) .lucide-chevron-down {
-  transition: rotate 150ms;
+  transition: rotate var(--motion-open) var(--ease-standard);
 }
 :root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .lucide-chevron-down {
   rotate: 180deg;
 }
 
-/* Input and search: hover tints the field's own fill (`--field-fill`) 4% ink. */
-:root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
-  background-color: color-mix(in oklch, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
+/* Input and search: a fine pointer's hover tints the field's own fill
+   (`--field-fill`) 4% ink. */
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
+    background-color: color-mix(in oklch, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
+  }
 }
 
 /* The switch's thumb, lifted when on (HeroUI's checked shadow). */
@@ -2332,15 +2367,17 @@ label {
   opacity: 0;
   scale: 0.7;
   transition:
-    scale 100ms linear,
-    opacity 200ms;
+    scale var(--motion-fast) linear,
+    opacity var(--motion-open);
 }
 .check-box:not([data-state='unchecked'])::after {
   opacity: 1;
   scale: none;
 }
-:is(.check-box, .radio-dot)[data-state='unchecked']:enabled:hover {
-  border-color: color-mix(in oklab, var(--color-control-line), var(--color-ink-2));
+@media (hover: hover) and (pointer: fine) {
+  :is(.check-box, .radio-dot)[data-state='unchecked']:enabled:hover {
+    border-color: color-mix(in oklab, var(--color-control-line), var(--color-ink-2));
+  }
 }
 
 /* Tabs and segments: one accent underline slides to the current item
@@ -2349,7 +2386,7 @@ label {
   width: var(--tab-mark-w);
   height: var(--mark-width);
   translate: var(--tab-mark-x);
-  transition: 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: var(--motion-open) var(--ease-fluid);
   transition-property: translate, width;
 }
 [data-tab-mark-ready] > [data-tab-mark] {

@@ -18,10 +18,10 @@ export const ROWS_PANEL = 'bg-surface rounded-card overflow-hidden';
  * A tree leaf's work rows in the table shell: a column-head row, then
  * 56px rows of tick, title (with a muted line), scope, impact and source.
  * The columns are fixed, so no row moves another; below desktop, scope and
- * source fold away.
+ * source fold away, and below 768 impact narrows to its word.
  */
 const GRID =
-  'grid grid-cols-[20px_1fr_120px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 px-4';
+  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_72px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
 const WIDE = 'hidden desktop:block';
 
 export function WorkRows({

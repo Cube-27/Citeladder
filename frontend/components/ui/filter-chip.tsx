@@ -63,7 +63,7 @@ export function FilterTrigger({
         className={cn(
           SOFT_FIELD_BOX,
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
-          'transition-[transform,border-color,outline-color] active:scale-[0.97] data-[state=open]:overlay-selected',
+          'press data-[state=open]:overlay-selected',
           'disabled:cursor-not-allowed disabled:opacity-45',
           // Icon only, it is an icon control: no padding, its glyphs inset like IconButton's.
           iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',
@@ -81,10 +81,8 @@ export function FilterTrigger({
             {value}
           </span>
         )}
-        <ChevronDown
-          className="text-ink-2 size-3 shrink-0 transition-transform [[data-state=open]>&]:rotate-180"
-          aria-hidden
-        />
+        {/* It turns while the list is open (globals.css, every dropdown's chevron). */}
+        <ChevronDown className="text-ink-2 size-3 shrink-0" aria-hidden />
       </button>
     </Tooltip>
   );

@@ -8,6 +8,8 @@ import { extendTailwindMerge } from 'tailwind-merge';
  */
 const twMerge = extendTailwindMerge({
   extend: {
+    // The app's named radii, so a caller's `rounded-card` replaces a primitive's `rounded-mark`.
+    theme: { radius: ['mark', 'control', 'card', 'overlay'] },
     classGroups: {
       'font-size': [
         {

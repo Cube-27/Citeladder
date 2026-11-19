@@ -207,12 +207,12 @@ export function ArrowLink({
 }: Readonly<{ href?: string; projectId?: string | null; children: ReactNode }>) {
   const content = (
     <>
-      <span className="decoration-control-line underline decoration-1 underline-offset-4 transition-[text-decoration-color] group-hover:decoration-current">
+      <span className="decoration-control-line underline decoration-1 underline-offset-4 transition-[text-decoration-color] [@media(hover:hover)_and_(pointer:fine)]:group-hover:decoration-current">
         {children}
       </span>
       <ArrowRight
         aria-hidden
-        className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+        className="size-4 shrink-0 transition-transform motion-reduce:transition-none motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
       />
     </>
   );

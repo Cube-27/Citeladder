@@ -125,7 +125,8 @@ function MessageNoticeView({
       data-notice-tone={tone}
       className={cn(
         textRole('body'),
-        // Actions that do not fit beside the text wrap under it, at the right.
+        // Actions that do not fit beside the text wrap under it, at the right;
+        // below 768 they sit under the message, on its left edge.
         'rounded-control flex flex-wrap items-start gap-2 px-3 py-2',
         style.wash,
         className,
@@ -146,7 +147,7 @@ function MessageNoticeView({
         {children != null ? <div>{children}</div> : null}
       </div>
       {action ? (
-        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
+        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
           {action}
         </div>
       ) : null}

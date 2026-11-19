@@ -152,7 +152,7 @@ export function CellMeter({
       aria-valuenow={shown}
       aria-valuetext={valueText}
       data-meter-tone={tone}
-      className="bg-well block h-2 w-30 overflow-hidden rounded-sm"
+      className="bg-well rounded-mark block h-2 w-30 overflow-hidden"
     >
       <span className={cn(FILL_MOTION, METER_FILL[tone])} style={{ width: `${percent}%` }} />
     </div>

@@ -142,7 +142,7 @@ makes no external fetch: brand and competitor logos are looked up after
 onboarding creates a project and after a project edit.
 
 The SPA preserves the authenticated shell while route content resolves: after
-authentication, QueryState loading and recoverable gate notices render in the
+authentication, StateBlock loading and recoverable gate notices render in the
 shell's content pane, and an in-place refresh retains data with scoped progress
 rather than collapsing the surface. What is drawn before the page has one owner,
 `FirstFrame` (`components/layout/first-frame.tsx`), driven by the route
@@ -223,7 +223,7 @@ never evidence content.
 Shared UI capabilities have one owner under `frontend/components/ui/`. Their
 technical contracts and state responsibilities live here; visual values and
 interaction recipes live only in [`design.md`](design.md). Read states map one
-query to loading, read error, not measured or empty through `QueryState`, so a
+query to loading, read error, not measured or empty through `StateBlock`, so a
 pending, failed or unmeasured read never renders as zero or "no data".
 Browser error reports follow the
 [API error contract](api-error-contract.md#6-browser-error-reports).

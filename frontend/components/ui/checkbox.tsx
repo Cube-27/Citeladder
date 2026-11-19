@@ -32,7 +32,7 @@ export type CheckboxProps = AccessibleCheckbox & {
  * 24. Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'check-box press [--press:0.92] isolate focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[border-color] duration-[var(--motion-fast)] before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] disabled:cursor-not-allowed';
+  'check-box press [--press:0.92] isolate focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
 
 /** Draws the check over 150ms, 15ms after the fill starts (HeroUI v3). */
 const CHECK_DRAW = 'stroke-dashoffset 150ms linear 15ms';
@@ -156,7 +156,8 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cn(CHECK_TARGET, '-my-0.5')}>{box}</span>
+      {/* The label row is the tap target, so the box's own area stays 24 and never covers a stacked neighbour. */}
+      <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--target-min)]')}>{box}</span>
       <span className="flex min-w-0 flex-col">
         <span className="type-body">{label}</span>
         {description != null ? <span className="type-body text-ink-2">{description}</span> : null}

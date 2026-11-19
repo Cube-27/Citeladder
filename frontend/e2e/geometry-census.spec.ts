@@ -466,6 +466,10 @@ function measure({ route }: { route: string }) {
     const rect = element.getBoundingClientRect();
     add('field-end-target.size', element, rect.width);
     add('field-end-target.size', element, rect.height);
+    // Its tap area (`hit-area`): the drawn size here, 44 for touch (surface-layout-actions).
+    const hit = getComputedStyle(element, '::before');
+    add('field-end-target.hit', element, px(hit.width));
+    add('field-end-target.hit', element, px(hit.height));
   }
   for (const element of all('[data-code-token]')) {
     const style = getComputedStyle(element);
@@ -802,6 +806,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'icon-tile.size', ICON_TILE_SIZE);
   expectOneValue(records, 'setting-row.padding-y', SETTING_ROW_PADDING_Y);
   expectOneValue(records, 'field-end-target.size', FIELD_END_TARGET_SIZE);
+  expectOneValue(records, 'field-end-target.hit', FIELD_END_TARGET_SIZE);
   expectOneValue(records, 'code-token.padding-x', CODE_TOKEN_PADDING_X);
   expectOneValue(records, 'code-token.padding-y', CODE_TOKEN_PADDING_Y);
 }

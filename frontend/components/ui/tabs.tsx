@@ -145,7 +145,7 @@ function tabFace({
 }: Readonly<{ kind: TabKind; selected: boolean; className?: string }>) {
   const tab = kind !== 'segment';
   return cn(
-    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-tint)] disabled:cursor-not-allowed disabled:opacity-60',
+    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
     TAB_KIND[kind],
     tab &&
       'isolate px-3 before:absolute before:inset-x-0 before:-z-10 before:rounded-mark before:content-[""]',

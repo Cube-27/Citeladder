@@ -475,12 +475,15 @@ its own spacing, size or radius on them.
   (owner 2026-11-18): hairlines above and below, thin dividers between equal
   cells, columns from the count, each cell a muted label with its hint over
   the value and its inline delta, values on one baseline.
-- **Progress is rungs:** RungMeter for a 0 to 100 score or a quota, RungTrail
-  for steps. No rings, donuts, smooth
-  curves or generic progress bars.
+- **Progress:** RungMeter for a 0 to 100 score or a quota, RungTrail for
+  steps. A score may also be a ScoreRing, a part of a whole a PartDonut, and a
+  level a bar Meter, where the app draws them today; no other rings, donuts
+  or progress bars.
 - **The live rung** (Spinner) is the only "working" mark: one rung pulsing
   its opacity, shown only after 300ms and held still under reduced motion.
-  No shimmer, arcs or a lone spinner on an empty page.
+  No arcs or a lone spinner on an empty page. A loading placeholder is
+  block-shaped, and one soft band of light sweeps across its blocks; under
+  reduced motion the blocks stay still.
 - **Notice** is the one inline message (glyph, sentence, optional action);
   **StateBlock** holds a read's loading, empty and error states in one
   footprint, names the failed subject with one Retry, and appears once per

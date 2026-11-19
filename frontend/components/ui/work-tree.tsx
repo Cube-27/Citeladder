@@ -19,7 +19,7 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
     <ChevronDown
       aria-hidden
       className={cn(
-        'text-ink-2 size-3.5 shrink-0 transition-transform duration-[var(--motion-fast)]',
+        'text-ink-2 size-3.5 shrink-0 transition-transform duration-[var(--motion-open)]',
         !open && '-rotate-90',
       )}
     />
@@ -32,7 +32,7 @@ function CountBox({ count }: Readonly<{ count: number }>) {
     <span
       className={textRole(
         'captionStrong',
-        'border-rule inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded-sm border px-1 tabular-nums',
+        'border-rule inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded-mark border px-1 tabular-nums',
       )}
     >
       {formatCount(count)}
@@ -134,32 +134,40 @@ export function TreeGroupingRow({
   );
 }
 
-/** One level down: indented under its parent's chevron. */
+/**
+ * One level down: indented under its parent's chevron. Below 768 the three
+ * levels indent 8 + 13 + 0 instead of 20 + 33 + 24, so a row's title keeps
+ * its width (at least 180 at 390).
+ */
 export function TreeIndent({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="ml-5 grid gap-1 pb-2">{children}</div>;
+  return <div className="phone:ml-2 ml-5 grid gap-1 pb-2">{children}</div>;
 }
 
 /** The groupings under a group, on a tree line. */
 export function TreeLine({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="border-rule ml-5 grid border-l pl-3">{children}</div>;
+  return (
+    <div className="border-rule phone:ml-2 phone:pl-1 ml-5 grid border-l pl-3">{children}</div>
+  );
 }
 
 /** A level's rows under one grouping: aligned past the grouping's chevron. */
 export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="ms-6 pb-2">{children}</div>;
+  return <div className="phone:ms-0 ms-6 pb-2">{children}</div>;
 }
 
 /** An empty level in the rows' rhythm. */
 export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <p className={textRole('body', 'text-ink-2 ml-5 flex h-10 items-center px-2')}>{children}</p>
+    <p className={textRole('body', 'text-ink-2 ml-5 flex h-10 items-center px-2 phone:ml-2')}>
+      {children}
+    </p>
   );
 }
 
 /** A level loading: three row-high blocks, and the words for a screen reader. */
 export function TreeLoading({ label }: Readonly<{ label: string }>) {
   return (
-    <div aria-busy className="ml-5 grid gap-1">
+    <div aria-busy className="phone:ml-2 ml-5 grid gap-1">
       <span className="sr-only">{label}</span>
       {[0, 1, 2].map((row) => (
         <SkeletonBlock key={row} className="rounded-control h-10" />

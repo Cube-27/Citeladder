@@ -1,8 +1,13 @@
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StatusMark } from '@/components/ui/status-mark';
-import { availabilityLabel } from '@/lib/format';
-import { ACTION_GOAL_HINT, ACTION_GOAL_LABEL, goalCountPhrase } from '@/lib/agent/vocabulary';
+import { availabilityLabel, formatCount } from '@/lib/format';
+import {
+  ACTION_GOAL_HINT,
+  ACTION_GOAL_LABEL,
+  goalCountPhrase,
+  goalCountWords,
+} from '@/lib/agent/vocabulary';
 import type { ActionTree } from '@/lib/api/actions';
 import { actionGoalSchema, type ActionGoal } from '@citeladder/contracts/actions';
 
@@ -34,7 +39,13 @@ export function GoalStrip({
           key: goal,
           label,
           loading: !failed && !goals,
-          value: phrase,
+          // A narrow cell cuts the words after the count, never the count.
+          value: entry ? (
+            <span className="flex min-w-0" title={phrase ?? undefined}>
+              <span className="shrink-0 whitespace-pre">{`${formatCount(entry.count)} `}</span>
+              <span className="min-w-0 truncate">{goalCountWords(goal, entry.count)}</span>
+            </span>
+          ) : null,
           missingLabel: availabilityLabel('unavailable'),
           marker: (
             <>

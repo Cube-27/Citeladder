@@ -311,9 +311,10 @@ export function SuggestionList({
       role="listbox"
       aria-label={label}
       hidden={!open}
+      data-open={open || undefined}
       className={cn(
         MENU_PANEL,
-        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-[min(20rem,40dvh)] overflow-auto overscroll-contain',
+        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-[min(20rem,40dvh)] overflow-auto overscroll-contain [--popup-origin:bottom]',
       )}
     >
       {options.map((option, index) => (

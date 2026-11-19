@@ -195,8 +195,9 @@ function Controls({
         </div>
       ) : null}
       {actions ? (
-        // At the line's end, after the meta that fills the line.
-        <div className="ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
+        // At the line's end, after the meta that fills the line; below 768 a
+        // wrapped row starts at the left edge.
+        <div className="phone:ms-0 phone:justify-start ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
           {actions}
         </div>
       ) : null}

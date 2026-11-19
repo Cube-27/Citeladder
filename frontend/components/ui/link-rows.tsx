@@ -55,7 +55,7 @@ export function LinkRow({
       <ProjectLink
         href={href}
         state={state}
-        className="focus-ring min-w-0 flex-1 truncate rounded-sm before:absolute before:inset-x-0 before:inset-y-0"
+        className="focus-ring rounded-mark min-w-0 flex-1 truncate before:absolute before:inset-x-0 before:inset-y-0"
       >
         {name}
       </ProjectLink>

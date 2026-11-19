@@ -225,8 +225,8 @@ function componentFolder(label) {
  * Geometry a feature folder chose for itself: spacing, sized boxes and radii
  * as utilities (`layer-geometry`), and `size=`/`padding=` props
  * (`layer-size-prop`); and, in every product folder including `ui/` and
- * `layout/`, a breakpoint other than `desktop:`, the shell's `shell:` and
- * the main column's `column-split:`/`column-wide:`
+ * `layout/`, a breakpoint other than `desktop:`, `phone:`, the shell's
+ * `shell:` and the main column's `column-split:`/`column-wide:`
  * (`layer-breakpoint`).
  * Every one is a violation: the layering debt was burned to zero (app
  * geometry PR 7), so none is ratcheted or baselined and none can regrow.
@@ -253,7 +253,7 @@ export function featureLayeringViolations(source, label) {
       push(
         'layer-breakpoint',
         line,
-        `${token} — the product's breakpoints are desktop:, shell: and the column- variants`,
+        `${token} — the product's breakpoints are desktop:, phone:, shell: and the column- variants`,
       );
     }
   }

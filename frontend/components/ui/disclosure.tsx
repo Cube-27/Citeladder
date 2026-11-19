@@ -23,14 +23,12 @@ export function Disclosure({
       <summary
         className={textRole(
           'body',
-          'text-ink-2 focus-ring hover:text-ink hover:overlay-hover flex min-h-[var(--target-min)] w-fit cursor-pointer items-center gap-2 rounded-control px-2 transition-colors duration-[var(--motion-tint)] [&::-webkit-details-marker]:hidden',
+          'text-ink-2 focus-ring hover:text-ink hover:overlay-hover flex min-h-[var(--target-min)] w-fit cursor-pointer items-center gap-2 rounded-control px-2 transition-colors duration-[var(--motion-fast)] [&::-webkit-details-marker]:hidden',
         )}
       >
         {title}
-        <ChevronDown
-          className="size-4 shrink-0 transition-[rotate] duration-[var(--motion-overlay)]"
-          aria-hidden
-        />
+        {/* It turns on the panel's timing (ui-motion.css). */}
+        <ChevronDown className="size-4 shrink-0" aria-hidden />
       </summary>
       <div className="grid min-w-0 gap-3 pt-3">{children}</div>
     </details>

@@ -76,7 +76,7 @@ export function DateField({
             type="button"
             aria-label={`${ariaLabel}: open calendar`}
             disabled={disabled}
-            className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark inline-flex size-[var(--target-min)] shrink-0 items-center justify-center transition-colors"
+            className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area inline-flex size-[var(--target-min)] shrink-0 items-center justify-center transition-colors"
           >
             <CalendarDays className="size-4" aria-hidden />
           </button>
