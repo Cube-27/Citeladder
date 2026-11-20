@@ -47,19 +47,19 @@ sites are out of scope.
   screen with the product showcase and the form unboxed on the surface (no
   card), and setup keeps its own layout; both take the app's new look.
   Owner, 2026-11-20.
-- **AR-13 No helper text.** No description under a group heading or field
-  unless it carries information the label cannot (a limit, a count, an
-  error). Owner, 2026-11-20.
-- **AR-14 Business facts.** The Prompt Builder and Agent context's Business
-  map both edit the business facts, with one shared offerings grid, and no
-  third place does: Context's Audience tab merges into Company and stops
-  editing offerings. Prompt Builder has its own sidebar row under Tracking and
-  keeps its steps in a left rail. Owner, 2026-11-20.
-- **AR-15 Shares as split bars.** Distribution shares and the intent mix are
-  bars dragged in 5% steps that always total 100, not percentage fields.
-  Owner, 2026-11-20.
 - **AR-13 Focus.** Focus rings use a subtle accent edge and glow instead of
   ink. Owner, 2026-11-20.
+- **AR-14 No helper text.** No description under a group heading or field
+  unless it carries information the label cannot (a limit, a count, an
+  error). Owner, 2026-11-20.
+- **AR-15 Business facts.** The Prompt Builder and Agent context's Business
+  map both edit the business facts, with one shared offerings grid, and no
+  third place does: Context's Company tab holds the target audience and no
+  other Context tab edits offerings. Prompt Builder has its own sidebar row
+  under Tracking and keeps its steps in a left rail. Owner, 2026-11-20.
+- **AR-16 Shares as split bars.** Distribution shares and the intent mix are
+  bars dragged in 5% steps that always total 100, not percentage fields.
+  Owner, 2026-11-20.
 
 ## Visual spec and standard layouts
 
