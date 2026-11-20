@@ -24,15 +24,15 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 /**
- * The 16px box: `surface` with the control line,
- * radius 2; checked and indeterminate are an `ink` fill with an `on-ink`
- * check or dash. The fill scales in and the check draws itself; a held
+ * The 16px box: a field's face (`panel`, `rule` edge, `control-line` on
+ * hover), radius 4; checked and indeterminate are an `ink` fill with an
+ * `on-ink` check or dash. The fill scales in and the check draws itself; a held
  * press scales the box to 92% (the fill is in globals.css). It is drawn
  * centred in a 24×24 target (`CHECK_TARGET`), so the target is never under
  * 24. Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'check-box press [--press:0.92] isolate focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
+  'check-box press [--press:0.92] isolate focus-ring bg-panel border-rule enabled:data-[state=unchecked]:hover:border-control-line text-on-ink data-[state=checked]:border-ink data-[state=indeterminate]:border-ink hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
 
 /** Draws the check over 150ms, 15ms after the fill starts (HeroUI v3). */
 const CHECK_DRAW = 'stroke-dashoffset 150ms linear 15ms';

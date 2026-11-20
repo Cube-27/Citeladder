@@ -5,24 +5,13 @@ import { UrlCutParts } from '@/components/ui/clamp-text';
 import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
-const TAG_SHAPE =
-  'type-caption border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-2 normal-nums whitespace-nowrap [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:text-ink';
-
 /**
- * The two tag looks, 24px tall, 12/16, radius 4, never wider than their
- * container. A static tag is a `well` fill with no edge in `ink-2`, so it
- * never looks operable. The website keeps its radius 2 `surface` face with a
- * hairline.
+ * The one tag face: 20px tall, radius 4, a `rule` edge, 12/16 `ink-2`, never
+ * wider than its container. The website keeps its 24px `surface` face in
+ * `ink`. A link tag takes the hover overlay and ends in a 12px arrow.
  */
-const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2');
-
-/**
- * A tag you can operate (a link, a remove, an expander): `control-fill` with the
- * soft control edge and shadow, `ink` text, the 6% ink hover. A link tag ends
- * in a 12px arrow (`ArrowRight` for an app route).
- */
-const OPERABLE_FACE = cn(TAG_SHAPE, 'bg-control-fill border-control-edge shadow-control text-ink');
-const TAG_OPERABLE = cn(OPERABLE_FACE, 'hover:overlay-hover');
+const TAG_FACE =
+  'type-caption border border-rule text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-[var(--tag-height)] [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:text-ink';
 
 /**
  * What a tag is for. A status is a `StatusMark`, never
@@ -62,9 +51,10 @@ function TagShell({
       {...span}
       data-tag-kind={kind}
       className={cn(
+        TAG_FACE,
         // A removable tag's operable part is its remove button, which takes the hover.
-        kind === 'removable' ? cn(OPERABLE_FACE, 'pe-0.5') : TAG_STATIC,
-        kind === 'draft' && 'bg-surface border-control-line border-dashed',
+        kind === 'removable' && 'pe-0.5',
+        kind === 'draft' && 'border-control-line border-dashed',
         className,
       )}
     >
@@ -92,9 +82,9 @@ export function Tag(props: TagProps) {
             type="button"
             aria-label={`Remove ${removeLabel ?? text ?? 'tag'}`}
             onClick={onRemove}
-            className="focus-ring text-ink-2 hover:overlay-hover hover:text-ink rounded-mark hit-area grid size-5 place-items-center transition-colors"
+            className="focus-ring text-ink-2 hover:overlay-hover hover:text-ink rounded-mark hit-area grid size-4 place-items-center transition-colors"
           >
-            <X className="size-3.5" aria-hidden />
+            <X className="size-3" aria-hidden />
           </button>
         }
       />
@@ -120,7 +110,7 @@ export function RecordTag({
     <ProjectLink
       href={href}
       data-tag-kind="record"
-      className={cn(TAG_OPERABLE, 'focus-ring align-middle no-underline')}
+      className={cn(TAG_FACE, 'hover:overlay-hover focus-ring align-middle no-underline')}
     >
       {labelKind === 'url' ? (
         <span className="flex min-w-0">
