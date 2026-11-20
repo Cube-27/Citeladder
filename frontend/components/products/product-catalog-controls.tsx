@@ -185,7 +185,7 @@ type ControlParts = Readonly<{ notices: ReactNode; actions: ReactNode }>;
  * A catalog product's own controls on its page: Edit, and Archive or Restore.
  * An archived product says so; it keeps its history but leaves the catalog,
  * new matching and shopping prompts until restored. `children` places the
- * notices and the action buttons, which sit apart on the identity card.
+ * notices under the status line and the action buttons in the page header.
  */
 export function ProductCatalogControls({
   scope,

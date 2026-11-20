@@ -1,9 +1,28 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
+import { seriesColor } from './chart-tooltip';
 import { PartDonut } from './part-donut';
 import { Sparkline } from './sparkline';
-import { SeriesTonesContext, seriesTones } from './step-chart-parts';
+import { type SERIES_STROKE, SeriesTonesContext, seriesTones } from './step-chart-parts';
+
+describe('seriesColor', () => {
+  it('names a variable globals.css emits for every tone, so a script-drawn series has a colour', () => {
+    const css = readFileSync(join(import.meta.dirname, '../../apps/app/src/globals.css'), 'utf8');
+    // An `@theme inline` value is folded into utilities and never emitted as a variable.
+    const emitted = css.replaceAll(/@theme inline \{[^}]*\}/g, '');
+    const tones = ['you', 'rival-1', 'rival-2', 'rival-3', 'rival-4', 'other'] satisfies Array<
+      keyof typeof SERIES_STROKE
+    >;
+    const missing = tones
+      .map((tone) => /var\((--[\w-]+)\)/.exec(seriesColor(tone))?.[1])
+      .filter((name) => !name || !emitted.includes(`${name}:`));
+    expect(missing).toEqual([]);
+  });
+});
 
 const rows = (name: string) =>
   within(screen.getByRole('table', { name }))

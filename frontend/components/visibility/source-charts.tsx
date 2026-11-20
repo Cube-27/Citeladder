@@ -94,6 +94,8 @@ function UsagePlot({
         value: first.points[index]?.value ?? null,
       }))}
       series={usageComparisons(rest)}
+      // The lines rank sources by share; none of them is "you".
+      you={false}
       yMin={0}
       yMax={seriesCeiling(series)}
       yFormat={percentLabel}

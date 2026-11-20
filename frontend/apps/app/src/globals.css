@@ -161,7 +161,9 @@
      the paper; the app binds its value below. */
   --color-chrome: var(--color-paper);
   /* Data: you are the accent, rivals one to four in rank order (ink, then
-     cool hues only), a fifth and later are `data-other`; you is below. */
+     cool hues only), a fifth and later are `data-other`. Charts read these
+     from script, so each must stay an emitted variable, never `inline`. */
+  --color-data-you: var(--color-accent);
   --color-data-rival-1: var(--color-ink);
   --color-data-rival-2: oklch(52.3% 0.1 244);
   --color-data-rival-3: oklch(41% 0.128 289.3);
@@ -377,12 +379,6 @@
   --z-index-overlay: 40;
   --z-index-modal: 50;
   --z-index-toast: 60;
-}
-
-/* Aliases no scope rebinds, inlined into their utilities. The others stay in
-   `@theme`: the app rebinds them, or a website band rebinds the ink they read. */
-@theme inline {
-  --color-data-you: var(--color-accent);
 }
 
 :root {
