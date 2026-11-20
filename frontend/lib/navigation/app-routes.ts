@@ -386,7 +386,7 @@ export const APP_ROUTES = [
     screen: screens.promptBuilder,
     // The step list beside the business step's fields.
     loading: cards([facts(6)]),
-    nav: [{ label: 'Prompt builder', icon: 'promptBuilder', placements: ['palette:tracking'] }],
+    nav: [listed('Prompt builder', 'promptBuilder', 'tracking')],
   }),
   page({
     path: '/prompts/:promptId',

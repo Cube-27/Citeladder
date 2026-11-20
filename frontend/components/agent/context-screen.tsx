@@ -6,11 +6,11 @@ import { BrandAliasesPanel } from '@/components/knowledge-base/brand-aliases-pan
 import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
 import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-panel';
 import {
-  AudienceCard,
   CompanyFactsCard,
   TrackedCompetitorsCard,
 } from '@/components/knowledge-base/brand-profile-cards';
-import { BusinessMapSummary } from '@/components/knowledge-base/business-map-summary';
+import { BusinessMapTab } from '@/components/knowledge-base/business-map-tab';
+import { useBusinessDraft } from '@/components/knowledge-base/use-business-draft';
 import {
   useBrandProfileForm,
   type BrandProfileForm,
@@ -37,11 +37,12 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
 
 /**
  * What the agent knows about the business before it reads any evidence, one
- * tab per subject: the company facts, audience and offerings, the themes
- * Perception classifies answers against, the read-only
- * business map the Prompt Builder edits, the tracked competitors, the pilot's
- * Brand facts, and the project's Agent instructions. Each tab is a stack of
- * settings groups; a form's Save sits in its frame's foot.
+ * tab per subject: the company facts, the themes Perception classifies
+ * answers against, the business map (offerings and the facts that steer
+ * prompt generation, the Prompt Builder's own editor, in the 1040 column),
+ * the tracked competitors, the pilot's Brand facts, and the project's Agent
+ * instructions. Each tab is a stack of settings groups; a form's Save sits in
+ * its frame's foot.
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();
@@ -62,10 +63,15 @@ function ContextWorkspace({
     profile: profile.data,
   });
   const instructions = useAgentInstructions(workspaceId, project.id);
+  // Held above the tabs, like the profile form, so a tab switch keeps unsaved edits.
+  const business = useBusinessDraft({ workspaceId, projectId: project.id });
 
   return (
     <TabsRoot value={requestedTab} onValueChange={setTab}>
-      <SettingsPage tabs={<TabRow items={CONTEXT_TABS} ariaLabel="Context sections" />}>
+      <SettingsPage
+        wide={requestedTab === 'map'}
+        tabs={<TabRow items={CONTEXT_TABS} ariaLabel="Context sections" />}
+      >
         <ContextPanels
           project={project}
           workspaceId={workspaceId}
@@ -73,6 +79,9 @@ function ContextWorkspace({
           form={form}
           brandFacts={<BrandFactsTab facts={facts} workspaceId={workspaceId} project={project} />}
           instructions={<AgentInstructionsCard instructions={instructions} />}
+          businessMap={
+            <BusinessMapTab business={business} projectId={project.id} workspaceId={workspaceId} />
+          }
         />
       </SettingsPage>
     </TabsRoot>
@@ -86,6 +95,7 @@ function ContextPanels({
   form,
   brandFacts,
   instructions,
+  businessMap,
 }: Readonly<{
   project: Project;
   workspaceId: string;
@@ -93,6 +103,7 @@ function ContextPanels({
   form: BrandProfileForm;
   brandFacts: ReactNode;
   instructions: ReactNode;
+  businessMap: ReactNode;
 }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
@@ -100,25 +111,12 @@ function ContextPanels({
       <TabPanel value="facts">
         {profile.data ? <CompanyFactsCard form={form} /> : <ProfileState profile={profile} />}
       </TabPanel>
-      <TabPanel value="audience">
-        {profile.data ? <AudienceCard form={form} /> : <ProfileState profile={profile} />}
-      </TabPanel>
       <TabPanel value="themes">
         <SettingsGroup title="Themes">
           <ProjectThemesPanel scope={{ workspaceId, projectId: project.id }} mayEdit={mayEdit} />
         </SettingsGroup>
       </TabPanel>
-      <TabPanel value="map">
-        {profile.data ? (
-          <BusinessMapSummary
-            projectId={project.id}
-            workspaceId={workspaceId}
-            profile={profile.data}
-          />
-        ) : (
-          <ProfileState profile={profile} />
-        )}
-      </TabPanel>
+      <TabPanel value="map">{businessMap}</TabPanel>
       <TabPanel value="competitors">
         <TrackedCompetitorsCard project={project} />
       </TabPanel>

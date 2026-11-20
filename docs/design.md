@@ -128,8 +128,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
   then the metric strip, then sections 24 apart; a section's head sits 12
   above its body. Narrow pages centre the body in their column (AR-9; 1040:
-  Overview, Projects, Issues, Actions, page detail, Agent, Billing; 720:
-  Settings, Pricing, Runs, Agent context); the header and tab rules still
+  Overview, Projects, Issues, Actions, page detail, Agent, Billing, Agent
+  context's Business map; 720: Settings, Pricing, Runs, the other Agent
+  context tabs; a tab sets its own with `SettingsPage wide`); the header and tab rules still
   span the panel.
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
@@ -211,7 +212,12 @@ One entry per family; wave 2 fills each from the layouts above.
   edge on `panel`, `control-line` on hover; focused, an accent edge and its
   glow; invalid, a negative edge and a negative glow. 16px leading icon. Checkbox and radio
   take the same edge and an `ink` fill when on; the switch is an `ink` track
-  when on.
+  when on. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
+  are 24-high tokens on `state-selected`, a suggestion dashed with one accept
+  tick per field, then the add field; Enter (and a comma in a grid cell) adds,
+  Tab leaves. A grid cell drops the edge until focused. A share of a whole
+  ([`SplitBar`](../frontend/components/ui/split-bar.tsx)) is a bar of cool
+  series fills with a slider per divider, 5% steps, a dot legend under it.
 - **Selects and menus.** A select or filter trigger is a secondary button's
   face (`TRIGGER_BOX`); a typed combobox is an input. Menus, listboxes and
   tooltips are `raised` with a `rule` edge, radius 8, 28-high rows on

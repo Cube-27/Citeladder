@@ -9,10 +9,16 @@ import { PageFrame, type PageFrameSlots } from './page-frame';
  */
 export function SettingsPage({
   children,
+  wide = false,
   ...slots
-}: Omit<PageFrameSlots, 'filters' | 'trail' | 'crumb'> & Readonly<{ children: ReactNode }>) {
+}: Omit<PageFrameSlots, 'filters' | 'trail' | 'crumb'> &
+  Readonly<{
+    /** This view takes the 1040 column instead of the route's 720 (AR-9). */
+    wide?: boolean;
+    children: ReactNode;
+  }>) {
   return (
-    <PageFrame {...slots}>
+    <PageFrame {...slots} width={wide ? 'narrow' : undefined}>
       <div data-settings-sections="" className="min-w-0">
         {children}
       </div>

@@ -90,16 +90,16 @@ function StepRow<T extends string>({
         className={textRole(
           'caption',
           cn(
-            'grid size-5 shrink-0 place-items-center rounded-full',
-            done && 'bg-positive-wash text-positive',
-            position === current && 'bg-ink text-on-ink',
-            position > current && 'bg-well text-ink-2',
+            'grid size-4 shrink-0 place-items-center rounded-full tabular-nums',
+            done && 'text-ink-2',
+            position === current && 'border-ink text-ink border',
+            position > current && 'border-control-line text-ink-2 border',
           ),
         )}
       >
-        {done ? <Check className="size-3" /> : position + 1}
+        {done ? <Check className="size-3.5" /> : position + 1}
       </span>
-      <span className="truncate">{step.label}</span>
+      <span className={cn('truncate', position > current && 'text-ink-2')}>{step.label}</span>
     </>
   );
   if (done) {

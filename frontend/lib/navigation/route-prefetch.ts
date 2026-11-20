@@ -161,6 +161,15 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
       ]),
     warmPrompts,
   ),
+  // The first step's offerings grid: the profile, the map and the list bounds.
+  '/prompts/build': routeReads(
+    () => Promise.all([import('@/lib/api/projects'), import('@/lib/api/prompts')]),
+    ([{ projectQueries }, { promptsQueries }], client, scope) => {
+      warmQuery(client, projectQueries.brandProfile(scope));
+      warmQuery(client, projectQueries.businessMap(scope));
+      warmQuery(client, promptsQueries.sets(scope));
+    },
+  ),
   '/visibility': routeReads(visibilitySelection, warmVisibilitySelection),
   '/insights': routeReads(visibilitySelection, warmVisibilitySelection),
   '/competitors': routeReads(visibilitySelection, warmVisibilitySelection),

@@ -73,8 +73,9 @@ selectable.
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
 
-The [business map](../frontend/services/api/src/projects/business-map.ts), edited only in
-the Prompt Builder (Agent → Context shows it read-only with a link there), and
+The [business map](../frontend/services/api/src/projects/business-map.ts), edited in
+the Prompt Builder's first step and Agent → Context → Business map with one
+shared editor and save, and
 stored in `BusinessContext.business_map`, lists per confirmed offering its
 attributes, situations/constraints and audiences, plus excluded pairs that never
 combine. Generation reads no excluded pair, and no screen edits them; the
@@ -354,18 +355,23 @@ Each visit is a fresh session, and nothing it edits is written until its step
 saves or confirms. A generation run still in flight from an earlier visit keeps
 Generate pending, so it is never paid for twice.
 
-1. **About your business**: offerings, buyer roles, each offering's audiences,
-   situations/constraints and attributes, service areas (only for a local or regional
-   `market_scope`), category terms, jobs to be done and business model, as
-   chips and choices; plus a one-line `run_context` for this run only. Save
-   sends only changed fields to the brand-profile update, then the business-map
-   update.
+1. **About your business**: the offerings grid (each offering's audiences,
+   situations/constraints and attributes as multi-value cells), then buyer
+   roles, service areas (only for a local or regional `market_scope`),
+   category terms, jobs to be done and business model; plus a one-line
+   `run_context` for this run only. A list discovery inferred (its
+   `field_sources` entry is not `reviewed`) and a `suggested` map entry are
+   drafts until accepted; accepting sends the field unchanged, which the API
+   records as reviewed. Save sends only changed or accepted fields to the
+   brand-profile update, then the business-map update.
 2. **Topics**: the existing topics plus proposals from the preview, with
    "+N more" for the overflow. People rename, remove or add; Confirm sends one
    plan.
-3. **Distribution**: count, branded share (default 20%), competitor-alternative
-   share (disabled, saying why, without a tracked competitor), intent mix
-   (default 25/50/25), personas from step 1, and the search source (each source
+3. **Distribution**: count; the unbranded, branded (default 20%) and
+   competitor-alternative shares as one split (no competitor part without a
+   tracked competitor), so they never pass 100%; the intent mix (default
+   25/50/25) as a second split; both move in 5% steps. Then personas from
+   step 1, and the search source (each source
    with persisted data, or none) with its seed queries grouped by topic and
    untickable. Edits not yet saved or confirmed are named as unused by this run.
    Generate sends every field for all topics.

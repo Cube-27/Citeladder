@@ -4,8 +4,9 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { queryKeys } from '@/lib/api/query-keys';
-import type { BrandProfile } from '@citeladder/contracts';
+import type { BrandProfile, BusinessMap } from '@citeladder/contracts';
 import { makeProject } from '@/test/fixtures/project';
+import { makeSetList } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, testProjectSelection } from '@/test/render';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
@@ -96,6 +97,14 @@ function renderContext({
   return renderWithProviders(<ContextScope activeProject={activeProject} />);
 }
 
+/** The business map tab's reads: the map, and the prompt-set list that carries its list bound. */
+function mapReads(map: BusinessMap = { available_offerings: [], offerings: [] }) {
+  return [
+    http.get(`/api/v1/projects/${project.id}/business-map`, () => HttpResponse.json(map)),
+    http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([]))),
+  ];
+}
+
 /** Records the body of the next profile save and answers with `reply`. */
 function captureProfileSave(reply: (body: unknown) => Response) {
   const capture: { body?: unknown } = {};
@@ -116,15 +125,7 @@ describe('Context layout', () => {
       within(tabs)
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
-    ).toEqual([
-      'Company',
-      'Audience',
-      'Themes',
-      'Business map',
-      'Competitors',
-      'Instructions',
-      'Brand facts',
-    ]);
+    ).toEqual(['Company', 'Themes', 'Business map', 'Competitors', 'Instructions', 'Brand facts']);
     // The instructions are a tab of their own, not a section under every tab.
     expect(screen.queryByRole('textbox', { name: 'Agent instructions' })).not.toBeInTheDocument();
   });
@@ -139,14 +140,9 @@ describe('Context layout', () => {
     expect(window.location.search).toBe('?tab=competitors');
   });
 
-  it('offers the save that belongs to the active tab, and none on a read-only tab', async () => {
+  it('offers the save that belongs to the active tab', async () => {
     const user = userEvent.setup({ delay: null });
-    mswServer.use(
-      http.get(`/api/v1/projects/${project.id}/business-map`, () =>
-        HttpResponse.json({ available_offerings: [], offerings: [] }),
-      ),
-    );
-    renderContext();
+    renderContext({ handlers: mapReads() });
     // A blank profile offers no save until a change.
     const idle = await screen.findByRole('button', { name: 'Save brand knowledge' });
     expect(idle).toHaveAttribute('aria-disabled', 'true');
@@ -157,7 +153,11 @@ describe('Context layout', () => {
     expect(save).not.toHaveAttribute('aria-disabled');
     expect(save).not.toHaveAccessibleDescription('No changes to save');
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
-    expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Save business map' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.queryByRole('button', { name: 'Save brand knowledge' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Instructions' }));
     const idleInstructions = await screen.findByRole('button', { name: 'Save instructions' });
     expect(idleInstructions).toHaveAttribute('aria-disabled', 'true');
@@ -202,15 +202,7 @@ describe('Context layout', () => {
       within(tabs)
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
-    ).toEqual([
-      'Company',
-      'Audience',
-      'Themes',
-      'Business map',
-      'Competitors',
-      'Instructions',
-      'Brand facts',
-    ]);
+    ).toEqual(['Company', 'Themes', 'Business map', 'Competitors', 'Instructions', 'Brand facts']);
     const aliases = screen.getByRole('group', { name: 'Aliases' });
     expect(within(aliases).getByText('Best&Less')).toBeVisible();
     expect(await screen.findByRole('status', { name: 'Loading brand facts…' })).toBeVisible();
@@ -263,7 +255,7 @@ describe('Context layout', () => {
 });
 
 describe('Company facts', () => {
-  it('saves direct edits, keeping drafts across tabs and a typed but unadded offering', async () => {
+  it('saves direct edits, keeping drafts across tabs', async () => {
     const user = userEvent.setup({ delay: null });
     const save = captureProfileSave(() =>
       HttpResponse.json({ ...emptyProfile, description: 'A value-focused family retailer.' }),
@@ -273,8 +265,8 @@ describe('Company facts', () => {
       await screen.findByLabelText('Description'),
       'A value-focused family retailer.',
     );
-    await user.click(screen.getByRole('tab', { name: 'Audience' }));
-    await user.type(screen.getByLabelText('Add to Products and services'), 'Clothing');
+    await user.type(screen.getByLabelText('Target audience'), 'Families');
+    await user.click(screen.getByRole('tab', { name: 'Competitors' }));
     await user.click(screen.getByRole('tab', { name: 'Company' }));
     expect(screen.getByLabelText('Description')).toHaveValue('A value-focused family retailer.');
     await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
@@ -282,52 +274,8 @@ describe('Company facts', () => {
     expect(await screen.findByText(/brand knowledge saved/i)).toBeInTheDocument();
     expect(save.body).toEqual({
       description: 'A value-focused family retailer.',
-      products_services: ['Clothing'],
+      target_audience: 'Families',
     });
-  });
-
-  it('keeps an offering containing a comma as one chip through a save', async () => {
-    const user = userEvent.setup({ delay: null });
-    const bays = 'Commercial simulator bays for golf courses, and community centers';
-    const save = captureProfileSave(() =>
-      HttpResponse.json({
-        ...emptyProfile,
-        products_services: [bays, 'Golf nets, cages and mats'],
-      }),
-    );
-    renderContext({ profile: { ...emptyProfile, products_services: [bays] }, tab: 'audience' });
-    const field = await screen.findByLabelText('Add to Products and services');
-    await user.type(field, 'Golf nets, cages and mats{Enter}');
-    // A duplicate, in any case, cannot be added twice.
-    await user.type(field, 'golf NETS, cages and mats{Enter}');
-    expect(
-      within(screen.getByRole('list', { name: 'Products and services' })).getAllByRole('listitem'),
-    ).toHaveLength(2);
-    await user.clear(field);
-    await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
-
-    expect(await screen.findByText(/brand knowledge saved/i)).toBeInTheDocument();
-    expect(save.body).toEqual({ products_services: [bays, 'Golf nets, cages and mats'] });
-    const list = screen.getByRole('list', { name: 'Products and services' });
-    expect(
-      within(list)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual([bays, 'Golf nets, cages and mats']);
-  });
-
-  it('removes an offering chip from the saved list', async () => {
-    const user = userEvent.setup({ delay: null });
-    const save = captureProfileSave(() =>
-      HttpResponse.json({ ...emptyProfile, products_services: ['Golf mats'] }),
-    );
-    renderContext({
-      profile: { ...emptyProfile, products_services: ['Golf nets', 'Golf mats'] },
-      tab: 'audience',
-    });
-    await user.click(await screen.findByRole('button', { name: 'Remove Golf nets' }));
-    await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
-    await waitFor(() => expect(save.body).toEqual({ products_services: ['Golf mats'] }));
   });
 
   it('sends only the category, buyer and market a reader changed', async () => {
@@ -339,7 +287,7 @@ describe('Company facts', () => {
         business_context: { category: 'feed software', buyer_type: 'b2b' },
       },
     });
-    const category = await screen.findByLabelText(/what you sell/i);
+    const category = await screen.findByLabelText('Category');
     expect(category).toHaveValue('feed software');
     expect(screen.getByLabelText('Who buys it')).toHaveTextContent('Businesses');
     await user.clear(category);
@@ -364,12 +312,12 @@ describe('Company facts', () => {
     renderContext({
       profile: { ...emptyProfile, business_context: { category: 'feed software' } },
     });
-    await user.clear(await screen.findByLabelText(/what you sell/i));
+    await user.clear(await screen.findByLabelText('Category'));
     await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
 
     expect(await screen.findByText('category is required')).toBeVisible();
     expect(save.body).toEqual({ category: '' });
-    expect(screen.getByLabelText(/what you sell/i)).toHaveValue('');
+    expect(screen.getByLabelText('Category')).toHaveValue('');
   });
 
   it('locks profile fields while a save is pending', async () => {
@@ -439,101 +387,126 @@ describe('Competitors', () => {
 });
 
 describe('Business map', () => {
-  it('shows the map read-only, offerings as one table, suggestions as a draft, linked to the Prompt Builder', async () => {
-    const offering = 'Golf practice net';
-    mswServer.use(
-      http.get(`/api/v1/projects/${project.id}/business-map`, () =>
-        HttpResponse.json({
-          available_offerings: [offering],
-          offerings: [
-            {
-              offering,
-              attributes: [],
-              situations: [
-                {
-                  value: 'Small garden',
-                  origin: 'model',
-                  review_state: 'suggested',
-                  reviewed_by: null,
-                  reviewed_at: null,
-                  source: {},
-                },
-              ],
-              audiences: [],
-              exclusions: [],
-            },
-          ],
-        }),
-      ),
-    );
-    renderContext({
-      profile: {
-        ...emptyProfile,
-        products_services: [offering],
-        business_context: {
-          buyer_roles: ['Club coach', 'Parent'],
-          business_model: 'd2c_product',
-          // Discovery inferred the roles; a person has saved the business model.
-          field_sources: { buyer_roles: 'inferred', business_model: 'reviewed' },
-        },
-      },
-      tab: 'map',
-    });
+  const offering = 'Golf practice net';
+  const suggested = {
+    value: 'Small garden',
+    origin: 'model' as const,
+    review_state: 'suggested' as const,
+    reviewed_by: null,
+    reviewed_at: null,
+    source: {},
+  };
+  const golfMap: BusinessMap = {
+    available_offerings: [offering],
+    offerings: [
+      { offering, attributes: [], situations: [suggested], audiences: [], exclusions: [] },
+    ],
+  };
+  const golfProfile: BrandProfile = {
+    ...emptyProfile,
+    products_services: [offering],
+    business_context: {
+      buyer_roles: ['Club coach', 'Parent'],
+      business_model: 'd2c_product',
+      // Discovery inferred the roles; a person has saved the business model.
+      field_sources: { buyer_roles: 'inferred', business_model: 'reviewed' },
+    },
+  };
 
-    const details = await screen.findByLabelText('Business details');
-    const [roles] = within(details).getAllByRole('list');
-    if (!roles) throw new Error('Buyer roles render as a list');
-    expect(
-      within(roles)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Club coachSuggested', 'ParentSuggested']);
-    expect(details).toHaveTextContent('Business modelProducts sold direct');
-    const map = screen.getByRole('region', { name: 'Business map' });
-    // Every offering is one row of one table.
-    const offerings = screen.getByRole('region', { name: 'Offerings' });
-    const [, row] = within(within(offerings).getByRole('table')).getAllByRole('row');
-    if (!row) throw new Error('The offering renders as a row');
-    expect(
-      within(row)
-        .getAllByRole('cell')
-        .slice(1)
-        .map((cell) => cell.textContent),
-    ).toEqual(['—Not set', 'Suggested: Small garden', '—Not set']);
-    expect(within(row).getByRole('link', { name: offering })).toHaveAttribute(
-      'href',
-      expect.stringContaining('/prompts/build?offering=Golf+practice+net'),
+  it('edits the map in place and saves accepted suggestions through the profile and map owners', async () => {
+    const user = userEvent.setup({ delay: null });
+    const profileSave = captureProfileSave(() => HttpResponse.json(golfProfile));
+    const mapSave: { body?: unknown } = {};
+    mswServer.use(
+      http.put(`/api/v1/projects/${project.id}/business-map`, async ({ request }) => {
+        mapSave.body = await request.json();
+        return HttpResponse.json(golfMap);
+      }),
     );
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(within(map).getByRole('link', { name: 'Edit in Prompt builder' })).toHaveAttribute(
-      'href',
-      expect.stringContaining('/prompts/build'),
+    renderContext({ profile: golfProfile, tab: 'map', handlers: mapReads(golfMap) });
+
+    // Two inferred roles and one suggested situation; a suggestion says so in its name.
+    expect(await screen.findByText('3 suggestions')).toBeVisible();
+    expect(
+      within(screen.getByRole('list', { name: `Situations: ${offering}` })).getByRole('listitem'),
+    ).toHaveTextContent('Small garden (suggested)');
+    expect(screen.getByRole('combobox', { name: 'Business model' })).toHaveTextContent(
+      'Products sold direct',
+    );
+
+    // An offering with commas is one offering, and a repeat in any case is ignored.
+    const add = screen.getByRole('textbox', { name: 'Add offering' });
+    await user.type(add, 'Nets, cages and mats{Enter}');
+    await user.type(add, 'golf PRACTICE net{Enter}');
+    expect(
+      within(screen.getByRole('list', { name: 'Offerings' }))
+        .getAllByRole('listitem', { name: /./ })
+        .map((row) => row.getAttribute('aria-label')),
+    ).toEqual([offering, 'Nets, cages and mats']);
+
+    await user.click(screen.getByRole('button', { name: 'Accept all' }));
+    expect(screen.queryByText(/suggestions?$/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save business map' }));
+
+    await waitFor(() =>
+      expect(mapSave.body).toEqual({
+        offerings: [
+          {
+            offering,
+            attributes: [],
+            situations: [{ value: 'Small garden', review_state: 'confirmed' }],
+            audiences: [],
+            exclusions: [],
+          },
+          {
+            offering: 'Nets, cages and mats',
+            attributes: [],
+            situations: [],
+            audiences: [],
+            exclusions: [],
+          },
+        ],
+      }),
+    );
+    // Accepting sends the inferred roles unchanged, so the API records them reviewed.
+    expect(profileSave.body).toEqual({
+      products_services: [offering, 'Nets, cages and mats'],
+      buyer_roles: ['Club coach', 'Parent'],
+    });
+  });
+
+  it('keeps unsaved map edits across tab switches', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderContext({ profile: golfProfile, tab: 'map', handlers: mapReads(golfMap) });
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Add offering' }),
+      'Hitting mats{Enter}',
+    );
+    await user.click(screen.getByRole('tab', { name: 'Competitors' }));
+    await user.click(screen.getByRole('tab', { name: 'Business map' }));
+    expect(await screen.findByRole('listitem', { name: 'Hitting mats' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save business map' })).not.toHaveAttribute(
+      'aria-disabled',
     );
   });
 
   it('tells an unrecognized saved business model apart from none', async () => {
-    mswServer.use(
-      http.get(`/api/v1/projects/${project.id}/business-map`, () =>
-        HttpResponse.json({ available_offerings: [], offerings: [] }),
-      ),
-    );
     const view = renderContext({
       profile: { ...emptyProfile, business_context: { business_model: 'franchise' } },
       tab: 'map',
+      handlers: mapReads(),
     });
-    expect(await screen.findByLabelText('Business details')).toHaveTextContent(
-      'Business model—Unknown',
+    expect(await screen.findByRole('combobox', { name: 'Business model' })).toHaveTextContent(
+      'Unknown',
     );
     view.unmount();
 
-    renderContext({ tab: 'map' });
-    expect(await screen.findByLabelText('Business details')).toHaveTextContent(
-      'Business model—Not set',
+    renderContext({ tab: 'map', handlers: mapReads() });
+    expect(await screen.findByRole('combobox', { name: 'Business model' })).toHaveTextContent(
+      'Not set',
     );
-    // Nothing suggested: no suggestion note.
-    expect(screen.getByRole('region', { name: 'Business map' })).not.toHaveTextContent(
-      'Entries marked Suggested',
-    );
+    // Nothing suggested: no suggestions notice.
+    expect(screen.queryByRole('button', { name: 'Accept all' })).not.toBeInTheDocument();
   });
 });
 
