@@ -146,6 +146,18 @@ drawn sidebar is visible. In review: a `max-width` media query or
 `@container` rule under `components/marketing/screens/` that targets a
 `.cl-screen` part.
 
+### Popup exits animate, eager CSS pays for itself
+
+**Rule:** Radix popups (menus, popovers, tooltips, dialogs) leave with a CSS
+`animation`, never a `transition`. New eager CSS makes room by deleting dead
+CSS; the budget changes only with the owner.
+**Why:** Radix unmounts on close only after an animation ends, so a
+transition-only exit snapped shut (#918). The eager CSS gzip budget has
+little headroom; the button redesign (#1082) went over it twice before dead
+rules were cut.
+**Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
+under a Radix part that uses `transition` alone.
+
 ## Value states
 
 ### Absence goes through `Absence` and nowhere else
