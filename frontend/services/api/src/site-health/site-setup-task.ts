@@ -36,7 +36,7 @@ import {
   type SitemapUrl,
   type SitemapWalk,
 } from './sitemap-walk.ts';
-import { fillTrackedSet } from './tracked-set.ts';
+import { fillTrackedSet, orderedUnique, trackedRoom } from './tracked-set.ts';
 import {
   Abandoned,
   commitTask,
@@ -209,21 +209,41 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
 
 /**
  * The sitemap fills the tracked set's free slots in the stable order and
- * queues the new pages' analysis. Returns how many joined the tracked set.
+ * queues the new pages' analysis, one window of the order per short commit
+ * under the runtime lock (CO-7): a sitemap of tens of thousands of URLs never
+ * holds the workspace or crawl lock for long. A replayed window skips the
+ * pages already tracked. Resolves false when the lease or the crawl was lost.
  */
-async function trackSitemapPages(trx: Database, crawl: Crawl, listed: SitemapUrl[]) {
-  const joined = await fillTrackedSet(
-    trx,
-    crawl,
-    listed.map(({ item }) => item),
-  );
-  await enqueueCrawlTasks(
-    trx,
-    crawl,
-    joined.map(({ item, siteUrlId }) => analyzeSeed(siteUrlId, item)),
-    'admit',
-  );
-  return joined.length;
+async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed: SitemapUrl[]) {
+  const ordered = orderedUnique(listed.map(({ item }) => item));
+  for (let offset = 0; offset < ordered.length; offset += INVENTORY_CHUNK) {
+    const window = ordered.slice(offset, offset + INVENTORY_CHUNK);
+    let full = false;
+    // NOSONAR: windows commit in order, each under the task's lease.
+    const committed = await commitTask(ctx, claimed, async (trx, lock) => {
+      const live = await loadScope(trx, claimed);
+      if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
+      const { crawl } = live;
+      if (crawl.sample_mode || crawl.discovery_status !== 'pending') {
+        full = true;
+        return;
+      }
+      // Membership and task writes take the runtime lock first, in the Site Health lock order.
+      await lockRuntime(trx, crawl.workspace_id);
+      const { crawl: locked } = await lock();
+      const joined = await fillTrackedSet(trx, locked, window);
+      await enqueueCrawlTasks(
+        trx,
+        locked,
+        joined.map(({ item, siteUrlId }) => analyzeSeed(siteUrlId, item)),
+        'admit',
+      );
+      full = (await trackedRoom(trx, locked)) <= 0;
+    });
+    if (!committed) return false;
+    if (full) break;
+  }
+  return true;
 }
 
 /**
@@ -236,12 +256,10 @@ async function discover(
   trx: Database,
   crawl: Crawl,
   walk: SitemapWalk | null,
-): Promise<{ admitted?: number; discovered?: number; discoveryStatus?: 'completed' | 'running' }> {
+): Promise<{ discovered?: number; discoveryStatus?: 'completed' | 'running' }> {
   if (crawl.sample_mode || crawl.discovery_status !== 'pending') return {};
-  if (walk?.listed.length) {
-    const admitted = await trackSitemapPages(trx, crawl, walk.listed);
-    return { admitted, discovered: walk.discovered, discoveryStatus: 'completed' };
-  }
+  // The listed pages were tracked in their own commits (`trackSitemapPages`).
+  if (walk?.listed.length) return { discovered: walk.discovered, discoveryStatus: 'completed' };
   if (walk?.unread) return { discoveryStatus: 'completed' };
   await enqueueCrawlTasks(
     trx,
@@ -415,6 +433,11 @@ async function walkThenPersist(input: Parameters<typeof sitemapDiscovery>[0]) {
   const found = await sitemapDiscovery(input);
   if (found.kind === 'lost') return;
   if (found.kind === 'retry') return deferWalk(input.ctx, input.claimed, found);
+  if (
+    found.walk?.listed.length &&
+    !(await trackSitemapPages(input.ctx, input.claimed, found.walk.listed))
+  )
+    return;
   await persist(input.ctx, input.claimed, found.facts, found.walk, input.settings);
 }
 

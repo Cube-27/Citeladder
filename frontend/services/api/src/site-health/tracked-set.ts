@@ -8,6 +8,7 @@
  * downgrade keeps the first N, an upgrade extends the set in place
  * (`fitTrackedSet`). Memberships are written by `admission-writes.ts`.
  */
+import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -59,8 +60,20 @@ function trackedTarget(crawl: Crawl) {
   );
 }
 
-/** Every page the project ever tracked, by URL hash, and how many are active now. */
-async function trackedPages(trx: Database, crawl: Crawl) {
+/**
+ * Which of `hashes` the project ever tracked, and how many pages are active
+ * now: bounded by the candidates, never the project's whole tracked history.
+ */
+async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
+  const active = await trx
+    .selectFrom('monitored_site_urls')
+    .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('project_id', '=', crawl.project_id)
+    .where('fill_order', 'is not', null)
+    .where('active', '=', true)
+    .executeTakeFirstOrThrow();
+  if (!hashes.length) return { hashes: new Set<string>(), active: Number(active.count) };
   const rows = await trx
     .selectFrom('monitored_site_urls as m')
     .innerJoin('site_urls as u', (join) =>
@@ -69,15 +82,13 @@ async function trackedPages(trx: Database, crawl: Crawl) {
         .onRef('u.workspace_id', '=', 'm.workspace_id')
         .onRef('u.project_id', '=', 'm.project_id'),
     )
-    .select(['u.url_hash', 'm.active'])
+    .select('u.url_hash')
     .where('m.workspace_id', '=', crawl.workspace_id)
     .where('m.project_id', '=', crawl.project_id)
     .where('m.fill_order', 'is not', null)
+    .where('u.url_hash', '=', sql<string>`any(${hashes}::text[])`)
     .execute();
-  return {
-    hashes: new Set(rows.map((row) => row.url_hash)),
-    active: rows.filter((row) => row.active).length,
-  };
+  return { hashes: new Set(rows.map((row) => row.url_hash)), active: Number(active.count) };
 }
 
 /**
@@ -87,10 +98,15 @@ async function trackedPages(trx: Database, crawl: Crawl) {
  * The caller holds the workspace runtime lock.
  */
 export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
-  const tracked = await trackedPages(trx, crawl);
+  const ordered = orderedUnique(candidates);
+  const tracked = await trackedPages(
+    trx,
+    crawl,
+    ordered.map((item) => item.hash),
+  );
   const room = trackedTarget(crawl) - tracked.active;
   if (room <= 0) return [];
-  const picked = orderedUnique(candidates)
+  const picked = ordered
     .filter((item) => item.disposition === 'analyze' && !tracked.hashes.has(item.hash))
     .slice(0, room);
   if (!picked.length) return [];
@@ -106,6 +122,11 @@ export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Ca
     const siteUrlId = ids.get(item.hash)!;
     return joined.has(siteUrlId) ? [{ item, siteUrlId }] : [];
   });
+}
+
+/** The tracked set's free slots for this crawl. */
+export async function trackedRoom(trx: Database, crawl: Crawl) {
+  return trackedTarget(crawl) - (await trackedPages(trx, crawl, [])).active;
 }
 
 /**
