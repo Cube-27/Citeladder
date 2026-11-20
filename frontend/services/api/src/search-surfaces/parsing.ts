@@ -82,16 +82,24 @@ function observedAt(page: Record<string, unknown>, task: Record<string, unknown>
   }
   return null;
 }
+const OVERVIEW_ELEMENT_TYPES = [
+  'ai_overview_element',
+  'ai_overview_expanded_element',
+  'ai_overview_table_element',
+  'ai_overview_video_element',
+];
+/** An element and its expanded components, which carry their own text, links and references. */
+const withComponents = (element: Record<string, unknown>) => [
+  element,
+  ...objects(element.components),
+];
 function elements(block: Record<string, unknown>): [number, Record<string, unknown>][] {
   if (block.items != null && !Array.isArray(block.items))
     throw new Error('Invalid overview elements');
   const result: [number, Record<string, unknown>][] = [];
   function descend(value: unknown, index: number, depth: number) {
     const node = record(value);
-    if (
-      depth > 128 ||
-      !['ai_overview_element', 'ai_overview_expanded_element'].includes(scalarText(node.type))
-    )
+    if (depth > 128 || !OVERVIEW_ELEMENT_TYPES.includes(scalarText(node.type)))
       throw new Error('Unknown overview element');
     result.push([index, node]);
     for (const child of objects(node.items)) descend(child, index, depth + 1);
@@ -104,9 +112,14 @@ function fragments(element: Record<string, unknown>) {
   const values = [
     text(element.title),
     text(element.text),
+    text(element.snippet),
     ...list(table.table_header).map(text),
     ...list(table.table_content).map((row) => list(row).map(text).filter(Boolean).join(' ')),
     ...list(element.items).map(text),
+    ...objects(element.components).flatMap((part) => [
+      text(part.title),
+      text(part.text) || text(part.markdown),
+    ]),
   ].filter(Boolean);
   return values.length ? values : [text(element.markdown)].filter(Boolean);
 }
@@ -162,7 +175,7 @@ function overviewContent(walked: [number, Record<string, unknown>][]) {
       seenText.add(key);
       parts.push(fragment.trim());
     }
-    for (const link of objects(element.links)) {
+    for (const link of withComponents(element).flatMap((part) => objects(part.links))) {
       const url = scalarText(link.url).trim();
       if (url && !links.has(url))
         links.set(url, {
@@ -175,9 +188,14 @@ function overviewContent(walked: [number, Record<string, unknown>][]) {
   }
   return { parts, links };
 }
-function overviewReferences(block: Record<string, unknown>) {
+/** The root, element and component references, each URL once in first-seen order. */
+function overviewReferences(
+  block: Record<string, unknown>,
+  walked: [number, Record<string, unknown>][],
+) {
   const references = new Map<string, SurfaceReference>();
-  for (const ref of objects(block.references)) {
+  const owners = [block, ...walked.flatMap(([, element]) => withComponents(element))];
+  for (const ref of owners.flatMap((owner) => objects(owner.references))) {
     const url = scalarText(ref.url).trim(),
       host = domain(scalarText(ref.domain) || url);
     if (url && !references.has(url))
@@ -215,7 +233,7 @@ export function parseOverview(
   try {
     const walked = elements(block),
       { parts, links } = overviewContent(walked);
-    const references = overviewReferences(block);
+    const references = overviewReferences(block, walked);
     return {
       ...base,
       answer_text: parts.join('\n\n'),

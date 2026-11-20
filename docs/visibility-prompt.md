@@ -518,7 +518,10 @@ owns leases and run state; claim, finalize and schedule edits serialize on the
 schedule row. The [maintenance owner](../frontend/services/api/src/audits/maintenance.ts)
 independently reconciles expired leases and unused funding. DataForSEO submission
 intent commits before the paid request; uncertain submissions remain uncertain
-and are never automatically resubmitted. Known task IDs use free result polling.
+and are never automatically resubmitted. A submission DataForSEO refused for its
+rate limit (`rate_limit_status_codes`, reported in the body, never as HTTP 429)
+created nothing and is sent again after a retry delay, without spending an
+attempt. Known task IDs use free result polling.
 A DataForSEO refusal of the account itself (paused, unfunded or unsubscribed:
 `account_unavailable_status_codes` in `dataforseo.json`) fails that answer as
 `provider_account_unavailable` and pauses the connection for
@@ -543,7 +546,8 @@ Scraper model reports are supplementary provenance, distinct from the frozen pro
 
 Paid provider tasks retain their committed submission/account identity across
 restarts. Uncertain scraper submissions use exact-tag, product-checked, bounded
-paginated reconciliation. The config-owned recovery deadline runs from committed intent. Recovery never resubmits a
+paginated reconciliation. The config-owned recovery deadline runs from committed intent. A paid
+submission whose receipt failed to save stays leased, so lease expiry reconciles it by its tag. Recovery never resubmits a
 paid task; unrecovered tasks fail without negative brand observations. Known
 submission charges remain recorded even when retrieval fails: the failed task
 keeps a failure artifact carrying the reported charge and its cost projection,
