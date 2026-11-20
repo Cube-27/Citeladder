@@ -137,32 +137,24 @@ describe('probe admission', () => {
     expect(debits.map((row) => Number(row.units))).toEqual([LABEL]);
   });
 
-  it('runs the quoted probe, skipping engines a market cannot measure, and holds exactly the quote', async () => {
+  it('quotes only the engine-market pairs that run, then launches every market holding exactly the quote', async () => {
     const { t } = await probeTenant(1_000_000);
-    await managedPlan(db, t.workspaceId);
     await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
-    const markets = await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
-    const brazil = markets.find((market) => market.country_code === 'BR')?.id;
-    const { quote } = await probeStatus(db, t);
-    // Brazil has no Gemini (no location control) and no Gemini app search in Portuguese.
+    await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
     const perMarket = 3 * policy.probes.repetitions;
-    expect([quote.markets.length, quote.answers]).toEqual([2, (5 + 3) * perMarket]);
+    // On its own ChatGPT key the workspace probes both markets.
+    const { quote } = await probeStatus(db, t);
+    expect([quote.markets.length, quote.answers]).toEqual([2, 2 * perMarket]);
     const ids = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
-    const engines = await db
-      .selectFrom('audit_tasks as k')
-      .innerJoin('audits as a', 'a.id', 'k.audit_id')
-      .select(['a.market_id', 'k.logical_engine'])
-      .where('k.audit_id', 'in', ids)
-      .distinct()
-      .execute();
-    expect(
-      engines
-        .filter((row) => row.market_id === brazil)
-        .map((row) => row.logical_engine)
-        .sort(),
-    ).toEqual(['chatgpt', 'chatgpt_search', 'claude']);
     const held = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'reservation');
-    expect(held.reduce((sum, row) => sum + Number(row.units), 0)).toBe(quote.credits);
+    expect([ids.length, held.reduce((sum, row) => sum + Number(row.units), 0)]).toEqual([
+      2,
+      quote.credits,
+    ]);
+    // Managed, Brazil skips Gemini (no location control) and the Gemini app (no Portuguese).
+    await managedPlan(db, t.workspaceId);
+    const managed = (await probeStatus(db, t)).quote;
+    expect(managed.answers).toBe((5 + 3) * perMarket);
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {

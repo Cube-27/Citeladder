@@ -23,7 +23,6 @@
       "services/api/src/audits/creation.ts::createMarketAudit": 16,
       "services/api/src/audits/exports.ts::markdownExport": 24,
       "services/api/src/audits/finalization.ts::finalizeAudit::<anonymous>": 13,
-      "services/api/src/audits/freeze.ts::prepareAudit": 13,
       "services/api/src/audits/maintenance.ts::reclaim::<anonymous>": 16,
       "services/api/src/audits/maintenance.ts::repairOwnedCompletion::<anonymous>": 19,
       "services/api/src/auth/challenges.ts::consumeChallenge::<anonymous>": 15,

@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { canMeasure } from '../src/audits/freeze.ts';
 import { taskFunding } from '../src/audits/prompt-runs.ts';
 import { policy } from '../src/config.ts';
 import { mapKnownFor, mapObjections, mapThemeBrands } from '../src/probes/label-model.ts';
@@ -61,6 +62,29 @@ describe('position score', () => {
     ];
     expect([rankOf(entries, 'brand'), rankOf(entries, 'b'), rankOf(entries, 'a')]).toEqual([
       2, 2, 1,
+    ]);
+  });
+});
+
+describe('probe market coverage', () => {
+  it('skips an engine that cannot measure a market instead of failing it', () => {
+    const brazil = {
+      id: '0f3b1c9e-0000-4000-8000-0000000000b2',
+      country_code: 'BR',
+      language_code: 'pt',
+    };
+    const home = { id: null, country_code: 'BR', language_code: 'pt' };
+    expect(
+      (['chatgpt', 'chatgpt_search', 'gemini_consumer', 'gemini'] as const).map((engine) => [
+        canMeasure(engine, brazil),
+        canMeasure(engine, home),
+      ]),
+    ).toEqual([
+      [true, true],
+      [true, true],
+      // The Gemini app has no Portuguese search; the Gemini API cannot leave the default market.
+      [false, false],
+      [false, true],
     ]);
   });
 });
