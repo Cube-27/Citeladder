@@ -526,15 +526,15 @@
   --color-accent-text: oklch(75.3% 0.155 41.6);
   /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: oklch(31% 0.041 43);
+  --color-accent-wash: oklch(27% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
-  --color-positive-wash: oklch(29% 0.035 157);
+  --color-positive-wash: oklch(27% 0.035 157);
   --color-negative: oklch(74.8% 0.157 10.3);
   --color-negative-wash: oklch(28% 0.044 7);
   --color-warning: oklch(81.4% 0.14 81.3);
-  --color-warning-wash: oklch(30% 0.0354 86);
+  --color-warning-wash: oklch(27% 0.0354 86);
   --color-info: oklch(76.6% 0.119 265.7);
-  --color-info-wash: oklch(30% 0.0529 266);
+  --color-info-wash: oklch(27% 0.0529 266);
   --color-data-rival-2: oklch(74.2% 0.1035 243.3);
   --color-data-rival-3: oklch(66.3% 0.169 293);
   --color-data-rival-4: oklch(75% 0.1072 183.6);
