@@ -97,32 +97,44 @@ function MovementMeter({
 }
 
 /**
- * The facts under an Action wherever the Overview lists it: its priority, its
- * target and how much evidence backs it, worded once.
+ * Where an Action applies and how much evidence backs it, worded once. A
+ * theme's label repeats the title ("Orphan pages theme"), so it is left out.
  */
+function actionScope(action: Opportunity): string {
+  const label = action.target_label;
+  const echoes = label?.toLowerCase().startsWith(action.title.toLowerCase());
+  const target = label && !echoes ? readableUrl(label) : null;
+  const evidence = pluralCount(action.evidence_summary.count, 'evidence item');
+  return target ? `${target} · ${evidence}` : evidence;
+}
+
+/** The one priority mapping the evidence drawer uses. */
+function ActionPriority({ action }: Readonly<{ action: Opportunity }>) {
+  return (
+    <StatusMark variant="priority" value={severityPriority(action.severity)}>
+      {severityLabel(action.severity)}
+    </StatusMark>
+  );
+}
+
+/** The facts under an Action wherever the Overview lists it: its priority, then its scope. */
 export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <Inline>
-      {/* The one priority mapping the evidence drawer uses. */}
-      <StatusMark variant="priority" value={severityPriority(action.severity)}>
-        {severityLabel(action.severity)}
-      </StatusMark>
-      <ClampText className={textRole('caption', 'min-w-0 flex-1')}>
-        {`${action.target_label ? readableUrl(action.target_label) : 'Project-wide'} · ${pluralCount(action.evidence_summary.count, 'evidence item')}`}
-      </ClampText>
+      <ActionPriority action={action} />
+      <ClampText className={textRole('caption', 'min-w-0 flex-1')}>{actionScope(action)}</ClampText>
     </Inline>
   );
 }
 
-/** One ranked action, as a row of the shared reorderable list. */
+/** One ranked action, as a one-line row of the shared reorderable list. */
 export function actionItem(action: Opportunity): ReorderItem {
   return {
     key: action.id,
     name: action.title,
-    // The severity mark carries the priority; the score is not repeated.
     content: (
-      <Stack gap="tight">
-        {/* The Action's own title, from its source; cut to one line with all of it in the tooltip. */}
+      <Inline gap="item" className="min-w-0">
+        {/* The Action's own title, from its source; cut with all of it in the tooltip. */}
         <TextLink
           text="body"
           underline="hover"
@@ -131,8 +143,11 @@ export function actionItem(action: Opportunity): ReorderItem {
         >
           <ClampText>{action.title}</ClampText>
         </TextLink>
-        <ActionFacts action={action} />
-      </Stack>
+        <ClampText className={textRole('body', 'text-ink-2 min-w-0 flex-1')}>
+          {actionScope(action)}
+        </ClampText>
+        <ActionPriority action={action} />
+      </Inline>
     ),
   };
 }

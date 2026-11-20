@@ -5,6 +5,12 @@ const BARS = [
   { x: 10, height: 12 },
 ] as const;
 
+/** An empty bar is a rule; High's filled bars take the negative hue, as a High priority mark does. */
+function barFill(index: number, level: 1 | 2 | 3) {
+  if (index >= level) return 'fill-control-line';
+  return level === 3 ? 'fill-negative' : 'fill-ink';
+}
+
 /**
  * A row's impact: three rising bars, as many filled as the level, then its
  * word. Quieter than a priority StatusMark, for dense rows where every row
@@ -22,7 +28,7 @@ export function ImpactBars({ level, children }: Readonly<{ level: 1 | 2 | 3; chi
             width={3}
             height={bar.height}
             rx={1}
-            className={index < level ? 'fill-ink' : 'fill-control-line'}
+            className={barFill(index, level)}
           />
         ))}
       </svg>

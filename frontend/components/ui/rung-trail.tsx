@@ -2,6 +2,7 @@ import { Check, ChevronRight, CircleHelp, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { SLIP_FACE } from '@/components/ui/slip';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -248,62 +249,55 @@ const SETUP_WORD = {
   waiting: 'Waiting',
 } as const satisfies Record<SetupStep['state'], string>;
 
-const SETUP_MARKER = {
-  done: 'bg-positive text-surface',
-  next: 'bg-accent',
-  running: 'bg-accent',
-  waiting: 'bg-surface border border-control-line',
-} as const satisfies Record<SetupStep['state'], string>;
-
 /**
- * SetupSteps — a checklist of setup steps, one line each on one connector:
- * a 12px marker (positive with a check when done, accent for the step you are
- * on, hollow while waiting), the title, its state word and, on the current
- * step, that step's action. Rows sit 40px apart.
+ * SetupSteps — a checklist of setup steps in a framed list of 40px rows: a
+ * check once done, the step's title and its state word, and on the step you
+ * are on a 2px accent mark (it is "here"), the title at 500 and its action
+ * at the row's end. Waiting steps are in the secondary ink.
  */
 export function SetupSteps({
   steps,
   label,
 }: Readonly<{ steps: readonly SetupStep[]; label: string }>) {
   return (
-    <ol aria-label={label} className="m-0 flex min-w-0 list-none flex-col p-0">
-      {steps.map((step, index) => {
+    <ol
+      aria-label={label}
+      className={cn(SLIP_FACE, 'divide-rule m-0 list-none divide-y overflow-hidden p-0')}
+    >
+      {steps.map((step) => {
         const current = step.state === 'next' || step.state === 'running';
         return (
           <li
             key={step.id}
             aria-current={current ? 'step' : undefined}
             data-setup-step={step.state}
-            className="relative flex min-h-10 min-w-0 items-center gap-3"
+            className="relative flex min-h-10 min-w-0 items-center gap-2 px-4"
           >
-            {/* The connector runs through the markers' centres, between the first and last. */}
+            {current ? (
+              <span
+                aria-hidden
+                className="bg-accent absolute inset-y-2 start-0 w-0.5 rounded-full"
+              />
+            ) : null}
+            <span aria-hidden className="flex w-4 shrink-0 justify-center">
+              {step.state === 'done' ? <Icon icon={Check} className="text-ink-2 my-0" /> : null}
+              {step.state === 'running' ? <Spinner /> : null}
+            </span>
             <span
-              aria-hidden
-              className={cn(
-                'bg-control-line absolute start-[5px] w-0.5',
-                index === 0 ? 'top-1/2' : 'top-0',
-                index === steps.length - 1 ? 'bottom-1/2' : 'bottom-0',
-              )}
-            />
-            <span
-              aria-hidden
-              className={cn(
-                'relative grid size-3 shrink-0 place-items-center rounded-mark',
-                SETUP_MARKER[step.state],
+              className={textRole(
+                current ? 'label' : 'body',
+                cn('min-w-0 truncate', step.state === 'waiting' ? 'text-ink-2' : 'text-ink'),
               )}
             >
-              {step.state === 'done' ? <Check className="size-2.5" /> : null}
+              {step.label}
             </span>
-            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 py-1">
-              <span className={textRole(current ? 'label' : 'body', 'text-ink min-w-0')}>
-                {step.label}
-              </span>
-              <span className={textRole('caption', 'text-ink-2')}>
-                <span className="sr-only">, </span>
-                {SETUP_WORD[step.state]}
-              </span>
-              {current && step.action ? <span className="ms-auto">{step.action}</span> : null}
+            <span className={textRole('caption', 'text-ink-2 shrink-0')}>
+              <span className="sr-only">, </span>
+              {SETUP_WORD[step.state]}
             </span>
+            {current && step.action ? (
+              <span className="ms-auto shrink-0">{step.action}</span>
+            ) : null}
           </li>
         );
       })}

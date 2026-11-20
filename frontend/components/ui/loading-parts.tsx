@@ -1,4 +1,3 @@
-import { SectionHeader } from '@/components/ui/section';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
 import { textRole, type TextRole } from '@/components/ui/typography';
 
@@ -17,21 +16,5 @@ export function TextLineSkeleton({
     <span aria-hidden className={textRole(text, 'flex h-lh items-center')}>
       <SkeletonBlock className={LINE_WIDTH[width]} />
     </span>
-  );
-}
-
-/**
- * A section's header while its read is pending: the title line in its role,
- * the description line, and the severity ring a count summary carries beside them.
- */
-export function SectionHeaderSkeleton({
-  title,
-  ring = false,
-}: Readonly<{ title: 'figure' | 'heading'; ring?: boolean }>) {
-  return (
-    <SectionHeader actions={ring ? <SkeletonBlock className="size-24 rounded-full" /> : undefined}>
-      <TextLineSkeleton text={title} width={title === 'figure' ? 'medium' : 'short'} />
-      <TextLineSkeleton text="body" width="long" />
-    </SectionHeader>
   );
 }
