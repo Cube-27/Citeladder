@@ -45,6 +45,12 @@ commercial equivalence. An identity the model judges `insufficient_evidence` is
 recorded on the snapshot (`identity_status`) and raises the review warning
 `insufficient_evidence`.
 
+The same identity request proposes buyer-facing themes (AV-27). Code keeps at
+most eight: confident, one to three words, never a company fact (the configured
+terms) or the `Other` fallback; too little evidence keeps none, never invented
+ones. They ride the snapshot, are never shown in onboarding, and become the
+project's themes at completion.
+
 Every website, owned domain and competitor domain is stored as its site
 ([`siteDomain`](../frontend/services/api/src/analysis/domains.ts), AR-5): the
 registrable domain, except that a host on a shared platform is a site of its
@@ -99,7 +105,8 @@ picks the buyer type and market scope.
 idempotency key and the confirmation (at most five competitors, each with a
 distinct public domain), locks the authorized discovery, requires it to be
 `ready` with persisted research, and in one transaction creates the project,
-brand profile and empty prompt set and marks the discovery `project_created`.
+brand profile, research themes and empty prompt set and marks the discovery
+`project_created`.
 A rollback leaves no partial project. Competitor websites are not fetched again.
 Completion makes no model call, creates no topics or prompts, queues no task and
 starts no Site Health crawl. A same-key replay returns the same project; a

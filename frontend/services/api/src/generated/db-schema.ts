@@ -2388,6 +2388,17 @@ export interface ProjectMarkets {
   workspace_id: string;
 }
 
+export interface ProjectThemes {
+  created_at: Timestamp;
+  id: string;
+  name: string;
+  position: number;
+  project_id: string;
+  source: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
 export interface Projects {
   benchmark_mode: string;
   brand_name: string;
@@ -3839,6 +3850,7 @@ export interface DB {
   platform_calls: PlatformCalls;
   policy_acceptances: PolicyAcceptances;
   project_markets: ProjectMarkets;
+  project_themes: ProjectThemes;
   projects: Projects;
   prompt_candidates: PromptCandidates;
   prompt_generation_runs: PromptGenerationRuns;

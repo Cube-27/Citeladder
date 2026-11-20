@@ -2,6 +2,7 @@ import {
   brandProfileSchema,
   businessMapSchema,
   competitorSchema,
+  projectThemeSchema,
 } from '@citeladder/contracts/project';
 import {
   brandFactImportResultSchema,
@@ -32,11 +33,24 @@ import {
   updateBrandFact,
 } from '../projects/brand-facts.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
+import {
+  createTheme,
+  deleteTheme,
+  listThemes,
+  renameTheme,
+  themeRequest,
+} from '../projects/themes.ts';
 import { acceptSuggestion, COMPETITORS_WRITE, rejectSuggestion } from '../commands/competitors.ts';
 import { routeActor } from '../commands/permission.ts';
 import { listSuggestions } from '../projects/competitor-suggestions.ts';
 import { logoResponse } from '../projects/logos.ts';
-import { defineGetRoute, definePatchRoute, definePostRoute, definePutRoute } from './define.ts';
+import {
+  defineDeleteRoute,
+  defineGetRoute,
+  definePatchRoute,
+  definePostRoute,
+  definePutRoute,
+} from './define.ts';
 import { fileResponse } from './opportunity-contracts.ts';
 
 const family = 'brand-identity';
@@ -149,6 +163,45 @@ export const brandIdentityRoutes = [
       const update = await readBody(c, brandFactUpdate);
       return updateBrandFact(db, scope, c.get('user').id, path.fact_id, update);
     },
+  }),
+  defineGetRoute({
+    ...activeProject,
+    path: `${root}/themes`,
+    params: { path: projectPath, query: {} },
+    response: z.array(projectThemeSchema),
+    handle: ({ c, db }, { path }) => listThemes(db, scopeOf(c, path.project_id)),
+  }),
+  definePostRoute({
+    ...activeProject,
+    path: `${root}/themes`,
+    capability: 'write',
+    status: 201,
+    params: { path: projectPath, query: {} },
+    body: themeRequest,
+    response: projectThemeSchema,
+    async handle({ c, db }, { path }) {
+      return createTheme(db, scopeOf(c, path.project_id), await readBody(c, themeRequest));
+    },
+  }),
+  definePatchRoute({
+    ...activeProject,
+    path: `${root}/themes/{theme_id}`,
+    capability: 'write',
+    params: { path: { ...projectPath, theme_id: uuid }, query: {} },
+    body: themeRequest,
+    response: projectThemeSchema,
+    async handle({ c, db }, { path }) {
+      const input = await readBody(c, themeRequest);
+      return renameTheme(db, { ...scopeOf(c, path.project_id), themeId: path.theme_id }, input);
+    },
+  }),
+  defineDeleteRoute({
+    ...activeProject,
+    path: `${root}/themes/{theme_id}`,
+    capability: 'write',
+    params: { path: { ...projectPath, theme_id: uuid }, query: {} },
+    handle: ({ c, db }, { path }) =>
+      deleteTheme(db, { ...scopeOf(c, path.project_id), themeId: path.theme_id }),
   }),
   defineGetRoute({
     ...activeProject,
