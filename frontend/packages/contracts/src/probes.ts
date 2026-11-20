@@ -100,6 +100,8 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
     brand: z.string(),
     category: z.string(),
     language_code: z.string(),
+    /** Known-for answers the scores average over; 0 means none answered, not nothing raised. */
+    known_for_answers: z.int().nonnegative(),
     /** What answers say the brand is known for, highest score first; `theme_id: null` is Other. */
     known_for: z.array(
       z.object({ theme_id: uuid().nullable(), theme: z.string(), score, raised_in: z.int() }),
@@ -121,6 +123,8 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
     engines: z.array(
       z.object({
         engine: logicalEngineSchema,
+        /** Whether this engine answered the known-for question at all. */
+        answered: z.boolean(),
         top_themes: z.array(z.object({ theme_id: uuid().nullable(), theme: z.string() })),
         /** The brand's rank in this engine's answers on its top theme; null when not named. */
         rank_in_top_theme: z.int().positive().nullable(),
@@ -139,6 +143,8 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
     brand: z.string(),
     /** Objection answers the scores average over. */
     answers: z.int().nonnegative(),
+    /** Engines that answered the objection question: what a group's engine count is out of. */
+    answered_by: z.array(logicalEngineSchema),
     /** The mean score of the groups an engine raised in this probe; null when none was. */
     average: score.nullable(),
     groups: z.array(

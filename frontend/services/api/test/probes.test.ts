@@ -349,9 +349,11 @@ describe('probe labelling and reads', () => {
         gap: 37,
       },
     ]);
+    expect(market.known_for_answers).toBe(3);
     expect(market.engines).toEqual([
       {
         engine: 'chatgpt',
+        answered: true,
         top_themes: [
           { theme_id: themeId, theme: 'Comfort' },
           { theme_id: null, theme: 'Other' },
@@ -401,7 +403,7 @@ describe('probe labelling and reads', () => {
       ['Fit runs small', 0, [], -63, [63, 0], 0],
     ]);
     // The average reads only the groups an engine raised in this probe.
-    expect(objections.average).toBe(95);
+    expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
     const labellings = await db
       .selectFrom('probe_labellings')
       .select('outcome')

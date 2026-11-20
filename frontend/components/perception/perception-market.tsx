@@ -52,7 +52,11 @@ export function PerceptionMarket({
                 ))}
               </Stack>
             ) : (
-              <StateBlock kind="empty" inline message="Nothing raised." />
+              <StateBlock
+                kind="empty"
+                inline
+                message={data.known_for_answers ? 'Nothing raised.' : 'No answers.'}
+              />
             )}
           </SectionContent>
         </TitledSection>
@@ -102,7 +106,7 @@ function Lede({ data }: Readonly<{ data: ProbeMarketValue }>) {
     {
       key: 'led',
       label: 'Themes you lead',
-      value: `${led.length} of ${data.themes.length}`,
+      value: data.themes.length ? `${led.length} of ${data.themes.length}` : null,
       sub: led.map((row) => row.theme).join(', ') || undefined,
     },
   ];
@@ -141,7 +145,7 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
         state={
           data.themes.length
             ? undefined
-            : { kind: 'empty', inline: true, message: 'No themes yet.' }
+            : { kind: 'empty', inline: true, message: 'No theme answers.' }
         }
       >
         {data.themes.map((row) => {
@@ -202,12 +206,12 @@ function EngineTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
                   ))}
                 </Inline>
               ) : (
-                <Absence label="Nothing raised" />
+                <Absence label={row.answered ? 'Nothing raised' : 'No answers'} />
               )}
             </TableCell>
             <TableCell numeric>
               {row.rank_in_top_theme === null ? (
-                <Absence label="Not named" />
+                <Absence label={row.top_themes.length ? 'Not named' : 'No top theme'} />
               ) : (
                 `#${row.rank_in_top_theme}`
               )}

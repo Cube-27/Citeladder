@@ -141,6 +141,16 @@ Build these before enabling them:
     ends `interrupted` (B69). A turn that hits `turn_timeout`, or that the
     browser closes while a search is pending or before the document's save call
     was accepted, is still refunded under B58, and its document is not saved.
+- **Market probe allowance (owner 2026-11-20).** Probes charge AI credits
+  today: 100 credits per managed answer plus 5 for labelling, 5 on BYOK
+  (`config/probes.json`, `audits/prompt-runs.ts`). A 3-engine probe (about 90
+  answers) outspends Starter's 5,000 credits and drains the balance the Agent
+  and onboarding need. Give probes their own `probe_runs_per_period` counter,
+  funded like `prompt_runs_per_period`: one run per probe answer whichever key
+  pays, labelling included, managed engine cost counted in the funded monthly
+  budget, refusal 403 `probe_runs_exhausted`; then delete `answer_credits` and
+  `label_credits`. Plan amounts are open (proposed: Starter 0, Growth 600, Scale
+  2,000, trial 0), and the operator provisioning script needs a value too.
 
 Owners: [Billing and entitlements](../billing-entitlements.md),
 [billing provider readiness](../billing-provider-readiness.md) and the

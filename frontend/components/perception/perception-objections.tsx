@@ -55,7 +55,7 @@ function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
     {
       key: 'widest',
       label: 'Raised by most engines',
-      value: widest ? `${widest.engines.length} of ${data.probe.engines.length}` : null,
+      value: widest ? `${widest.engines.length} of ${data.answered_by.length}` : null,
       sub: widest?.name,
     },
     {
@@ -112,9 +112,13 @@ function ObjectionTable({
         {data.groups.map((group) => (
           <TableRow key={group.id}>
             <TableCell>{group.name}</TableCell>
-            <TableCell numeric>{group.score ?? <Absence label="Not asked" />}</TableCell>
+            <TableCell numeric>{group.score ?? <Absence label="No answers" />}</TableCell>
             <TableCell numeric>
-              {group.engines.length} of {data.probe.engines.length}
+              {data.answered_by.length ? (
+                `${group.engines.length} of ${data.answered_by.length}`
+              ) : (
+                <Absence label="No answers" />
+              )}
             </TableCell>
             <TableCell numeric>
               {/* A higher score is raised earlier: a rise is worse for the brand. */}

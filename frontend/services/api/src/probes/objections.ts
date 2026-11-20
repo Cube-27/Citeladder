@@ -113,11 +113,13 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   });
   // A late, rare objection can average to 0 and still be raised by an engine.
   const raised = rows.filter((row) => row.engines.length > 0);
+  const answering = new Set(current.asked.map((answer) => answer.engine));
   return {
     state: 'value',
     probe: { ...latest.run, answers: latestAnswers.length },
     brand: roster.brand,
     answers: current.asked.length,
+    answered_by: logicalEngines.filter((engine) => answering.has(engine)),
     average: raised.length
       ? Math.round(raised.reduce((sum, row) => sum + (row.score ?? 0), 0) / raised.length)
       : null,

@@ -48,6 +48,7 @@ function market(themes: ProbeMarketValue['themes'], knownFor: string[]): ProbeMa
     brand: 'Acme',
     category: 'Shoes',
     language_code: 'en',
+    known_for_answers: 6,
     known_for: knownFor.map((name, index) => ({
       theme_id: themes.find((row) => row.theme === name)?.theme_id ?? null,
       theme: name,
@@ -130,6 +131,7 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 6,
+      answered_by: ['chatgpt', 'claude'],
       average: 68,
       groups: [
         group('Too expensive', 90, ['chatgpt']),
@@ -150,6 +152,7 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 6,
+      answered_by: ['chatgpt', 'claude'],
       average: null,
       groups: [group('Fit', 0, [])],
     });
@@ -165,6 +168,7 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 30,
+      answered_by: ['chatgpt', 'claude'],
       average: 0,
       groups: [group('Fit', 0, ['claude']), group('Slow', 0, [])],
     });
@@ -178,6 +182,7 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 0,
+      answered_by: [],
       average: null,
       groups: [group('Fit', null, [])],
     });

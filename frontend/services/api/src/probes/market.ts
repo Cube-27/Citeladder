@@ -119,6 +119,7 @@ export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMark
     const row = first && asked.length ? themeRow({ id: first, name: '' }, asked, roster) : null;
     return {
       engine,
+      answered: own.some((answer) => answer.question.question === 'known_for'),
       top_themes: top.map(({ theme_id, theme }) => ({ theme_id, theme })),
       // A gap as large as the leader's score means the brand scored 0: not named.
       rank_in_top_theme: row && row.gap < row.leader.score ? row.rank : null,
@@ -130,6 +131,7 @@ export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMark
     brand: roster.brand,
     category: subject.category,
     language_code: latest.run.markets[0]?.language_code ?? '',
+    known_for_answers: answers.filter((answer) => answer.question.question === 'known_for').length,
     known_for: knownFor(answers, themes),
     themes: rows,
     engines,
