@@ -275,11 +275,14 @@ describe('audit recovery against PostgreSQL', () => {
     expect(tasks.find((row) => row.id === t.tasks[0]!.id)).toMatchObject({
       status: 'retry_wait',
       attempt_count: 1,
+      provider_poll_count: 0,
       lease_owner: null,
     });
+    // A paid lap counts toward the poll ceiling, so a receipt save that keeps failing ends.
     expect(tasks.find((row) => row.id === t.tasks[1]!.id)).toMatchObject({
       status: 'submission_uncertain',
       attempt_count: 3,
+      provider_poll_count: 1,
     });
     expect(tasks.find((row) => row.id === t.tasks[2]!.id)).toMatchObject({ status: 'failed' });
     expect(await runs(held)).toEqual({

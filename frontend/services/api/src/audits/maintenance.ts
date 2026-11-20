@@ -203,6 +203,8 @@ export class AuditMaintenance {
             .set({
               status: expiredLeaseStatus(pending, failed, audit.status),
               attempt_count: attempts,
+              // Each paid lap counts toward the poll ceiling, so a save that keeps failing ends.
+              provider_poll_count: task.provider_poll_count + (pending ? 1 : 0),
               available_at: at,
               lease_owner: null,
               lease_expires_at: null,
