@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { AgentInstructionsCard, useAgentInstructions } from '@/components/agent/agent-instructions';
+import { BrandAliasesPanel } from '@/components/knowledge-base/brand-aliases-panel';
 import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
 import {
   AudienceCard,
@@ -53,9 +54,7 @@ function ContextWorkspace({
 }: Readonly<{ workspaceId: string; project: Project }>) {
   const [requestedTab, setTab] = useUrlState('tab', CONTEXT_TAB_CODEC);
   const profile = useQuery(projectQueries.brandProfile({ workspaceId, projectId: project.id }));
-  // The five fixed tabs render at once; Brand facts joins the end of the row
-  // when the pilot gate answers. Outside the pilot there is no tab; an
-  // unreadable gate shows its error there.
+  // Brand facts always holds the aliases; its facts list waits on the pilot gate.
   const facts = useBrandFacts();
   const form = useBrandProfileForm({
     projectId: project.id,
@@ -63,25 +62,16 @@ function ContextWorkspace({
     profile: profile.data,
   });
   const instructions = useAgentInstructions(workspaceId, project.id);
-  const offersBrandFacts = facts.isError || Boolean(facts.data?.enabled);
-  const tabs = CONTEXT_TABS.filter((tab) => tab.value !== 'brand-facts' || offersBrandFacts);
-  // `?tab=` is deep-linkable, so a link can ask for a tab this project does
-  // not offer. A link to Brand facts holds that tab while the gate is read.
-  const awaitingGate = requestedTab === 'brand-facts' && facts.isPending;
-  const offered = awaitingGate || tabs.some((tab) => tab.value === requestedTab);
-  const activeTab = offered ? requestedTab : 'facts';
 
   return (
-    <TabsRoot value={activeTab} onValueChange={setTab}>
-      <SettingsPage tabs={<TabRow items={tabs} ariaLabel="Context sections" />}>
+    <TabsRoot value={requestedTab} onValueChange={setTab}>
+      <SettingsPage tabs={<TabRow items={CONTEXT_TABS} ariaLabel="Context sections" />}>
         <ContextPanels
           project={project}
           workspaceId={workspaceId}
           profile={profile}
           form={form}
-          brandFacts={
-            <BrandFactsTab facts={facts} workspaceId={workspaceId} projectId={project.id} />
-          }
+          brandFacts={<BrandFactsTab facts={facts} workspaceId={workspaceId} project={project} />}
           instructions={<AgentInstructionsCard instructions={instructions} />}
         />
       </SettingsPage>
@@ -176,21 +166,51 @@ function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
 }
 
 /**
- * Brand facts answers are checked against, on their own tab; shown only
- * inside the fact-checking pilot, or with the gate's read error.
+ * The brand's aliases, then the facts answers are checked against; the facts
+ * show only inside the fact-checking pilot, or with the gate's read error.
  */
 function BrandFactsTab({
   facts,
   workspaceId,
+  project,
+}: Readonly<{
+  facts: ReturnType<typeof useBrandFacts>;
+  workspaceId: string;
+  project: Project;
+}>) {
+  const mayEdit = useWorkspaceCapability('write');
+  return (
+    <Stack gap="workspace">
+      <Section aria-labelledby="brand-aliases">
+        <SectionHeader>
+          <SectionTitle id="brand-aliases">Aliases</SectionTitle>
+        </SectionHeader>
+        <BrandAliasesPanel project={project} mayEdit={mayEdit} />
+      </Section>
+      <BrandFactsSection
+        facts={facts}
+        workspaceId={workspaceId}
+        projectId={project.id}
+        mayEdit={mayEdit}
+      />
+    </Stack>
+  );
+}
+
+function BrandFactsSection({
+  facts,
+  workspaceId,
   projectId,
+  mayEdit,
 }: Readonly<{
   facts: ReturnType<typeof useBrandFacts>;
   workspaceId: string;
   projectId: string;
+  mayEdit: boolean;
 }>) {
-  const mayEdit = useWorkspaceCapability('write');
   if (facts.isPending)
     return <StateBlock kind="loading" label="Loading brand facts…" shape={{ kind: 'list' }} />;
+  if (!facts.isError && !facts.data?.enabled) return null;
   return (
     <Section aria-labelledby="brand-facts">
       <SectionHeader>

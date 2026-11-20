@@ -6,8 +6,6 @@ export const CONTEXT_TABS = [
   { value: 'map', label: 'Business map' },
   { value: 'competitors', label: 'Competitors' },
   { value: 'instructions', label: 'Instructions' },
-  // Last, and only once the pilot gate answers: it joins the end of the row,
-  // so its arrival moves no other tab.
   { value: 'brand-facts', label: 'Brand facts' },
 ] as const;
 

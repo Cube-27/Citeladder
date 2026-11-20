@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { scoreExecution, scoringConfig } from '../src/analysis/scoring.ts';
-import { assessEntities } from '../src/analysis/entity-assessment.ts';
+import { assessEntities, brandNamed } from '../src/analysis/entity-assessment.ts';
 import { citationIdentity } from '../src/source-pages/identity.ts';
 import { normalizeAlias, firstAliasOffset } from '../src/analysis/aliases.ts';
 const config = scoringConfig({
@@ -17,6 +17,7 @@ describe('frozen deterministic execution scoring', () => {
       config,
       answerText: '😀 Rival first. Then bestandless.',
       promptText: 'Compare Rival shoes',
+      promptNamesBrand: false,
       searchUsed: true,
       queryTextAvailable: true,
       searchEvents: [{ query: 'best bestandless running shoes review' }],
@@ -42,6 +43,7 @@ describe('frozen deterministic execution scoring', () => {
       config,
       answerText: '',
       promptText: 'Best & Less shoes',
+      promptNamesBrand: true,
       searchUsed: true,
       queryTextAvailable: false,
       searchEvents: [],
@@ -75,6 +77,7 @@ describe('frozen deterministic execution scoring', () => {
         config: target,
         answerText,
         promptText: '',
+        promptNamesBrand: false,
         searchUsed: false,
         queryTextAvailable: true,
         searchEvents: [],
@@ -95,6 +98,7 @@ describe('frozen deterministic execution scoring', () => {
         config: scoringConfig({ brand_name: 'Target' }),
         answerText: 'the target audience',
         promptText: '',
+        promptNamesBrand: false,
         searchUsed: false,
         queryTextAvailable: true,
         searchEvents: [],
@@ -115,6 +119,7 @@ describe('frozen deterministic execution scoring', () => {
         config: scoringConfig({ brand_name }),
         answerText,
         promptText: '',
+        promptNamesBrand: false,
         searchUsed: false,
         queryTextAvailable: true,
         searchEvents: [],
@@ -164,6 +169,58 @@ describe('frozen deterministic execution scoring', () => {
     expect(state('Grow your sales force this year.')).toBe('absent');
     expect(state('Salesforce is a CRM.')).toBe('mentioned');
     expect(state('Grow your sales force this year.', ['Sales Force'])).toBe('mentioned');
+  });
+  it('reads "&", "and" and the run-together spelling as one name, on whole words', () => {
+    const named = (brand_name: string, answer: string) => {
+      const config = scoringConfig({ brand_name });
+      const score = scoreExecution({
+        config,
+        answerText: answer,
+        promptText: '',
+        promptNamesBrand: false,
+        searchUsed: false,
+        queryTextAvailable: true,
+        searchEvents: [],
+        citations: [],
+      });
+      const assessed = assessEntities(answer, config)[0]!.state !== 'absent';
+      // Brand detection and the assessment perception passages read must agree.
+      expect(assessed).toBe(score.brand_mentioned);
+      return score.brand_mentioned;
+    };
+    for (const written of ['Best&Less', 'Best & Less', 'Best and Less', 'bestandless'])
+      for (const brand of ['bestandless', 'Best&Less'])
+        expect([brand, written, named(brand, `Shop at ${written} today.`)]).toEqual([
+          brand,
+          written,
+          true,
+        ]);
+    expect(named('Target', 'Ads targeted at parents.')).toBe(false);
+    expect(named('Target', 'Ads at Target for parents.')).toBe(true);
+    // A short part never splits off an "and": "Brandon" is not "Br and on".
+    expect(named('Brandon', 'Br and on the menu.')).toBe(false);
+  });
+  it('counts the brand in the whole answer to a prompt that names it, and only there', () => {
+    const answer = 'Rated 2.4/5 from 314 reviews; holes within 3 months; limited plus sizes.';
+    const score = (promptNamesBrand: boolean) =>
+      scoreExecution({
+        config,
+        answerText: answer,
+        promptText: 'Is it good value for cheap underwear?',
+        promptNamesBrand,
+        searchUsed: false,
+        queryTextAvailable: true,
+        searchEvents: [],
+        citations: [],
+      });
+    expect(score(true)).toMatchObject({ brand_mentioned: true, brand_first_offset: null });
+    expect(score(false)).toMatchObject({ brand_mentioned: false, brand_first_offset: null });
+    const assessed = assessEntities(answer, config);
+    expect(brandNamed(assessed).map((row) => [row.entity_kind, row.state])).toEqual([
+      ['brand', 'mentioned'],
+      ['competitor', 'absent'],
+    ]);
+    expect(assessed.map((row) => row.state)).toEqual(['absent', 'absent']);
   });
   it('preserves code-point ordering after Unicode folding', () => {
     expect(firstAliasOffset('Straße', normalizeAlias('😀 Rival then STRASSE'))).toBe(11);

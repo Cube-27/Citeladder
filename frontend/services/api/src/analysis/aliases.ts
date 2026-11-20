@@ -4,7 +4,10 @@
  * including its separator-free spelling ("Ace Hardware" names "acehardware").
  * Words join only through a configured alias (AR-6): separate words in the
  * text never join to spell a name, so "your sales force" does not name
- * Salesforce unless "Sales Force" is one of its aliases. Text in scripts written without spaces (Chinese, Japanese, Thai) is
+ * Salesforce unless "Sales Force" is one of its aliases. The one exception is
+ * an "and" inside a name word (AV-25): "bestandless" is also spelled
+ * "Best&Less", "Best & Less" and "Best and Less" (`aliasSpellings`).
+ * Text in scripts written without spaces (Chinese, Japanese, Thai) is
  * word-segmented first, so a name inside a sentence is still a whole-token run.
  *
  * An entity's matching policy can require context: under `context_required`
@@ -31,6 +34,29 @@ export function normalizeAlias(value: string): string {
       .trim()
       .replaceAll(/\s+/gu, ' ')
   );
+}
+
+/**
+ * The word sequences an alias is written as: its normalized words, plus one
+ * spelling per word that holds "and" between two parts of at least the
+ * configured length, with that "and" written apart ("bestandless" → "best and
+ * less", which `&` also normalizes to). Short parts never split, so
+ * "Brandon" never reads as "Br and on". Brand detection and perception
+ * passages both match through these spellings.
+ */
+export function aliasSpellings(alias: string): string[][] {
+  const words = normalizeAlias(alias).split(' ').filter(Boolean);
+  if (!words.length) return [];
+  const min = policy.audits.analysis.alias_connector_part_min_chars;
+  const spellings = [words];
+  words.forEach((word, index) => {
+    for (let at = word.indexOf('and', min); at !== -1; at = word.indexOf('and', at + 1)) {
+      const [head, tail] = [word.slice(0, at), word.slice(at + 3)];
+      if (head.length < min || tail.length < min) continue;
+      spellings.push([...words.slice(0, index), head, 'and', tail, ...words.slice(index + 1)]);
+    }
+  });
+  return spellings;
 }
 
 /** `normalizeAlias` with tokens of space-free scripts split into their words. */
@@ -165,9 +191,7 @@ function firstOccurrence(
   if (!normalizedText) return null;
   const tokens = normalizedText.split(' ');
   let first: Occurrence | null = null;
-  for (const alias of aliases) {
-    const words = normalizeAlias(alias).split(' ').filter(Boolean);
-    if (!words.length) continue;
+  for (const words of aliases.flatMap(aliasSpellings)) {
     for (const found of occurrences(tokens, words)) {
       if (first && found.offset >= first.offset) break;
       if (occurrenceCounts(tokens, found, entity)) {

@@ -7,12 +7,13 @@ import { policy } from '../config.ts';
 import { record, jsonObjects } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import {
+  cohortNamesBrand,
   scoreExecution,
   scoringConfig,
   classifyCitation,
   type ClassifiedCitation,
 } from './scoring.ts';
-import { assessEntities } from './entity-assessment.ts';
+import { assessEntities, brandNamed } from './entity-assessment.ts';
 import { classifySourceDomain, classifySourceOrigin } from './opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
@@ -63,6 +64,7 @@ async function scoredArtifact(
       config,
       answerText: artifact.answer_text,
       promptText: snapshot.text,
+      promptNamesBrand: cohortNamesBrand(snapshot.cohort),
       citations,
       searchEvents: jsonObjects(artifact.search_events ?? [], 'artifact.search_events'),
       searchUsed: artifact.search_used,
@@ -201,7 +203,8 @@ export async function analyzeResponse(
   const at = new Date(),
     id = randomUUID(),
     versions = policy.audits.analysis,
-    assessments = assessEntities(artifact.answer_text, config),
+    assessed = assessEntities(artifact.answer_text, config),
+    assessments = cohortNamesBrand(snapshot.cohort) ? brandNamed(assessed) : assessed,
     ads = answerAds({
       id: task.id,
       logical_engine: task.logical_engine,

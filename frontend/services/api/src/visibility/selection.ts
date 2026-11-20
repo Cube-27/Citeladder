@@ -112,6 +112,15 @@ export function selectedCohorts(cohort: string): readonly string[] {
   return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 
+/**
+ * The cohorts a Perception read takes: the branded and "all" selections also
+ * read the brand questions, whose answers are about the brand (AV-24).
+ */
+export function perceptionCohorts(cohort: string): readonly string[] {
+  const mapped: Readonly<Record<string, readonly string[]>> = visibility.perception_cohorts;
+  return Object.hasOwn(mapped, cohort) ? mapped[cohort]! : selectedCohorts(cohort);
+}
+
 /** Without named runs a selection reads its market; named runs bring their own. */
 const readsMarket = (selection: Pick<RunSelection, 'auditId' | 'auditIds'>) =>
   selection.auditId === null && !selection.auditIds?.length;
@@ -177,10 +186,14 @@ export async function authorizedSelection(
 /**
  * The evidence base scope: successful answers of the project's dashboard-ready
  * runs, filtered by the selection. Every reader narrows or groups this one
- * statement, so they agree on what "the selection" contains.
+ * statement, so they agree on what "the selection" contains. Perception
+ * passes its own wider `cohorts`.
  */
-export function evidenceScope(db: Database, selection: RunSelection) {
-  const cohorts = selectedCohorts(selection.cohort);
+export function evidenceScope(
+  db: Database,
+  selection: RunSelection,
+  cohorts: readonly string[] = selectedCohorts(selection.cohort),
+) {
   let query = selectedRuns(db, selection)
     .innerJoin('response_analyses as ra', 'ra.audit_id', 'audit.id')
     .innerJoin('audit_tasks as task', 'task.id', 'ra.task_id')

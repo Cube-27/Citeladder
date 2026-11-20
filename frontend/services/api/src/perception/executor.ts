@@ -11,7 +11,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { scoringConfig } from '../analysis/scoring.ts';
+import { cohortNamesBrand, scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import { meterFor } from '../billing/metering.ts';
 import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
@@ -86,6 +86,7 @@ function loadSubject(db: Database, task: QueueTask, projectId: string) {
       'audit.configuration',
       'artifact.answer_text',
       'snapshot.text as prompt',
+      'snapshot.cohort',
     ])
     .where('ra.id', '=', analysisId)
     .where('ra.workspace_id', '=', task.workspace_id)
@@ -301,6 +302,7 @@ export function answerPerception(
         languageCode,
         config,
         policy: settings,
+        promptNamesBrand: cohortNamesBrand(subject.cohort),
       }),
     };
     if (!pkg.entities.length) return settle({ outcome: 'no_mentions' });

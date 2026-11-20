@@ -116,7 +116,14 @@ describe('Context layout', () => {
       within(tabs)
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
-    ).toEqual(['Company', 'Audience', 'Business map', 'Competitors', 'Instructions']);
+    ).toEqual([
+      'Company',
+      'Audience',
+      'Business map',
+      'Competitors',
+      'Instructions',
+      'Brand facts',
+    ]);
     // The instructions are a tab of their own, not a section under every tab.
     expect(screen.queryByRole('textbox', { name: 'Agent instructions' })).not.toBeInTheDocument();
   });
@@ -172,12 +179,14 @@ describe('Context layout', () => {
     expect(await screen.findByText('The fact-checking pilot is unavailable.')).toBeVisible();
   });
 
-  it('shows the fixed tabs while the pilot gate is read and adds Brand facts at the end', async () => {
+  it('offers Brand facts with its aliases before the pilot gate answers', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
     renderContext({
+      tab: 'brand-facts',
+      activeProject: makeProject({ brand: { aliases: ['Best&Less'], logo_url: null } }),
       handlers: [
         http.get('/api/v1/projects/:id/brand-facts', async () => {
           await gate;
@@ -186,22 +195,11 @@ describe('Context layout', () => {
       ],
     });
     const tabs = await screen.findByRole('tablist', { name: 'Context sections' });
-    const labels = () =>
+    expect(
       within(tabs)
         .getAllByRole('tab')
-        .map((tab) => tab.textContent);
-    expect(labels()).toEqual([
-      'Company',
-      'Audience',
-      'Business map',
-      'Competitors',
-      'Instructions',
-    ]);
-    // The fixed tabs are usable before the gate answers.
-    expect(await screen.findByLabelText('Description')).toBeVisible();
-    release();
-    expect(await within(tabs).findByRole('tab', { name: 'Brand facts' })).toBeVisible();
-    expect(labels()).toEqual([
+        .map((tab) => tab.textContent),
+    ).toEqual([
       'Company',
       'Audience',
       'Business map',
@@ -209,30 +207,23 @@ describe('Context layout', () => {
       'Instructions',
       'Brand facts',
     ]);
+    const aliases = screen.getByRole('group', { name: 'Aliases' });
+    expect(within(aliases).getByText('Best&Less')).toBeVisible();
+    expect(await screen.findByRole('status', { name: 'Loading brand facts…' })).toBeVisible();
+    release();
+    expect(await screen.findByText(/No facts yet/)).toBeVisible();
   });
 
-  it('holds a link to Brand facts on its loading state until the pilot gate answers', async () => {
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+  it('keeps the aliases and hides the facts outside the pilot', async () => {
     renderContext({
       tab: 'brand-facts',
-      handlers: [
-        http.get('/api/v1/projects/:id/brand-facts', async () => {
-          await gate;
-          return HttpResponse.json({ enabled: true, facts: [], limits });
-        }),
-      ],
+      activeProject: makeProject({ brand: { aliases: ['Best&Less'], logo_url: null } }),
     });
-    expect(await screen.findByRole('status', { name: 'Loading brand facts…' })).toBeVisible();
-    // The link is not answered with the Company tab while the gate is read.
-    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
-    release();
-    expect(await screen.findByRole('tab', { name: 'Brand facts' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    expect(await screen.findByText('Best&Less')).toBeVisible();
+    await waitFor(() =>
+      expect(screen.queryByRole('status', { name: 'Loading brand facts…' })).toBeNull(),
     );
+    expect(screen.queryByRole('heading', { name: 'Brand facts' })).not.toBeInTheDocument();
   });
 
   it('keeps pilot Brand facts on their own tab', async () => {

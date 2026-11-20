@@ -41,7 +41,13 @@ import { compareText } from '../text-order.ts';
 import { applyIdentities, brandIdentities } from './brand-identities.ts';
 import { scopedSelection } from './dashboard.ts';
 import { periodTrendSelection } from './runs.ts';
-import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import {
+  citationsByAnalysis,
+  evidenceScope,
+  observedAt,
+  perceptionCohorts,
+  type RunSelection,
+} from './selection.ts';
 
 const QUOTES_CURSOR_SCOPE = 'visibility.perception.quotes';
 
@@ -162,14 +168,18 @@ function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | u
     });
 }
 
-/** The selection's perceived answers; citations only when the caller reads drivers. */
+/**
+ * The selection's perceived answers; citations only when the caller reads
+ * drivers. The Perception page's own reads add the brand questions.
+ */
 async function selectionAnswers(
   db: Database,
   selection: RunSelection,
-  options: { citations: boolean },
+  options: { citations: boolean; brandQuestions?: boolean },
 ) {
   const scoped = await scopedSelection(db, selection);
-  const selected = await evidenceScope(db, scoped)
+  const cohorts = options.brandQuestions ? perceptionCohorts(scoped.cohort) : undefined;
+  const selected = await evidenceScope(db, scoped, cohorts)
     .select([
       'ra.id',
       'ra.audit_id',
@@ -236,14 +246,16 @@ export async function getPerception(
 ): Promise<PerceptionResponse> {
   const scoped = await scopedSelection(db, selection);
   const [{ answers, auditIds }, period] = await Promise.all([
-    selectionAnswers(db, scoped, { citations: true }),
+    selectionAnswers(db, scoped, { citations: true, brandQuestions: true }),
     periodTrendSelection(db, scoped),
   ]);
   const summary = perceptionSummary(answers, policy.perception);
   applyIdentities(summary.entities, await brandIdentities(db, scoped));
   // The headline reads the pool; a pooled period's trend reads every run in it.
   const trend = period
-    ? perceptionTrend((await selectionAnswers(db, period, { citations: false })).answers)
+    ? perceptionTrend(
+        (await selectionAnswers(db, period, { citations: false, brandQuestions: true })).answers,
+      )
     : summary.trend;
   return { ...summary, trend, source_audit_ids: auditIds };
 }
@@ -366,7 +378,10 @@ export async function getPerceptionQuotes(
     polarity: filters.polarity,
   };
   const after = filters.cursor ? cursorPosition(filters.cursor, fingerprint) : null;
-  const { answers } = await selectionAnswers(db, selection, { citations: false });
+  const { answers } = await selectionAnswers(db, selection, {
+    citations: false,
+    brandQuestions: true,
+  });
   const quotes = classifiedQuotes(
     answers,
     (mention) => filters.entity === null || mention.entity === filters.entity,

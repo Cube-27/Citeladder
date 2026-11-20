@@ -25,6 +25,7 @@
     "prompt_decline_history_candidate_limit": 20,
     "entity_matching_version": "entity-matching-1",
     "context_window_tokens": 12,
+    "alias_connector_part_min_chars": 3,
     "entity_context_seed_max": 12,
     "entity_terms_max": 20,
     "common_noun_names": [

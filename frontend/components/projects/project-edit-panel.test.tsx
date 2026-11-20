@@ -71,16 +71,14 @@ describe('ProjectEditPanel', () => {
 
     renderWithProviders(<ProjectEditPanel project={project} open onOpenChange={vi.fn()} />);
 
-    const aliases = screen.getByLabelText('Brand aliases');
-    await user.clear(aliases);
-    await user.type(aliases, 'Acme Inc, Acme Co');
     const competitorName = screen.getByLabelText('Competitor 1 name');
     await user.clear(competitorName);
     await user.type(competitorName, 'Globex Group');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => expect(sent.body).toBeDefined());
-    expect(sent.body?.brand).toEqual({ aliases: ['Acme Inc', 'Acme Co'] });
+    // Brand aliases are edited in Context › Brand facts, so a save here leaves them alone.
+    expect(sent.body).not.toHaveProperty('brand');
     // The panel does not edit per-competitor aliases, so a rename must keep
     // the ones the project already had, and the id keeps the competitor.
     expect(sent.body?.competitors).toEqual([

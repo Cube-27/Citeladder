@@ -128,8 +128,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/agent/context?tab=instructions',
       title: 'Context',
-      // Brand facts, the pilot's only, joins the live row's end after the gate answers.
-      tabs: labels(CONTEXT_TABS.filter((item) => item.value !== 'brand-facts')),
+      tabs: labels(CONTEXT_TABS),
       selected: 'Instructions',
       filters: false,
       shapes: ['facts'],
