@@ -122,9 +122,7 @@ test('below 1280px the sidebar keeps every destination named and the palette on 
   await expect(palette).not.toBeVisible();
 });
 
-test('the prompt builder scrolls inside its pane and never scrolls the window', async ({
-  page,
-}) => {
+test('the prompt builder scrolls inside its pane and never scrolls the panel', async ({ page }) => {
   const projectApi = `**/api/v1/projects/${FIXTURE_PROJECT.id}`;
   // Enough offerings that each row's hidden "Not set" text lies far below the fold.
   const offerings = Array.from({ length: 40 }, (_, index) => `Offering ${index + 1}`);
@@ -183,15 +181,16 @@ test('the prompt builder scrolls inside its pane and never scrolls the window', 
       },
     ],
   ]);
-  const windowGeometry = () =>
+  const panelGeometry = () =>
     page.evaluate(() => {
-      const root = document.scrollingElement ?? document.documentElement;
+      const panel = document.getElementById('main')!;
+      const foot = panel.getBoundingClientRect().bottom;
       const bar = document.querySelector('[data-page-band="action-bar"]')?.getBoundingClientRect();
       return {
-        scrollTop: root.scrollTop,
-        overflow: root.scrollHeight - root.clientHeight,
-        // The shell fills the window: the action bar rests at its foot.
-        barAtFoot: bar !== undefined && bar.bottom <= innerHeight && bar.bottom > innerHeight - 64,
+        scrollTop: panel.scrollTop,
+        overflow: panel.scrollHeight - panel.clientHeight,
+        // The page fills the panel: the action bar rests at its foot.
+        barAtFoot: bar !== undefined && bar.bottom <= foot && bar.bottom > foot - 64,
       };
     });
   const still = { scrollTop: 0, overflow: 0, barAtFoot: true };
@@ -199,20 +198,20 @@ test('the prompt builder scrolls inside its pane and never scrolls the window', 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(fixtureProjectPath('/prompts/build'));
   await expect(page.getByText('Offering 40', { exact: true }).last()).toBeVisible();
-  expect(await windowGeometry()).toEqual(still);
+  expect(await panelGeometry()).toEqual(still);
 
   const runContext = page.getByLabel('Anything else for this run');
   await runContext.focus();
   await expect(runContext).toBeFocused();
-  expect(await windowGeometry()).toEqual(still);
+  expect(await panelGeometry()).toEqual(still);
 
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Topics' })).toBeVisible();
-  expect(await windowGeometry()).toEqual(still);
+  expect(await panelGeometry()).toEqual(still);
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(runContext).toBeVisible();
-  expect(await windowGeometry()).toEqual(still);
+  expect(await panelGeometry()).toEqual(still);
 });
 
 test('project lookup failure retries in place and only confirmed empty projects enter onboarding', async ({

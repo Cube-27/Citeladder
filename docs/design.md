@@ -104,15 +104,20 @@ refreshes.
 
 Pages are placed into these layouts, never arranged by hand (AR-10).
 
-- **Shell.** Sidebar 224 on `ground`, 8 padding: header row (workspace
-  switcher, settings icon, collapse toggle), the Dashboard | Agent segmented
-  control, 28-high nav rows (current row on `state-selected` with a 2px accent
-  mark), 12px group labels, foot with Integrations and the account. The main
-  column is the inset panel: 8 from the window edges (none on the sidebar
-  side), `rule` edge, radius 8, `panel` fill, scrolling inside itself.
+- **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
+  as tall as the page header (workspace switcher, settings icon, collapse
+  toggle), the Dashboard | Agent segmented control, 28-high nav rows (current
+  row on `state-selected` with a 2px accent mark), 12px group labels, foot
+  with Integrations and the account. The main column is the inset panel: 8
+  from the window edges (none on the sidebar side), `rule` edge, radius 8,
+  `panel` fill, the page's only scroller. Below 900 the panel fills the
+  window and the header's menu button opens the sidebar in a drawer.
 - **Page header**, 44 high with a `rule`: the page title as a breadcrumb
-  (section icon, section › page), then secondary actions, at most one primary
-  action, Search ⌘K and Ask agent at the right edge.
+  (section icon, section › page; a record adds its collection, and its name
+  is the h1 above the strips), then secondary actions, at most one primary
+  action, Search ⌘K and Ask agent at the right edge. The section is the nav
+  group holding the current row, Agent, or Workspace; below 900 only the
+  page shows.
 - **Tab strip**, 36 high with a `rule`; tabs 20 apart, the current one
   underlined in accent.
 - **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
@@ -122,7 +127,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   Settings, Runs, Agent context); the header and tab rules still span the
   panel.
 - **Toolbar**, above the content it scopes: segmented control, search, filter
-  buttons, then right-aligned the muted count and one action, 8 apart.
+  buttons, then right-aligned the muted count and one action, 8 apart. A
+  page-wide toolbar is the strip under the tabs, 8 above and below its
+  controls, with a `rule` across the panel.
 - **Metric strip:** one `rule`-framed strip, radius 8, cells divided by
   hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
@@ -161,7 +168,11 @@ One entry per family; wave 2 fills each from the layouts above.
   draft is dashed; Kbd and composer chips share the face. Status pill
   (`StatusMark`): 20 high, radius full, `rule` edge, the tone's 6px dot, 12px
   at 500 in `ink`; a live state draws the spinner and priority its bars.
-- **Navigation.** To be specified in wave 2.
+- **Navigation.** Sidebar rows: 16px icon, label, 8 apart, radius 6, `ink`
+  at rest and `state-hover` on hover; a group label folds its rows and a
+  folded group still shows the current row. Collapsed (⌘\ or the toggle,
+  remembered per browser) the sidebar is a 56 rail of 40 buttons, one per
+  group, each opening a flyout; the toggle sits under the project's mark.
 - **Tables and metric strip.** See Standard layouts.
 - **Overlays** (menus, popovers, dialogs, drawers). To be specified in wave 2.
 - **States** (loading, empty, error, notice). To be specified in wave 2.

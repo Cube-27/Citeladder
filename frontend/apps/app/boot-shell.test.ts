@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import { DASHBOARD_GROUPS, FOOT_NAV_ITEMS } from '@/components/layout/nav-items';
+import { DASHBOARD_GROUPS, FOOT_NAV_ITEMS, pageSection } from '@/components/layout/nav-items';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import * as manifest from '@/lib/navigation/app-routes';
 
@@ -29,6 +29,7 @@ function bootAt(path: string) {
     getComputedStyle(shell.querySelector(selector)!).display !== 'none';
   return {
     title: shell.querySelector('.boot-title')?.textContent ?? '',
+    section: shell.querySelector('.boot-section')?.textContent ?? '',
     mode: shell.dataset.bootMode,
     width: shell.style.getPropertyValue('--boot-side-width'),
     frame: { sidebar: shown('.boot-side'), masthead: shown('.boot-main') },
@@ -41,14 +42,19 @@ describe('boot-title.js', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('titles every path as the mounted masthead does', () => {
+  it("names every path's section and title as the mounted page header does", () => {
     const paths = manifest.APP_ROUTES.flatMap(({ path }) => {
       const concrete = path.replaceAll(/:[^/]+/gu, 'x1');
       return [concrete, `${concrete}/deeper`];
     });
     for (const path of [...paths, '/', '/nowhere']) {
-      const expected = manifest.hasPageTitle(path) ? manifest.resolveTitle(path) : '';
-      expect({ path, title: bootAt(path).title }).toEqual({ path, title: expected });
+      const titled = manifest.hasPageTitle(path);
+      const { title, section } = bootAt(path);
+      expect({ path, title, section }).toEqual({
+        path,
+        title: titled ? manifest.resolveTitle(path) : '',
+        section: titled ? pageSection(path, new URLSearchParams()).title : '',
+      });
     }
   });
 
@@ -97,25 +103,22 @@ describe('the boot shell geometry', () => {
   )?.[1];
   const token = (name: string) =>
     Number(new RegExp(`${name}: (\\d+)px;`, 'u').exec(appTokens ?? '')?.[1]);
-  const px = (element: Element, property: 'height' | 'marginTop' | 'marginBottom') =>
+  const px = (element: Element, property: 'height') =>
     Number.parseFloat(getComputedStyle(element)[property]);
 
-  it('draws the masthead, the switch and the rows at the live tokens and weights', () => {
+  it('draws the page header, the switch and the rows at the live tokens and weights', () => {
     bootAt('/projects');
     const at = (selector: string) => document.querySelector(selector)!;
-    const mode = at('.boot-mode');
     expect({
       masthead: px(at('.boot-mast'), 'height'),
       ident: px(at('.boot-ident'), 'height'),
-      switch: px(mode, 'height'),
-      switchRow: px(mode, 'marginTop') + px(mode, 'height') + px(mode, 'marginBottom'),
+      switch: px(at('.boot-mode'), 'height'),
       row: px(at('.boot-row'), 'height'),
       rowWeight: getComputedStyle(at('.boot-row')).fontWeight,
     }).toEqual({
       masthead: token('--masthead-height'),
       ident: token('--masthead-height'),
       switch: token('--control-md'),
-      switchRow: token('--filter-bar-height'),
       row: token('--nav-row-height'),
       rowWeight: sidebarNavRowClasses(false).includes('font-normal') ? '400' : '500',
     });

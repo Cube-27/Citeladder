@@ -1,7 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
-import { DASHBOARD_SIDEBAR_GROUPS, MODE_HOMES, navDestinations } from '@/lib/navigation/app-routes';
+import {
+  DASHBOARD_SIDEBAR_GROUPS,
+  isAgentPath,
+  MODE_HOMES,
+  navDestinations,
+} from '@/lib/navigation/app-routes';
 import type { NavDestination } from '@/lib/navigation/route-types';
 
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
@@ -136,4 +141,20 @@ export function isNavItemActive(
   );
   if (deeper) return false;
   return [...target.searchParams].every(([key, value]) => searchParams.get(key) === value);
+}
+
+/**
+ * The section the page header names before the title: the Dashboard group
+ * whose row is current, the Agent on its pages, else the workspace's own
+ * pages (Integrations, Settings, Billing).
+ */
+export function pageSection(
+  pathname: string,
+  searchParams: URLSearchParams,
+): Readonly<{ title: string; icon: LucideIcon }> {
+  if (isAgentPath(pathname)) return { title: 'Agent', icon: ICONS.agent };
+  const group = DASHBOARD_GROUPS.find(({ items }) =>
+    items.some((item) => isNavItemActive(pathname, searchParams, item)),
+  );
+  return group ?? { title: 'Workspace', icon: ICONS.settings };
 }

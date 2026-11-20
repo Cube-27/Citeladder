@@ -34,7 +34,7 @@ describe('RecordPage', () => {
     expect(screen.queryByRole('link', { name: /back/i })).not.toBeInTheDocument();
   });
 
-  it('keeps a top-level page title in the masthead with no trail', async () => {
+  it('keeps a top-level page title in the masthead after its section, with no trail', async () => {
     renderWithProviders(
       <RecordPage>
         <p>Body</p>
@@ -45,28 +45,8 @@ describe('RecordPage', () => {
     const heading = await screen.findByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent('Runs');
     expect(masthead()).toContainElement(heading);
+    // The page's nav section leads the title.
+    expect(masthead().textContent).toBe('TrackingRuns');
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
-  });
-
-  it('pads the document scroller to clear the action bar only while the bar shows', async () => {
-    const root = document.documentElement;
-    const { rerender, unmount } = renderWithProviders(
-      <RecordPage title="Fix links" actionBar={<button type="button">Reopen</button>}>
-        <p>Body</p>
-      </RecordPage>,
-    );
-    await screen.findByRole('button', { name: 'Reopen' });
-    expect(root.style.getPropertyValue('scroll-padding-bottom')).toBe(
-      'calc(var(--filter-bar-height) + 2 * var(--content-gutter))',
-    );
-
-    rerender(
-      <RecordPage title="Fix links">
-        <p>Body</p>
-      </RecordPage>,
-    );
-    expect(screen.queryByRole('button', { name: 'Reopen' })).not.toBeInTheDocument();
-    expect(root.style.getPropertyValue('scroll-padding-bottom')).toBe('');
-    unmount();
   });
 });

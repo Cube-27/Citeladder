@@ -436,7 +436,6 @@
   );
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
-  --content-max-width: var(--container-app);
   /* App rhythm: header → 32 → controls → 16 → content; cards gap 16; card
      padding 24. */
   --page-section-gap: 32px;
@@ -769,95 +768,72 @@
 
   /* Density (2.2): controls 28 (owner, 2026-11-19), and 44 on flow pages;
      below 900px or under a coarse pointer every control is 44 (block below);
-     tags 24; every target at least 24. Navigation rows 32 on a 34 pitch (44
-     in the drawer). Table header one control, body rows 36. */
+     tags 24; every target at least 24. Navigation rows 28 (44 in the
+     drawer). Table header one control, body rows 36. */
   --control-md: 28px;
   --control-lg: 44px;
   --control-coarse: 44px;
-  --nav-row-height: 32px;
+  --nav-row-height: 28px;
   --table-row-height: 36px;
 
-  /* Anatomy (2.3): the top strips, each closed by a rule across the main
-     column and the same height on every page (`PageFrame`, owner 2026-11-18):
-     masthead 48; tabs, then filters, each 8 + one control + 8 (owner,
-     2026-11-18: one row height; 2026-11-19: 48 and 44), the tabs filling theirs. Then
-     `page-pad-block` to the first content. Sidebar 224 from 1280, 200 from
-     900, a 56 rail of 40px buttons when collapsed. Content fills the main
-     column inside a 32 gutter (24 on flow, setup and auth pages; 16 below
-     900), a reading page centred in
-     `thread`. The current navigation item sits on a 7% ink tile (2.8). */
-  --masthead-height: 48px;
-  --page-tabs-height: calc(var(--control-md) + 16px);
+  /* Standard layouts (docs/design.md): the page header 44, the tab strip 36,
+     the toolbar strip one control and 8 above and below, each closed by a
+     rule across the panel (`PageFrame`). The panel sits `panel-inset` from
+     the window (none on the sidebar side, none below 900). Sidebar 224 from
+     1280, 200 from 900, a 56 rail of 40px buttons when collapsed. */
+  --masthead-height: 44px;
+  --page-tabs-height: 36px;
   --filter-bar-height: 44px;
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
   --nav-current-fill: var(--color-state-selected);
-  /* What a Thread page leaves for its own scrolling region: the masthead (as
-     drawn: below `rail` its actions take a second row, `Masthead`), a record
-     page's h1 (`PageFrame`), the `page-pad-block` above the first content and
-     the main column's foot. */
+  --panel-inset: 0px;
+  /* What a fitted page (a thread, a workbench) leaves for its own scrolling
+     region: the panel's inset, the header (as drawn: below `rail`
+     its actions can take a second row), a record page's h1, the body's top
+     padding and the panel's foot. */
   --route-chrome-height: calc(
-    var(--masthead-block-size, var(--masthead-height)) +
-      var(--page-heading-block-size, 0px) + var(--page-pad-block) + var(--page-section-gap)
+    2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
+      var(--page-heading-block-size, 0px) + var(--page-pad-block) + 24px
   );
-  /* No shell cap: a page fills the main column, so collapsing the sidebar
-     grows it. A reading page's `thread` column (`PageFrame`) and the measures
-     (form, prose) live in the templates. */
-  --content-max-width: none;
   --content-gutter: 24px;
 
   /* Spacing roles (2.2), on the one scale 2 4 8 12 16 24 32 48 64: peers in a
      control group 8, card padding and cards apart 16, the chrome to the first
-     card 24, titled groups 32, flow blocks 48. */
+     card 24, page sections 24, flow blocks 48. */
   --compact-gap: 8px;
   --card-padding: 16px;
   --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
-  --page-section-gap: 32px;
+  --page-section-gap: 24px;
   --flow-gap: 48px;
   /* Empty space after a scrolling page's last content (`PageFrame`), so
      content shrinking near the bottom never pulls the page or the scroll
      position. `svh`, so a phone's collapsing toolbar never resizes it. */
   --page-end-space: 33svh;
-  /* The page's padding. Inline: the main column's left and right (the
-     gutter). Block: the last strip to the first content. */
+  /* The body's padding: the gutter at its sides, 20 above the first content. */
   --page-pad-inline: var(--content-gutter);
-  --page-pad-block: 16px;
+  --page-pad-block: 20px;
 }
 
 @media (max-width: 899px) {
   :root:not([data-public-surface]) {
     --content-gutter: 16px;
-    --page-pad-block: 12px;
   }
 }
-/* Main pages sit 8 further in than flow, setup and auth pages (owner, 2026-11-18). */
-@media (min-width: 900px) {
+@media (min-width: 760px) {
   [data-main-column] {
-    --content-gutter: 32px;
-    --page-pad-inline: 32px;
+    --content-gutter: 24px;
   }
 }
-/* The labelled sidebar's Dashboard | Agent row: a strip's height, the switch
-   centred, its rule on the page's first strip's line (owner, 2026-11-18). */
-[data-sidebar-mode-row]:where([data-sidebar-state='expanded'] *, [data-nav-drawer] *) {
-  position: relative;
-  display: grid;
-  align-content: center;
-  height: var(--filter-bar-height);
-  padding-top: 0;
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-bottom: 1px solid var(--color-rule);
-    pointer-events: none;
+@media (min-width: 900px) {
+  :root:not([data-public-surface]) {
+    --panel-inset: 8px;
   }
 }
-
 /* Primary targets are 44 below 900px as well as under a coarse pointer (2.2):
    navigation rows, masthead and row actions, page tabs, sheet buttons. A
    small control (checkbox, switch, a field's end button) keeps its drawn
@@ -870,6 +846,8 @@
     --control-md-padding: 16px;
     --nav-row-height: 44px;
     --table-row-height: 44px;
+    --masthead-height: 52px;
+    --page-tabs-height: 44px;
     --filter-bar-height: 48px;
   }
 }
@@ -1137,9 +1115,17 @@ html {
   scrollbar-width: thin;
 }
 
-/* In-page focus and anchors clear the app's sticky masthead and page strips. */
-html:not([data-public-surface]) {
+/* The shell never scrolls the document, so it reserves no gutter for it. */
+html:has([data-app-surface]) {
+  scrollbar-gutter: auto;
+}
+/* The panel is the page's scroller: in-page focus and anchors clear its
+   sticky header and strips, and a record page's action bar at its foot. */
+[data-main-column] {
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--page-top-gap));
+  &:has([data-page-band='action-bar']) {
+    scroll-padding-bottom: calc(var(--filter-bar-height) + 2 * var(--content-gutter));
+  }
 }
 
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter

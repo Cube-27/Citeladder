@@ -11,19 +11,18 @@
         reader never sees a light frame. The cookie name must match
         THEME_COOKIE in lib/theme/theme.ts, which owns the preference. -->
     <script src="/theme-preference.js"></script>
-    <!-- First paint is the shell (STA-02, STA-07): the sidebar's rows, the
-        masthead's title and the ground in the token colours, at the live
+    <!-- First paint is the shell (STA-02, STA-07): the sidebar's rows and the
+        page header's section and title in the token colours, at the live
         shell's places, until React replaces #root. The sidebar is 224 from
         1280px, 200 from 900, none below, or the stored width; 56 with no rows
-        when the preference script finds it collapsed. The switcher's and the
-        account's blocks (44, or 40 in the rail) sit in a 48 cell; the switch is 28
-        centred in a 44 row closed by a rule (44 in 48 under a coarse
-        pointer), so the rows keep their hydrated y. Rows are 32 on a 34
-        pitch (44 under a coarse pointer), at the regular weight; group titles
-        and the switch at medium. boot-shell.test.ts holds these to the live
-        tokens. /boot-title.js marks a shell path
-        (data-boot-shell) and shows the rows and the title; a flow path
-        (sign-in, setup, the chooser) keeps the bare ground (PR 524). -->
+        when the preference script finds it collapsed. It pads 8 and stacks its
+        parts 8 apart (the selected segment opaque, state-selected over the ground): the switcher's block (44) in a 44 header, the 28-high
+        framed switch, rows 28 high 2 apart (44 under a coarse pointer). The
+        panel sits 8 from the window (none on the sidebar's side, none below
+        900) with a 44 header. boot-shell.test.ts holds these to the live
+        tokens. /boot-title.js marks a shell path (data-boot-shell) and shows
+        the rows, the section and the title; a flow path (sign-in, setup, the
+        chooser) keeps the bare ground (PR 524). -->
     <style>
       .boot-shell {
         position: fixed;
@@ -46,38 +45,51 @@
         flex: none;
         display: flex;
         flex-direction: column;
+        gap: 8px;
         overflow: hidden;
         width: var(--boot-side-width, 200px);
-        background: #f4f5f7;
-        border-inline-end: 1px solid rgb(0 0 0 / 8%);
+        padding: 8px;
       }
       .boot-main {
         flex: 1;
         min-width: 0;
-      }
-      .boot-mast,
-      .boot-ident {
-        flex: none;
-        height: 48px;
-        background: #f4f5f7;
-        border-block-end: 1px solid rgb(0 0 0 / 8%);
+        margin: 8px 8px 8px 0;
+        border-radius: 8px;
+        box-shadow: 0 0 0 1px rgb(0 0 0 / 8%);
+        background: #ffffff;
       }
       .boot-mast {
         display: flex;
         align-items: center;
+        gap: 8px;
+        height: 44px;
         padding-inline: 24px;
+        border-block-end: 1px solid rgb(0 0 0 / 8%);
+      }
+      .boot-section {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .boot-section::before,
+      .boot-section::after {
+        content: '';
+        width: 16px;
+        height: 16px;
+      }
+      .boot-section::after {
+        width: 12px;
       }
       .boot-title {
         overflow: hidden;
         color: #111214;
-        font:
-          400 1.25rem/1.75rem var(--font-face-display),
-          var(--font-face-sans),
-          system-ui,
-          sans-serif;
+        font-weight: 500;
         white-space: nowrap;
         text-overflow: ellipsis;
       }
+      .boot-section:empty,
       .boot-mode,
       .boot-list,
       .boot-foot,
@@ -96,8 +108,9 @@
       }
       .boot-ident {
         display: flex;
+        flex: none;
         align-items: center;
-        padding-inline: 8px;
+        height: 44px;
       }
       .boot-switcher,
       .boot-account {
@@ -108,26 +121,15 @@
       }
       .boot-switcher {
         flex: 1;
+        margin-inline-end: 64px;
       }
       .boot-mode {
         flex: none;
         grid-template-columns: 1fr 1fr;
-        position: relative;
         height: 28px;
-        margin-top: 8px;
-        margin-bottom: 8px;
-        margin-inline: 8px;
-        padding: 2px;
+        padding: 1px;
+        border: 1px solid rgb(0 0 0 / 8%);
         border-radius: 6px;
-        background: #f7f8f9;
-        font-weight: 500;
-      }
-      .boot-mode::after {
-        content: '';
-        position: absolute;
-        inset-inline: -8px;
-        bottom: -8px;
-        border-block-end: 1px solid rgb(0 0 0 / 8%);
       }
       .boot-mode span {
         display: flex;
@@ -137,14 +139,14 @@
       }
       [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
       [data-boot-mode='agent'] [data-boot-seg='agent'] {
-        background: #ffffff;
+        background: #e6e6e8;
         color: #111214;
       }
       .boot-list {
         flex: 1;
         min-height: 0;
         overflow: hidden;
-        padding: 12px 8px;
+        padding-block: 4px;
       }
       .boot-rows {
         flex-direction: column;
@@ -159,9 +161,9 @@
       .boot-row,
       .boot-group-title {
         display: block;
-        height: 32px;
+        height: 28px;
         overflow: hidden;
-        line-height: 32px;
+        line-height: 28px;
         white-space: nowrap;
         text-overflow: ellipsis;
       }
@@ -178,8 +180,6 @@
       }
       .boot-foot {
         flex: none;
-        padding: 8px;
-        border-block-start: 1px solid rgb(0 0 0 / 8%);
       }
       .boot-account {
         width: calc(100% - 34px);
@@ -190,11 +190,16 @@
         }
       }
       @media (pointer: coarse) {
-        .boot-mode {
-          margin-top: 2px;
-          margin-bottom: 2px;
+        .boot-mast,
+        .boot-ident {
+          height: 52px;
         }
-        .boot-mode,
+        .boot-switcher {
+          margin-inline-end: 96px;
+        }
+        .boot-mode {
+          height: 44px;
+        }
         .boot-row,
         .boot-group-title {
           height: 44px;
@@ -207,15 +212,31 @@
       [data-sidebar-rail] .boot-side > :not(.boot-ident) {
         display: none;
       }
+      [data-sidebar-rail] .boot-ident {
+        height: auto;
+      }
       [data-sidebar-rail] .boot-switcher {
         flex: none;
         width: 40px;
         height: 40px;
+        margin: 0;
       }
       @media (max-width: 899.98px) {
-        .boot-side {
+        .boot-side,
+        .boot-section {
           display: none;
         }
+        .boot-main {
+          margin: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .boot-mast {
+          height: 52px;
+          padding-inline: 76px 24px;
+        }
+      }
+      @media (max-width: 759.98px) {
         .boot-mast {
           padding-inline: 68px 16px;
         }
@@ -224,25 +245,24 @@
         background: #08090a;
         color: #8a8f98;
       }
-      [data-theme='dark'] :is(.boot-side, .boot-mast, .boot-ident) {
-        background: #08090a;
+      [data-theme='dark'] :is(.boot-mast, .boot-mode) {
         border-color: rgb(255 255 255 / 8%);
       }
-      [data-theme='dark'] .boot-foot,
-      [data-theme='dark'] .boot-mode::after {
-        border-color: rgb(255 255 255 / 8%);
+      [data-theme='dark'] .boot-main {
+        background: #0f1011;
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 8%);
       }
       [data-theme='dark'] .boot-title,
       [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
       [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
         color: #f7f8f8;
       }
-      [data-theme='dark'] :is(.boot-mode, .boot-switcher, .boot-account) {
+      [data-theme='dark'] :is(.boot-switcher, .boot-account) {
         background: #151618;
       }
       [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
       [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
-        background: #1c1d20;
+        background: #1a1b1c;
       }
     </style>
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -260,7 +280,9 @@
       <div class="boot-shell" aria-hidden="true">
         <div class="boot-side"><!-- boot-sidebar --></div>
         <div class="boot-main">
-          <div class="boot-mast"><span class="boot-title"></span></div>
+          <div class="boot-mast">
+            <span class="boot-section"></span><span class="boot-title"></span>
+          </div>
         </div>
       </div>
     </div>
