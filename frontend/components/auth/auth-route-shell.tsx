@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { AuthPage } from '@/components/templates/auth-page';
+import { FlowPage } from '@/components/templates/flow-page';
+import { AuthShowcase } from '@/components/ui/auth-showcase';
 import { TextLink } from '@/components/ui/text-link';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
@@ -9,11 +10,21 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
 /**
- * Account access (sign-in, sign-up and the mailbox screens): an Auth page,
+ * Account access (sign-in, sign-up and the mailbox screens): a Flow page with
+ * no kicker (the heading names the screen) beside the product showcase,
  * closed by the copyright and legal links.
  */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
-  return <AuthPage footer={<AuthLegalFooter />}>{children}</AuthPage>;
+  return (
+    <FlowPage
+      label="Account access"
+      kicker={null}
+      footer={<AuthLegalFooter />}
+      aside={<AuthShowcase />}
+    >
+      {children}
+    </FlowPage>
+  );
 }
 
 function AuthLegalFooter() {

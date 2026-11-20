@@ -14,19 +14,21 @@ import {
   Stethoscope,
   Wrench,
 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ReportPage } from '@/components/templates/report-page';
 import { ProjectLink } from '@/components/ui/project-link';
-import { AppGrid } from '@/components/ui/app-grid';
-import { ICON_CARD, IconCardContent } from '@/components/ui/icon-card';
+import { Icon } from '@/components/ui/icon';
+import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { cn } from '@/lib/utils';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -87,38 +89,53 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
               {group} <span className="text-ink-2">({rows.length})</span>
             </SectionTitle>
           </SectionHeader>
-          <AppGrid as="ul" layout="pair">
+          <ul className={cn(SLIP_FACE, 'divide-rule divide-y overflow-hidden')}>
             {rows.map((skill) => (
-              <li key={skill.id} className="flex min-w-0">
-                <SkillCard skill={skill} output={outputKind(skill.output_kind)?.label} />
-              </li>
+              <SkillRow
+                key={skill.id}
+                skill={skill}
+                output={outputKind(skill.output_kind)?.label}
+              />
             ))}
-          </AppGrid>
+          </ul>
         </Section>
       ))}
     </div>
   );
 }
 
-/** A skill as a wide card that starts a chat with it: icon tile, name, two lines and its output. */
-function SkillCard({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
+/**
+ * A skill as one list row that starts a chat with it: icon, name, its sentence
+ * inline in `ink-2`, and what it produces at the end. The whole row is the link.
+ */
+function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
   const detailId = useId();
   return (
-    <ProjectLink
-      href={agentHandoffHref({ skillId: skill.id })}
-      aria-label={`Start a chat with ${skill.label}`}
-      aria-describedby={detailId}
-      className={ICON_CARD}
-    >
-      {/* The link's name replaces its content, so what it does is its description. */}
-      <IconCardContent
-        icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles}
-        title={skill.label}
-        detailId={detailId}
-      >
-        <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{skill.description}</p>
-        {output ? <p className={textRole('caption', 'text-ink-2')}>{`Output: ${output}`}</p> : null}
-      </IconCardContent>
-    </ProjectLink>
+    <li className="hover:overlay-hover relative flex min-h-[var(--table-row-height)] min-w-0 items-center gap-2 px-4">
+      <Icon icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} className="text-ink-2" />
+      <span className={textRole('body', 'flex min-w-0 flex-1 items-baseline gap-2')}>
+        {/* The link's name replaces its content, so what it does is its description. */}
+        <ProjectLink
+          href={agentHandoffHref({ skillId: skill.id })}
+          aria-label={`Start a chat with ${skill.label}`}
+          aria-describedby={output ? `${detailId} ${detailId}-output` : detailId}
+          className="focus-ring-inset type-label text-ink shrink-0 no-underline before:absolute before:inset-0"
+        >
+          {skill.label}
+        </ProjectLink>
+        <span id={detailId} className="text-ink-2 phone:sr-only min-w-0 truncate">
+          {skill.description}
+        </span>
+      </span>
+      {output ? (
+        <span
+          id={`${detailId}-output`}
+          className={textRole('caption', 'shrink-0 whitespace-nowrap')}
+        >
+          <span className="sr-only">Output:</span> {output}
+        </span>
+      ) : null}
+      <Icon icon={ChevronRight} className="text-ink-2" />
+    </li>
   );
 }

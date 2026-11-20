@@ -3,11 +3,18 @@ import type { ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
+import { SLIP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import { PageFrame } from './page-frame';
+
+/**
+ * The one card a page outside the shell draws on the ground: Flow, Setup and
+ * the full-page Notice. It lives here because the Notice loads eagerly.
+ */
+export const FLOW_CARD = cn(SLIP_FACE, 'p-6');
 
 /**
  * What a full-page notice says: a gate, a dead end, a failure, or the
@@ -26,7 +33,7 @@ const TONE: Readonly<
 
 type NoticeContent = Readonly<{
   tone: NoticeTone;
-  /** The notice's heading, in the display face. */
+  /** The notice's heading, in the `title` role outside the shell. */
   heading: string;
   /** A glyph for this notice in place of its tone's (not found: a search). */
   icon?: LucideIcon;
@@ -59,21 +66,18 @@ function NoticeBlock({
   if (tone === 'loading')
     return <StateBlock kind="loading" label={heading ?? undefined} shape={{ kind: 'list' }} />;
   const [glyph, ink, word] = TONE[tone];
-  const mark = <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />;
+  const mark = <Icon icon={icon ?? glyph} className={ink} />;
   return (
     <section
       data-notice-tone={tone}
-      className={cn(
-        'flex w-full flex-col gap-4',
-        heading && 'bg-surface rounded-card shadow-card p-[var(--page-top-gap)]',
-      )}
+      className={cn('flex w-full flex-col gap-4', heading && FLOW_CARD)}
     >
       {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
       <div className="flex flex-col gap-2">
         {heading ? (
           <div className="flex items-start gap-2">
-            {mark}
-            <h1 className={textRole('display', 'min-w-0 text-balance')}>{heading}</h1>
+            <span className="flex h-7 items-center">{mark}</span>
+            <h1 className={textRole('title', 'min-w-0 text-balance')}>{heading}</h1>
           </div>
         ) : null}
         {children ? (
