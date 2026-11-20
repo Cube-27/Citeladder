@@ -19,6 +19,7 @@ import { assessCrawl, LIFECYCLE_KINDS, saveState } from './crawl-assessment.ts';
 import { pageRerunSql } from './page-rerun.ts';
 import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
+import { publishRunningIssues } from './issue-catalog.ts';
 import { refreshLiveScoreSummary, refreshRunningScoreSummary } from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
 import { persistLiveCounters, persistTerminalCounters } from './terminal-counters.ts';
@@ -166,6 +167,7 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
     case 'analysis_progress':
       if (cadence.score.admits(task.crawl_id, { pages: row.admitted_url_count }))
         await refreshRunningScoreSummary(db, task);
+      if (cadence.issues.admits(task.crawl_id)) await publishRunningIssues(db, task);
       break;
     default: {
       const unhandled: never = kind;

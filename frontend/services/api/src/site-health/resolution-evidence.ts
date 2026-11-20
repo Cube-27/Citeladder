@@ -327,7 +327,7 @@ export type LinkingPage = {
  * header and footer links. A target is sitewide when at least
  * `min_linking_pages` pages, and `min_page_share` of all judged pages, link it.
  */
-export function sitewideTargets(linksByPage: readonly (readonly string[])[]): Set<string> {
+export function sitewideTargets(linksByPage: readonly Iterable<string>[]): Set<string> {
   const counts = new Map<string, number>();
   for (const links of linksByPage)
     for (const target of new Set(links)) counts.set(target, (counts.get(target) ?? 0) + 1);

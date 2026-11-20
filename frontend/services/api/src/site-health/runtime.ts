@@ -50,6 +50,8 @@ export function siteWorkerSettings(env: SettingSource = process.env) {
       largePages: number('live_score_refresh_large_crawl_pages'),
       largeIntervalSeconds: number('live_score_refresh_large_crawl_interval_seconds'),
       maxTrackedCrawls: number('live_score_refresh_max_tracked_crawls'),
+      /** Analyzed pages between a running crawl's Issues catalog publications (CO-7). */
+      issuePages: number('issue_publication_page_interval'),
       /** How stale the counters an active crawl's reads render may grow (CO-3). */
       countersSeconds: number('live_counters_refresh_seconds'),
     },

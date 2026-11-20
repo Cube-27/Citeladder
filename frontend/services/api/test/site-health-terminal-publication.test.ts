@@ -417,8 +417,8 @@ describe('terminal analysis publication', () => {
     await fixtures.page(seed, '/', { has_html: true, links: { anchors: [] } });
     const first = await fixtures.page(seed, '/a', copy);
     const second = await fixtures.page(seed, '/b', copy);
-    // How the Issues reads derived currency before the flag existed: every
-    // evaluation a current, finalized analysis names, plus architecture findings.
+    // The flag's definition (CO-7): every evaluation a current analysis names,
+    // provisional or final, plus architecture findings.
     const derived = async () => {
       const { rows } = await sql<{ id: string }>`
         select i.id from site_issues i
@@ -426,7 +426,7 @@ describe('terminal analysis publication', () => {
           and i.evaluation_id in (
             select unnest(a.source_evaluation_ids) from site_page_analyses a
             where a.workspace_id = ${seed.workspaceId} and a.crawl_id = ${seed.crawlId}
-              and a.is_current and a.finalized_at is not null
+              and a.is_current
             union all
             select e.id from site_rule_evaluations e
             join site_observed_architectures o
@@ -477,7 +477,7 @@ describe('terminal analysis publication', () => {
     expect(await catalogDuplicates()).toBe(2);
 
     // `/a` is analyzed again over its finalized analysis: its findings stop
-    // being current, and the new provisional analysis names none yet.
+    // being current, and the new provisional analysis's own are current at once.
     const crawl = await db
       .selectFrom('site_crawls')
       .selectAll()

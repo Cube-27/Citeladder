@@ -3920,7 +3920,7 @@ CREATE INDEX ix_site_crawl_tasks_site_url_id ON public.site_crawl_tasks USING bt
 
 CREATE INDEX ix_site_crawl_tasks_source_task_id ON public.site_crawl_tasks USING btree (source_task_id) WHERE (source_task_id IS NOT NULL);
 
-CREATE INDEX ix_site_crawl_tasks_workspace_id ON public.site_crawl_tasks USING btree (workspace_id);
+CREATE INDEX ix_site_crawl_tasks_workspace_crawl_page ON public.site_crawl_tasks USING btree (workspace_id, crawl_id, site_url_id, task_kind);
 
 CREATE STATISTICS public.st_site_crawl_tasks_workspace_crawl (dependencies) ON crawl_id, workspace_id FROM public.site_crawl_tasks;
 
@@ -4253,7 +4253,6 @@ CREATE TABLE public.site_issue_catalogs (
     finding_class character varying(16) NOT NULL,
     items jsonb NOT NULL,
     summary jsonb NOT NULL,
-    sources jsonb NOT NULL,
     analyzer_version character varying(32) NOT NULL,
     rule_catalog_version character varying(32) NOT NULL,
     created_at timestamp with time zone NOT NULL,
@@ -4510,7 +4509,7 @@ CREATE INDEX ix_site_page_link_metrics_project_id ON public.site_page_link_metri
 
 CREATE INDEX ix_site_page_link_metrics_site_url_id ON public.site_page_link_metrics USING btree (site_url_id);
 
-CREATE INDEX ix_site_page_link_metrics_workspace_id ON public.site_page_link_metrics USING btree (workspace_id);
+CREATE INDEX ix_site_page_link_metrics_workspace_crawl_page ON public.site_page_link_metrics USING btree (workspace_id, crawl_id, site_url_id);
 
 CREATE TABLE public.site_rule_evaluations (
     id uuid NOT NULL,

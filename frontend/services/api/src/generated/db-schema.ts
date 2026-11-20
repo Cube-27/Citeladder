@@ -3239,7 +3239,6 @@ export interface SiteIssueCatalogs {
   project_id: string;
   reference_snippets: Generated<Json>;
   rule_catalog_version: string;
-  sources: Json;
   summary: Json;
   updated_at: Timestamp;
   workspace_id: string;

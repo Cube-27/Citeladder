@@ -12,7 +12,7 @@ import { compareText, scalarText } from '../text-order.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { deactivateSystemMemberships } from './frontier.ts';
-import { refreshIssueCurrency } from './issue-currency.ts';
+import { syncIssueCurrency } from './issue-currency.ts';
 import type { Crawl } from './site-task.ts';
 import { inScope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
@@ -129,9 +129,14 @@ export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string
     .where('crawl_id', '=', crawl.id)
     .where('site_url_id', '=', sql<string>`any(${ids}::uuid[])`)
     .where('is_current', '=', true)
-    .returning('finalized_at')
+    .returning(['id', 'supersedes_analysis_id'])
     .execute();
-  if (retired.some((row) => row.finalized_at !== null)) await refreshIssueCurrency(trx, crawl);
+  // The finalize publication then republishes the crawl's issue set.
+  await syncIssueCurrency(
+    trx,
+    crawl,
+    retired.map((row) => row.supersedes_analysis_id ?? row.id),
+  );
 }
 
 /**

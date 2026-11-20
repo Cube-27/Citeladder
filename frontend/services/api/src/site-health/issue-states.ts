@@ -30,7 +30,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { SiteIssueStates } from '../generated/db-schema.ts';
-import { pageAudits, type PageAudit } from './issue-audits.ts';
+import { eachPageAuditBatch, type PageAudit } from './issue-audits.ts';
 import type { Crawl } from './site-task.ts';
 
 const config = policy.site_health.reads.issue_states;
@@ -237,26 +237,41 @@ async function newerAudited(db: Database, crawl: Crawl, pageIds: string[], audit
 }
 
 /**
- * Land the crawl's audit: move the audited pages' issue states and write the
- * day's open count. The caller owns the transaction; a project lock orders
- * landings of the same project. Replaying a landing writes the same states.
+ * Land the crawl's audit: move the audited pages' issue states, one keyset
+ * batch of pages at a time, and write the day's open count. The caller owns
+ * the transaction; a project lock orders landings of the same project.
+ * Replaying a landing writes the same states.
  */
 export async function landIssueStates(db: Database, crawl: Crawl): Promise<void> {
-  const audits = await pageAudits(db, crawl);
-  if (!audits.length) return;
-  await lockIssueStates(db, { workspaceId: crawl.workspace_id, projectId: crawl.project_id });
   const scope = {
     workspaceId: crawl.workspace_id,
     projectId: crawl.project_id,
   };
-  const auditAt = auditTime(crawl);
   const now = new Date();
   const landing = {
     crawlId: crawl.id,
-    auditAt,
+    auditAt: auditTime(crawl),
     analyzerVersion: crawl.analyzer_version || policy.site_health.versions.analyzer,
     now,
   };
+  let landed = false;
+  await eachPageAuditBatch(db, crawl, async (audits) => {
+    if (!audits.length) return;
+    if (!landed) await lockIssueStates(db, scope);
+    landed = true;
+    await landAuditBatch(db, { crawl, scope, landing, audits });
+  });
+  if (!landed) return;
+  await releaseUntrackedStates(db, scope, now);
+  await writeTrendPoint(db, crawl, now);
+}
+
+async function landAuditBatch(
+  db: Database,
+  batch: { crawl: Crawl; scope: Scope; landing: Landing; audits: PageAudit[] },
+) {
+  const { crawl, scope, landing, audits } = batch;
+  const auditAt = landing.auditAt;
   const pageIds = audits.map((audit) => audit.siteUrlId);
   const existing = await db
     .selectFrom('site_issue_states')
@@ -304,8 +319,6 @@ export async function landIssueStates(db: Database, crawl: Crawl): Promise<void>
           ),
       )
       .execute();
-  await releaseUntrackedStates(db, scope, now);
-  await writeTrendPoint(db, crawl, now);
 }
 
 /**

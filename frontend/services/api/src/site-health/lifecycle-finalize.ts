@@ -3,6 +3,9 @@
  * transaction: it keyset-reads the crawl's unfinalized analyses with only the
  * facts the cross-page rules read, and builds their shared context in memory.
  * The finalize task then judges and revises the pages in short batches.
+ * Every page's links and hreflang targets are kept as indices into one shared
+ * URL table, so the context of tens of thousands of pages stays far under the
+ * runner's memory (CO-7).
  */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
@@ -46,7 +49,30 @@ import { hardExcluded } from './url-admission.ts';
 import { canonicalUrl, canonicalIdentity } from './url-identity.ts';
 
 type Facts = Record<string, unknown>;
-type Alternates = Map<string, Facts[]>;
+type Alternates = Map<string, Uint32Array>;
+
+/** Each distinct URL the crawl's pages name, once; pages hold indices into it. */
+class UrlTable {
+  readonly urls: string[] = [];
+  readonly #index = new Map<string, number>();
+  encode(values: readonly string[]) {
+    return Uint32Array.from(values, (value) => {
+      let index = this.#index.get(value);
+      if (index === undefined) {
+        index = this.urls.length;
+        this.urls.push(value);
+        this.#index.set(value, index);
+      }
+      return index;
+    });
+  }
+  *values(indices: Uint32Array) {
+    for (const index of indices) yield this.urls[index]!;
+  }
+  decode(indices: Uint32Array) {
+    return Array.from(indices, (index) => this.urls[index]!);
+  }
+}
 const settings = policy.site_health.crawl.finalize;
 
 const sorted = (values: Iterable<string>) => [...new Set(values)].sort(compareText);
@@ -81,31 +107,34 @@ function unobservedLinks(facts: Facts, links: string[]) {
     }),
   );
 }
+/** The raw URLs the page's hreflang alternates declare: all the cross-check reads. */
 const alternatesOf = (facts: Facts) =>
-  Array.isArray(facts.hreflang_alternates) ? facts.hreflang_alternates.map(record) : [];
+  Array.isArray(facts.hreflang_alternates)
+    ? facts.hreflang_alternates.map((alternate) => scalarText(record(alternate).url))
+    : [];
 
 /** Cross-check one page's hreflang cluster against the pages this crawl analyzed. */
 function hreflang(
   source: string | null,
-  alternates: Facts[],
-  pages: Alternates,
-  resolutions: Map<string, Resolution>,
+  alternates: string[],
+  context: { pages: Alternates; table: UrlTable; resolutions: Map<string, Resolution> },
 ) {
+  const { pages, table, resolutions } = context;
   const declared = source ? alternates : [];
   const counts = { checked: 0, unchecked: 0, limited: 0 };
   const missing = new Set<string>();
-  for (const alternate of declared) {
-    const raw = scalarText(alternate.url);
+  for (const raw of declared) {
     const target = canonicalUrl(raw);
     if (target === source) continue;
-    const returns = target ? pages.get(target) : undefined;
+    const encoded = target ? pages.get(target) : undefined;
+    const returns = encoded ? table.decode(encoded) : undefined;
     if (target && resolutions.get(target)?.status === 429) counts.limited++;
     if (!target || !returns || resolutions.get(target)?.status === 429) {
       counts.unchecked++;
       continue;
     }
     counts.checked++;
-    if (!returns.some((back) => canonicalUrl(scalarText(back.url)) === source)) missing.add(raw);
+    if (!returns.some((back) => canonicalUrl(back) === source)) missing.add(raw);
   }
   return hreflangConflict({
     alternateCount: declared.length,
@@ -148,7 +177,7 @@ function duplicateCandidate(
 }
 
 /** What the cross-page rules keep of one analyzed page once its facts are dropped. */
-function analyzedPage(finalUrl: string, facts: Facts) {
+function analyzedPage(finalUrl: string, facts: Facts, table: UrlTable) {
   const url = canonicalUrl(finalUrl);
   const links = internalTargets(finalUrl, facts);
   return {
@@ -156,12 +185,12 @@ function analyzedPage(finalUrl: string, facts: Facts) {
     url,
     title: scalarText(facts.title),
     declarations: canonicalDeclarations(facts),
-    alternates: alternatesOf(facts),
+    alternates: table.encode(alternatesOf(facts)),
     target: {
       noindex: record(facts.robots).noindex === true,
       canonical: declaredCanonical(finalUrl, facts),
     } satisfies CanonicalTarget,
-    links,
+    links: table.encode(links),
     unobserved: unobservedLinks(facts, links),
     candidate: duplicateCandidate(url, finalUrl, facts),
   };
@@ -310,10 +339,10 @@ async function rootEvaluations(
 }
 
 /** The pages linking each sitewide target, in URL order. */
-function linkingPages(pages: Analyzed[], sitewide: ReadonlySet<string>) {
+function linkingPages(pages: Analyzed[], sitewide: ReadonlySet<string>, table: UrlTable) {
   const result = new Map<string, LinkingPage[]>();
   for (const page of pages)
-    for (const target of page.links) {
+    for (const target of table.values(page.links)) {
       if (!sitewide.has(target)) continue;
       const linking: LinkingPage = {
         siteUrlId: page.site_url_id,
@@ -345,6 +374,7 @@ type PrepareOptions = { crossPage: boolean; retiring: ReadonlySet<string> };
  */
 async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) {
   const rootHash = rootHashOf(crawl);
+  const table = new UrlTable();
   const order: { id: string; root: boolean }[] = [];
   const analyzed: Analyzed[] = [];
   let after: string | null = null;
@@ -356,14 +386,14 @@ async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) 
       if (options.retiring.has(row.url_hash)) continue;
       if (row.pending) order.push({ id: row.id, root: row.url_hash === rootHash });
       if (options.crossPage && facts !== null && finalUrl !== null)
-        analyzed.push({ ...row, ...analyzedPage(finalUrl, record(facts)) });
+        analyzed.push({ ...row, ...analyzedPage(finalUrl, record(facts), table) });
     }
     full = rows.length === settings.read_pages;
   }
   const pendingIds = [...order.filter((row) => row.root), ...order.filter((row) => !row.root)].map(
     (row) => row.id,
   );
-  return { rootHash, pendingIds, analyzed };
+  return { rootHash, pendingIds, analyzed, table };
 }
 
 /**
@@ -373,7 +403,7 @@ async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) 
  * crawl only appends final revisions.
  */
 export async function prepareFinalization(db: Database, crawl: Crawl, options: PrepareOptions) {
-  const { rootHash, pendingIds, analyzed } = await readCurrent(db, crawl, options);
+  const { rootHash, pendingIds, analyzed, table } = await readCurrent(db, crawl, options);
   if (!analyzed.length) return { pendingIds, judge: (_id: string): Judged | null => null };
   // The first analyzed page of an identity URL, by artifact, speaks for it.
   analyzed.sort((a, b) => compareText(a.artifact_id, b.artifact_id) || compareText(a.id, b.id));
@@ -386,16 +416,19 @@ export async function prepareFinalization(db: Database, crawl: Crawl, options: P
     canonicalTargets.set(page.url, page.target);
   }
   const duplicates = duplicateComparisons(analyzed);
-  const linked = new Set(analyzed.flatMap((page) => page.links));
+  const linked = new Set<string>();
+  for (const page of analyzed) for (const url of table.values(page.links)) linked.add(url);
   // Sitewide links are judged once, on the root; without the root in this crawl
   // every page keeps judging them itself. A root an earlier pass finalized
   // already holds its crawl-wide findings.
   const root = analyzed.find((page) => page.url_hash === rootHash);
-  const sitewide = root ? sitewideTargets(analyzed.map((page) => page.links)) : new Set<string>();
+  const sitewide = root
+    ? sitewideTargets(analyzed.map((page) => table.values(page.links)))
+    : new Set<string>();
   const rootExtras = root?.pending
     ? [
         ...(await rootEvaluations(db, crawl, linked, resolutions)),
-        ...sitewideLinks(sitewide, linkingPages(analyzed, sitewide), resolutions),
+        ...sitewideLinks(sitewide, linkingPages(analyzed, sitewide, table), resolutions),
       ]
     : [];
   const byId = new Map(analyzed.filter((page) => page.pending).map((page) => [page.id, page]));
@@ -403,15 +436,16 @@ export async function prepareFinalization(db: Database, crawl: Crawl, options: P
   const judge = (analysisId: string): Judged | null => {
     const page = byId.get(analysisId);
     if (!page) return null;
+    const links = table.decode(page.links);
     return {
       siteUrlId: page.site_url_id,
       artifactId: page.artifact_id,
       evaluations: [
-        hreflang(page.url, page.alternates, pages, resolutions),
+        hreflang(page.url, table.decode(page.alternates), { pages, table, resolutions }),
         canonicalResolution(page.declarations, page.finalUrl, resolutions, canonicalTargets),
         ...(page.unobserved ?? [
-          resolutionSet(page.links, resolutions, { sitewide }),
-          linkRedirects(page.links, resolutions, sitewide),
+          resolutionSet(links, resolutions, { sitewide }),
+          linkRedirects(links, resolutions, sitewide),
         ]),
         duplicateContent(duplicates(page.url)),
         ...(page === root ? rootExtras : []),

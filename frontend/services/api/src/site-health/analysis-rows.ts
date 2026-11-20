@@ -16,7 +16,7 @@ import type { SiteTask } from '../queue/task-queue.ts';
 import type { analyzePage } from './analysis/analyze-page.ts';
 import { createsIssue, type RuleEvaluation } from './analysis/rules.ts';
 import type { Facts } from './analysis/read-facts.ts';
-import { refreshIssueCurrency } from './issue-currency.ts';
+import { refreshIssueCurrency, syncIssueCurrency } from './issue-currency.ts';
 import type { Crawl } from './site-task.ts';
 import { refreshTerminalCounters } from './terminal-counters.ts';
 import { canonicalIdentity } from './url-identity.ts';
@@ -368,7 +368,7 @@ export async function writePageAnalysis(
     .where('crawl_id', '=', crawl.id)
     .where('site_url_id', '=', siteUrlId)
     .where('is_current', '=', true)
-    .returning('finalized_at')
+    .returning(['id', 'supersedes_analysis_id', 'finalized_at'])
     .execute();
   const id = timeOrderedId();
   const scores = result.scores;
@@ -408,10 +408,15 @@ export async function writePageAnalysis(
     })
     .execute();
   await insertEvaluations(db, crawl, [{ analysisId: id, siteUrlId, artifactId, evaluations }]);
-  // A provisional analysis names no current evaluations, so its issues are
-  // written not current; only superseding a finalized analysis changes the set.
+  // A provisional analysis's issues are current at once (CO-7), and those of
+  // the analysis it replaced are not; superseding a finalized analysis also
+  // republishes the crawl's issue set.
+  await syncIssueCurrency(db, crawl, [
+    id,
+    ...superseded.map((row) => row.supersedes_analysis_id ?? row.id),
+  ]);
   if (superseded.some((row) => row.finalized_at !== null)) {
-    await refreshIssueCurrency(db, crawl);
+    await refreshIssueCurrency(db, crawl, { resync: false });
     await refreshTerminalCounters(db, crawl);
   }
   return { id, pageKind: result.assessment.page_kind };

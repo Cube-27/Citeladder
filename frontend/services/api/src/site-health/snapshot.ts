@@ -9,15 +9,13 @@ import { sameScope } from './change-snapshot.ts';
 import { cohortComposition } from './cohort-composition.ts';
 import { crawlCoverage } from './coverage.ts';
 import {
-  loadMeasurementProjection,
   lockProfile,
+  measurementProjection,
   scoreSummary,
   type MeasurementProjection,
 } from './score-summary.ts';
 import { liveScoreSummary } from './live-score.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
-import { readinessDiagnostic, webDiagnostic } from './snapshot-diagnostics.ts';
-import { snapshotEligibility } from './snapshot-eligibility.ts';
 import { snapshotIssues } from './snapshot-issues.ts';
 import type { Crawl } from './site-task.ts';
 
@@ -105,17 +103,6 @@ async function changeSummary(db: Database, crawl: Crawl, projection: Measurement
   };
 }
 
-/** How many scored checks the pages measured, of those they expected. */
-function checkCounts(projection: MeasurementProjection) {
-  const expected = projection.evaluations.filter(
-    (row) => row.score_roles?.length && row.outcome !== 'not_applicable',
-  );
-  const measured = expected.filter((row) => ['satisfied', 'missing'].includes(row.outcome));
-  return { measured_check_count: measured.length, expected_check_count: expected.length };
-}
-
-const analysisIds = (projection: MeasurementProjection) => projection.rows.map((row) => row.id);
-
 /**
  * Every snapshot column the pages' latest audits decide: scores,
  * classification, eligibility, issue rollups, the change summary and the
@@ -124,8 +111,8 @@ const analysisIds = (projection: MeasurementProjection) => projection.rows.map((
  * Coverage and discovery stay the crawl's own.
  */
 async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementProjection) {
-  const issues = await snapshotIssues(db, crawl, analysisIds(projection));
-  const eligibility = await snapshotEligibility(db, crawl, projection);
+  const issues = await snapshotIssues(db, crawl, projection.analysisIds);
+  const eligibility = projection.eligibility;
   const {
     readiness_dimensions: dimensions,
     scoring_version: _scoring,
@@ -135,7 +122,7 @@ async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementPr
     issues,
     eligibility,
     columns: {
-      selected_url_count: projection.selectedIds.length,
+      selected_url_count: projection.selectedCount,
       ...aggregate,
       ...projection.classification,
       classification_reason_groups: JSON.stringify(
@@ -145,15 +132,15 @@ async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementPr
         projection.classification.scored_page_count_by_kind,
       ),
       readiness_dimensions: JSON.stringify(dimensions),
-      aeo_readiness_diagnostic: JSON.stringify(readinessDiagnostic(crawl, projection)),
+      aeo_readiness_diagnostic: JSON.stringify(projection.readinessDiagnostic),
       ...eligibility,
       eligibility_totals: JSON.stringify(eligibility.eligibility_totals),
       eligibility_reasons: JSON.stringify(eligibility.eligibility_reasons),
       status_counts: JSON.stringify(eligibility.status_counts),
       ...issueColumns(issues),
-      web_fundamentals: JSON.stringify(webDiagnostic(projection)),
+      web_fundamentals: JSON.stringify(projection.webDiagnostic),
       change_summary: JSON.stringify(await changeSummary(db, crawl, projection)),
-      source_artifact_ids: projection.rows.map((row) => row.artifact_id),
+      source_artifact_ids: projection.artifactIds,
     },
   };
 }
@@ -172,7 +159,7 @@ async function writeAnalysisSet(
     .where('workspace_id', '=', snapshot.workspace_id)
     .where('snapshot_id', '=', snapshot.id)
     .execute();
-  const rows = [...new Set(analysisIds(projection))].map((analysisId) => ({
+  const rows = [...new Set(projection.analysisIds)].map((analysisId) => ({
     workspace_id: snapshot.workspace_id,
     snapshot_id: snapshot.id,
     analysis_id: analysisId,
@@ -212,10 +199,10 @@ async function publishScoreSummary(
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
   if (isPageRerun(crawl)) return false;
   await lockProfile(db, crawl);
-  const projection = await loadMeasurementProjection(db, crawl);
+  const projection = await measurementProjection(db, crawl);
   if (
     !persistEmpty &&
-    !projection.rows.length &&
+    !projection.analysisIds.length &&
     !projection.classification.classification_expected_page_count
   )
     return false;
@@ -231,7 +218,7 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
       crawl_id: crawl.id,
       ...published.columns,
       coverage_state: coverage.state,
-      coverage_evidence: JSON.stringify({ ...coverage.evidence, ...checkCounts(projection) }),
+      coverage_evidence: JSON.stringify({ ...coverage.evidence, ...projection.checkCounts }),
       coverage_formula_version: reads.coverage_formula_version,
       analyzer_version: crawl.analyzer_version || policy.site_health.versions.analyzer,
       scoring_version: crawl.scoring_version || reads.scoring_version,
@@ -269,14 +256,14 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
     .executeTakeFirst();
   if (!snapshot) return false;
   await lockProfile(db, crawl);
-  const projection = await loadMeasurementProjection(db, crawl);
+  const projection = await measurementProjection(db, crawl);
   const published = await pageColumns(db, crawl, projection);
   await writeAnalysisSet(db, snapshot, projection);
   await db
     .updateTable('site_health_snapshots')
     .set({
       ...published.columns,
-      coverage_evidence: sql`coverage_evidence || ${JSON.stringify(checkCounts(projection))}::jsonb`,
+      coverage_evidence: sql`coverage_evidence || ${JSON.stringify(projection.checkCounts)}::jsonb`,
     })
     .where('id', '=', snapshot.id)
     .where('workspace_id', '=', crawl.workspace_id)

@@ -1,6 +1,6 @@
 import type { SiteWorkerSettings } from './runtime.ts';
 
-type CadenceSettings = Omit<SiteWorkerSettings['scoreRefresh'], 'countersSeconds'>;
+type CadenceSettings = Omit<SiteWorkerSettings['scoreRefresh'], 'countersSeconds' | 'issuePages'>;
 
 /**
  * Work a crawl repeats as its tasks settle (the live score summary, discovery
@@ -69,6 +69,14 @@ export function crawlCadences(settings: SiteWorkerSettings['scoreRefresh']) {
     discovery: new RefreshCadence(settings),
     analysisEvent: new RefreshCadence(settings),
     discoveryEvent: new RefreshCadence(settings),
+    // A running crawl's Issues publish every `issuePages` analyzed pages, its first at once.
+    issues: new RefreshCadence({
+      ...settings,
+      pageInterval: settings.issuePages,
+      pageFraction: 0,
+      largePages: 0,
+      minIntervalSeconds: 0,
+    }),
     counters: new RefreshCadence({
       ...settings,
       pageInterval: 0,

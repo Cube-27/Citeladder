@@ -352,6 +352,12 @@
     "default": 1800.0,
     "exclusive_minimum": 0
   },
+  "issue_publication_page_interval": {
+    "env": ["SITE_HEALTH_ISSUE_PUBLICATION_PAGE_INTERVAL"],
+    "type": "int",
+    "default": 500,
+    "minimum": 1
+  },
   "live_score_refresh_page_interval": {
     "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_PAGE_INTERVAL"],
     "type": "int",

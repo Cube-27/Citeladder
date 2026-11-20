@@ -1,4 +1,4 @@
-import { sql } from 'kysely';
+import { sql, type KyselyPlugin, type QueryId, type RootOperationNode } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
@@ -6,6 +6,7 @@ import { compareText } from '../src/text-order.ts';
 import { cancelCrawl } from '../src/site-health/controls.ts';
 import { reserveCrawlFetches } from '../src/site-health/fetch-budget.ts';
 import { publishCancelledCrawls } from '../src/site-health/lifecycle.ts';
+import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { asOwner, testDatabase } from './support.ts';
 import { FinalizeFixtures, type SiteSeed } from './site-health-finalize-fixtures.ts';
@@ -75,6 +76,32 @@ const retryNow = (seed: SiteSeed) =>
     .where('crawl_id', '=', seed.crawlId)
     .where('task_kind', '=', 'finalize')
     .execute();
+const CRAWL_TABLES = new Set(['site_page_analyses', 'site_rule_evaluations', 'site_issues']);
+/** The table a query reads first: its FROM for a built query, the first `from` of raw SQL. */
+function primaryTable(node: RootOperationNode) {
+  if (node.kind === 'SelectQueryNode')
+    return /"name":"(\w+)"/.exec(JSON.stringify(node.from))?.[1] ?? '';
+  const text = node.kind === 'RawNode' ? node.sqlFragments.join(' ') : '';
+  return /\bfrom\s+(\w+)/.exec(text)?.[1] ?? '';
+}
+/** A view of the test database that records the most rows any one read returned per crawl-sized table. */
+function rowCounter() {
+  const tables = new Map<QueryId, string>();
+  const most: Record<string, number> = {};
+  const plugin: KyselyPlugin = {
+    transformQuery: ({ node, queryId }) => {
+      tables.set(queryId, primaryTable(node));
+      return node;
+    },
+    transformResult: async ({ result, queryId }) => {
+      const table = tables.get(queryId) ?? '';
+      tables.delete(queryId);
+      if (CRAWL_TABLES.has(table)) most[table] = Math.max(most[table] ?? 0, result.rows.length);
+      return result;
+    },
+  };
+  return { db: db.withPlugin(plugin), most };
+}
 /** A completed analysis of an active monitored page, settled by its own analyze task. */
 async function monitoredPage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
   const member = await fixtures.analyzable(seed, path);
@@ -270,5 +297,42 @@ describe('finalize task', () => {
     } finally {
       policy.site_health.crawl.finalize.batch_pages = size;
     }
+  });
+
+  it('publishes a crawl larger than one batch without any read holding more than one batch', async () => {
+    const seed = await fixtures.crawl('running');
+    const paths = ['/', '/a', '/b', '/c', '/d', '/e', '/f', '/g', '/h'];
+    for (const path of paths) await monitoredPage(seed, path); // NOSONAR -- Fixture rows in order.
+    const settings = policy.site_health.crawl.finalize;
+    const sizes = { ...settings };
+    Object.assign(settings, { batch_pages: 2, read_pages: 2, projection_pages: 2 });
+    const counter = rowCounter();
+    try {
+      const worker = new SiteHealthWorker(counter.db, {
+        taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+      });
+      expect(await fixtures.terminalize(seed, worker)).toBe(true);
+    } finally {
+      Object.assign(settings, sizes);
+    }
+    expect((await crawlRow(seed.crawlId)).status).toBe('completed');
+    const published = await db
+      .selectFrom('site_health_snapshots as s')
+      .innerJoin('site_health_snapshot_analyses as a', 'a.snapshot_id', 's.id')
+      .select(sql<number>`count(*)::int`.as('count'))
+      .where('s.crawl_id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    expect(published.count).toBe(paths.length);
+    // Every page is published, yet no read held more than one batch of two pages.
+    const perPage = await db
+      .selectFrom('site_rule_evaluations')
+      .select(sql<number>`count(*)::int`.as('count'))
+      .where('workspace_id', '=', seed.workspaceId)
+      .groupBy('analysis_id')
+      .orderBy(sql`count(*)`, 'desc')
+      .executeTakeFirstOrThrow();
+    expect(counter.most.site_page_analyses).toBe(2);
+    // Two pages' evaluations, and the root's site checks every final revision names.
+    expect(counter.most.site_rule_evaluations).toBeLessThanOrEqual(3 * perPage.count);
   });
 });

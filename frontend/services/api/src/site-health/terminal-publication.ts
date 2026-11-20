@@ -121,7 +121,10 @@ async function terminalize(db: Database, crawl: Crawl, assessment: Assessment) {
   else await enqueueTerminalAnalyticsRefresh(db, crawl, null);
 }
 
-/** Issue currency follows the final revisions; a crawl with none still lands its issue states. */
+/**
+ * Publish the issue set the finalize batches kept current (CO-7); a crawl with
+ * no final revision still lands its issue states.
+ */
 async function publishIssues(db: Database, crawl: Crawl) {
   const finalized = await db
     .selectFrom('site_page_analyses')
@@ -133,7 +136,7 @@ async function publishIssues(db: Database, crawl: Crawl) {
     .where('finalized_at', 'is not', null)
     .limit(1)
     .executeTakeFirst();
-  if (finalized) await refreshIssueCurrency(db, crawl);
+  if (finalized) await refreshIssueCurrency(db, crawl, { resync: false });
   else await landIssueStates(db, crawl);
 }
 

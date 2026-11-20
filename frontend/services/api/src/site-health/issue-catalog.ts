@@ -11,14 +11,17 @@
  * replaces the crawl's rows with the groups and summary computed from the
  * issues the crawl shows (each page's latest audit, `viewIssuesSql`), so the
  * read never recomputes them. The issues stay as
- * written; each row names the crawl and versions it was computed from, and
- * `sources` keeps every group's exact issue and evaluation IDs (never served).
+ * written; each row names the crawl and versions it was computed from. Every
+ * part is a SQL aggregate bounded by the rule groups, never by the crawl's
+ * issues, so it is rewritten on each batched publication while a crawl runs
+ * (CO-7).
  *
  * `reference_snippets` keeps at most one redacted HTML reference snippet per
  * issue family: from the first affected page in URL order whose fetched facts
  * carry one. Pages keep theirs only in their bounded fetch facts; the Agent's
  * Site Health tool reads the catalog's (`mcp/evidence-site.ts`).
  */
+import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
@@ -26,7 +29,6 @@ import type { Database } from '../db/database.ts';
 import {
   catalogClassKey,
   catalogItems,
-  catalogSources,
   ISSUE_FINDING_CLASSES,
   issueSummary,
   unfilteredIssues,
@@ -105,16 +107,28 @@ async function referenceSnippets(
   return snippets;
 }
 
-export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<void> {
-  const now = new Date();
+/** Each class's catalog, and the combined one, from the issues the crawl shows. */
+async function computeIssueCatalog(db: Database, crawl: Crawl) {
+  const classes = [];
   for (const findingClass of [...ISSUE_FINDING_CLASSES, null]) {
     const filters = unfilteredIssues(findingClass);
-    // One transaction connection: the class's reads, then its write.
-    const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
-    const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
-    const sources = await catalogSources(db, crawl, findingClass); // NOSONAR -- In order on the writer's connection.
+    // One connection: the class's reads in order.
+    const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on one connection.
+    const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on one connection.
     // The combined row repeats the class rows' groups; their snippets stay on those rows.
-    const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR -- In order on the writer's connection.
+    const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR -- In order on one connection.
+    classes.push({ findingClass, items, summary, snippets });
+  }
+  return classes;
+}
+
+async function writeIssueCatalog(
+  db: Database,
+  crawl: Crawl,
+  classes: Awaited<ReturnType<typeof computeIssueCatalog>>,
+) {
+  const now = new Date();
+  for (const { findingClass, items, summary, snippets } of classes) {
     await db // NOSONAR -- In order on the writer's connection.
       .insertInto('site_issue_catalogs')
       .values({
@@ -124,7 +138,6 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
         finding_class: catalogClassKey(findingClass),
         items: JSON.stringify(items),
         summary: JSON.stringify(summary),
-        sources: JSON.stringify(sources),
         reference_snippets: JSON.stringify(snippets),
         analyzer_version: crawl.analyzer_version,
         rule_catalog_version: crawl.rule_catalog_version,
@@ -135,7 +148,6 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
         conflict.columns(['crawl_id', 'finding_class']).doUpdateSet((eb) => ({
           items: eb.ref('excluded.items'),
           summary: eb.ref('excluded.summary'),
-          sources: eb.ref('excluded.sources'),
           reference_snippets: eb.ref('excluded.reference_snippets'),
           analyzer_version: eb.ref('excluded.analyzer_version'),
           rule_catalog_version: eb.ref('excluded.rule_catalog_version'),
@@ -144,4 +156,38 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
       )
       .execute();
   }
+}
+
+export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<void> {
+  await writeIssueCatalog(db, crawl, await computeIssueCatalog(db, crawl));
+}
+
+/**
+ * A running crawl's batched Issues publication (CO-7), on the issues cadence:
+ * the catalog is computed outside the crawl lock every task commit takes, and
+ * the lock is held only for the write, which a crawl that ended meanwhile
+ * skips, so the terminal publication's catalog is never overwritten.
+ */
+export async function publishRunningIssues(
+  db: Database,
+  task: { workspace_id: string; crawl_id: string },
+) {
+  const crawl = await db
+    .selectFrom('site_crawls')
+    .selectAll()
+    .where('workspace_id', '=', task.workspace_id)
+    .where('id', '=', task.crawl_id)
+    .executeTakeFirst();
+  if (!crawl || !isActiveCrawl(crawl.status)) return;
+  const classes = await computeIssueCatalog(db, crawl);
+  await db.transaction().execute(async (trx) => {
+    const locked = await trx
+      .selectFrom('site_crawls')
+      .select('status')
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('id', '=', crawl.id)
+      .forNoKeyUpdate()
+      .executeTakeFirst();
+    if (locked && isActiveCrawl(locked.status)) await writeIssueCatalog(trx, crawl, classes);
+  });
 }
