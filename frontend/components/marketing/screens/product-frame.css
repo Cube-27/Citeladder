@@ -151,16 +151,6 @@
   }
 }
 
-/* Below 1280px the screen is laid out at the frame's width, never under
-   800px, and a frame narrower than that (a phone) shows it whole, scaled
-   down like a screenshot, instead of cropping its right side. */
-
-@media (max-width: 1279px) {
-  .cl-frame--scale .cl-frame-screen > .cl-screen {
-    --screen-w: clamp(800px, 100cqi, var(--screen-natural));
-  }
-}
-
 /* Inside a product image no text sets under the caption size (12px): the
    smaller product roles take the caption size, mono deltas included. */
 

@@ -74,27 +74,6 @@
   min-width: 0;
 }
 
-/* Below 1280px the screen is drawn unscaled in a narrower frame: each
-   sparkline takes its own row 8px under the delta, and a tile's label holds
-   one line. */
-
-@media (max-width: 1279px) {
-  .cl-frame--scale .cl-screen-kpis {
-    gap: 24px;
-  }
-
-  .cl-frame--scale .cl-screen-kpi {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .cl-frame--scale .cl-screen-kpi .type-eyebrow {
-    white-space: nowrap;
-  }
-}
-
 /* Engine meters flow down two columns; the second, holding "Google AI Overviews", is wider. */
 
 .cl-screen-meters {
@@ -186,22 +165,4 @@
 
 .cl-screen-cols > * {
   min-width: 0;
-}
-
-/* Below 1280px a frame draws its screen unscaled at the frame's width
-   (product-frame.css). The aside (the brands table: two 96px figure columns
-   and the card's padding) stacks under the main column wherever its name
-   column would be narrower than 160px, so no brand name ellipsises. */
-
-.cl-screen--app .cl-app-content,
-.cl-screen--visibility {
-  container: cl-screen-body / inline-size;
-}
-
-@media (max-width: 1279px) {
-  @container cl-screen-body (max-width: 1167px) {
-    .cl-screen-cols {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
 }

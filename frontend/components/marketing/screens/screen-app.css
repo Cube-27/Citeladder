@@ -23,20 +23,6 @@
   --screen-h: 704px;
 }
 
-/* Drawn unscaled (below 1280px) the ranking would stack
-   under the trend and be cut mid-card, so the overview draws the KPI row and
-   the trend at their own height, the trend's caption included. */
-
-@media (max-width: 1279px) {
-  .cl-frame--scale .cl-screen--visibility {
-    height: auto;
-  }
-
-  .cl-frame--scale .cl-screen--visibility .cl-screen-cols > :nth-child(2) {
-    display: none;
-  }
-}
-
 /* ---------- The app in its chrome: the home page's first view ----------
    The shell's own geometry: the sidebar column, the ruled top bar
    (`page-header-band`) shared by the project switcher and the page title,
@@ -310,34 +296,6 @@
   margin: 0;
 }
 
-/* The website draws the strip without React measuring it, so its rows follow
-   `figureRows` (figure-rows.ts) by container width instead: five across while
-   each cell keeps 160px, then 3 + 2, then pairs below a 480px strip. */
-
-.cl-screen--app [data-figure-strip-frame] {
-  container: cl-figures / inline-size;
-}
-
-@container cl-figures (480px <= width < 800px) {
-  .cl-screen--app [data-figure-cell] {
-    flex-basis: calc(100% / 3);
-  }
-
-  .cl-screen--app [data-figure-cell]:nth-child(3n + 1) {
-    box-shadow: inset 0 -1px 0 var(--color-rule);
-  }
-}
-
-@container cl-figures (width < 480px) {
-  .cl-screen--app [data-figure-cell] {
-    flex-basis: 50%;
-  }
-
-  .cl-screen--app [data-figure-cell]:nth-child(2n + 1) {
-    box-shadow: inset 0 -1px 0 var(--color-rule);
-  }
-}
-
 /* Site health's split Run new crawl: two faces joined on one edge. */
 
 .cl-app-split {
@@ -353,18 +311,4 @@
   margin-inline-start: -1px;
   border-start-start-radius: 0;
   border-end-start-radius: 0;
-}
-
-/* Below 1280px the drawn app drops its sidebar; the frame draws the main
-   pane at scale 1 (product-frame.css), every section whole. */
-
-@media (max-width: 1279px) {
-  .cl-frame--scale .cl-screen--app {
-    grid-template-columns: minmax(0, 1fr);
-    height: auto;
-  }
-
-  .cl-frame--scale .cl-screen--app > .cl-app-side {
-    display: none;
-  }
 }
