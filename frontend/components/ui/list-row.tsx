@@ -307,11 +307,11 @@ export function TreeItemForm({
 
 /**
  * A card's list of `ItemRow`s, which lay out by its width rather than the
- * window's. Its rows and hairlines stay inside the content column, their text
- * lined up with the section head.
+ * window's. Its rows stay inside the content column, their text lined up
+ * with the section head, apart by their padding with no rule between.
  */
 export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="divide-rule @container min-w-0 divide-y">{children}</ul>;
+  return <ul className="@container min-w-0">{children}</ul>;
 }
 
 /**

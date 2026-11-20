@@ -115,13 +115,9 @@ export function SectionDescription({
   );
 }
 
-/** A form section's foot: under a `rule` 16 below the body, its actions right-aligned 16 under it. */
+/** A form section's foot: its actions right-aligned 24 below the body, with no rule between. */
 export function SectionFoot({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="border-rule mt-4 flex flex-wrap justify-end gap-2 border-t pt-4">
-      {children}
-    </div>
-  );
+  return <div className="mt-6 flex flex-wrap justify-end gap-2">{children}</div>;
 }
 
 /** The section's body. */
