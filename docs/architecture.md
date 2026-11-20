@@ -105,7 +105,9 @@ project row through its foreign key, so that implicit lock is a project lock
 too. Only project deletion locks the row `FOR UPDATE`, which blocks those
 inserts; every other project writer serializes with `FOR NO KEY UPDATE`, which
 does not. The same holds for a crawl row: every child insert key-shares it, so
-crawl writers lock it `FOR NO KEY UPDATE`. A path that inserts project rows after the capacity lock (an audit
+crawl writers lock it `FOR NO KEY UPDATE`. An analyze task commit writes no
+crawl column and takes it `FOR SHARE` in the same place, so commits share it
+while Stop and the reconcile wait for them. A path that inserts project rows after the capacity lock (an audit
 launch) takes the project's key-share lock before the capacity lock. Cancellation remains `audit -> task
 mutation -> reservation release`. A run ending takes its probe launch's advisory
 lock after its own audit row; nothing takes it before an audit row

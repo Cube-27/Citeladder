@@ -190,7 +190,9 @@ how to add or change an entry.
   2026-11-02.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them
   ([invariant 5](invariants.md#5-derived-artifacts-record-provenance)). Owner,
-  2026-11-02.
+  2026-11-02. The Overview also drops the per-page eligibility reasons no screen
+  reads, and a published Issues summary keeps its monitored affected count until
+  the next publication instead of recounting it per read. Owner, 2026-11-20.
 - **Domain verification, authorized-crawl receipts and enterprise SSO/SCIM wait**
   for an enterprise customer; before a crawl of the project's own site the user
   may choose to ignore robots.txt, with no verification required. Owner,

@@ -221,8 +221,10 @@ crawl status sets from `packages/contracts/src/site-health/crawl.ts`
 ([state machines](state-machines.md)).
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
-settled lifecycle task reconciles counters and sub-states under the crawl row
-lock, in its crawl's single-flight chain inside the worker: the slot that ran
+settled lifecycle task reconciles counters and sub-states, in its crawl's
+single-flight chain inside the worker. It assesses the crawl outside the lock
+and writes under the crawl row lock, assessing again under the lock only when
+the row's state moved meanwhile. The slot that ran
 the task refills at once, and one crawl's reconciles run one at a time in
 settlement order. While siblings remain, a settled analysis (analyzed, failed or
 cancelled) only refreshes the provisional summary, and a discover while
@@ -235,7 +237,10 @@ events. The summary's elapsed-time bound lengthens to
 provisional scores, with counts, from a few grouped queries that never read
 rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
 evaluations. It is read outside the crawl lock every task commit takes, which
-is held only to write, skipping a crawl that settled meanwhile. When discovery and
+is held only to write, skipping a crawl that settled meanwhile. An analyze commit
+writes no crawl column and holds the row `FOR SHARE`, so page commits run side
+by side; the analyzed count is counted by the reconcile, Stop and the live
+counters, never bumped per page. When discovery and
 analysis drain, the reconcile enqueues one `finalize` task and the crawl stays
 active until it publishes (`finalize-task.ts`, owner decision CO-2):
 
@@ -878,8 +883,9 @@ unfiltered Issues read pages that persisted list. A filtered read (search,
 severity, category, dimension, rule, page or page kind) computes its groups and
 summary from the current issues, as does a crawl whose catalog is not written
 yet. The
-monitored affected count is read per request in both: the monitored selection
-is live configuration.
+monitored affected count is published with the summary, so a persisted one lags
+a monitored-selection change until the next publication; a computed summary
+counts it live ([decisions](decisions.md#site-health-and-data)).
 
 Every rule lists under one Issues tab (`section`: technical, content or aeo);
 the API owns the mapping (`issue_section_by_category` in
