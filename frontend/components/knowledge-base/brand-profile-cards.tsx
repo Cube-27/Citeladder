@@ -9,7 +9,7 @@ import { ChipInput } from '@/components/ui/chip-input';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 import { Textarea } from '@/components/ui/textarea';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -20,10 +20,9 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { SaveFoot } from './save-foot';
 import type { BrandProfileForm } from './use-brand-profile-form';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-/** The profile save's outcome, above the tab it was saved from. */
-export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
+/** The profile save's outcome, above the form it was saved from. */
+function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   if (form.error)
     return (
       <Notice
@@ -55,11 +54,9 @@ function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
 export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, identity, saving } = form;
   return (
-    <Section aria-labelledby="company-facts">
-      <SectionHeader>
-        <SectionTitle id="company-facts">Company facts</SectionTitle>
-      </SectionHeader>
-      <SettingRows>
+    <SettingsGroup title="Company facts">
+      <ProfileSaveNotices form={form} />
+      <SettingRows foot={<ProfileSaveFoot form={form} />}>
         <SettingField label="What you sell">
           {(field) => (
             <Textarea
@@ -91,7 +88,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           disabled={saving}
           onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
         />
-        <SettingField wide label="Description">
+        <SettingField label="Description">
           {(field) => (
             <Textarea
               {...field}
@@ -102,7 +99,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             />
           )}
         </SettingField>
-        <SettingField wide label="Positioning">
+        <SettingField label="Positioning">
           {(field) => (
             <Textarea
               {...field}
@@ -114,8 +111,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           )}
         </SettingField>
       </SettingRows>
-      <ProfileSaveFoot form={form} />
-    </Section>
+    </SettingsGroup>
   );
 }
 
@@ -134,7 +130,7 @@ function FacetChoice<T extends string>({
   onPick: (value: T) => void;
 }>) {
   return (
-    <SettingField compact label={label}>
+    <SettingField inline label={label}>
       {(field) => (
         <Select<T | ''>
           id={field.id}
@@ -162,12 +158,10 @@ function FacetChoice<T extends string>({
 export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, saving } = form;
   return (
-    <Section aria-labelledby="audience-offerings">
-      <SectionHeader>
-        <SectionTitle id="audience-offerings">Audience and offerings</SectionTitle>
-      </SectionHeader>
-      <SettingRows>
-        <SettingField wide label="Target audience">
+    <SettingsGroup title="Audience and offerings">
+      <ProfileSaveNotices form={form} />
+      <SettingRows foot={<ProfileSaveFoot form={form} />}>
+        <SettingField label="Target audience">
           {(field) => (
             <Textarea
               {...field}
@@ -189,8 +183,7 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
           disabled={saving}
         />
       </SettingRows>
-      <ProfileSaveFoot form={form} />
-    </Section>
+    </SettingsGroup>
   );
 }
 
@@ -202,19 +195,17 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
   const mayEdit = useWorkspaceCapability('write');
   const [editing, setEditing] = useState(false);
   return (
-    <Section aria-labelledby="tracked-competitors">
-      <SectionHeader
-        actions={
-          mayEdit ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              <Icon icon={Pencil} />
-              Edit competitors
-            </Button>
-          ) : null
-        }
-      >
-        <SectionTitle id="tracked-competitors">Tracked competitors</SectionTitle>
-      </SectionHeader>
+    <SettingsGroup
+      title="Tracked competitors"
+      action={
+        mayEdit ? (
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            <Icon icon={Pencil} />
+            Edit competitors
+          </Button>
+        ) : null
+      }
+    >
       {(project.competitors ?? []).length === 0 ? (
         <StateBlock kind="empty" inline message="No competitors tracked yet." />
       ) : (
@@ -244,6 +235,6 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
         </SettingRows>
       )}
       {editing ? <ProjectEditPanel project={project} open onOpenChange={setEditing} /> : null}
-    </Section>
+    </SettingsGroup>
   );
 }

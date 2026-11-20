@@ -16,7 +16,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -103,11 +103,8 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
   // The workspace's list shows only what it holds; a failed read still says so.
   if (adminView && (query.isPending || empty)) return null;
   return (
-    <Section aria-label={title}>
-      {/* The list's title is its card's head, not a heading between blocks. */}
-      <SectionHeader>
-        <SectionTitle>{title}</SectionTitle>
-      </SectionHeader>
+    // The table is the named region; the group only heads it.
+    <SettingsGroup title={title} region={false}>
       {empty ? (
         <StateBlock kind="empty" icon={ICONS.agent} heading="No connections yet" />
       ) : (
@@ -131,7 +128,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
         revoke={revoke}
         onClose={() => setPending(null)}
       />
-    </Section>
+    </SettingsGroup>
   );
 }
 
@@ -181,13 +178,12 @@ export function McpConnections() {
   const mayManage = useWorkspaceCapability('manage_members');
   return (
     <>
-      <Section aria-labelledby="mcp-connect-title">
-        <SectionHeader>
-          <SectionTitle id="mcp-connect-title">Connect an AI assistant</SectionTitle>
-        </SectionHeader>
-        <ConnectStrip surface="app" />
-      </Section>
-      {/* Your approvals and the workspace's: one card each. */}
+      <SettingsGroup title="Connect an AI assistant">
+        <SettingRows>
+          <ConnectStrip surface="app" />
+        </SettingRows>
+      </SettingsGroup>
+      {/* Your approvals and the workspace's: one group each. */}
       <ConnectionList />
       {mayManage && activeWorkspaceId ? (
         <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />

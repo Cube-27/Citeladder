@@ -1,17 +1,16 @@
 import type { BillingEntitlement } from '@/lib/api/billing';
 
-import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { SettingField } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
-import { wellClasses } from '@/components/ui/slip';
 
 export function BillingCountryInput({
   country,
   setCountry,
 }: Readonly<{ country: string; setCountry: (country: string) => void }>) {
   return (
-    <Field label="Billing country" hint="Two-letter ISO code" className={wellClasses()}>
+    <SettingField inline label="Billing country" hint="Two-letter ISO code">
       {(field) => (
         <Input
           {...field}
@@ -20,7 +19,7 @@ export function BillingCountryInput({
           placeholder="US"
         />
       )}
-    </Field>
+    </SettingField>
   );
 }
 

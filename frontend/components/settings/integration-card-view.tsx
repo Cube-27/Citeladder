@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,8 +15,12 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GoogleMark } from '@/components/ui/google-glyph';
-import { Stack } from '@/components/ui/layout';
-import { ItemList } from '@/components/ui/list-row';
+import {
+  SettingRow,
+  SettingRows,
+  SettingsGroup,
+  settingRowsClasses,
+} from '@/components/ui/setting-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatTimeZoneNote } from '@/lib/format';
 import {
@@ -26,15 +30,7 @@ import {
 } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { textRole } from '@/components/ui/typography';
 import { Notice } from '@/components/ui/notice';
-import {
-  Section,
-  SectionContent,
-  SectionHeader,
-  SectionTitle,
-  SectionTitleLine,
-} from '@/components/ui/section';
 
 type GrantStatus = IntegrationConnection['grant_status'];
 type GrantBadge =
@@ -69,29 +65,29 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   return null;
 }
 
-function GrantHeader({
+/** The grant's status, on its family's heading line. */
+function GrantStatus({
   family,
   grant,
-  actions,
-}: Readonly<{ family: GrantFamily; grant: GrantModel | null; actions?: ReactNode }>) {
-  const meta = FAMILY_META[family];
+}: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
   const badge = grant ? GRANT_STATUS_BADGE[grant.status] : { variant: 'neutral' as const };
   const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
+  return badge.variant === 'status' ? (
+    <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
+      {label}
+    </StatusMark>
+  ) : (
+    <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
+  );
+}
 
+/** The family's name, after Google's mark. */
+function GrantTitle({ family }: Readonly<{ family: GrantFamily }>) {
   return (
-    <SectionHeader actions={actions}>
-      <SectionTitleLine>
-        {family === 'google' ? <GoogleMark /> : null}
-        <SectionTitle>{meta.title}</SectionTitle>
-        {badge.variant === 'status' ? (
-          <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
-            {label}
-          </StatusMark>
-        ) : (
-          <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
-        )}
-      </SectionTitleLine>
-    </SectionHeader>
+    <>
+      {family === 'google' ? <GoogleMark /> : null}
+      {FAMILY_META[family].title}
+    </>
   );
 }
 
@@ -118,18 +114,19 @@ function ConnectCard({
   const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
-    <Section data-testid={`grant-card-${family}`}>
-      <GrantHeader
-        family={family}
-        grant={null}
-        actions={canManage ? <ConnectButton workspaceId={workspaceId} family={family} /> : null}
-      />
-      {canManage ? null : (
-        <SectionContent>
-          <p className={textRole('body', 'text-ink-2')}>Owner or Admin only.</p>
-        </SectionContent>
-      )}
-    </Section>
+    <div data-testid={`grant-card-${family}`}>
+      <SettingsGroup
+        title={<GrantTitle family={family} />}
+        status={<GrantStatus family={family} grant={null} />}
+        action={canManage ? <ConnectButton workspaceId={workspaceId} family={family} /> : null}
+      >
+        {canManage ? null : (
+          <SettingRows>
+            <SettingRow label="Owner or Admin only." />
+          </SettingRows>
+        )}
+      </SettingsGroup>
+    </div>
   );
 }
 
@@ -225,22 +222,21 @@ function ConnectedCard({
   ) : null;
 
   return (
-    <Section data-testid={`grant-card-${family}`}>
-      <GrantHeader family={family} grant={grant} actions={actions} />
-      <SectionContent>
-        <Stack gap="compact">
-          <GrantAlert family={family} status={grant.status} />
-          <ItemList>
-            {grant.connections.map((connection) => (
-              <ConnectionRow key={connection.id} connection={connection} grant={grant} />
-            ))}
-          </ItemList>
-          {datesShown ? (
-            <p className={textRole('caption', 'text-ink-2')}>{formatTimeZoneNote(timeZone)}</p>
-          ) : null}
-        </Stack>
-      </SectionContent>
-    </Section>
+    <div data-testid={`grant-card-${family}`}>
+      <SettingsGroup
+        title={<GrantTitle family={family} />}
+        status={<GrantStatus family={family} grant={grant} />}
+        description={datesShown ? formatTimeZoneNote(timeZone) : undefined}
+        action={actions}
+      >
+        <GrantAlert family={family} status={grant.status} />
+        <ul className={settingRowsClasses('@container')}>
+          {grant.connections.map((connection) => (
+            <ConnectionRow key={connection.id} connection={connection} grant={grant} />
+          ))}
+        </ul>
+      </SettingsGroup>
+    </div>
   );
 }
 

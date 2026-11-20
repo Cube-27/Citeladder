@@ -14,7 +14,7 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,7 +66,7 @@ export function BrandFactsPanel({
   const active = list.facts.filter((fact) => fact.status !== 'retired');
   const retired = list.facts.filter((fact) => fact.status === 'retired');
   return (
-    <Stack gap="workspace">
+    <>
       {create.isError ? (
         <Notice
           kind="mutation"
@@ -109,11 +109,11 @@ export function BrandFactsPanel({
           onAdd={addFact}
         />
       ) : null}
-    </Stack>
+    </>
   );
 }
 
-/** The add form as setting rows under its own heading, after the facts it adds to. */
+/** The add form as its own frame of setting rows, after the facts it adds to. */
 function AddFact({
   maxChars,
   pending,
@@ -134,15 +134,22 @@ function AddFact({
   const empty = !draft.statement.trim();
   return (
     <form
-      aria-labelledby="add-brand-fact"
+      aria-label="Add a fact"
       onSubmit={(event) => {
         event.preventDefault();
         if (pending || empty) return;
         void submit();
       }}
     >
-      <SettingRows title="Add a fact" titleId="add-brand-fact">
-        <SettingField label="Topic">
+      <SettingRows
+        foot={
+          <Button type="submit" variant="primary" disabled={pending || empty}>
+            <Icon icon={Plus} />
+            Add draft fact
+          </Button>
+        }
+      >
+        <SettingField inline label="Topic">
           {(props) => (
             <Select
               id={props.id}
@@ -153,7 +160,7 @@ function AddFact({
             />
           )}
         </SettingField>
-        <SettingField wide label="Fact">
+        <SettingField label="Fact">
           {(props) => (
             <Textarea
               {...props}
@@ -174,12 +181,6 @@ function AddFact({
             />
           )}
         </SettingField>
-        <Inline className="flex-wrap justify-end">
-          <Button type="submit" variant="primary" disabled={pending || empty}>
-            <Icon icon={Plus} />
-            Add draft fact
-          </Button>
-        </Inline>
       </SettingRows>
     </form>
   );

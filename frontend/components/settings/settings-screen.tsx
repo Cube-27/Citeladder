@@ -26,12 +26,10 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { Avatar } from '@/components/ui/avatar';
 import { Icon } from '@/components/ui/icon';
-import { SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -88,41 +86,34 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
-      <Section aria-labelledby="settings-danger-zone-title">
-        <SectionHeader>
-          {/* Its own card: Settings has no project-scoped tab, so it stays under Account. */}
-          <SectionTitle id="settings-danger-zone-title">Delete project</SectionTitle>
-        </SectionHeader>
-        <Stack gap="item">
-          {activeProject ? (
-            <>
-              <SettingRow
-                label={activeProject.name}
-                action={
-                  <Button
-                    variant="danger"
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Icon icon={Trash2} />
-                    Delete project
-                  </Button>
-                }
-              />
-              {deleteMutation.isError ? (
-                <Notice
-                  kind="mutation"
-                  notice={mutationNoticeForError(deleteMutation.error, {
-                    action: 'delete the project',
-                  })}
-                />
-              ) : null}
-            </>
-          ) : (
-            <StateBlock kind="empty" inline message="No project is selected." />
-          )}
-        </Stack>
-      </Section>
+      {/* Settings has no project-scoped tab, so it stays under Account, last. */}
+      <SettingsGroup title="Delete project">
+        {deleteMutation.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(deleteMutation.error, { action: 'delete the project' })}
+          />
+        ) : null}
+        {activeProject ? (
+          <SettingRows>
+            <SettingRow
+              label={activeProject.name}
+              action={
+                <Button
+                  variant="danger"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Icon icon={Trash2} />
+                  Delete project
+                </Button>
+              }
+            />
+          </SettingRows>
+        ) : (
+          <StateBlock kind="empty" inline message="No project is selected." />
+        )}
+      </SettingsGroup>
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -201,19 +192,13 @@ export function SettingsScreen() {
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
       <SettingsPage tabs={<TabRow items={tabs} ariaLabel="Settings sections" />}>
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
-          <Section aria-labelledby="settings-profile-title">
-            <SectionHeader>
-              <SectionTitle id="settings-profile-title">Profile</SectionTitle>
-            </SectionHeader>
+          <SettingsGroup title="Profile">
             <SettingRows>
-              <SettingRow
-                label={user.email}
-                action={<Avatar name={user.email} placement="profile" />}
-              />
+              <SettingRow label={user.email} action={<Avatar name={user.email} />} />
               {createdLabel ? <SettingRow label="Account created" value={createdLabel} /> : null}
               {updatedLabel ? <SettingRow label="Last updated" value={updatedLabel} /> : null}
             </SettingRows>
-          </Section>
+          </SettingsGroup>
           <TimeZoneSetting />
           <AccountSecurity />
           <ProjectDeletionControls />

@@ -1678,11 +1678,20 @@ a.focus-ring:active .type-caption {
    PageSections, SectionStack, AppGrid) names its gap in `data-rhythm-gap`,
    so the section adds only the difference. */
 @layer components {
-  /* Settings (3.4): one section per group across the column, its head on top
-     and every block (lists, tables, notices, button rows) at full width.
-     Only a form field (text input, textarea, select) stops at 640. */
-  [data-settings-sections] .surface-section [data-form-field] {
-    max-width: var(--container-form);
+  /* The Settings layout: the page and each tab panel stack their groups 32
+     apart; a group's frame is its edge, so no section rule or margin is added. */
+  [data-settings-sections],
+  [data-settings-sections] > [role='tabpanel'] {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  [data-settings-sections] :is(section, section.surface-section) {
+    padding-top: 0;
+    margin-block-start: 0;
+    &::before {
+      content: none;
+    }
   }
   /* Section dividers (owner, 2026-11-18): a `rule` separates page sections,
      32 either side. A page section is a section, or a grid of them, placed
