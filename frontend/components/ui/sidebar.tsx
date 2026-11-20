@@ -377,7 +377,7 @@ export function SidebarIdentButton({
  * Below 900px and in the drawer, where the menu button opens the sidebar
  * instead, it is hidden.
  */
-export function SidebarCollapseToggle() {
+function SidebarCollapseToggle() {
   const collapsed = useSidebarCollapsed();
   return (
     <IconButton
