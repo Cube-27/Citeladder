@@ -42,6 +42,18 @@
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
+/* The website's button edges follow the owner's reference (2026-11-20): a
+   soft hairline on a secondary (its words name it, so no 3:1) and a step
+   darker than the fill on a primary. Drawn app screens keep the app's. */
+[data-public-surface]
+  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
+  border-color: var(--color-button-edge);
+}
+
+[data-public-surface] .face-primary:not(:is(.cl-screen, .cl-vig) *) {
+  border-color: var(--color-primary-edge);
+}
+
 @media (max-width: 540px) {
   [data-public-surface] .marketing-cta-button {
     flex: none;

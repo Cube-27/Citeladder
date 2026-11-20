@@ -624,74 +624,60 @@
 /* State layers: the state's ink overlay painted as a background image,
    so it tints an opaque control (a surface button) and a transparent row
    alike without replacing their fill. A selected element takes no hover
-   overlay, so the two never compete. Over a layered control the overlay
-   sits on its gradient (`--button-face`, which nothing inherits). */
-@property --button-face {
-  syntax: '*';
-  inherits: false;
-}
+   overlay, so the two never compete. */
 @utility overlay-hover {
-  background-image:
-    linear-gradient(var(--color-state-hover), var(--color-state-hover)), var(--button-face, none);
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }
 @utility overlay-pressed {
-  background-image:
-    linear-gradient(var(--color-state-pressed), var(--color-state-pressed)),
-    var(--button-face, none);
+  background-image: linear-gradient(var(--color-state-pressed), var(--color-state-pressed));
 }
 @utility overlay-selected {
-  background-image:
-    linear-gradient(var(--color-state-selected), var(--color-state-selected)),
-    var(--button-face, none);
-}
-/* The primary's states: hover lifts it a touch lighter, a press sinks it. */
-@utility overlay-lift {
-  background-image:
-    linear-gradient(oklch(100% 0 0 / 5%), oklch(100% 0 0 / 5%)), var(--button-face, none);
-}
-@utility overlay-sink {
-  background-image:
-    linear-gradient(oklch(0% 0 0 / 8%), oklch(0% 0 0 / 8%)), var(--button-face, none);
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
-/* The layered control (owner, 2026-11-20: "just to have a subtle 3d
-   effect"), app and website alike: a faint vertical gradient over its flat
-   bottom colour, a barely-there lit top edge and a soft low
-   drop (`shadow-button`); each control keeps its own border. A press drops
-   the shadow; disabled is flat. */
-@utility face-primary {
-  --button-face: linear-gradient(var(--color-primary-from), var(--color-primary-to));
-  background-color: var(--color-primary-to);
-  background-image: var(--button-face);
+/* The layered face (owner, 2026-11-20: "just to have a subtle 3d effect"),
+   app and website alike: a faint vertical gradient (--face-from/to), its
+   state tint on top, a lit top edge and the soft low shadow-button. Each
+   control keeps its own border. A press drops the shadow; disabled is flat.
+   Danger stays flat (--face-to is its top): its crimson label fails 4.5:1 on
+   the gradient's foot under the tints. Unlayered, over the overlay utilities. */
+.face {
+  --face-from: var(--color-button-from);
+  --face-to: var(--color-button-to);
+  background:
+    linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
+    linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
+  box-shadow: var(--face-lit, 0 0 transparent), var(--shadow-button);
+}
+.face-primary {
+  --face-from: var(--color-primary-from);
+  --face-to: var(--color-primary-to);
+  --face-lit: inset 0 1px 0 oklch(100% 0 0 / 16%);
+  --face-hover: oklch(100% 0 0 / 5%);
+  --face-press: oklch(0% 0 0 / 8%);
   color: var(--color-on-primary);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 16%), var(--shadow-button);
 }
-@utility face-secondary {
-  --button-face: linear-gradient(var(--color-button-from), var(--color-button-to));
-  background-color: var(--color-button-to);
-  background-image: var(--button-face);
-  box-shadow: var(--shadow-button);
+.face-danger {
+  --face-to: var(--color-button-from);
 }
-/* A crimson label fails 4.5:1 on the gradient's foot under the hover and
-   press tints, so danger keeps the flat top colour with the same depth. */
-@utility face-danger {
-  background-color: var(--color-button-from);
-  box-shadow: var(--shadow-button);
+.face-filled {
+  --face-from: oklch(100% 0 0 / 6%);
+  --face-to: transparent;
+  --face-bg: var(--color-negative);
 }
-/* A filled colour (the confirm dialog's danger) keeps its fill under a faint sheen. */
-@utility face-filled {
-  --button-face: linear-gradient(oklch(100% 0 0 / 6%), oklch(100% 0 0 / 0%));
-  background-image: var(--button-face);
-  box-shadow: var(--shadow-button);
+@media (hover: hover) {
+  .face:hover {
+    --face-tint: var(--face-hover, var(--color-state-hover));
+  }
 }
-/* Unlayered, so they outrank the face utilities. */
-:is(.face-primary, .face-secondary, .face-danger, .face-filled):is(:active, :disabled, [aria-disabled='true']) {
+.face:is(:active, [aria-pressed='true'], [data-state='open']) {
+  --face-tint: var(--face-press, var(--color-state-pressed));
   box-shadow: none;
 }
-:is(.face-primary, .face-secondary, .face-filled):is(:disabled, [aria-disabled='true']):not(
-    [aria-busy='true']
-  ) {
-  background-image: none;
+.face:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+  --face-tint: transparent;
+  --face-from: var(--face-to);
+  box-shadow: none;
 }
 
 /* A small control's tap area: centred on it and at least --target-hit square
@@ -1093,12 +1079,11 @@
   --color-site-band-line: oklch(100% 0 0 / 45%);
 }
 
-/* A website secondary button's edge is a soft hairline, light grey in light
-   and a lighter step on the dark ground (owner, 2026-11-20); its words name
-   it, so the edge needs no 3:1. Drawn app screens keep the app's. */
+/* A secondary (outline) button's edge is the control line, at least 3:1 on
+   paper and on the neutral panel in both themes. Drawn app screens keep the app's. */
 [data-public-surface]
   :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
-  border-color: var(--color-button-edge);
+  border-color: var(--color-line-control);
 }
 
 /* Public eyebrows are quiet sans labels; product images keep the app's mono. */
@@ -1857,14 +1842,17 @@ a.focus-ring:active .type-caption {
    attributes are app-only; the disabled rule below outranks these, so a
    disabled button keeps the one disabled look. */
 [data-state-offer] [data-button-variant='secondary']:first-child {
-  --button-face: linear-gradient(var(--color-primary-from), var(--color-primary-to));
-  background-color: var(--color-primary-to);
+  --face-from: var(--color-primary-from);
+  --face-to: var(--color-primary-to);
   border-color: var(--color-primary-to);
   color: var(--color-on-primary);
 }
 [data-demoted] [data-button-variant] {
-  --button-face: linear-gradient(var(--color-button-from), var(--color-button-to));
-  background-color: var(--color-button-to);
+  --face-from: var(--color-button-from);
+  --face-to: var(--color-button-to);
+  --face-lit: initial;
+  --face-hover: initial;
+  --face-press: initial;
   border-color: var(--color-control-edge);
   color: var(--color-ink);
 }

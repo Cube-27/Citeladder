@@ -445,7 +445,7 @@ its own spacing, size or radius on them.
   effect"): every primary, secondary and danger button, filter and select
   trigger, and the selected segment of a switch, in the app, website, login
   and onboarding, takes a faint top-to-bottom gradient, a soft low shadow and
-  a barely-there lit top edge (`face-*` in `globals.css`, `shadow-button`).
+  a barely-there lit top edge (`.face` in `globals.css`: shared `--face-*` properties, one rule per state, and `shadow-button`).
   No heavy bevel. App borders stay as they were; on the website a secondary
   takes the soft `button-edge` hairline and the primary a `primary-edge` a step
   darker than its fill (owner, 2026-11-20). The primary fill is the accent
