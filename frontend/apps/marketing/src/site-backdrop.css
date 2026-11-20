@@ -58,9 +58,14 @@
   opacity: var(--lb-grain);
 }
 
-/* The closing band meets the footer: no strip of page between them. */
+/* The closing band meets the footer: the space between them is the
+   footer's own paper, not a strip of the page. */
 .cl-site-main:has(.cl-cta) {
   padding-bottom: 0;
+}
+
+.cl-site-main:has(.cl-cta) ~ .cl-footer {
+  padding-top: 96px;
 }
 
 /* The nav bar sits on the background at the top and takes its own paper and
