@@ -122,10 +122,10 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   underlined in accent.
 - **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
   then the metric strip, then sections 24 apart; a section's head sits 12
-  above its body. Narrow pages centre the body in their column (1040:
+  above its body. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, page detail, Agent, Billing; 720:
-  Settings, Runs, Agent context); the header and tab rules still span the
-  panel.
+  Settings, Pricing, Runs, Agent context); the header and tab rules still
+  span the panel.
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar is the strip under the tabs, 8 above and below its
