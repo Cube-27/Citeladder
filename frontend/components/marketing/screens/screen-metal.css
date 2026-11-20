@@ -1,0 +1,22 @@
+/* Experiment (owner, 2026-11-20): every product image's surface is dark
+   brushed metal (light silver in the light theme): a sheen that is lighter
+   at the top and falls away, a faint diagonal highlight, a bright rim along
+   the top edge and a hairline border. The full app screen lets the metal
+   show through its ground and, a little, through its sidebar. Colours are
+   the site-metal tokens in globals.css. */
+
+:root[data-marketing-surface] .cl-screen {
+  /* The screen's panels let the metal through instead of covering it. */
+  --color-surface: color-mix(in oklch, var(--color-site-metal-top) 45%, transparent);
+
+  border: 1px solid var(--color-site-metal-edge);
+  background:
+    linear-gradient(115deg, transparent 30%, var(--color-site-metal-sheen) 46%, transparent 62%),
+    linear-gradient(180deg, var(--color-site-metal-top), var(--color-site-metal-bottom) 60%);
+  box-shadow: inset 0 1px 0 var(--color-site-metal-rim);
+}
+
+:root[data-marketing-surface] .cl-screen--app {
+  --color-ground: transparent;
+  --color-chrome: color-mix(in oklch, var(--color-site-metal-top) 55%, transparent);
+}
