@@ -519,6 +519,10 @@ function expectRoleInvariants(records: readonly Box[], required: readonly string
   expectOneValue(records, SLIP_INSET_ROLES);
   expectOneValue(records, ['field-end-target.size', 'field-end-target.hit']);
   for (const role of NONE_ROLES) expectNone(records, role);
+  const smallAbsence = [...valuesOf(records, ['absence-target.height']).keys()].filter(
+    (value) => value < MIN_TARGET_SIZE,
+  );
+  expect.soft(smallAbsence, `an absence target is at least ${MIN_TARGET_SIZE}px`).toEqual([]);
   const small = [...valuesOf(records, ['field-end-target.size']).keys()].filter(
     (value) => value < MIN_TARGET_SIZE,
   );
