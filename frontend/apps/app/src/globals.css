@@ -507,15 +507,15 @@
    specificity, so it would otherwise win here. The website and docs keep
    the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #08090a;
-  --color-panel: #0f1011;
-  --color-raised: #151618;
-  --color-raised-2: #1c1d20;
+  --color-ground: #09090a;
+  --color-panel: #121213;
+  --color-raised: #1a1a1b;
+  --color-raised-2: #252526;
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 8%);
   --color-control-line: rgb(255 255 255 / 12%);
-  --color-ink: #f7f8f8;
-  --color-ink-2: #8a8f98;
+  --color-ink: #ececec;
+  --color-ink-2: #929293;
   --color-ink-hover: oklch(85% 0 0);
   --color-accent: #ff6a33;
   --color-accent-text: oklch(75.3% 0.155 41.6);
@@ -694,7 +694,7 @@
   --focus-glow: color-mix(in srgb, var(--color-focus) 24%, transparent);
   --field-focus-edge: var(--color-focus);
   --color-control-edge: var(--color-rule);
-  --color-ink: #111214;
+  --color-ink: #1d1d1d;
   --color-ink-2: #5f636a;
   /* The primary button's hover: its ink fill one step lighter. */
   --color-ink-hover: oklch(32% 0.015 264);

@@ -22,16 +22,16 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#08090a`                | `#f2f2f4`          | window and sidebar                   |
-| `panel`          | `#0f1011`                | `#ffffff`          | the inset content panel              |
-| `raised`         | `#151618`                | `#f7f8f9`          | secondary buttons, table head, menus |
-| `raised-2`       | `#1c1d20`                | `#eef0f2`          | hover on raised, avatar              |
+| `ground`         | `#09090a`                | `#f2f2f4`          | window and sidebar                   |
+| `panel`          | `#121213`                | `#ffffff`          | the inset content panel              |
+| `raised`         | `#1a1a1b`                | `#f7f8f9`          | secondary buttons, table head, menus |
+| `raised-2`       | `#252526`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
 | `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | hovered field edge (`line-strong`)   |
-| `ink`            | `#f7f8f8`                | `#111214`          | text                                 |
-| `ink-2`          | `#8a8f98`                | `#5f636a`          | secondary text, icons                |
+| `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
+| `ink-2`          | `#929293`                | `#5f636a`          | secondary text, icons                |
 | `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
