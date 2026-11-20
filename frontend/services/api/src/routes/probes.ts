@@ -6,6 +6,7 @@
 import { auditSchema } from '@citeladder/contracts/audits';
 import {
   objectionGroupMergeRequestSchema,
+  objectionGroupSchema as groupSchema,
   probeMarketSchema,
   probeObjectionsSchema,
   probeScheduleRequestSchema,
@@ -36,7 +37,6 @@ const root = '/api/v1/projects/{project_id}/probes';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 const groupPath = { ...projectPath, group_id: uuid } as const;
-const groupSchema = z.object({ id: z.uuid(), name: z.string() });
 
 function scopeOf(c: Context<AppEnv>, projectId: string) {
   return { workspaceId: c.get('workspace').workspaceId, projectId };

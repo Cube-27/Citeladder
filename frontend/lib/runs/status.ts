@@ -164,9 +164,8 @@ export function runTitle(
   timeZone = 'UTC',
 ): string {
   const scope = RUN_SCOPES[audit.audit_scope];
-  const kind = audit.parent_audit_id
-    ? `${scope} repair run`
-    : `${scope} ${audit.audit_scope === 'probe' ? 'probe' : 'audit'}`;
+  const noun = audit.audit_scope === 'probe' ? 'probe' : 'audit';
+  const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} ${noun}`;
   return `${kind} · ${formatDisplayDate(audit.created_at, timeZone)}`;
 }
 

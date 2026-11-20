@@ -15,9 +15,9 @@ const uuid = () => z.uuid();
 const score = z.int().min(0).max(100);
 
 export const objectionGroupRequestSchema = z.object({ name: z.string() });
-export type ObjectionGroupRequest = z.input<typeof objectionGroupRequestSchema>;
 export const objectionGroupMergeRequestSchema = z.object({ into_id: uuid() });
-export type ObjectionGroupMergeRequest = z.input<typeof objectionGroupMergeRequestSchema>;
+/** A renamed or merged-into objection group. */
+export const objectionGroupSchema = z.object({ id: uuid(), name: z.string() });
 
 /** `PUT /projects/{id}/probes/schedule`: a cadence, or null to turn the schedule off. */
 export const probeScheduleRequestSchema = z.object({
@@ -26,7 +26,7 @@ export const probeScheduleRequestSchema = z.object({
 export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
 
 /** What Run probe would ask and charge, before anything runs (AV-34). */
-export const probeQuoteSchema = z.object({
+const probeQuoteSchema = z.object({
   /** Managed (`funded`) workspaces probe on CiteLadder's keys; others on their own saved keys. */
   credential_mode: credentialModeSchema,
   /** Search-capable engines with a usable key; empty means a key must be added first. */
@@ -42,10 +42,10 @@ export const probeQuoteSchema = z.object({
 });
 export type ProbeQuote = z.infer<typeof probeQuoteSchema>;
 
-export const probeStateSchema = z.enum(['running', 'labelling', 'ready', 'failed', 'unavailable']);
+const probeStateSchema = z.enum(['running', 'labelling', 'ready', 'failed', 'unavailable']);
 
 /** The newest probe launch: its markets' runs together. */
-export const probeRunSchema = z.object({
+const probeRunSchema = z.object({
   launch_id: uuid(),
   audit_ids: z.array(uuid()),
   state: probeStateSchema,

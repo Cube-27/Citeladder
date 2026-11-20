@@ -10,7 +10,7 @@ import { frozenQuestion, type ProbeQuestion } from './questions.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 
-export type ProbeItem = {
+type ProbeItem = {
   question: string;
   rank: number;
   theme_id: string | null;

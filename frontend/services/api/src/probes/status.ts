@@ -61,7 +61,7 @@ async function probeEngineList(
 }
 
 /** What Run probe would ask every engine in every market, and its exact AI-credit cost. */
-export async function probeQuote(
+async function probeQuote(
   db: Database,
   scope: Scope,
   { runtime = auditRuntime(), at = new Date() }: { runtime?: AuditRuntime; at?: Date } = {},

@@ -5,8 +5,7 @@
  */
 
 /** One answer's score for an item at `place` (0 is first); null is not raised. */
-export const placeScore = (place: number | null) =>
-  place === null ? 0 : Math.max(0, 100 - 10 * place);
+const placeScore = (place: number | null) => (place === null ? 0 : Math.max(0, 100 - 10 * place));
 
 /**
  * Each key's place in one answer's items, read in the answer's order: the

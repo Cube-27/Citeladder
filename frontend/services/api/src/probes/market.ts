@@ -75,7 +75,10 @@ function themeScores(answers: readonly ProbeAnswer[], roster: Roster) {
 function themeRow(theme: Theme, answers: readonly ProbeAnswer[], roster: Roster) {
   const { own, entities } = themeScores(answers, roster);
   // Ties keep the brand first, so a shared top score reads as "You lead".
-  const leader = entities.reduce((best, entity) => (entity.score > best.score ? entity : best));
+  const leader = entities.reduce(
+    (best, entity) => (entity.score > best.score ? entity : best),
+    own,
+  );
   return {
     theme_id: theme.id,
     theme: theme.name,

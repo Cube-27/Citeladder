@@ -207,15 +207,13 @@ async function label(
         answer,
       ]);
   for (const [themeId, answers] of byTheme) {
-    const mapped = await ask(
-      gateway,
-      calls,
-      {
-        user: themeRequest(probes, { question: answers[0]?.questionText ?? '', answers }),
-        schema: themeOutput,
-      },
-      (value) => mapThemeBrands(value, answers, { tracked, maxItems: max }),
-    ); // NOSONAR -- One bounded call per theme, in order.
+    const request = {
+      user: themeRequest(probes, { question: answers[0]?.questionText ?? '', answers }),
+      schema: themeOutput,
+    };
+    const accept = (value: z.infer<typeof themeOutput>) =>
+      mapThemeBrands(value, answers, { tracked, maxItems: max });
+    const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- One call per theme, in order.
     labels.themes.push(...mapped.map((item) => ({ ...item, themeId })));
   }
   return { labels, calls };

@@ -12,7 +12,7 @@ import type { Database } from '../db/database.ts';
 import { logicalEngines } from '../providers/config.ts';
 
 type Scope = { workspaceId: string; projectId: string };
-const COMPLETED = ['completed', 'partially_completed'];
+const COMPLETED = new Set(['completed', 'partially_completed']);
 
 function probeAudits(db: Database, scope: Scope) {
   return db
@@ -26,7 +26,7 @@ function probeAudits(db: Database, scope: Scope) {
 function launchState(audits: readonly { status: string; outcome: string | null }[]) {
   const terminal = policy.audits.constants.audit_terminal_statuses;
   if (audits.some((audit) => !terminal.includes(audit.status))) return 'running';
-  const completed = audits.filter((audit) => COMPLETED.includes(audit.status));
+  const completed = audits.filter((audit) => COMPLETED.has(audit.status));
   if (!completed.length) return 'failed';
   if (completed.some((audit) => audit.outcome === null)) return 'labelling';
   return completed.some((audit) => audit.outcome === 'labelled') ? 'ready' : 'unavailable';
@@ -120,4 +120,3 @@ function launch(
     labelledIds: audits.filter((audit) => audit.outcome === 'labelled').map((audit) => audit.id),
   };
 }
-export type ProbeLaunch = ReturnType<typeof launch>;

@@ -17,7 +17,7 @@ import { scalarText } from '../text-order.ts';
 
 const probes = policy.probes;
 
-export const probeQuestionSchema = z.discriminatedUnion('question', [
+const probeQuestionSchema = z.discriminatedUnion('question', [
   z.object({ question: z.literal('known_for') }),
   z.object({ question: z.literal('objection') }),
   z.object({ question: z.literal('theme'), theme_id: z.uuid(), theme_name: z.string() }),
@@ -45,7 +45,7 @@ export type FrozenPrompt = {
 };
 
 /** The category the theme questions name: the reviewed one, else the project's industry. */
-export function probeCategory(context: unknown, industry: string) {
+function probeCategory(context: unknown, industry: string) {
   return scalarText(record(context).category).trim() || industry.trim();
 }
 

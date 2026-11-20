@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 
 import { PerceptionView } from '@/components/perception/perception-brand';
@@ -37,11 +39,7 @@ type Queries = ReturnType<typeof useVisibilityQueries>;
 export function PerceptionScreen() {
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, 'perception');
-  // Fact-checking exists only inside the pilot.
-  const pilot = useBrandFacts().data?.enabled ?? false;
-  const [requested, setTab] = useUrlState('tab', TAB_CODEC);
-  const tab = pilot || requested !== 'fact-checking' ? requested : 'brand';
-  const probe = tab === 'market' || tab === 'objections';
+  const { pilot, tab, setTab, items, probe } = usePerceptionTab();
   const accuracy = useAccuracy({ filters, queries, pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
@@ -52,42 +50,61 @@ export function PerceptionScreen() {
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
-        tabs={
-          <TabRow
-            items={
-              pilot
-                ? PERCEPTION_TABS
-                : PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking')
-            }
-            ariaLabel="Perception views"
-          />
-        }
+        tabs={<TabRow items={items} ariaLabel="Perception views" />}
         // Market and Objections read the newest probe, not the run selection.
         filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
-        {queries.activeRun && queries.hasRuns && !probe ? (
-          <ActiveRunBanner run={queries.activeRun} />
-        ) : null}
+        {probe ? null : <RunBanner queries={queries} />}
         <TabPanel value={tab} className="focus-ring">
           {probe ? (
-            <PerceptionProbe view={tab} />
-          ) : ready ? (
-            <SelectionGate query={queries.visibilityQuery}>
-              {() =>
-                tab === 'brand' ? (
-                  <BrandTab filters={filters} queries={queries} factFigure={brandFact} />
-                ) : (
+            <PerceptionProbe view={probe} />
+          ) : (
+            <SelectionTab
+              ready={ready}
+              queries={queries}
+              view={
+                tab === 'fact-checking' ? (
                   <PerceptionFactChecking query={accuracy} views={factViews} />
+                ) : (
+                  <BrandTab filters={filters} queries={queries} factFigure={brandFact} />
                 )
               }
-            </SelectionGate>
-          ) : (
-            <PageState queries={queries} />
+            />
           )}
         </TabPanel>
       </ReportPage>
     </TabsRoot>
   );
+}
+
+/** The shown tab: Fact-checking exists only inside the pilot. */
+function usePerceptionTab() {
+  const pilot = useBrandFacts().data?.enabled ?? false;
+  const [requested, setTab] = useUrlState('tab', TAB_CODEC);
+  const tab = pilot || requested !== 'fact-checking' ? requested : 'brand';
+  return {
+    pilot,
+    tab,
+    setTab,
+    items: pilot
+      ? PERCEPTION_TABS
+      : PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking'),
+    probe: tab === 'market' || tab === 'objections' ? tab : null,
+  };
+}
+
+/** Brand and Fact-checking: views of the selected runs, behind the selection gate. */
+function SelectionTab({
+  ready,
+  queries,
+  view,
+}: Readonly<{ ready: boolean; queries: Queries; view: ReactNode }>) {
+  if (!ready) return <PageState queries={queries} />;
+  return <SelectionGate query={queries.visibilityQuery}>{() => view}</SelectionGate>;
+}
+
+function RunBanner({ queries }: Readonly<{ queries: Queries }>) {
+  return queries.activeRun && queries.hasRuns ? <ActiveRunBanner run={queries.activeRun} /> : null;
 }
 
 function BrandTab({

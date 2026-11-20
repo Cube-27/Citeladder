@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { auditSchema } from '@citeladder/contracts/audits';
 import {
+  objectionGroupSchema as groupSchema,
   probeMarketSchema,
   probeObjectionsSchema,
   probeStatusSchema,
@@ -21,7 +22,6 @@ import { startInteractiveWork } from './interactive-work';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 
-const groupSchema = z.object({ id: z.uuid(), name: z.string() });
 const root = (projectId: string) => `/projects/${projectId}/probes`;
 
 const probesApi = {
