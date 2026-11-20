@@ -486,7 +486,8 @@ that finding's approach branch template (`messages` in
 Action's own branch when no finding names a workflow, and falls back to the
 Action's label. **Ask agent** carries typed references only (an
 Opportunity, a Demand signal, a page or URL, up to 100 Keyword research rows of
-one dataset, an issue group, a Site Facts crawl, or an exact output revision)
+one dataset, an issue group, a Site Facts crawl, an exact output revision, or
+an objection group, which pins `objection_sources`)
 plus an optional question, skill or workflow. The browser never embeds evidence
 content beyond that message, and the context builder authorizes every
 reference at admission. A content-gap Action's handoff also pins a workflow: a

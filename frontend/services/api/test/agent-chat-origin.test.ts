@@ -52,6 +52,7 @@ describe('Agent chat list origin', () => {
       'site_health',
     ],
     [{ site_facts_reference: { crawl_id: ID } }, null, 'site_health'],
+    [{ objection_group_id: ID }, ID, 'objection'],
   ])('derives the origin of refs %j with action %s as %s', (refs, actionId, origin) => {
     expect(chatOrigin({ context_refs: refs, action_id: actionId })).toBe(origin);
   });

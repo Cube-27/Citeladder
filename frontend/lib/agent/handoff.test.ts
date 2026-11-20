@@ -24,6 +24,7 @@ describe('agent handoff', () => {
       issueGroup: { crawlId: DATASET, groupId: ROW, siteUrlId: PAGE },
       siteFacts: { crawlId: DATASET },
       outputRevision: { outputId: ACTION, revisionId: ROW },
+      objectionGroupId: PAGE,
     };
     const full = parse(agentHandoffHref(input));
     expect(full).toEqual(agentHandoff(input));
@@ -31,9 +32,15 @@ describe('agent handoff', () => {
       issue_group_reference: { crawl_id: DATASET, group_id: ROW, site_url_id: PAGE },
       site_facts_reference: { crawl_id: DATASET },
       output_revision_reference: { output_id: ACTION, revision_id: ROW },
+      objection_group_id: PAGE,
     });
     const chips = contextChips(full.context);
-    expect(chips).toHaveLength(3);
+    expect(chips.map((chip) => chip.label)).toEqual([
+      'Selected page issue',
+      'Selected crawl robots policy',
+      'Selected document revision',
+      'Objection',
+    ]);
     for (const chip of chips)
       expect(withoutContext(full.context, chip.key)[chip.key]).toBeUndefined();
   });
