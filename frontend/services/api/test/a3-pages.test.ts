@@ -308,6 +308,52 @@ describe('A3 persisted Pages join', () => {
       .where('source_id', '=', sourceId)
       .where('reporting_date', '=', new Date(day))
       .execute();
+    // A URL's flags are the distinct union of its landing rows, without multiplying its sums.
+    const flag = (source: string, flags: string[]) =>
+      db
+        .updateTable('ai_referral_landing_daily')
+        .set({ analytics_quality: JSON.stringify(flags) })
+        .where('project_id', '=', seed.projectId)
+        .where('ai_source', '=', source)
+        .execute();
+    const quiet = result.items.find((r) => r.display_path === '/quiet')!;
+    const landing = await db
+      .selectFrom('ai_referral_landing_daily')
+      .selectAll()
+      .where('project_id', '=', seed.projectId)
+      .where('ai_source', '=', 'claude')
+      .executeTakeFirstOrThrow();
+    const quietLanding = randomUUID();
+    await db
+      .insertInto('ai_referral_landing_daily')
+      .values({
+        ...landing,
+        id: quietLanding,
+        url_hash: quiet.url_hash,
+        canonical_url: quiet.canonical_url,
+        display_path: '/quiet',
+        analytics_quality: '[]',
+        source_metric_row_ids: JSON.stringify(landing.source_metric_row_ids),
+      })
+      .execute();
+    await flag('chatgpt', ['thresholding', 'sampling']);
+    await flag('claude', ['thresholding']);
+    try {
+      const flagged = await pagesRead(db, scope(), filters);
+      expect(flagged.items.find((r) => r.url_hash === guide)).toMatchObject({
+        referrals: { state: 'flagged', value: 8, reason: 'sampling, thresholding' },
+        key_events: 3,
+      });
+      expect(flagged.items.find((r) => r.url_hash === quiet.url_hash)?.referrals).toMatchObject({
+        state: 'flagged',
+        value: 5,
+        reason: 'thresholding',
+      });
+    } finally {
+      await db.deleteFrom('ai_referral_landing_daily').where('id', '=', quietLanding).execute();
+      await flag('chatgpt', []);
+      await flag('claude', []);
+    }
   });
   it('binds keyset cursors to window, folder, verification and sort, and exports the same saved measures', async () => {
     const first = await pagesRead(db, scope(), { ...filters, limit: 1 });

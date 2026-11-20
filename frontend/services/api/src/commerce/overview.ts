@@ -164,14 +164,16 @@ export async function shoppingOverview(db: Database, scope: CommerceScope, query
              bool_or(kind = 'owned') AS owned
       FROM holders WHERE btrim(brand) <> '' GROUP BY 1
     ),
+    brand_slots AS (SELECT brand_key, count(*)::int AS n FROM held GROUP BY brand_key),
     brand_metrics AS (
       SELECT n.brand_key, n.brand, n.owned,
              count(b.task_id)::int AS appearances, count(b.best_rank)::int AS ordered,
              count(*) FILTER (WHERE b.best_rank = 1)::int AS wins,
              avg(b.best_rank)::float8 AS position,
-             (SELECT count(*) FROM held x WHERE x.brand_key = n.brand_key)::int AS slots
+             coalesce(bs.n, 0) AS slots
       FROM brand_names n LEFT JOIN brand_best b ON b.brand_key = n.brand_key
-      GROUP BY n.brand_key, n.brand, n.owned
+      LEFT JOIN brand_slots bs ON bs.brand_key = n.brand_key
+      GROUP BY n.brand_key, n.brand, n.owned, bs.n
     ),
     merchants AS (
       SELECT o.merchant_domain AS domain, count(DISTINCT o.task_id)::int AS answers,

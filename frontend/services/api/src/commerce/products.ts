@@ -341,7 +341,9 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
              cur.currency AS price_currency, price.median AS price_median,
              price.quoted AS price_quoted, price.other AS price_other,
              merch.merchants, cats.category_ids
-      FROM keyed k
+      -- Cut the page first so the per-holder laterals below run only for its rows.
+      FROM (SELECT * FROM keyed k ${afterCursor}
+            ORDER BY k.sort_key, k.name_key, k.holder_id LIMIT ${query.limit + 1}) k
       LEFT JOIN LATERAL (
         SELECT coalesce(nullif(k.catalog_currency, ''), (
           SELECT pq.currency FROM priced pq
@@ -368,9 +370,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
         WHERE m.workspace_id = ${ws} AND m.project_id = ${project}
           AND m.product_id = k.holder_id AND c.normalized_name <> ${UNCATEGORIZED_KEY}
       ) cats ON true
-      ${afterCursor}
       ORDER BY k.sort_key, k.name_key, k.holder_id
-      LIMIT ${query.limit + 1}
     ) page ON true
     ORDER BY page.sort_key, page.name_key, page.holder_id
   `.execute(db);

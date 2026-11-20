@@ -208,6 +208,10 @@ describe('Shopping overview read', () => {
     // Measured by no Commerce audit yet: unavailable, not zero.
     expect(before.body.category_shelf).toBeNull();
     expect(before.body.slots).toBe(4);
+    expect(before.body.brands.map((row) => [row.brand, row.appearances, row.slots])).toEqual([
+      ['Acme', 2, 2],
+      ['Rival', 2, 2],
+    ]);
 
     const [audit] = await db
       .selectFrom('audits')
