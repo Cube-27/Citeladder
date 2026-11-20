@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 
 import { SetupStep, StepColumns, StepFindings, StepTrail } from '@/components/templates/setup-page';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { type TrailStep } from '@/components/ui/rung-trail';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
+import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
 import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
@@ -161,18 +163,7 @@ export function DiscoveryStage({
       {failed ? (
         <Notice
           tone="negative"
-          action={
-            SITE_FAILURES.has(errorCode) ? (
-              <>
-                <Button variant="secondary" onClick={onEdit}>
-                  Edit website
-                </Button>
-                {rerun}
-              </>
-            ) : (
-              rerun
-            )
-          }
+          action={<FailureRecovery code={errorCode} rerun={rerun} onEdit={onEdit} />}
         >
           {failureMessage(errorCode)}
         </Notice>
@@ -387,7 +378,31 @@ const RERUN_WARNINGS = new Set(['research_degraded', 'competitors_not_found']);
 /** Failures caused by the website address itself; the reader may need to correct it. */
 const SITE_FAILURES = new Set(['invalid_url', 'site_not_found', 'ssrf_blocked', 'out_of_scope']);
 
+/** A rerun cannot lift a plan limit, so that failure offers billing instead. */
+function FailureRecovery({
+  code,
+  rerun,
+  onEdit,
+}: Readonly<{ code: string; rerun: ReactNode; onEdit: () => void }>) {
+  if (isPlanLimit(code))
+    return (
+      <Button asChild variant="secondary">
+        <Link to={PLANS_HREF}>See plans</Link>
+      </Button>
+    );
+  if (!SITE_FAILURES.has(code)) return rerun;
+  return (
+    <>
+      <Button variant="secondary" onClick={onEdit}>
+        Edit website
+      </Button>
+      {rerun}
+    </>
+  );
+}
+
 function failureMessage(code: string): string {
+  if (code === 'ai_credits_exhausted') return 'Out of AI credits.';
   if (code === 'invalid_url') return 'The website address is invalid.';
   if (SITE_FAILURES.has(code)) return 'We could not open this website.';
   return 'Research did not finish.';

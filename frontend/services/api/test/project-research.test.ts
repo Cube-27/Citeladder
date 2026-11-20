@@ -140,12 +140,19 @@ it('preserves recorded research metadata and enforces a shared call budget befor
         source_id: 'recorded-page',
         url: 'https://acme.com/company',
         title: 'Company',
-        markdown: 'Recorded full page',
+        content: 'Recorded full page',
         acquired_at: '2026-03-02T00:00:00Z',
       },
     },
   ];
-  const transport = vi.fn(async () => Response.json(replies.shift()));
+  // Keenable answers 400 to a fetch parameter it does not document.
+  const fetchParameters = new Set(['url', 'max_chars', 'live']);
+  const transport = vi.fn<ResearchTransport>(async (target) => {
+    const { pathname, searchParams } = new URL(String(target));
+    if (pathname === '/v1/fetch' && [...searchParams.keys()].some((k) => !fetchParameters.has(k)))
+      return Response.json({ error: 'Unknown parameter(s)' }, { status: 400 });
+    return Response.json(replies.shift());
+  });
   const client = createResearchClient(settings, budget, transport, keenable);
   const items = await client.search('Acme company', 'acme.com', 10, 'recorded-query');
   expect(items).toHaveLength(1);
@@ -429,11 +436,22 @@ it('records the identity model finding too little evidence and warns the reviewe
   expect(result.warnings).toContain('insufficient_evidence');
 });
 it.each([
-  ['an unusable answer', new Error('invalid output'), true],
-  ['a credit refusal', new ApiError(403, 'Your AI credits are used up'), false],
+  ['an unusable answer', new Error('invalid output'), 'brand_identity_unavailable', true],
+  [
+    'a credit refusal',
+    new ApiError(403, 'Your AI credits are used up', { code: 'ai_credits_exhausted' }),
+    'ai_credits_exhausted',
+    false,
+  ],
+  [
+    'a pricing refusal',
+    new ApiError(503, 'AI pricing is not configured', { code: 'ai_pricing_unavailable' }),
+    'brand_identity_unavailable',
+    false,
+  ],
 ])(
   'fails research on %s from the identity request instead of an empty review',
-  async (_label, failure, retryable) => {
+  async (_label, failure, code, retryable) => {
     const structured = vi.fn(async () => {
       throw failure;
     });
@@ -457,7 +475,7 @@ it.each([
         { url: 'https://acme.com/', domain: 'acme.com', page: null, warning: 'research_degraded' },
         { meter, gateway, env: {} },
       ),
-    ).rejects.toMatchObject({ code: 'brand_identity_unavailable', retryable });
+    ).rejects.toMatchObject({ code, retryable });
     expect(structured).toHaveBeenCalledTimes(1);
   },
 );

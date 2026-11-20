@@ -283,6 +283,25 @@ describe('OnboardingScreen', () => {
     expect(rerunKeys).toEqual([expect.stringMatching(/\S/)]);
   });
 
+  it('sends research that ran out of AI credits to billing instead of a rerun', async () => {
+    useRealDiscovery = true;
+    searchParams = `discovery=${DISCOVERY_ID}&step=discovery`;
+    const failed = {
+      ...discovery('failed', 'preparing_review'),
+      warnings: ['research_degraded'],
+      error_code: 'ai_credits_exhausted',
+    };
+    mswServer.use(
+      catalogHandler(),
+      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () => HttpResponse.json(failed)),
+    );
+    renderOnboarding();
+    expect(await screen.findByText('Out of AI credits.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/billing');
+    expect(screen.queryByRole('button', { name: 'Run discovery again' })).toBeNull();
+    expect(screen.queryByText('Research did not finish.')).toBeNull();
+  });
+
   it('starts research once while polling persisted progress during the bounded request', async () => {
     useRealDiscovery = true;
     searchParams = `discovery=${DISCOVERY_ID}&step=discovery`;
