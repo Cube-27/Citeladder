@@ -28,8 +28,9 @@ import { hardExcluded, inScope } from './url-admission.ts';
 const a = policy.site_health.page_analysis.acquisition;
 const codes = a.error_codes;
 const BOT_MARKERS = a.bot_block_body_markers.map((marker) => marker.toLowerCase());
-// A redirect hop refused for an unreachable robots.txt (429, 5xx, network) may pass later.
+// A gate refusal that #robotsDenial no longer confirms (its cache entry expired) may pass later.
 const RETRYABLE = new Set([codes.timeout, codes.connection_failed, codes.robots_unavailable]);
+const ROBOTS_GATE_CODES = new Set(['robots_disallowed', 'robots_unavailable']);
 const FETCH_ERROR_CODES: Record<string, string> = {
   invalid_url: codes.url_admission_rejected,
   content_type: codes.unsupported_content_type,
@@ -196,6 +197,7 @@ export class SitePageFetcher {
     if (denied) return denied;
     const calls: FetchCall[] = [];
     const started = performance.now();
+    let lastHop: URL | null = null;
     try {
       const page = await this.acquirer.fetch(url.href, {
         signal: options.signal,
@@ -207,6 +209,7 @@ export class SitePageFetcher {
         headerNames: a.persisted_response_headers,
         // Admission screens the page and every redirect hop, never robots.txt.
         admit: (hop) => {
+          lastHop = hop;
           if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
         },
         onCall: (call) => calls.push(call),
@@ -226,6 +229,12 @@ export class SitePageFetcher {
       ]);
       return { ok: true, page, calls, latencyMs, robotsExcluded };
     } catch (error) {
+      const latencyMs = Math.round(performance.now() - started);
+      // The shared gate refuses a redirect hop with two codes; classify it as the requested URL is.
+      if (lastHop && error instanceof FetchError && ROBOTS_GATE_CODES.has(error.code)) {
+        const denied = await this.#robotsDenial(lastHop, handling(lastHop));
+        if (denied) return { ...denied, calls, latencyMs };
+      }
       const code = errorCode(error);
       return {
         ok: false,
@@ -233,7 +242,7 @@ export class SitePageFetcher {
         detail: error instanceof Error ? error.message.slice(0, 2000) : code,
         retryable: RETRYABLE.has(code),
         calls,
-        latencyMs: Math.round(performance.now() - started),
+        latencyMs,
       };
     }
   }

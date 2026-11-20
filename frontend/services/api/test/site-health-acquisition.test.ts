@@ -446,6 +446,24 @@ describe('discover', () => {
       codes.robots_unavailable,
     ],
     [
+      'a redirect to an origin whose robots.txt is access-blocked',
+      {
+        '/': { status: 301, redirect: 'https://shop.example.test/' },
+        'shop.example.test/robots.txt': { status: 403 },
+      },
+      'failed',
+      codes.access_blocked,
+    ],
+    [
+      'a redirect to an origin whose robots.txt is refused',
+      {
+        '/': { status: 301, redirect: 'https://shop.example.test/' },
+        'shop.example.test/robots.txt': { status: 301, redirect: '/robots.txt' },
+      },
+      'failed',
+      codes.robots_unavailable,
+    ],
+    [
       'a redirect off the crawl scope',
       { '/': { status: 301, redirect: 'https://elsewhere.test/' } },
       'failed',
