@@ -223,9 +223,11 @@ before provider I/O and settles once through its owner.
 `prompt_runs_per_period`, whichever key pays: every audit task holds one run at
 admission (manual, scheduled, MCP, public API and repair alike), only a recorded
 answer spends it, and every other terminal path releases it
-([prompt runs](../frontend/services/api/src/audits/prompt-runs.ts)). Answer
-analysis is included in the run. An exhausted allowance refuses the launch with
-403 `prompt_runs_exhausted`.
+([prompt runs](../frontend/services/api/src/audits/prompt-runs.ts), `taskFunding`).
+Answer analysis is included in the run. An exhausted allowance refuses the launch
+with 403 `prompt_runs_exhausted`. The exception is a market probe task: it holds
+AI credits instead (labelling, plus the answer on CiteLadder's keys), refuses with
+403 `ai_credits_exhausted`, and a probe run is never repaired.
 
 **AI credits.** Every platform model call spends AI credits through the
 [metering owner](../frontend/services/api/src/billing/metering.ts): prompt

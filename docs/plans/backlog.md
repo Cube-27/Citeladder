@@ -151,6 +151,8 @@ Build these before enabling them:
   budget, refusal 403 `probe_runs_exhausted`; then delete `answer_credits` and
   `label_credits`. Plan amounts are open (proposed: Starter 0, Growth 600, Scale
   2,000, trial 0), and the operator provisioning script needs a value too.
+  The same change deletes the probe code's own credit reads, `aiCreditBalance`
+  (`probes/status.ts`) and `heldCredits` (`probes/plan.ts`).
 
 Owners: [Billing and entitlements](../billing-entitlements.md),
 [billing provider readiness](../billing-provider-readiness.md) and the
