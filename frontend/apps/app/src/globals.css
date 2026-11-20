@@ -131,9 +131,6 @@
   --color-rule: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
-  /* The fill of a labelled control (secondary button, select, filter trigger):
-     the surface, except in the app's dark, where it is the well. */
-  --color-control-fill: var(--color-surface);
   /* The layered button (owner, 2026-11-20): a vertical gradient per face.
      The primary is the accent deepened so white text holds 4.5:1 at its
      lightest point, hover lift included. */
@@ -400,8 +397,6 @@
      soft edge. The website and docs draw their borderless edges with the
      ring inside xs and pop. Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px oklch(17.8% 0 0 / 5%);
-  /* Under a labelled control's soft edge (a secondary button, an operable tag). */
-  --shadow-control: 0 1px 2px oklch(21% 0.034 263 / 6%);
   /* Under every layered button, app and website: a lit top edge and a soft drop. */
   --shadow-button: inset 0 1px 0 oklch(100% 0 0 / 6%), 0 1px 1px oklch(0% 0 0 / 10%), 0 2px 6px -1px oklch(0% 0 0 / 6%);
   --shadow-xs: 0 0 0 1px oklch(17.8% 0 0 / 8%), 0 1px 2px oklch(17.8% 0 0 / 6%);
@@ -505,7 +500,6 @@
   --color-scrim: oklch(0% 0 0 / 64%);
   --color-chart-grid: oklch(26.9% 0 0);
   --shadow-edge: 0 1px 2px oklch(0% 0 0 / 40%);
-  --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
   --shadow-button: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 1px 1px oklch(0% 0 0 / 50%), 0 2px 6px -1px oklch(0% 0 0 / 30%);
   --shadow-xs: 0 0 0 1px oklch(100% 0 0 / 8%), 0 1px 2px oklch(0% 0 0 / 50%);
   --shadow-pop: 0 0 0 1px oklch(100% 0 0 / 10%), 0 16px 40px oklch(0% 0 0 / 60%);
@@ -521,7 +515,6 @@
   --color-panel: #0f1011;
   --color-raised: #151618;
   --color-raised-2: #1c1d20;
-  --color-control-fill: var(--color-well);
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 8%);
   --color-control-line: rgb(255 255 255 / 12%);
@@ -532,15 +525,15 @@
   --color-accent-text: oklch(75.3% 0.155 41.6);
   /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: oklch(31% 0.041 43);
+  --color-accent-wash: oklch(27% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
-  --color-positive-wash: oklch(29% 0.035 157);
+  --color-positive-wash: oklch(27% 0.035 157);
   --color-negative: oklch(74.8% 0.157 10.3);
   --color-negative-wash: oklch(28% 0.044 7);
   --color-warning: oklch(81.4% 0.14 81.3);
-  --color-warning-wash: oklch(30% 0.0354 86);
+  --color-warning-wash: oklch(27% 0.0354 86);
   --color-info: oklch(76.6% 0.119 265.7);
-  --color-info-wash: oklch(30% 0.0529 266);
+  --color-info-wash: oklch(27% 0.0529 266);
   --color-data-rival-2: oklch(74.2% 0.1035 243.3);
   --color-data-rival-3: oklch(66.3% 0.169 293);
   --color-data-rival-4: oklch(75% 0.1072 183.6);
@@ -549,7 +542,6 @@
   --color-state-selected: rgb(255 255 255 / 7%);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
-  --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
   /* Black barely shows on a near-black ground, so an overlay also reads by a
      lit top edge (inset: a child that fills the top would cover it). */
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
@@ -560,9 +552,6 @@
    would freeze the light value; these read the live token instead. */
 @utility shadow-edge {
   box-shadow: var(--shadow-edge);
-}
-@utility shadow-control {
-  box-shadow: var(--shadow-control);
 }
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
@@ -614,49 +603,52 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
-/* The layered face (owner, 2026-11-20: "just to have a subtle 3d effect"),
-   app and website alike: a faint vertical gradient (--face-from/to), its
-   state tint on top, a lit top edge and the soft low shadow-button. Each
-   control keeps its own border. A press drops the shadow; disabled is flat.
-   Danger stays flat (--face-to is its top): its crimson label fails 4.5:1 on
-   the gradient's foot under the tints. Unlayered, over the overlay utilities. */
-.face {
-  --face-from: var(--color-face-from);
-  --face-to: var(--color-face-to);
-  background:
-    linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
-    linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
-  box-shadow: var(--face-lit, 0 0 transparent), var(--shadow-button);
-}
-.face-primary {
-  --face-from: var(--color-primary-from);
-  --face-to: var(--color-primary-to);
-  --face-lit: inset 0 1px 0 oklch(100% 0 0 / 16%);
-  --face-hover: oklch(100% 0 0 / 5%);
-  --face-press: oklch(0% 0 0 / 8%);
-  color: var(--color-on-primary);
-}
-.face-danger {
-  --face-to: var(--color-face-from);
-}
-.face-filled {
-  --face-from: oklch(100% 0 0 / 6%);
-  --face-to: transparent;
-  --face-bg: var(--color-negative);
-}
-@media (hover: hover) {
-  .face:hover {
-    --face-tint: var(--face-hover, var(--color-state-hover));
+/* The website's layered face (owner, 2026-11-20: "just to have a subtle 3d
+   effect"); the app's buttons are flat (button.tsx). A faint vertical
+   gradient (--face-from/to), its state tint on top, a lit top edge and the
+   soft low shadow-button. A press drops the shadow; disabled is flat. Danger
+   stays flat (--face-to is its top): its crimson label fails 4.5:1 on the
+   gradient's foot under the tints. Unlayered, over the fill utilities. */
+[data-public-surface] {
+  .face {
+    --face-from: var(--color-face-from);
+    --face-to: var(--color-face-to);
+    background:
+      linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
+      linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
+    box-shadow: var(--face-lit, 0 0 transparent), var(--shadow-button);
   }
-}
-.face:is(:active, [aria-pressed='true'], [data-state='open']) {
-  --face-tint: var(--face-press, var(--color-state-pressed));
-  box-shadow: none;
-}
-.face:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
-  --face-tint: transparent;
-  --face-from: var(--face-to);
-  box-shadow: none;
+  .face-primary {
+    --face-from: var(--color-primary-from);
+    --face-to: var(--color-primary-to);
+    --face-lit: inset 0 1px 0 oklch(100% 0 0 / 16%);
+    --face-hover: oklch(100% 0 0 / 5%);
+    --face-press: oklch(0% 0 0 / 8%);
+    border-color: var(--color-primary-to);
+    color: var(--color-on-primary);
+  }
+  .face-danger {
+    --face-to: var(--color-face-from);
+  }
+  .face-filled {
+    --face-from: oklch(100% 0 0 / 6%);
+    --face-to: transparent;
+    --face-bg: var(--color-negative);
+  }
+  @media (hover: hover) {
+    .face:hover {
+      --face-tint: var(--face-hover, var(--color-state-hover));
+    }
+  }
+  .face:is(:active, [aria-pressed='true'], [data-state='open']) {
+    --face-tint: var(--face-press, var(--color-state-pressed));
+    box-shadow: none;
+  }
+  .face:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+    --face-tint: transparent;
+    --face-from: var(--face-to);
+    box-shadow: none;
+  }
 }
 
 /* A small control's tap area: centred on it and at least --target-hit square
@@ -700,7 +692,6 @@
   --color-rule: rgb(0 0 0 / 8%);
   --color-control-line: rgb(0 0 0 / 12%);
   --field-focus-edge: var(--color-control-line);
-  --fg: 0 0 6px 3px var(--color-state-pressed);
   --color-control-edge: var(--color-rule);
   --color-ink: #111214;
   --color-ink-2: #62666d;
@@ -768,9 +759,8 @@
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-overlay: 12px;
-  /* One resting shadow: a control rests at a card's lift. */
+  /* One resting shadow: a card's lift. */
   --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
-  --shadow-control: var(--shadow-card);
   --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
   --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
   /* The accent mark ("you, here"). */
@@ -959,7 +949,6 @@
 
 :root[data-public-surface] {
   --shadow-edge: none;
-  --shadow-control: none;
   --shadow-xs: 0 0 0 1px var(--color-line);
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
@@ -1592,25 +1581,29 @@ a.focus-ring:active .type-caption {
   outline-offset: -2px;
 }
 
-/* A focused field lights its own edge, never a second ring: in the app a
-   soft glow (`--fg`) sits over its resting edge; on the website the edge
-   thickens inside a `line` halo. An invalid field keeps its crimson edge
-   (its own `--field-focus-edge`). A framed field lights its frame. */
+/* A focused field lights its own edge: in the app the `control-line` edge
+   and the one focus ring; on the website the edge thickens inside a `line`
+   halo. An invalid field keeps its crimson edge (its own
+   `--field-focus-edge`). A framed field lights its frame. */
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--field-focus-edge, var(--color-focus));
   outline: none;
-  box-shadow: var(
-    --fg,
+  box-shadow:
     0 0 0 1px var(--field-focus-edge, var(--color-focus)),
-    0 0 0 4px var(--color-line)
-  );
+    0 0 0 4px var(--color-line);
+}
+:root:not([data-public-surface])
+  :is(.focus-input:focus-visible, .focus-frame:has(:where(input, textarea, select):focus-visible)) {
+  box-shadow: none;
+  outline: 2px solid var(--color-focus);
 }
 
 /* A field the reader did not Tab into (an overlay or Edit action focused it
    on open, or a press into a dialog's field) never takes the outline ring
-   (`data-quiet-focus`, components/ui/input-modality.ts); its edge still glows. */
-:root:not([data-public-surface]) [data-quiet-focus]:focus-visible {
+   (`data-quiet-focus`, components/ui/input-modality.ts); its edge still lights. */
+:root:not([data-public-surface])
+  :is([data-quiet-focus]:focus-visible, .focus-frame:has([data-quiet-focus]:focus-visible)) {
   outline: none;
 }
 
@@ -1626,19 +1619,12 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
   --color-ground: var(--color-surface);
 }
-/* Light buttons and filter pills are white on the white page (owner,
-   2026-11-20), not the grey root ground; the foot shade stays barely there. */
-:root:not([data-public-surface]):not([data-theme='dark']) {
-  --color-face-page: var(--color-surface);
-  --color-face-to: color-mix(in oklch, var(--color-face-page), oklch(0% 0 0) 1.5%);
-}
 /* Dark keeps its near-black ground and draws cards, table bodies and control
    fills on it, as light does (owner, 2026-11-19). Overlays portal outside the
    shell and keep their lighter surface. */
 :root[data-theme='dark']:not([data-public-surface]) [data-app-surface] {
   --color-surface: var(--color-ground);
   --table-ground: var(--color-ground);
-  --color-control-fill: var(--color-ground);
 }
 
 .table-frame {
@@ -1818,29 +1804,31 @@ a.focus-ring:active .type-caption {
    attributes are app-only; the disabled rule below outranks these, so a
    disabled button keeps the one disabled look. */
 [data-state-offer] [data-button-variant='secondary']:first-child {
-  --face-from: var(--color-primary-from);
-  --face-to: var(--color-primary-to);
-  border-color: var(--color-primary-to);
-  color: var(--color-on-primary);
+  border-color: var(--color-ink);
+  background-color: var(--color-ink);
+  color: var(--color-on-ink);
 }
 [data-demoted] [data-button-variant] {
-  --face-from: var(--color-face-from);
-  --face-to: var(--color-face-to);
-  --face-lit: initial;
-  --face-hover: initial;
-  --face-press: initial;
-  border-color: var(--color-control-edge);
+  border-color: var(--color-rule);
+  background-color: var(--color-raised);
   color: var(--color-ink);
 }
+/* A secondary button's 16px icon is `ink-2` beside its `ink` label. */
+:root:not([data-public-surface])
+  :is([data-button-variant='secondary'], [data-demoted] [data-button-variant])
+  svg {
+  color: var(--color-ink-2);
+}
+:root:not([data-public-surface]) [data-state-offer] [data-button-variant='secondary']:first-child svg {
+  color: inherit;
+}
 
-/* Disabled (2.8): one look for every variant. It keeps its frame (the soft
-   edge on the well fill, no ink fill, no shadow), so it never reads as text. */
+/* Disabled (2.8): one look for every variant. It keeps its frame (the rule
+   edge on the raised fill, no ink fill), so it never reads as text. */
 :root:not([data-public-surface])
   [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
-  background-color: var(--color-well);
-  background-image: none;
-  border-color: var(--color-control-edge);
-  box-shadow: none;
+  background-color: var(--color-raised);
+  border-color: var(--color-rule);
   color: color-mix(in oklch, var(--color-ink-2) 60%, transparent);
 }
 
@@ -2376,28 +2364,6 @@ label {
   rotate: 180deg;
 }
 
-/* Input and search: a fine pointer's hover tints the field's own fill
-   (`--field-fill`) 4% ink. */
-@media (hover: hover) and (pointer: fine) {
-  :root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
-    background-color: color-mix(in oklch, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
-  }
-}
-
-/* The switch's thumb, lifted when on (HeroUI's checked shadow). */
-[role='switch'][aria-checked='true'] > span {
-  box-shadow:
-    0 0 5px oklch(0% 0 0 / 2%),
-    0 2px 10px oklch(0% 0 0 / 6%),
-    0 0 1px oklch(0% 0 0 / 30%);
-}
-/* Dark: the overlays' rule, a lit top edge over a deeper drop. */
-:root[data-theme='dark'] [role='switch'][aria-checked='true'] > span {
-  box-shadow:
-    inset 0 1px 0 oklch(100% 0 0 / 5%),
-    0 2px 10px oklch(0% 0 0 / 40%);
-}
-
 /* A picture drawn once per theme (the sign-in showcase): only the current
    theme's draws, from first paint, so the other is never fetched. */
 :root:not([data-theme='dark']) [data-theme-art='dark'],
@@ -2406,7 +2372,7 @@ label {
 }
 
 /* Checkbox: the ink fill grows from 70% under the check (checkbox.tsx draws
-   the check). Checkbox and radio: hover darkens an empty edge. */
+   the check). */
 .check-box::after {
   content: '';
   position: absolute;
@@ -2423,11 +2389,6 @@ label {
 .check-box:not([data-state='unchecked'])::after {
   opacity: 1;
   scale: none;
-}
-@media (hover: hover) and (pointer: fine) {
-  :is(.check-box, .radio-dot)[data-state='unchecked']:enabled:hover {
-    border-color: color-mix(in oklab, var(--color-control-line), var(--color-ink-2));
-  }
 }
 
 /* A focused row rings inside itself, so the frame never clips it. */

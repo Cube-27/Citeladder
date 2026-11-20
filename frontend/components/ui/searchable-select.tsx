@@ -85,7 +85,6 @@ export function SearchableSelect({
       ) : null}
       <Input
         id={id}
-        edge="soft"
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- An editable ARIA combobox supports filtering where a native select cannot.
         role="combobox"
         aria-label={ariaLabel}

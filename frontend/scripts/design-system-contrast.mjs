@@ -110,7 +110,7 @@ const CONTRAST_PAIRS = [
     only: 'app',
   },
   {
-    inks: [color('ink')],
+    inks: ['ink', 'ink-2'].map(color),
     surfaces: ['accent', ...STATUSES].map((role) => color(`${role}-wash`)),
     minimum: 4.5,
     only: 'app',

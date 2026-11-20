@@ -74,7 +74,6 @@ export function SearchField({
     <Input
       {...props}
       ref={ref}
-      edge="soft"
       type="search"
       value={value}
       onChange={(event) => onValueChange(event.target.value)}

@@ -18,7 +18,7 @@ export type RadioOption<T extends string> = {
  * darkens an empty circle's edge; a held press scales it to 95%.
  */
 const RADIO =
-  'radio-dot press [--press:0.95] focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'press [--press:0.95] focus-ring bg-panel border-rule enabled:data-[state=unchecked]:hover:border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-panel hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 const LIST_LAYOUT = {
   list: 'flex flex-col gap-3',
@@ -116,7 +116,7 @@ function RadioCard<T extends string>({
     <label
       className={cn(
         'text-ink flex cursor-pointer items-start gap-2 rounded-control border p-4 transition-[background-color,border-color]',
-        selected ? 'bg-well border-control-line' : 'bg-surface border-rule',
+        selected ? 'bg-raised border-control-line' : 'bg-panel border-rule',
         !selected && !option.disabled && 'hover:overlay-hover',
         option.disabled && 'cursor-not-allowed opacity-60',
       )}
