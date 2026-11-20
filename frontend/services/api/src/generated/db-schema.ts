@@ -2397,10 +2397,10 @@ export interface ProbeAnswerItems {
 }
 
 export interface ProbeLabellings {
-  audit_id: string;
   created_at: Timestamp;
   id: string;
   labelling_version: string;
+  launch_id: string;
   model: string | null;
   model_provider: string | null;
   outcome: string;

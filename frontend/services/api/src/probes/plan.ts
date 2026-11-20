@@ -14,10 +14,10 @@ import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { countryName, probeQuestions, probeSubject } from './questions.ts';
 
-type Scope = { workspaceId: string; projectId: string };
 const probes = policy.probes;
 
 /** The search-capable engines this workspace can probe on: CiteLadder's, or its own usable keys. */
@@ -55,7 +55,9 @@ export async function probePlan(
     const questions = probeQuestions({ ...subject, country: countryName(country_code) });
     return engines.length ? [{ market, engines, questions: questions.map((q) => q.text) }] : [];
   });
-  const asks = (2 + subject.themes.length) * probes.repetitions;
+  // Every market asks the same questions, only its country differs.
+  const questions = probeQuestions({ ...subject, country: '' }).length;
+  const asks = questions * probes.repetitions;
   let credits = 0;
   for (const run of runs)
     for (const engine of run.engines) credits += asks * probeAnswerCredits(engine, !funded);
@@ -68,7 +70,7 @@ export async function probePlan(
     usable,
     engines,
     runs,
-    questions: 2 + subject.themes.length,
+    questions,
     answers: runs.reduce((sum, run) => sum + run.engines.length * asks, 0),
     credits,
     fingerprint,
@@ -89,20 +91,29 @@ export async function promptSetOf(db: Database, scope: Scope) {
   return set.id;
 }
 
+type Plan = Awaited<ReturnType<typeof probePlan>>;
+
+/** Why a plan would run nothing: no usable key, or no usable engine measures any market. */
+export function blockedBy(plan: Plan) {
+  if (!plan.usable.length) return 'no_key';
+  return plan.runs.length ? null : 'no_market';
+}
+
 /** A plan with at least one engine in one market, or why there is none. */
-export function runnable(plan: Awaited<ReturnType<typeof probePlan>>) {
-  if (!plan.usable.length)
+export function runnable(plan: Plan) {
+  const blocked = blockedBy(plan);
+  if (blocked === 'no_key')
     throw new ApiError(400, 'Add a key for a search-capable engine to run a probe', {
       code: 'execution_credentials_unavailable',
     });
-  if (!plan.runs.length)
+  if (blocked === 'no_market')
     throw new ApiError(422, 'No probe engine can measure any of the project’s markets', {
       code: 'market_unsupported',
     });
   return plan;
 }
 
-const changed = () =>
+export const changed = () =>
   new ApiError(409, 'The probe changed since its cost was shown. Check the new cost and run it.', {
     code: 'probe_quote_changed',
   });

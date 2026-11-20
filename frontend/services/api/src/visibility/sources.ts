@@ -27,10 +27,9 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
-import { latestReadings, readingPresences } from '../source-pages/reading.ts';
 import { compareText } from '../text-order.ts';
 import { brandIdentities, leadingBrands, type BrandCount } from './brand-identities.ts';
-import { gapPageHashes, pageStanding } from './page-standing.ts';
+import { gapPageHashes, pageStandings } from './page-standing.ts';
 import { earnedPageActions } from '../opportunities/earned-page-actions.ts';
 import { ratio } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
@@ -393,43 +392,16 @@ async function attachPageLinks(
   const scope = { workspaceId: selection.workspaceId, projectId: selection.projectId };
   // The Action lookup needs only the hashes, so it runs beside the page read.
   const [pages, actions] = await Promise.all([
-    db
-      .selectFrom('source_pages as page')
-      .leftJoin('source_page_snapshots as snapshot', 'snapshot.id', 'page.latest_snapshot_id')
-      .select([
-        'page.id',
-        'page.url_hash',
-        'page.source_class',
-        'page.inspection_state',
-        'page.page_format',
-        'page.page_format_method',
-        'snapshot.page_facts',
-      ])
-      .where('page.workspace_id', '=', selection.workspaceId)
-      .where('page.project_id', '=', selection.projectId)
-      .where('page.url_hash', 'in', hashes)
-      .orderBy('page.url_hash')
-      .execute(),
+    pageStandings(db, scope, hashes),
     earnedPageActions(db, scope, hashes),
   ]);
-  const readings = await latestReadings(db, scope, [...new Set(pages.map((page) => page.id))]);
-  const presences = await readingPresences(
-    db,
-    scope,
-    [...readings.values()].map((reading) => reading.id),
-  );
-  const seen = new Set<string>();
-  for (const page of pages) {
-    if (seen.has(page.url_hash)) continue;
-    seen.add(page.url_hash);
+  for (const page of pages.values()) {
     const title = record(page.page_facts).title;
-    const reading = readings.get(page.id);
-    const standing = pageStanding(page, reading, reading ? (presences.get(reading.id) ?? []) : []);
     for (const row of byHash.get(page.url_hash) ?? []) {
       row.inspection_state = page.inspection_state;
       const listing = actions.get(page.url_hash);
       row.opportunity_id = listing?.opportunity_id ?? null;
-      row.standing = standing;
+      row.standing = page.standing;
       row.action_id = listing?.action_id ?? null;
       row.title = typeof title === 'string' && title ? title : null;
       row.page_format = page.page_format;

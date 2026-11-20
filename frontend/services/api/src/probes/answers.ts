@@ -5,10 +5,10 @@
  */
 import { scoringConfig } from '../analysis/scoring.ts';
 import type { Database } from '../db/database.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { logicalEngines, type Engine } from '../providers/config.ts';
+import type { TrackedName } from './label-model.ts';
 import { frozenQuestion, type ProbeQuestion } from './questions.ts';
-
-type Scope = { workspaceId: string; projectId: string };
 
 type ProbeItem = {
   question: string;
@@ -27,6 +27,29 @@ export type ProbeAnswer = {
 
 const engineOf = (value: string) => logicalEngines.find((engine) => engine === value);
 
+/** A probe's recorded, non-empty answers; callers add their columns and order. */
+export function answeredProbeTasks(db: Database, scope: Scope, auditIds: readonly string[]) {
+  return db
+    .selectFrom('audit_tasks as t')
+    .innerJoin('audit_prompt_snapshots as p', (join) =>
+      join.onRef('p.id', '=', 't.prompt_snapshot_id').onRef('p.audit_id', '=', 't.audit_id'),
+    )
+    .select(['t.id', 'p.generation_evidence'])
+    .where('t.workspace_id', '=', scope.workspaceId)
+    .where('t.project_id', '=', scope.projectId)
+    .where('t.audit_id', 'in', auditIds)
+    .where('t.status', '=', 'succeeded')
+    .where('t.answer_text', '<>', '');
+}
+
+/** The rows whose snapshot froze a probe question, with that question. */
+export function withQuestion<Row extends { generation_evidence: unknown }>(rows: readonly Row[]) {
+  return rows.flatMap((row) => {
+    const question = frozenQuestion(row.generation_evidence);
+    return question ? [{ ...row, question }] : [];
+  });
+}
+
 export async function probeAnswers(
   db: Database,
   scope: Scope,
@@ -34,19 +57,7 @@ export async function probeAnswers(
 ): Promise<ProbeAnswer[]> {
   if (!auditIds.length) return [];
   const [tasks, items] = await Promise.all([
-    db
-      .selectFrom('audit_tasks as t')
-      .innerJoin('audit_prompt_snapshots as p', (join) =>
-        join.onRef('p.id', '=', 't.prompt_snapshot_id').onRef('p.audit_id', '=', 't.audit_id'),
-      )
-      .select(['t.id', 't.logical_engine', 'p.generation_evidence'])
-      .where('t.workspace_id', '=', scope.workspaceId)
-      .where('t.project_id', '=', scope.projectId)
-      .where('t.audit_id', 'in', auditIds)
-      .where('t.status', '=', 'succeeded')
-      .where('t.answer_text', '<>', '')
-      .orderBy('t.id')
-      .execute(),
+    answeredProbeTasks(db, scope, auditIds).select('t.logical_engine').orderBy('t.id').execute(),
     db
       .selectFrom('probe_answer_items')
       .select([
@@ -63,34 +74,25 @@ export async function probeAnswers(
       .where('audit_id', 'in', auditIds)
       .execute(),
   ]);
-  const byTask = new Map<string, ProbeItem[]>();
-  for (const { task_id: taskId, ...item } of items)
-    byTask.set(taskId, [...(byTask.get(taskId) ?? []), item]);
-  return tasks.flatMap((task) => {
-    const question = frozenQuestion(task.generation_evidence);
+  const byTask = Map.groupBy(items, (item) => item.task_id);
+  return withQuestion(tasks).flatMap((task) => {
     const engine = engineOf(task.logical_engine);
-    return question && engine
-      ? [{ taskId: task.id, engine, question, items: byTask.get(task.id) ?? [] }]
+    return engine
+      ? [{ taskId: task.id, engine, question: task.question, items: byTask.get(task.id) ?? [] }]
       : [];
   });
 }
 
-/** The tracked businesses a probe's first run froze: the brand, then competitors with ids. */
-export async function probeRoster(db: Database, scope: Scope, auditIds: readonly string[]) {
-  const audit = auditIds.length
-    ? await db
-        .selectFrom('audits')
-        .select('configuration')
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('id', 'in', auditIds)
-        .orderBy('created_at')
-        .orderBy('id')
-        .executeTakeFirst()
-    : undefined;
-  const config = scoringConfig(audit?.configuration);
+/** The brand a frozen configuration names, and its tracked businesses: the brand, then competitors with ids. */
+export function probeRoster(configuration: unknown): { brand: string; tracked: TrackedName[] } {
+  const config = scoringConfig(configuration);
   return {
     brand: config.brandName,
-    competitors: config.competitors.flatMap(({ id, name }) => (id ? [{ id, name }] : [])),
+    tracked: [
+      { kind: 'brand', id: null, name: config.brandName, aliases: config.brandAliases },
+      ...config.competitors.flatMap(({ id, name, aliases }) =>
+        id ? [{ kind: 'competitor' as const, id, name, aliases }] : [],
+      ),
+    ],
   };
 }

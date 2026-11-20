@@ -16,6 +16,7 @@
  */
 import { policy } from '../config.ts';
 import { casefold } from '../casefold.ts';
+import { siteDomain } from './domains.ts';
 import type { EntityPolicy } from './entity-matching.ts';
 
 export type { EntityPolicy };
@@ -236,4 +237,19 @@ export function firstAliasOffset(
   entity?: EntityPolicy,
 ): number | null {
   return entityOffset(normalized, [alias], entity);
+}
+
+/**
+ * Spellings to suggest as brand aliases (AV-25): each domain's site label that
+ * the brand name and kept aliases do not already match. "&", "and" and
+ * run-together forms of the name already match, so they are never suggested.
+ */
+export function aliasSuggestions(input: {
+  brandName: string;
+  aliases: readonly string[];
+  domains: readonly string[];
+}): string[] {
+  const names = [input.brandName, ...input.aliases];
+  const labels = input.domains.flatMap((domain) => siteDomain(domain)?.split('.')[0] ?? []);
+  return [...new Set(labels)].filter((label) => !namesEntity(label, names));
 }

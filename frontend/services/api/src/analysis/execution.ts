@@ -8,6 +8,7 @@ import { record, jsonObjects } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import {
   cohortNamesBrand,
+  namedByPrompt,
   scoreExecution,
   scoringConfig,
   classifyCitation,
@@ -204,7 +205,9 @@ export async function analyzeResponse(
     id = randomUUID(),
     versions = policy.audits.analysis,
     assessed = assessEntities(artifact.answer_text, config),
-    assessments = cohortNamesBrand(snapshot.cohort) ? brandNamed(assessed) : assessed,
+    assessments = namedByPrompt(cohortNamesBrand(snapshot.cohort), artifact.answer_text)
+      ? brandNamed(assessed)
+      : assessed,
     ads = answerAds({
       id: task.id,
       logical_engine: task.logical_engine,

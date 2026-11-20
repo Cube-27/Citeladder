@@ -7,7 +7,6 @@ import { insightsRefresh } from '../config/ai-traffic.ts';
 import { enqueueCoalesced } from '../queue/enqueue.ts';
 import { persistComparisonBaselines } from '../visibility/baselines.ts';
 import { deriveRunMetrics } from '../analysis/finalization.ts';
-import { labelIfProbe } from '../probes/labelling.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 import { deriveExecution } from './derivation.ts';
 import type { DeriveExecution } from './result-persistence.ts';
@@ -136,7 +135,6 @@ export function finalizeAudit(
     // surface that reads it. It runs once the run reads as measured, so later
     // runs it refreshes find it among their candidates.
     await persistComparisonBaselines(trx, { workspaceId, auditId });
-    await labelIfProbe(trx, { ...audit, workspaceId, auditId });
     await enqueueCoalesced(trx, {
       ...insightsRefresh,
       workspaceId,

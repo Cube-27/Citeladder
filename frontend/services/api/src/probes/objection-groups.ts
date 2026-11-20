@@ -15,15 +15,11 @@ import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ProbeAnswerItems } from '../generated/db-schema.ts';
-import { nameKey } from './label-model.ts';
-
-type Scope = { workspaceId: string; projectId: string };
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
+import { idsByName, nameSchema } from '../projects/themes.ts';
 
 export const groupRequest = objectionGroupRequestSchema.extend({
-  name: z
-    .string()
-    .transform((name) => name.replaceAll(/\s+/gu, ' ').trim())
-    .pipe(z.string().min(1).max(policy.probes.group_name_max_chars)),
+  name: nameSchema(policy.probes.group_name_max_chars),
 });
 
 /** The project's groups, oldest first. */
@@ -55,8 +51,7 @@ export async function saveGroups(db: Database, scope: Scope, names: readonly str
       )
       .onConflict((conflict) => conflict.doNothing())
       .execute();
-  const groups = await listGroups(db, scope);
-  return new Map(groups.map((group) => [nameKey(group.name), group.id]));
+  return idsByName(await listGroups(db, scope));
 }
 
 export async function saveAnswerItems(db: Database, rows: Insertable<ProbeAnswerItems>[]) {

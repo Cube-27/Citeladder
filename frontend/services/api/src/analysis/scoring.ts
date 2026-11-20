@@ -149,6 +149,10 @@ function classifyFanout(query: string) {
 export const cohortNamesBrand = (cohort: string) =>
   policy.visibility.brand_named_cohorts.includes(cohort);
 
+/** AV-26, the one rule: an answer to a brand-named prompt names the brand unless it is blank. */
+export const namedByPrompt = (promptNamesBrand: boolean, answer: string) =>
+  promptNamesBrand && answer.trim() !== '';
+
 export function scoreExecution(input: {
   answerText: string;
   promptText: string;
@@ -193,8 +197,8 @@ export function scoreExecution(input: {
     search_used: input.searchUsed,
     search_query_count: input.searchEvents.length,
     search_query_text_available: queryTextAvailable,
-    // An empty answer names nothing, whatever the prompt asked.
-    brand_mentioned: brandOffset !== null || (input.promptNamesBrand && answer !== ''),
+    brand_mentioned:
+      brandOffset !== null || namedByPrompt(input.promptNamesBrand, input.answerText),
     brand_first_offset: brandOffset,
     brand_injected_in_search: queryTextAvailable ? !promptBrand && brandAt(query) !== null : null,
     prompt_contains_brand: promptBrand,

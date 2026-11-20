@@ -22,15 +22,24 @@ import type { ProjectScope } from './brand-profile.ts';
 
 const limits = policy.perception.project_themes;
 
+/** A theme or objection group name as stored: spaces collapsed, trimmed. */
+export const cleanName = (name: string) => name.replaceAll(/\s+/gu, ' ').trim();
+/** The one way perception, probe labelling and research compare names: case and spacing aside. */
+export const nameKey = (name: string) => cleanName(name).toLowerCase();
+/** Each row's id by its name key. */
+export const idsByName = (rows: readonly { id: string; name: string }[]) =>
+  new Map(rows.map((row) => [nameKey(row.name), row.id]));
+/** A stored name from a request, so two names never read as one. */
+export const nameSchema = (maxChars: number) =>
+  z.string().transform(cleanName).pipe(z.string().min(1).max(maxChars));
+
 export const themeRequest = projectThemeRequestSchema.extend({
-  // Spaces collapse as perception matches names, so two names never read as one theme.
-  name: z
-    .string()
-    .transform((name) => name.replaceAll(/\s+/gu, ' ').trim())
-    .pipe(z.string().min(1).max(limits.name_max_chars))
-    .refine((name) => name.toLowerCase() !== limits.fallback.toLowerCase(), {
+  name: nameSchema(limits.name_max_chars).refine(
+    (name) => name.toLowerCase() !== limits.fallback.toLowerCase(),
+    {
       message: `${limits.fallback} is every project's fallback theme`,
-    }),
+    },
+  ),
 });
 type ThemeRequest = z.infer<typeof themeRequest>;
 

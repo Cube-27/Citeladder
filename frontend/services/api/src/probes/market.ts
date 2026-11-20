@@ -3,19 +3,19 @@
  * say the brand is known for, and the brand's rank, leader and gap on every
  * current theme. Every number is a position score code computes here.
  */
-import type { ProbeMarket } from '@citeladder/contracts/probes';
+import type { ProbeMarket, ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { listThemes } from '../projects/themes.ts';
-import { probeAnswers, probeRoster, type ProbeAnswer } from './answers.ts';
-import { probeLaunches } from './launches.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
+import { probeAnswers, type ProbeAnswer } from './answers.ts';
+import type { TrackedName } from './label-model.ts';
+import { labelledLaunches } from './launches.ts';
 import { probeSubject } from './questions.ts';
 import { distinctPlaces, firstPlaces, positionScores, rankOf, scoreOf } from './scores.ts';
 
-type Scope = { workspaceId: string; projectId: string };
 type Theme = { id: string; name: string };
-type KnownFor = Extract<ProbeMarket, { state: 'value' }>['known_for'][number];
+type KnownFor = ProbeMarketValue['known_for'][number];
 const OTHER = 'other';
 const BRAND = 'brand';
 const TOP_THEMES = 3;
@@ -34,18 +34,16 @@ function knownFor(answers: readonly ProbeAnswer[], themes: readonly Theme[]) {
   );
   const names = new Map(themes.map((theme) => [theme.id, theme.name]));
   return [...scores]
-    .flatMap(([key, { score, raised }]): KnownFor[] => {
+    .flatMap(([key, { score }]): KnownFor[] => {
       const theme = key === OTHER ? policy.perception.project_themes.fallback : names.get(key);
       if (!theme) return [];
-      return [{ theme_id: key === OTHER ? null : key, theme, score, raised_in: raised }];
+      return [{ theme_id: key === OTHER ? null : key, theme, score }];
     })
     .sort((a, b) => b.score - a.score || a.theme.localeCompare(b.theme));
 }
 
-type Roster = Awaited<ReturnType<typeof probeRoster>>;
-
-/** Every tracked business's score on one theme, the brand first. */
-function themeScores(answers: readonly ProbeAnswer[], roster: Roster) {
+/** Every tracked business's score on one theme's answers, the brand first, then its rank, leader and gap. */
+function themeRow(answers: readonly ProbeAnswer[], roster: readonly TrackedName[]) {
   const scores = positionScores(
     answers.map((answer) =>
       firstPlaces(
@@ -55,34 +53,20 @@ function themeScores(answers: readonly ProbeAnswer[], roster: Roster) {
       ),
     ),
   );
-  const own = {
-    kind: 'brand' as const,
-    id: null,
-    name: roster.brand,
-    key: BRAND,
-    score: scoreOf(scores, BRAND, answers.length) ?? 0,
-  };
-  const competitors = roster.competitors.map((competitor) => ({
-    kind: 'competitor' as const,
-    id: competitor.id,
-    name: competitor.name,
-    key: competitor.id,
-    score: scoreOf(scores, competitor.id, answers.length) ?? 0,
+  const entities = roster.map(({ kind, id, name }) => ({
+    kind,
+    id,
+    name,
+    key: id ?? BRAND,
+    score: scoreOf(scores, id ?? BRAND, answers.length) ?? 0,
   }));
-  return { own, entities: [own, ...competitors] };
-}
-
-function themeRow(theme: Theme, answers: readonly ProbeAnswer[], roster: Roster) {
-  const { own, entities } = themeScores(answers, roster);
+  const own = entities.find((entity) => entity.kind === 'brand')!;
   // Ties keep the brand first, so a shared top score reads as "You lead".
   const leader = entities.reduce(
     (best, entity) => (entity.score > best.score ? entity : best),
     own,
   );
   return {
-    theme_id: theme.id,
-    theme: theme.name,
-    answers: answers.length,
     entities: entities.map(({ kind, id, name, score }) => ({ kind, id, name, score })),
     rank: rankOf(entities, BRAND)!,
     of: entities.length,
@@ -96,41 +80,52 @@ const themeAnswers = (answers: readonly ProbeAnswer[], themeId: string) =>
     (answer) => answer.question.question === 'theme' && answer.question.theme_id === themeId,
   );
 
+/** The brand's rank on an engine's top theme: its first real theme, never Other. */
+function rankInTopTheme(
+  own: readonly ProbeAnswer[],
+  top: readonly KnownFor[],
+  roster: readonly TrackedName[],
+): ProbeMarketValue['engines'][number]['rank_in_top_theme'] {
+  const first = top.find((row) => row.theme_id !== null)?.theme_id;
+  if (!first) return { kind: 'no_theme' };
+  const asked = themeAnswers(own, first);
+  if (!asked.length) return { kind: 'not_asked' };
+  const row = themeRow(asked, roster);
+  // A gap as large as the leader's score means the brand scored 0: not named.
+  return row.gap < row.leader.score ? { kind: 'rank', rank: row.rank } : { kind: 'not_named' };
+}
+
 export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMarket> {
-  const [latest] = await probeLaunches(db, scope, { limit: 1, labelled: true });
+  const [latest] = await labelledLaunches(db, scope, 1);
   if (!latest) return { state: 'none' };
-  const [answers, themes, roster, subject] = await Promise.all([
-    probeAnswers(db, scope, latest.labelledIds),
-    listThemes(db, scope),
-    probeRoster(db, scope, latest.labelledIds),
+  const [answers, subject] = await Promise.all([
+    probeAnswers(db, scope, latest.ids),
     probeSubject(db, scope),
   ]);
+  const { themes } = subject;
   const rows = themes.flatMap((theme) => {
     const asked = themeAnswers(answers, theme.id);
-    return asked.length ? [themeRow(theme, asked, roster)] : [];
+    if (!asked.length) return [];
+    return [{ theme_id: theme.id, theme: theme.name, ...themeRow(asked, latest.roster) }];
   });
-  const engines = latest.run.engines.map((engine) => {
+  const engines = latest.basis.engines.map((engine) => {
     const own = answers.filter((answer) => answer.engine === engine);
     const top = knownFor(own, themes)
       .filter((row) => row.score > 0)
       .slice(0, TOP_THEMES);
-    const first = top[0]?.theme_id;
-    const asked = first ? themeAnswers(own, first) : [];
-    const row = first && asked.length ? themeRow({ id: first, name: '' }, asked, roster) : null;
     return {
       engine,
       answered: own.some((answer) => answer.question.question === 'known_for'),
       top_themes: top.map(({ theme_id, theme }) => ({ theme_id, theme })),
-      // A gap as large as the leader's score means the brand scored 0: not named.
-      rank_in_top_theme: row && row.gap < row.leader.score ? row.rank : null,
+      rank_in_top_theme: rankInTopTheme(own, top, latest.roster),
     };
   });
   return {
     state: 'value',
-    probe: { ...latest.run, answers: answers.length },
-    brand: roster.brand,
+    probe: { ...latest.basis, answers: answers.length },
+    brand: latest.brand,
     category: subject.category,
-    language_code: latest.run.markets[0]?.language_code ?? '',
+    language_code: latest.basis.markets[0]?.language_code ?? '',
     known_for_answers: answers.filter((answer) => answer.question.question === 'known_for').length,
     known_for: knownFor(answers, themes),
     themes: rows,

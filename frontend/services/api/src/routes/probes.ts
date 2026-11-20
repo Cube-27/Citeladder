@@ -13,12 +13,10 @@ import {
   probeScheduleRequestSchema,
   probeStatusSchema,
 } from '@citeladder/contracts/probes';
-import type { Context } from 'hono';
 import { z } from 'zod';
 
 import { auditRuntime } from '../audits/config.ts';
 import { readAudits } from '../audits/reads.ts';
-import type { AppEnv } from '../context.ts';
 import { readBody } from '../http/body.ts';
 import { probeMarket } from '../probes/market.ts';
 import { deleteGroup, groupRequest, mergeGroups, renameGroup } from '../probes/objection-groups.ts';
@@ -32,6 +30,7 @@ import {
   definePatchRoute,
   definePostRoute,
   definePutRoute,
+  projectScopeOf,
 } from './define.ts';
 
 const activeProject = { family: 'probes', authorize: 'active-project' } as const;
@@ -40,10 +39,6 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 const groupPath = { ...projectPath, group_id: uuid } as const;
 
-function scopeOf(c: Context<AppEnv>, projectId: string) {
-  return { workspaceId: c.get('workspace').workspaceId, projectId };
-}
-
 export const probeRoutes = [
   defineGetRoute({
     ...activeProject,
@@ -51,7 +46,7 @@ export const probeRoutes = [
     params: { path: projectPath, query: {} },
     response: probeStatusSchema,
     handle: ({ c, db, config }, { path }) =>
-      probeStatus(db, scopeOf(c, path.project_id), auditRuntime(config.settings)),
+      probeStatus(db, projectScopeOf(c, path.project_id), auditRuntime(config.settings)),
   }),
   definePostRoute({
     ...activeProject,
@@ -62,7 +57,7 @@ export const probeRoutes = [
     body: probeRunRequestSchema,
     response: z.array(auditSchema),
     async handle({ c, db, config }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const input = await readBody(c, probeRunRequestSchema);
       const ids = await runProbe(db, scope, input, auditRuntime(config.settings));
       return readAudits(db, scope.workspaceId, ids);
@@ -76,7 +71,7 @@ export const probeRoutes = [
     body: probeScheduleRequestSchema,
     response: probeStatusSchema,
     async handle({ c, db, config }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const input = await readBody(c, probeScheduleRequestSchema);
       const runtime = auditRuntime(config.settings);
       await setProbeSchedule(db, scope, input, runtime);
@@ -88,14 +83,14 @@ export const probeRoutes = [
     path: `${root}/market`,
     params: { path: projectPath, query: {} },
     response: probeMarketSchema,
-    handle: ({ c, db }, { path }) => probeMarket(db, scopeOf(c, path.project_id)),
+    handle: ({ c, db }, { path }) => probeMarket(db, projectScopeOf(c, path.project_id)),
   }),
   defineGetRoute({
     ...activeProject,
     path: `${root}/objections`,
     params: { path: projectPath, query: {} },
     response: probeObjectionsSchema,
-    handle: ({ c, db }, { path }) => probeObjections(db, scopeOf(c, path.project_id)),
+    handle: ({ c, db }, { path }) => probeObjections(db, projectScopeOf(c, path.project_id)),
   }),
   definePatchRoute({
     ...activeProject,
@@ -106,7 +101,11 @@ export const probeRoutes = [
     response: groupSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, groupRequest);
-      return renameGroup(db, { ...scopeOf(c, path.project_id), groupId: path.group_id }, input);
+      return renameGroup(
+        db,
+        { ...projectScopeOf(c, path.project_id), groupId: path.group_id },
+        input,
+      );
     },
   }),
   definePostRoute({
@@ -118,7 +117,11 @@ export const probeRoutes = [
     response: groupSchema,
     async handle({ c, db }, { path }) {
       const { into_id: intoId } = await readBody(c, objectionGroupMergeRequestSchema);
-      return mergeGroups(db, { ...scopeOf(c, path.project_id), groupId: path.group_id, intoId });
+      return mergeGroups(db, {
+        ...projectScopeOf(c, path.project_id),
+        groupId: path.group_id,
+        intoId,
+      });
     },
   }),
   defineDeleteRoute({
@@ -127,6 +130,6 @@ export const probeRoutes = [
     capability: 'write',
     params: { path: groupPath, query: {} },
     handle: ({ c, db }, { path }) =>
-      deleteGroup(db, { ...scopeOf(c, path.project_id), groupId: path.group_id }),
+      deleteGroup(db, { ...projectScopeOf(c, path.project_id), groupId: path.group_id }),
   }),
 ];

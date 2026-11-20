@@ -7,7 +7,7 @@
 import { createHash } from 'node:crypto';
 
 import { countedMatches, trackedEntities } from '../analysis/entity-assessment.ts';
-import type { ScoringConfig } from '../analysis/scoring.ts';
+import { namedByPrompt, type ScoringConfig } from '../analysis/scoring.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
 import { canonicalJson } from '../canonical-json.ts';
 
@@ -143,7 +143,7 @@ export function entityPassages(input: {
     windows: Range[] | null;
   };
   const named = trackedEntities(input.config).flatMap((entity): Named[] => {
-    if (input.promptNamesBrand && entity.kind === 'brand')
+    if (entity.kind === 'brand' && namedByPrompt(input.promptNamesBrand, answer))
       return [{ entity, occurrences: [0], first: 0, windows: [{ start: 0, end: answer.length }] }];
     const occurrences = countedMatches(entity.aliases, answer, entity.matching).map((m) => m.index);
     const [first] = occurrences;

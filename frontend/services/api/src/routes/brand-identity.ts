@@ -50,6 +50,7 @@ import {
   definePatchRoute,
   definePostRoute,
   definePutRoute,
+  projectScopeOf,
 } from './define.ts';
 import { fileResponse } from './opportunity-contracts.ts';
 
@@ -59,10 +60,6 @@ const activeProject = { family, authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
-
-function scopeOf(c: Context<AppEnv>, projectId: string) {
-  return { workspaceId: c.get('workspace').workspaceId, projectId };
-}
 
 /** Logo reads authorize through the path: an `<img>` sends no workspace header. */
 function serveLogo(
@@ -82,7 +79,7 @@ export const brandIdentityRoutes = [
     params: { path: projectPath, query: {} },
     response: brandProfileSchema,
     async handle({ c, db }, { path }) {
-      return readBrandProfile(db, scopeOf(c, path.project_id));
+      return readBrandProfile(db, projectScopeOf(c, path.project_id));
     },
   }),
   definePutRoute({
@@ -93,7 +90,7 @@ export const brandIdentityRoutes = [
     body: brandProfileUpdate,
     response: brandProfileSchema,
     async handle({ c, db }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const update = await readBody(c, brandProfileUpdate);
       return updateBrandProfile(db, scope, c.get('user').id, update);
     },
@@ -104,7 +101,7 @@ export const brandIdentityRoutes = [
     params: { path: projectPath, query: {} },
     response: brandFactListSchema,
     async handle({ c, db }, { path }) {
-      return listBrandFacts(db, scopeOf(c, path.project_id), c.get('entitlements'));
+      return listBrandFacts(db, projectScopeOf(c, path.project_id), c.get('entitlements'));
     },
   }),
   definePostRoute({
@@ -115,7 +112,7 @@ export const brandIdentityRoutes = [
     body: brandFactCreate,
     response: brandFactSchema,
     async handle({ c, db }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const input = await readBody(c, brandFactCreate);
       return createBrandFact(db, scope, c.get('user').id, input);
     },
@@ -128,7 +125,7 @@ export const brandIdentityRoutes = [
     body: brandFactImport,
     response: brandFactImportResultSchema,
     async handle({ c, db }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const input = await readBody(c, brandFactImport);
       return importBrandFacts(db, scope, c.get('user').id, input);
     },
@@ -144,7 +141,7 @@ export const brandIdentityRoutes = [
     async handle({ c, db }, { path }) {
       const change = await readBody(c, verdictOverrideRequest);
       return overrideVerdict(db, {
-        scope: scopeOf(c, path.project_id),
+        scope: projectScopeOf(c, path.project_id),
         userId: c.get('user').id,
         verdictId: path.verdict_id,
         change,
@@ -159,7 +156,7 @@ export const brandIdentityRoutes = [
     body: brandFactUpdate,
     response: brandFactSchema,
     async handle({ c, db }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const update = await readBody(c, brandFactUpdate);
       return updateBrandFact(db, scope, c.get('user').id, path.fact_id, update);
     },
@@ -169,7 +166,7 @@ export const brandIdentityRoutes = [
     path: `${root}/themes`,
     params: { path: projectPath, query: {} },
     response: z.array(projectThemeSchema),
-    handle: ({ c, db }, { path }) => listThemes(db, scopeOf(c, path.project_id)),
+    handle: ({ c, db }, { path }) => listThemes(db, projectScopeOf(c, path.project_id)),
   }),
   definePostRoute({
     ...activeProject,
@@ -180,7 +177,7 @@ export const brandIdentityRoutes = [
     body: themeRequest,
     response: projectThemeSchema,
     async handle({ c, db }, { path }) {
-      return createTheme(db, scopeOf(c, path.project_id), await readBody(c, themeRequest));
+      return createTheme(db, projectScopeOf(c, path.project_id), await readBody(c, themeRequest));
     },
   }),
   definePatchRoute({
@@ -192,7 +189,11 @@ export const brandIdentityRoutes = [
     response: projectThemeSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, themeRequest);
-      return renameTheme(db, { ...scopeOf(c, path.project_id), themeId: path.theme_id }, input);
+      return renameTheme(
+        db,
+        { ...projectScopeOf(c, path.project_id), themeId: path.theme_id },
+        input,
+      );
     },
   }),
   defineDeleteRoute({
@@ -201,7 +202,7 @@ export const brandIdentityRoutes = [
     capability: 'write',
     params: { path: { ...projectPath, theme_id: uuid }, query: {} },
     handle: ({ c, db }, { path }) =>
-      deleteTheme(db, { ...scopeOf(c, path.project_id), themeId: path.theme_id }),
+      deleteTheme(db, { ...projectScopeOf(c, path.project_id), themeId: path.theme_id }),
   }),
   defineGetRoute({
     ...activeProject,
@@ -210,7 +211,7 @@ export const brandIdentityRoutes = [
     params: { path: projectPath, query: {} },
     response: businessMapSchema,
     async handle({ c, db }, { path }) {
-      return readBusinessMap(db, scopeOf(c, path.project_id));
+      return readBusinessMap(db, projectScopeOf(c, path.project_id));
     },
   }),
   definePutRoute({
@@ -221,7 +222,7 @@ export const brandIdentityRoutes = [
     body: businessMapUpdate,
     response: businessMapSchema,
     async handle({ c, db }, { path }) {
-      const scope = scopeOf(c, path.project_id);
+      const scope = projectScopeOf(c, path.project_id);
       const update = await readBody(c, businessMapUpdate);
       return updateBusinessMap(db, scope, c.get('user').id, update);
     },
@@ -233,7 +234,7 @@ export const brandIdentityRoutes = [
     params: { path: projectPath, query: {} },
     response: z.array(observedCompetitorSchema),
     async handle({ c, db }, { path }) {
-      return listSuggestions(db, scopeOf(c, path.project_id));
+      return listSuggestions(db, projectScopeOf(c, path.project_id));
     },
   }),
   definePostRoute({

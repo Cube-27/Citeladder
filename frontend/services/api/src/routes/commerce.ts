@@ -55,7 +55,13 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { requireFlag } from '../entitlements/access.ts';
-import { defineGetRoute, definePatchRoute, definePostRoute, definePutRoute } from './define.ts';
+import {
+  defineGetRoute,
+  definePatchRoute,
+  definePostRoute,
+  definePutRoute,
+  projectScopeOf,
+} from './define.ts';
 
 /** Every route here reads the path project inside the active workspace. */
 const family = { family: 'commerce', authorize: 'active-project' } as const;
@@ -90,13 +96,9 @@ const buyerGenerateHeaders = z.object({
 });
 const executeDiscoveriesBody = competitorDiscoveryExecuteRequestSchema;
 
-function scopeOf(c: Context<AppEnv>, projectId: string) {
-  return { workspaceId: c.get('workspace').workspaceId, projectId };
-}
-
 /** Changes and new work need Commerce in the plan; reads of collected data do not. */
 async function writeScopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
-  const scope = scopeOf(c, projectId);
+  const scope = projectScopeOf(c, projectId);
   await requireFlag(db, scope.workspaceId, 'commerce');
   return scope;
 }
@@ -174,7 +176,7 @@ export const commerceRoutes = [
     params: { path: projectPath, query: {} },
     response: commerceCatalogSchema,
     async handle({ c, db }, { path }) {
-      return catalog(db, scopeOf(c, path.project_id));
+      return catalog(db, projectScopeOf(c, path.project_id));
     },
   }),
   defineGetRoute({
@@ -183,7 +185,7 @@ export const commerceRoutes = [
     params: { path: projectPath, query: {} },
     response: commerceProjectionSchema,
     async handle({ c, db }, { path }) {
-      return catalogProjection(db, scopeOf(c, path.project_id));
+      return catalogProjection(db, projectScopeOf(c, path.project_id));
     },
   }),
   definePostRoute({
@@ -252,7 +254,7 @@ export const commerceRoutes = [
     },
     response: commerceProductPageSchema,
     async handle({ c, db }, { path, query }) {
-      return productMetrics(db, scopeOf(c, path.project_id), {
+      return productMetrics(db, projectScopeOf(c, path.project_id), {
         source: query.source,
         category: query.category,
         windowDays: query.window,
@@ -274,7 +276,7 @@ export const commerceRoutes = [
     },
     response: commerceShoppingOverviewSchema,
     async handle({ c, db }, { path, query }) {
-      return shoppingOverview(db, scopeOf(c, path.project_id), {
+      return shoppingOverview(db, projectScopeOf(c, path.project_id), {
         windowDays: query.window,
         category: query.category,
       });
@@ -289,7 +291,7 @@ export const commerceRoutes = [
     },
     response: commerceProductDetailSchema,
     async handle({ c, db }, { path, query }) {
-      return productDetail(db, scopeOf(c, path.project_id), path.holder_id, {
+      return productDetail(db, projectScopeOf(c, path.project_id), path.holder_id, {
         windowDays: query.window,
         engine: query.engine,
         promptSet: query.prompt_set,
@@ -327,7 +329,7 @@ export const commerceRoutes = [
     params: { path: projectPath, query: {} },
     response: z.array(competitorCandidateSchema),
     async handle({ c, db }, { path }) {
-      return candidates(db, scopeOf(c, path.project_id));
+      return candidates(db, projectScopeOf(c, path.project_id));
     },
   }),
   defineGetRoute({
@@ -336,7 +338,7 @@ export const commerceRoutes = [
     params: { path: projectPath, query: { task_ids: { scalar: { kind: 'uuid' }, list: true } } },
     response: z.array(competitorDiscoveryTaskSchema),
     async handle({ c, db }, { path, query }) {
-      return discoveries(db, scopeOf(c, path.project_id), query.task_ids);
+      return discoveries(db, projectScopeOf(c, path.project_id), query.task_ids);
     },
   }),
   definePatchRoute({
@@ -362,7 +364,7 @@ export const commerceRoutes = [
     params: { path: projectPath, query: {} },
     response: z.array(buyerPromptSchema),
     async handle({ c, db }, { path }) {
-      return buyerPrompts(db, scopeOf(c, path.project_id));
+      return buyerPrompts(db, projectScopeOf(c, path.project_id));
     },
   }),
   definePatchRoute({

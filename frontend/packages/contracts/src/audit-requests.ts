@@ -10,6 +10,9 @@ import { auditScheduleCadenceSchema, auditScopeSchema } from './audits.ts';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema } from './providers.ts';
 
+/** The scopes a request may launch or schedule; probes run only through their own owner. */
+const requestScopeSchema = auditScopeSchema.exclude(['probe']);
+
 const uuid = () => z.uuid();
 
 /** A launch's markets: `null` is the project's default market. */
@@ -34,7 +37,7 @@ export type AuditEstimateRequest = z.input<typeof auditEstimateRequestSchema>;
 /** `POST /audits`: an estimate's selection plus the run's scope and seed. */
 export const auditLaunchRequestSchema = auditEstimateRequestSchema.extend({
   benchmark_mode: benchmarkModeSchema.nullish(),
-  audit_scope: auditScopeSchema.default('brand'),
+  audit_scope: requestScopeSchema.default('brand'),
   /** Optional 64-bit seed as a decimal string; generated and stored when omitted. */
   random_seed: z.string().nullish(),
 });
@@ -52,7 +55,7 @@ export type AuditRepairRequest = z.input<typeof auditRepairRequestSchema>;
 /** Every schedule field; a create defaults the optional ones, an update sends any subset. */
 export const auditScheduleUpdateRequestSchema = z.object({
   prompt_set_id: uuid(),
-  audit_scope: auditScopeSchema,
+  audit_scope: requestScopeSchema,
   cadence: auditScheduleCadenceSchema,
   interval_minutes: z.int().positive().nullable(),
   timezone: z.string().trim().min(1),

@@ -2,20 +2,24 @@
  * The Objections tab (W13, AV-35/36): each objection group's position score
  * in the newest labelled probe, the engines raising it, its scores over the
  * recent probes, and the pages the answers raising it cited. An answer that
- * did not search cites nothing, so a group can truly have no sources.
+ * did not search cites nothing, so a raised group can truly have no sources;
+ * a group this probe did not raise has none to count.
  */
-import type { ProbeObjections } from '@citeladder/contracts/probes';
+import { citationClassificationSchema } from '@citeladder/contracts/audits';
+import type { ProbeObjections, ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { logicalEngines } from '../providers/config.ts';
-import { probeAnswers, probeRoster, type ProbeAnswer } from './answers.ts';
-import { probeLaunches } from './launches.ts';
+import { pageStandings } from '../visibility/page-standing.ts';
+import { probeAnswers, type ProbeAnswer } from './answers.ts';
+import { labelledLaunches } from './launches.ts';
 import { listGroups } from './objection-groups.ts';
 import { distinctPlaces, positionScores, scoreOf } from './scores.ts';
 
-type Scope = { workspaceId: string; projectId: string };
 const probes = policy.probes;
+type Page = ProbeObjectionsValue['groups'][number]['pages'][number];
 
 /** Each group's score over a probe's objection answers, and how many answers there were. */
 function groupScores(answers: readonly ProbeAnswer[]) {
@@ -41,7 +45,7 @@ async function groupPages(db: Database, scope: Scope, asked: readonly ProbeAnswe
     ? await db
         .selectFrom('citations as c')
         .innerJoin('response_analyses as ra', 'ra.id', 'c.analysis_id')
-        .select(['ra.task_id', 'c.url', 'c.title', 'c.domain', 'c.classification'])
+        .select(['ra.task_id', 'c.url', 'c.url_hash', 'c.title', 'c.domain', 'c.classification'])
         .distinctOn(['ra.task_id', 'c.url'])
         .where('ra.workspace_id', '=', scope.workspaceId)
         .where('c.workspace_id', '=', scope.workspaceId)
@@ -51,21 +55,22 @@ async function groupPages(db: Database, scope: Scope, asked: readonly ProbeAnswe
         .orderBy('c.ordinal')
         .execute()
     : [];
-  const byTask = new Map<string, typeof rows>();
-  for (const row of rows) byTask.set(row.task_id, [...(byTask.get(row.task_id) ?? []), row]);
+  const byTask = Map.groupBy(rows, (row) => row.task_id);
+  const hashes = [...new Set(rows.flatMap((row) => (row.url_hash ? [row.url_hash] : [])))];
+  const known = hashes.length ? await pageStandings(db, scope, hashes) : undefined;
   return (groupId: string) => {
-    const pages = new Map<
-      string,
-      { url: string; title: string; domain: string; classification: string; citations: number }
-    >();
+    const pages = new Map<string, Page>();
     for (const answer of asked)
       if (answer.items.some((item) => item.objection_group_id === groupId))
         for (const row of byTask.get(answer.taskId) ?? []) {
+          const source = row.url_hash ? known?.get(row.url_hash) : undefined;
           const page = pages.get(row.url) ?? {
             url: row.url,
             title: row.title,
             domain: row.domain,
-            classification: row.classification,
+            classification: citationClassificationSchema.parse(row.classification),
+            page_format: source?.page_format ?? null,
+            standing: source?.standing ?? null,
             citations: 0,
           };
           page.citations += 1;
@@ -79,13 +84,12 @@ async function groupPages(db: Database, scope: Scope, asked: readonly ProbeAnswe
 }
 
 export async function probeObjections(db: Database, scope: Scope): Promise<ProbeObjections> {
-  const launches = await probeLaunches(db, scope, { limit: probes.history_probes, labelled: true });
+  const launches = await labelledLaunches(db, scope, probes.history_probes);
   const latest = launches[0];
   if (!latest) return { state: 'none' };
-  const [history, groups, roster] = await Promise.all([
-    Promise.all(launches.map((launch) => probeAnswers(db, scope, launch.labelledIds))),
+  const [history, groups] = await Promise.all([
+    Promise.all(launches.map((launch) => probeAnswers(db, scope, launch.ids))),
     listGroups(db, scope),
-    probeRoster(db, scope, latest.labelledIds),
   ]);
   const [latestAnswers = []] = history;
   const current = groupScores(latestAnswers);
@@ -95,7 +99,7 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   const rows = groups.map((group) => {
     const series = scored.map(({ asked, scores }) => scoreOf(scores, group.id, asked.length));
     const score = series.at(-1) ?? null;
-    const previous = series.length > 1 ? (series.at(-2) ?? null) : null;
+    const previous = series.at(-2) ?? null;
     const raising = new Set(
       current.asked
         .filter((answer) => answer.items.some((item) => item.objection_group_id === group.id))
@@ -108,7 +112,7 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
       engines: logicalEngines.filter((engine) => raising.has(engine)),
       change: score !== null && previous !== null ? score - previous : null,
       history: series,
-      ...pagesOf(group.id),
+      ...(raising.size ? pagesOf(group.id) : { sources: null, pages: [] }),
     };
   });
   // A late, rare objection can average to 0 and still be raised by an engine.
@@ -116,8 +120,8 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   const answering = new Set(current.asked.map((answer) => answer.engine));
   return {
     state: 'value',
-    probe: { ...latest.run, answers: latestAnswers.length },
-    brand: roster.brand,
+    probe: { ...latest.basis, answers: latestAnswers.length },
+    brand: latest.brand,
     answers: current.asked.length,
     answered_by: logicalEngines.filter((engine) => answering.has(engine)),
     average: raised.length

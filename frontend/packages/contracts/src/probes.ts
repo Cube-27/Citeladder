@@ -6,10 +6,11 @@
  */
 import { z } from 'zod';
 
-import { auditScheduleCadenceSchema } from './audits.ts';
+import { auditScheduleCadenceSchema, citationClassificationSchema } from './audits.ts';
 import { credentialModeSchema } from './billing.ts';
 import { auditMarketSchema } from './markets.ts';
 import { logicalEngineSchema } from './providers.ts';
+import { pageStandingSchema } from './visibility-evidence.ts';
 
 const uuid = () => z.uuid();
 const score = z.int().min(0).max(100);
@@ -23,18 +24,24 @@ export const objectionGroupSchema = z.object({ id: uuid(), name: z.string() });
 export const probeRunRequestSchema = z.object({ fingerprint: z.string().min(1) });
 export type ProbeRunRequest = z.infer<typeof probeRunRequestSchema>;
 
-/** `PUT /projects/{id}/probes/schedule`: a cadence, or null to turn the schedule off. */
-export const probeScheduleRequestSchema = z.object({
-  cadence: z.enum(['daily', 'weekly']).nullable(),
-});
+/**
+ * `PUT /projects/{id}/probes/schedule`: a cadence with the fingerprint of the
+ * quote the user confirmed per run, or null to turn the schedule off.
+ */
+export const probeScheduleRequestSchema = z.union([
+  z.object({ cadence: z.null() }),
+  z.object({ cadence: z.enum(['daily', 'weekly']), fingerprint: z.string().min(1) }),
+]);
 export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
 
 /** What Run probe would ask and charge, before anything runs (AV-34). */
 const probeQuoteSchema = z.object({
   /** Managed (`funded`) workspaces probe on CiteLadder's keys; others on their own saved keys. */
   credential_mode: credentialModeSchema,
-  /** Search-capable engines with a usable key; empty means a key must be added first. */
+  /** Engines that would run; empty when `blocked` says why. */
   engines: z.array(logicalEngineSchema),
+  /** Why nothing would run: no usable key, or no key's engine measures any market. */
+  blocked: z.enum(['no_key', 'no_market']).nullable(),
   markets: z.array(auditMarketSchema),
   /** Questions per engine and market: two about the brand plus one per theme. */
   questions: z.int().nonnegative(),
@@ -53,10 +60,8 @@ const probeStateSchema = z.enum(['running', 'labelling', 'ready', 'failed', 'una
 /** The newest probe launch: its markets' runs together. */
 const probeRunSchema = z.object({
   launch_id: uuid(),
-  audit_ids: z.array(uuid()),
   state: probeStateSchema,
   created_at: z.string(),
-  completed_at: z.string().nullable(),
   engines: z.array(logicalEngineSchema),
   markets: z.array(auditMarketSchema),
   answers: z.int().nonnegative(),
@@ -77,14 +82,8 @@ export const probeStatusSchema = z.object({
 });
 export type ProbeStatus = z.infer<typeof probeStatusSchema>;
 
-/** The labelled probe a read is built from. */
-const probeBasisSchema = z.object({
-  launch_id: uuid(),
-  created_at: z.string(),
-  engines: z.array(logicalEngineSchema),
-  markets: z.array(auditMarketSchema),
-  answers: z.int().nonnegative(),
-});
+/** The labelled probe a read is built from: only the markets and engines whose answers were read. */
+const probeBasisSchema = probeRunSchema.omit({ state: true });
 
 const entitySchema = z.object({
   kind: z.enum(['brand', 'competitor']),
@@ -103,15 +102,12 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
     /** Known-for answers the scores average over; 0 means none answered, not nothing raised. */
     known_for_answers: z.int().nonnegative(),
     /** What answers say the brand is known for, highest score first; `theme_id: null` is Other. */
-    known_for: z.array(
-      z.object({ theme_id: uuid().nullable(), theme: z.string(), score, raised_in: z.int() }),
-    ),
+    known_for: z.array(z.object({ theme_id: uuid().nullable(), theme: z.string(), score })),
     /** Every current theme the probe asked about, in the project's theme order. */
     themes: z.array(
       z.object({
         theme_id: uuid(),
         theme: z.string(),
-        answers: z.int().nonnegative(),
         /** The brand first, then competitors, each with its position score on this theme. */
         entities: z.array(entitySchema.extend({ score })),
         rank: z.int().positive(),
@@ -126,8 +122,13 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
         /** Whether this engine answered the known-for question at all. */
         answered: z.boolean(),
         top_themes: z.array(z.object({ theme_id: uuid().nullable(), theme: z.string() })),
-        /** The brand's rank in this engine's answers on its top theme; null when not named. */
-        rank_in_top_theme: z.int().positive().nullable(),
+        /** The brand's rank on this engine's top real theme (never Other), or why there is none. */
+        rank_in_top_theme: z.discriminatedUnion('kind', [
+          z.object({ kind: z.literal('rank'), rank: z.int().positive() }),
+          z.object({ kind: z.literal('not_named') }),
+          z.object({ kind: z.literal('not_asked') }),
+          z.object({ kind: z.literal('no_theme') }),
+        ]),
       }),
     ),
   }),
@@ -158,14 +159,17 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
         change: z.int().nullable(),
         /** Oldest first, this probe last; null where that probe had no objection answers. */
         history: z.array(score.nullable()),
-        /** Distinct pages cited by answers raising it; 0 is a real state (no search). */
-        sources: z.int().nonnegative(),
+        /** Distinct pages cited by answers raising it; 0 is a real state (no search), null when this probe did not raise it. */
+        sources: z.int().nonnegative().nullable(),
         pages: z.array(
           z.object({
             url: z.string(),
             title: z.string(),
             domain: z.string(),
-            classification: z.string(),
+            classification: citationClassificationSchema,
+            /** The source-page owner's page type and the brand's standing on it; null when no page is on record. */
+            page_format: z.string().nullable(),
+            standing: pageStandingSchema.nullable(),
             citations: z.int().positive(),
           }),
         ),

@@ -1,7 +1,8 @@
 /**
  * Probe launches: one per Run probe or scheduled occurrence, an audit per
- * market sharing a `launch_id`. Reads group them, newest first, and derive
- * the launch's state from its runs and their labelling outcomes.
+ * market sharing a `launch_id`, labelled together once every market ended.
+ * Reads group them, newest first, and derive the launch's state from its runs
+ * and its labelling outcome.
  */
 import type { ProbeRun } from '@citeladder/contracts/probes';
 import { sql } from 'kysely';
@@ -9,12 +10,14 @@ import { sql } from 'kysely';
 import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { logicalEngines } from '../providers/config.ts';
+import { probeRoster } from './answers.ts';
 
-type Scope = { workspaceId: string; projectId: string };
-const COMPLETED = new Set(['completed', 'partially_completed']);
+/** Runs that recorded answers; only these are labelled and read. */
+export const ANSWERED_STATUSES = ['completed', 'partially_completed'];
 
-function probeAudits(db: Database, scope: Scope) {
+export function probeAudits(db: Database, scope: Scope) {
   return db
     .selectFrom('audits as a')
     .where('a.workspace_id', '=', scope.workspaceId)
@@ -23,24 +26,7 @@ function probeAudits(db: Database, scope: Scope) {
     .where('a.launch_id', 'is not', null);
 }
 
-function launchState(audits: readonly { status: string; outcome: string | null }[]) {
-  const terminal = policy.audits.constants.audit_terminal_statuses;
-  if (audits.some((audit) => !terminal.includes(audit.status))) return 'running';
-  const completed = audits.filter((audit) => COMPLETED.has(audit.status));
-  if (!completed.length) return 'failed';
-  if (completed.some((audit) => audit.outcome === null)) return 'labelling';
-  return completed.some((audit) => audit.outcome === 'labelled') ? 'ready' : 'unavailable';
-}
-
-/**
- * The newest `limit` probe launches, newest first; `labelled` keeps only
- * those with at least one labelled run, the ones Market and Objections read.
- */
-export async function probeLaunches(
-  db: Database,
-  scope: Scope,
-  { limit, labelled = false }: { limit: number; labelled?: boolean },
-) {
+function launchRows(db: Database, scope: Scope, limit: number, labelled: boolean) {
   const recent = probeAudits(db, scope)
     .select('a.launch_id')
     .$if(labelled, (query) =>
@@ -48,7 +34,7 @@ export async function probeLaunches(
         exists(
           selectFrom('probe_labellings as l')
             .select('l.id')
-            .whereRef('l.audit_id', '=', 'a.id')
+            .whereRef('l.launch_id', '=', 'a.launch_id')
             .where('l.outcome', '=', 'labelled'),
         ),
       ),
@@ -56,14 +42,13 @@ export async function probeLaunches(
     .groupBy('a.launch_id')
     .orderBy(sql`max(a.created_at)`, 'desc')
     .limit(limit);
-  const rows = await probeAudits(db, scope)
-    .leftJoin('probe_labellings as l', 'l.audit_id', 'a.id')
+  return probeAudits(db, scope)
+    .leftJoin('probe_labellings as l', 'l.launch_id', 'a.launch_id')
     .select([
       'a.id',
       'a.launch_id',
       'a.status',
       'a.created_at',
-      'a.completed_at',
       'a.completed_count',
       'a.configuration',
       'a.market_id',
@@ -73,40 +58,23 @@ export async function probeLaunches(
     .orderBy('a.created_at', 'desc')
     .orderBy('a.id')
     .execute();
-  const launches = new Map<string, typeof rows>();
-  for (const row of rows) {
-    const key = row.launch_id!;
-    launches.set(key, [...(launches.get(key) ?? []), row]);
-  }
-  return [...launches].map(([launchId, audits]) => launch(launchId, audits));
+}
+type LaunchRow = Awaited<ReturnType<typeof launchRows>>[number];
+
+function launchState(audits: readonly LaunchRow[]): ProbeRun['state'] {
+  const terminal = policy.audits.constants.audit_terminal_statuses;
+  if (audits.some((audit) => !terminal.includes(audit.status))) return 'running';
+  if (!audits.some((audit) => ANSWERED_STATUSES.includes(audit.status))) return 'failed';
+  const outcome = audits[0]?.outcome ?? null;
+  if (outcome === null) return 'labelling';
+  return outcome === 'labelled' ? 'ready' : 'unavailable';
 }
 
-function launch(
-  launchId: string,
-  audits: readonly {
-    id: string;
-    status: string;
-    created_at: Date;
-    completed_at: Date | null;
-    completed_count: number;
-    configuration: unknown;
-    market_id: string | null;
-    outcome: string | null;
-  }[],
-) {
+/** The engines, markets and answers of `audits`, as their configurations froze them. */
+function basis(audits: readonly LaunchRow[]) {
   const configs = audits.map((audit) => readFrozenConfiguration(audit.configuration));
   const engines = new Set(configs.flatMap((config) => config.engines ?? []));
-  const finished = audits.map((audit) => audit.completed_at);
-  const run: ProbeRun = {
-    launch_id: launchId,
-    audit_ids: audits.map((audit) => audit.id),
-    state: launchState(audits),
-    created_at: new Date(
-      Math.min(...audits.map((audit) => audit.created_at.getTime())),
-    ).toISOString(),
-    completed_at: finished.includes(null)
-      ? null
-      : new Date(Math.max(...finished.map((at) => at!.getTime()))).toISOString(),
+  return {
     engines: logicalEngines.filter((engine) => engines.has(engine)),
     markets: audits.map((audit, index) => ({
       id: audit.market_id,
@@ -115,8 +83,56 @@ function launch(
     })),
     answers: audits.reduce((sum, audit) => sum + audit.completed_count, 0),
   };
+}
+
+/**
+ * A launch's run for the probe bar and, once labelled, what the reads score:
+ * the answered audits and only their markets and engines, so a market that
+ * failed is never claimed (rows arrive newest first).
+ */
+function launch(launchId: string, audits: readonly LaunchRow[]) {
+  const createdAt = new Date(
+    Math.min(...audits.map((audit) => audit.created_at.getTime())),
+  ).toISOString();
+  const run: ProbeRun = {
+    launch_id: launchId,
+    state: launchState(audits),
+    created_at: createdAt,
+    ...basis(audits),
+  };
+  const answered = audits.filter((audit) => ANSWERED_STATUSES.includes(audit.status));
+  const oldest = answered.at(-1);
+  if (run.state !== 'ready' || !oldest) return { run, labelled: null };
+  // The tracked businesses the launch's first run froze, the brand first.
+  const { brand, tracked } = probeRoster(oldest.configuration);
   return {
     run,
-    labelledIds: audits.filter((audit) => audit.outcome === 'labelled').map((audit) => audit.id),
+    labelled: {
+      ids: answered.map((audit) => audit.id),
+      basis: { launch_id: launchId, created_at: createdAt, ...basis(answered) },
+      brand,
+      roster: tracked,
+    },
   };
+}
+
+/**
+ * The newest `limit` probe launches, newest first; `labelled` keeps only
+ * those labelled, the ones Market and Objections read.
+ */
+export async function probeLaunches(
+  db: Database,
+  scope: Scope,
+  { limit, labelled = false }: { limit: number; labelled?: boolean },
+) {
+  const rows = await launchRows(db, scope, limit, labelled);
+  return [...Map.groupBy(rows, (row) => row.launch_id!)].map(([launchId, audits]) =>
+    launch(launchId, audits),
+  );
+}
+
+/** The newest `limit` labelled launches, newest first. */
+export async function labelledLaunches(db: Database, scope: Scope, limit: number) {
+  const launches = await probeLaunches(db, scope, { limit, labelled: true });
+  return launches.flatMap((row) => (row.labelled ? [row.labelled] : []));
 }

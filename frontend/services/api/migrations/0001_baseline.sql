@@ -1743,6 +1743,9 @@ ALTER TABLE ONLY public.project_themes
 
 CREATE INDEX ix_project_themes_workspace_id_project_id ON public.project_themes USING btree (workspace_id, project_id);
 
+ALTER TABLE ONLY public.project_themes
+    ADD CONSTRAINT uq_project_themes_ws_project_id UNIQUE (workspace_id, project_id, id);
+
 CREATE UNIQUE INDEX uq_project_theme_name ON public.project_themes USING btree (project_id, lower((name)::text));
 
 -- Probe objection groups (AV-28): the first probe groups reasons by meaning,
@@ -1761,14 +1764,18 @@ ALTER TABLE ONLY public.probe_objection_groups
 
 CREATE INDEX ix_probe_objection_groups_workspace_id_project_id ON public.probe_objection_groups USING btree (workspace_id, project_id);
 
+ALTER TABLE ONLY public.probe_objection_groups
+    ADD CONSTRAINT uq_probe_objection_groups_ws_project_id UNIQUE (workspace_id, project_id, id);
+
 CREATE UNIQUE INDEX uq_probe_objection_group_name ON public.probe_objection_groups USING btree (project_id, lower((name)::text));
 
--- One labelling outcome per probe run.
+-- One labelling outcome per probe launch: every market's answers are labelled
+-- in one pass, so the first probe groups objections once (AV-28).
 CREATE TABLE public.probe_labellings (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
     project_id uuid NOT NULL,
-    audit_id uuid NOT NULL,
+    launch_id uuid NOT NULL,
     labelling_version character varying(64) NOT NULL,
     outcome character varying(32) NOT NULL,
     outcome_reason character varying(64),
@@ -1783,7 +1790,7 @@ ALTER TABLE ONLY public.probe_labellings
     ADD CONSTRAINT probe_labellings_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.probe_labellings
-    ADD CONSTRAINT uq_probe_labellings_audit_id UNIQUE (audit_id);
+    ADD CONSTRAINT uq_probe_labellings_launch_id UNIQUE (launch_id);
 
 ALTER TABLE ONLY public.probe_labellings
     ADD CONSTRAINT uq_probe_labellings_ws_id UNIQUE (workspace_id, id);
@@ -6820,7 +6827,7 @@ ALTER TABLE ONLY public.probe_objection_groups
     ADD CONSTRAINT probe_objection_groups_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.probe_labellings
-    ADD CONSTRAINT probe_labellings_audit_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+    ADD CONSTRAINT probe_labellings_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.probe_answer_items
     ADD CONSTRAINT probe_answer_items_labelling_fkey FOREIGN KEY (workspace_id, labelling_id) REFERENCES public.probe_labellings(workspace_id, id) ON DELETE CASCADE;
@@ -6829,10 +6836,10 @@ ALTER TABLE ONLY public.probe_answer_items
     ADD CONSTRAINT probe_answer_items_task_fkey FOREIGN KEY (workspace_id, project_id, audit_id, task_id) REFERENCES public.audit_tasks(workspace_id, project_id, audit_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.probe_answer_items
-    ADD CONSTRAINT probe_answer_items_theme_id_fkey FOREIGN KEY (theme_id) REFERENCES public.project_themes(id) ON DELETE SET NULL;
+    ADD CONSTRAINT probe_answer_items_theme_fkey FOREIGN KEY (workspace_id, project_id, theme_id) REFERENCES public.project_themes(workspace_id, project_id, id) ON DELETE SET NULL (theme_id);
 
 ALTER TABLE ONLY public.probe_answer_items
-    ADD CONSTRAINT probe_answer_items_objection_group_id_fkey FOREIGN KEY (objection_group_id) REFERENCES public.probe_objection_groups(id) ON DELETE CASCADE;
+    ADD CONSTRAINT probe_answer_items_objection_group_fkey FOREIGN KEY (workspace_id, project_id, objection_group_id) REFERENCES public.probe_objection_groups(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.unintended_domains
     ADD CONSTRAINT unintended_domains_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;

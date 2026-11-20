@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { scoreExecution, scoringConfig } from '../src/analysis/scoring.ts';
 import { assessEntities, brandNamed } from '../src/analysis/entity-assessment.ts';
 import { citationIdentity } from '../src/source-pages/identity.ts';
-import { normalizeAlias, firstAliasOffset } from '../src/analysis/aliases.ts';
+import { aliasSuggestions, normalizeAlias, firstAliasOffset } from '../src/analysis/aliases.ts';
 const config = scoringConfig({
   brand_name: 'Best & Less',
   brand_aliases: ['Bestandless'],
@@ -57,6 +57,18 @@ describe('frozen deterministic execution scoring', () => {
       search_query_text_available: false,
       prompt_class: 'branded',
     });
+    // A blank answer names nothing either, as perception and the assessments read it.
+    const blank = scoreExecution({
+      config,
+      answerText: ' \n ',
+      promptText: 'Best & Less shoes',
+      promptNamesBrand: true,
+      searchUsed: false,
+      queryTextAvailable: false,
+      searchEvents: [],
+      citations: [],
+    });
+    expect(blank.brand_mentioned).toBe(false);
   });
   it('counts a context-required brand only with nearby context, as frozen in the audit block', () => {
     const target = scoringConfig({
@@ -199,6 +211,14 @@ describe('frozen deterministic execution scoring', () => {
     expect(named('Target', 'Ads at Target for parents.')).toBe(true);
     // A short part never splits off an "and": "Brandon" is not "Br and on".
     expect(named('Brandon', 'Br and on the menu.')).toBe(false);
+    // So an alias is suggested only for a domain spelling none of those forms reads.
+    expect(
+      aliasSuggestions({
+        brandName: 'Best & Less',
+        aliases: ['BNL'],
+        domains: ['https://www.bestandless.com.au', 'bnl.com', 'shop.bestless.co'],
+      }),
+    ).toEqual(['bestless']);
   });
   it('counts the brand in the whole answer to a prompt that names it, and only there', () => {
     const answer = 'Rated 2.4/5 from 314 reviews; holes within 3 months; limited plus sizes.';

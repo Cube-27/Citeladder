@@ -129,6 +129,9 @@ describe('AI Traffic Pages citations', () => {
     const older = await finalizedRun(t, ['https://acme.example/guide']);
     const guide = await ownedRows(t, older, 'https://acme.example/guide');
     const path = `pages/${guide[0]!.url_hash}?range=30d`;
+    // A market probe's brand-named answers cite owned pages; they are not tracked citations.
+    const probe = await finalizedRun(t, ['https://acme.example/guide']);
+    await db.updateTable('audits').set({ audit_scope: 'probe' }).where('id', '=', probe).execute();
     expect(
       (await trafficRead<UrlDetail>(t, t.projectId, path)).body!.citations.map((c) => [
         c.citation_id,
