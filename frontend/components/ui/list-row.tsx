@@ -175,16 +175,9 @@ export function DisclosureRow({
         className={cn(listRowClasses(), pressableRowClasses, 'min-h-10')}
       >
         <span className="flex min-w-0 flex-1 items-center gap-3">
-          {/* As in a table row, the facts give way before the title. */}
-          <ClampText className={textRole('label', 'text-ink max-w-full shrink-0')}>
-            {title}
-          </ClampText>
-          <span
-            className={textRole(
-              'caption',
-              'text-ink-2 flex min-w-0 items-center gap-3 overflow-hidden',
-            )}
-          >
+          {/* The title gives way (its whole text in a tooltip); the severity never does. */}
+          <ClampText className={textRole('label', 'text-ink min-w-0')}>{title}</ClampText>
+          <span className={textRole('caption', 'text-ink-2 flex shrink-0 items-center gap-3')}>
             {meta}
           </span>
         </span>
