@@ -17,9 +17,10 @@ import { enqueueProbeLabelling, probeLabelling } from '../src/probes/labelling.t
 import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
 import { probeObjections } from '../src/probes/objections.ts';
+import { setProbeSchedule } from '../src/probes/schedule.ts';
 import { createTheme } from '../src/projects/themes.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
-import { auditTenant } from './audit-fixtures.ts';
+import { auditTenant, managedPlan } from './audit-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -127,6 +128,35 @@ describe('probe admission', () => {
     });
     const debits = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'debit');
     expect(debits.map((row) => Number(row.units))).toEqual([LABEL]);
+  });
+
+  it('keeps one probe schedule per project on every managed probe engine, and Off removes it', async () => {
+    const { t } = await probeTenant();
+    const other = await probeTenant();
+    await managedPlan(db, t.workspaceId);
+    const schedules = (scope: { workspaceId: string; projectId: string }) =>
+      db
+        .selectFrom('audit_schedules')
+        .select(['id', 'audit_scope', 'cadence', 'enabled', 'engines'])
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .execute();
+    await setProbeSchedule(db, t, { cadence: 'weekly' }, runtime);
+    await setProbeSchedule(db, other.t, { cadence: 'daily' }, runtime);
+    const [weekly] = await schedules(t);
+    await setProbeSchedule(db, t, { cadence: 'daily' }, runtime);
+    expect(await schedules(t)).toEqual([
+      {
+        id: weekly?.id,
+        audit_scope: 'probe',
+        cadence: 'daily',
+        enabled: true,
+        engines: policy.probes.engines,
+      },
+    ]);
+    await setProbeSchedule(db, t, { cadence: null }, runtime);
+    expect(await schedules(t)).toEqual([]);
+    expect((await schedules(other.t)).map((row) => row.cadence)).toEqual(['daily']);
   });
 });
 

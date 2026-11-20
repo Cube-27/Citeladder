@@ -8,6 +8,7 @@ import {
   objectionGroupMergeRequestSchema,
   probeMarketSchema,
   probeObjectionsSchema,
+  probeScheduleRequestSchema,
   probeStatusSchema,
 } from '@citeladder/contracts/probes';
 import type { Context } from 'hono';
@@ -20,8 +21,15 @@ import { readBody } from '../http/body.ts';
 import { probeMarket } from '../probes/market.ts';
 import { deleteGroup, groupRequest, mergeGroups, renameGroup } from '../probes/objection-groups.ts';
 import { probeObjections } from '../probes/objections.ts';
+import { setProbeSchedule } from '../probes/schedule.ts';
 import { probeStatus, runProbe } from '../probes/status.ts';
-import { defineDeleteRoute, defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
+import {
+  defineDeleteRoute,
+  defineGetRoute,
+  definePatchRoute,
+  definePostRoute,
+  definePutRoute,
+} from './define.ts';
 
 const activeProject = { family: 'probes', authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}/probes';
@@ -53,6 +61,20 @@ export const probeRoutes = [
       const scope = scopeOf(c, path.project_id);
       const ids = await runProbe(db, scope, auditRuntime(config.settings));
       return readAudits(db, scope.workspaceId, ids);
+    },
+  }),
+  definePutRoute({
+    ...activeProject,
+    path: `${root}/schedule`,
+    capability: 'write',
+    params: { path: projectPath, query: {} },
+    body: probeScheduleRequestSchema,
+    response: probeStatusSchema,
+    async handle({ c, db, config }, { path }) {
+      const scope = scopeOf(c, path.project_id);
+      const input = await readBody(c, probeScheduleRequestSchema);
+      await setProbeSchedule(db, scope, input, auditRuntime(config.settings));
+      return probeStatus(db, scope);
     },
   }),
   defineGetRoute({

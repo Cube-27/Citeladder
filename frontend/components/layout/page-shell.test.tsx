@@ -113,7 +113,7 @@ describe('RouteLoadingScreen', () => {
     {
       path: '/perception',
       title: 'Perception',
-      tabs: labels(PERCEPTION_TABS.filter((item) => item.value === 'brand')),
+      tabs: labels(PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking')),
       selected: 'Brand',
       filters: true,
       shapes: ['figures', 'chart'],

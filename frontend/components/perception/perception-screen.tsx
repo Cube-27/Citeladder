@@ -2,6 +2,7 @@ import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 
 import { PerceptionView } from '@/components/perception/perception-brand';
 import { PerceptionFactChecking } from '@/components/perception/perception-factcheck';
+import { PerceptionProbe } from '@/components/perception/perception-probe';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
@@ -39,7 +40,8 @@ export function PerceptionScreen() {
   // Fact-checking exists only inside the pilot.
   const pilot = useBrandFacts().data?.enabled ?? false;
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
-  const tab = pilot ? requested : 'brand';
+  const tab = pilot || requested !== 'fact-checking' ? requested : 'brand';
+  const probe = tab === 'market' || tab === 'objections';
   const accuracy = useAccuracy({ filters, queries, pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
@@ -53,16 +55,23 @@ export function PerceptionScreen() {
         tabs={
           <TabRow
             items={
-              pilot ? PERCEPTION_TABS : PERCEPTION_TABS.filter((item) => item.value === 'brand')
+              pilot
+                ? PERCEPTION_TABS
+                : PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking')
             }
             ariaLabel="Perception views"
           />
         }
-        filters={ready ? <FilterBar filters={pageFilters} /> : undefined}
+        // Market and Objections read the newest probe, not the run selection.
+        filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
-        {queries.activeRun && queries.hasRuns ? <ActiveRunBanner run={queries.activeRun} /> : null}
+        {queries.activeRun && queries.hasRuns && !probe ? (
+          <ActiveRunBanner run={queries.activeRun} />
+        ) : null}
         <TabPanel value={tab} className="focus-ring">
-          {ready ? (
+          {probe ? (
+            <PerceptionProbe view={tab} />
+          ) : ready ? (
             <SelectionGate query={queries.visibilityQuery}>
               {() =>
                 tab === 'brand' ? (

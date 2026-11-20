@@ -19,6 +19,12 @@ export type ObjectionGroupRequest = z.input<typeof objectionGroupRequestSchema>;
 export const objectionGroupMergeRequestSchema = z.object({ into_id: uuid() });
 export type ObjectionGroupMergeRequest = z.input<typeof objectionGroupMergeRequestSchema>;
 
+/** `PUT /projects/{id}/probes/schedule`: a cadence, or null to turn the schedule off. */
+export const probeScheduleRequestSchema = z.object({
+  cadence: z.enum(['daily', 'weekly']).nullable(),
+});
+export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
+
 /** What Run probe would ask and charge, before anything runs (AV-34). */
 export const probeQuoteSchema = z.object({
   /** Managed (`funded`) workspaces probe on CiteLadder's keys; others on their own saved keys. */

@@ -47,9 +47,10 @@ export const themeQueries = {
     }),
 };
 
-/** A theme write re-reads the list and Perception, whose themes it names. */
+/** A theme write re-reads the list, Perception and the probe reads, whose themes it names. */
 function refresh(client: QueryClient, projectId: string) {
   void client.invalidateQueries({ queryKey: queryKeys.projects.resource(projectId, 'themes') });
+  void client.invalidateQueries({ queryKey: queryKeys.projects.resource(projectId, 'probes') });
   void client.invalidateQueries({ queryKey: queryKeys.visibility.project(projectId) });
 }
 

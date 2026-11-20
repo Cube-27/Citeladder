@@ -103,8 +103,8 @@ export function toRunOptions(
     }));
 }
 
-/** Brand pages read brand runs only: a Commerce run is never a brand selection. */
-export function brandRuns<T extends { audit_scope: 'brand' | 'commerce' }>(
+/** Brand pages read brand runs only: a Commerce run or a probe is never a brand selection. */
+export function brandRuns<T extends { audit_scope: string }>(
   audits: readonly T[] | undefined,
 ): T[] {
   return (audits ?? []).filter((audit) => audit.audit_scope === 'brand');

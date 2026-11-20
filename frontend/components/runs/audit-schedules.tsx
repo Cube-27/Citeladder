@@ -51,7 +51,10 @@ const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
 const SCOPE_LABELS: Record<AuditSchedule['audit_scope'], string> = {
   brand: 'Brand visibility',
   commerce: 'Commerce AI Shelf',
+  probe: 'Market probe',
 };
+/** A probe's schedule is set from Perception's probe bar, not here. */
+const CREATE_SCOPES = ['brand', 'commerce'] as const;
 
 /** Compact schedule ledger: schedules use the same frozen prompt set and engines as a run. */
 export function AuditSchedules({
@@ -186,10 +189,7 @@ function ScheduleForm({
             ariaLabel="Measurement scope"
             value={auditScope}
             onValueChange={setAuditScope}
-            options={Object.entries(SCOPE_LABELS).map(([value, label]) => ({
-              value: value as AuditSchedule['audit_scope'],
-              label,
-            }))}
+            options={CREATE_SCOPES.map((value) => ({ value, label: SCOPE_LABELS[value] }))}
           />
         </FormRow>
         <FormRow label="Cadence">

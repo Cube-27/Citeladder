@@ -156,23 +156,29 @@ async function promptSetOf(db: Database, scope: Scope) {
   return set.id;
 }
 
-/** Launches a probe in every market on every usable probe engine; returns the run ids. */
-export async function runProbe(db: Database, scope: Scope, runtime: AuditRuntime = auditRuntime()) {
+/** What a probe launch names: the usable probe engines and the project's prompt set. */
+export async function probeLaunchPlan(db: Database, scope: Scope, runtime: AuditRuntime) {
   const funded = (await workspaceCredentialMode(db, scope.workspaceId)) === 'funded';
   const engines = await probeEngineList(db, scope, { funded, runtime, at: new Date() });
   if (!engines.length)
     throw new ApiError(400, 'Add a key for a search-capable engine to run a probe', {
       code: 'execution_credentials_unavailable',
     });
+  return { engines, promptSetId: await promptSetOf(db, scope) };
+}
+
+/** Launches a probe in every market on every usable probe engine; returns the run ids. */
+export async function runProbe(db: Database, scope: Scope, runtime: AuditRuntime = auditRuntime()) {
+  const plan = await probeLaunchPlan(db, scope, runtime);
   const markets = await listMarkets(db, scope);
   return createAudits(
     db,
     scope.workspaceId,
     {
       project_id: scope.projectId,
-      prompt_set_id: await promptSetOf(db, scope),
+      prompt_set_id: plan.promptSetId,
       prompt_ids: [],
-      engines,
+      engines: plan.engines,
       market_ids: markets.map((market) => market.id),
       audit_scope: probes.audit_scope,
     },
