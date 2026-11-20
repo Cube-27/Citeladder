@@ -20,13 +20,11 @@ import { useTableFilters } from '@/components/visibility/table-filters';
 import { VISIBILITY_TABS, type SourceTab, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
   EVIDENCE_LIMIT,
-  useCanonicalSourcesTab,
   useVisibilityFilters,
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
 export function VisibilityDashboard() {
-  useCanonicalSourcesTab();
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, filters.activeTab);
   return (

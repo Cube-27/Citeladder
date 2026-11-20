@@ -24,6 +24,10 @@ how to add or change an entry.
   it ends when the owner names the next forward migration, after which edits to
   the baseline stop again.
   A reset is owner-run, never agent-run.
+- **An app route change deletes the old route.** The signed-in app keeps no
+  redirect, alias, tab-key remap or URL rewrite for a renamed or removed path or
+  tab: an unknown path gets the not-found page, an unknown tab the page's
+  default. Owner, 2026-11-20.
 - **Access is looked up once per request** and never cached across requests, so
   removing a member, revoking a grant or ending a trial bites on the next
   request. Workers keep their own bounded reuse. Owner, 2026-11-02.
@@ -245,7 +249,8 @@ how to add or change an entry.
   `/enterprise` does not pitch self-hosting. Owner, 2026-10-20.
 - **Modules carry plain names and renamed public URLs keep a 301** from the old
   path, served by the marketing Worker before Astro (no chains; Content Briefs
-  became Content Optimization). Inside the app and API there are still no
-  aliases. Owner, 2026-11-04 and 2026-11-10.
+  became Content Optimization). Only the website and docs sites keep
+  redirects; the API keeps no aliases and the app follows the route rule under
+  Platform. Owner, 2026-11-04 and 2026-11-10.
 - **The desktop navbar island hydrates only from 1280px** (`client:media`); no
   popover rebuild. Owner, 2026-11-13.
