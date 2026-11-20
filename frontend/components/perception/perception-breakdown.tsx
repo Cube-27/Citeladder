@@ -17,12 +17,7 @@ import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPercent, percentText } from '@/lib/format';
-import {
-  breakdownRow,
-  formatNet,
-  themeLabel,
-  themeNegativeShare,
-} from '@/lib/visibility/perception';
+import { breakdownRow, formatNet, themeNegativeShare } from '@/lib/visibility/perception';
 
 type View = 'theme' | 'topic' | 'engine' | 'prompt' | 'source';
 type Segment = Exclude<View, 'theme' | 'source'>;
@@ -115,7 +110,7 @@ function ThemeTable({
                 >
                   <Inline as="span">
                     <Icon icon={expanded ? ChevronDown : ChevronRight} className="text-ink-2" />
-                    {themeLabel(theme.theme)}
+                    {theme.theme}
                   </Inline>
                 </Pressable>
               </TableCell>
@@ -125,7 +120,7 @@ function ThemeTable({
               <TableCell>
                 {share === null ? null : (
                   <CellMeter
-                    label={`${themeLabel(theme.theme)}: negative share`}
+                    label={`${theme.theme}: negative share`}
                     value={share * 100}
                     max={100}
                     valueText={shown ?? ''}

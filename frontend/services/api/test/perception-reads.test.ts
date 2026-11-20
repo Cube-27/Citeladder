@@ -45,7 +45,13 @@ type Entity = {
   state?: string;
   label?: string;
   confidence?: number;
-  aspects?: { theme: string; polarity: string; quote: string; start: number; end: number }[];
+  aspects?: {
+    theme_id: string | null;
+    polarity: string;
+    quote: string;
+    start: number;
+    end: number;
+  }[];
 };
 
 /** One analysed answer and, unless `outcome` is omitted, its persisted perception. */
@@ -130,8 +136,30 @@ async function answer(
   return taskId;
 }
 
+const SUPPORT = randomUUID();
+const PRICING = randomUUID();
+
+/** The project's themes, as research or a person saved them. */
+async function themes(tenant: Tenant, rows: [id: string, name: string][]) {
+  await db
+    .insertInto('project_themes')
+    .values(
+      rows.map(([id, name], position) => ({
+        id,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        name,
+        position,
+        source: 'user',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })),
+    )
+    .execute();
+}
+
 const aspect = (polarity: string, quote: string, start = 0) => ({
-  theme: 'support',
+  theme_id: SUPPORT as string | null,
   polarity,
   quote,
   start,
@@ -150,6 +178,10 @@ describe('GET /visibility/perception', () => {
 
   beforeAll(async () => {
     tenant = await fixtures.tenant();
+    await themes(tenant, [
+      [SUPPORT, 'Support'],
+      [PRICING, 'Pricing'],
+    ]);
     auditId = await fixtures.audit(tenant, { configuration: CONFIGURATION });
     classifiedTask = await answer(tenant, auditId, {
       outcome: 'classified',
@@ -211,7 +243,7 @@ describe('GET /visibility/perception', () => {
         unavailable: [{ reason: 'platform_cap', count: 1 }],
       },
       brand: { name: 'Acme', score: { positive: 1, negative: 1, classified: 2, net_sentiment: 0 } },
-      themes: [{ theme: 'support', positive: 1, negative: 1 }],
+      themes: [{ theme: 'Support', positive: 1, negative: 1 }],
       drivers: [
         { domain: 'reviews.example', answers: 1, example_url: 'https://reviews.example/acme' },
       ],
@@ -221,7 +253,7 @@ describe('GET /visibility/perception', () => {
       expect.objectContaining({
         name: 'Acme',
         is_brand: true,
-        theme_mentions: [{ theme: 'support', mentions: 2 }],
+        theme_mentions: [{ theme: 'Support', mentions: 2 }],
       }),
       expect.objectContaining({
         name: 'Rival',
@@ -253,7 +285,7 @@ describe('GET /visibility/perception', () => {
           aspects: [
             aspect('negative', 'Rival support is slow'),
             aspect('negative', 'Rival support is rude', 30),
-            { ...aspect('positive', 'Rival is cheap'), theme: 'pricing' },
+            { ...aspect('positive', 'Rival is cheap'), theme_id: PRICING },
           ],
         },
       ],
@@ -284,13 +316,39 @@ describe('GET /visibility/perception', () => {
         [
           'Rival',
           [
-            { theme: 'support', mentions: 2 },
-            { theme: 'pricing', mentions: 1 },
+            { theme: 'Support', mentions: 2 },
+            { theme: 'Pricing', mentions: 1 },
           ],
         ],
       ],
       [],
       [],
+    ]);
+    // Aspects keep the theme's id: a rename shows on past answers, a deletion reads as Other.
+    const rival = async () =>
+      (
+        (
+          await get(tenant, `/api/v1/projects/${tenant.projectId}/visibility/perception`, {
+            audit_id: run,
+          })
+        ).body.entities as Body[]
+      ).find((entity) => entity.name === 'Rival')?.theme_mentions;
+    await db
+      .updateTable('project_themes')
+      .set({ name: 'Price' })
+      .where('id', '=', PRICING)
+      .execute();
+    const renamed = await rival();
+    await db.deleteFrom('project_themes').where('id', '=', PRICING).execute();
+    expect([renamed, await rival()]).toEqual([
+      [
+        { theme: 'Support', mentions: 2 },
+        { theme: 'Price', mentions: 1 },
+      ],
+      [
+        { theme: 'Support', mentions: 2 },
+        { theme: 'Other', mentions: 1 },
+      ],
     ]);
   });
 
@@ -465,6 +523,9 @@ describe('GET /visibility/perception', () => {
     expect((negative.body.items as Body[]).map((item) => item.text)).toEqual([
       'Acme support is slow',
     ]);
+    const byTheme = async (theme: string) =>
+      ((await get(tenant, path, { audit_id: auditId, theme })).body.items as Body[]).length;
+    expect([await byTheme('Support'), await byTheme('Delivery')]).toEqual([2, 0]);
     const replay = await get(tenant, path, {
       audit_id: auditId,
       polarity: 'positive',
@@ -485,7 +546,15 @@ describe('GET /visibility/perception', () => {
         confidence: 0.9,
         extractor_version: VERSIONS.extractor_version,
         template_version: VERSIONS.template_version,
-        aspects: [aspect('negative', 'Acme support is slow')],
+        aspects: [
+          {
+            theme: 'Support',
+            polarity: 'negative',
+            quote: 'Acme support is slow',
+            start: 0,
+            end: 20,
+          },
+        ],
       },
       {
         entity: 'Rival',

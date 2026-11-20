@@ -1,5 +1,5 @@
 /**
- * Answer perception policy: versions, caps, the closed theme list and the
+ * Answer perception policy: versions, caps, the project-theme limits and the
  * model templates, plus the gated fact-checking block (claim addendum,
  * verification template, topics and platform caps).
  */
@@ -70,7 +70,15 @@ const schema = z.strictObject({
   task_max_attempts: positive,
   quotes_default_limit: positive,
   quotes_max_limit: positive,
-  themes: z.array(z.string().regex(/^[a-z_]+$/u)).min(2),
+  // Each project's own themes (AV-27, AV-39); `fallback` takes any aspect none fits.
+  project_themes: z.strictObject({
+    fallback: z.string().trim().min(1),
+    name_max_chars: positive,
+    research_max: positive,
+    research_max_words: positive,
+    research_min_confidence: share,
+    company_fact_terms: z.array(z.string().trim().toLowerCase().min(1)),
+  }),
   eval_policy_version: version,
   eval_thresholds: z.strictObject({
     min_label_agreement: share,
@@ -114,8 +122,6 @@ function loadPerception(input: unknown) {
   if (!result.success)
     throw new ConfigError('Invalid perception configuration: ' + result.error.message);
   const config = result.data;
-  if (config.themes.at(-1) !== 'other' || new Set(config.themes).size !== config.themes.length)
-    throw new ConfigError('Perception themes must be unique and end with the "other" fallback');
   if (config.quotes_default_limit > config.quotes_max_limit)
     throw new ConfigError('Perception quote default limit exceeds its maximum');
   for (const slot of ['{prompt}', '{language}', '{themes}', '{max_aspects}', '{entities}'])

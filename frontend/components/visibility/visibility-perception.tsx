@@ -14,7 +14,7 @@ import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { coverageLine, stateCopy, themeLabel } from '@/lib/visibility/perception';
+import { coverageLine, stateCopy } from '@/lib/visibility/perception';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
@@ -114,7 +114,7 @@ export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] 
                 <QuoteLink quote={quote} />
                 <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
                   <StatusMark variant="sentiment" value="negative">
-                    {themeLabel(quote.theme)}
+                    {quote.theme}
                   </StatusMark>
                   {engineLabel(quote.logical_engine)} · {quote.prompt}
                 </Inline>

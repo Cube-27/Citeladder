@@ -9,7 +9,6 @@ import {
   sentimentReading,
   sentimentTrend,
   stateCopy,
-  themeLabel,
   themeNegativeShare,
 } from './perception';
 
@@ -191,7 +190,5 @@ describe('perception display', () => {
     expect(stateCopy('unavailable', 'platform_cap').description).toBe(
       'The platform classification limit was reached for these answers.',
     );
-    expect(themeLabel('security_privacy')).toBe('Security and privacy');
-    expect(themeLabel('pricing')).toBe('Pricing');
   });
 });

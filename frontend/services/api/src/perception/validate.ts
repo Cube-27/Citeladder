@@ -10,7 +10,8 @@ import type { ExtractedClaim, Label, PerceptionOutput } from './model.ts';
 import type { PerceptionPackage, Span } from './passages.ts';
 
 export type VerifiedAspect = {
-  theme: string;
+  /** The project theme's id; null for the fallback, which no theme row holds. */
+  theme_id: string | null;
   polarity: 'positive' | 'negative';
   /** The answer's own text at `start`..`end` (code points). */
   quote: string;
@@ -77,11 +78,16 @@ export function locateQuote(quote: string, spans: readonly Span[]) {
   return null;
 }
 
-/** The aspects whose quotes are found in the entity's passages, themes mapped to the list. */
+const themeKey = (name: string) => name.replaceAll(/\s+/gu, ' ').trim().toLowerCase();
+
+/**
+ * The aspects whose quotes are found in the entity's passages, each theme
+ * matched to a project theme's id by name; any other theme is the fallback.
+ */
 function verifiedAspects(
   aspects: PerceptionOutput['entities'][number]['aspects'],
   spans: readonly Span[],
-  themes: ReadonlySet<string>,
+  themes: { ids: ReadonlyMap<string, string>; fallback: string },
   drop: (reason: DropReason) => void,
 ): VerifiedAspect[] {
   return aspects.flatMap((aspect) => {
@@ -90,10 +96,17 @@ function verifiedAspects(
       drop('quote_not_found');
       return [];
     }
-    const theme = themes.has(aspect.theme) ? aspect.theme : 'other';
-    if (theme !== aspect.theme) drop('theme_other');
+    const key = themeKey(aspect.theme);
+    const themeId = themes.ids.get(key) ?? null;
+    if (themeId === null && key !== themes.fallback) drop('theme_other');
     return [
-      { theme, polarity: aspect.polarity, quote: found.text, start: found.start, end: found.end },
+      {
+        theme_id: themeId,
+        polarity: aspect.polarity,
+        quote: found.text,
+        start: found.start,
+        end: found.end,
+      },
     ];
   });
 }
@@ -101,14 +114,17 @@ function verifiedAspects(
 export function validateOutput(
   pkg: PerceptionPackage,
   output: PerceptionOutput,
-  policy: Pick<PerceptionPolicy, 'min_confidence' | 'max_aspects_per_entity' | 'themes'>,
+  policy: Pick<PerceptionPolicy, 'min_confidence' | 'max_aspects_per_entity' | 'project_themes'>,
 ) {
   const drops: Partial<Record<DropReason, number>> = {};
   const drop = (reason: DropReason, count = 1) => {
     if (count > 0) drops[reason] = (drops[reason] ?? 0) + count;
   };
   const sent = new Map(pkg.entities.map((entity) => [entity.entity_id, entity]));
-  const themes = new Set(policy.themes);
+  const themes = {
+    ids: new Map(pkg.themes.map((theme) => [themeKey(theme.name), theme.id])),
+    fallback: themeKey(policy.project_themes.fallback),
+  };
   const results = new Map<string, EntitySentiment>();
   for (const row of output.entities) {
     const entity = sent.get(row.entity_id);

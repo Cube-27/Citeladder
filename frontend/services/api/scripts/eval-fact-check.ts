@@ -106,6 +106,7 @@ async function pipeline(fixture: Answer, brand: Brand) {
     template_version: `${settings.template_version}+${facts.claims_version}`,
     language: 'en',
     prompt: brand.prompt,
+    themes: [],
     entities: entityPassages({
       answer: fixture.answer,
       languageCode: 'en',

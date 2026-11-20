@@ -794,25 +794,9 @@
           },
           "theme": {
             "type": "string",
-            "enum": [
-              "pricing",
-              "value",
-              "quality",
-              "features",
-              "ease_of_use",
-              "support",
-              "reliability",
-              "performance",
-              "security_privacy",
-              "integrations",
-              "reputation_trust",
-              "availability",
-              "shipping_delivery",
-              "returns_policy",
-              "sustainability",
-              "other"
-            ],
-            "description": "With view quotes: keep only quotes about this theme."
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "With view quotes: keep only quotes about this theme, as the summary names it."
           },
           "polarity": {
             "type": "string",

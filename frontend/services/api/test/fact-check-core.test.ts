@@ -37,6 +37,7 @@ const pkg: PerceptionPackage = {
   template_version: 't',
   language: 'en',
   prompt: 'best tools?',
+  themes: [],
   entities: [
     {
       entity_id: 'brand:acme',

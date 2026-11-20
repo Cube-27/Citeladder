@@ -34,6 +34,7 @@ import {
   persistedOutcomeSchema,
   quoteOrder,
   type Mention,
+  type NamedAspect,
   type PerceptionAnswer,
 } from '../perception/metrics.ts';
 import { isNamed } from '../perception/passages.ts';
@@ -62,10 +63,11 @@ const assessmentsSchema = z
   )
   .catch([]);
 type Assessment = z.infer<typeof assessmentsSchema>[number];
+// A theme id no project theme holds (deleted, or none) reads as the fallback.
 const aspectsSchema = z
   .array(
     z.object({
-      theme: z.string(),
+      theme_id: z.string().nullable().catch(null),
       polarity: z.enum(['positive', 'negative']),
       quote: z.string(),
       start: z.number().int(),
@@ -81,11 +83,34 @@ const entityRowSchema = z.object({
   aspects: z.unknown(),
 });
 
-type EntityRow = z.infer<typeof entityRowSchema>;
+type EntityRow = Omit<z.infer<typeof entityRowSchema>, 'aspects'> & { aspects: NamedAspect[] };
 type Perceived = {
   perception: z.infer<typeof persistedOutcomeSchema>;
   entities: Map<string, EntityRow>;
 };
+
+/** Each of these projects' theme ids with its current name. */
+async function themeNames(db: Database, workspaceId: string, projectIds: readonly string[]) {
+  const rows = await db
+    .selectFrom('project_themes')
+    .select(['id', 'name'])
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', 'in', projectIds)
+    .execute();
+  return new Map(rows.map((row) => [row.id, row.name]));
+}
+
+function entityRow(row: unknown, names: ReadonlyMap<string, string>): EntityRow {
+  const entity = entityRowSchema.parse(row);
+  const fallback = policy.perception.project_themes.fallback;
+  return {
+    ...entity,
+    aspects: aspectsSchema.parse(entity.aspects).map(({ theme_id, ...aspect }) => ({
+      ...aspect,
+      theme: (theme_id === null ? undefined : names.get(theme_id)) ?? fallback,
+    })),
+  };
+}
 
 /** Each analysis's perception row at the extractor version its audit froze (`wanted`). */
 export async function perceptionRows(
@@ -98,7 +123,14 @@ export async function perceptionRows(
     await chunked([...wanted.keys()], (ids) =>
       db
         .selectFrom('answer_perceptions')
-        .select(['id', 'analysis_id', 'extractor_version', 'outcome', 'outcome_reason'])
+        .select([
+          'id',
+          'project_id',
+          'analysis_id',
+          'extractor_version',
+          'outcome',
+          'outcome_reason',
+        ])
         .where('workspace_id', '=', workspaceId)
         .where('analysis_id', 'in', ids)
         .execute(),
@@ -114,6 +146,9 @@ async function perceptionsOf(
 ): Promise<Map<string, Perceived>> {
   const perceptions = await perceptionRows(db, workspaceId, wanted);
   if (!perceptions.length) return new Map();
+  const names = await themeNames(db, workspaceId, [
+    ...new Set(perceptions.map((row) => row.project_id)),
+  ]);
   const entities = groupBy(
     await chunked(
       perceptions.map((row) => row.id),
@@ -143,7 +178,7 @@ async function perceptionsOf(
         entities: new Map(
           (entities.get(row.id) ?? []).map((entity) => [
             entity.entity_id,
-            entityRowSchema.parse(entity),
+            entityRow(entity, names),
           ]),
         ),
       },
@@ -162,7 +197,7 @@ function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | u
         entity: row.entity_name,
         isBrand: row.entity_kind === 'brand',
         status,
-        aspects: status.kind === 'classified' ? aspectsSchema.parse(entity?.aspects) : [],
+        aspects: status.kind === 'classified' ? (entity?.aspects ?? []) : [],
       };
       return { mention, entity };
     });

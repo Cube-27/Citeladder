@@ -26,12 +26,18 @@ const config = scoringConfig({
 const limits = { max_entities: 8, max_passage_chars_per_entity: 1200 };
 const plain = { languageCode: 'en', config, policy: limits, promptNamesBrand: false };
 
+const THEMES = [
+  { id: 'theme-value', name: 'Value' },
+  { id: 'theme-support', name: 'Customer support' },
+];
+
 function pkgFor(answer: string) {
   return {
     extractor_version: 'x1',
     template_version: 't1',
     language: 'en',
     prompt: 'best tools?',
+    themes: THEMES,
     entities: entityPassages({ ...plain, answer }),
   };
 }
@@ -108,6 +114,7 @@ describe('perception passages', () => {
   it('hashes equal packages equally whatever their key order', () => {
     const pkg = pkgFor('Acme is great.');
     const reordered = {
+      themes: THEMES,
       entities: pkg.entities,
       prompt: pkg.prompt,
       language: 'en',
@@ -129,12 +136,22 @@ describe('perception passages', () => {
     expect(user).toContain('Question asked: best tools?');
     expect(user).toContain('Acme says {prompt} here.');
   });
+
+  it("offers the project's own themes and the fallback, and only the fallback without themes", () => {
+    const pkg = pkgFor('Acme is great.');
+    const offered = (themes: typeof THEMES) =>
+      perceptionPrompt({ ...pkg, themes }, policy.perception)
+        .user.split('\n')
+        .find((line) => line.startsWith('Allowed themes:'));
+    expect(offered(THEMES)).toBe('Allowed themes: Value, Customer support, Other');
+    expect(offered([])).toBe('Allowed themes: Other');
+  });
 });
 
 describe('perception validation', () => {
   const pkg = pkgFor('Acme is great value.  Rival   support is slow.');
 
-  it('keeps verified quotes, drops invented ones, unknown entities and maps stray themes', () => {
+  it("keeps verified quotes, drops invented ones and unknown entities, and maps themes outside the project's to the fallback", () => {
     const result = validateOutput(
       pkg,
       {
@@ -144,15 +161,16 @@ describe('perception validation', () => {
             label: 'positive',
             confidence: 0.9,
             aspects: [
-              { theme: 'value', polarity: 'positive', quote: 'great value' },
-              { theme: 'pricing', polarity: 'negative', quote: 'Acme is overpriced' },
+              { theme: ' value ', polarity: 'positive', quote: 'great value' },
+              { theme: 'Value', polarity: 'negative', quote: 'Acme is overpriced' },
+              { theme: 'Other', polarity: 'positive', quote: 'Acme is great' },
             ],
           },
           {
             entity_id: 'competitor:rival',
             label: 'negative',
             confidence: 0.4,
-            aspects: [{ theme: 'helpdesk', polarity: 'negative', quote: 'Rival support is slow' }],
+            aspects: [{ theme: 'pricing', polarity: 'negative', quote: 'Rival support is slow' }],
           },
           { entity_id: 'competitor:ghost', label: 'negative', confidence: 1, aspects: [] },
         ],
@@ -166,7 +184,16 @@ describe('perception validation', () => {
           'brand:acme',
           'positive',
           false,
-          [{ theme: 'value', polarity: 'positive', quote: 'great value', start: 8, end: 19 }],
+          [
+            {
+              theme_id: 'theme-value',
+              polarity: 'positive',
+              quote: 'great value',
+              start: 8,
+              end: 19,
+            },
+            { theme_id: null, polarity: 'positive', quote: 'Acme is great', start: 0, end: 13 },
+          ],
         ],
         [
           'competitor:rival',
@@ -174,7 +201,7 @@ describe('perception validation', () => {
           true,
           [
             {
-              theme: 'other',
+              theme_id: null,
               polarity: 'negative',
               quote: 'Rival   support is slow',
               start: 22,

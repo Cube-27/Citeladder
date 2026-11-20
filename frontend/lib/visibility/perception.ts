@@ -103,21 +103,6 @@ export function gatedFigure(
   };
 }
 
-const THEME_LABELS: Record<string, string> = {
-  ease_of_use: 'Ease of use',
-  security_privacy: 'Security and privacy',
-  reputation_trust: 'Reputation and trust',
-  shipping_delivery: 'Shipping and delivery',
-  returns_policy: 'Returns policy',
-};
-
-export function themeLabel(theme: string): string {
-  const known = THEME_LABELS[theme];
-  if (known) return known;
-  const words = theme.replaceAll('_', ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 const REASON_COPY: Record<NonNullable<PerceptionResponse['reason']>, string> = {
   model_not_configured: 'Sentiment classification is not set up on this platform yet.',
   platform_cap: 'The platform classification limit was reached for these answers.',

@@ -55,6 +55,8 @@ async function evaluate(fixture: Fixture) {
     template_version: settings.template_version,
     language: fixture.language,
     prompt: fixture.prompt,
+    // Labels and quotes are scored, not themes: every aspect reads as the fallback.
+    themes: [],
     entities: entityPassages({
       answer: fixture.answer,
       languageCode: fixture.language,

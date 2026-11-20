@@ -28,7 +28,6 @@ import {
   shareReading,
   rankThemes,
   sentimentTrend,
-  themeLabel,
 } from '@/lib/visibility/perception';
 
 /** Themes the "Themes in answers" list shows at most. */
@@ -147,7 +146,7 @@ function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }
             {ranked.map((theme) => (
               <li key={theme.theme}>
                 <Meter
-                  label={themeLabel(theme.theme)}
+                  label={theme.theme}
                   value={(theme[order] / most) * 100}
                   valueLabel={`${theme[order]} ${order}`}
                   tone={order === 'negative' ? 'negative' : 'accent'}

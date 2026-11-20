@@ -834,7 +834,7 @@ it('serves answer perception with the same numbers as the Perception read, and i
       low_confidence: false,
       passage_spans: JSON.stringify([]),
       aspects: JSON.stringify([
-        { theme: 'pricing', polarity: 'negative', quote: 'Acme is pricey', start: 0, end: 14 },
+        { theme_id: null, polarity: 'negative', quote: 'Acme is pricey', start: 0, end: 14 },
       ]),
     })
     .execute();

@@ -12,7 +12,6 @@ import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { percentText } from '@/lib/format';
-import { themeLabel } from '@/lib/visibility/perception';
 import { themeAssociation, type ThemeCell } from '@/lib/visibility/theme-association';
 
 const TITLE = 'How AI describes competitors';
@@ -33,7 +32,7 @@ export function CompetitorThemes({
     { key: 'brand', label: 'Brand' },
     ...map.themes.map((theme, index): DataTableColumn => ({
       key: theme,
-      label: themeLabel(theme),
+      label: theme,
       kind: 'number',
       width: 'figure',
       ...(index >= SHOWN_THEMES ? { priority: 'low' } : {}),
@@ -49,14 +48,14 @@ export function CompetitorThemes({
               {
                 key: 'top',
                 label: 'Your most associated theme',
-                value: map.top ? themeLabel(map.top.theme) : null,
+                value: map.top?.theme ?? null,
                 missingState: 'too_few',
                 sub: map.top ? `${percentText(map.top.share)} of your mentions` : undefined,
               },
               {
                 key: 'gap',
                 label: 'Largest gap to the leader',
-                value: map.gap ? themeLabel(map.gap.theme) : null,
+                value: map.gap?.theme ?? null,
                 ...(map.top ? { missingLabel: 'No gap' } : { missingState: 'too_few' }),
                 sub: map.gap ? `${map.gap.leader} ahead by ${map.gap.points} pts` : undefined,
               },

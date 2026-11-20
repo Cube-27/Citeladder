@@ -325,8 +325,13 @@ export const definitions = {
       ),
       theme: optional(
         z
-          .enum(policy.perception.themes)
-          .describe('With view quotes: keep only quotes about this theme.'),
+          .string()
+          .trim()
+          .min(1)
+          .max(policy.perception.project_themes.name_max_chars)
+          .describe(
+            'With view quotes: keep only quotes about this theme, as the summary names it.',
+          ),
       ),
       polarity: optional(
         z
