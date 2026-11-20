@@ -1811,7 +1811,7 @@ CREATE TABLE public.probe_answer_items (
     CONSTRAINT ck_probe_answer_items_question CHECK ((question IN ('known_for', 'objection', 'theme'))),
     CONSTRAINT ck_probe_answer_items_rank CHECK ((rank >= 0)),
     CONSTRAINT ck_probe_answer_items_objection CHECK (((question = 'objection') = (objection_group_id IS NOT NULL))),
-    CONSTRAINT ck_probe_answer_items_entity CHECK ((((question = 'theme') = (entity_kind IS NOT NULL)) AND ((entity_kind IS NULL) OR (entity_kind IN ('brand', 'competitor'))) AND ((entity_kind = 'competitor') = (entity_id IS NOT NULL))))
+    CONSTRAINT ck_probe_answer_items_entity CHECK ((((question = 'theme') = (entity_kind IS NOT NULL)) AND ((entity_kind IS NULL) OR (entity_kind IN ('brand', 'competitor'))) AND ((entity_kind IS NOT DISTINCT FROM 'competitor') = (entity_id IS NOT NULL))))
 );
 
 ALTER TABLE ONLY public.probe_answer_items

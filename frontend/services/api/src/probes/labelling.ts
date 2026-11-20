@@ -25,6 +25,7 @@ import { enqueueTask } from '../queue/enqueue.ts';
 import { payloadString, taskProject, type Executor } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import {
+  covering,
   knownForOutput,
   knownForRequest,
   mapKnownFor,
@@ -165,7 +166,7 @@ async function label(
               themes,
               answers: known,
             }),
-            schema: knownForOutput,
+            schema: covering(knownForOutput, known.length),
           },
           (value) => mapKnownFor(value, known, { themes, maxItems: max }),
         )
@@ -180,7 +181,7 @@ async function label(
               groups,
               answers: objections,
             }),
-            schema: objectionOutput,
+            schema: covering(objectionOutput, objections.length),
           },
           (value) =>
             mapObjections(value, objections, {
@@ -220,7 +221,7 @@ async function label(
     if (!themes.some((theme) => theme.id === themeId)) continue;
     const request = {
       user: themeRequest(probes, { question: answers[0]?.questionText ?? '', answers }),
-      schema: themeOutput,
+      schema: covering(themeOutput, answers.length),
     };
     const accept = (value: z.infer<typeof themeOutput>) =>
       mapThemeBrands(value, answers, { tracked, maxItems: max });

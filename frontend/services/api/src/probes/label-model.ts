@@ -35,6 +35,20 @@ export const themeOutput = z.object({
   answers: z.array(z.object({ answer: number, brands: z.array(z.string()) })),
 });
 
+/**
+ * `schema`, refusing a reply that skips any of the `count` answers it was sent:
+ * a skipped answer is unlabelled, not one that raised nothing.
+ */
+export function covering<Value extends { answers: readonly { answer: number }[] }>(
+  schema: z.ZodType<Value>,
+  count: number,
+) {
+  return schema.refine((value) => {
+    const listed = new Set(value.answers.map((row) => row.answer));
+    return Array.from({ length: count }, (_, index) => index + 1).every((n) => listed.has(n));
+  }, 'Every answer must be labelled');
+}
+
 /** Names compare as perception compares theme names: case and spacing aside. */
 export const nameKey = (name: string) => name.replaceAll(/\s+/gu, ' ').trim().toLowerCase();
 

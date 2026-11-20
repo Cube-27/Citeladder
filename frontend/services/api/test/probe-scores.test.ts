@@ -8,7 +8,13 @@ import { describe, expect, it } from 'vitest';
 import { canMeasure } from '../src/audits/freeze.ts';
 import { taskFunding } from '../src/audits/prompt-runs.ts';
 import { policy } from '../src/config.ts';
-import { mapKnownFor, mapObjections, mapThemeBrands } from '../src/probes/label-model.ts';
+import {
+  covering,
+  mapKnownFor,
+  mapObjections,
+  mapThemeBrands,
+  themeOutput,
+} from '../src/probes/label-model.ts';
 import { probeQuestions } from '../src/probes/questions.ts';
 import { distinctPlaces, firstPlaces, positionScores, rankOf } from '../src/probes/scores.ts';
 
@@ -156,6 +162,13 @@ describe('labelling output mapping', () => {
       { taskId: 'task-1', rank: 0, themeId: 'theme-comfort', quote: 'q' },
       { taskId: 'task-1', rank: 1, themeId: null, quote: '' },
     ]);
+  });
+
+  it('refuses a labelling reply that skips an answer, but keeps an answer listed with nothing', () => {
+    const schema = covering(themeOutput, 2);
+    const reply = (numbers: number[]) =>
+      schema.safeParse({ answers: numbers.map((answer) => ({ answer, brands: [] })) }).success;
+    expect([reply([1]), reply([2, 9]), reply([2, 1])]).toEqual([false, false, true]);
   });
 
   it('maps reasons onto existing groups and creates a group only for a new name, capped per probe', () => {
