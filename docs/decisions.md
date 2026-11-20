@@ -41,6 +41,11 @@ how to add or change an entry.
   [frontend architecture](frontend-architecture.md) owns the matrix.
 - **Source files are limited by tokens (6,000), not lines**; the 500-line module
   rule is gone. Owner, 2026-11-13; [Development](DEVELOPMENT.md#source-file-size).
+- **Visual effects are the owner's choice, not a check's.** The design-system
+  policy guards only breakage, theming and exposure (colours as tokens,
+  contrast, Tailwind `@source`, Radix imports, font files, CSS that does not
+  parse); shadows, motion, radii, type and spacing ladders, card layout and
+  token usage are not policed. Owner, 2026-11-20.
 
 ## Accounts, access and sign-in
 

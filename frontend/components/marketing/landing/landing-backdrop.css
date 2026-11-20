@@ -1,0 +1,19 @@
+/* Experiment (owner, 2026-11-20): the home hero's product image sits on the
+   site background (site-backdrop.css) with more room above it, and its foot
+   fades out into that background. */
+
+@media (min-width: 1024px) {
+  .cl-lhero .cl-lhero-frame {
+    margin-top: 120px;
+  }
+}
+
+.cl-lhero .cl-lhero-frame {
+  max-height: 760px;
+  overflow: hidden;
+  mask-image: linear-gradient(currentcolor 76%, transparent);
+}
+
+.cl-lhero .cl-frame--hero > .cl-frame-card {
+  padding: 0;
+}

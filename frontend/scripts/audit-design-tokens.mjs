@@ -5,7 +5,6 @@ import { pathToFileURL } from 'node:url';
 import postcss from 'postcss';
 
 import { paletteDeclarations, resolvePalette } from './design-system-contrast.mjs';
-import { contractTokenNames } from './design-system-contract.mjs';
 import { readMarketingCss } from './marketing-css.mjs';
 import { parseSource, stringFragments } from './source-ast.mjs';
 
@@ -13,7 +12,7 @@ import { parseSource, stringFragments } from './source-ast.mjs';
  * Token audit: globals.css stays the sole value authority, and this reads it.
  *
  *   (no flag)  print the colour inventory with each token's consumers
- *   --check    fail on duplicate values, unconsumed tokens and stale docs
+ *   --check    fail on stale docs/design.md token blocks
  *   --write    regenerate the docs/design.md token blocks from CSS
  */
 
@@ -37,9 +36,6 @@ const ignored = new Set([
   'test-results',
   'playwright-report',
 ]);
-
-/** Families every declared token must have a consumer in. */
-const AUDITED_FAMILY = /^--(?:color|tag|radius|shadow|elevation|motion|ease|text)-/;
 
 const escaped = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 const byName = (left, right) => {
@@ -72,15 +68,6 @@ export function tokenInventory(source) {
       light: light.get(token),
       dark: dark.get(token),
     }));
-}
-
-/** Every custom property globals.css declares in an audited family. */
-function declaredTokens(source) {
-  const tokens = new Set();
-  postcss.parse(source).walkDecls((decl) => {
-    if (AUDITED_FAMILY.test(decl.prop) && !decl.prop.includes('*')) tokens.add(decl.prop);
-  });
-  return tokens;
 }
 
 // Longer prefixes precede their stems so `border-x-…` names the x side's colour.
@@ -149,36 +136,6 @@ function consumedTokens({ path, text }) {
     }
   }
   return consumed;
-}
-
-/** The `--text-*` token a `--text-…--modifier` companion travels with. */
-function textCompanion(token) {
-  if (!token.startsWith('--text-')) return undefined;
-  const split = token.indexOf('--', '--text-'.length);
-  if (split < 0) return undefined;
-  const base = token.slice(0, split);
-  const modifier = token.slice(split + 2);
-  return /^--text-\w+(?:-[a-z\d]+)*$/.test(base) && /^[\w-]+$/.test(modifier) ? base : undefined;
-}
-
-/**
- * Declared tokens that no source file consumes.
- * @public — also imported by the scripts/frontend fixture tests.
- */
-export function zeroConsumerTokens(source, files, required = new Set()) {
-  const consumed = new Set();
-  for (const file of files) for (const token of consumedTokens(file)) consumed.add(token);
-  return [...declaredTokens(source)]
-    .filter((token) => {
-      if (consumed.has(token)) return false;
-      // The system's contract requires the token whether or not a page has
-      // reached for it yet (design-system-contract.mjs pins its value).
-      if (required.has(token) || required.has(textCompanion(token))) return false;
-      // `--text-sm--line-height` travels with the `text-sm` utility.
-      const companion = textCompanion(token);
-      return !(companion && consumed.has(companion));
-    })
-    .sort(byName);
 }
 
 /**
@@ -381,13 +338,8 @@ function refreshDesignDoc({ tokenCss, websiteCss, document }) {
 /** Everything --check enforces, as violation strings. */
 export function tokenAuditViolations(base = root) {
   const sources = readSources(base);
-  const { tokenCss } = sources;
-  const files = CONSUMER_ROOTS.flatMap((directory) => sourceFiles(join(base, directory)));
   const { stale, missing } = refreshDesignDoc(sources);
   return [
-    ...zeroConsumerTokens(tokenCss, files, contractTokenNames(base)).map(
-      (token) => `${TOKEN_CSS}: ${token} has no consumer; remove it or use it`,
-    ),
     ...stale.map(
       (name) =>
         `docs/design.md: generated ${name} block is stale; run node frontend/scripts/audit-design-tokens.mjs --write`,
@@ -407,7 +359,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       console.error(violations.join('\n'));
       process.exit(1);
     }
-    console.log('Design tokens are unique, consumed and documented.');
+    console.log('Design token blocks in docs/design.md are current.');
   } else if (mode === '--write') {
     const { text, stale, missing } = refreshDesignDoc(readSources(root));
     if (stale.length) writeFileSync(join(root, DESIGN_DOC), text);
@@ -419,7 +371,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   } else {
     const { tokenCss } = readSources(root);
     const files = CONSUMER_ROOTS.flatMap((directory) => sourceFiles(join(root, directory)));
-    // The same consumption rule the --check gate applies.
     const consumption = files.map((file) => ({ path: file.path, tokens: consumedTokens(file) }));
     const rows = tokenInventory(tokenCss).map((row) => ({
       ...row,

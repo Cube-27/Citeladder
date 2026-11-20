@@ -17,10 +17,9 @@
   }
 }
 
-/* The product image's frame: a lit backdrop (a spotlight), not a shadow. One
-   warm family (a glow from above, a halo, a corner, a vignette) and a dither
-   (below); no text sits on it (the caption is under the panel). On its own it
-   holds the picture's white card (below). */
+/* The product image's frame stands on the site background with no panel of
+   its own (experiment, owner 2026-11-20); no text sits on it (the caption is
+   under the screen). */
 
 .cl-frame-card {
   display: flex;
@@ -31,29 +30,7 @@
   position: relative;
   isolation: isolate;
   border-radius: var(--site-radius-stage);
-  background:
-    radial-gradient(120% 110% at 50% 45%, transparent 55%, var(--color-spot-vignette)),
-    radial-gradient(60% 55% at 50% 0%, var(--color-spot-glow), transparent),
-    radial-gradient(70% 75% at 50% 50%, var(--color-spot-halo), transparent),
-    radial-gradient(45% 60% at 100% 100%, var(--color-spot-warm), transparent),
-    linear-gradient(180deg, var(--color-spot-from), var(--color-spot-to));
   box-shadow: none;
-}
-
-/* Heavy film grain over the backdrop's soft gradient, blended with
-   `overlay` so it speckles the colour rather than greying it. It sits under
-   the well. */
-
-.cl-frame-card::before {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--site-noise);
-  content: '';
-  mix-blend-mode: overlay;
-  opacity: 0.7;
-  pointer-events: none;
 }
 
 /* The well holds the screen; its height is the screen's. In a cell taller

@@ -1,21 +1,10 @@
-import {
-  lineIndex,
-  nameText,
-  parseSource,
-  stringFragments,
-  stringValue,
-  unwrap,
-  walk,
-} from './source-ast.mjs';
+import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
 
 export function escapeRegExp(value) {
   return value.replace(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
 }
 
-/** Alternation over literal values, escaped for use inside a RegExp. */
-export const oneOf = (values) => `(?:${values.map(escapeRegExp).join('|')})`;
-
-export function staticBindings(program) {
+function staticBindings(program) {
   const bindings = new Map();
   walk(program, (node) => {
     if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
@@ -69,7 +58,7 @@ const CLASS_FRAGMENT_READERS = {
   JSXExpressionContainer: (node, bindings, seen) => classFragments(node.expression, bindings, seen),
 };
 
-export function classFragments(node, bindings, seen = new Set()) {
+function classFragments(node, bindings, seen = new Set()) {
   if (!node) return [];
   const literal = stringValue(node);
   if (literal !== null) return [literal];
@@ -108,9 +97,6 @@ export function jsxClassData(source, label) {
   const entries = [];
   walk(program, (node) => {
     if (node.type !== 'JSXOpeningElement') return;
-    // `className` is not the only way a call site hands classes to a
-    // component. `rootClassName="grid gap-6"` slipped past every spacing and
-    // type rule for exactly as long as this only looked at one attribute.
     const classAttributes = node.attributes.filter(
       (property) =>
         property.type === 'JSXAttribute' && CLASS_ATTRIBUTES.has(nameText(property.name)),
@@ -126,15 +112,4 @@ export function jsxClassData(source, label) {
     }
   });
   return entries;
-}
-
-/** Every class-like token in a module's string and template text. */
-export function classTokens(program, lineOf) {
-  return stringFragments(program).flatMap(({ text, start }) => {
-    const line = lineOf(start);
-    return text
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((token) => ({ token, line }));
-  });
 }

@@ -2,9 +2,8 @@
  * The design system's tokens, base, and every hand-written shared rule.
  *
  * The system itself is the CiteLadder Design System artifact (docs/design.md):
- * monochrome with one flare of orange. Every token here carries the system's
- * name and value from its tokens.json, in both themes; nothing else declares a
- * colour, a face, a radius or a shadow.
+ * monochrome with one flare of orange. Every colour token lives here, in both
+ * themes; nothing else declares a colour.
  *
  * It does NOT import Tailwind. Each app's entry does that, with its own
  * `@source` list, and then imports this. That indirection is the only way the
@@ -1019,15 +1018,20 @@
   --color-site-rule-from: oklch(80.8% 0.11 55 / 55%);
   --color-site-rule-to: oklch(63.4% 0.1973 37.5 / 55%);
   --color-site-well: oklch(97% 0 0);
-  --color-site-well-shade: oklch(25% 0 0 / 7%);
-  --color-site-well-edge: oklch(25% 0 0 / 7%);
+  --color-site-well-edge: oklch(25% 0 0 / 0%);
   --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
-  --color-spot-from: oklch(95% 0.03 55);
-  --color-spot-to: oklch(97.6% 0.012 65);
-  --color-spot-glow: oklch(76% 0.15 45 / 35%);
-  --color-spot-halo: oklch(86% 0.08 55 / 35%);
-  --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
-  --color-spot-vignette: oklch(55% 0.12 40 / 10%);
+  /* The home hero's backdrop (experiment, owner 2026-11-20). */
+  --color-site-hero-base: oklch(100% 0 0);
+  --color-site-hero-line: oklch(25% 0 0 / 5%);
+  --color-site-hero-amber: oklch(78% 0.12 55 / 19%);
+  --color-site-hero-umber: oklch(88% 0.06 60 / 12%);
+  --color-site-hero-side: oklch(80% 0.11 55 / 12%);
+  /* Product images as brushed metal (experiment, owner 2026-11-20). */
+  --color-site-metal-top: oklch(99% 0 0);
+  --color-site-metal-bottom: oklch(95.5% 0 0);
+  --color-site-metal-sheen: oklch(100% 0 0 / 55%);
+  --color-site-metal-rim: oklch(100% 0 0 / 90%);
+  --color-site-metal-edge: oklch(25% 0 0 / 10%);
   /* The closing band: pale warm silk with ink text. Contrast is checked over
      every stop with any two layers stacked. */
   --color-site-band-from: oklch(97.6% 0.018 70);
@@ -1057,15 +1061,18 @@
   --color-site-rule-from: oklch(55% 0.13 40 / 55%);
   --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
   --color-site-well: oklch(21.2% 0 0);
-  --color-site-well-shade: oklch(0% 0 0 / 55%);
-  --color-site-well-edge: oklch(100% 0 0 / 6%);
+  --color-site-well-edge: oklch(100% 0 0 / 0%);
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
-  --color-spot-from: oklch(22% 0.04 40);
-  --color-spot-to: oklch(15% 0.015 40);
-  --color-spot-glow: oklch(70.3% 0.194 39.3 / 35%);
-  --color-spot-halo: oklch(60% 0.15 40 / 22%);
-  --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
-  --color-spot-vignette: oklch(0% 0 0 / 55%);
+  --color-site-hero-base: oklch(11.6% 0.0023 17);
+  --color-site-hero-line: oklch(97.5% 0.01 70 / 3.5%);
+  --color-site-hero-amber: oklch(56% 0.13 50 / 16%);
+  --color-site-hero-umber: oklch(30% 0.07 48 / 9%);
+  --color-site-hero-side: oklch(55% 0.13 50 / 10%);
+  --color-site-metal-top: oklch(23% 0 0);
+  --color-site-metal-bottom: oklch(12.5% 0 0);
+  --color-site-metal-sheen: oklch(100% 0 0 / 6%);
+  --color-site-metal-rim: oklch(100% 0 0 / 18%);
+  --color-site-metal-edge: oklch(100% 0 0 / 8%);
   /* Deep, low-glow warm on near-black with light text. */
   --color-site-band-from: oklch(17% 0.03 45);
   --color-site-band-mid: oklch(13% 0.018 42);
@@ -1491,8 +1498,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
 /* The page workspace editor's text field ring, drawn inside the pane so the
    scroller never clips it, and a pressed suggestion's card in the focus ink
-   over its own border utility. Focus belongs here (design-system source
-   checks); the rest of the editor's look loads with its route
+   over its own border utility. The rest of the editor's look loads with its route
    (components/agent/workspace/page-workspace.css). */
 .page-editor .cm-editor.cm-focused {
   outline: none;

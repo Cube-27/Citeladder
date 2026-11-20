@@ -271,8 +271,10 @@ code unchanged, with no renames of exported symbols or behaviour changes, in its
 own commit when possible. Never shrink a file by deleting comments or
 compressing code, and never extend the ignore list or baseline to pass.
 
-The design-system policy ratchets its stylesheet, TSX geometry and SVG colour
-rules against `frontend/scripts/design-system-baseline.json`: a file's count per
+The design-system policy checks breakage, theming and exposure, never a visual
+choice ([decision](decisions.md#platform-and-schema)). It ratchets its
+stylesheet (parse and self-referencing custom property) and SVG colour rules
+against `frontend/scripts/design-system-baseline.json`: a file's count per
 rule may fall but never rise, and a new file starts at zero. When a count falls,
 lower the baseline with `node scripts/check-design-system.mjs --write-baseline`
 from `frontend/`; never raise it to make a change pass. The generated token

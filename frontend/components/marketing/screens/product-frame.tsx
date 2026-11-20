@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import './product-frame.css';
+import './screen-metal.css';
 
 /**
  * How a product image fits its frame. `fluid`: a vignette (screen-vignette.tsx)

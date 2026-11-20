@@ -145,7 +145,6 @@ export function ScreenSidebar({
           <BrandMark name="Acme Analytics" placement="inline" />
           <span className="cl-app-ident-text">
             <span className="type-control">Acme Analytics</span>
-            <span className="type-caption">acme.example</span>
           </span>
           <ChevronsUpDown className="text-ink-muted size-4" aria-hidden />
         </span>
