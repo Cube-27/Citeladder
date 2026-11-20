@@ -257,6 +257,7 @@ async function settleChunk({
   await db
     .updateTable('site_crawl_tasks')
     .set({ status: 'succeeded', classification_expected: true, completed_at: now })
+    .where('workspace_id', '=', seed.workspaceId)
     .where(
       'id',
       'in',
@@ -267,6 +268,7 @@ async function settleChunk({
     await db // NOSONAR -- One artifact per task, in order.
       .updateTable('site_crawl_tasks')
       .set({ result_artifact_id: page.artifactId })
+      .where('workspace_id', '=', seed.workspaceId)
       .where('id', '=', page.id)
       .execute();
 }

@@ -408,7 +408,7 @@ export const visibilityRoutes = [
         granularity: {
           scalar: { kind: 'str' },
           default: policy.visibility.trend_default_granularity,
-          description: `The length of each series point: ${GRANULARITY_NAMES}.\`run\` plots one point per run.`,
+          description: `The length of each series point: ${GRANULARITY_NAMES}. \`run\` plots one point per run.`,
         },
         transport_model: {
           scalar: { kind: 'str' },
