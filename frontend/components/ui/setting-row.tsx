@@ -92,6 +92,8 @@ export function SettingRow({
 }
 
 const CONTROL_COLUMN = 'grid w-80 max-w-full min-w-0 gap-1 *:w-full';
+/** A short choice (a select of single words) at the right, no wider than it needs. */
+const COMPACT_COLUMN = 'grid w-44 max-w-full min-w-0 gap-1 *:w-full';
 
 /**
  * A form field as a settings row: its label and hint at the left, the control
@@ -105,6 +107,7 @@ export function SettingField({
   error,
   required,
   wide = false,
+  compact = false,
   children,
 }: Readonly<{
   label: string;
@@ -112,6 +115,8 @@ export function SettingField({
   error?: ReactNode;
   required?: boolean;
   wide?: boolean;
+  /** A narrow column for a short choice, instead of the 320 one. */
+  compact?: boolean;
   children: (props: ControlProps) => ReactNode;
 }>) {
   const id = useId();
@@ -159,7 +164,7 @@ export function SettingField({
       className="flex min-w-0 flex-wrap items-start justify-between gap-x-6 gap-y-2"
     >
       {name}
-      <div className={CONTROL_COLUMN}>
+      <div className={compact ? COMPACT_COLUMN : CONTROL_COLUMN}>
         {control}
         {foot}
       </div>
