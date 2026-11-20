@@ -173,18 +173,18 @@ describe('billing money and access owner', () => {
       plan: 'plan_tier1fundedinternational',
       total: { currency: 'USD', amount_minor: 9900 },
     });
+    const modes = async () => [
+      (await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode,
+      (await entitlementRead(db, config, t.workspaceId, new Date())).subscription?.credential_mode,
+    ];
     // Unpaid, the workspace is not yet managed.
-    expect((await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode).toBe(
-      'byok',
-    );
+    expect(await modes()).toEqual(['byok', undefined]);
     await db
       .transaction()
       .execute((trx) =>
         settlePending(trx, row.id, 'test', paidSubscription(row), 'reconciliation'),
       );
-    expect((await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode).toBe(
-      'funded',
-    );
+    expect(await modes()).toEqual(['funded', 'funded']);
   });
   it('refuses a top-up on the free trial, which has no plan to add to', async () => {
     const t = await fixtures.tenant({ access: false });
@@ -1629,7 +1629,7 @@ describe('billing money and access owner', () => {
     });
     expect(
       (await entitlementRead(db, config, t.workspaceId, new Date())).subscription,
-    ).toMatchObject({ cancel_at_period_end: true, resumable_until: null });
+    ).toMatchObject({ credential_mode: 'byok', cancel_at_period_end: true, resumable_until: null });
   });
   it('authenticates bounded webhook bytes, persists before settlement, and quarantines conflicting replay of an unapplied event only', async () => {
     const t = await activated();

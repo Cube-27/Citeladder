@@ -281,6 +281,8 @@ const scheduledPlanChangeSchema = responseObject({
 
 const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
+  /** The mode this subscription was bought in, which prices and gates its plan changes. */
+  credential_mode: credentialModeSchema,
   status: subscriptionStatusSchema,
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
