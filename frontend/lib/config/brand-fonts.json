@@ -15,14 +15,14 @@
       }
     },
     "sans": {
-      "family": "Spline Sans",
-      "file": "SplineSans-Variable.woff2",
+      "family": "Geist",
+      "file": "Geist-Variable.woff2",
       "preload": ["app", "public", "docs"],
       "weights": "300 600",
       "fallback": {
-        "sizeAdjust": "105.11%",
-        "ascentOverride": "91.67%",
-        "descentOverride": "22.5%",
+        "sizeAdjust": "102.12%",
+        "ascentOverride": "98.41%",
+        "descentOverride": "28.89%",
         "lineGapOverride": "0%"
       }
     },
