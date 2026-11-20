@@ -41,7 +41,7 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
  * prompt generation, the Prompt Builder's own editor, in the 1040 column),
  * the tracked competitors, the pilot's Brand facts, and the project's Agent
  * instructions. Each tab is a stack of settings groups; a form's Save sits in
- * its frame's foot. An old `?tab=audience` link reads as Company.
+ * its frame's foot.
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();

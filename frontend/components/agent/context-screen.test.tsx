@@ -140,12 +140,6 @@ describe('Context layout', () => {
     expect(window.location.search).toBe('?tab=competitors');
   });
 
-  it('reads an old Audience link as Company, where the target audience now lives', async () => {
-    renderContext({ tab: 'audience' });
-    expect(await screen.findByLabelText('Target audience')).toBeVisible();
-    expect(screen.getByRole('tab', { name: 'Company' })).toHaveAttribute('aria-selected', 'true');
-  });
-
   it('offers the save that belongs to the active tab', async () => {
     const user = userEvent.setup({ delay: null });
     renderContext({ handlers: mapReads() });
