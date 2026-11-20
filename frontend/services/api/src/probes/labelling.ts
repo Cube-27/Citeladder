@@ -1,29 +1,32 @@
 /**
- * The `probe_labelling` analytics executor: once a probe run finalizes, a few
- * bounded model calls label its answers (known-for themes, objection groups,
- * the brands each theme answer names). The calls are paid for by the AI
- * credits each answer held at admission, so they are metered as included.
+ * The `probe_labelling` analytics executor: once every market run of a probe
+ * launch ended, one task labels all its answers in bounded per-market calls
+ * (known-for themes, objection groups, the brands each theme answer names).
+ * The calls are paid for by the AI credits each answer held at admission, so
+ * they are metered as included.
  *
  * Reads commit before the calls and no transaction spans them; the labels,
  * any new objection groups and the outcome land in the worker's lease-fenced
- * terminal transaction, once per run (`probe_labellings.audit_id`). A call
- * that fails retries the task; an exhausted task still records an outcome.
+ * terminal transaction, once per launch (`probe_labellings.launch_id`). A
+ * call that fails retries the task; an exhausted task still records an outcome.
  */
 import { randomUUID } from 'node:crypto';
 
+import type { Insertable } from 'kysely';
 import type { z } from 'zod';
 
-import { scoringConfig } from '../analysis/scoring.ts';
 import { meterFor } from '../billing/metering.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { ProbeAnswerItems } from '../generated/db-schema.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { ModelGateway } from '../models/gateway.ts';
 import { callStructured, configuredGateway, type ModelCall } from '../perception/model-call.ts';
-import { listThemes } from '../projects/themes.ts';
-import { enqueueTask } from '../queue/enqueue.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
+import { listThemes, nameKey } from '../projects/themes.ts';
 import { payloadString, taskProject, type Executor } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
+import { answeredProbeTasks, probeRoster, withQuestion } from './answers.ts';
 import {
   covering,
   knownForOutput,
@@ -31,80 +34,59 @@ import {
   mapKnownFor,
   mapObjections,
   mapThemeBrands,
-  nameKey,
   objectionOutput,
   objectionRequest,
   themeOutput,
   themeRequest,
   type LabelAnswer,
-  type TrackedName,
 } from './label-model.ts';
+import { ANSWERED_STATUSES } from './launch-end.ts';
+import { probeAudits } from './launches.ts';
 import { listGroups, saveAnswerItems, saveGroups } from './objection-groups.ts';
-import { frozenQuestion } from './questions.ts';
 
 const probes = policy.probes;
-type Scope = { workspaceId: string; projectId: string };
 
-/** Queued in the finalizing transaction of a probe run; a re-derived finalize adds none. */
-export function enqueueProbeLabelling(db: Database, scope: Scope & { auditId: string }) {
-  return enqueueTask(db, {
-    workspaceId: scope.workspaceId,
-    projectId: scope.projectId,
-    kind: probes.task_kind,
-    payload: { audit_id: scope.auditId },
-    keyParts: [scope.auditId, probes.labelling_version],
-    maxAttempts: probes.task_max_attempts,
-  });
-}
-
-/** At finalization: a probe audit queues its labelling; any other audit does nothing. */
-export async function labelIfProbe(
-  db: Database,
-  audit: { workspaceId: string; auditId: string; project_id: string; audit_scope: string },
-) {
-  if (audit.audit_scope !== probes.audit_scope) return;
-  await enqueueProbeLabelling(db, { ...audit, projectId: audit.project_id });
-}
-
-async function loadProbe(db: Database, task: QueueTask, projectId: string) {
-  const auditId = parseUuid(payloadString(task, 'audit_id'));
-  if (auditId === null) throw new Error('probe_labelling payload missing audit_id');
-  const audit = await db
-    .selectFrom('audits')
-    .select(['id', 'configuration'])
-    .where('id', '=', auditId)
-    .where('workspace_id', '=', task.workspace_id)
-    .where('project_id', '=', projectId)
-    .where('audit_scope', '=', probes.audit_scope)
-    .executeTakeFirstOrThrow();
-  const rows = await db
-    .selectFrom('audit_tasks as t')
-    .innerJoin('audit_prompt_snapshots as p', (join) =>
-      join.onRef('p.id', '=', 't.prompt_snapshot_id').onRef('p.audit_id', '=', 't.audit_id'),
-    )
-    .select(['t.id', 't.answer_text', 'p.text as question_text', 'p.generation_evidence'])
-    .where('t.workspace_id', '=', task.workspace_id)
-    .where('t.audit_id', '=', audit.id)
-    .where('t.status', '=', 'succeeded')
-    .where('t.answer_text', '<>', '')
-    .orderBy('t.prompt_index')
-    .orderBy('t.logical_engine')
-    .orderBy('t.repetition')
+/** The launch's answered runs, oldest first, and every recorded answer across them. */
+async function loadLaunch(db: Database, task: QueueTask, scope: Scope) {
+  const launchId = parseUuid(payloadString(task, 'launch_id'));
+  if (launchId === null) throw new Error('probe_labelling payload missing launch_id');
+  const audits = await probeAudits(db, scope)
+    .select(['a.id', 'a.configuration'])
+    .where('a.launch_id', '=', launchId)
+    .where('a.status', 'in', ANSWERED_STATUSES)
+    .orderBy('a.created_at')
+    .orderBy('a.id')
     .execute();
-  const answers = rows.flatMap((row) => {
-    const question = frozenQuestion(row.generation_evidence);
-    return question
-      ? [{ taskId: row.id, text: row.answer_text, questionText: row.question_text, question }]
-      : [];
-  });
-  return { audit, answers };
+  const rows = audits.length
+    ? await answeredProbeTasks(
+        db,
+        scope,
+        audits.map((audit) => audit.id),
+      )
+        .select(['t.audit_id', 't.answer_text', 'p.text as question_text'])
+        .orderBy('t.prompt_index')
+        .orderBy('t.logical_engine')
+        .orderBy('t.audit_id')
+        .orderBy('t.repetition')
+        .execute()
+    : [];
+  const answers = withQuestion(rows).map((row) => ({
+    taskId: row.id,
+    auditId: row.audit_id,
+    text: row.answer_text,
+    questionText: row.question_text,
+    question: row.question,
+  }));
+  return { launchId, configuration: audits[0]?.configuration, answers };
 }
 
-async function labelled(db: Database, auditId: string) {
+async function labelled(db: Database, scope: Scope, launchId: string) {
   const row = await db
     .selectFrom('probe_labellings')
     .select('id')
-    .where('audit_id', '=', auditId)
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('launch_id', '=', launchId)
     .executeTakeFirst();
   return row !== undefined;
 }
@@ -134,99 +116,84 @@ async function ask<Value, Result>(
   return outcome.value;
 }
 
+type Launch = Awaited<ReturnType<typeof loadLaunch>>;
 type Labels = {
   known: ReturnType<typeof mapKnownFor>;
   objections: ReturnType<typeof mapObjections>;
   themes: (ReturnType<typeof mapThemeBrands>[number] & { themeId: string })[];
 };
 
-async function label(
-  db: Database,
-  gateway: ModelGateway,
-  scope: Scope,
-  probe: Awaited<ReturnType<typeof loadProbe>>,
-) {
-  const config = scoringConfig(probe.audit.configuration);
+async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: Launch) {
+  const { brand, tracked: roster } = probeRoster(launch.configuration);
   const [themes, groups] = await Promise.all([listThemes(db, scope), listGroups(db, scope)]);
   const calls: ModelCall[] = [];
-  const of = (question: string): LabelAnswer[] =>
-    probe.answers.filter((answer) => answer.question.question === question);
   const max = probes.max_items_per_answer;
-  const known = of('known_for');
-  const objections = of('objection');
-  const labels: Labels = {
-    known: known.length
-      ? await ask(
-          gateway,
-          calls,
-          {
-            user: knownForRequest(probes, {
-              brand: config.brandName,
-              fallback: policy.perception.project_themes.fallback,
-              themes,
-              answers: known,
-            }),
-            schema: covering(knownForOutput, known.length),
-          },
-          (value) => mapKnownFor(value, known, { themes, maxItems: max }),
-        )
-      : [],
-    objections: objections.length
-      ? await ask(
-          gateway,
-          calls,
-          {
-            user: objectionRequest(probes, {
-              brand: config.brandName,
-              groups,
-              answers: objections,
-            }),
-            schema: covering(objectionOutput, objections.length),
-          },
-          (value) =>
-            mapObjections(value, objections, {
-              groups,
-              maxItems: max,
-              maxNewGroups: probes.max_new_groups_per_probe,
-              nameMaxChars: probes.group_name_max_chars,
-            }),
-        )
-      : { items: [], newGroups: [] },
-    themes: [],
-  };
-  const tracked: TrackedName[] = [
-    { kind: 'brand', id: null, name: config.brandName, aliases: config.brandAliases },
-    ...config.competitors.flatMap((competitor) =>
-      competitor.id
-        ? [
-            {
-              kind: 'competitor' as const,
-              id: competitor.id,
-              name: competitor.name,
-              aliases: competitor.aliases,
-            },
-          ]
-        : [],
-    ),
-  ];
-  const byTheme = new Map<string, typeof probe.answers>();
-  for (const answer of probe.answers)
-    if (answer.question.question === 'theme')
-      byTheme.set(answer.question.theme_id, [
-        ...(byTheme.get(answer.question.theme_id) ?? []),
-        answer,
-      ]);
-  for (const [themeId, answers] of byTheme) {
+  const labels: Labels = { known: [], objections: { items: [], newGroups: [] }, themes: [] };
+  // One known-for and one objection call per market run keeps each request one
+  // market's size; a later market sees the groups earlier ones named (AV-28).
+  for (const run of Map.groupBy(launch.answers, (answer) => answer.auditId).values()) {
+    const of = (question: string): LabelAnswer[] =>
+      run.filter((answer) => answer.question.question === question);
+    const known = of('known_for');
+    const objections = of('objection');
+    if (known.length) {
+      const request = {
+        user: knownForRequest(probes, {
+          brand,
+          fallback: policy.perception.project_themes.fallback,
+          themes,
+          answers: known,
+        }),
+        schema: covering(knownForOutput, known.length),
+      };
+      const accept = (value: z.infer<typeof knownForOutput>) =>
+        mapKnownFor(value, known, { themes, maxItems: max });
+      labels.known.push(...(await ask(gateway, calls, request, accept))); // NOSONAR -- One call per market, in order.
+    }
+    if (objections.length) {
+      const named = labels.objections.newGroups;
+      const request = {
+        user: objectionRequest(probes, {
+          brand,
+          groups: [...groups, ...named.map((name) => ({ name }))],
+          answers: objections,
+        }),
+        schema: covering(objectionOutput, objections.length),
+      };
+      const accept = (value: z.infer<typeof objectionOutput>) =>
+        mapObjections(value, objections, {
+          groups,
+          named,
+          maxItems: max,
+          maxNewGroups: probes.max_new_groups_per_probe,
+          nameMaxChars: probes.group_name_max_chars,
+        });
+      const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- Each market sees the groups the earlier ones named.
+      labels.objections = {
+        items: [...labels.objections.items, ...mapped.items],
+        newGroups: mapped.newGroups,
+      };
+    }
+  }
+  // One call per theme question: each market's question names its country.
+  const byQuestion = Map.groupBy(
+    launch.answers.filter((answer) => answer.question.question === 'theme'),
+    (answer) => answer.questionText,
+  );
+  for (const [question, answers] of byQuestion) {
+    const [sample] = answers;
+    const asked = sample?.question;
     // A theme deleted since admission has no row to label against.
-    if (!themes.some((theme) => theme.id === themeId)) continue;
+    if (asked?.question !== 'theme' || !themes.some((theme) => theme.id === asked.theme_id))
+      continue;
     const request = {
-      user: themeRequest(probes, { question: answers[0]?.questionText ?? '', answers }),
+      user: themeRequest(probes, { question, answers }),
       schema: covering(themeOutput, answers.length),
     };
     const accept = (value: z.infer<typeof themeOutput>) =>
-      mapThemeBrands(value, answers, { tracked, maxItems: max });
-    const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- One call per theme, in order.
-    labels.themes.push(...mapped.map((item) => ({ ...item, themeId })));
+      mapThemeBrands(value, answers, { tracked: roster, maxItems: max });
+    const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- One call per theme question, in order.
+    labels.themes.push(...mapped.map((item) => ({ ...item, themeId: asked.theme_id })));
   }
   return { labels, calls };
 }
@@ -235,95 +202,102 @@ type Outcome =
   | { outcome: 'labelled'; labels: Labels }
   | { outcome: 'unavailable'; reason: 'model_not_configured' | 'task_failed' };
 
-function persist(
-  task: QueueTask,
+/**
+ * The answer item rows, against the themes and groups as they stand now: a
+ * theme deleted during the calls reads as Other (or drops a theme answer's
+ * brands), and a reason whose group was deleted or merged away drops.
+ */
+async function answerRows(
+  db: Database,
   scope: Scope,
-  auditId: string,
-  outcome: Outcome,
-  calls: ModelCall[],
+  input: { launch: Launch; labellingId: string; labels: Labels; at: Date },
 ) {
+  const { known, objections, themes } = input.labels;
+  const [current, groupIds] = await Promise.all([
+    listThemes(db, scope),
+    saveGroups(db, scope, objections.newGroups, input.at),
+  ]);
+  const liveThemes = new Set(current.map((theme) => theme.id));
+  const liveGroups = new Set(groupIds.values());
+  const auditOf = new Map(input.launch.answers.map((answer) => [answer.taskId, answer.auditId]));
+  const row = (
+    item: { taskId: string; rank: number },
+    question: string,
+    fields: Partial<Insertable<ProbeAnswerItems>>,
+  ): Insertable<ProbeAnswerItems> => ({
+    id: randomUUID(),
+    workspace_id: scope.workspaceId,
+    project_id: scope.projectId,
+    audit_id: auditOf.get(item.taskId)!,
+    labelling_id: input.labellingId,
+    task_id: item.taskId,
+    question,
+    rank: item.rank,
+    theme_id: null,
+    objection_group_id: null,
+    entity_kind: null,
+    entity_id: null,
+    entity_name: null,
+    quote: '',
+    created_at: input.at,
+    ...fields,
+  });
+  return [
+    ...known.map((item) =>
+      row(item, 'known_for', {
+        theme_id: item.themeId && liveThemes.has(item.themeId) ? item.themeId : null,
+        quote: item.quote,
+      }),
+    ),
+    ...objections.items.flatMap((item) => {
+      const group =
+        item.group.kind === 'existing' ? item.group.id : groupIds.get(nameKey(item.group.name));
+      return group && liveGroups.has(group)
+        ? [row(item, 'objection', { objection_group_id: group, quote: item.quote })]
+        : [];
+    }),
+    ...themes.flatMap((item) =>
+      liveThemes.has(item.themeId)
+        ? [
+            row(item, 'theme', {
+              theme_id: item.themeId,
+              entity_kind: item.entity.kind,
+              entity_id: item.entity.id,
+              entity_name: item.entity.name,
+            }),
+          ]
+        : [],
+    ),
+  ];
+}
+
+function persist(scope: Scope, launch: Launch, outcome: Outcome, calls: ModelCall[]) {
   return async (db: Database) => {
     const id = randomUUID();
-    const now = new Date();
+    const at = new Date();
     const inserted = await db
       .insertInto('probe_labellings')
       .values({
         id,
         workspace_id: scope.workspaceId,
         project_id: scope.projectId,
-        audit_id: auditId,
+        launch_id: launch.launchId,
         labelling_version: probes.labelling_version,
         outcome: outcome.outcome,
         outcome_reason: outcome.outcome === 'unavailable' ? outcome.reason : null,
         model_provider: calls[0]?.provider ?? null,
         model: calls[0]?.model ?? null,
         usage: calls.length ? JSON.stringify({ calls: calls.map((call) => call.usage) }) : null,
-        created_at: now,
+        created_at: at,
       })
-      .onConflict((conflict) => conflict.column('audit_id').doNothing())
+      .onConflict((conflict) => conflict.column('launch_id').doNothing())
       .returning('id')
       .executeTakeFirst();
     if (!inserted || outcome.outcome !== 'labelled') return;
-    const { known, objections, themes } = outcome.labels;
-    const groupIds = await saveGroups(db, scope, objections.newGroups, now);
-    const base = {
-      workspace_id: task.workspace_id,
-      project_id: scope.projectId,
-      audit_id: auditId,
-      labelling_id: id,
-      created_at: now,
-    };
-    const empty = {
-      theme_id: null,
-      objection_group_id: null,
-      entity_kind: null,
-      entity_id: null,
-      entity_name: null,
-    };
-    const rows = [
-      ...known.map((item) => ({
-        ...base,
-        ...empty,
-        id: randomUUID(),
-        task_id: item.taskId,
-        question: 'known_for',
-        rank: item.rank,
-        theme_id: item.themeId,
-        quote: item.quote,
-      })),
-      ...objections.items.flatMap((item) => {
-        const group =
-          item.group.kind === 'existing' ? item.group.id : groupIds.get(nameKey(item.group.name));
-        return group
-          ? [
-              {
-                ...base,
-                ...empty,
-                id: randomUUID(),
-                task_id: item.taskId,
-                question: 'objection',
-                rank: item.rank,
-                objection_group_id: group,
-                quote: item.quote,
-              },
-            ]
-          : [];
-      }),
-      ...themes.map((item) => ({
-        ...base,
-        ...empty,
-        id: randomUUID(),
-        task_id: item.taskId,
-        question: 'theme',
-        rank: item.rank,
-        theme_id: item.themeId,
-        entity_kind: item.entity.kind,
-        entity_id: item.entity.id,
-        entity_name: item.entity.name,
-        quote: '',
-      })),
-    ];
-    await saveAnswerItems(db, rows);
+    await saveAnswerItems(
+      db,
+      await answerRows(db, scope, { launch, labellingId: id, labels: outcome.labels, at }),
+    );
   };
 }
 
@@ -331,32 +305,25 @@ export function probeLabelling(
   gatewayFactory: () => ModelGateway | null = configuredGateway,
 ): Executor {
   return async (task, { db, checkCancelled }) => {
-    const projectId = await taskProject(db, task);
-    const scope = { workspaceId: task.workspace_id, projectId };
-    const probe = await loadProbe(db, task, projectId);
-    if (await labelled(db, probe.audit.id)) return;
+    const scope = { workspaceId: task.workspace_id, projectId: await taskProject(db, task) };
+    const launch = await loadLaunch(db, task, scope);
+    if (await labelled(db, scope, launch.launchId)) return;
     const settle = (outcome: Outcome, calls: ModelCall[] = []) => ({
       error: null,
-      persist: persist(task, scope, probe.audit.id, outcome, calls),
+      persist: persist(scope, launch, outcome, calls),
     });
     const raw = gatewayFactory();
     if (!raw) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
     const gateway = meterFor(db, task.workspace_id).gateway(raw, 'probe_labelling');
     await checkCancelled('probe_labelling_model_call');
-    const { labels, calls } = await label(db, gateway, scope, probe);
+    const { labels, calls } = await label(db, gateway, scope, launch);
     return settle({ outcome: 'labelled', labels }, calls);
   };
 }
 
 /** A task that exhausted its attempts still records why the probe has no labels. */
 export async function compensateProbeLabelling(db: Database, task: QueueTask) {
-  const projectId = await taskProject(db, task);
-  const probe = await loadProbe(db, task, projectId);
-  await persist(
-    task,
-    { workspaceId: task.workspace_id, projectId },
-    probe.audit.id,
-    { outcome: 'unavailable', reason: 'task_failed' },
-    [],
-  )(db);
+  const scope = { workspaceId: task.workspace_id, projectId: await taskProject(db, task) };
+  const launch = await loadLaunch(db, task, scope);
+  await persist(scope, launch, { outcome: 'unavailable', reason: 'task_failed' }, [])(db);
 }

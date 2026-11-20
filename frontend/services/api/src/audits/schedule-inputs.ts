@@ -71,22 +71,30 @@ export function scheduleIntervalIssue(
     : 'every_n_minutes requires a configured-minimum interval or higher';
 }
 
-export const scheduleCreate = z
-  .object({
-    ...fields,
-    audit_scope: fields.audit_scope.default('brand'),
-    interval_minutes: fields.interval_minutes.default(null),
-    timezone: fields.timezone.default(policy.audit_schedules.default_timezone),
-    market_ids: fields.market_ids.default([null]),
-    repetitions: fields.repetitions.default(null),
-    benchmark_mode: fields.benchmark_mode.default(null),
-    enabled: fields.enabled.default(true),
-    next_run_at: fields.next_run_at.default(null),
-  })
-  .superRefine((input, context) => {
-    const message = scheduleIntervalIssue(input);
-    if (message) context.addIssue({ code: 'custom', path: ['interval_minutes'], message });
-  });
+const scheduleObject = z.object({
+  ...fields,
+  audit_scope: fields.audit_scope.default('brand'),
+  interval_minutes: fields.interval_minutes.default(null),
+  timezone: fields.timezone.default(policy.audit_schedules.default_timezone),
+  market_ids: fields.market_ids.default([null]),
+  repetitions: fields.repetitions.default(null),
+  benchmark_mode: fields.benchmark_mode.default(null),
+  enabled: fields.enabled.default(true),
+  next_run_at: fields.next_run_at.default(null),
+});
+const intervalCheck = (
+  input: { cadence: string; interval_minutes: number | null },
+  context: z.RefinementCtx,
+) => {
+  const message = scheduleIntervalIssue(input);
+  if (message) context.addIssue({ code: 'custom', path: ['interval_minutes'], message });
+};
+/** A request's schedule: never the probe scope, which only its owner writes. */
+export const scheduleCreate = scheduleObject.superRefine(intervalCheck);
+/** The probe schedule owner's schedule. */
+export const probeScheduleCreate = scheduleObject
+  .extend({ audit_scope: z.literal('probe') })
+  .superRefine(intervalCheck);
 export const scheduleUpdate = z.object(fields).partial();
-export type ScheduleCreate = z.output<typeof scheduleCreate>;
+export type ScheduleCreate = z.output<typeof scheduleCreate> | z.output<typeof probeScheduleCreate>;
 export type ScheduleUpdate = z.output<typeof scheduleUpdate>;

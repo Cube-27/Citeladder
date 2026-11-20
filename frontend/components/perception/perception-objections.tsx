@@ -4,13 +4,15 @@ import { ObjectionActions } from '@/components/perception/objection-actions';
 import { Absence } from '@/components/ui/absence';
 import { buttonClasses } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Delta } from '@/components/ui/delta';
 import { Disclosure } from '@/components/ui/disclosure';
-import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { ProbeLede } from '@/components/perception/probe-lede';
+import type { FigureSegment } from '@/components/ui/figure-strip';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Section, SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
+import { Sparkline } from '@/components/ui/sparkline';
 import { StateBlock } from '@/components/ui/state-block';
+import { StatusMark } from '@/components/ui/status-mark';
 import {
   TableActionsCell,
   TableCell,
@@ -18,13 +20,14 @@ import {
   TableRow,
   UrlText,
 } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { objectionsSummary } from '@/lib/perception/probe';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
+import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
+import { standingLabel } from '@/lib/visibility/source-pages';
+import { typeLabel } from '@/lib/visibility/sources';
 
 type Group = ProbeObjectionsValue['groups'][number];
 
@@ -49,7 +52,6 @@ export function PerceptionObjections({
 }
 
 function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
-  const timeZone = useDisplayTimeZone();
   const { raised, widest, headline } = objectionsSummary(data);
   const segments: FigureSegment[] = [
     {
@@ -72,17 +74,12 @@ function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
     },
   ];
   return (
-    <Section>
-      <SectionContent>
-        <Stack gap="item">
-          <p className={textRole('caption', 'text-ink-2')}>
-            From the market probe · {formatDisplayDate(data.probe.created_at, timeZone)}
-          </p>
-          <h2 className={textRole('heading')}>{headline}</h2>
-          <FigureStrip label="Objections" segments={segments} subLine />
-        </Stack>
-      </SectionContent>
-    </Section>
+    <ProbeLede
+      createdAt={data.probe.created_at}
+      headline={headline}
+      label="Objections"
+      segments={segments}
+    />
   );
 }
 
@@ -90,7 +87,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'objection', label: 'Objection' },
   { key: 'score', label: 'Position score', kind: 'number', width: 'metric' },
   { key: 'engines', label: 'Engines', kind: 'number', width: 'shortMetric' },
-  { key: 'trend', label: 'Trend', sublabel: 'Since last probe', kind: 'number', width: 'metric' },
+  { key: 'trend', label: 'Trend', sublabel: 'Recent probes', width: 'metric' },
   { key: 'sources', label: 'Sources', kind: 'number', width: 'shortMetric' },
   { key: 'actions', label: 'Actions', kind: 'actions' },
 ];
@@ -125,17 +122,18 @@ function ObjectionTable({
                 <Absence label="No answers" />
               )}
             </TableCell>
-            <TableCell numeric>
-              {/* A higher score is raised earlier: a rise is worse for the brand. */}
-              <Delta
-                value={group.change}
-                policy="lower-is-better"
-                precision={0}
-                missingReason="No previous probe"
-              />
+            <TableCell>
+              {group.history.length > 1 ? (
+                <Sparkline
+                  values={group.history}
+                  label={`${group.name}: position score over the last ${group.history.length} probes, oldest first: ${group.history.map((value) => value ?? 'no answers').join(', ')}`}
+                />
+              ) : (
+                <Absence state="not_run" label="No previous probe" />
+              )}
             </TableCell>
             <TableCell numeric>
-              {group.sources ? group.sources : <Absence state="none" label="No sources" />}
+              <Sources sources={group.sources} />
             </TableCell>
             <TableActionsCell>
               <ProjectLink
@@ -164,9 +162,17 @@ function ObjectionTable({
   );
 }
 
+/** A group's cited pages; a group this probe did not raise has none to count. */
+function Sources({ sources }: Readonly<{ sources: Group['sources'] }>) {
+  if (sources === null) return <Absence state="not_applicable" label="Not raised" />;
+  return sources || <Absence state="none" label="No sources" />;
+}
+
 const PAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'page', label: 'Page' },
+  { key: 'page-type', label: 'Page type', width: 'category' },
   { key: 'type', label: 'Source type', width: 'category' },
+  { key: 'mentions', label: 'Mentions you', width: 'category' },
   { key: 'citations', label: 'Citations', kind: 'number', width: 'shortMetric' },
 ];
 
@@ -203,7 +209,18 @@ function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
                           secondaryTooltip={page.url}
                         />
                       </TableCell>
-                      <TableCell>{page.classification}</TableCell>
+                      <TableCell>
+                        {typeLabel(page.page_format, 'url') ?? <Absence state="not_measured" />}
+                      </TableCell>
+                      <TableCell>
+                        <StatusMark
+                          variant="classification"
+                          value={classificationBadgeValue(page.classification)}
+                        >
+                          {classificationLabel(page.classification)}
+                        </StatusMark>
+                      </TableCell>
+                      <TableCell>{standingLabel(page.standing)}</TableCell>
                       <TableCell numeric>{page.citations}</TableCell>
                     </TableRow>
                   ))}

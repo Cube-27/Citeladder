@@ -13,7 +13,6 @@ import { SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
-import { suggestAliases } from '@/lib/project/alias-suggestions';
 
 /**
  * The brand's aliases: the other spellings answers use for it. Each change
@@ -30,11 +29,7 @@ export function BrandAliasesPanel({
   // Settles with the save; the notice shows a failure.
   const saveAliases = (next: readonly string[]) =>
     save.mutateAsync({ brand: { aliases: [...new Set(next.map((alias) => alias.trim()))] } });
-  const suggestions = suggestAliases({
-    brandName: project.brand_name,
-    aliases,
-    domains: [project.website_url, ...project.owned_domains],
-  });
+  const suggestions = project.brand.alias_suggestions;
   return (
     <Stack gap="workspace">
       {save.isError ? (

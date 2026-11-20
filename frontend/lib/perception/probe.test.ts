@@ -29,7 +29,6 @@ function theme(
   return {
     theme_id: `00000000-0000-4000-8000-00000000000${id}`,
     theme: name,
-    answers: 6,
     entities: [
       { ...brand, score: own },
       { ...rival, score: other },
@@ -53,7 +52,6 @@ function market(themes: ProbeMarketValue['themes'], knownFor: string[]): ProbeMa
       theme_id: themes.find((row) => row.theme === name)?.theme_id ?? null,
       theme: name,
       score: 90 - index * 10,
-      raised_in: 3,
     })),
     themes,
     engines: [],
@@ -117,7 +115,6 @@ function group(
     name,
     score,
     engines,
-    change: null,
     history: [score],
     sources: 0,
     pages: [],

@@ -5651,6 +5651,12 @@
                   "type": "string"
                 }
               },
+              "alias_suggestions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "logo_url": {
                 "type": ["string", "null"]
               },
@@ -5658,7 +5664,7 @@
                 "$ref": "#/components/schemas/EntityMatching"
               }
             },
-            "required": ["aliases"],
+            "required": ["aliases", "alias_suggestions"],
             "additionalProperties": false
           },
           "owned_domains": {
@@ -10293,6 +10299,7 @@
                   "default_repetitions": 1,
                   "brand": {
                     "aliases": ["Example aliases"],
+                    "alias_suggestions": ["Example alias suggestions"],
                     "logo_url": null,
                     "matching": {
                       "mode": "always",
@@ -18081,7 +18088,8 @@
                   },
                   "audit_scope": {
                     "default": "brand",
-                    "$ref": "#/components/schemas/AuditScope"
+                    "type": "string",
+                    "enum": ["brand", "commerce"]
                   },
                   "cadence": {
                     "$ref": "#/components/schemas/AuditScheduleCadence"
@@ -18377,7 +18385,8 @@
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
                   "audit_scope": {
-                    "$ref": "#/components/schemas/AuditScope"
+                    "type": "string",
+                    "enum": ["brand", "commerce"]
                   },
                   "cadence": {
                     "$ref": "#/components/schemas/AuditScheduleCadence"
@@ -18711,6 +18720,7 @@
                       "default_repetitions": 1,
                       "brand": {
                         "aliases": ["Example aliases"],
+                        "alias_suggestions": ["Example alias suggestions"],
                         "logo_url": null,
                         "matching": {
                           "mode": null,
@@ -19948,7 +19958,8 @@
                   },
                   "audit_scope": {
                     "default": "brand",
-                    "$ref": "#/components/schemas/AuditScope"
+                    "type": "string",
+                    "enum": ["brand", "commerce"]
                   },
                   "random_seed": {
                     "type": ["string", "null"]

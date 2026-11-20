@@ -33,7 +33,7 @@ const PROJECT = '22222222-2222-4222-8222-222222222222';
 const created = makeProject({
   id: PROJECT,
   workspace_id: WORKSPACE,
-  brand: { aliases: [], logo_url: 'https://acme.example/logo.png' },
+  brand: { alias_suggestions: [], aliases: [], logo_url: 'https://acme.example/logo.png' },
 });
 
 let projectExists = false;

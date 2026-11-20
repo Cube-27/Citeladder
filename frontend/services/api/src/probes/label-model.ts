@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { namesEntity } from '../analysis/aliases.ts';
 import type { ProbePolicy } from '../config/probes.ts';
+import { cleanName, idsByName, nameKey } from '../projects/themes.ts';
 
 export type LabelAnswer = { taskId: string; text: string };
 type Named = { id: string; name: string };
@@ -49,9 +50,6 @@ export function covering<Value extends { answers: readonly { answer: number }[] 
   }, 'Every answer must be labelled');
 }
 
-/** Names compare as perception compares theme names: case and spacing aside. */
-export const nameKey = (name: string) => name.replaceAll(/\s+/gu, ' ').trim().toLowerCase();
-
 const QUOTE_MAX = 500;
 
 function answersBlock(answers: readonly LabelAnswer[], maxChars: number) {
@@ -87,7 +85,7 @@ export function knownForRequest(
 
 export function objectionRequest(
   policy: ProbePolicy,
-  input: { brand: string; groups: readonly Named[]; answers: readonly LabelAnswer[] },
+  input: { brand: string; groups: readonly { name: string }[]; answers: readonly LabelAnswer[] },
 ) {
   return render(policy.objection_template, {
     '{brand}': input.brand,
@@ -131,7 +129,7 @@ export function mapKnownFor(
   answers: readonly LabelAnswer[],
   input: { themes: readonly Named[]; maxItems: number },
 ) {
-  const themes = new Map(input.themes.map((theme) => [nameKey(theme.name), theme.id]));
+  const themes = idsByName(input.themes);
   return byAnswer(
     answers,
     output.answers.map((row) => ({ answer: row.answer, entries: row.points })),
@@ -151,19 +149,25 @@ export type GroupRef = { kind: 'existing'; id: string } | { kind: 'new'; name: s
 /**
  * Reasons onto the project's objection groups (AV-28). A name an existing
  * group has maps onto it; any other becomes a new group, at most
- * `maxNewGroups` per probe, and reasons past that cap are dropped.
+ * `maxNewGroups` per probe, and reasons past that cap are dropped. `named`
+ * holds the new groups this probe's earlier calls created; `newGroups` returns
+ * them with this call's.
  */
 export function mapObjections(
   output: z.infer<typeof objectionOutput>,
   answers: readonly LabelAnswer[],
-  input: { groups: readonly Named[]; maxItems: number; maxNewGroups: number; nameMaxChars: number },
+  input: {
+    groups: readonly Named[];
+    named?: readonly string[];
+    maxItems: number;
+    maxNewGroups: number;
+    nameMaxChars: number;
+  },
 ) {
-  const existing = new Map(input.groups.map((group) => [nameKey(group.name), group.id]));
-  const created = new Map<string, string>();
+  const existing = idsByName(input.groups);
+  const created = new Map((input.named ?? []).map((name) => [nameKey(name), name]));
   const refOf = (raw: string): GroupRef | null => {
-    const name = Array.from(raw.replaceAll(/\s+/gu, ' ').trim())
-      .slice(0, input.nameMaxChars)
-      .join('');
+    const name = Array.from(cleanName(raw)).slice(0, input.nameMaxChars).join('');
     if (!name) return null;
     const id = existing.get(nameKey(name));
     if (id) return { kind: 'existing', id };
@@ -186,9 +190,7 @@ export function mapObjections(
   return { items, newGroups: [...created.values()] };
 }
 
-export type TrackedName = {
-  kind: 'brand' | 'competitor';
-  id: string | null;
+export type TrackedName = ({ kind: 'brand'; id: null } | { kind: 'competitor'; id: string }) & {
   name: string;
   aliases: readonly string[];
 };

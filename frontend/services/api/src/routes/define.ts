@@ -47,6 +47,11 @@ import { withIdempotency } from '../public-api/idempotency.ts';
 
 type RouteContext = { c: Context<AppEnv>; db: Database; config: ServiceConfig };
 
+/** The workspace-and-project scope an active-project route's owner call takes. */
+export function projectScopeOf(c: Context<AppEnv>, projectId: string) {
+  return { workspaceId: c.get('workspace').workspaceId, projectId };
+}
+
 /**
  * A JSON route's handler must return what its response contract accepts, so
  * the shared contract and the handler cannot drift apart; a raw route builds

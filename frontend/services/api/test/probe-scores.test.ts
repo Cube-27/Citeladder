@@ -171,6 +171,30 @@ describe('labelling output mapping', () => {
     expect([reply([1]), reply([2, 9]), reply([2, 1])]).toEqual([false, false, true]);
   });
 
+  it("maps a later market's reasons onto the groups an earlier one named, inside the same cap", () => {
+    const mapped = mapObjections(
+      {
+        answers: [
+          {
+            answer: 1,
+            reasons: [
+              { group: 'slow  delivery', quote: '' },
+              { group: 'Weak returns', quote: '' },
+            ],
+          },
+        ],
+      },
+      answers,
+      { groups: [], named: ['Slow delivery'], maxItems: 10, maxNewGroups: 1, nameMaxChars: 120 },
+    );
+    expect(mapped).toEqual({
+      items: [
+        { taskId: 'task-1', rank: 0, group: { kind: 'new', name: 'Slow delivery' }, quote: '' },
+      ],
+      newGroups: ['Slow delivery'],
+    });
+  });
+
   it('maps reasons onto existing groups and creates a group only for a new name, capped per probe', () => {
     const mapped = mapObjections(
       {

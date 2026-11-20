@@ -81,8 +81,8 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
   the docs site, with a page per endpoint and request and response examples. Shipped in
   #967.
 - **AV-21, migrations for this plan.** The plan's schema is in `0001_baseline.sql` after
-  the 2026-11-19 refold. Phase 2 schema changes go into `0001_baseline.sql` while the
-  owner maintains a single baseline (owner, 2026-11-20).
+  the 2026-11-19 refold. Phase 2 schema changes edit `0001_baseline.sql`: the
+  open exception in [decisions](../decisions.md#platform-and-schema).
 - **AV-22, Keyword research.** "it should be keyword research so change the sidebar
   option to keyword researach not keywords" (2026-11-18): the page at
   `/search-intelligence` is named Keyword research in the sidebar, its title, the

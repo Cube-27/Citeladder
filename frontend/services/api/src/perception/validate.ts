@@ -6,6 +6,7 @@
 import { factTopicSchema, type FactTopic } from '@citeladder/contracts/fact-checking';
 
 import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
+import { idsByName, nameKey } from '../projects/themes.ts';
 import type { ExtractedClaim, Label, PerceptionOutput } from './model.ts';
 import type { PerceptionPackage, Span } from './passages.ts';
 
@@ -78,8 +79,6 @@ export function locateQuote(quote: string, spans: readonly Span[]) {
   return null;
 }
 
-const themeKey = (name: string) => name.replaceAll(/\s+/gu, ' ').trim().toLowerCase();
-
 /**
  * The aspects whose quotes are found in the entity's passages, each theme
  * matched to a project theme's id by name; any other theme is the fallback.
@@ -96,7 +95,7 @@ function verifiedAspects(
       drop('quote_not_found');
       return [];
     }
-    const key = themeKey(aspect.theme);
+    const key = nameKey(aspect.theme);
     const themeId = themes.ids.get(key) ?? null;
     if (themeId === null && key !== themes.fallback) drop('theme_other');
     return [
@@ -122,8 +121,8 @@ export function validateOutput(
   };
   const sent = new Map(pkg.entities.map((entity) => [entity.entity_id, entity]));
   const themes = {
-    ids: new Map(pkg.themes.map((theme) => [themeKey(theme.name), theme.id])),
-    fallback: themeKey(policy.project_themes.fallback),
+    ids: idsByName(pkg.themes),
+    fallback: nameKey(policy.project_themes.fallback),
   };
   const results = new Map<string, EntitySentiment>();
   for (const row of output.entities) {

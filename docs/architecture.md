@@ -107,7 +107,9 @@ inserts; every other project writer serializes with `FOR NO KEY UPDATE`, which
 does not. The same holds for a crawl row: every child insert key-shares it, so
 crawl writers lock it `FOR NO KEY UPDATE`. A path that inserts project rows after the capacity lock (an audit
 launch) takes the project's key-share lock before the capacity lock. Cancellation remains `audit -> task
-mutation -> reservation release`. A transaction that has acquired the account
+mutation -> reservation release`. A run ending takes its probe launch's advisory
+lock after its own audit row; nothing takes it before an audit row
+(`probes/launch-end.ts`). A transaction that has acquired the account
 capacity or any billing row must not acquire project, prompt, runtime, audit, or
 task locks afterward. Candidate grants are locked in UUID order; commercial
 earliest-expiry draw order is computed separately and frozen on reservation

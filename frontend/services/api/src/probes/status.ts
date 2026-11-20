@@ -8,12 +8,12 @@ import type { ProbeQuote, ProbeStatus } from '@citeladder/contracts/probes';
 import type { AuditRuntime } from '../audits/config.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { grantBalances } from '../entitlements/ledger.ts';
 import { loadAccountState } from '../entitlements/state.ts';
 import { probeLaunches } from './launches.ts';
-import { probePlan } from './plan.ts';
-
-type Scope = { workspaceId: string; projectId: string };
+import { blockedBy, probePlan } from './plan.ts';
+import { probeSchedules } from './schedule.ts';
 const probes = policy.probes;
 
 /**
@@ -38,6 +38,7 @@ async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Pr
   return {
     credential_mode: plan.funded ? 'funded' : 'byok',
     engines: plan.engines,
+    blocked: blockedBy(plan),
     markets: plan.runs.map((run) => run.market),
     questions: plan.questions,
     repetitions: probes.repetitions,
@@ -57,12 +58,8 @@ export async function probeStatus(
   const [quote, [latest], schedule] = await Promise.all([
     probeQuote(db, scope, runtime),
     probeLaunches(db, scope, { limit: 1 }),
-    db
-      .selectFrom('audit_schedules')
+    probeSchedules(db, scope)
       .select(['id', 'cadence', 'enabled', 'next_run_at'])
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('audit_scope', '=', probes.audit_scope)
       .orderBy('created_at', 'desc')
       .orderBy('id')
       .executeTakeFirst(),

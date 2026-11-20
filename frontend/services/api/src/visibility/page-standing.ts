@@ -12,8 +12,12 @@ import type { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { isListingGap } from '../analysis/listing-gap.ts';
+import type { Database } from '../db/database.ts';
+import type { ProjectScope } from '../projects/brand-profile.ts';
 import {
   judgedUnderCurrentRoster,
+  latestReadings,
+  readingPresences,
   type Reading,
   type ReadingPresence,
 } from '../source-pages/reading.ts';
@@ -46,6 +50,48 @@ export function pageStanding(
   if (brand?.presence === s.PRESENCE_PRESENT) return 'listed';
   if (brand?.presence === s.PRESENCE_NOT_ASSESSABLE) return 'not_assessable';
   return isListingGap(page, presences) ? 'gap' : 'read';
+}
+
+/**
+ * The project's pages for `hashes` (at least one), each with its standing, by url hash.
+ * A hash with no page is absent: nobody looked, which is not nothing wrong.
+ */
+export async function pageStandings(db: Database, scope: ProjectScope, hashes: readonly string[]) {
+  const pages = await db
+    .selectFrom('source_pages as page')
+    .leftJoin('source_page_snapshots as snapshot', (join) =>
+      join
+        .onRef('snapshot.id', '=', 'page.latest_snapshot_id')
+        .onRef('snapshot.workspace_id', '=', 'page.workspace_id'),
+    )
+    .select([
+      'page.id',
+      'page.url_hash',
+      'page.source_class',
+      'page.inspection_state',
+      'page.page_format',
+      'page.page_format_method',
+      'snapshot.page_facts',
+    ])
+    .where('page.workspace_id', '=', scope.workspaceId)
+    .where('page.project_id', '=', scope.projectId)
+    .where('page.url_hash', 'in', hashes)
+    .orderBy('page.url_hash')
+    .execute();
+  const readings = await latestReadings(db, scope, [...new Set(pages.map((page) => page.id))]);
+  const presences = await readingPresences(
+    db,
+    scope,
+    [...readings.values()].map((reading) => reading.id),
+  );
+  const byHash = new Map<string, (typeof pages)[number] & { standing: PageStanding }>();
+  for (const page of pages) {
+    if (byHash.has(page.url_hash)) continue;
+    const reading = readings.get(page.id);
+    const standing = pageStanding(page, reading, reading ? (presences.get(reading.id) ?? []) : []);
+    byHash.set(page.url_hash, { ...page, standing });
+  }
+  return byHash;
 }
 
 /**

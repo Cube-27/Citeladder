@@ -8,6 +8,7 @@ import {
 import type { Insertable, Selectable } from 'kysely';
 import type { z } from 'zod';
 
+import { aliasSuggestions } from '../analysis/aliases.ts';
 import {
   entityKey,
   matchingBlock,
@@ -132,6 +133,9 @@ async function views(
       .filter((item) => item.project_id === row.id)
       .map((item) => ({ ...item, aliases: stringArray.parse(item.aliases) }));
     const profile = profiles.find((item) => item.project_id === row.id);
+    const ownedDomains = owned
+      .filter((item) => item.project_id === row.id)
+      .map((item) => item.domain);
     const matching = projectEntityMatching(
       profile?.business_context,
       strings(profile?.products_services),
@@ -152,10 +156,15 @@ async function views(
       brand_name: brandName,
       brand: {
         aliases: brandAliases,
+        alias_suggestions: aliasSuggestions({
+          brandName,
+          aliases: brandAliases,
+          domains: [row.website_url, ...ownedDomains],
+        }),
         logo_url: brand?.logo_asset_id ? brandLogoUrl(row.id) : null,
         matching: matching[entityKey(brandName)],
       },
-      owned_domains: owned.filter((item) => item.project_id === row.id).map((item) => item.domain),
+      owned_domains: ownedDomains,
       unintended_domains: unintended
         .filter((item) => item.project_id === row.id)
         .map((item) => item.domain),

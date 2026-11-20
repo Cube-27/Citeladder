@@ -27,7 +27,7 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
     language_code: 'en',
     benchmark_mode: 'consumer_like',
     default_repetitions: 3,
-    brand: { aliases: [] },
+    brand: { alias_suggestions: [], aliases: [] },
     owned_domains: [],
     unintended_domains: [],
     competitors: [],

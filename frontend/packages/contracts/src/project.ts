@@ -390,6 +390,8 @@ export const projectSchema = responseObject({
   default_repetitions: z.number().int(),
   brand: responseObject({
     aliases: z.array(z.string()),
+    /** Domain spellings the brand's names do not already match (AV-25). */
+    alias_suggestions: z.array(z.string()),
     logo_url: z.string().nullable().optional(),
     matching: entityMatchingSchema.optional(),
   }),

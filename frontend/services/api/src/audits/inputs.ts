@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { auditLaunchRequestSchema } from '@citeladder/contracts/audit-requests';
+import { auditScopeSchema } from '@citeladder/contracts/audits';
 import { auditPolicy } from './config.ts';
 /** A launch's markets: distinct ids, `null` for the project default. */
 export const marketIdList = z
@@ -21,8 +22,15 @@ const auditFields = auditLaunchRequestSchema.extend({
 });
 const selectedPrompts = (input: { prompt_set_id?: string | null; prompt_ids: string[] }) =>
   Boolean(input.prompt_set_id || input.prompt_ids.length);
-/** Funding follows the workspace's plan (B32), never the request body. */
-export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt set or prompt IDs');
+/** A browser launch. Funding follows the workspace's plan (B32), never the request body. */
+export const auditRequestInput = auditFields.refine(
+  selectedPrompts,
+  'Select a prompt set or prompt IDs',
+);
+/** Every launch, including the scheduler's and the probe owner's probe runs. */
+export const auditInput = auditFields
+  .extend({ audit_scope: auditScopeSchema.default('brand') })
+  .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 /**
  * A public API launch: the project comes from the path, and the caller caps the
  * estimate's maximum attempt count (every answer times its retry budget).
@@ -30,7 +38,5 @@ export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt s
 export const auditLaunchInput = auditFields
   .omit({ project_id: true })
   .extend({ max_attempts: z.int().min(1) })
-  .refine(selectedPrompts, 'Select a prompt set or prompt IDs')
-  // The estimate guard counts library prompts; a probe asks its own questions.
-  .refine((input) => input.audit_scope !== 'probe', 'Run probes from Perception');
+  .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export type AuditInput = z.output<typeof auditInput>;

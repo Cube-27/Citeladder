@@ -18,6 +18,10 @@ how to add or change an entry.
   into `0001_baseline.sql` (owner, 2026-11-17), and `0002_ai_visibility_gaps`
   into a strict `0001_baseline.sql` with its existing-data branches removed
   (owner, 2026-11-19). Forward migrations from `0002` apply again after each.
+  A third is open: while the owner keeps a single baseline, the AI visibility
+  gaps plan's Phase 2 schema changes edit `0001_baseline.sql` in place and CI
+  builds the database (owner, 2026-11-20); it ends when the owner names the
+  next forward migration, after which edits to the baseline stop again.
   A reset is owner-run, never agent-run.
 - **Access is looked up once per request** and never cached across requests, so
   removing a member, revoking a grant or ending a trial bites on the next

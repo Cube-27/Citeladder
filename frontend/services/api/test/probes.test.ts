@@ -4,6 +4,7 @@
  * out), labelling persists themes, fixed objection groups and theme ranks,
  * the reads score them, and everything stays inside its workspace.
  */
+import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { readAgentContext } from '../src/agent/context-adapter.ts';
@@ -11,10 +12,13 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { settlePromptRun } from '../src/audits/prompt-runs.ts';
+import { createRepairAudit } from '../src/audits/repair.ts';
+import { transitionAudit } from '../src/audits/state.ts';
 import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
-import { enqueueProbeLabelling, probeLabelling } from '../src/probes/labelling.ts';
+import { probeLabelling } from '../src/probes/labelling.ts';
+import { enqueueProbeLabelling } from '../src/probes/launch-end.ts';
 import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
 import { probeObjections } from '../src/probes/objections.ts';
@@ -186,10 +190,34 @@ describe('probe admission', () => {
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .execute();
-    await setProbeSchedule(db, t, { cadence: 'weekly' }, runtime);
-    await setProbeSchedule(db, other.t, { cadence: 'daily' }, runtime);
+    const fingerprint = async (scope: Tenant) =>
+      (await probeStatus(db, scope, runtime)).quote.fingerprint;
+    // Turning a schedule on confirms the shown cost per run.
+    await expect(
+      setProbeSchedule(db, t, { cadence: 'weekly', fingerprint: 'stale' }, runtime),
+    ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    // It serializes on the project without waiting on a launch's key-share lock.
+    await db.transaction().execute(async (launching) => {
+      await launching
+        .selectFrom('projects')
+        .select('id')
+        .where('id', '=', t.projectId)
+        .forKeyShare()
+        .execute();
+      const shown = await fingerprint(t);
+      await db.transaction().execute(async (trx) => {
+        await sql`set local lock_timeout = '5s'`.execute(trx);
+        await setProbeSchedule(trx, t, { cadence: 'weekly', fingerprint: shown }, runtime);
+      });
+    });
+    await setProbeSchedule(
+      db,
+      other.t,
+      { cadence: 'daily', fingerprint: await fingerprint(other.t) },
+      runtime,
+    );
     const [weekly] = await schedules(t);
-    await setProbeSchedule(db, t, { cadence: 'daily' }, runtime);
+    await setProbeSchedule(db, t, { cadence: 'daily', fingerprint: await fingerprint(t) }, runtime);
     expect(await schedules(t)).toEqual([
       {
         id: weekly?.id,
@@ -210,20 +238,43 @@ async function answered(t: Tenant, auditId: string) {
   await db
     .updateTable('audit_tasks')
     .set({ status: 'succeeded', answer_text: 'An answer.', completed_at: new Date() })
+    .where('workspace_id', '=', t.workspaceId)
     .where('audit_id', '=', auditId)
     .execute();
   await db
     .updateTable('audits')
-    .set({ status: 'completed', completed_count: 9, completed_at: new Date() })
+    .set({ completed_count: 9, completed_at: new Date() })
+    .where('workspace_id', '=', t.workspaceId)
     .where('id', '=', auditId)
     .execute();
-  await enqueueProbeLabelling(db, { workspaceId: t.workspaceId, projectId: t.projectId, auditId });
+  await ended(t, auditId, 'completed');
 }
 
+/** Ends a run through the audit state machine, as finalization or cancellation does. */
+async function ended(t: Tenant, auditId: string, status: 'completed' | 'cancelled') {
+  const steps = status === 'completed' ? ['running', 'analyzing', 'reporting', status] : [status];
+  await db.transaction().execute(async (trx) => {
+    for (const step of steps) await transitionAudit(trx, t.workspaceId, auditId, step, new Date());
+  });
+}
+
+const launchOf = async (auditId: string) =>
+  (
+    await db
+      .selectFrom('audits')
+      .select('launch_id')
+      .where('id', '=', auditId)
+      .executeTakeFirstOrThrow()
+  ).launch_id!;
+
 /** A fake gateway answering each labelling request by its question. */
-function labeller(outputs: { known: unknown; objection: unknown; theme: unknown }) {
+function labeller(
+  outputs: { known: unknown; objection: unknown; theme: unknown },
+  onCall: (sent: string) => Promise<void> = async () => {},
+) {
   const fetch = vi.fn(async (_url: unknown, init?: { body?: unknown }) => {
     const sent = String(init?.body ?? '');
+    await onCall(sent);
     let content = outputs.theme;
     if (sent.includes('known for?')) content = outputs.known;
     else if (sent.includes('not choose')) content = outputs.objection;
@@ -313,7 +364,7 @@ describe('probe labelling and reads', () => {
     const labelling = await db
       .selectFrom('probe_labellings')
       .select('outcome')
-      .where('audit_id', '=', auditId)
+      .where('launch_id', '=', await launchOf(auditId))
       .executeTakeFirstOrThrow();
     const market = await probeMarket(db, t);
     expect([labelling.outcome, market.state === 'value' ? market.themes : null]).toEqual([
@@ -329,17 +380,14 @@ describe('probe labelling and reads', () => {
     await label(t, labeller(first));
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
-    expect(
-      market.known_for.map(({ theme, score, raised_in }) => [theme, score, raised_in]),
-    ).toEqual([
-      ['Comfort', 67, 2],
-      ['Other', 30, 1],
+    expect(market.known_for.map(({ theme, score }) => [theme, score])).toEqual([
+      ['Comfort', 67],
+      ['Other', 30],
     ]);
     expect(market.themes).toEqual([
       {
         theme_id: themeId,
         theme: 'Comfort',
-        answers: 3,
         entities: [
           { kind: 'brand', id: null, name: 'Acme Running', score: 60 },
           { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97 },
@@ -359,7 +407,7 @@ describe('probe labelling and reads', () => {
           { theme_id: themeId, theme: 'Comfort' },
           { theme_id: null, theme: 'Other' },
         ],
-        rank_in_top_theme: 2,
+        rank_in_top_theme: { kind: 'rank', rank: 2 },
       },
     ]);
 
@@ -384,24 +432,24 @@ describe('probe labelling and reads', () => {
     await enqueueProbeLabelling(db, {
       workspaceId: t.workspaceId,
       projectId: t.projectId,
-      auditId: secondId,
+      launchId: await launchOf(secondId),
     });
     const objections = await probeObjections(db, t);
     if (objections.state !== 'value') throw new Error('expected a labelled probe');
     expect(
-      objections.groups.map(({ name, score, engines, change, history, sources }) => [
+      objections.groups.map(({ name, score, engines, history, sources }) => [
         name,
         score,
         engines,
-        change,
         history,
         sources,
       ]),
     ).toEqual([
-      ['Too expensive', 100, ['chatgpt'], 3, [97, 100], 0],
+      ['Too expensive', 100, ['chatgpt'], [97, 100], 0],
       // Not raised before is 0 then, never unknown.
-      ['Slow delivery', 90, ['chatgpt'], 90, [0, 90], 0],
-      ['Fit runs small', 0, [], -63, [63, 0], 0],
+      ['Slow delivery', 90, ['chatgpt'], [0, 90], 0],
+      // Not raised in this probe, its sources are not applicable.
+      ['Fit runs small', 0, [], [63, 0], null],
     ]);
     // The average reads only the groups an engine raised in this probe.
     expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
@@ -449,6 +497,119 @@ describe('probe labelling and reads', () => {
     expect(objections.groups.map(({ name, score }) => [name, score])).toEqual([
       ['Too expensive', 100],
     ]);
+  });
+
+  it('labels a launch once, after its last market ends, reading only the markets that answered', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
+    await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
+    const { quote } = await probeStatus(db, t, runtime);
+    const [usId, brId] = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
+    const queued = () =>
+      db
+        .selectFrom('analytics_tasks')
+        .select('payload')
+        .where('workspace_id', '=', t.workspaceId)
+        .where('task_kind', '=', policy.probes.task_kind)
+        .execute();
+    await answered(t, usId!);
+    expect(await queued()).toEqual([]);
+    await ended(t, brId!, 'cancelled');
+    expect(await queued()).toEqual([{ payload: { launch_id: await launchOf(usId!) } }]);
+    const sent: string[] = [];
+    await label(
+      t,
+      labeller(first, async (body) => {
+        sent.push(body);
+      }),
+    );
+    // One objection call groups every market's reasons.
+    expect(sent.filter((body) => body.includes('not choose'))).toHaveLength(1);
+    const market = await probeMarket(db, t);
+    if (market.state !== 'value') throw new Error('expected a labelled probe');
+    expect(market.probe.markets.map((row) => row.country_code)).toEqual(['US']);
+  });
+
+  it('labels each market in its own calls, a later market seeing the groups an earlier one named', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
+    await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
+    const { quote } = await probeStatus(db, t, runtime);
+    const [usId, brId] = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
+    await answered(t, usId!);
+    await answered(t, brId!);
+    const sent: string[] = [];
+    await label(
+      t,
+      labeller(first, async (body) => {
+        sent.push(body);
+      }),
+    );
+    const objections = sent.filter((body) => body.includes('not choose'));
+    expect(objections.map((body) => body.includes('(none yet)'))).toEqual([true, false]);
+    const market = await probeMarket(db, t);
+    if (market.state !== 'value') throw new Error('expected a labelled probe');
+    expect(new Set(market.probe.markets.map((row) => row.country_code))).toEqual(
+      new Set(['BR', 'US']),
+    );
+  });
+
+  it('keeps a probe labelled when a theme and a group are deleted while its calls run', async () => {
+    const { t, themeId } = await probeTenant();
+    const [firstId] = await launch(t);
+    await answered(t, firstId!);
+    await label(t, labeller(first));
+    const fit = await db
+      .selectFrom('probe_objection_groups')
+      .select('id')
+      .where('project_id', '=', t.projectId)
+      .where('name', '=', 'Fit runs small')
+      .executeTakeFirstOrThrow();
+    const [secondId] = await launch(t);
+    await answered(t, secondId!);
+    let deleted = false;
+    await label(
+      t,
+      labeller(first, async () => {
+        if (deleted) return;
+        deleted = true;
+        await deleteTheme(db, { ...t, themeId });
+        await db.deleteFrom('probe_objection_groups').where('id', '=', fit.id).execute();
+      }),
+    );
+    const labellings = await db
+      .selectFrom('probe_labellings')
+      .select('outcome')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect(labellings).toEqual([{ outcome: 'labelled' }, { outcome: 'labelled' }]);
+    const market = await probeMarket(db, t);
+    const objections = await probeObjections(db, t);
+    expect([
+      market.state === 'value' ? market.known_for.map(({ theme }) => theme) : null,
+      objections.state === 'value' ? objections.groups.map(({ name }) => name) : null,
+    ]).toEqual([['Other'], ['Too expensive']]);
+  });
+
+  it('leaves a probe that answered nothing unlabelled, so the reads keep the last labelled one', async () => {
+    const { t } = await probeTenant();
+    const [firstId] = await launch(t);
+    await answered(t, firstId!);
+    await label(t, labeller(first));
+    const [failedId] = await launch(t);
+    await ended(t, failedId!, 'cancelled');
+    await label(t, labeller(first));
+    const market = await probeMarket(db, t);
+    expect(market.state === 'value' ? market.probe.launch_id : null).toBe(await launchOf(firstId!));
+  });
+
+  it('refuses to repair a probe run: a new probe is its retry', async () => {
+    const { t } = await probeTenant();
+    const [auditId] = await launch(t);
+    await ended(t, auditId!, 'cancelled');
+    await expect(createRepairAudit(db, t.workspaceId, auditId!, {}, runtime)).rejects.toMatchObject(
+      { status: 409 },
+    );
   });
 
   it("seeds an Agent chat with one objection and its answers' cited sources, in its workspace only", async () => {

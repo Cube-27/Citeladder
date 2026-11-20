@@ -11,7 +11,7 @@ const { project, downloadOverviewReport, queryResult, promptsResult, layoutResul
       name: 'Acme',
       brand_name: 'Acme',
       website_url: 'https://acme.com',
-      brand: { aliases: [], logo_url: null },
+      brand: { alias_suggestions: [], aliases: [], logo_url: null },
       competitors: [],
     },
     downloadOverviewReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
