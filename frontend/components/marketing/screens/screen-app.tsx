@@ -153,11 +153,6 @@ export function ScreenSidebar({
         <span className="cl-app-mode">
           <ScreenTabs items={[{ label: 'Dashboard' }, { label: 'Agent' }]} selected={mode} />
         </span>
-        <span className="cl-app-palette">
-          <Search className="text-ink-muted size-4" aria-hidden />
-          <span>Search or jump to…</span>
-          <Kbd>Ctrl K</Kbd>
-        </span>
       </div>
       <div className="cl-app-nav">
         {groups.map((group) => (
@@ -200,7 +195,7 @@ export function ScreenAppPage({
     <div className="cl-screen cl-screen--app">
       <ScreenSidebar active={active} mode={mode} />
       <div className="cl-app-main">
-        <ScreenPageHeader title={title} actions={actions} />
+        <ScreenPageHeader title={title} actions={actions} mode={mode} />
         {tabs && (
           <div className="cl-app-bands">
             <ScreenTabs items={tabs.items.map((label) => ({ label }))} selected={tabs.selected} />
@@ -265,19 +260,27 @@ function HeaderActions({ actions }: Readonly<{ actions: PageActions }>) {
   }
 }
 
-/** The page title on the ruled bar the sidebar's project switcher shares, then its actions. */
+/**
+ * The page title on the ruled bar the sidebar's project switcher shares, then,
+ * as the app's masthead orders them, the page's actions, Search and "Ask agent"
+ * (which the Agent's own pages do not carry).
+ */
 export function ScreenPageHeader({
   title,
   actions,
-}: Readonly<{ title: string; actions?: PageActions }>) {
+  mode = 'Dashboard',
+}: Readonly<{ title: string; actions?: PageActions; mode?: 'Dashboard' | 'Agent' }>) {
   return (
     <div className="cl-app-topbar cl-app-header">
       <p className={textRole('pageTitle')}>{title}</p>
-      {actions && (
-        <span className="cl-app-actions">
-          <HeaderActions actions={actions} />
-        </span>
-      )}
+      <span className="cl-app-actions">
+        {actions && <HeaderActions actions={actions} />}
+        <ScreenButton icon={Search}>
+          Search
+          <Kbd>Ctrl K</Kbd>
+        </ScreenButton>
+        {mode === 'Dashboard' && <ScreenButton icon={ICONS.agent}>Ask agent</ScreenButton>}
+      </span>
     </div>
   );
 }
