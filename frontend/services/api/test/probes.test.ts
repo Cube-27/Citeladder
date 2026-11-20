@@ -18,7 +18,7 @@ import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
 import { probeObjections } from '../src/probes/objections.ts';
 import { setProbeSchedule } from '../src/probes/schedule.ts';
-import { createTheme } from '../src/projects/themes.ts';
+import { createTheme, deleteTheme } from '../src/projects/themes.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant, managedPlan } from './audit-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -259,6 +259,24 @@ const first = {
 };
 
 describe('probe labelling and reads', () => {
+  it('still labels a probe whose theme was deleted after admission, dropping that theme', async () => {
+    const { t, themeId } = await probeTenant();
+    const [auditId] = await launch(t);
+    await answered(t, auditId);
+    await deleteTheme(db, { ...t, themeId });
+    await label(t, labeller(first));
+    const labelling = await db
+      .selectFrom('probe_labellings')
+      .select('outcome')
+      .where('audit_id', '=', auditId)
+      .executeTakeFirstOrThrow();
+    const market = await probeMarket(db, t);
+    expect([labelling.outcome, market.state === 'value' ? market.themes : null]).toEqual([
+      'labelled',
+      [],
+    ]);
+  });
+
   it('labels a probe once, scores Market and Objections, then maps the next probe onto the same groups', async () => {
     const { t, themeId, rivalId } = await probeTenant();
     const [firstId] = await launch(t);

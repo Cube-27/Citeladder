@@ -154,4 +154,27 @@ describe('objectionsSummary', () => {
       widest: undefined,
     });
   });
+
+  it('keeps an objection an engine raised even when its average rounds to 0', () => {
+    const summary = objectionsSummary({
+      state: 'value',
+      probe,
+      brand: 'Acme',
+      answers: 30,
+      groups: [group('Fit', 0, ['claude']), group('Slow', 0, [])],
+    });
+    expect(summary.raised.map((item) => item.name)).toEqual(['Fit']);
+    expect(summary.headline).toBe('Fit is the objection AI raises first');
+  });
+
+  it('says no engine answered when the probe has no objection answers', () => {
+    const summary = objectionsSummary({
+      state: 'value',
+      probe,
+      brand: 'Acme',
+      answers: 0,
+      groups: [],
+    });
+    expect(summary.headline).toBe('No engine answered the objection question');
+  });
 });

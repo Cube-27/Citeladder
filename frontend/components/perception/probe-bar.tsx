@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useIsFetching, useMutation } from '@tanstack/react-query';
 
 import type { ProbeRun, ProbeStatus } from '@citeladder/contracts/probes';
 
@@ -11,6 +11,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeBusy, probeMutations } from '@/lib/api/probes';
+import { queryKeys } from '@/lib/api/query-keys';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
@@ -60,6 +61,8 @@ export function ProbeBar({
   const mayRun = useWorkspaceCapability('run');
   const mayWrite = useWorkspaceCapability('write');
   const schedule = useMutation(probeMutations.schedule(scope));
+  // After Run probe the cached status is stale until the re-read lands: no second launch.
+  const refreshing = useIsFetching({ queryKey: queryKeys.projects.probes(scope) }) > 0;
   return (
     <Section variant="framed">
       <Stack gap="item">
@@ -78,7 +81,11 @@ export function ProbeBar({
               disabled={!mayWrite || schedule.isPending}
               onValueChange={(cadence) => schedule.mutate(cadence === 'off' ? null : cadence)}
             />
-            <Button variant="primary" disabled={!mayRun || probeBusy(status)} onClick={onRun}>
+            <Button
+              variant="primary"
+              disabled={!mayRun || refreshing || probeBusy(status)}
+              onClick={onRun}
+            >
               Run probe
             </Button>
           </Inline>
@@ -108,10 +115,11 @@ export function ProbeEmpty({
         description="Results appear when it finishes."
       />
     );
+  const failed = status.latest?.state === 'failed' || status.latest?.state === 'unavailable';
   return (
     <StateBlock
       kind="empty"
-      heading="No market probe yet"
+      heading={failed ? "The last probe couldn't finish" : 'No market probe yet'}
       description="A probe asks each engine what you're known for, which brands lead each theme, and why a buyer might not choose you. It's paid from your AI credits."
       action={mayRun ? <Button onClick={onRun}>Run probe</Button> : undefined}
     />

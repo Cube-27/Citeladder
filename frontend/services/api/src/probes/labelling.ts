@@ -207,6 +207,8 @@ async function label(
         answer,
       ]);
   for (const [themeId, answers] of byTheme) {
+    // A theme deleted since admission has no row to label against.
+    if (!themes.some((theme) => theme.id === themeId)) continue;
     const request = {
       user: themeRequest(probes, { question: answers[0]?.questionText ?? '', answers }),
       schema: themeOutput,

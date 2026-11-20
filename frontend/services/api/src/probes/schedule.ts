@@ -9,17 +9,36 @@ import { auditRuntime, type AuditRuntime } from '../audits/config.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
 import { createSchedule, deleteSchedule, updateSchedule } from '../audits/schedules.ts';
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { probeLaunchPlan } from './status.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 
-export async function setProbeSchedule(
+export function setProbeSchedule(
+  db: Database,
+  scope: Scope,
+  input: ProbeScheduleRequest,
+  runtime: AuditRuntime = auditRuntime(),
+) {
+  return inTransaction(db, async (trx) => {
+    // The project row serializes schedule writes, so concurrent requests keep one schedule.
+    await trx
+      .selectFrom('projects')
+      .select('id')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', scope.projectId)
+      .forUpdate()
+      .executeTakeFirst();
+    await applySchedule(trx, scope, input, runtime);
+  });
+}
+
+async function applySchedule(
   db: Database,
   scope: Scope,
   { cadence }: ProbeScheduleRequest,
-  runtime: AuditRuntime = auditRuntime(),
+  runtime: AuditRuntime,
 ) {
   const existing = await db
     .selectFrom('audit_schedules')
