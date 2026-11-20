@@ -104,6 +104,12 @@ async function resolvePrompts(db: OriginDb, scope: OriginScope, refs: OriginRefs
     unavailable_prompt_count: chosen.size - prompts.length,
   };
 }
+async function resolveObjection(db: OriginDb, scope: OriginScope, refs: OriginRefs) {
+  if (!refs.objection_group_id) return null;
+  const objection = await probeObjection(db, scope, refs.objection_group_id);
+  if (!objection) throw new AgentError('agent_context_unavailable');
+  return objection;
+}
 async function resolveOrigins(
   db: Parameters<ContextReader>[0],
   scope: Parameters<ContextReader>[1],
@@ -173,10 +179,7 @@ async function resolveOrigins(
   if (refs.page_snapshot_reference && !fetchedPage)
     throw new AgentError('agent_context_unavailable');
   const targetPrompts = await resolvePrompts(db, scope, refs);
-  const objection = refs.objection_group_id
-    ? await probeObjection(db, scope, refs.objection_group_id)
-    : null;
-  if (refs.objection_group_id && !objection) throw new AgentError('agent_context_unavailable');
+  const objection = await resolveObjection(db, scope, refs);
   const targetUrl =
     target?.normalized_url ||
     refs.target_url?.trim() ||
@@ -318,7 +321,6 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
           output_revision_reference: refs.output_revision_reference ?? null,
           page_snapshot_reference: refs.page_snapshot_reference ?? null,
           prompt_reference: refs.prompt_reference ?? null,
-          objection_group_id: refs.objection_group_id ?? null,
         }),
       ),
     };
