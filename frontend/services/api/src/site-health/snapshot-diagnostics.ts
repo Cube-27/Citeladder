@@ -54,28 +54,32 @@ class DimensionFold {
   checkedPages = 0;
   failingPages = 0;
   evidence: EvidencePage[] = [];
+  /** Counts the row on its check; true when it fails a page-scope check. */
+  private countCheck(row: Evaluation) {
+    const check = this.checks.get(row.rule_id) ?? {
+      scope: row.scope,
+      pillar: row.readiness_dimension ?? '',
+      counts: emptyCounts(),
+      failures: 0,
+      failingPages: 0,
+      failed: false,
+    };
+    this.checks.set(row.rule_id, check);
+    count(check.counts, row.outcome);
+    if (!failing(row)) return false;
+    check.failed = true;
+    if (check.scope === 'page') return true;
+    if (check.scope !== 'site')
+      check.failures += Math.max(1, reportedFailures(record(row.evidence).failure_count));
+    return false;
+  }
   addPage(page: DiagnosticPage, rows: Evaluation[]) {
     const failures: Evaluation[] = [];
     let checked = false;
     const failedRules = new Set<string>();
     for (const row of rows) {
       count(this.counts, row.outcome);
-      const check = this.checks.get(row.rule_id) ?? {
-        scope: row.scope,
-        pillar: row.readiness_dimension ?? '',
-        counts: emptyCounts(),
-        failures: 0,
-        failingPages: 0,
-        failed: false,
-      };
-      count(check.counts, row.outcome);
-      if (failing(row)) {
-        check.failed = true;
-        if (check.scope === 'page') failedRules.add(row.rule_id);
-        else if (check.scope !== 'site')
-          check.failures += Math.max(1, reportedFailures(record(row.evidence).failure_count));
-      }
-      this.checks.set(row.rule_id, check);
+      if (this.countCheck(row)) failedRules.add(row.rule_id);
       if (row.scope !== 'page') continue;
       if (['satisfied', 'partial', 'missing'].includes(row.outcome)) checked = true;
       if (failing(row)) failures.push(row);

@@ -188,6 +188,8 @@ async function sharedSiteEvaluations(db: Database, crawl: Crawl) {
   return [...shared.values()].sort((a, b) => compareText(a.id, b.id));
 }
 
+const TASK_ENDED = new Set(['succeeded', 'failed', 'cancelled']);
+
 class ClassificationFold {
   kinds: Record<string, number> = {};
   reasons: Record<string, number> = {};
@@ -204,27 +206,29 @@ class ClassificationFold {
     for (const row of rows) {
       if (expectedByUrl.get(row.site_url_id)?.result_artifact_id !== row.artifact_id) continue;
       completed.add(row.site_url_id);
-      this.analysisIds.push(row.id);
-      this.artifactIds.add(row.artifact_id);
-      this.kinds[row.page_kind] = (this.kinds[row.page_kind] ?? 0) + 1;
-      if (row.page_kind === 'other') {
-        this.other++;
-        const reason = scalarText(row.other_reason) || 'page_purpose_unresolved';
-        this.reasons[reason] = (this.reasons[reason] ?? 0) + 1;
-      } else this.classified++;
+      this.addAnalysis(row);
     }
     for (const task of expected) {
       this.taskIds.push(task.id);
-      if (
-        completed.has(task.site_url_id!) ||
-        !['succeeded', 'failed', 'cancelled'].includes(task.status)
-      )
-        continue;
+      if (completed.has(task.site_url_id!) || !TASK_ENDED.has(task.status)) continue;
       this.errors++;
-      const reason = task.error_code || 'classification_failed';
-      this.reasons[reason] = (this.reasons[reason] ?? 0) + 1;
+      this.addReason(task.error_code || 'classification_failed');
       if (task.result_artifact_id) this.artifactIds.add(task.result_artifact_id);
     }
+  }
+  private addAnalysis(row: Analysis) {
+    this.analysisIds.push(row.id);
+    this.artifactIds.add(row.artifact_id);
+    this.kinds[row.page_kind] = (this.kinds[row.page_kind] ?? 0) + 1;
+    if (row.page_kind !== 'other') {
+      this.classified++;
+      return;
+    }
+    this.other++;
+    this.addReason(scalarText(row.other_reason) || 'page_purpose_unresolved');
+  }
+  private addReason(reason: string) {
+    this.reasons[reason] = (this.reasons[reason] ?? 0) + 1;
   }
   result() {
     const expected = this.taskIds.length;

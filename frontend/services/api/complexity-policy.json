@@ -128,7 +128,6 @@
       "services/api/src/site-health/reads/page-rows.ts::pageRows": 13,
       "services/api/src/site-health/reads/pages.ts::pageDetail": 22,
       "services/api/src/site-health/resolution-evidence.ts::canonicalResolution": 14,
-      "services/api/src/site-health/score-summary.ts::loadMeasurementProjection": 14,
       "services/api/src/site-health/site-setup-task.ts::siteEvidence": 14,
       "services/api/src/source-pages/differentiation.ts::refreshDifferentiation::<anonymous>": 16,
       "services/api/src/source-pages/persistence.ts::recordInspection::<anonymous>": 32,

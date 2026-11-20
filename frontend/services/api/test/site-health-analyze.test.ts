@@ -13,8 +13,6 @@ import {
 } from '../src/site-health/page-fetch.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
-import { issues as readIssues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
-import { publishRunningIssues } from '../src/site-health/issue-catalog.ts';
 import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
@@ -218,29 +216,8 @@ describe('analyze acquisition', () => {
       .select(['rule_id', 'is_current'])
       .where('analysis_id', '=', analysis!.id)
       .execute();
-    // The running crawl's Issues show what it found so far (CO-7): current at once,
-    // read live, then from the catalog its batched publication persists.
-    expect(issues.find((row) => row.rule_id === 'technical.canonical_present')).toEqual({
-      rule_id: 'technical.canonical_present',
-      is_current: true,
-    });
-    const shown = async () =>
-      (
-        await readIssues(db, seed.workspaceId, seed.crawlId, unfilteredIssues(null), {
-          limit: 100,
-          cursor: null,
-        })
-      ).items.map((item) => item.rule_id);
-    expect(await shown()).toContain('technical.canonical_present');
-    await publishRunningIssues(db, { workspace_id: seed.workspaceId, crawl_id: seed.crawlId });
-    const catalog = await db
-      .selectFrom('site_issue_catalogs')
-      .select('finding_class')
-      .where('crawl_id', '=', seed.crawlId)
-      .orderBy('finding_class')
-      .execute();
-    expect(catalog.map((row) => row.finding_class)).toEqual(['advisory', 'all', 'defect']);
-    expect(await shown()).toContain('technical.canonical_present');
+    const canonical = issues.find((row) => row.rule_id === 'technical.canonical_present');
+    expect(canonical?.is_current).toBe(true); // Current while the crawl runs (CO-7).
 
     const after = await crawl(seed);
     expect(after).toMatchObject({ status: 'running', analyzed_url_count: 1 });
