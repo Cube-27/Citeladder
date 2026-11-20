@@ -36,6 +36,14 @@ const filters = { start_date: day, end_date: day },
 let seed: SiteSeed, sourceId: string, artifactId: string;
 const scope = () => ({ workspaceId: seed.workspaceId, projectId: seed.projectId });
 const guide = hash('https://example.test/guide');
+type LandingSet = { sessions?: number; analytics_quality?: string; reporting_timezone?: string };
+const setLanding = (sources: string[], values: LandingSet) =>
+  db
+    .updateTable('ai_referral_landing_daily')
+    .set(values)
+    .where('project_id', '=', seed.projectId)
+    .where('ai_source', 'in', sources)
+    .execute();
 beforeAll(async () => {
   crawlLogs.ingestion_enabled = true;
   seed = await fixtures.crawl();
@@ -247,21 +255,11 @@ describe('A3 persisted Pages join', () => {
       expect(detail.crawls.map((r) => r.bot_id)).toEqual(['openai_oai_searchbot']);
       expect(detail.referrals.map((r) => [r.ai_source, r.sessions])).toEqual([['claude', 5]]);
       expect(detail.provenance.bounded).toBe(true);
-      await db
-        .updateTable('ai_referral_landing_daily')
-        .set({ sessions: 5 })
-        .where('project_id', '=', seed.projectId)
-        .where('ai_source', '=', 'chatgpt')
-        .execute();
+      await setLanding(['chatgpt'], { sessions: 5 });
       expect((await urlRead(db, scope(), guide, filters)).referrals[0]?.ai_source).toBe('chatgpt');
     } finally {
       aiTraffic.max_timeline_items = originalCap;
-      await db
-        .updateTable('ai_referral_landing_daily')
-        .set({ sessions: 3 })
-        .where('project_id', '=', seed.projectId)
-        .where('ai_source', '=', 'chatgpt')
-        .execute();
+      await setLanding(['chatgpt'], { sessions: 3 });
     }
   });
   it('narrows a path detail to one crawler when the drawer names it', async () => {
@@ -309,51 +307,15 @@ describe('A3 persisted Pages join', () => {
       .where('reporting_date', '=', new Date(day))
       .execute();
     // A URL's flags are the distinct union of its landing rows, without multiplying its sums.
-    const flag = (source: string, flags: string[]) =>
-      db
-        .updateTable('ai_referral_landing_daily')
-        .set({ analytics_quality: JSON.stringify(flags) })
-        .where('project_id', '=', seed.projectId)
-        .where('ai_source', '=', source)
-        .execute();
-    const quiet = result.items.find((r) => r.display_path === '/quiet')!;
-    const landing = await db
-      .selectFrom('ai_referral_landing_daily')
-      .selectAll()
-      .where('project_id', '=', seed.projectId)
-      .where('ai_source', '=', 'claude')
-      .executeTakeFirstOrThrow();
-    const quietLanding = randomUUID();
-    await db
-      .insertInto('ai_referral_landing_daily')
-      .values({
-        ...landing,
-        id: quietLanding,
-        url_hash: quiet.url_hash,
-        canonical_url: quiet.canonical_url,
-        display_path: '/quiet',
-        analytics_quality: '[]',
-        source_metric_row_ids: JSON.stringify(landing.source_metric_row_ids),
-      })
-      .execute();
-    await flag('chatgpt', ['thresholding', 'sampling']);
-    await flag('claude', ['thresholding']);
-    try {
-      const flagged = await pagesRead(db, scope(), filters);
-      expect(flagged.items.find((r) => r.url_hash === guide)).toMatchObject({
-        referrals: { state: 'flagged', value: 8, reason: 'sampling, thresholding' },
-        key_events: 3,
-      });
-      expect(flagged.items.find((r) => r.url_hash === quiet.url_hash)?.referrals).toMatchObject({
-        state: 'flagged',
-        value: 5,
-        reason: 'thresholding',
-      });
-    } finally {
-      await db.deleteFrom('ai_referral_landing_daily').where('id', '=', quietLanding).execute();
-      await flag('chatgpt', []);
-      await flag('claude', []);
-    }
+    await setLanding(['chatgpt'], { analytics_quality: '["thresholding","sampling"]' });
+    await setLanding(['claude'], { analytics_quality: '["thresholding"]' });
+    expect(
+      (await pagesRead(db, scope(), filters)).items.find((r) => r.url_hash === guide),
+    ).toMatchObject({
+      referrals: { state: 'flagged', value: 8, reason: 'sampling, thresholding' },
+      key_events: 3,
+    });
+    await setLanding(['chatgpt', 'claude'], { analytics_quality: '[]' });
   });
   it('binds keyset cursors to window, folder, verification and sort, and exports the same saved measures', async () => {
     const first = await pagesRead(db, scope(), { ...filters, limit: 1 });
@@ -488,19 +450,11 @@ describe('A3 persisted Pages join', () => {
     }
   });
   it('keeps timezone mismatches non-comparable, flagged absence unavailable, and missing connections distinct', async () => {
-    await db
-      .updateTable('ai_referral_landing_daily')
-      .set({ reporting_timezone: 'Asia/Kolkata' })
-      .where('project_id', '=', seed.projectId)
-      .execute();
+    await setLanding(['chatgpt', 'claude'], { reporting_timezone: 'Asia/Kolkata' });
     const result = await pagesRead(db, scope(), filters),
       row = result.items.find((r) => r.url_hash === guide)!;
     expect([row.crawl.state, row.referrals.state]).toEqual(['non_comparable', 'non_comparable']);
-    await db
-      .updateTable('ai_referral_landing_daily')
-      .set({ reporting_timezone: 'UTC' })
-      .where('project_id', '=', seed.projectId)
-      .execute();
+    await setLanding(['chatgpt', 'claude'], { reporting_timezone: 'UTC' });
     // Even a complete empty crawl leg has a reporting timezone to compare.
     await db
       .updateTable('crawl_log_coverage_daily')

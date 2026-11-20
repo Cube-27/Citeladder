@@ -28,7 +28,7 @@ import { hardExcluded, inScope } from './url-admission.ts';
 const a = policy.site_health.page_analysis.acquisition;
 const codes = a.error_codes;
 const BOT_MARKERS = a.bot_block_body_markers.map((marker) => marker.toLowerCase());
-// A gate refusal that #robotsDenial no longer confirms (its cache entry expired) may pass later.
+// A gate refusal with no cached policy to classify (transient, or expired) may pass later.
 const RETRYABLE = new Set([codes.timeout, codes.connection_failed, codes.robots_unavailable]);
 const ROBOTS_GATE_CODES = new Set(['robots_disallowed', 'robots_unavailable']);
 const FETCH_ERROR_CODES: Record<string, string> = {
@@ -142,8 +142,12 @@ export class SitePageFetcher {
   }
 
   /** The robots decision for the requested URL, before any page request. */
-  async #robotsDenial(url: URL, handling: CrawlRobotsHandling): Promise<SiteFetchFailure | null> {
-    const robots = await this.acquirer.robots(url.origin);
+  async #robotsDenial(
+    url: URL,
+    handling: CrawlRobotsHandling,
+    pending = this.acquirer.robots(url.origin),
+  ): Promise<SiteFetchFailure | null> {
+    const robots = await pending;
     if (robots.admits(url.href, handling)) return null;
     let code: string = codes.robots_denied;
     let detail = 'robots.txt disallows the crawler user-agent for this URL';
@@ -160,6 +164,14 @@ export class SitePageFetcher {
     // A refused one (too large, redirect limit, SSRF, suppression) will not.
     const retryable = robots.transient;
     return { ok: false, code, detail, retryable, calls: [], latencyMs: null };
+  }
+
+  /** The shared gate refuses a redirect hop with two codes; classify it as the requested URL is. */
+  async #hopDenial(error: unknown, hop: URL | undefined, handling: RobotsChoice) {
+    if (!hop || !(error instanceof FetchError) || !ROBOTS_GATE_CODES.has(error.code)) return null;
+    // Cache only: a transient policy is never cached, and asking again would repeat its retries.
+    const cached = this.acquirer.cachedRobots(hop.origin);
+    return cached ? this.#robotsDenial(hop, handling(hop), cached) : null;
   }
 
   /** Whether robots.txt excludes any URL this fetch requested under an `ignore` choice. */
@@ -197,7 +209,7 @@ export class SitePageFetcher {
     if (denied) return denied;
     const calls: FetchCall[] = [];
     const started = performance.now();
-    let lastHop: URL | null = null;
+    const hops: URL[] = [];
     try {
       const page = await this.acquirer.fetch(url.href, {
         signal: options.signal,
@@ -209,7 +221,7 @@ export class SitePageFetcher {
         headerNames: a.persisted_response_headers,
         // Admission screens the page and every redirect hop, never robots.txt.
         admit: (hop) => {
-          lastHop = hop;
+          hops.push(hop);
           if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
         },
         onCall: (call) => calls.push(call),
@@ -230,11 +242,8 @@ export class SitePageFetcher {
       return { ok: true, page, calls, latencyMs, robotsExcluded };
     } catch (error) {
       const latencyMs = Math.round(performance.now() - started);
-      // The shared gate refuses a redirect hop with two codes; classify it as the requested URL is.
-      if (lastHop && error instanceof FetchError && ROBOTS_GATE_CODES.has(error.code)) {
-        const denied = await this.#robotsDenial(lastHop, handling(lastHop));
-        if (denied) return { ...denied, calls, latencyMs };
-      }
+      const denied = await this.#hopDenial(error, hops.at(-1), handling);
+      if (denied) return { ...denied, calls, latencyMs };
       const code = errorCode(error);
       return {
         ok: false,
