@@ -354,6 +354,43 @@ describe('Site Health lock order', () => {
       .executeTakeFirstOrThrow();
     expect(crawl).toEqual({ discovery_status: 'completed', analysis_status: 'running' });
   });
+
+  it('recounts a stopped crawl under its lock, so a task settling meanwhile is not counted running', async () => {
+    const seed = await fixtures.crawl('running');
+    const page = await leased(await fixtures.analyzable(seed, '/a'), 'stop-recount');
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'cancelled', completed_at: new Date() })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    const running = async () => {
+      const row = await db
+        .selectFrom('site_crawls')
+        .select(sql<number>`(terminal_counters ->> 'running')::int`.as('running'))
+        .where('id', '=', seed.crawlId)
+        .executeTakeFirstOrThrow();
+      return row.running;
+    };
+    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    expect(await running()).toBe(1);
+    const writer = await db.startTransaction().execute();
+    try {
+      await lockedCrawl(writer, seed);
+      const reconcile = reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+      await blocksAnother(await backendPid(writer));
+      // The task Stop skipped cancels itself; no crawl column moves.
+      await writer
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'cancelled', completed_at: new Date() })
+        .where('id', '=', page.id)
+        .execute();
+      await writer.commit().execute();
+      await reconcile;
+    } finally {
+      if (!writer.isCommitted) await writer.rollback().execute();
+    }
+    expect(await running()).toBe(0);
+  });
 });
 
 /** The analyze task leased to `owner`, as a claim hands it to the worker. */

@@ -20,7 +20,6 @@ import { pageRerunSql } from './page-rerun.ts';
 import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { publishRunningIssues } from './issue-catalog.ts';
-import { taskCounters, type TaskCounters } from './reads/crawl-counters.ts';
 import {
   provisionalSummary,
   refreshLiveScoreSummary,
@@ -29,11 +28,7 @@ import {
   type LiveSummary,
 } from './snapshot.ts';
 import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
-import {
-  persistLiveCounters,
-  persistTerminalCounters,
-  writeTerminalCounters,
-} from './terminal-counters.ts';
+import { persistLiveCounters, persistTerminalCounters } from './terminal-counters.ts';
 import { drainedFinalizeTask, enqueueFinalize, failFinalization } from './terminal-publication.ts';
 
 const logger = getLogger('app.workers.site_health.lifecycle');
@@ -82,10 +77,14 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: Reconci
   if (rescore) await refreshLiveScoreSummary(db, crawl);
 }
 
-/** A reconcile's crawl-wide reads, made from an unlocked copy of the row. */
+/**
+ * A reconcile's crawl-wide reads, made from an unlocked copy of the row. A
+ * cancelled crawl recounts under the lock: its counter writes move no state
+ * column, so an earlier unlocked count could overwrite a later one.
+ */
 type Assessed =
   | { kind: 'settled' }
-  | { kind: 'cancelled'; crawl: Crawl; counters: TaskCounters }
+  | { kind: 'recount' }
   | { kind: 'active'; crawl: Crawl; drained: boolean; score: LiveSummary | null };
 
 async function assessUnlocked(
@@ -95,8 +94,7 @@ async function assessUnlocked(
 ): Promise<Assessed> {
   // A copy: the assessment moves the row's state in memory, and `read` is compared later.
   const crawl = { ...read };
-  if (crawl.status === 'cancelled')
-    return { kind: 'cancelled', crawl, counters: await taskCounters(db, crawl) };
+  if (crawl.status === 'cancelled') return { kind: 'recount' };
   if (!isActiveCrawl(crawl.status)) return { kind: 'settled' };
   const { drained } = await assessCrawl(db, crawl);
   const rescore =
@@ -110,22 +108,11 @@ async function assessUnlocked(
 }
 
 /** Write what `assessUnlocked` read, under the crawl lock of a row no state write moved since. */
-async function applyAssessed(db: Database, assessed: Exclude<Assessed, { kind: 'settled' }>) {
-  switch (assessed.kind) {
-    case 'cancelled':
-      return writeTerminalCounters(db, assessed.crawl, assessed.counters);
-    case 'active': {
-      const { crawl, score } = assessed;
-      if (assessed.drained) return settleDrained(db, crawl, async () => score);
-      await saveState(db, crawl);
-      if (score) await writeScoreSummary(db, crawl, score);
-      return;
-    }
-    default: {
-      const unhandled: never = assessed;
-      return unhandled;
-    }
-  }
+async function applyAssessed(db: Database, assessed: Extract<Assessed, { kind: 'active' }>) {
+  const { crawl, score } = assessed;
+  if (assessed.drained) return settleDrained(db, crawl, async () => score);
+  await saveState(db, crawl);
+  if (score) await writeScoreSummary(db, crawl, score);
 }
 
 /** NO KEY UPDATE: FOR UPDATE would block the FK checks of every child insert in the crawl. */
@@ -178,9 +165,9 @@ export async function reconcileCrawl(
   await db.transaction().execute(async (trx) => {
     const crawl = await lockCrawl(trx, workspaceId, crawlId);
     if (!crawl) return;
-    await (stateMoved(read, crawl)
-      ? reconcileLockedCrawl(trx, crawl, options)
-      : applyAssessed(trx, assessed));
+    await (assessed.kind === 'active' && !stateMoved(read, crawl)
+      ? applyAssessed(trx, assessed)
+      : reconcileLockedCrawl(trx, crawl, options));
   });
 }
 

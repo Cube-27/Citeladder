@@ -218,8 +218,6 @@ describe('analyze acquisition', () => {
       .execute();
     const canonical = issues.find((row) => row.rule_id === 'technical.canonical_present');
     expect(canonical?.is_current).toBe(true); // Current while the crawl runs (CO-7).
-
-    // The page commit leaves the crawl row's count to its reconciles; the live counters count it.
     const after = await crawl(seed);
     expect(after).toMatchObject({ status: 'running', analyzed_url_count: 0 });
     expect((await crawlCounters(db, after)).analyzed).toBe(1);
@@ -259,8 +257,7 @@ describe('analyze acquisition', () => {
       [discovered.artifactId, false],
       [discovered.artifactId, true],
     ]);
-    // Two commits of one page count it once.
-    expect((await crawlCounters(db, await crawl(seed))).analyzed).toBe(1);
+    expect((await crawlCounters(db, await crawl(seed))).analyzed).toBe(1); // One page, two commits.
   });
 
   it.each(['product', 'category', 'other'])(
