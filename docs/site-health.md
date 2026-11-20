@@ -288,8 +288,7 @@ task cancels itself and the cancelled crawl is published by its own `finalize`.
 timer beside the claim loop, never before a claim: recovery every
 `poll_interval_seconds` (at once again while a reclaim batch fills), the
 backstops every `backstop_interval_seconds`. Every pass awaits the job before
-it returns, so an empty drain still runs them. A `/run` request's scoped worker
-reconciles only its crawl, on the same interval and score cadence.
+it returns, so an empty drain still runs them.
 
 - **Stalled:** an active crawl with no open task and no write for
   `stalled_crawl_reconcile_seconds` is reconciled.
