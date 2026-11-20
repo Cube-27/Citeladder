@@ -1,9 +1,9 @@
-import { useContext, type ReactNode } from 'react';
+import { useContext } from 'react';
 import { Cell, Pie, PieChart } from 'recharts';
 
 import { chartPercent } from '@/components/ui/chart';
 import { ChartTable } from '@/components/ui/chart-frame';
-import { roleColor, seriesColor } from '@/components/ui/chart-tooltip';
+import { seriesColor } from '@/components/ui/chart-tooltip';
 import {
   SERIES_FILL,
   SeriesTonesContext,
@@ -144,53 +144,6 @@ export function PartDonut({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-type CountPart = Readonly<{
-  key: string;
-  /** Its name in the legend, e.g. a StatusMark. */
-  term: ReactNode;
-  value: number;
-  /** A `stroke-*` class naming its segment's colour role (`stroke-negative`). */
-  stroke: string;
-}>;
-
-/**
- * CountDonut — a few named counts, one per row, with their ring on the right.
- * The legend carries every figure, so the ring is decorative.
- */
-export function CountDonut({
-  parts,
-  label,
-}: Readonly<{ parts: readonly CountPart[]; /** Names the legend. */ label: string }>) {
-  const whole = parts.reduce((sum, part) => sum + part.value, 0);
-  return (
-    <div className="flex min-w-0 items-center gap-x-6">
-      <dl // NOSONAR -- a <fieldset> would add form-group semantics to a list of counts
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- as above
-        role="group"
-        aria-label={label}
-        className="grid gap-2"
-      >
-        {parts.map((part) => (
-          <div key={part.key} className="flex items-center justify-between gap-4">
-            <dt>{part.term}</dt>
-            <dd className={textRole('heading', 'tabular-nums')}>{formatCount(part.value)}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="w-24 shrink-0">
-        <DonutRing
-          size={96}
-          segments={parts.map((part) => ({
-            key: part.key,
-            share: whole ? part.value / whole : 0,
-            color: roleColor(part.stroke, 'stroke'),
-          }))}
-        />
-      </div>
     </div>
   );
 }
