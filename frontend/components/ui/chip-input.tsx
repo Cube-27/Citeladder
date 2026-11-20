@@ -120,45 +120,17 @@ export function ValuesInput({
 
   return (
     // The add field grows to fill the rest of its line, so a press there lands in it.
-    <div
-      ref={box}
-      className={cn(
-        'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1 rounded-control p-1 transition-[border-color,box-shadow]',
-        // The accept tick sits in the top corner, clear of the wrapping tokens.
-        accepting && 'pe-8',
-        variant === 'field'
-          ? cn('min-h-[var(--control-md)]', FIELD_EDGE)
-          : 'min-h-10 border border-transparent hover:bg-state-hover',
-        disabled && 'cursor-not-allowed opacity-45',
-      )}
-    >
+    <div ref={box} className={boxClasses({ variant, accepting, disabled })}>
       {items.length ? (
         <ul aria-label={label} className="contents">
           {items.map((item, index) => (
-            <li
+            <Token
               key={item.value}
-              className={cn(
-                'group/token type-body rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
-                item.suggested ? 'border-control-line border border-dashed' : 'bg-state-selected',
-              )}
-            >
-              <span className="min-w-0 truncate" title={item.value}>
-                {item.value}
-                {item.suggested ? <span className="sr-only"> (suggested)</span> : null}
-              </span>
-              <button
-                type="button"
-                data-token-remove=""
-                tabIndex={-1}
-                aria-label={`Remove ${item.value}`}
-                disabled={disabled}
-                onClick={() => removeAt(index)}
-                onKeyDown={(event) => onTokenKey(event, index)}
-                className={TOKEN_REMOVE}
-              >
-                <Icon icon={X} className="my-0" />
-              </button>
-            </li>
+              item={item}
+              disabled={disabled}
+              onRemove={() => removeAt(index)}
+              onKeyDown={(event) => onTokenKey(event, index)}
+            />
           ))}
         </ul>
       ) : null}
@@ -174,18 +146,82 @@ export function ValuesInput({
         onPaste={onPaste}
         className="text-ink placeholder:text-ink-2 type-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
       />
-      {accepting ? (
-        <button
-          type="button"
-          aria-label={`Accept ${label}`}
-          disabled={disabled}
-          onClick={onAccept}
-          className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control absolute end-1 top-1 grid size-6 place-items-center"
-        >
-          <Icon icon={Check} className="my-0" />
-        </button>
-      ) : null}
+      {accepting ? <AcceptTick label={label} disabled={disabled} onAccept={onAccept} /> : null}
     </div>
+  );
+}
+
+/** A field's box, or a grid cell's edgeless one; room is kept for the accept tick. */
+function boxClasses({
+  variant,
+  accepting,
+  disabled,
+}: Readonly<{ variant: 'field' | 'cell'; accepting: boolean; disabled?: boolean }>) {
+  return cn(
+    'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1 rounded-control p-1 transition-[border-color,box-shadow]',
+    accepting && 'pe-8',
+    variant === 'field'
+      ? cn('min-h-[var(--control-md)]', FIELD_EDGE)
+      : 'min-h-10 border border-transparent hover:bg-state-hover',
+    disabled && 'cursor-not-allowed opacity-45',
+  );
+}
+
+/** One value; its remove button is reached by the arrow keys, not Tab. */
+function Token({
+  item,
+  disabled,
+  onRemove,
+  onKeyDown,
+}: Readonly<{
+  item: ChipItem;
+  disabled?: boolean;
+  onRemove: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}>) {
+  return (
+    <li
+      className={cn(
+        'group/token type-body rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
+        item.suggested ? 'border-control-line border border-dashed' : 'bg-state-selected',
+      )}
+    >
+      <span className="min-w-0 truncate" title={item.value}>
+        {item.value}
+        {item.suggested ? <span className="sr-only"> (suggested)</span> : null}
+      </span>
+      <button
+        type="button"
+        data-token-remove=""
+        tabIndex={-1}
+        aria-label={`Remove ${item.value}`}
+        disabled={disabled}
+        onClick={onRemove}
+        onKeyDown={onKeyDown}
+        className={TOKEN_REMOVE}
+      >
+        <Icon icon={X} className="my-0" />
+      </button>
+    </li>
+  );
+}
+
+/** The box's one accept, in its top corner, clear of the wrapping tokens. */
+function AcceptTick({
+  label,
+  disabled,
+  onAccept,
+}: Readonly<{ label: string; disabled?: boolean; onAccept?: () => void }>) {
+  return (
+    <button
+      type="button"
+      aria-label={`Accept ${label}`}
+      disabled={disabled}
+      onClick={onAccept}
+      className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control absolute end-1 top-1 grid size-6 place-items-center"
+    >
+      <Icon icon={Check} className="my-0" />
+    </button>
   );
 }
 

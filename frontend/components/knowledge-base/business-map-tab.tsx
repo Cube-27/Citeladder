@@ -10,7 +10,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { BusinessFacts, OfferingsGrid, SuggestionsNotice } from './business-editor';
 import { SaveFoot } from './save-foot';
-import { useBusinessDraft } from './use-business-draft';
+import { useBusinessDraft, type BusinessDraftState } from './use-business-draft';
 
 /**
  * Agent › Context › Business map: the facts that steer prompt generation,
@@ -63,21 +63,27 @@ export function BusinessMapTab({
       {mayEdit ? <SuggestionsNotice {...editor} /> : null}
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />
-      {mayEdit ? (
-        <div className="bg-panel border-rule sticky bottom-0 flex justify-end gap-2 border-t py-3">
-          {business.dirty ? (
-            <Button variant="quiet" disabled={saving} onClick={business.discard}>
-              Discard
-            </Button>
-          ) : null}
-          <SaveFoot
-            label="Save business map"
-            changed={business.dirty}
-            saving={saving}
-            onSave={() => void business.save.mutateAsync().catch(() => undefined)}
-          />
-        </div>
-      ) : null}
+      {mayEdit ? <SaveBar business={business} /> : null}
     </Stack>
+  );
+}
+
+/** Discard (once something changed) and the one Save, pinned to the panel's foot. */
+function SaveBar({ business }: Readonly<{ business: BusinessDraftState }>) {
+  const saving = business.save.isPending;
+  return (
+    <div className="bg-panel border-rule sticky bottom-0 flex justify-end gap-2 border-t py-3">
+      {business.dirty ? (
+        <Button variant="quiet" disabled={saving} onClick={business.discard}>
+          Discard
+        </Button>
+      ) : null}
+      <SaveFoot
+        label="Save business map"
+        changed={business.dirty}
+        saving={saving}
+        onSave={() => void business.save.mutateAsync().catch(() => undefined)}
+      />
+    </div>
   );
 }
