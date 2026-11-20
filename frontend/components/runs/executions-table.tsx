@@ -5,7 +5,7 @@ import { FileSearch } from 'lucide-react';
 import { IconButton } from '@/components/ui/button';
 import { TitledSection } from '@/components/ui/section';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -90,14 +90,14 @@ export function ExecutionsTable({
                 <TableCellLines title primary={engines.label(execution.logical_engine)} />
               </TableCell>
               <TableCell>
-                <Stack gap="tight" className="justify-items-start">
+                <Inline as="span">
                   <StatusBadge execution={execution} />
                   {execution.status === 'failed' ? (
-                    <ClampText lines={1} className="type-caption max-w-full">
+                    <ClampText className="text-ink-2">
                       {executionFailureReason(execution.error_code)}
                     </ClampText>
                   ) : null}
-                </Stack>
+                </Inline>
               </TableCell>
               <TableCell numeric>
                 {execution.latency_ms == null ? (

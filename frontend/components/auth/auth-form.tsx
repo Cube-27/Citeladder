@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
 import { AuthSwitchLink, AuthSwitchOnly } from '@/components/auth/auth-switch';
-import { useDocumentTitle } from '@/components/layout/use-route-announcement';
+import { FlowBlock } from '@/components/templates/flow-page';
 import {
-  AuthBlock,
   AuthButton,
   AuthDivider,
   AuthForm,
@@ -224,12 +223,11 @@ export function AuthFormShell({
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
   const notice = error ? <Notice tone="negative">{error}</Notice> : null;
 
-  useDocumentTitle(title);
   // Only sign-in and sign-up switch to each other with motion.
   const switching = showForm && terms !== undefined;
 
   return (
-    <AuthBlock
+    <FlowBlock
       title={title}
       sub={description}
       after={
@@ -278,7 +276,7 @@ export function AuthFormShell({
           />
         </>
       ) : null}
-    </AuthBlock>
+    </FlowBlock>
   );
 }
 

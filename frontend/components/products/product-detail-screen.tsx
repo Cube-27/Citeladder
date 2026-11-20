@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
-import { FilterControls } from '@/components/ui/filter-bar';
+import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -15,7 +15,6 @@ import { TextLink } from '@/components/ui/text-link';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
 import { isNotFound } from '@/lib/api/errors';
-import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { promptsQueries } from '@/lib/api/prompts';
 import { formatCount } from '@/lib/format';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
@@ -196,15 +195,16 @@ function HolderDetail({
     );
   const data = detail.data;
   const named = data.answer_total > 0;
-  return (
+  const page = (notices: ReactNode, actions: ReactNode) => (
     <RecordPage
       title={data.product.name}
       trail={trail}
       busy={detail.isFetching}
-      identity={<ProductIdentity detail={data} scope={projectScope} filters={filters} />}
+      actions={actions}
+      filters={<FilterBar filters={filters} />}
+      identity={<ProductIdentity detail={data} notices={notices} />}
     >
       <ProductKpis detail={data} />
-      {/* Each list takes the full row: beside the competing list, the short ones sat over a third empty. */}
       {named ? (
         <>
           <CompetingProducts detail={data} scope={scopeFilters} />
@@ -219,7 +219,7 @@ function HolderDetail({
         <Answers detail={data} />
       ) : (
         // Every section below reads the answers that named it: with none,
-        // one sentence says so instead of six empty cards.
+        // one sentence says so instead of six empty tables.
         <Section>
           <StateBlock
             kind="empty"
@@ -234,75 +234,60 @@ function HolderDetail({
       ) : null}
     </RecordPage>
   );
+  const { product } = data;
+  if (product.catalog)
+    return (
+      <ProductCatalogControls scope={projectScope} product={product} catalog={product.catalog}>
+        {({ notices, actions }) => page(notices, actions)}
+      </ProductCatalogControls>
+    );
+  return page(
+    null,
+    product.kind === 'ai_observed_competitor' ? (
+      <AddToTracking scope={projectScope} candidateId={product.holder_id} name={product.name} />
+    ) : null,
+  );
 }
 
 /**
- * The record's identity card, one row (the masthead names it): an info hint
- * holding who holds it, the answers it is read from and a listing title that
- * differs from the name, then the image and the link to its page; the page's
- * filters and a catalog product's Edit and Archive, or Add to tracking for a
- * product the answers showed, sit at the row's end and wrap under it.
+ * The record's status line (the masthead names it): an info hint holding who
+ * holds it, the answers it is read from and a listing title that differs
+ * from the name, then the image and the link to its page; its notices below.
  */
 function ProductIdentity({
   detail,
-  scope,
-  filters,
-}: Readonly<{
-  detail: CommerceProductDetail;
-  scope: ProjectScope;
-  filters: readonly FilterDefinition[];
-}>) {
+  notices,
+}: Readonly<{ detail: CommerceProductDetail; notices: ReactNode }>) {
   const { product } = detail;
   const listingTitle =
     product.description && product.description.trim() !== product.name.trim()
       ? product.description
       : null;
-  const card = (notices: ReactNode, actions: ReactNode) => (
-    <Section aria-label="Product">
-      <Stack gap="workspace">
-        <Inline gap="compact" className="flex-wrap items-center">
-          <Inline gap="item" className="min-w-0 flex-[1_1_20rem] items-center">
-            <InfoHint label="About this product">
-              {holderCaption(product)} · From {formatCount(detail.executions)}
-              {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days}{' '}
-              days.
-              {listingTitle ? ` Listing title: ${listingTitle}` : null}
-            </InfoHint>
-            {product.image_url ? <ProductImage src={product.image_url} /> : null}
-            {product.url ? (
-              <TextLink
-                variant="external"
-                href={product.url}
-                text="caption"
-                className="flex max-w-full min-w-0"
-              >
-                {listingTitle ? <span className="sr-only">{listingTitle}, </span> : null}
-                <UrlText url={product.url} />
-              </TextLink>
-            ) : (
-              <span className="type-caption text-ink-2">{holderCaption(product)}</span>
-            )}
-          </Inline>
-          <Inline gap="item" className="ms-auto flex-wrap items-center">
-            <FilterControls filters={filters} align="end" />
-            {actions}
-          </Inline>
-        </Inline>
-        {notices}
-      </Stack>
-    </Section>
-  );
-  if (product.catalog)
-    return (
-      <ProductCatalogControls scope={scope} product={product} catalog={product.catalog}>
-        {({ notices, actions }) => card(notices, actions)}
-      </ProductCatalogControls>
-    );
-  return card(
-    null,
-    product.kind === 'ai_observed_competitor' ? (
-      <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
-    ) : null,
+  return (
+    <Stack gap="workspace">
+      <Inline gap="item">
+        <InfoHint label="About this product">
+          {holderCaption(product)} · From {formatCount(detail.executions)}
+          {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days} days.
+          {listingTitle ? ` Listing title: ${listingTitle}` : null}
+        </InfoHint>
+        {product.image_url ? <ProductImage src={product.image_url} /> : null}
+        {product.url ? (
+          <TextLink
+            variant="external"
+            href={product.url}
+            text="caption"
+            className="flex max-w-full min-w-0"
+          >
+            {listingTitle ? <span className="sr-only">{listingTitle}, </span> : null}
+            <UrlText url={product.url} />
+          </TextLink>
+        ) : (
+          <span className="type-caption text-ink-2">{holderCaption(product)}</span>
+        )}
+      </Inline>
+      {notices}
+    </Stack>
   );
 }
 

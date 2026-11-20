@@ -1,9 +1,7 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell } from '@/components/ui/table';
+import { TableCell, TableCellLines } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
-import { textRole } from '@/components/ui/typography';
 import type { SortState, SourcesData } from '@/lib/visibility/sources';
 
 /** The source's own mark and name, with the favicon a reader recognises first. */
@@ -15,14 +13,7 @@ export function SourceName({
   return (
     <Inline as="span">
       <BrandMark name={name} websiteUrl={host ? `https://${host}` : null} />
-      <span className="grid min-w-0">
-        <ClampText lines={1}>{name}</ClampText>
-        {secondary ? (
-          <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-            {secondary}
-          </ClampText>
-        ) : null}
-      </span>
+      <TableCellLines primary={name} secondary={secondary} />
     </Inline>
   );
 }

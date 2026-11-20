@@ -113,6 +113,7 @@ function TrendCard({
           height="sm"
           yMax={domainMax}
           yFormat={formatTick}
+          you={false}
         />
       </SectionContent>
     </Section>

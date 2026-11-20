@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import {
   useId,
   useState,
@@ -86,63 +86,6 @@ export function OptionRow({
   );
 }
 
-/**
- * A ledger list's row that opens its item (an issue's detail): an optional
- * leading number, the title on one line, the item's meta after it (wrapping
- * under the title when the row is narrow), an optional caption, and a
- * trailing chevron that says at rest that the row opens. The whole row is the
- * target; it owns its padding, gaps and hover state. `stacked`: titles that
- * read alike on one line take the row's width and two lines, the meta under.
- */
-export function OpenRow({
-  number,
-  title,
-  meta,
-  caption,
-  layout = 'inline',
-  opens,
-  onOpen,
-}: Readonly<{
-  number?: number;
-  title: ReactNode;
-  meta?: ReactNode;
-  caption?: ReactNode;
-  layout?: 'inline' | 'stacked';
-  /** What the row opens over the page, announced before it is pressed. */
-  opens?: 'dialog';
-  onOpen: () => void;
-}>) {
-  const stacked = layout === 'stacked';
-  return (
-    <Pressable
-      onClick={onOpen}
-      aria-haspopup={opens}
-      className={cn(listRowClasses(), pressableRowClasses)}
-    >
-      <span className="grid min-w-0 flex-1 gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          {number === undefined ? null : (
-            <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
-          )}
-          {/* Inline, the title keeps 15rem before the meta wraps under it. */}
-          <ClampText
-            lines={stacked ? 2 : 1}
-            className={textRole('body', cn('text-ink', stacked ? 'flex-1' : 'flex-[1_1_15rem]'))}
-          >
-            {title}
-          </ClampText>
-          {stacked ? null : meta}
-        </span>
-        {stacked && meta ? (
-          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">{meta}</span>
-        ) : null}
-        {caption ? <ClampText className="type-caption">{caption}</ClampText> : null}
-      </span>
-      <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
-    </Pressable>
-  );
-}
-
 /** A ruled list of `DisclosureRow`s. */
 export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) {
   return <ul className="divide-rule grid min-w-0 divide-y">{children}</ul>;
@@ -151,8 +94,8 @@ export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) 
 /**
  * A row that opens in place (an issue on a page): the title, then its facts
  * inline, 40 tall, with a chevron at the end and `aria-expanded`. Open, its
- * body sits under it on `well` (12 down, 16 across, radius 6). Like `OpenRow`
- * it bleeds 12 past its list, so every row's text starts on one edge.
+ * body sits under it on `well` (12 down, 16 across, radius 6). It bleeds 12
+ * past its list, so every row's text starts on one edge.
  */
 export function DisclosureRow({
   title,

@@ -4,7 +4,7 @@ import { Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -163,15 +163,10 @@ function AdvertiserTable({
         {advertisers.map((advertiser) => (
           <TableRow key={advertiser.domain}>
             <TableCell>
-              <span className="grid min-w-0">
-                <Inline as="span">
-                  <ClampText lines={1}>{advertiser.name}</ClampText>
-                  <AdOwnershipChip ownership={advertiser.ownership} />
-                </Inline>
-                <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-                  {advertiser.domain}
-                </ClampText>
-              </span>
+              <Inline as="span">
+                <TableCellLines primary={advertiser.name} secondary={advertiser.domain} />
+                <AdOwnershipChip ownership={advertiser.ownership} />
+              </Inline>
             </TableCell>
             <TableCell numeric>{advertiser.appearances}</TableCell>
             <TableCell numeric>{advertiser.prompts}</TableCell>

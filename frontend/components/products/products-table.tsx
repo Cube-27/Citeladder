@@ -63,7 +63,7 @@ const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
 };
 
 /**
- * A metric as the Value atom prints it, its note beneath. Nothing in scope to
+ * A metric as the Value atom prints it, its note after it. Nothing in scope to
  * measure is "not measured", a price the catalog lacks is "unknown", and a
  * competitor's catalog price does not apply; none of them is ever a zero.
  */
@@ -73,9 +73,9 @@ function MetricValue({ cell, text }: Readonly<{ cell: ProductCell; text: boolean
   else value = text ? <ClampText>{cell.text}</ClampText> : <Value value={cell.text} />;
   if (!cell.note) return value;
   return (
-    <span title={cell.note}>
+    <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
       {value}
-      <span className="type-caption block">{cell.note}</span>
+      <span className="text-ink-2 font-sans">{cell.note}</span>
     </span>
   );
 }

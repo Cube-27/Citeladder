@@ -3,6 +3,7 @@ import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { FlowLogo } from '@/components/templates/flow-page';
+import { FLOW_CARD } from '@/components/templates/notice-page';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { RungTrail } from '@/components/ui/rung-trail';
@@ -53,7 +54,7 @@ export function SetupPage({
             <FlowLogo />
           </span>
           {steps ? <SetupStepper steps={steps} current={index} /> : <span />}
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center justify-end gap-2">
             {barEnd}
             <ThemeSwitch />
           </div>
@@ -188,22 +189,17 @@ export function SetupStep({
   useDocumentTitle(typeof title === 'string' ? title : undefined);
   return (
     <div className="flex flex-1 flex-col">
-      <div
-        className={cn(
-          STEP_COLUMN[width],
-          'flex flex-1 flex-col gap-[var(--card-padding)] py-[var(--page-section-gap)]',
-        )}
-      >
+      <div className={cn(STEP_COLUMN[width], 'flex flex-1 flex-col gap-4 py-6')}>
         <header className="flex flex-col gap-2">
           {/* Takes focus by script (tabIndex -1) when the flow moves to a new step. */}
-          <h1 id={headingId} tabIndex={-1} className={textRole('display', 'text-balance')}>
+          <h1 id={headingId} tabIndex={-1} className={textRole('title', 'text-balance')}>
             {title}
           </h1>
           {help ? <p className={textRole('body', 'text-ink-2')}>{help}</p> : null}
         </header>
         <section
           aria-labelledby={headingId}
-          className="bg-surface rounded-card shadow-card flex min-w-0 flex-col gap-[var(--card-padding)] p-[var(--card-padding)]"
+          className={cn(FLOW_CARD, 'flex min-w-0 flex-col gap-[var(--card-padding)]')}
         >
           {children}
         </section>
