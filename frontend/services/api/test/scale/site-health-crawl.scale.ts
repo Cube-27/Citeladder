@@ -285,7 +285,7 @@ function urlset(urls: readonly string[]) {
  * that probes them once per tracked page scales with the crawl, not the page.
  * Printed, never asserted: the count is the planner's choice.
  */
-async function scanned(read: (trx: Database) => Promise<unknown>) {
+function scanned(read: (trx: Database) => Promise<unknown>) {
   const scans = async (trx: Database) => {
     const { rows } = await sql<{ scans: number }>`
       select coalesce(sum(seq_scan + coalesce(idx_scan, 0)), 0)::int as scans

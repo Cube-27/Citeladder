@@ -82,12 +82,12 @@ function observedAt(page: Record<string, unknown>, task: Record<string, unknown>
   }
   return null;
 }
-const OVERVIEW_ELEMENT_TYPES = [
+const OVERVIEW_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   'ai_overview_element',
   'ai_overview_expanded_element',
   'ai_overview_table_element',
   'ai_overview_video_element',
-];
+]);
 /** An element and its expanded components, which carry their own text, links and references. */
 const withComponents = (element: Record<string, unknown>) => [
   element,
@@ -99,7 +99,7 @@ function elements(block: Record<string, unknown>): [number, Record<string, unkno
   const result: [number, Record<string, unknown>][] = [];
   function descend(value: unknown, index: number, depth: number) {
     const node = record(value);
-    if (depth > 128 || !OVERVIEW_ELEMENT_TYPES.includes(scalarText(node.type)))
+    if (depth > 128 || !OVERVIEW_ELEMENT_TYPES.has(scalarText(node.type)))
       throw new Error('Unknown overview element');
     result.push([index, node]);
     for (const child of objects(node.items)) descend(child, index, depth + 1);
