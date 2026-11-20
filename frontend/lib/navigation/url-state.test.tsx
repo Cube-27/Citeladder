@@ -163,17 +163,14 @@ describe('router registration', () => {
 
   it('opens a new visit at the top, restores only on Back, and keeps position on a filter write', async () => {
     window.history.replaceState(null, '', '/site');
-    let scrollY = 0;
-    Object.defineProperty(window, 'scrollY', { configurable: true, get: () => scrollY });
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(((_x: number, y: number) => {
-      scrollY = y;
-    }) as typeof window.scrollTo);
     const router = createBrowserRouter([
       {
         element: (
           <>
             <AppScrollRestoration />
-            <Outlet />
+            <main id="main">
+              <Outlet />
+            </main>
           </>
         ),
         children: [
@@ -184,23 +181,36 @@ describe('router registration', () => {
     ]);
     setUrlStateRouter(router);
     render(<RouterProvider router={router} />);
+    // jsdom lays nothing out, so the panel's position is held here.
+    const panel = document.getElementById('main')!;
+    let scrollTop = 0;
+    Object.defineProperty(panel, 'scrollTop', {
+      get: () => scrollTop,
+      set: (value: number) => (scrollTop = value),
+    });
+    const scrollPanelTo = (top: number) => {
+      scrollTop = top;
+      panel.dispatchEvent(new Event('scroll'));
+    };
     const positions: number[] = [];
 
-    scrollY = 600;
+    scrollPanelTo(600);
     await act(() => router.navigate('/issues'));
-    positions.push(scrollY);
+    positions.push(scrollTop);
     await act(() => router.navigate('/site'));
-    positions.push(scrollY);
-    scrollY = 300;
+    positions.push(scrollTop);
+    scrollPanelTo(300);
     await act(async () => setUrlParams({ tab: 'pages' }));
-    positions.push(scrollY);
+    positions.push(scrollTop);
     // Back past the filter write, the fresh /site visit and /issues.
     await act(() => router.navigate(-3));
-    positions.push(scrollY);
+    positions.push(scrollTop);
 
     expect(positions).toEqual([0, 0, 300, 600]);
-    scrollTo.mockRestore();
-    Reflect.deleteProperty(window, 'scrollY');
+    // A malformed fragment is no anchor: the visit still opens at the top.
+    scrollPanelTo(200);
+    await act(() => router.navigate('/issues#%'));
+    expect(scrollTop).toBe(0);
     router.dispose();
   });
 

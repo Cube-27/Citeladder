@@ -1,6 +1,7 @@
 import { lazy, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
+import { pageSection } from '@/components/layout/nav-items';
 import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
@@ -26,40 +27,34 @@ export type PageFrameSlots = Readonly<{
   trail?: readonly Crumb[];
   /** The page's own crumb when it differs from the title (a short path, a logo). */
   crumb?: Pick<Crumb, 'label' | 'mark'>;
-  /** The masthead's own actions: secondary first, then at most one primary. */
+  /** The header's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
   /** The tab strip: the page's sub-views. */
   tabs?: ReactNode;
-  /** The filter strip: view switch, search and filters; meta, count and export at its end. */
+  /** The toolbar strip: view switch, search and filters; the count and one action at its end. */
   filters?: ReactNode;
 }>;
 
-/**
- * A strip's `ground` and closing hairline, across the whole main column like
- * the masthead's, so a narrow page's strips still span it and content
- * scrolls under them unseen.
- */
-const STRIP_RULE =
-  'before:bg-ground before:border-rule relative isolate min-w-0 before:absolute before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:inset-y-0 before:-z-10 before:border-b';
+/** A strip across the panel's gutters, its content on the page column's edges. */
+const STRIP =
+  'border-rule flex min-w-0 border-b px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
 
 /**
- * The anatomy every shell page shares (owner, 2026-11-18): the masthead
- * strip, then the optional tab strip and filter strip (8 around 32 controls,
- * one line), both 48 high and each closed by a hairline across the main
- * column, then the body `--page-pad-block` below. A page passes content into
- * the slots and sets no strip geometry of its own. One rule for the title
- * (owner, 2026-11-19): a page with a trail (a record under its collection)
- * draws the breadcrumb in the masthead and its title as the h1 above the
- * strips; a top-level page's masthead holds its title. No page has a back
- * arrow. The masthead's
- * menu button, search and "Ask agent" come from the shell; the page's
- * actions sit just left of them, and they keep the main column's right edge
- * on every page (owner, 2026-11-19). A narrow route (its
- * manifest `width`) centres its strips and body in `max-w-thread`, a compact
- * one in `--container-prose`, and starts the masthead's title on that column's
- * edge; `fill` keeps a workbench across the main column. A page the window scrolls ends in
- * `--page-end-space` of empty space; a `fitted` one (a thread, a workbench)
- * fills the window and scrolls inside itself, so it has none.
+ * The anatomy every shell page shares (docs/design.md, Standard layouts):
+ * the page header, then the optional tab strip (36) and toolbar strip (one
+ * line of 28 controls, 8 above and below), each closed by a rule across the
+ * whole panel and sticky under the header, then the body, 20 below the last
+ * rule. A page passes content into the slots and sets no geometry of its own.
+ * The header's title is the page's place: its nav section, then the title,
+ * or for a record under its collection the trail, with the record's name as
+ * the h1 above the strips. No page has a back arrow. The header's menu
+ * button, search and "Ask agent" come from the shell and keep the panel's
+ * right edge on every page. A narrow route (its manifest `width`) centres its
+ * strips' content and body in `max-w-thread` (1040), a compact one in
+ * `--container-prose` (720), and starts the header's title on that column's
+ * edge; `fill` keeps a workbench across the panel. A page the panel scrolls
+ * ends in `--page-end-space` of empty space; a `fitted` one (a thread, a
+ * workbench) fills the panel and scrolls inside itself.
  */
 export function PageFrame({
   title,
@@ -79,18 +74,16 @@ export function PageFrame({
   const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
+  const searchParams = useSearchParams()[0];
   return (
     <PageEmptyOfferProvider>
       <div
         data-page-width={width}
-        className={cn(
-          'flex min-w-0 flex-1 flex-col',
-          PAGE_START[width],
-          !fitted && 'pb-[var(--page-end-space)]',
-        )}
+        className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
       >
         <Masthead
           title={resolved}
+          section={pageSection(pathname, searchParams)}
           crumb={
             hasTrail ? (
               <LazyIsland failed={null} label="breadcrumb" defects="contain">
@@ -99,26 +92,29 @@ export function PageFrame({
             ) : null
           }
           lead={
-            <>
-              {shell?.sidebarToggle}
-              {navDrawer ? (
-                <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} />
-              ) : null}
-            </>
+            navDrawer ? <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} /> : null
           }
           search={shell?.searchTrigger}
           actions={actions}
           end={shell?.agentTrigger}
         />
-        <div className={cn('flex min-w-0 flex-1 flex-col', PAGE_COLUMN[width])}>
-          {hasTrail ? <PageHeading title={resolved} strips={Boolean(tabs || filters)} /> : null}
-          {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
-          <div
-            data-page-body=""
-            className="flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]"
-          >
-            {children}
-          </div>
+        {hasTrail ? (
+          <PageHeading
+            title={resolved}
+            strips={Boolean(tabs || filters)}
+            className={PAGE_COLUMN[width]}
+          />
+        ) : null}
+        {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
+        <div
+          data-page-body=""
+          className={cn(
+            'flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]',
+            PAGE_COLUMN[width],
+            fitted ? 'pb-6' : 'pb-[var(--page-end-space)]',
+          )}
+        >
+          {children}
         </div>
       </div>
     </PageEmptyOfferProvider>
@@ -129,14 +125,18 @@ export function PageFrame({
  * A record page's h1, above its strips. Its height is published, so a fitted
  * page (a workbench, the prompt builder) still fills the window exactly.
  */
-function PageHeading({ title, strips }: Readonly<{ title: string; strips: boolean }>) {
+function PageHeading({
+  title,
+  strips,
+  className,
+}: Readonly<{ title: string; strips: boolean; className: string | false }>) {
   const block = useRef<HTMLDivElement>(null);
   usePublishedHeight(block, '--page-heading-block-size');
   return (
     <div
       ref={block}
       data-page-heading=""
-      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-4')}
+      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-3', className)}
     >
       <h1 className={textRole('title', 'break-words')}>{title}</h1>
     </div>
@@ -144,9 +144,9 @@ function PageHeading({ title, strips }: Readonly<{ title: string; strips: boolea
 }
 
 /**
- * The tab strip, then the filter strip, pinned together under the masthead
- * on `ground` (owner, 2026-11-19: "the tabs and filters rows should be
- * sticky"). Their height is published, so in-page scrolling and focus clear them.
+ * The tab strip, then the toolbar strip, pinned together under the header
+ * (owner, 2026-11-19: "the tabs and filters rows should be sticky"). Their
+ * height is published, so in-page scrolling and focus clear them.
  */
 function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>) {
   const strips = useRef<HTMLDivElement>(null);
@@ -155,16 +155,19 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     <div
       ref={strips}
       data-page-strips=""
-      className="z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] flex min-w-0 flex-col"
+      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col"
     >
       {tabs ? (
-        // The tabs fill the strip, so the current tab's underline sits on its rule.
-        <div data-page-band="tabs" className={cn(STRIP_RULE, 'flex items-end')}>
+        // The tabs fill the strip, so the current tab's mark sits on its rule.
+        <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
           {tabs}
         </div>
       ) : null}
       {filters ? (
-        <div data-page-band="filters" className={cn(STRIP_RULE, 'flex items-center py-2')}>
+        <div
+          data-page-band="filters"
+          className={cn(STRIP, 'min-h-[var(--filter-bar-height)] items-center py-2')}
+        >
           {filters}
         </div>
       ) : null}
@@ -174,7 +177,7 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
 
 type PageWidth = ReturnType<typeof routeWidth>;
 
-/** A narrow page's column: the strips and body, centred in the main column. */
+/** A narrow page's column: its record heading and body, centred in the panel. */
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   full: false,
   narrow: 'max-w-thread mx-auto w-full',
@@ -182,14 +185,14 @@ const PAGE_COLUMN: Record<PageWidth, string | false> = {
   compact: 'mx-auto w-full max-w-[var(--container-prose)]',
 };
 
-/** Where the masthead's title starts: on the page column's left edge. */
+/** Where the header's title and the strips' content start: on the page column's left edge. */
 const PAGE_START: Record<PageWidth, string | false> = {
   full: false,
-  narrow: '[--page-start:max(0px,calc((100%_-_var(--container-thread))/2))]',
-  compact: '[--page-start:max(0px,calc((100%_-_var(--container-prose))/2))]',
+  narrow: '[--page-start:max(0px,calc((100cqw_-_var(--container-thread))/2))]',
+  compact: '[--page-start:max(0px,calc((100cqw_-_var(--container-prose))/2))]',
 };
 
-/** The body's sections on the page surface, 32 apart, on the one left edge. */
+/** The body's sections, 24 apart, on the one left edge. */
 export function PageSections({
   className,
   children,

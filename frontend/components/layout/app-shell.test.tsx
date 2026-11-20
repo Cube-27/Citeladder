@@ -134,12 +134,11 @@ describe('AppShell resizable sidebar', () => {
     const { unmount } = renderShell();
     const frame = () => screen.getByRole('main').parentElement;
     expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
-    // The toggle sits in the masthead, before the title, not in the sidebar.
+    // The toggle sits in the sidebar's header, beside Settings (AR-8), not in the page header.
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
-    expect(toggle.closest('[data-masthead-title]')).toContainElement(
-      screen.getByRole('heading', { name: 'Website' }),
-    );
-    expect(screen.getByRole('complementary', { name: 'Sidebar' })).not.toContainElement(toggle);
+    const header = toggle.closest<HTMLElement>('[data-sidebar-ident-cell]');
+    expect(header).toContainElement(screen.getByRole('link', { name: 'Settings' }));
+    expect(screen.getByRole('banner')).not.toContainElement(toggle);
 
     await user.click(toggle);
     expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
@@ -154,7 +153,7 @@ describe('AppShell resizable sidebar', () => {
     expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
   });
 
-  it('collapses to one rail button per group, few enough to fit a window 480 high', async () => {
+  it('collapses to one rail button per group, few enough to fit a window 520 high', async () => {
     const user = userEvent.setup();
     window.localStorage.setItem('citeladder:app:sidebar-collapsed', '1');
     renderShell();
@@ -163,11 +162,12 @@ describe('AppShell resizable sidebar', () => {
       ...within(sidebar).getAllByRole('button'),
       ...within(sidebar).getAllByRole('link'),
     ];
-    // Project, Dashboard, Agent, Home, Brand, Tracking, Website, Search,
-    // Commerce, Integrations, account: 40px each, the first in the 56px cell, with 21px
-    // between the rail's parts. The collapse toggle is in the masthead.
-    expect(buttons).toHaveLength(11);
-    expect(56 + (buttons.length - 1) * 40 + 21).toBeLessThanOrEqual(480);
+    // Project, the collapse toggle, Dashboard, Agent, Home, Brand, Tracking,
+    // Website, Search, Commerce, Integrations, account: 40px each, 8 inside
+    // the rail's ends and 4 between its parts.
+    expect(buttons).toHaveLength(12);
+    expect(within(sidebar).getByRole('button', { name: 'Expand sidebar' })).toBe(buttons[1]);
+    expect(2 * 8 + buttons.length * 40 + 4 * 4).toBeLessThanOrEqual(520);
 
     // A group opens its flyout with the right arrow, marking the current page.
     const analyze = within(sidebar).getByRole('button', { name: 'Website' });

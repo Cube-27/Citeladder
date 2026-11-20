@@ -54,7 +54,7 @@ export function NewChatLoading() {
 /**
  * Thread: the masthead, then the thread across the page (the Agent's routes
  * are narrow, `max-w-thread`), scrolling in its own region with the composer docked
- * under it, so the window, the masthead and the composer never move as the
+ * under it, so the panel, the page header and the composer never move as the
  * thread grows. Every turn, its prose included, spans the thread's width, so
  * its edges meet the composer's. The chat list is the Agent-mode sidebar. `scrollRef` reaches the scrolling region;
  * `scrollLabel` names it when it holds a conversation.

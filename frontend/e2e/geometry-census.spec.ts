@@ -83,8 +83,8 @@ const CONTROL_ROLES = [
   'scroll-step.height',
   'data-table-header.height',
 ] as const;
-/** Masthead, tab strip and filter strip stack flush, each strip one height, its tabs filling it. */
-const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height', 'filter-strip.height'] as const;
+/** The tab strip is one height, its tabs filling it. */
+const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height'] as const;
 /** A slip's content starts at its padding, on both axes. */
 const SLIP_INSET_ROLES = ['slip.padding', 'slip.inset-top', 'slip.inset-left'] as const;
 /**
@@ -227,8 +227,7 @@ function measure({ route }: { route: string }) {
   }
   for (const element of all('[data-sidebar-ident]'))
     add('sidebar-ident.height', element, element.getBoundingClientRect().height);
-  // The sidebar's switcher cell and the masthead end on one line, the rule
-  // under both, scrolled or not.
+  // The sidebar's header row and the page header end on one line, scrolled or not.
   for (const element of all('[data-sidebar-ident-cell], [data-masthead]'))
     add('masthead.bottom', element, element.getBoundingClientRect().bottom);
   for (const element of all('aside a, nav a, [data-sidebar-group-toggle]')) {

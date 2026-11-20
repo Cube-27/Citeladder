@@ -7,27 +7,26 @@ import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
 
 /**
- * The signed-in frame: the sidebar column on `chrome` beside the main
- * column on the ground.
+ * The signed-in frame: the sidebar on the window's `ground` beside the inset
+ * panel, the page's one scroller.
  *
  * From `rail:` (900px) the sidebar is a labelled column, 200 wide below
  * `shell:` (1280px) and 224 from it; the reader may drag its inner edge
  * (`lib/sidebar-width.ts`) or collapse it to the 56px rail, and both choices
- * persist. Below `rail:` there is no column: the masthead's menu button opens
- * the same sidebar, labelled, in a left drawer. `labelled:` styles the
- * sidebar wherever it shows its labels. The page's own anatomy (masthead,
- * page tabs, filter bar, sections) belongs to the templates.
+ * persist. The panel sits `--panel-inset` from the window's other edges with
+ * a `rule` edge (a ring, so its content starts on the inset and the page
+ * header lines up with the sidebar's) and radius 8. Below `rail:` there is no column and the panel
+ * fills the window: the header's menu button opens the same sidebar,
+ * labelled, in a left drawer. `labelled:` styles the sidebar wherever it
+ * shows its labels. The page's own anatomy belongs to the templates.
  */
 const FRAME =
-  'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-resize)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
-// The sidebar sits on `chrome`; one hairline divides it from the page in both
-// themes, and the resize handle's line strengthens it on hover, focus and drag.
-const SIDEBAR_COLUMN =
-  'bg-chrome border-rule rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
+  'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-resize)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
+const SIDEBAR_COLUMN = 'rail:block z-sticky relative hidden min-h-0 min-w-0';
 // The `main` container the `column-split:`/`column-wide:` variants measure.
-const MAIN_INSET =
-  '@container/main min-w-0 px-[var(--page-pad-inline)] pb-[var(--page-section-gap)]';
-const PAGE = 'flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
+const PANEL =
+  '@container/main bg-panel rail:ms-0 rail:rounded-card rail:ring-1 ring-rule m-[var(--panel-inset)] flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-[var(--page-pad-inline)]';
+const PAGE = 'flex w-full min-w-0 flex-1 flex-col';
 
 /**
  * The reader's sidebar width as the one width both breakpoints read; at the
@@ -75,7 +74,7 @@ export function AppShellFrame({
         {sidebar}
         {state === 'expanded' ? <SidebarResizeHandle sidebarId={sidebarId} /> : null}
       </aside>
-      <main id="main" tabIndex={-1} data-main-column="" className={MAIN_INSET}>
+      <main id="main" tabIndex={-1} data-main-column="" className={PANEL}>
         <div className={PAGE}>{children}</div>
       </main>
     </div>
@@ -105,7 +104,7 @@ export function AppShellPlaceholder({
       <div className={SIDEBAR_COLUMN} inert>
         {sidebar}
       </div>
-      <main id="main" tabIndex={-1} data-main-column="" className={MAIN_INSET}>
+      <main id="main" tabIndex={-1} data-main-column="" className={PANEL}>
         <div className={PAGE}>{children}</div>
       </main>
     </div>
@@ -113,7 +112,7 @@ export function AppShellPlaceholder({
 }
 
 /**
- * The masthead's menu button below `rail:` (900px), where there is no sidebar
+ * The header's menu button below `rail:` (900px), where there is no sidebar
  * column: it opens the navigation drawer. Hidden from `rail:` up.
  */
 export function NavMenuButton({
