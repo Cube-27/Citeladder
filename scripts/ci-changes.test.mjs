@@ -273,7 +273,6 @@ test('a fixture or helper change selects every spec that imports it', () => {
   assert.deepEqual(selectE2EFiles(['frontend/test/fixtures/project.ts']), fixtureUsers);
   assert.deepEqual(selectE2EFiles(['frontend/test/agent-chat-fixture.ts']), [
     'e2e/agent-conversation.spec.ts',
-    'e2e/geometry-census.spec.ts',
     'e2e/page-workspace.spec.ts',
   ]);
   // Shared content the marketing specs assert against.

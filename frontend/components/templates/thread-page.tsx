@@ -75,12 +75,13 @@ export function ThreadPage({
   return (
     <PageFrame {...slots} fitted>
       <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
-        {/* The scrollbar's track is reserved on both edges, so the column
-            centred in the region shares its centre with the composer. */}
+        {/* The scrollbar's track is reserved at the end only, so the thread
+            starts on the composer's start edge and its scrollbar ends on the
+            composer's end edge, and nothing moves when the thread overflows. */}
         <section
           ref={scrollRef}
           aria-label={scrollLabel}
-          className="min-h-0 flex-1 [scrollbar-gutter:stable_both-edges] overflow-y-auto overscroll-contain"
+          className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain"
         >
           <div
             data-page-content=""

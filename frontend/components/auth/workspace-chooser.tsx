@@ -57,7 +57,7 @@ export function WorkspaceChooser() {
         {workspaces.map((workspace) => (
           <AuthRow
             key={workspace.id}
-            lead={<BrandMark name={workspace.name} placement="header" />}
+            lead={<BrandMark name={workspace.name} />}
             name={workspace.name}
             meta={workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
             trailing={<AccessBadge workspaceId={workspace.id} />}

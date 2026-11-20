@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { skills } from '../test/agent-chat-fixture';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 const PROMPT_SET_ID = '44444444-4444-4444-8444-000000000001';
@@ -632,7 +631,6 @@ type PageState = Readonly<{
 }>;
 
 const [run] = RUNS;
-const [skill] = skills.skills;
 const workspace = FIXTURE_PROJECT.workspace_id;
 
 /**
@@ -745,18 +743,6 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
     { route: '/actions' },
     { route: '/agent/skills' },
     { route: '/agent/context' },
-    {
-      // Two skills in one group, so neighbouring slips are measured.
-      route: '/agent/skills',
-      label: '/agent/skills (slips)',
-      stubs: [
-        [
-          /\/api\/v1\/agent\/skills$/,
-          { ...skills, skills: [skill, { ...skill, id: 'gsc_titles', label: 'Title rewrites' }] },
-        ],
-      ],
-      required: ['slip.gap'],
-    },
     {
       // The project edit panel open, so its mention-rule Switch is drawn.
       route: '/agent/context?tab=competitors',

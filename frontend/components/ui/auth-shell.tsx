@@ -1,57 +1,16 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react';
-import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { LogoMark } from '@/components/ui/logo-mark';
-import { textRole } from '@/components/ui/typography';
-import { websiteHref } from '@/lib/config/app-link';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
 /*
  * The parts of account access's forms (sign-in, sign-up, the mailbox screens,
- * the workspace chooser). Sign-in, sign-up and the mailbox screens sit in the
- * Auth template (components/templates/auth-page.tsx) under AuthBlock's head;
- * the chooser and setup use the Flow template's frame and heading.
+ * the workspace chooser), inside the Flow template's card
+ * (components/templates/flow-page.tsx) under FlowBlock's head.
  */
-
-/**
- * One account-access screen in the Auth template's column: the logo (linking
- * to the website's home) centred over the title and its line, the body 16
- * below, then the closing lines (`after`: the switch to the other form and the
- * agreement line), centred. The title is the page's one `h1`.
- */
-export function AuthBlock({
-  title,
-  sub,
-  after,
-  children,
-}: Readonly<{ title: string; sub?: ReactNode; after?: ReactNode; children: ReactNode }>) {
-  const headingId = useId();
-  return (
-    <div className="flex flex-col gap-4 text-center">
-      <section aria-labelledby={headingId} className="flex flex-col gap-4 text-start">
-        <header className="flex flex-col items-center gap-2 text-center">
-          <a
-            href={websiteHref('/')}
-            aria-label="CiteLadder home"
-            className="focus-ring text-ink rounded-control inline-flex p-1"
-          >
-            <LogoMark size={28} />
-          </a>
-          {/* Takes focus by script (tabIndex -1) when a flow moves to a new step. */}
-          <h1 id={headingId} tabIndex={-1} className={textRole('display', 'text-balance')}>
-            {title}
-          </h1>
-          {sub ? <p className={textRole('body', 'text-ink-2')}>{sub}</p> : null}
-        </header>
-        {children}
-      </section>
-      {after}
-    </div>
-  );
-}
 
 /** The form's full-width action: the submit, or "Continue with Google". */
 export function AuthButton(props: Readonly<Omit<ButtonProps, 'className'>>) {
@@ -134,28 +93,28 @@ export function AuthLinkRow({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * A list of whole-row choices (the workspace chooser's rows), divided by rules
- * and never boxed: it sits inside the AuthCard, and a container never holds a
- * second bordered box.
+ * A list of whole-row choices (the workspace chooser's rows), divided by
+ * hairlines and never boxed: it sits inside the flow's card, and a container
+ * never holds a second bordered box.
  */
 export function AuthRowList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <ul aria-label={label} className="divide-rule rounded-control divide-y overflow-hidden">
+    <ul aria-label={label} className="divide-rule -mx-2 divide-y">
       {children}
     </ul>
   );
 }
 
 const AUTH_ROW =
-  'focus-ring-inset text-ink hover:overlay-hover flex min-h-18 w-full cursor-pointer items-center gap-3 px-4 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
+  'focus-ring-inset text-ink hover:overlay-hover rounded-control flex min-h-[var(--table-row-height)] w-full cursor-pointer items-center gap-2 px-2 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
 
 type RowLink = ReactElement<{ className?: string; children?: ReactNode }>;
 
 /**
- * One 72px row: a 40px lead, the name (16/24 medium) over a meta line (14/20
- * `ink-muted`), an optional trailing badge and a chevron. Hover is
- * `surface-sunken`, focus a 2px inset ring; long names end in an ellipsis.
- * The row is a button (`onSelect`) or the caller's link element (`link`).
+ * One list row (40, 44 on a phone): a 20px lead, the name with its meta inline
+ * after it in `ink-2`, an optional trailing status and a chevron. Long names
+ * end in an ellipsis. The row is a button (`onSelect`) or the caller's link
+ * element (`link`).
  */
 export function AuthRow({
   lead,
@@ -173,9 +132,9 @@ export function AuthRow({
   const content = (
     <>
       {lead}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="type-body flex min-w-0 flex-1 items-baseline gap-2">
         <span className="type-label text-ink truncate">{name}</span>
-        {meta ? <span className="type-body text-ink-2 truncate">{meta}</span> : null}
+        {meta ? <span className="text-ink-2 truncate">{meta}</span> : null}
       </span>
       {trailing}
       <Icon icon={ChevronRight} className="text-ink-2" />
@@ -194,13 +153,10 @@ export function AuthRow({
   );
 }
 
-/** The create row's lead: a 40px inset tile with the glyph (dashed is for drafts only). */
+/** The create row's lead: the glyph in the lead's 20px box. */
 export function AuthRowTile({ icon }: Readonly<{ icon: LucideIcon }>) {
   return (
-    <span
-      aria-hidden
-      className="bg-well text-ink-2 rounded-control grid size-10 shrink-0 place-items-center"
-    >
+    <span aria-hidden className="text-ink-2 grid size-5 shrink-0 place-items-center">
       <Icon icon={icon} />
     </span>
   );
