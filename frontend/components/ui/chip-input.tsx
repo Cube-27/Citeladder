@@ -26,7 +26,7 @@ function appended(items: readonly ChipItem[], values: readonly string[], max?: n
 const SEPARATORS = {
   line: { keys: ['Enter'], split: /[\n\r]+/ },
   comma: { keys: ['Enter', ','], split: /[\n\r,]+/ },
-} as const satisfies Record<string, { keys: readonly string[]; split: RegExp }>;
+} satisfies Record<string, { keys: readonly string[]; split: RegExp }>;
 
 const TOKEN_REMOVE =
   'focus-ring text-ink-2 hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark opacity-0 transition-opacity group-hover/token:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 disabled:hidden';
