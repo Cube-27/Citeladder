@@ -358,8 +358,9 @@ async function untilAdmissionEnds<T>(
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = config.settings;
   const runtime = auditRuntime(env);
-  // Task slots leave one pooled connection free, so a slot's cadence work (live
-  // score, catalog publication) never waits out the pool timeout behind them.
+  // Each lane's task slots leave one pooled connection free, so its cadence work
+  // (live score, catalog publication) never waits out the pool timeout behind
+  // them. Audit tasks hold no connection across provider calls.
   const slots = Math.max(1, config.execution.poolSize - 1);
   // Provider calls hold no connection, so audits keep a pool-bounded set in
   // flight like Site Health below; per-transport capacity still caps each provider.
