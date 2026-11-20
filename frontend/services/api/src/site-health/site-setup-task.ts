@@ -150,19 +150,20 @@ type SiteFacts = Record<string, unknown>;
 
 /** Site URL ids of the given URL hashes this crawl already observed. */
 async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
-  // One uq_site_url_project_hash probe per hash (LIMIT 1 keeps the lateral from
-  // flattening): a join on `= any` let the planner seq-scan site_urls per chunk.
+  // Two index probes per hash whatever the statistics say (LIMIT 1 keeps the
+  // lateral from flattening): a join outside it let an unanalyzed planner loop
+  // over the crawl's observations, and `= any` seq-scanned site_urls per chunk.
   const { rows } = await sql<{ url_hash: string; id: string }>`
     select u.url_hash, u.id
     from unnest(${hashes}::text[]) as h(url_hash)
     cross join lateral (
       select s.id, s.url_hash from site_urls s
+      join site_url_observations o on o.crawl_id = ${crawl.id} and o.site_url_id = s.id
+        and o.workspace_id = ${crawl.workspace_id}
       where s.project_id = ${crawl.project_id} and s.url_hash = h.url_hash
         and s.workspace_id = ${crawl.workspace_id}
       limit 1
-    ) u
-    join site_url_observations o on o.crawl_id = ${crawl.id} and o.site_url_id = u.id
-    where o.workspace_id = ${crawl.workspace_id}`.execute(trx);
+    ) u`.execute(trx);
   return new Map(rows.map((row) => [row.url_hash, row.id]));
 }
 

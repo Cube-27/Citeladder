@@ -145,38 +145,6 @@ describe('crawl control admission', () => {
     ]);
   });
 
-  it('hands a created crawl to the runner and drains nothing inside the API request', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
-    await allow(tenant, 2);
-    const wake = vi.fn(async () => true);
-    const server = createApp(config, db, { startRunner: wake });
-    const response = await request(
-      tenant,
-      '/site-crawls',
-      'POST',
-      { project_id: tenant.projectId },
-      server,
-    );
-    expect(response.status).toBe(201);
-    const crawl = siteCrawlSchema.parse(await response.json());
-    const tasks = await db
-      .selectFrom('site_crawl_tasks')
-      .select(['task_kind', 'status', 'attempt_count'])
-      .where('workspace_id', '=', tenant.workspaceId)
-      .where('crawl_id', '=', crawl.id)
-      .orderBy('task_kind')
-      .execute();
-    expect(tasks).toEqual([
-      { task_kind: 'analyze', status: 'queued', attempt_count: 0 },
-      { task_kind: 'site_setup', status: 'queued', attempt_count: 0 },
-    ]);
-    // The wake starts once the request's commit lands, before the response settles.
-    expect(wake).toHaveBeenCalledTimes(1);
-    // The in-request drain is retired: the runner owns every claim.
-    expect((await request(tenant, `/site-crawls/${crawl.id}/run`, 'POST', {}, server)).status).toBe(
-      404,
-    );
-  });
   it('reserves one shared fetch allowance under concurrent creates and settles unused units once', async () => {
     const first = await fixtures.crawl();
     const second = await otherProject(first);

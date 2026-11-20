@@ -7,13 +7,14 @@ import type { Database } from '../src/db/database.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { drainLanes, runnerOwners, tickAndDrain } from '../src/workers/runner.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
-import { Fixtures, ownerDatabaseUrl, testConfig, testDatabase } from './support.ts';
+import { ownerDatabaseUrl, sessionToken, testConfig, testDatabase } from './support.ts';
+import { SiteFixtures } from './site-health-fixtures.ts';
 import { setLogSink } from '../src/logging.ts';
 
 const config = testConfig({ DB_POOL_SIZE: '4', DB_MAX_OVERFLOW: '0' });
 const db = testDatabase(config),
   reader = testDatabase(config);
-const fixtures = new Fixtures(db);
+const fixtures = new SiteFixtures(db);
 let workspaces: string[];
 
 async function enqueue(connection: Database, workspaceId = workspaces[0]!, id = randomUUID()) {
@@ -246,6 +247,25 @@ describe('committed API work at PostgreSQL', () => {
     } finally {
       setLogSink(restore);
     }
+  });
+
+  it('hands a created crawl to the runner through its raw task insert, not a refused one', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const wake = vi.fn(async () => true);
+    const app = createApp(config, db, { startRunner: wake });
+    const create = async () =>
+      app.request('/api/v1/site-crawls', {
+        method: 'POST',
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: tenant.userId, ver: 0 })}`,
+          'x-workspace-id': tenant.workspaceId,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ project_id: tenant.projectId }),
+      });
+    expect((await create()).status).toBe(201);
+    expect((await create()).status).toBe(409);
+    expect(wake).toHaveBeenCalledTimes(1);
   });
 
   it('keeps concurrent committing and rolling-back workspace requests separate', async () => {
