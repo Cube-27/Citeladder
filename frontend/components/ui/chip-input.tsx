@@ -12,8 +12,10 @@ export type ChipItem = Readonly<{ value: string; suggested?: boolean }>;
 
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+// No `hit-area`: a suggested chip's Confirm and Remove sit side by side, so
+// each keeps its own box, their centres 24 apart (WCAG 2.5.8 spacing).
 const CHIP_BUTTON =
-  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink hit-area grid size-4 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
+  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
 
 /**
  * One value as a 24px `surface-sunken` chip with a 20px remove button. A
@@ -58,7 +60,7 @@ function Chip({
         aria-label={`Remove ${item.value}`}
         disabled={disabled}
         onClick={onRemove}
-        className={CHIP_BUTTON}
+        className={cn(CHIP_BUTTON, item.suggested && 'ms-1')}
       >
         <Icon icon={X} className="my-0" />
       </button>
