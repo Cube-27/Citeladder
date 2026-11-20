@@ -3,8 +3,9 @@
  * index.html's `.boot-shell` gets the sidebar's rows at build, and
  * `/boot-title.js`, a same-origin classic script (the CSP allows no inline
  * script), shows the shell frame only on a shell path (a flow path keeps the
- * plain ground, as `FirstFrame` does), titles the masthead and the document,
- * shows the mode's rows and applies the stored sidebar width.
+ * plain ground, as `FirstFrame` does), names the page header's section and
+ * title and the document, shows the mode's rows and applies the stored
+ * sidebar width.
  */
 import type * as Manifest from '../../lib/navigation/app-routes.ts';
 
@@ -43,6 +44,24 @@ export function bootSidebarHtml(manifest: RouteManifest): string {
   ].join('');
 }
 
+const atOrBelow = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
+
+/**
+ * The page header's section for a route, as `pageSection` names it: the
+ * Dashboard group listing the route (or its collection), the Agent, else the
+ * workspace's own pages.
+ */
+function routeSection(manifest: RouteManifest, route: RouteManifest['APP_ROUTES'][number]) {
+  const path = route.collection ?? route.path;
+  if (atOrBelow(path, '/agent')) return 'Agent';
+  const group = manifest.DASHBOARD_SIDEBAR_GROUPS.find(({ group }) =>
+    manifest
+      .navDestinations(`sidebar:${group}`)
+      .some((entry) => atOrBelow(path, entry.href.split('?')[0] ?? entry.href)),
+  );
+  return group?.title ?? 'Workspace';
+}
+
 /**
  * `/boot-title.js`. It resolves the path as `resolveTitle` and `hasPageTitle`
  * do (the route, else the deepest parameter-free route above it). The storage
@@ -53,6 +72,7 @@ export function bootTitleScript(manifest: RouteManifest): string {
     route.path,
     route.shell,
     route.shell && route.title ? route.title : null,
+    routeSection(manifest, route),
   ]);
   return `// Generated at build from lib/navigation/app-routes.ts by apps/app/boot-shell.ts.
 try {
@@ -80,6 +100,8 @@ try {
     shell.dataset.bootMode = path === '/agent' || path.startsWith('/agent/') ? 'agent' : 'dashboard';
     const heading = shell.querySelector('.boot-title');
     if (heading) heading.textContent = title;
+    const section = shell.querySelector('.boot-section');
+    if (section) section.textContent = route[3];
     document.title = title + ' · CiteLadder';
   }
   try {

@@ -22,14 +22,14 @@ import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
 /**
- * The Sidebar organism's parts, labelled and as the collapsed rail. Top to
- * bottom: the project switcher in a cell as tall as the masthead, the mode
- * switch, the mode's list, then the foot (Integrations, the account and the
- * collapse toggle). The switcher, the switch and the foot are pinned; only
- * the list scrolls. Everything sits 8 inside the column's edges, so in the
- * 56px rail every 40px button shares one centre axis. The rail's buttons sit
- * edge to edge with 4 between its parts, so its eleven buttons fit a window
- * 480 high (56 + 10 × 40 + 21 = 477). `labelled:` is wherever the labels show.
+ * The Sidebar organism's parts, labelled and as the collapsed rail, 8 inside
+ * the column's edges. Top to bottom: the header (the project switcher, the
+ * Settings link and the collapse toggle in one row as tall as the page
+ * header), the mode switch, the mode's list, then the foot (Integrations and
+ * the account). Only the list scrolls. In the 56px rail every 40px button
+ * shares one centre axis, 4 between the parts, the toggle straight under the
+ * project's mark, so it keeps its place at the top of the sidebar whichever
+ * way it shows; its twelve buttons fit a window 520 high (16 + 12 × 40 + 16).
  */
 export function SidebarFrame({
   ident,
@@ -40,25 +40,21 @@ export function SidebarFrame({
   return (
     <div className="h-full overflow-hidden">
       {/* In the shell's column the content keeps the width the column eases
-          to (less its 1px border), so a collapse never rewraps a label. */}
+          to, so a collapse never rewraps a label. */}
       <div
         data-sidebar-frame=""
-        className="rail:in-data-[sidebar-state=expanded]:w-[calc(var(--sidebar-width-compact)-1px)] shell:in-data-[sidebar-state=expanded]:w-[calc(var(--sidebar-width)-1px)] rail:in-data-[sidebar-state=collapsed]:w-[calc(var(--sidebar-rail-width)-1px)] flex h-full flex-col"
+        className="rail:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width-compact)] shell:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width)] rail:in-data-[sidebar-state=collapsed]:w-[var(--sidebar-rail-width)] labelled:gap-2 flex h-full flex-col gap-1 p-2"
       >
         <div
           data-sidebar-ident-cell=""
-          className="border-rule flex h-[var(--masthead-height)] shrink-0 items-center border-b px-2 in-data-[nav-drawer]:pe-12"
+          className="labelled:h-[var(--masthead-height)] labelled:flex-row flex shrink-0 flex-col items-center gap-1 in-data-[nav-drawer]:pe-10"
         >
           {ident}
+          <SidebarCollapseToggle />
         </div>
-        {/* Labelled, the row lines up with the page's first strip (globals.css). */}
-        <div data-sidebar-mode-row="" className="shrink-0 px-2 pt-1">
-          {mode}
-        </div>
+        {mode}
         {nav}
-        <div className="border-rule labelled:gap-0.5 labelled:py-2 flex shrink-0 flex-col border-t px-2 py-1">
-          {foot}
-        </div>
+        <div className="labelled:gap-0.5 flex shrink-0 flex-col">{foot}</div>
       </div>
     </div>
   );
@@ -155,7 +151,7 @@ export function SidebarScrollList({
       data-sidebar-scroll=""
       data-fade-top={ends.top || undefined}
       data-fade-bottom={ends.bottom || undefined}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3"
+      className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1"
     >
       <nav aria-label={label} className="flex flex-col gap-4">
         {children}
@@ -165,10 +161,10 @@ export function SidebarScrollList({
 }
 
 /**
- * A group of rows. A titled group's label is a 32-high button in
+ * A group of rows. A titled group's label is a row-high button in 12px
  * `caption-strong` with a chevron that folds and unfolds the rows; the
  * caller passes only the rows to show (a folded group still shows the
- * current page's row). Rows sit on a 34 pitch.
+ * current page's row).
  */
 export function SidebarNavGroup({
   title,
@@ -217,7 +213,7 @@ const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 const NAV_AT_REST = 'text-ink hover:overlay-hover';
 
 /**
- * A row's face: 32 tall (44 in the drawer below 900px), `label` type at the
+ * A row's face: 28 tall (44 in the drawer below 900px), `label` type at the
  * regular weight (owner, 2026-11-18), the icon and the label 8 apart, radius
  * 6. Labels never wrap: one that cannot fit (WCAG text spacing) ends in an
  * ellipsis and the row's tooltip shows it.
@@ -257,7 +253,7 @@ export function SidebarNavRowContent({
 }
 
 const RAIL_BUTTON = cn(
-  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-5',
+  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-4',
   'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
   'data-[state=open]:overlay-pressed',
 );
@@ -272,24 +268,25 @@ export function sidebarRailButtonClasses(current: boolean) {
 }
 
 /**
- * The Dashboard | Agent switch, the Segmented look: a `well` track one control
- * tall with the current segment raised on `surface`. In the
- * rail it is two stacked rail buttons, the current one on the tile without the mark.
+ * The Dashboard | Agent switch, the segmented control: a `rule` frame one
+ * control tall, segments 2 inside it, the current one on `state-selected`. In
+ * the rail it is two stacked rail buttons, the current one on the tile
+ * without the mark.
  */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-well rounded-control flex h-[var(--control-md)] w-full min-w-0 p-0.5';
+    : 'border-rule rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 border p-px';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
   if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
-  // Labelled, a segment is its word (no icon) plus 12 a side, the two sharing
-  // what is left: both fit the 200 sidebar; wider text spacing ends in an ellipsis.
+  // Labelled, a segment is its word (no icon), the two sharing the width;
+  // wider text spacing ends in an ellipsis.
   return cn(
-    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center rounded-mark px-3 transition-colors',
-    current ? 'bg-surface text-ink shadow-card' : AT_REST,
+    'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
+    current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST,
   );
 }
 
@@ -304,7 +301,7 @@ export function SidebarRailList({
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <nav aria-label={label} className="min-h-0 flex-1 overflow-hidden px-2 py-1">
+    <nav aria-label={label} className="min-h-0 flex-1 overflow-hidden">
       <ul className="flex flex-col items-center">{children}</ul>
     </nav>
   );
@@ -375,9 +372,10 @@ export function SidebarIdentButton({
 }
 
 /**
- * Collapse the sidebar to its rail, or open it again: the masthead's first
- * item, before the title. Below 900px, where the menu button opens the
- * drawer instead, it is hidden.
+ * Collapse the sidebar to its rail, or open it again: last in the sidebar's
+ * header, beside Settings, and under the project's mark in the rail (AR-8).
+ * Below 900px and in the drawer, where the menu button opens the sidebar
+ * instead, it is hidden.
  */
 export function SidebarCollapseToggle() {
   const collapsed = useSidebarCollapsed();
@@ -386,11 +384,10 @@ export function SidebarCollapseToggle() {
       icon={collapsed ? PanelLeftOpen : PanelLeftClose}
       label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       shortcut={COLLAPSE_SHORTCUT}
-      tooltipSide="bottom"
+      tooltipSide={collapsed ? 'right' : 'bottom'}
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
-      aria-pressed={collapsed}
       onClick={() => setSidebarCollapsed(!collapsed)}
-      className="rail:inline-flex hidden shrink-0"
+      className="rail:inline-flex not-labelled:size-[var(--rail-button)] hidden shrink-0 in-data-[nav-drawer]:hidden"
     />
   );
 }

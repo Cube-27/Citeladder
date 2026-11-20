@@ -11,6 +11,4 @@ export const ShellContext = createContext<Readonly<{
   searchTrigger: ReactNode;
   /** The header's Agent trigger; the shell owns the Agent panel it opens. */
   agentTrigger: ReactNode;
-  /** The sidebar's collapse toggle, first in the masthead from 900px. */
-  sidebarToggle: ReactNode;
 }> | null>(null);

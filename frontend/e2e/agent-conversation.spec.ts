@@ -364,8 +364,8 @@ for (const width of [1280, 390]) {
         (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
       );
       expect(remaining).toBeLessThanOrEqual(1);
-      // Following the thread never scrolls the window under the shell chrome.
-      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      // Following the thread never scrolls the panel under the page header.
+      expect(await page.locator('#main').evaluate((panel) => panel.scrollTop)).toBe(0);
       await expect(reply).toHaveValue('Draft kept while working');
       const stop = page.getByRole('button', { name: 'Stop', exact: true });
       await stop.focus();

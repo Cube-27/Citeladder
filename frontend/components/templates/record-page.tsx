@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
 
@@ -12,8 +12,9 @@ const BAR_CLEARANCE = 'calc(var(--filter-bar-height) + 2 * var(--content-gutter)
  * `raised` bar with `shadow-pop` at the foot of the main column, one row at
  * every width (the caller folds lower-priority actions into a "More" menu),
  * the primary last. It sits in the flow under the cards and sticks to the
- * window's foot. While it shows, the document's scroll padding and the body's
- * foot clear it, so focus and the last card never sit under it (WCAG 2.4.11).
+ * panel's foot. While it shows, the panel's scroll padding (globals.css) and
+ * the body's foot clear it, so focus and the last card never sit under it
+ * (WCAG 2.4.11).
  */
 export function RecordPage({
   busy,
@@ -35,7 +36,6 @@ export function RecordPage({
     children: ReactNode;
   }>) {
   const hasBar = Boolean(actionBar);
-  useScrollClearance(hasBar);
   return (
     <PageFrame {...slots}>
       <div
@@ -70,16 +70,4 @@ export function RecordPage({
       ) : null}
     </PageFrame>
   );
-}
-
-/** The document is the page's scroller, so its scroll padding stops focus above the bar. */
-function useScrollClearance(shown: boolean) {
-  useEffect(() => {
-    if (!shown) return;
-    const root = document.documentElement;
-    root.style.setProperty('scroll-padding-bottom', BAR_CLEARANCE);
-    return () => {
-      root.style.removeProperty('scroll-padding-bottom');
-    };
-  }, [shown]);
 }

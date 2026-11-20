@@ -9,7 +9,7 @@ import {
   CommandPaletteHost,
   CommandPaletteTrigger,
 } from '@/components/ui/command-palette-launcher';
-import { SidebarCollapseToggle, SidebarFrame, SidebarRailList } from '@/components/ui/sidebar';
+import { SidebarFrame, SidebarRailList } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
@@ -29,11 +29,12 @@ import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
 /**
- * AppShell — the signed-in application chrome: the sidebar (the project
- * switcher, the Dashboard | Agent switch, the mode's list, Integrations and
- * the account at its foot) beside the page. Below 900px the masthead's menu button opens the same sidebar in a left
- * drawer that closes when the route changes. The masthead's search, "Ask
- * agent" and menu button come from here through `ShellContext`.
+ * AppShell — the signed-in application chrome: the sidebar (its header, the
+ * Dashboard | Agent switch, the mode's list, Integrations and the account at
+ * its foot) beside the page's panel. Below 900px the header's menu button
+ * opens the same sidebar in a left drawer that closes when the route
+ * changes. The header's search, "Ask agent" and menu button come from here
+ * through `ShellContext`.
  */
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const [titleOverride, setTitleOverride] = useState<string>();
@@ -54,7 +55,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       navDrawer: { open: drawerOpen, onOpen: () => setDrawerLocation(location.key) },
       searchTrigger: <CommandPaletteTrigger />,
       agentTrigger: <AgentPanelTrigger />,
-      sidebarToggle: <SidebarCollapseToggle />,
     }),
     [drawerOpen, location.key],
   );
@@ -81,10 +81,11 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * The sidebar: the project switcher, the Dashboard | Agent switch, the
- * mode's list (the route decides the mode), then Integrations and the
- * account (the collapse toggle is in the masthead). Collapsed (never in the drawer) it is the 56px
- * rail: one button per group, flyouts for the groups, and nothing scrolls.
+ * The sidebar: the header (project switcher, Settings, collapse toggle), the
+ * Dashboard | Agent switch, the mode's list (the route decides the mode),
+ * then Integrations and the account. Collapsed (never in the drawer) it is
+ * the 56px rail: one button per group, flyouts for the groups, and nothing
+ * scrolls.
  */
 function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   const collapsed = useSidebarCollapsed();
@@ -122,9 +123,8 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
 }
 
 /**
- * Settings, beside the project (owner, 2026-11-19, restoring the gear PR 482 added).
- * Not in the rail: its 56 cell holds the project's mark alone, and the
- * account menu still opens Settings there.
+ * Settings, beside the project (owner, 2026-11-19, restoring the gear PR 482
+ * added). Not in the rail, where the account menu still opens Settings.
  */
 function SettingsLink() {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();

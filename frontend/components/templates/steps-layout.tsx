@@ -13,8 +13,8 @@ export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
  * steps run down a 224 column on the left (numbered, the current one on the
  * nav's current tile, completed ones ticked and clickable to go back to),
  * the current step's content beside them, and a raised action bar at the
- * window's foot: `footerStart` at its left, `footerEnd` at its right. The body
- * fills the window and scrolls inside itself, so the bar never moves with a
+ * panel's foot: `footerStart` at its left, `footerEnd` at its right. The body
+ * fills the panel and scrolls inside itself, so the bar never moves with a
  * step's height.
  */
 export function StepsLayout<T extends string>({
@@ -42,7 +42,7 @@ export function StepsLayout<T extends string>({
   return (
     <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 min-w-0 flex-col">
       {/* `relative` contains absolute descendants (`sr-only` text); without it they
-          escape the clip, lengthen the document and the window scrolls the shell away. */}
+          escape the clip, lengthen the panel and it scrolls the page header away. */}
       <div className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
         <nav aria-label={label} className="flex w-56 shrink-0 flex-col">
           <ol className="flex min-w-0 flex-col gap-1">
