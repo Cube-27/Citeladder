@@ -17,14 +17,15 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The four buttons. Actions are ink, never the accent:
- * `primary` is the one ink-filled action a view is for, `secondary` a
- * `control-fill` button with the soft `control-edge` and `shadow-control` (its
- * words name it, so the edge needs no 3:1), `quiet` no edge (`ink-2`, `ink`
- * on hover) for toolbars, rows and navigation, `danger` the secondary face
- * with a crimson label (filled only in a confirm dialog, `danger-confirm`).
- * Hover is the 6% ink tint, pressed and open the 10% tint; in the app a
- * held press also scales the button to 97% (`press`, globals.css).
+ * The four buttons, layered (globals.css `.face`: a faint gradient and a
+ * soft low shadow; borders unchanged): `primary` is the one accent-filled
+ * action a view is for, `secondary` the white (near-black in dark) face with
+ * the soft `control-edge` (its words name it, so the edge needs no 3:1),
+ * `quiet` flat with no edge (`ink-2`, `ink` on hover) for toolbars, rows and
+ * navigation (the ink tints below), `danger` a flat secondary face with a
+ * crimson label (filled only in a confirm dialog, `danger-confirm`). A face
+ * draws its own hover, pressed and open tints and drops its shadow on press; in
+ * the app a held press also scales the button to 97% (`press`, globals.css).
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
@@ -35,12 +36,12 @@ export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'dang
  */
 export type ButtonSize = 'md' | 'lg';
 
-/** Hover, unless the button is toggled on or its menu is open. */
+/** A quiet button's hover, unless it is toggled on or its menu is open. */
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
-/** The labelled button's soft edge; the website keeps its control line (globals.css). */
-const SOFT_EDGE = 'bg-control-fill border border-control-edge shadow-control';
+/** The labelled button's layered face; the website draws a softer hairline (marketing.css). */
+const SOFT_EDGE = 'face border border-control-edge';
 
 // The app's one disabled look (well fill, no edge) is in globals.css, after
 // every variant. The website keeps its 45% disabled face.
@@ -54,15 +55,15 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary:
-    'bg-ink text-on-ink border border-ink not-disabled:hover:bg-ink-hover aria-disabled:hover:bg-ink',
-  secondary: cn(SOFT_EDGE, 'text-ink', HOVER_OVERLAY),
+  primary: 'face face-primary border border-primary-to',
+  secondary: cn(SOFT_EDGE, 'text-ink'),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
-  danger: cn(SOFT_EDGE, 'text-negative [[data-public-surface]_&]:border-negative', HOVER_OVERLAY),
-  'danger-confirm': 'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
+  danger: cn(SOFT_EDGE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
+  'danger-confirm':
+    'face face-filled text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
 /** The button face for an element that is not a `Button` (a link styled as one). */

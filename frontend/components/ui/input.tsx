@@ -18,11 +18,13 @@ export const FIELD_EDGE = `bg-surface border border-control-line ${PUBLIC_EDGE}`
 /**
  * The soft edge of a search or filter control (SearchField, FilterTrigger,
  * Select's trigger, SearchableSelect): 1px `control-edge` with
- * `shadow-control`, since its icon and words name it. Hover is the 6% ink
- * tint, never a darker edge; focus and invalid are FIELD_EDGE's. The website
+ * `shadow-control`, since its icon and words name it; a trigger takes the
+ * layered button face (`.face`, which draws its own tints) on that edge.
+ * Hover is the 6% ink tint, never a darker edge; focus and invalid are FIELD_EDGE's. The website
  * keeps its hairline edge.
  */
 const SOFT_FIELD_EDGE = `bg-control-fill border border-control-edge shadow-control ${PUBLIC_EDGE}`;
+const SOFT_TRIGGER_EDGE = `face border border-control-edge ${PUBLIC_EDGE}`;
 
 const FIELD_SHAPE =
   'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]';
@@ -30,7 +32,7 @@ const FIELD_SHAPE =
 /** A form field's box: FIELD_EDGE, the control radius, at least `control-md` tall. */
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 /** A search or filter control's box: the soft edge on the same shape. */
-export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} [:root:not([data-public-surface])_&]:hover:overlay-hover ${FIELD_SHAPE}`;
+export const SOFT_FIELD_BOX = `${SOFT_TRIGGER_EDGE} ${FIELD_SHAPE}`;
 
 /**
  * A typed field (Input, SearchField, Textarea) tints its own fill 4% ink on

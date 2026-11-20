@@ -95,8 +95,17 @@ const CONTRAST_PAIRS = [
     surfaces: [color('paper'), color('surface'), color('accent-soft')],
     minimum: 4.5,
   },
-  // Labels on fills: the primary button and its hover.
+  // Labels on fills: an ink tile (badge, selected day) and its hover.
   { inks: [color('on-ink')], surfaces: [color('ink'), color('ink-hover')], minimum: 4.5 },
+  // The layered buttons' labels over both ends of their gradients.
+  {
+    inks: [color('on-primary')],
+    surfaces: [color('primary-from'), color('primary-to')],
+    minimum: 4.5,
+  },
+  { inks: [color('ink')], surfaces: [color('button-from'), color('button-to')], minimum: 4.5 },
+  // Danger's crimson label sits on the flat top colour.
+  { inks: [color('negative')], surfaces: [color('button-from')], minimum: 4.5 },
   // Marks: Flare and the focus ring.
   { inks: [color('accent'), color('focus')], surfaces: GROUNDS, minimum: 3 },
   // The website's control marks; the app's field edges are quieter by design.

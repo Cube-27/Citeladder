@@ -63,7 +63,7 @@ export function FilterTrigger({
         className={cn(
           SOFT_FIELD_BOX,
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
-          'press data-[state=open]:overlay-selected',
+          'press',
           'disabled:cursor-not-allowed disabled:opacity-45',
           // Icon only, it is an icon control: no padding, its glyphs inset like IconButton's.
           iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',

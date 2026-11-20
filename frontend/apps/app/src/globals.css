@@ -134,6 +134,18 @@
   /* The fill of a labelled control (secondary button, select, filter trigger):
      the surface, except in the app's dark, where it is the well. */
   --color-control-fill: var(--color-surface);
+  /* The layered button (owner, 2026-11-20): a vertical gradient per face.
+     The primary is the accent deepened so white text holds 4.5:1 at its
+     lightest point, hover lift included. */
+  --color-button-from: oklch(100% 0 0);
+  --color-button-to: oklch(94.9% 0.008 91.5);
+  /* The website secondary button's soft hairline (owner, 2026-11-20). */
+  --color-button-edge: oklch(87.3% 0.01 87.5);
+  --color-primary-from: oklch(54.5% 0.175 37.5);
+  --color-primary-to: oklch(48.5% 0.158 37.5);
+  /* The website primary's edge, a step darker than its fill (owner, 2026-11-20). */
+  --color-primary-edge: oklch(40.5% 0.135 37.5);
+  --color-on-primary: oklch(100% 0 0);
   /* An off switch's thumb: the surface, except in the app's dark, where it is ink-2. */
   --color-thumb: var(--color-surface);
   --color-ink-2: var(--color-ink-secondary);
@@ -385,6 +397,8 @@
   --shadow-edge: 0 1px 2px oklch(17.8% 0 0 / 5%);
   /* Under a labelled control's soft edge (a secondary button, an operable tag). */
   --shadow-control: 0 1px 2px oklch(21% 0.034 263 / 6%);
+  /* Under every layered button, app and website: a lit top edge and a soft drop. */
+  --shadow-button: inset 0 1px 0 oklch(100% 0 0 / 6%), 0 1px 1px oklch(0% 0 0 / 10%), 0 2px 6px -1px oklch(0% 0 0 / 6%);
   --shadow-xs: 0 0 0 1px oklch(17.8% 0 0 / 8%), 0 1px 2px oklch(17.8% 0 0 / 6%);
   --shadow-pop:
     0 0 0 1px oklch(17.8% 0 0 / 8%), 0 2px 6px oklch(17.8% 0 0 / 6%),
@@ -464,6 +478,12 @@
   --color-ink-hover: oklch(87.6% 0 0);
   --color-ink-secondary: oklch(72.5% 0 0);
   --color-on-ink: oklch(17.8% 0 0);
+  --color-button-from: oklch(27.3% 0.004 84.6);
+  --color-button-to: oklch(24.1% 0.004 48.6);
+  --color-button-edge: oklch(31.8% 0.0045 67.7);
+  --color-primary-from: oklch(54.5% 0.173 39.3);
+  --color-primary-to: oklch(48.5% 0.157 39.3);
+  --color-primary-edge: oklch(40.5% 0.134 39.3);
   --color-accent: oklch(70.3% 0.194 39.3);
   --color-accent-ink: oklch(77% 0.1428 43.5);
   --color-accent-soft: oklch(26.2% 0.057 43);
@@ -480,13 +500,15 @@
   --color-chart-grid: oklch(26.9% 0 0);
   --shadow-edge: 0 1px 2px oklch(0% 0 0 / 40%);
   --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
+  --shadow-button: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 1px 1px oklch(0% 0 0 / 50%), 0 2px 6px -1px oklch(0% 0 0 / 30%);
   --shadow-xs: 0 0 0 1px oklch(100% 0 0 / 8%), 0 1px 2px oklch(0% 0 0 / 50%);
   --shadow-pop: 0 0 0 1px oklch(100% 0 0 / 10%), 0 16px 40px oklch(0% 0 0 / 60%);
   --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
-/* The app's dark: designed, not inverted. Neutral near-blacks after the
-   owner's table reference (sampled 2026-11-19), with our shell kept: the
+/* The app's dark: designed, not inverted. The ground is the owner's warm
+   near-black #131211 (2026-11-20); the layers above it are neutral greys,
+   lifted to keep their steps, with our shell kept: the
    chrome is a step lighter than the ground, not a darker frame. It rebinds
    every literal the app's light block below sets: that block follows the
    system's dark at the same specificity, so it would otherwise win here.
@@ -494,19 +516,19 @@
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps at least 1.05 lighter than the one beneath, so a surface
      reads by its fill alone, with no edge and no shadow. */
-  --color-ground: oklch(12.5% 0 0);
-  --color-chrome: oklch(17% 0 0);
-  --color-surface: oklch(20.6% 0 0);
-  --color-raised: oklch(23% 0 0);
-  --color-well: oklch(25.6% 0 0);
+  --color-ground: oklch(18.3% 0.0026 67.7);
+  --color-chrome: oklch(21.2% 0 0);
+  --color-surface: oklch(23.8% 0 0);
+  --color-raised: oklch(25.9% 0 0);
+  --color-well: oklch(27.9% 0 0);
   --color-control-fill: var(--color-well);
   --color-thumb: var(--color-ink-2);
-  --color-rule: oklch(28.5% 0 0);
-  --color-control-edge: oklch(31% 0 0);
+  --color-rule: oklch(31% 0 0);
+  --color-control-edge: oklch(33.5% 0 0);
   /* Field, checkbox and radio edges: quiet like Linear's, a step past
      control-edge so an unchecked ring still shows on a surface. */
-  --color-control-line: oklch(36% 0 0);
-  --color-chart-grid: oklch(26% 0 0);
+  --color-control-line: oklch(38.5% 0 0);
+  --color-chart-grid: oklch(29% 0 0);
   --color-ink: oklch(94% 0 0);
   --color-ink-2: oklch(72% 0 0);
   --color-ink-hover: oklch(85% 0 0);
@@ -515,15 +537,15 @@
   --color-accent-text: oklch(75.3% 0.155 41.6);
   /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: oklch(28% 0.041 43);
+  --color-accent-wash: oklch(31% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
-  --color-positive-wash: oklch(26% 0.035 157);
+  --color-positive-wash: oklch(29% 0.035 157);
   --color-negative: oklch(74.8% 0.157 10.3);
-  --color-negative-wash: oklch(25% 0.044 7);
+  --color-negative-wash: oklch(28% 0.044 7);
   --color-warning: oklch(81.4% 0.14 81.3);
-  --color-warning-wash: oklch(27% 0.0354 86);
+  --color-warning-wash: oklch(30% 0.0354 86);
   --color-info: oklch(76.6% 0.119 265.7);
-  --color-info-wash: oklch(27% 0.0529 266);
+  --color-info-wash: oklch(30% 0.0529 266);
   --color-data-rival-2: oklch(74.2% 0.1035 243.3);
   --color-data-rival-3: oklch(66.3% 0.169 293);
   --color-data-rival-4: oklch(75% 0.1072 183.6);
@@ -611,6 +633,51 @@
 }
 @utility overlay-selected {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+}
+
+/* The layered face (owner, 2026-11-20: "just to have a subtle 3d effect"),
+   app and website alike: a faint vertical gradient (--face-from/to), its
+   state tint on top, a lit top edge and the soft low shadow-button. Each
+   control keeps its own border. A press drops the shadow; disabled is flat.
+   Danger stays flat (--face-to is its top): its crimson label fails 4.5:1 on
+   the gradient's foot under the tints. Unlayered, over the overlay utilities. */
+.face {
+  --face-from: var(--color-button-from);
+  --face-to: var(--color-button-to);
+  background:
+    linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
+    linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
+  box-shadow: var(--face-lit, 0 0 transparent), var(--shadow-button);
+}
+.face-primary {
+  --face-from: var(--color-primary-from);
+  --face-to: var(--color-primary-to);
+  --face-lit: inset 0 1px 0 oklch(100% 0 0 / 16%);
+  --face-hover: oklch(100% 0 0 / 5%);
+  --face-press: oklch(0% 0 0 / 8%);
+  color: var(--color-on-primary);
+}
+.face-danger {
+  --face-to: var(--color-button-from);
+}
+.face-filled {
+  --face-from: oklch(100% 0 0 / 6%);
+  --face-to: transparent;
+  --face-bg: var(--color-negative);
+}
+@media (hover: hover) {
+  .face:hover {
+    --face-tint: var(--face-hover, var(--color-state-hover));
+  }
+}
+.face:is(:active, [aria-pressed='true'], [data-state='open']) {
+  --face-tint: var(--face-press, var(--color-state-pressed));
+  box-shadow: none;
+}
+.face:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+  --face-tint: transparent;
+  --face-from: var(--face-to);
+  box-shadow: none;
 }
 
 /* A small control's tap area: centred on it and at least --target-hit square
@@ -975,14 +1042,21 @@
   --color-site-band-line: oklch(17.8% 0 0 / 80%);
 }
 
+/* The website's dark ground is the owner's warm near-black #131211 (owner,
+   2026-11-20); the docs keep theirs. The surface, inset and well above it
+   step at least 1.05 lighter. */
 :root[data-marketing-surface][data-theme='dark'] {
+  --color-site-page: oklch(18.3% 0.0026 67.7);
+  --color-paper: oklch(18.3% 0.0026 67.7);
+  --color-surface: oklch(21.2% 0 0);
+  --color-surface-sunken: oklch(23.8% 0 0);
   --color-site-mark: oklch(70.8% 0 0);
   --color-site-chip: oklch(26.9% 0 0);
   --color-site-chip-ink: oklch(92.2% 0 0);
   --color-site-guide: oklch(100% 0 0 / 9%);
   --color-site-rule-from: oklch(55% 0.13 40 / 55%);
   --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
-  --color-site-well: oklch(18.2% 0 0);
+  --color-site-well: oklch(21.2% 0 0);
   --color-site-well-shade: oklch(0% 0 0 / 55%);
   --color-site-well-edge: oklch(100% 0 0 / 6%);
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
@@ -1624,16 +1698,6 @@ a.focus-ring:active .type-caption {
 }
 
 
-/* The website's shared buttons (a form's submit, a callout action) take the
-   control-md row. */
-:where([data-public-surface]) :is([data-button-size='md'], [data-button-size='lg']) {
-  min-height: var(--control-md);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  font-weight: var(--weight-medium);
-  letter-spacing: 0;
-}
-
 /* Text entry belongs to the field frame. Auxiliary buttons keep their own
    focus edge and do not also highlight the surrounding frame. */
 .focus-frame :is(input, textarea, select):focus-visible {
@@ -1772,20 +1836,24 @@ a.focus-ring:active .type-caption {
 }
 
 /* One primary per view (STA-03): an empty state on the page that offers an
-   action draws its main (first, secondary) button with the ink fill; the
+   action draws its main (first, secondary) button with the primary face; the
    buttons after it keep the secondary face. The masthead's primary takes the
    secondary face while it shows (StateBlock, MastheadPrimary). Both
    attributes are app-only; the disabled rule below outranks these, so a
    disabled button keeps the one disabled look. */
 [data-state-offer] [data-button-variant='secondary']:first-child {
-  background-color: var(--color-ink);
-  border-color: var(--color-ink);
-  color: var(--color-on-ink);
+  --face-from: var(--color-primary-from);
+  --face-to: var(--color-primary-to);
+  border-color: var(--color-primary-to);
+  color: var(--color-on-primary);
 }
 [data-demoted] [data-button-variant] {
-  background-color: var(--color-control-fill);
+  --face-from: var(--color-button-from);
+  --face-to: var(--color-button-to);
+  --face-lit: initial;
+  --face-hover: initial;
+  --face-press: initial;
   border-color: var(--color-control-edge);
-  box-shadow: var(--shadow-control);
   color: var(--color-ink);
 }
 

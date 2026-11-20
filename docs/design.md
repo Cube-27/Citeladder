@@ -73,6 +73,9 @@ colors:
   brand-google-green: '#34a853' # dark '#34a853'
   brand-google-red: '#ea4335' # dark '#ea4335'
   brand-google-yellow: '#fbbc05' # dark '#fbbc05'
+  button-edge: '#d8d5ce' # dark '#343230'
+  button-from: '#ffffff' # dark '#282725'
+  button-to: '#f0eee8' # dark '#211f1e'
   chart-grid: '#ececec' # dark '#262626'
   chrome: '#f4f4f4' # dark '#0a0a0a'
   control-edge: '#e5e5e5' # dark '#2a2a2a'
@@ -101,10 +104,14 @@ colors:
   negative-soft: '#ffe2e6' # dark '#3d0e16'
   negative-wash: '#ffe2e6' # dark '#3d0e16'
   on-ink: '#ffffff' # dark '#111111'
+  on-primary: '#ffffff' # dark '#ffffff'
   paper: '#f4f4f4' # dark '#0a0a0a'
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
   positive-wash: '#d6f2ef' # dark '#0e2e2b'
+  primary-edge: '#822300' # dark '#812500'
+  primary-from: '#c03d0b' # dark '#be3f01'
+  primary-to: '#a53204' # dark '#a43300'
   raised: '#ffffff' # dark '#151515'
   rule: '#e5e5e5' # dark '#2a2a2a'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
@@ -129,15 +136,17 @@ colors:
 - **App roles.** Fills: `ground` (the page; in the shell, one colour with
   `surface`), `chrome` (the sidebar, a step lighter than the ground),
   `surface` (slips, fields), `raised` (sheets), `well` (sunken material, a chart's gap band,
-  the selected state) and `control-fill` (secondary buttons, selects, search
-  and filter fields, operable tags). Lines: `rule` (dividers between rows
+  the selected state) and `control-fill` (search fields, operable tags).
+  Lines: `rule` (dividers between rows
   inside a surface and on chrome edges), `control-edge` (the soft edge of a
   labelled control or clickable card), `control-line` (a quiet grey: text fields,
   checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
-  (and the primary button's fill, labelled `on-ink`), `ink-2` for what
+  (and an inverted tile's fill, labelled `on-ink`), `ink-2` for what
   supports it; there is no third grey. Dark is designed, not inverted:
-  neutral near-blacks (values in `globals.css`; owner's table reference,
-  2026-11-19), each layer at least 1.05 lighter than the one beneath.
+  the ground is the owner's warm near-black `#131211` in the app and on the
+  website (owner, 2026-11-20; the docs keep theirs), with neutral greys
+  above it (values in `globals.css`), each layer at least 1.05 lighter than
+  the one beneath.
   The shell keeps our structure: the chrome is lighter than the ground,
   never a darker frame around an inset page. In the shell, cards, table bodies
   and control fills take the page's ground in both themes (owner, 2026-11-19);
@@ -389,7 +398,7 @@ screen stays rendered while it refreshes.
   the shadow in light, the lighter `raised` fill and the hairline in dark.
 - **The website and docs are flat.** Panels are one flat neutral fill
   with no border or shadow; a product image's screen is edged by a `line`
-  hairline ring. Buttons have no sheen, press shadow or press nudge.
+  hairline ring. Buttons take the layered face below but no press nudge.
 
 ## Shapes
 
@@ -425,13 +434,29 @@ Atoms have one form, defined once and composed everywhere; a page never sets
 its own spacing, size or radius on them.
 
 - **Buttons:** a look follows the kind of action, never the page. Primary
-  (ink fill) is the one action a view exists for, and lives only in the
+  (accent fill) is the one action a view exists for, and lives only in the
   masthead's primary slot or last in a sheet or form footer. Every other
-  action is secondary (`control-fill`, `control-edge`), quiet (no edge), danger,
-  or a link. Controls in one row share one height. Website calls to action
-  are these same buttons (owner, 2026-11-19): rounded, sentence case, the
-  sans face, no trailing glyph but an external link's arrow, one 44 height
-  on a page and in the phone sheet.
+  action is secondary (white, near-black in dark, `control-edge`), quiet (no
+  edge), danger, or a link. Controls in one row share one height. Website
+  calls to action are these same buttons (owner, 2026-11-19): rounded,
+  sentence case, the sans face, no trailing glyph but an external link's
+  arrow, one 44 height on a page and in the phone sheet.
+- **The layered face** (owner, 2026-11-20: "just to have a subtle 3d
+  effect"): every primary, secondary and danger button, filter and select
+  trigger, and the selected segment of a switch, in the app, website, login
+  and onboarding, takes a faint top-to-bottom gradient, a soft low shadow and
+  a barely-there lit top edge (`.face` in `globals.css`: shared `--face-*` properties, one rule per state, and `shadow-button`).
+  No heavy bevel. App borders stay as they were; on the website a secondary
+  takes the soft `button-edge` hairline and the primary a `primary-edge` a step
+  darker than its fill (owner, 2026-11-20). The primary fill is the accent
+  deepened (`primary-from`, `primary-to`) so white text holds 4.5:1 at its
+  lightest point, hover included; the accent itself is unchanged. Hover
+  lifts the primary a touch lighter and tints the others; a press drops the
+  shadow and darkens; disabled is flat. Danger keeps the flat top colour
+  with the same depth: its crimson label fails 4.5:1 on the gradient's foot
+  under the hover and press tints. The owner's reference images are the
+  spec for the website (gradient, edge, lit top edge, low shadow). Quiet buttons (icon-only ones
+  included), links, read-only status chips and badges stay flat.
 - **Website touch targets** (owner, 2026-11-19): under a coarse pointer
   every website control is a 44 target (shared buttons through
   `control-coarse`, small icons and text links by a hit area, their drawn

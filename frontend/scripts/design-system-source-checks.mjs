@@ -576,8 +576,8 @@ export function directRadixImportViolations(source, label) {
  * it reads string and template text only, so the rule cannot be tripped by a
  * prose mention in a comment.
  *
- * NOT banned: `bg-ink` + `text-on-ink` is the primary button and the
- * inverse-chip pattern.
+ * NOT banned: `bg-ink` + `text-on-ink` is the inverse-chip pattern (an ink
+ * badge, the calendar's selected day).
  */
 const TEXT_ROLE_BACKGROUND = new RegExp(
   // Assembled from fragments so this policy source -- which the walk in
