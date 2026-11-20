@@ -185,7 +185,10 @@ describe('ProductDetailScreen', () => {
     expect(new URL(rival.getAttribute('href')!, 'https://app.test').pathname).toBe(
       `/products/${RIVAL}`,
     );
-    expect(screen.getByText(/ranked above it in 1/)).toBeInTheDocument();
+    const rivalCells = within(screen.getByRole('row', { name: /Rival Pacer/ })).getAllByRole(
+      'cell',
+    );
+    expect(rivalCells.slice(1).map((cell) => cell.textContent)).toEqual(['2', '1', '1.5']);
     expect(screen.getByRole('link', { name: /Best road shoes/ })).toHaveAttribute(
       'href',
       'https://reviews.example/best-road',
