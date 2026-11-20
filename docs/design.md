@@ -137,7 +137,8 @@ colors:
 <!-- generated:tokens:end -->
 
 - **App roles.** Fills: `ground` (the page; in the shell, one colour with
-  `surface`), `chrome` (the sidebar, a step lighter than the ground),
+  `surface`), `chrome` (the sidebar: a step lighter than the ground in
+  light, a step darker in dark),
   `surface` (slips, fields), `raised` (sheets), `well` (sunken material, a chart's gap band,
   the selected state) and `control-fill` (search fields, operable tags).
   Lines: `rule` (dividers between rows
@@ -146,14 +147,13 @@ colors:
   checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
   (and an inverted tile's fill, labelled `on-ink`), `ink-2` for what
   supports it; there is no third grey. Dark is designed, not inverted:
-  the ground is the owner's warm near-black `#131211` in the app and on the
-  website (owner, 2026-11-20; the docs keep theirs), with neutral greys
-  above it (values in `globals.css`), each layer at least 1.05 lighter than
-  the one beneath.
-  The shell keeps our structure: the chrome is lighter than the ground,
-  never a darker frame around an inset page. In the shell, cards, table bodies
-  and control fills take the page's ground in both themes (owner, 2026-11-19);
-  overlays keep their lighter fills.
+  the owner's warm near-black `#131211` is the app's sidebar chrome and the
+  website's ground (owner, 2026-11-20; the docs keep theirs); the app's page
+  is a step lighter, with neutral greys above it (values in `globals.css`),
+  each layer at least 1.05 lighter than the one beneath. In the shell, cards,
+  table bodies and control fills take the page's ground in both themes
+  (owner, 2026-11-19); overlays keep their lighter fills. Buttons and filter
+  pills are white on the white light page, never grey (owner, 2026-11-20).
 - **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
   (light 6% and 10%, dark 4% and 8%); selected is the `well` tint plus a
   mark that is not colour (the checked control, a check glyph).
