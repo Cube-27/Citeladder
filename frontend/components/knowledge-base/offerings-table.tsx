@@ -6,7 +6,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { availabilityLabel } from '@/lib/format';
@@ -93,15 +93,12 @@ function OfferingRow({ map }: Readonly<{ map: OfferingMap }>) {
 export function OfferingsTable({ maps }: Readonly<{ maps: readonly OfferingMap[] }>) {
   if (maps.length === 0) return null;
   return (
-    <Section aria-labelledby="offerings">
-      <SectionHeader>
-        <SectionTitle id="offerings">Offerings</SectionTitle>
-      </SectionHeader>
+    <SettingsGroup title="Offerings">
       <DataTable label="Offering facts" columns={COLUMNS}>
         {maps.map((map) => (
           <OfferingRow key={map.offering} map={map} />
         ))}
       </DataTable>
-    </Section>
+    </SettingsGroup>
   );
 }

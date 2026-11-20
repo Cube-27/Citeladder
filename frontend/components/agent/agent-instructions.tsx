@@ -4,15 +4,13 @@ import { useState } from 'react';
 import { SaveFoot } from '@/components/knowledge-base/save-foot';
 import { Absence } from '@/components/ui/absence';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
-import { textRole } from '@/components/ui/typography';
 import { agentMutations, agentQueries } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
 /**
  * The project's Agent instructions and their draft. The draft follows the
@@ -79,10 +77,16 @@ export function AgentInstructionsCard({
 }: Readonly<{ instructions: AgentInstructions }>) {
   const { query, draft, mayEdit, saveError } = instructions;
   return (
-    <Section aria-labelledby="agent-instructions">
-      <SectionHeader>
-        <SectionTitle id="agent-instructions">Agent instructions</SectionTitle>
-      </SectionHeader>
+    <SettingsGroup
+      title="Agent instructions"
+      description={
+        query.data?.created_at ? (
+          <>
+            Saved <DisplayTime value={query.data.created_at} />
+          </>
+        ) : undefined
+      }
+    >
       {query.isPending ? (
         <StateBlock
           kind="loading"
@@ -98,48 +102,50 @@ export function AgentInstructionsCard({
           fallback="Agent instructions could not be loaded."
         />
       ) : null}
-      {query.data ? (
-        <Stack gap="compact">
-          <label htmlFor="agent-instructions-text" className="sr-only">
-            Agent instructions
-          </label>
-          <Textarea
-            data-form-field=""
-            id="agent-instructions-text"
-            value={draft}
-            onChange={(event) => instructions.setDraft(event.target.value)}
-            rows={8}
-            readOnly={!mayEdit}
-            placeholder={
-              mayEdit
-                ? 'For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates.'
-                : undefined
-            }
-          />
-          {saveError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(saveError, { action: 'save the instructions' })}
-              onRetry={instructions.retry}
-            />
-          ) : null}
-          {/* Never saved: an editor sees the empty field's example; a reader, None. */}
-          {query.data.created_at ? (
-            <span className={textRole('caption')}>
-              Saved <DisplayTime value={query.data.created_at} />
-            </span>
-          ) : null}
-          {!query.data.created_at && !mayEdit ? <Absence state="none" /> : null}
-        </Stack>
-      ) : null}
-      {query.data && mayEdit ? (
-        <SaveFoot
-          label="Save instructions"
-          changed={instructions.changed}
-          saving={instructions.saving}
-          onSave={instructions.save}
+      {saveError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(saveError, { action: 'save the instructions' })}
+          onRetry={instructions.retry}
         />
       ) : null}
-    </Section>
+      {query.data ? (
+        <SettingRows
+          foot={
+            mayEdit ? (
+              <SaveFoot
+                label="Save instructions"
+                changed={instructions.changed}
+                saving={instructions.saving}
+                onSave={instructions.save}
+              />
+            ) : null
+          }
+        >
+          {/* Never saved: an editor sees the empty field's example; a reader, None. */}
+          {!query.data.created_at && !mayEdit ? (
+            <Absence state="none" />
+          ) : (
+            <div>
+              <label htmlFor="agent-instructions-text" className="sr-only">
+                Agent instructions
+              </label>
+              <Textarea
+                id="agent-instructions-text"
+                value={draft}
+                onChange={(event) => instructions.setDraft(event.target.value)}
+                rows={8}
+                readOnly={!mayEdit}
+                placeholder={
+                  mayEdit
+                    ? 'For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates.'
+                    : undefined
+                }
+              />
+            </div>
+          )}
+        </SettingRows>
+      ) : null}
+    </SettingsGroup>
   );
 }

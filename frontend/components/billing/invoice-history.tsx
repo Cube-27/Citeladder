@@ -8,8 +8,7 @@ import { Download } from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -103,45 +102,41 @@ export function InvoiceHistory({
   };
 
   return (
-    <Section aria-labelledby="invoices-title">
-      <SectionHeader>
-        <SectionTitle id="invoices-title">Invoices</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact">
-        {downloadError ? (
-          <Notice tone="negative">Receipt download failed. Please retry.</Notice>
-        ) : null}
-        <DataTable label="Invoices" columns={COLUMNS} state={invoicesState(read, invoices.length)}>
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.invoice_id}>
-              <TableCell>
-                <ClampText lines={1} className={textRole('emphasis')}>
-                  {invoice.status === 'credited'
-                    ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                    : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-                </ClampText>
-              </TableCell>
-              <TableCell>
-                <DisplayTime value={invoice.paid_at} dateOnly />
-              </TableCell>
-              <TableCell>
-                <Value value={formatMoney(invoice.amount_paid, 2)} />
-              </TableCell>
-              <TableCell>
-                <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
-              </TableCell>
-              <TableActionsCell>
-                <IconButton
-                  icon={Download}
-                  label={downloadLabel(invoice, downloading)}
-                  disabled={downloading === invoice.invoice_id}
-                  onClick={() => void download(invoice)}
-                />
-              </TableActionsCell>
-            </TableRow>
-          ))}
-        </DataTable>
-      </Stack>
-    </Section>
+    // The table is the named region; the group only heads it.
+    <SettingsGroup title="Invoices" region={false}>
+      {downloadError ? (
+        <Notice tone="negative">Receipt download failed. Please retry.</Notice>
+      ) : null}
+      <DataTable label="Invoices" columns={COLUMNS} state={invoicesState(read, invoices.length)}>
+        {invoices.map((invoice) => (
+          <TableRow key={invoice.invoice_id}>
+            <TableCell>
+              <ClampText lines={1} className={textRole('emphasis')}>
+                {invoice.status === 'credited'
+                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
+              </ClampText>
+            </TableCell>
+            <TableCell>
+              <DisplayTime value={invoice.paid_at} dateOnly />
+            </TableCell>
+            <TableCell>
+              <Value value={formatMoney(invoice.amount_paid, 2)} />
+            </TableCell>
+            <TableCell>
+              <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
+            </TableCell>
+            <TableActionsCell>
+              <IconButton
+                icon={Download}
+                label={downloadLabel(invoice, downloading)}
+                disabled={downloading === invoice.invoice_id}
+                onClick={() => void download(invoice)}
+              />
+            </TableActionsCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </SettingsGroup>
   );
 }

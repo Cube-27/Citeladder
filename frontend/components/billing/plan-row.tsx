@@ -1,4 +1,5 @@
 import { CreditCard } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import {
   billingDetailsError,
@@ -18,11 +19,68 @@ import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
-import { ControlRow } from '@/components/ui/control-row';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
+import { slipClasses } from '@/components/ui/slip';
+import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
+
+/**
+ * One plan as a card, the one place the Settings layout draws cards: its
+ * name, its price in mono, what it is, then its controls in a foot pinned to
+ * the card's bottom, so a row of cards lines its buttons up. The workspace's
+ * own plan carries the accent "you" rule along its top and says so in words.
+ */
+export function PlanCard({
+  name,
+  price,
+  current = false,
+  controls,
+  children,
+  ...props
+}: Readonly<{
+  name: string;
+  price: ReactNode;
+  current?: boolean;
+  controls?: ReactNode;
+  children?: ReactNode;
+  'data-tier'?: string;
+}>) {
+  return (
+    <div
+      {...props}
+      aria-current={current ? 'true' : undefined}
+      className={slipClasses(
+        cn(
+          'flex h-full min-w-0 flex-col gap-4',
+          current && 'shadow-[inset_0_2px_0_var(--color-accent)]',
+        ),
+      )}
+    >
+      <div className="grid min-w-0 flex-1 content-start gap-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className={textRole('label')}>{name}</span>
+          {current ? <Tag>Current plan</Tag> : null}
+        </div>
+        <span className={textRole('body', 'font-mono tabular-nums')}>{price}</span>
+        {children}
+      </div>
+      {controls ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">{controls}</div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Plans side by side: one row of equal cards while they fit, else one per line. */
+export function PlanCards({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="@container min-w-0">
+      <div className="grid gap-3 @[640px]:auto-cols-fr @[640px]:grid-flow-col">{children}</div>
+    </div>
+  );
+}
 
 export function PlanRow({
   plan,
@@ -54,8 +112,10 @@ export function PlanRow({
     pending,
   );
   return (
-    <ControlRow
+    <PlanCard
       data-tier={plan.key}
+      name={plan.name}
+      price={priceLabel}
       controls={
         plan.contact_only ? (
           <TextLink
@@ -80,15 +140,11 @@ export function PlanRow({
         )
       }
     >
-      <Inline>
-        <span className={textRole('body')}>{plan.name}</span>
-        <span className={textRole('body', 'text-ink-2 tabular-nums')}>{priceLabel}</span>
-      </Inline>
-      {plan.description ? <p className="type-caption">{plan.description}</p> : null}
+      {plan.description ? <p className={textRole('caption')}>{plan.description}</p> : null}
       {!selection.ok && !plan.contact_only && selection.reason ? (
-        <p className="type-caption">{billingReasonMessage(selection.reason)}</p>
+        <p className={textRole('caption')}>{billingReasonMessage(selection.reason)}</p>
       ) : null}
-    </ControlRow>
+    </PlanCard>
   );
 }
 

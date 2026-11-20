@@ -19,7 +19,7 @@ import {
 import { oauthErrorMessage } from '@/components/integrations/data-sources';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { TitledSection } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 
 /** Display order of connection sub-rows inside a grant card (gsc before ga4). */
@@ -137,8 +137,8 @@ export function IntegrationSettings() {
   return (
     <>
       <CallbackNotice notice={notice} />
-      {settled ? null : (
-        <TitledSection title="Search and analytics">
+      {settled && connections.length > 0 ? null : (
+        <SettingsGroup title="Search and analytics">
           {connectionsQuery.isError ? (
             <StateBlock
               kind="error"
@@ -146,14 +146,13 @@ export function IntegrationSettings() {
               {...readErrorProps(connectionsQuery)}
               fallback="Couldn't load integrations. Check your connection and try again."
             />
-          ) : (
+          ) : null}
+          {connectionsQuery.isLoading ? (
             <StateBlock kind="loading" label="Loading integrations…" shape={{ kind: 'list' }} />
-          )}
-        </TitledSection>
+          ) : null}
+          {settled ? <IntegrationsEmptyState workspaceId={workspaceId} /> : null}
+        </SettingsGroup>
       )}
-      {settled && connections.length === 0 ? (
-        <IntegrationsEmptyState workspaceId={workspaceId} />
-      ) : null}
       {/* One section per grant: a Google grant holds two connections, a Bing grant one. */}
       {settled && connections.length > 0
         ? FAMILY_ORDER.map((family) => (

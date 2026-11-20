@@ -8,7 +8,6 @@ import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-p
 import {
   AudienceCard,
   CompanyFactsCard,
-  ProfileSaveNotices,
   TrackedCompetitorsCard,
 } from '@/components/knowledge-base/brand-profile-cards';
 import { BusinessMapSummary } from '@/components/knowledge-base/business-map-summary';
@@ -18,7 +17,6 @@ import {
 } from '@/components/knowledge-base/use-brand-profile-form';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
-import { Stack } from '@/components/ui/layout';
 import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile, Project } from '@citeladder/contracts';
@@ -28,7 +26,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 
 type ProfileRead = UseQueryResult<BrandProfile>;
 
@@ -42,8 +40,8 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
  * tab per subject: the company facts, audience and offerings, the themes
  * Perception classifies answers against, the read-only
  * business map the Prompt Builder edits, the tracked competitors, the pilot's
- * Brand facts, and the project's Agent instructions. Each tab is one or two
- * sections of setting rows; a form section carries its own Save in its foot.
+ * Brand facts, and the project's Agent instructions. Each tab is a stack of
+ * settings groups; a form's Save sits in its frame's foot.
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();
@@ -100,17 +98,15 @@ function ContextPanels({
   return (
     <>
       <TabPanel value="facts">
-        <ProfileTab profile={profile} form={form}>
-          <CompanyFactsCard form={form} />
-        </ProfileTab>
+        {profile.data ? <CompanyFactsCard form={form} /> : <ProfileState profile={profile} />}
       </TabPanel>
       <TabPanel value="audience">
-        <ProfileTab profile={profile} form={form}>
-          <AudienceCard form={form} />
-        </ProfileTab>
+        {profile.data ? <AudienceCard form={form} /> : <ProfileState profile={profile} />}
       </TabPanel>
       <TabPanel value="themes">
-        <ProjectThemesPanel scope={{ workspaceId, projectId: project.id }} mayEdit={mayEdit} />
+        <SettingsGroup title="Themes">
+          <ProjectThemesPanel scope={{ workspaceId, projectId: project.id }} mayEdit={mayEdit} />
+        </SettingsGroup>
       </TabPanel>
       <TabPanel value="map">
         {profile.data ? (
@@ -129,25 +125,6 @@ function ContextPanels({
       <TabPanel value="brand-facts">{brandFacts}</TabPanel>
       <TabPanel value="instructions">{instructions}</TabPanel>
     </>
-  );
-}
-
-/** A tab the profile save covers: its notices above its card, once the profile is read. */
-function ProfileTab({
-  profile,
-  form,
-  children,
-}: Readonly<{
-  profile: ProfileRead;
-  form: BrandProfileForm;
-  children: ReactNode;
-}>) {
-  if (!profile.data) return <ProfileState profile={profile} />;
-  return (
-    <Stack gap="workspace">
-      <ProfileSaveNotices form={form} />
-      {children}
-    </Stack>
   );
 }
 
@@ -186,20 +163,15 @@ function BrandFactsTab({
 }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
-    <Stack gap="workspace">
-      <Section aria-labelledby="brand-aliases">
-        <SectionHeader>
-          <SectionTitle id="brand-aliases">Aliases</SectionTitle>
-        </SectionHeader>
-        <BrandAliasesPanel project={project} mayEdit={mayEdit} />
-      </Section>
+    <>
+      <BrandAliasesPanel project={project} mayEdit={mayEdit} />
       <BrandFactsSection
         facts={facts}
         workspaceId={workspaceId}
         projectId={project.id}
         mayEdit={mayEdit}
       />
-    </Stack>
+    </>
   );
 }
 
@@ -218,10 +190,7 @@ function BrandFactsSection({
     return <StateBlock kind="loading" label="Loading brand facts…" shape={{ kind: 'list' }} />;
   if (!facts.isError && !facts.data?.enabled) return null;
   return (
-    <Section aria-labelledby="brand-facts">
-      <SectionHeader>
-        <SectionTitle id="brand-facts">Brand facts</SectionTitle>
-      </SectionHeader>
+    <SettingsGroup title="Brand facts">
       {facts.data?.enabled ? (
         <BrandFactsPanel
           workspaceId={workspaceId}
@@ -237,6 +206,6 @@ function BrandFactsSection({
           fallback="Brand facts could not be loaded."
         />
       )}
-    </Section>
+    </SettingsGroup>
   );
 }

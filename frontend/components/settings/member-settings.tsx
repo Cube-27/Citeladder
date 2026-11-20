@@ -5,8 +5,7 @@ import { UserPlus } from 'lucide-react';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
 import { pluralCount } from '@/lib/format';
@@ -201,68 +200,61 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
 
   return (
     <>
-      {/* The roster table is the named region; the section only heads it. */}
-      <Section>
-        <SectionHeader
-          actions={
-            mayInvite ? (
-              <Button type="button" variant="secondary" onClick={() => setInviteOpen(true)}>
-                <Icon icon={UserPlus} />
-                Invite
-              </Button>
-            ) : undefined
+      {/* The roster table is the named region; the group only heads it. */}
+      <SettingsGroup
+        title="Members"
+        region={false}
+        description={
+          membersQuery.data ? pluralCount(membersQuery.data.length, 'member') : undefined
+        }
+        action={
+          mayInvite ? (
+            <Button type="button" variant="secondary" onClick={() => setInviteOpen(true)}>
+              <Icon icon={UserPlus} />
+              Invite
+            </Button>
+          ) : undefined
+        }
+      >
+        {mayInvite ? null : (
+          <Notice tone="info">
+            Inviting members needs a paid plan. <TextLink href={PLANS_HREF}>See plans</TextLink>
+          </Notice>
+        )}
+        <MemberFailure failure={failure} onRetry={refresh} />
+        <MemberRoster
+          members={visibleMembers}
+          toolbar={{
+            search: (
+              <SearchField
+                value={search}
+                onValueChange={setSearch}
+                placeholder="Search members…"
+                aria-label="Search members"
+              />
+            ),
+          }}
+          noMatch={
+            searchFindsNobody(needle, membersQuery.isSuccess, visibleMembers) ? search.trim() : null
           }
-        >
-          <SectionTitle>Members</SectionTitle>
-          {membersQuery.data ? (
-            <SectionDescription>
-              {pluralCount(membersQuery.data.length, 'member')}
-            </SectionDescription>
-          ) : null}
-        </SectionHeader>
-        <Stack gap="workspace">
-          {mayInvite ? null : (
-            <Notice tone="info">
-              Inviting members needs a paid plan. <TextLink href={PLANS_HREF}>See plans</TextLink>
-            </Notice>
-          )}
-          <MemberFailure failure={failure} onRetry={refresh} />
-          <MemberRoster
-            members={visibleMembers}
-            toolbar={{
-              search: (
-                <SearchField
-                  value={search}
-                  onValueChange={setSearch}
-                  placeholder="Search members…"
-                  aria-label="Search members"
-                />
-              ),
-            }}
-            noMatch={
-              searchFindsNobody(needle, membersQuery.isSuccess, visibleMembers)
-                ? search.trim()
-                : null
-            }
-            isLoading={membersQuery.isLoading}
-            isError={membersQuery.isError}
-            error={membersQuery.error}
-            busy={busy}
-            onRetry={refresh}
-            onChangeRole={(member, role) =>
-              confirmThen(confirmations.role(member.email, role), () =>
-                changeRole.mutateAsync({ memberId: member.id, role }),
-              )
-            }
-            onTransfer={transferIntent}
-            onRemove={(member) =>
-              confirmThen(confirmations.remove(member.email, workspaceName), () =>
-                remove.mutateAsync(member.id),
-              )
-            }
-          />
-        </Stack>
-      </Section>
+          isLoading={membersQuery.isLoading}
+          isError={membersQuery.isError}
+          error={membersQuery.error}
+          busy={busy}
+          onRetry={refresh}
+          onChangeRole={(member, role) =>
+            confirmThen(confirmations.role(member.email, role), () =>
+              changeRole.mutateAsync({ memberId: member.id, role }),
+            )
+          }
+          onTransfer={transferIntent}
+          onRemove={(member) =>
+            confirmThen(confirmations.remove(member.email, workspaceName), () =>
+              remove.mutateAsync(member.id),
+            )
+          }
+        />
+      </SettingsGroup>
 
       <PendingInvitations
         read={invitationsQuery}
