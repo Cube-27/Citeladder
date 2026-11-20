@@ -2,9 +2,8 @@
  * The design system's tokens, base, and every hand-written shared rule.
  *
  * The system itself is the CiteLadder Design System artifact (docs/design.md):
- * monochrome with one flare of orange. Every token here carries the system's
- * name and value from its tokens.json, in both themes; nothing else declares a
- * colour, a face, a radius or a shadow.
+ * monochrome with one flare of orange. Every colour token lives here, in both
+ * themes; nothing else declares a colour.
  *
  * It does NOT import Tailwind. Each app's entry does that, with its own
  * `@source` list, and then imports this. That indirection is the only way the
@@ -1499,8 +1498,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
 /* The page workspace editor's text field ring, drawn inside the pane so the
    scroller never clips it, and a pressed suggestion's card in the focus ink
-   over its own border utility. Focus belongs here (design-system source
-   checks); the rest of the editor's look loads with its route
+   over its own border utility. The rest of the editor's look loads with its route
    (components/agent/workspace/page-workspace.css). */
 .page-editor .cm-editor.cm-focused {
   outline: none;

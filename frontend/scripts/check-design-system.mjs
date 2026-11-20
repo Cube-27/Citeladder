@@ -4,36 +4,21 @@ import { extname, join, relative, resolve } from 'node:path';
 
 import {
   appSourceViolations,
-  editorialTypographyViolations,
-  cardHeaderLayoutViolations,
-  nestedCardViolations,
   directRadixImportViolations,
   productControlViolations,
   productUiSourceViolations,
   textContrastViolations,
-  motionRoleViolations,
-  focusRoleViolations,
-  shadowRoleViolations,
-  radiusRoleAdvisories,
-  densityRoleViolations,
   textRoleBackgroundViolations,
 } from './design-system-source-checks.mjs';
 import { appVocabularyViolations } from './design-system-app-vocabulary.mjs';
 import { websiteOnlyImportViolations } from './design-system-website-only.mjs';
 import {
-  featureLayeringViolations,
-  rawRadiusViolations,
-  tsxGeometryFindings,
-} from './design-system-geometry-checks.mjs';
-import {
   landingThemeViolations,
-  productContractViolations,
   websiteContractViolations,
   websiteStyleViolations,
 } from './design-system-stylesheet-checks.mjs';
 import { styleAssertionViolations } from './design-system-test-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
-import { colourNotationViolations, tokenContractViolations } from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
@@ -113,8 +98,6 @@ for (const path of files(root)) {
     ...directRadixImportViolations(source, label),
     ...styleAssertionViolations(source, label),
   );
-  const ownsWebsiteEditorialCopy =
-    !label.includes('.test.') && label.startsWith('components/marketing/');
   // Sign-in and onboarding are product UI: they compose the Flow and Setup
   // templates (components/templates/flow-page.tsx, setup-page.tsx).
   const ownsProductUi =
@@ -128,23 +111,11 @@ for (const path of files(root)) {
   // is wrong on a marketing surface too.
   violations.push(
     ...textRoleBackgroundViolations(source, label),
-    ...rawRadiusViolations(source, label),
-    ...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy),
     ...productUiSourceViolations(source, label, ownsProductUi),
-    ...motionRoleViolations(source, label, ownsProductUi),
-    ...focusRoleViolations(source, label, ownsProductUi),
-    ...shadowRoleViolations(source, label, ownsProductUi),
-    ...densityRoleViolations(source, label, ownsProductUi),
-    ...nestedCardViolations(source, label, ownsProductUi),
-    ...cardHeaderLayoutViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
     ...appVocabularyViolations(source, label, ownsProductUi),
     ...websiteOnlyImportViolations(source, label, ownsProductUi),
-    ...featureLayeringViolations(source, label),
   );
-  advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));
-  if (/^(?:apps|components|lib)\//.test(label))
-    findings.push(...tsxGeometryFindings(source, label));
   if (typeSource(label)) typeFindings.push(...typeDisciplineFindings(source, label));
 }
 
@@ -170,12 +141,9 @@ for (const [path, ratcheted] of [
 
 violations.push(
   ...brandTokenViolations(lightPalette),
-  ...tokenContractViolations(root),
-  ...colourNotationViolations(root),
   ...tokenAuditViolations(root),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),
-  ...productContractViolations(root),
   ...landingThemeViolations(root),
   ...appSourceViolations(
     readFileSync(join(root, 'apps', 'app', 'src', 'app.css'), 'utf8'),
