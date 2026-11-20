@@ -144,10 +144,22 @@ describe('committed API work at PostgreSQL', () => {
     }, wake);
     const afterPayload = wake.mock.calls.length;
     // The same observer wakes for a real task insert.
+    let id = '';
     await observeCommittedWork(async () => {
-      await enqueue(db);
+      id = await enqueue(db);
     }, wake);
-    expect([afterPayload, wake.mock.calls.length]).toEqual([0, 1]);
+    const afterInsert = wake.mock.calls.length;
+    // A raw statement wakes only when it writes a work table (the crawl task writer is raw).
+    await observeCommittedWork(async () => {
+      await sql`update workspaces set name = name where id = ${workspaces[0]!}`.execute(db);
+    }, wake);
+    const afterRawOther = wake.mock.calls.length;
+    await observeCommittedWork(async () => {
+      await sql`UPDATE analytics_tasks SET status = 'retry_wait' WHERE id = ${id}`.execute(db);
+    }, wake);
+    expect([afterPayload, afterInsert, afterRawOther, wake.mock.calls.length]).toEqual([
+      0, 1, 1, 2,
+    ]);
   });
 
   it.each([false, true])(
