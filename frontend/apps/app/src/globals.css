@@ -512,18 +512,17 @@
   --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
-/* The app's dark: designed, not inverted. The ground is the owner's warm
-   near-black #131211 (2026-11-20); the layers above it are neutral greys,
-   lifted to keep their steps, with our shell kept: the
-   chrome is a step lighter than the ground, not a darker frame. It rebinds
+/* The app's dark: designed, not inverted. The sidebar chrome is the owner's
+   warm near-black #131211 and the page a step lighter (owner, 2026-11-20);
+   the layers above the page are neutral greys, lifted to keep their steps. It rebinds
    every literal the app's light block below sets: that block follows the
    system's dark at the same specificity, so it would otherwise win here.
    The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps at least 1.05 lighter than the one beneath, so a surface
      reads by its fill alone, with no edge and no shadow. */
-  --color-ground: oklch(18.3% 0.0026 67.7);
-  --color-chrome: oklch(21.2% 0 0);
+  --color-ground: oklch(21.2% 0 0);
+  --color-chrome: oklch(18.3% 0.0026 67.7);
   --color-surface: oklch(23.8% 0 0);
   --color-raised: oklch(25.9% 0 0);
   --color-well: oklch(27.9% 0 0);
@@ -1667,6 +1666,12 @@ a.focus-ring:active .type-caption {
    callout, an inline empty state) is the sunken fill. */
 :root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
   --color-ground: var(--color-surface);
+}
+/* Light buttons and filter pills are white on the white page (owner,
+   2026-11-20), not the grey root ground; the foot shade stays barely there. */
+:root:not([data-public-surface]):not([data-theme='dark']) {
+  --color-face-page: var(--color-surface);
+  --color-face-to: color-mix(in oklch, var(--color-face-page), oklch(0% 0 0) 1.5%);
 }
 /* Dark keeps its near-black ground and draws cards, table bodies and control
    fills on it, as light does (owner, 2026-11-19). Overlays portal outside the
