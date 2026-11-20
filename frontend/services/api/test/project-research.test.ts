@@ -210,6 +210,24 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
       profile: { category: 'Analytics', description: 'Recorded business evidence' },
       signature: { category: 'Analytics' },
       field_evidence_refs: { description: [ref] },
+      themes: [
+        ['Price', 'buyer_choice', 0.95],
+        ['Funding and valuation', 'buyer_choice', 0.9],
+        ['Company history', 'company_fact', 0.9],
+        ['Ownership', 'buyer_choice', 0.9],
+        ['Delivery  speed', 'buyer_choice', 0.9],
+        ['Best value for families on a budget', 'buyer_choice', 0.9],
+        ['Other', 'buyer_choice', 0.9],
+        ['Product range', 'buyer_choice', 0.85],
+        ['price', 'buyer_choice', 0.8],
+        ['Returns', 'buyer_choice', 0.8],
+        ['Store locations', 'buyer_choice', 0.8],
+        ['Ease of use', 'buyer_choice', 0.8],
+        ['Customer support', 'buyer_choice', 0.8],
+        ['Quality', 'buyer_choice', 0.75],
+        ['Sizing', 'buyer_choice', 0.75],
+        ['Packaging', 'buyer_choice', 0.4],
+      ].map(([name, kind, confidence]) => ({ name, kind, confidence })),
     },
     { competitors: 'invalid' },
     { competitors: [{ name: 'Globex', domains: ['globex.com'], aliases: [] }] },
@@ -237,6 +255,17 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
     ['competitor_suggestions', 'succeeded'],
   ]);
   expect(result.snapshot.field_evidence_refs).toEqual({ description: [ref] });
+  // Company facts, long or repeated names, the fallback and low confidence go; at most 8 stay.
+  expect(result.snapshot.themes).toEqual([
+    'Price',
+    'Delivery speed',
+    'Product range',
+    'Returns',
+    'Store locations',
+    'Ease of use',
+    'Customer support',
+    'Quality',
+  ]);
 });
 it.each(['ready', 'failed'] as const)(
   'reports competitor search %s while retaining successful model suggestions',

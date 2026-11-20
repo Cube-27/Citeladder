@@ -26,6 +26,8 @@ export type PerceptionPackage = {
   template_version: string;
   language: string;
   prompt: string;
+  /** The project's themes when the answer was classified; the fallback is implied. */
+  themes: { id: string; name: string }[];
   entities: EntityPassages[];
 };
 

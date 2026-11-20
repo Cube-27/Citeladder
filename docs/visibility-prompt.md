@@ -658,8 +658,16 @@ Unknown, not-run, failed, partial and observed-zero states remain distinct.
 [Perception](../frontend/services/api/src/perception/) classifies how a brand-audit
 answer portrays each tracked business it names. It is always on and
 platform-funded through the default Agent gateway (`DEFAULT_AGENT_*`); it draws no
-customer credits. Policy, caps, the closed theme list and the templates live in
+customer credits. Policy, caps, the project-theme limits and the templates live in
 [`config/perception.json`](../frontend/services/api/src/config/perception.json).
+
+- **Themes.** Each project classifies against its own themes
+  ([`project_themes`](../frontend/services/api/src/projects/themes.ts)), saved by
+  onboarding research and edited in Context › Themes, plus the configured
+  fallback `Other`; there is no global list (AV-27, AV-39). Zero themes is valid
+  and classifies everything to `Other`. Aspects store the theme's id, so reads
+  show a renamed theme's current name on past answers and a deleted theme's
+  aspects as `Other`.
 
 - **Trigger.** At the end of the analysis transaction, an answer whose entity
   assessments name the brand or a competitor enqueues one `answer_perception`
@@ -683,7 +691,8 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   transaction, unique on `(analysis_id, extractor_version)`.
 - **Validation.** Deterministic: an unknown entity is dropped; a quote must be
   found in that business's own passages after whitespace normalisation, else it
-  is dropped; a theme outside the list becomes `other`; a label below
+  is dropped; a theme that names none of the project's themes (case and spacing
+  aside) becomes `Other`; a label below
   `min_confidence` is stored but excluded from aggregates. A business the model
   was sent but left out keeps its row flagged `model_omitted` and reads as
   `unavailable / model_omitted`, never as a `not_assessable` judgement. Drops

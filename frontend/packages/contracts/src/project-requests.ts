@@ -113,6 +113,10 @@ export const brandProfileUpdateRequestSchema = z.object({
 });
 export type BrandProfileUpdateRequest = z.input<typeof brandProfileUpdateRequestSchema>;
 
+/** A theme to add, or a theme's new name. */
+export const projectThemeRequestSchema = z.object({ name: text().min(1) });
+export type ProjectThemeRequest = z.input<typeof projectThemeRequestSchema>;
+
 const factSourceUrl = () => z.url({ protocol: /^https?$/u }).nullish();
 
 export const brandFactCreateRequestSchema = z.object({

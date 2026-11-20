@@ -202,18 +202,37 @@ describe('perception enqueue', () => {
 });
 
 describe('perception executor', () => {
-  it('persists verified quotes with code-point offsets and counts what it dropped', async () => {
+  it("persists verified quotes with code-point offsets, classifies against the project's own themes and counts what it dropped", async () => {
+    const value = randomUUID();
+    const theme = (owner: Tenant, id: string, name: string) => ({
+      id,
+      workspace_id: owner.workspaceId,
+      project_id: owner.projectId,
+      name,
+      position: 0,
+      source: 'research',
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    // Another workspace's Support theme is never offered or matched here.
+    const other = await fixtures.tenant();
+    await db
+      .insertInto('project_themes')
+      .values([theme(tenant, value, 'Value'), theme(other, randomUUID(), 'Support')])
+      .execute();
     const auditId = await fixtures.audit(tenant, { configuration });
     const { analysisId } = await analysed(tenant, auditId, ANSWER);
     const gateway = fakeGateway([goodOutput]);
     await drain(tenant, gateway.factory);
+    const sent = JSON.stringify(gateway.fetch.mock.calls);
+    expect(sent).toContain('Allowed themes: Value, Other\\\\n');
     expect(await perceptions(tenant.workspaceId)).toEqual([
       {
         analysis_id: analysisId,
         outcome: 'classified',
         outcome_reason: null,
         extractor_version: 'perception-extract-test',
-        drop_counts: { quote_not_found: 1 },
+        drop_counts: { quote_not_found: 1, theme_other: 1 },
         usage: expect.objectContaining({ input_tokens: 100, output_tokens: 20, attempts: 1 }),
         model: 'returned-model',
       },
@@ -231,7 +250,7 @@ describe('perception executor', () => {
         low_confidence: false,
         aspects: [
           {
-            theme: 'value',
+            theme_id: value,
             polarity: 'positive',
             quote: 'the best value pick',
             start: 10,
@@ -245,7 +264,7 @@ describe('perception executor', () => {
         low_confidence: false,
         aspects: [
           {
-            theme: 'support',
+            theme_id: null,
             polarity: 'negative',
             quote: 'Rival support is slow',
             start: 31,

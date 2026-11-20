@@ -235,6 +235,7 @@
     "platform_calls": ["src/billing/metering.ts"],
     "policy_acceptances": ["src/workspaces/policies.ts"],
     "project_markets": ["src/projects/markets.ts"],
+    "project_themes": ["src/projects/themes.ts"],
     "projects": [
       "src/projects/service.ts",
       "src/search-intelligence/reviews.ts",

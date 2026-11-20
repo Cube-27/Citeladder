@@ -39,6 +39,7 @@ import {
 } from './model-call.ts';
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
 import { untrackedNames, type UntrackedName } from './untracked-names.ts';
+import { listThemes } from '../projects/themes.ts';
 import { trackedEntities } from '../analysis/entity-assessment.ts';
 import { refreshNamedCandidates } from '../analysis/observed-names.ts';
 import {
@@ -297,6 +298,9 @@ export function answerPerception(
       template_version: versions.template_version,
       language: languageCode,
       prompt: subject.prompt,
+      themes: (await listThemes(db, { workspaceId: task.workspace_id, projectId })).map(
+        ({ id, name }) => ({ id, name }),
+      ),
       entities: entityPassages({
         answer: subject.answer_text,
         languageCode,

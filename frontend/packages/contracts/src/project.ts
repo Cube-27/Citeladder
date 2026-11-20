@@ -105,6 +105,14 @@ export const topicSchema = responseObject({
   updated_at: z.string(),
 });
 
+// A buyer-facing theme perception classifies answers against, in display
+// order: saved by onboarding research or added by a person.
+export const projectThemeSchema = responseObject({
+  id: uuid(),
+  name: z.string(),
+  source: z.enum(['research', 'user']),
+});
+
 // A generated prompt awaiting review. It is never audited, charged to prompt
 // capacity or counted until a user accepts it.
 export const promptCandidateSchema = responseObject({
@@ -416,6 +424,7 @@ export type PromptSet = z.infer<typeof promptSetSchema>;
 export type PromptFormLimits = z.infer<typeof promptFormLimitsSchema>;
 export type PromptSetList = z.infer<typeof promptSetListSchema>;
 export type Topic = z.infer<typeof topicSchema>;
+export type ProjectTheme = z.infer<typeof projectThemeSchema>;
 export type TopicPreview = z.infer<typeof topicPreviewResponseSchema>;
 export type SeedQueries = z.infer<typeof seedQueriesResponseSchema>;
 export type PromptGenerateResponse = z.infer<typeof promptGenerateResponseSchema>;

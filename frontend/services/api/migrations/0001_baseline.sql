@@ -1723,6 +1723,28 @@ CREATE INDEX ix_topics_workspace_id_project_id ON public.topics USING btree (wor
 
 CREATE UNIQUE INDEX uq_topic_project_name ON public.topics USING btree (project_id, lower((name)::text));
 
+-- The buyer-facing themes perception classifies answers against (AV-27, AV-39).
+-- Aspects store a theme's id, so a rename shows everywhere and a deleted
+-- theme's past aspects read as the fallback.
+CREATE TABLE public.project_themes (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    name character varying(80) NOT NULL,
+    "position" integer NOT NULL,
+    source character varying(16) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_project_themes_source CHECK ((source IN ('research', 'user')))
+);
+
+ALTER TABLE ONLY public.project_themes
+    ADD CONSTRAINT project_themes_pkey PRIMARY KEY (id);
+
+CREATE INDEX ix_project_themes_workspace_id_project_id ON public.project_themes USING btree (workspace_id, project_id);
+
+CREATE UNIQUE INDEX uq_project_theme_name ON public.project_themes USING btree (project_id, lower((name)::text));
+
 CREATE TABLE public.unintended_domains (
     id uuid NOT NULL,
     project_id uuid NOT NULL,
@@ -6709,6 +6731,9 @@ ALTER TABLE ONLY public.topics
 
 ALTER TABLE ONLY public.topics
     ADD CONSTRAINT topics_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.project_themes
+    ADD CONSTRAINT project_themes_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.unintended_domains
     ADD CONSTRAINT unintended_domains_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;

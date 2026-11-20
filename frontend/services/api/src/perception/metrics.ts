@@ -29,12 +29,15 @@ export type MentionStatus =
   | { kind: 'pending' }
   | { kind: 'unavailable'; reason: UnavailableReason };
 
+/** A verified aspect with its theme's current name, or the fallback's. */
+export type NamedAspect = Omit<VerifiedAspect, 'theme_id'> & { theme: string };
+
 export type Mention = {
   entity: string;
   isBrand: boolean;
   status: MentionStatus;
   /** Verified aspects; only a classified mention's count toward themes. */
-  aspects: VerifiedAspect[];
+  aspects: NamedAspect[];
 };
 
 export type PerceptionAnswer = {
@@ -231,11 +234,7 @@ export function classifiedQuotes(
     .sort(quoteOrder);
 }
 
-function quoteOf(
-  answer: PerceptionAnswer,
-  mention: Mention,
-  aspect: VerifiedAspect,
-): PerceptionQuote {
+function quoteOf(answer: PerceptionAnswer, mention: Mention, aspect: NamedAspect): PerceptionQuote {
   return {
     text: aspect.quote,
     theme: aspect.theme,

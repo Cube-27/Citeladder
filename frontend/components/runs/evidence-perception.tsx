@@ -6,7 +6,6 @@ import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Label, textRole } from '@/components/ui/typography';
 import type { Highlight } from '@/lib/markdown/highlight';
-import { themeLabel } from '@/lib/visibility/perception';
 import { wellClasses } from '@/components/ui/slip';
 
 const SENTIMENT_LABELS = {
@@ -71,7 +70,7 @@ export function EvidencePerception({
             {entity.state === 'classified'
               ? entity.aspects.map((aspect) => (
                   <span key={`${aspect.start}:${aspect.end}`} className="type-caption text-ink-2">
-                    {themeLabel(aspect.theme)} ({aspect.polarity}): “{aspect.quote}”
+                    {aspect.theme} ({aspect.polarity}): “{aspect.quote}”
                   </span>
                 ))
               : null}

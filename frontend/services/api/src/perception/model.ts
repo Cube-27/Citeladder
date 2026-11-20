@@ -61,7 +61,7 @@ export function perceptionPrompt(
   pkg: PerceptionPackage,
   policy: Pick<
     PerceptionPolicy,
-    'system_template' | 'user_template' | 'themes' | 'max_aspects_per_entity'
+    'system_template' | 'user_template' | 'project_themes' | 'max_aspects_per_entity'
   >,
   claims: ClaimsRequest | null = null,
 ) {
@@ -74,7 +74,9 @@ export function perceptionPrompt(
   const slots: Record<string, string> = {
     '{prompt}': pkg.prompt,
     '{language}': pkg.language || 'unknown',
-    '{themes}': policy.themes.join(', '),
+    '{themes}': [...pkg.themes.map((theme) => theme.name), policy.project_themes.fallback].join(
+      ', ',
+    ),
     '{max_aspects}': String(policy.max_aspects_per_entity),
     '{entities}': JSON.stringify(entities, null, 2),
   };

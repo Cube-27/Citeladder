@@ -1,0 +1,58 @@
+/**
+ * Onboarding research's theme candidates and the filter that keeps only the
+ * confident, buyer-facing ones (AV-27). The identity call proposes them; code
+ * drops company facts, long phrases, low confidence and repeats, and never
+ * keeps more than the cap. Too little research leaves none, never invented ones.
+ */
+import { z } from 'zod';
+
+import type { PerceptionPolicy } from '../config/perception.ts';
+
+export const themeCandidates = z
+  .array(
+    z.object({
+      name: z.string(),
+      kind: z.enum(['buyer_choice', 'company_fact']),
+      confidence: z.number().min(0).max(1),
+    }),
+  )
+  .default([]);
+type Candidate = z.output<typeof themeCandidates>[number];
+
+const words = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+/** The identity's kept themes; none without an identity. */
+export function researchThemes(
+  identity: { themes: readonly Candidate[] } | null,
+  limits: PerceptionPolicy['project_themes'],
+): string[] {
+  const candidates = identity?.themes ?? [];
+  const facts = limits.company_fact_terms.map((term) => ` ${words(term).join(' ')} `);
+  const seen = new Set([limits.fallback.toLowerCase()]);
+  return candidates
+    .filter(
+      (candidate) =>
+        candidate.kind === 'buyer_choice' && candidate.confidence >= limits.research_min_confidence,
+    )
+    .toSorted((a, b) => b.confidence - a.confidence)
+    .flatMap((candidate) => {
+      const name = candidate.name.replaceAll(/\s+/gu, ' ').trim();
+      const tokens = words(name);
+      const padded = ` ${tokens.join(' ')} `;
+      if (
+        !tokens.length ||
+        tokens.length > limits.research_max_words ||
+        name.length > limits.name_max_chars ||
+        facts.some((fact) => padded.includes(fact)) ||
+        seen.has(name.toLowerCase())
+      )
+        return [];
+      seen.add(name.toLowerCase());
+      return [name];
+    })
+    .slice(0, limits.research_max);
+}

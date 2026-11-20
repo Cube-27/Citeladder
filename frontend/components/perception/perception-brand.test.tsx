@@ -35,7 +35,7 @@ const coverage = {
 
 const quote = {
   text: 'support is slow',
-  theme: 'support',
+  theme: 'Support',
   polarity: 'negative' as const,
   entity: 'Acme',
   is_brand: true,
@@ -79,7 +79,7 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
     engines: [],
     topics: [],
     prompts: [],
-    themes: [{ theme: 'ease_of_use', positive: 2, negative: 1, quotes: [quote] }],
+    themes: [{ theme: 'Ease of use', positive: 2, negative: 1, quotes: [quote] }],
     negative_quotes: [quote],
     drivers: [{ domain: 'reviews.example', answers: 1, example_url: null }],
     recommended: {

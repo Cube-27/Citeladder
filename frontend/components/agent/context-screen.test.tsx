@@ -119,6 +119,7 @@ describe('Context layout', () => {
     ).toEqual([
       'Company',
       'Audience',
+      'Themes',
       'Business map',
       'Competitors',
       'Instructions',
@@ -202,6 +203,7 @@ describe('Context layout', () => {
     ).toEqual([
       'Company',
       'Audience',
+      'Themes',
       'Business map',
       'Competitors',
       'Instructions',

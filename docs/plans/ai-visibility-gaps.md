@@ -148,6 +148,11 @@ repeated 3 of 3).
 - **AV-38, proof before merge.** Before a probe PR merges, its builder runs the finished
   probe on three real brands with the Claude key and reports themes, objections, ranks
   and run-to-run steadiness in the PR for the owner.
+- **AV-39, Perception uses the project's themes (owner, 2026-11-20).** Perception ›
+  Brand classifies every answer's aspects against the project's own themes (AV-27)
+  plus the `Other` fallback. The fixed global theme list and everything that
+  depended on it are deleted, not kept as a fallback. Applies from the next audit;
+  no backfill.
 
 ## Where it lives
 
@@ -342,9 +347,9 @@ for brand-named prompts; Perception reads serve the branded cohort (the selectio
 mapping includes it, labelled). Applies from the next audit, no backfill. Ships this plan
 update.
 
-**P2-2 Project themes (M; AV-27).** Onboarding research saves 5–8 high-confidence
-buyer-facing themes (hidden in onboarding). Theme editing in Context and on the Market
-tab, like prompt topics.
+**P2-2 Project themes (M; AV-27, AV-39).** Onboarding research saves 5–8 high-confidence
+buyer-facing themes (hidden in onboarding). Theme editing in Context, like prompt
+topics; Perception classifies against them. Market-tab editing ships with P2-3.
 
 **P2-3 Probe run and the Market and Objections tabs (L, may split API and UI;
 AV-28–36, AV-38).** A probe cohort through the existing audit pipeline (admission,

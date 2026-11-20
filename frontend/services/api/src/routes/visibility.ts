@@ -182,7 +182,9 @@ export const visibilityRoutes = [
       query: {
         ...PERCEPTION_SELECTION,
         entity: { scalar: { kind: 'str', maxLength: 255 } },
-        theme: { scalar: { kind: 'literal', values: policy.perception.themes } },
+        theme: {
+          scalar: { kind: 'str', maxLength: policy.perception.project_themes.name_max_chars },
+        },
         polarity: { scalar: { kind: 'literal', values: ['positive', 'negative'] } },
         cursor: CURSOR,
         limit: {

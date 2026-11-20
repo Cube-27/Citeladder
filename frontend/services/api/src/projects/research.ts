@@ -19,6 +19,7 @@ import {
   type ResearchEvidence,
   type ResearchTransport,
 } from './research-evidence.ts';
+import { researchThemes, themeCandidates } from './research-themes.ts';
 import type { ResolvedSite } from './site-resolution.ts';
 import { fetchWebsite, websiteIdentity, type WebsiteFetcher } from '../safe-fetch.ts';
 import type { Meter } from '../billing/metering.ts';
@@ -87,6 +88,7 @@ export const identityEnvelope = z.object({
     })
     .default({ category: '', buyer: '', core_job: '', delivery_model: '', market_context: '' }),
   field_evidence_refs: z.record(z.string(), z.array(z.string())).default({}),
+  themes: themeCandidates,
 });
 type Identity = z.output<typeof identityEnvelope>;
 export function validateIdentity(identity: Identity, items: readonly ResearchEvidence[]): Identity {
@@ -467,6 +469,8 @@ export async function researchBrand(
       evidence_manifest: manifest,
       model_calls: modelCalls,
       field_evidence_refs: identity?.field_evidence_refs ?? {},
+      // Saved as the project's themes at completion; never shown in onboarding.
+      themes: researchThemes(identity, policy.perception.project_themes),
       metrics: {
         keenable_calls_used: budget.used,
         first_party_capture_version: policy.brand_evidence.version,

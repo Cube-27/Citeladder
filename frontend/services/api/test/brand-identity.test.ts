@@ -176,6 +176,10 @@ describe('brand identity workspace boundaries', () => {
     ['/competitor-suggestions', 'GET', undefined],
     [`/competitor-suggestions/${randomUUID()}/accept`, 'POST', undefined],
     [`/competitor-suggestions/${randomUUID()}/reject`, 'POST', undefined],
+    ['/themes', 'GET', undefined],
+    ['/themes', 'POST', { name: 'Price' }],
+    [`/themes/${randomUUID()}`, 'PATCH', { name: 'Price' }],
+    [`/themes/${randomUUID()}`, 'DELETE', undefined],
   ] as const;
 
   it('requires a session, membership, the project workspace and write capability', async () => {
@@ -198,6 +202,58 @@ describe('brand identity workspace boundaries', () => {
       if (method !== 'GET')
         expect((await call(path, { method, body, user: viewer })).status).toBe(403);
     }
+  });
+});
+
+describe('project themes', () => {
+  type Theme = { id: string; name: string; source: string };
+  const names = async (tenant: Tenant = t) => {
+    const token = await sessionToken({ sub: tenant.userId, ver: 0 });
+    const response = await app.request(`/api/v1/projects/${tenant.projectId}/themes`, {
+      headers: {
+        'x-workspace-id': tenant.workspaceId,
+        cookie: `${config.session.cookieName}=${token}`,
+      },
+    });
+    return ((await response.json()) as Theme[]).map((theme) => [theme.name, theme.source]);
+  };
+
+  it('adds in order, renames and deletes, refusing a repeated name and the fallback', async () => {
+    const add = (name: string) => call<Theme>('/themes', { method: 'POST', body: { name } });
+    const price = await add(' Price ');
+    const delivery = await add('Delivery');
+    expect([price.status, delivery.status]).toEqual([201, 201]);
+    expect([(await add('price')).status, (await add('other')).status]).toEqual([409, 422]);
+    // Inner spaces collapse, so a spacing variant is the same theme.
+    const spaced = await add('Customer   support');
+    expect([spaced.body.name, (await add('customer support')).status]).toEqual([
+      'Customer support',
+      409,
+    ]);
+    await request(`/themes/${spaced.body.id}`, { method: 'DELETE' });
+    const renamed = await call<Theme>(`/themes/${delivery.body.id}`, {
+      method: 'PATCH',
+      body: { name: 'Delivery speed' },
+    });
+    expect(renamed.body.name).toBe('Delivery speed');
+    expect(await names()).toEqual([
+      ['Price', 'user'],
+      ['Delivery speed', 'user'],
+    ]);
+    expect((await request(`/themes/${price.body.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect(await names()).toEqual([['Delivery speed', 'user']]);
+  });
+
+  it("never renames or deletes another workspace's theme through the caller's own project", async () => {
+    const theirs = await call<Theme>('/themes', { method: 'POST', body: { name: 'Price' } });
+    const owner = t;
+    t = await fixtures.tenant();
+    const path = `/themes/${theirs.body.id}`;
+    expect([
+      (await request(path, { method: 'PATCH', body: { name: 'Taken' } })).status,
+      (await request(path, { method: 'DELETE' })).status,
+    ]).toEqual([404, 404]);
+    expect([await names(owner), await names()]).toEqual([[['Price', 'user']], []]);
   });
 });
 

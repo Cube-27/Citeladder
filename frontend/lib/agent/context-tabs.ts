@@ -1,8 +1,9 @@
 /** Context's tabs in row order. Data only: the route manifest loads it in Node. */
 export const CONTEXT_TABS = [
-  // Short labels: six tabs fit the compact column on one row.
+  // Short labels: the tabs fit the compact column on one row.
   { value: 'facts', label: 'Company' },
   { value: 'audience', label: 'Audience' },
+  { value: 'themes', label: 'Themes' },
   { value: 'map', label: 'Business map' },
   { value: 'competitors', label: 'Competitors' },
   { value: 'instructions', label: 'Instructions' },

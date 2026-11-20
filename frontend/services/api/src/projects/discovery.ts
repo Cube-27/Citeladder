@@ -25,6 +25,10 @@ import {
 } from './discovery-inputs.ts';
 import { websiteIdentity } from '../safe-fetch.ts';
 import { insertProject } from './service.ts';
+import { saveResearchThemes } from './themes.ts';
+
+/** The research snapshot's filtered themes; absent ones are none. */
+const snapshotThemes = z.object({ themes: z.array(z.string()).catch([]) }).catch({ themes: [] });
 
 export type DiscoveryRow = Selectable<BrandDiscoveries>;
 const cfg = policy.discovery.constants;
@@ -353,7 +357,7 @@ export async function completeDiscovery(
     );
     const snapshot = await trx
       .selectFrom('brand_research_snapshots')
-      .select('id')
+      .select(['id', 'extracted_fields'])
       .where('workspace_id', '=', workspaceId)
       .where('discovery_id', '=', id)
       .orderBy('created_at', 'desc')
@@ -381,6 +385,11 @@ export async function completeDiscovery(
       }),
       sources,
       artifacts,
+    );
+    await saveResearchThemes(
+      trx,
+      { workspaceId, projectId },
+      snapshotThemes.parse(snapshot.extracted_fields).themes,
     );
     await trx
       .insertInto('prompt_sets')

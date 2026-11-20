@@ -308,7 +308,7 @@ describe('Answer perception evidence', () => {
           extractor_version: 'x1',
           template_version: 't1',
           aspects: [
-            { theme: 'support', polarity: 'negative', quote: 'support is slow', start: 5, end: 20 },
+            { theme: 'Support', polarity: 'negative', quote: 'support is slow', start: 5, end: 20 },
           ],
         },
         {

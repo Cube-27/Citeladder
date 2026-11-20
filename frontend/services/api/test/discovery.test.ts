@@ -77,7 +77,7 @@ describe('durable onboarding', () => {
         provider: '',
         model: '',
         method: 'recorded-test',
-        extracted_fields: '{}',
+        extracted_fields: JSON.stringify({ themes: ['Price', 'Delivery speed'] }),
         field_confidence: '{}',
         evidence: '[]',
         warnings: '[]',
@@ -521,6 +521,18 @@ describe('durable onboarding', () => {
       category: 'Analytics consultancy',
       field_sources: { category: 'reviewed', primary_market: 'reviewed' },
     });
+    // Research's themes become the project's, once, in research order.
+    expect(
+      await db
+        .selectFrom('project_themes')
+        .select(['name', 'source', 'workspace_id'])
+        .where('project_id', '=', projectId)
+        .orderBy('position')
+        .execute(),
+    ).toEqual([
+      { name: 'Price', source: 'research', workspace_id: t.workspaceId },
+      { name: 'Delivery speed', source: 'research', workspace_id: t.workspaceId },
+    ]);
     await expect(
       completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, 'different'),
     ).rejects.toMatchObject({ status: 409 });
