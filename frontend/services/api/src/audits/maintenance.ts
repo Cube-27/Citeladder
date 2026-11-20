@@ -24,6 +24,14 @@ function expiredLeaseStatus(
   if (!failed) return 'retry_wait';
   return auditStatus === 'cancelled' ? 'cancelled' : 'failed';
 }
+/**
+ * A paid submission is never charged again: an unconfirmed one is reconciled, and one with
+ * a provider task id goes back to polling, bounded by the recovery deadline or poll ceiling.
+ */
+function pendingSubmission(task: AuditTask) {
+  if (task.provider_task_id) return 'awaiting_provider_result';
+  return task.provider_submission_ref ? 'submission_uncertain' : null;
+}
 /** Evidence may be committed before its separate queue transition; repair the gap. */
 export function repairOwnedCompletion(db: Database, claimed: AuditTask, owner: string, at: Date) {
   return db.transaction().execute(async (trx) => {
@@ -190,12 +198,7 @@ export class AuditMaintenance {
           const parentTerminal = auditPolicy.constants.audit_terminal_statuses.includes(
             audit.status,
           );
-          // A paid submission is never charged again: an unconfirmed one is reconciled, and
-          // one with a provider task id goes back to polling, bounded by the recovery deadline.
-          let pending: 'submission_uncertain' | 'awaiting_provider_result' | null = null;
-          if (!parentTerminal && task.provider_task_id) pending = 'awaiting_provider_result';
-          else if (!parentTerminal && task.provider_submission_ref)
-            pending = 'submission_uncertain';
+          const pending = parentTerminal ? null : pendingSubmission(task);
           const attempts = task.attempt_count + (pending || parentTerminal ? 0 : 1);
           const failed = !pending && (parentTerminal || attempts >= task.max_attempts);
           await trx

@@ -151,7 +151,6 @@
       "services/api/test/a3-pages.test.ts": 907,
       "services/api/test/actions.test.ts": 931,
       "services/api/test/agent-runtime.test.ts": 2290,
-      "services/api/test/audit-worker.test.ts": 925,
       "services/api/test/auth-routes.test.ts": 1128,
       "services/api/test/billing.test.ts": 2346,
       "services/api/test/crawl-logs.test.ts": 1394,
