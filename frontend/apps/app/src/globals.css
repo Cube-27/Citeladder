@@ -691,7 +691,7 @@
 :is(.face-primary, .face-secondary, .face-filled):is(:disabled, [aria-disabled='true']):not(
     [aria-busy='true']
   ) {
-  --button-face: none;
+  background-image: none;
 }
 
 /* A small control's tap area: centred on it and at least --target-hit square
@@ -1712,16 +1712,6 @@ a.focus-ring:active .type-caption {
   padding: 0;
 }
 
-
-/* The website's shared buttons (a form's submit, a callout action) take the
-   control-md row. */
-:where([data-public-surface]) :is([data-button-size='md'], [data-button-size='lg']) {
-  min-height: var(--control-md);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  font-weight: var(--weight-medium);
-  letter-spacing: 0;
-}
 
 /* Text entry belongs to the field frame. Auxiliary buttons keep their own
    focus edge and do not also highlight the surrounding frame. */

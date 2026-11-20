@@ -56,7 +56,7 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'face-primary border border-primary-to [[data-public-surface]_&]:border-primary-edge not-disabled:not-aria-disabled:hover:overlay-lift not-disabled:not-aria-disabled:active:overlay-sink',
+    'face-primary border border-primary-to [[data-public-surface]_&]:border-primary-edge hover:overlay-lift active:overlay-sink',
   secondary: cn(SOFT_EDGE, 'text-ink', HOVER_OVERLAY),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
