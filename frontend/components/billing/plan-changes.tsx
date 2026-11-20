@@ -72,10 +72,13 @@ export function PlanChanges({
     (subscription.scheduled_change !== null &&
       subscription.scheduled_change.state !== 'provider_rejected');
   if (options.length === 0) return null;
-  const monthly = (plan: CatalogPlan) =>
-    plan.base_price
-      ? `${formatMoney(plan.base_price, catalog.currency_minor_units)} / month before tax`
-      : null;
+  const funded = subscription.credential_mode === 'funded';
+  const checkoutOpen = (plan: CatalogPlan) =>
+    funded ? plan.funded_checkout_available : plan.checkout_available;
+  const monthly = (plan: CatalogPlan) => {
+    const price = funded ? plan.funded_total_price : plan.base_price;
+    return price ? `${formatMoney(price, catalog.currency_minor_units)} / month before tax` : null;
+  };
   // The workspace's own plan stands in its catalogue place among the ones it can move to.
   const cards = catalog.plans.flatMap((plan): { plan: CatalogPlan; option: Option | null }[] => {
     if (plan.key === currentPlan.key) return [{ plan, option: null }];
@@ -108,6 +111,7 @@ export function PlanChanges({
                 <ChangeButton
                   option={option}
                   held={held}
+                  checkoutOpen={checkoutOpen(option.plan)}
                   controls={controls}
                   onDowngrade={setDowngradeTo}
                 />
@@ -116,9 +120,7 @@ export function PlanChanges({
           />
         ))}
       </PlanCards>
-      {options.some(
-        (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
-      ) ? (
+      {options.some((option) => option.direction === 'upgrade' && !checkoutOpen(option.plan)) ? (
         <p className={textRole('caption')}>Upgrades unavailable: checkout is closed.</p>
       ) : null}
       <Dialog
@@ -156,11 +158,13 @@ export function PlanChanges({
 function ChangeButton({
   option,
   held,
+  checkoutOpen,
   controls,
   onDowngrade,
 }: Readonly<{
   option: Option;
   held: boolean;
+  checkoutOpen: boolean;
   controls: PlanChangeControls;
   onDowngrade: (option: Option) => void;
 }>) {
@@ -168,7 +172,7 @@ function ChangeButton({
     return (
       <Button
         variant="secondary"
-        disabled={held || !option.plan.checkout_available}
+        disabled={held || !checkoutOpen}
         onClick={() => controls.upgrade(option.key)}
       >
         Upgrade to {option.plan.name}

@@ -89,6 +89,7 @@ function entitlement(subscription: unknown) {
 
 const scaleSubscription = {
   catalog_key: 'tier_3',
+  credential_mode: 'byok',
   status: 'active',
   current_period_end: '2026-09-01T00:00:00Z',
   cancel_at_period_end: false,
