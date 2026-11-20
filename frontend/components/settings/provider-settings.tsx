@@ -13,7 +13,7 @@ export function ProviderSettings() {
   return (
     <TitledSection title="Measurement providers">
       <SectionContent>
-        <ProviderList />
+        <ProviderList ruled={false} />
       </SectionContent>
     </TitledSection>
   );

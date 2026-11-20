@@ -16,11 +16,13 @@ import { StateBlock } from '@/components/ui/state-block';
  * Rows are driven by `/provider-catalog`: a transport appears once, with every
  * engine it measures, so one DataForSEO login covers all its surfaces.
  * `expandEngine` opens the row that measures that engine on arrival (the
- * launch dialog's clicked engine chip).
+ * launch dialog's clicked engine chip). Settings draws no rule between rows
+ * (`ruled={false}`); the launch dialog keeps them.
  */
 export function ProviderList({
   expandEngine = null,
-}: Readonly<{ expandEngine?: LogicalEngine | null }>) {
+  ruled = true,
+}: Readonly<{ expandEngine?: LogicalEngine | null; ruled?: boolean }>) {
   const catalogQuery = useQuery(providerQueries.catalog());
   const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
@@ -58,7 +60,7 @@ export function ProviderList({
   const connections = connectionsQuery.data ?? [];
   const expand = expandEngine ? transportForEngine(groups, expandEngine) : null;
   return (
-    <ul className={ledgerClasses()}>
+    <ul className={ruled ? ledgerClasses() : 'grid'}>
       {groups.map((group) => (
         <ProviderRow
           key={group.transport}

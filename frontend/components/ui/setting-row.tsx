@@ -5,11 +5,11 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * A list of setting rows (owner, 2026-11-19, after a reference account
- * page): 12 above and below each row, a `rule` between neighbours and none
- * above the first or below the last. A nested list (a form's rows) is one
- * row of its parent and divides its own rows the same way. A `title` heads a
- * group of rows inside a section (Brand facts' Add a fact), 12 above them.
+ * A list of setting rows: 12 above and below each row, none above the first
+ * or below the last, and no rule between rows (owner, 2026-11-20: only
+ * section lines). A nested list (a form's rows) is one row of its parent and
+ * spaces its own rows the same way. A `title` heads a group of rows inside a
+ * section (Brand facts' Add a fact), 12 above them.
  */
 export function SettingRows({
   label,
@@ -29,14 +29,14 @@ export function SettingRows({
       data-setting-rows=""
       aria-label={label}
       role={label ? 'group' : undefined}
-      className={cn('divide-rule grid min-w-0 divide-y *:py-3 *:first:pt-0 *:last:pb-0', className)}
+      className={cn('grid min-w-0 *:py-3 *:first:pt-0 *:last:pb-0', className)}
     >
       {children}
     </div>
   );
   if (!title) return rows;
   return (
-    <div className="border-rule grid min-w-0 gap-3 border-t pt-4">
+    <div className="grid min-w-0 gap-3 pt-6">
       <h3 id={titleId} className={textRole('subheading')}>
         {title}
       </h3>
