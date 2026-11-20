@@ -7,7 +7,7 @@ import {
   type Ref,
 } from 'react';
 
-import { FIELD_EDGE, FIELD_HOVER } from '@/components/ui/input';
+import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,7 +21,6 @@ const textareaClasses =
 const fieldClasses = cn(
   'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]',
   FIELD_EDGE,
-  FIELD_HOVER,
 );
 
 /**

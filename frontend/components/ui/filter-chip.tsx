@@ -12,7 +12,7 @@ import {
 
 import type { FilterDefinition, FilterIcon } from '@/components/ui/all-filters';
 import { focusFieldOnEntry, FilterOptions } from '@/components/ui/filter-options';
-import { SOFT_FIELD_BOX } from '@/components/ui/input';
+import { TRIGGER_BOX } from '@/components/ui/input';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,7 @@ export function FilterTrigger({
         data-active={active || undefined}
         aria-label={name}
         className={cn(
-          SOFT_FIELD_BOX,
+          TRIGGER_BOX,
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'press',
           'disabled:cursor-not-allowed disabled:opacity-45',
@@ -82,7 +82,7 @@ export function FilterTrigger({
           </span>
         )}
         {/* It turns while the list is open (globals.css, every dropdown's chevron). */}
-        <ChevronDown className="text-ink-2 size-3 shrink-0" aria-hidden />
+        <ChevronDown className="text-ink-2 size-4 shrink-0" aria-hidden />
       </button>
     </Tooltip>
   );
@@ -156,7 +156,7 @@ export function FilterChip({
 export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
   return (
     <Tooltip content={filter.label}>
-      <span className="face border-control-edge rounded-control type-body text-ink inline-flex min-h-[var(--control-md)] max-w-full min-w-0 shrink-0 items-center gap-1 border ps-3 pe-1">
+      <span className="face bg-raised border-rule rounded-control type-body text-ink inline-flex min-h-[var(--control-md)] max-w-full min-w-0 shrink-0 items-center gap-1 border ps-3 pe-1">
         <span className="min-w-0 truncate">{filter.valueLabel}</span>
         <button
           type="button"

@@ -137,15 +137,30 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 
 One entry per family; wave 2 fills each from the layouts above.
 
-- **Buttons.** 28, radius 6. Secondary: `raised` with a `rule` edge. Quiet:
-  transparent, `state-hover` fill. Primary: `ink` fill, `panel`-coloured
-  text, at most one per view. Danger: secondary with negative text.
-- **Inputs.** 28, `rule` edge on `panel`, `control-line` edge plus the focus
-  ring when focused, 16px leading icon.
-- **Segmented control.** `rule` frame, 2px inset, 24-high segments, the
-  selected one on `state-selected`.
-- **Tags and status.** Tag: 20 high, radius 4, `rule` edge, 12px `ink-2`.
-  Status pill: radius full, 6px coloured dot, 12px at 500.
+- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
+  radius 6, flat; 16px icons in `ink-2` on a secondary. Secondary: `raised`
+  with a `rule` edge, `raised-2` on hover, press or open. Quiet: transparent,
+  `state-hover` fill. Primary: `ink` fill, `panel`-coloured text, at most one
+  per view. Danger: secondary with negative text; filled only to confirm in a
+  dialog (`danger-confirm`). One disabled look for every variant. The
+  website keeps its layered `.face`.
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `rule`
+  edge on `panel`, `control-line` on hover; focused, `control-line` plus the
+  focus ring; invalid, a negative edge. 16px leading icon. Checkbox and radio
+  take the same edge and an `ink` fill when on; the switch is an `ink` track
+  when on.
+- **Selects and menus.** A select or filter trigger is a secondary button's
+  face (`TRIGGER_BOX`); a typed combobox is an input. Menus, listboxes and
+  tooltips are `raised` with a `rule` edge, radius 8, 28-high rows on
+  `state-hover`.
+- **Tabs and segmented control** ([`tabs.tsx`](../frontend/components/ui/tabs.tsx)).
+  Tabs are text, 20 apart, the current one `ink` over a 2px accent underline.
+  Segmented control: `rule` frame one control high, 2px inset, 24-high
+  segments, the selected one on `state-selected`.
+- **Tags and status.** Tag: 20 high, radius 4, `rule` edge, 12px `ink-2`; a
+  draft is dashed; Kbd and composer chips share the face. Status pill
+  (`StatusMark`): 20 high, radius full, `rule` edge, the tone's 6px dot, 12px
+  at 500 in `ink`; a live state draws the spinner and priority its bars.
 - **Navigation.** To be specified in wave 2.
 - **Tables and metric strip.** See Standard layouts.
 - **Overlays** (menus, popovers, dialogs, drawers). To be specified in wave 2.

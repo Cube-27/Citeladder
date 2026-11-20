@@ -1,27 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import {
-  Ban,
-  Circle,
-  CircleCheck,
-  CircleDashed,
-  CircleDot,
-  CircleMinus,
-  CirclePause,
-  CircleX,
-  Clock,
-  Frown,
-  Globe,
-  Info,
-  Meh,
-  OctagonAlert,
-  OctagonX,
-  Smile,
-  TriangleAlert,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
 
-import { Icon } from '@/components/ui/icon';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
@@ -32,35 +10,26 @@ import { cn } from '@/lib/utils';
  */
 export type StatusTone = 'neutral' | 'positive' | 'negative' | 'warning' | 'info' | 'you';
 
-/** Each tone's chip: its wash as the fill and its text colour (neutral is the well and `ink-2`). */
-const TONE_CHIP: Record<StatusTone, string> = {
-  neutral: 'bg-well text-ink-2',
-  positive: 'bg-positive-wash text-positive',
-  negative: 'bg-negative-wash text-negative',
-  warning: 'bg-warning-wash text-warning',
-  info: 'bg-info-wash text-info',
-  you: 'bg-accent-wash text-ink',
+/** Each tone's 6px dot. */
+const TONE_DOT: Record<StatusTone, string> = {
+  neutral: 'bg-ink-2',
+  positive: 'bg-positive',
+  negative: 'bg-negative',
+  warning: 'bg-warning',
+  info: 'bg-info',
+  you: 'bg-accent',
 };
 
-/** What a mark draws before its word: a glyph, the live rung, the "you" rung or priority bars. */
-type Glyph = LucideIcon | 'live' | 'you' | Readonly<{ bars: 1 | 2 | 3 }>;
-
-const TONE_GLYPH: Record<StatusTone, Glyph> = {
-  neutral: Circle,
-  positive: CircleCheck,
-  negative: CircleX,
-  warning: TriangleAlert,
-  info: Info,
-  you: 'you',
-};
+/** What a mark draws before its word: the tone's dot, the live rung or priority bars. */
+type Glyph = 'dot' | 'live' | Readonly<{ bars: 1 | 2 | 3 }>;
 
 type Mark = Readonly<{ tone: StatusTone; glyph: Glyph }>;
-const mark = (tone: StatusTone, glyph: Glyph = TONE_GLYPH[tone]): Mark => ({ tone, glyph });
+const mark = (tone: StatusTone, glyph: Glyph = 'dot'): Mark => ({ tone, glyph });
 
 /*
  * One vocabulary per domain, defined once: a product value resolves to a
- * tone and a glyph, so the same state reads the same mark wherever it shows.
- * The word always names the state; the glyph and tone repeat it (WCAG 1.4.1).
+ * tone, so the same state reads the same mark wherever it shows. The word
+ * always names the state; the dot's tone repeats it (WCAG 1.4.1).
  */
 const statusMarks = {
   success: mark('positive'),
@@ -70,42 +39,41 @@ const statusMarks = {
 } as const satisfies Record<string, Mark>;
 
 const sentimentMarks = {
-  positive: mark('positive', Smile),
-  neutral: mark('neutral', Meh),
-  negative: mark('negative', Frown),
-  mixed: mark('warning', Meh),
+  positive: mark('positive'),
+  neutral: mark('neutral'),
+  negative: mark('negative'),
+  mixed: mark('warning'),
 } as const satisfies Record<string, Mark>;
 
-/** Citation classification: your own pages carry the accent rung; everyone else is neutral. */
+/** Citation classification: your own pages carry the accent; everyone else is neutral. */
 const classificationMarks = {
   owned: mark('you'),
-  competitor: mark('neutral', Users),
-  'third-party': mark('neutral', Globe),
+  competitor: mark('neutral'),
+  'third-party': mark('neutral'),
 } as const satisfies Record<string, Mark>;
 
 /** Running and queued are info; partial and cancelled warning; failed negative. */
 const runStatusMarks = {
-  draft: mark('neutral', CircleDashed),
-  queued: mark('info', Clock),
+  draft: mark('neutral'),
+  queued: mark('info'),
   running: mark('info', 'live'),
-  paused: mark('neutral', CirclePause),
+  paused: mark('neutral'),
   analyzing: mark('info', 'live'),
   completed: mark('positive'),
   partial: mark('warning'),
   failed: mark('negative'),
-  cancelled: mark('warning', Ban),
+  cancelled: mark('warning'),
 } as const satisfies Record<string, Mark>;
 
 /**
- * Severity: High negative, Medium warning, Low neutral. Its glyphs belong to
- * severity alone, so a severity never reads as a run's or a check's state.
+ * Severity: Critical and High negative, Medium warning, Low and Info neutral.
  */
 const severityMarks = {
-  critical: mark('negative', OctagonX),
-  high: mark('negative', OctagonAlert),
-  medium: mark('warning', CircleDot),
-  low: mark('neutral', CircleMinus),
-  info: mark('neutral', CircleMinus),
+  critical: mark('negative'),
+  high: mark('negative'),
+  medium: mark('warning'),
+  low: mark('neutral'),
+  info: mark('neutral'),
 } as const satisfies Record<string, Mark>;
 
 /**
@@ -163,16 +131,11 @@ function markOf(props: StatusMarkProps): Mark {
   }
 }
 
-function MarkGlyph({ glyph }: Readonly<{ glyph: Glyph }>) {
+function MarkGlyph({ tone, glyph }: Mark) {
   if (glyph === 'live') return <Spinner />;
-  if (glyph === 'you')
-    return (
-      <span aria-hidden className="inline-grid size-4 shrink-0 place-items-center">
-        <span className="bg-accent rounded-mark block h-3 w-[var(--mark-width)]" />
-      </span>
-    );
-  if (typeof glyph === 'object' && 'bars' in glyph) return <PriorityBars filled={glyph.bars} />;
-  return <Icon icon={glyph} className="my-0" />;
+  if (glyph === 'dot')
+    return <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', TONE_DOT[tone])} />;
+  return <PriorityBars filled={glyph.bars} />;
 }
 
 /** Bar heights and left edges in a 16px box, lowest first. */
@@ -201,11 +164,12 @@ function PriorityBars({ filled }: Readonly<{ filled: 1 | 2 | 3 }>) {
 }
 
 /**
- * StatusMark — the only way to show a status, priority or severity: a chip
- * 24 high with radius 4, the tone's wash as its fill, the tone's text
- * colour, a glyph and a word, so a column of marks reads as a pattern and
- * every mark still says its state. A running state draws the live rung. It
- * is never cut: it sizes to its word, and its column's floor makes room.
+ * StatusMark — the only way to show a status, priority or severity: the
+ * status pill, 20 high, radius full, a `rule` edge, the tone's 6px dot and a
+ * 12px word at 500 in `ink`, so a column of marks reads as a pattern and
+ * every mark still says its state. A running state draws the live rung,
+ * priority its bars. It is never cut: it sizes to its word, and its column's
+ * floor makes room.
  */
 export function StatusMark(props: Readonly<StatusMarkProps>) {
   const {
@@ -216,18 +180,17 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
     tone: _tone,
     ...attributes
   } = { tone: undefined, ...props };
-  const { tone, glyph } = markOf(props);
+  const statusMark = markOf(props);
   return (
     <span
       {...attributes}
-      data-status-tone={tone}
+      data-status-tone={statusMark.tone}
       className={cn(
-        'type-caption inline-flex font-medium h-[var(--tag-height)] shrink-0 items-center gap-1 rounded-mark px-2 align-middle whitespace-nowrap',
-        TONE_CHIP[tone],
+        'type-caption text-ink border-rule inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full border px-2 align-middle font-medium whitespace-nowrap',
         className,
       )}
     >
-      <MarkGlyph glyph={glyph} />
+      <MarkGlyph {...statusMark} />
       <span>{children}</span>
     </span>
   );

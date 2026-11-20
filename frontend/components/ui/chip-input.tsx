@@ -13,7 +13,7 @@ export type ChipItem = Readonly<{ value: string; suggested?: boolean }>;
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 const CHIP_BUTTON =
-  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink grid size-5 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
+  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink hit-area grid size-4 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
 
 /**
  * One value as a 24px `surface-sunken` chip with a 20px remove button. A
@@ -32,11 +32,16 @@ function Chip({
   onConfirm: () => void;
 }>) {
   return (
-    <li className="bg-well text-ink text-body-sm rounded-mark inline-flex min-h-6 max-w-full items-center gap-1 ps-2 pe-0.5 whitespace-nowrap">
+    <li
+      className={cn(
+        'border-rule text-ink-2 type-caption rounded-mark inline-flex min-h-5 max-w-full items-center gap-1 border ps-1.5 pe-0.5 whitespace-nowrap',
+        item.suggested && 'border-control-line border-dashed',
+      )}
+    >
       <span className="min-w-0 truncate" title={item.value}>
         {item.value}
       </span>
-      {item.suggested ? <span className="text-caption text-ink-2 shrink-0">Suggested</span> : null}
+      {item.suggested ? <span className="shrink-0">Suggested</span> : null}
       {item.suggested ? (
         <button
           type="button"

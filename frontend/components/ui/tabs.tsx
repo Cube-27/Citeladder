@@ -14,12 +14,10 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Tabs: pills with no track (owner, 2026-11-20: every underline tab became the
- * Dashboard/Agent pill). The strip is one row that scrolls sideways inside
- * itself (its scrollbar hidden) when its items overflow; each item is `body`
- * in `ink-2`, and the current one is the raised pill (`.face`) in `ink`, the
- * same pill and height as a segment above a table. One face for page tabs and
- * in-section tabs.
+ * Tabs: text tabs 20 apart (docs/design.md, Tab strip). The strip is one row
+ * that scrolls sideways inside itself (its scrollbar hidden) when its items
+ * overflow; each item is `body` in `ink-2`, and the current one is `ink` over
+ * a 2px accent underline ("you, here"). One face for page and section tabs.
  */
 const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
@@ -58,31 +56,40 @@ function useRevealSelected(selected: string | null) {
 }
 
 /**
- * One item, a pill 4 less than a control (28, so a segment's track is one
- * control high) with 12 each side. The raised pill (the layered button face,
- * `.face`) alone marks the current item, at one weight, so a selection never
- * changes width. A tab that is not current hovers on the state tile; a
- * segment sits on its track and needs none.
+ * One item at one weight, so a selection never changes width. A tab fills
+ * its strip's height, its underline on the strip's foot. A segment is 4 less
+ * than a control (its track's 1px edge and 1px inset each side), on
+ * `state-selected` when current.
  */
-type TabKind = 'tab' | 'segment';
+const TAB_KIND = {
+  tab: {
+    base: 'min-h-[var(--control-md)] self-stretch',
+    current:
+      'after:bg-accent after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)]',
+  },
+  segment: {
+    base: 'rounded-mark min-h-[calc(var(--control-md)_-_4px)] px-3',
+    current: 'bg-state-selected',
+  },
+} as const;
 
 function tabFace({
   kind,
   selected,
   className,
-}: Readonly<{ kind: TabKind; selected: boolean; className?: string }>) {
+}: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset type-body rounded-control relative inline-flex min-h-[calc(var(--control-md)_-_4px)] shrink-0 items-center justify-center gap-1 px-3 whitespace-nowrap transition-[color,background-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
-    selected ? 'face text-ink' : 'text-ink-2 not-disabled:hover:text-ink',
-    kind === 'tab' && !selected && 'not-disabled:hover:bg-state-hover',
+    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color,background-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    TAB_KIND[kind].base,
+    selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
   );
 }
 
-/** A tab strip's row: the pills centred in it; a page strip keeps the page band's height. */
+/** A tab strip's row: a page strip keeps the page band's height; a section strip draws its rule. */
 const STRIP_ROW = {
-  page: 'min-h-[var(--page-tabs-height,var(--control-md))] items-center',
-  section: 'items-center',
+  page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
+  section: 'border-rule border-b',
 } as const;
 
 /**
@@ -207,7 +214,7 @@ export function HeldTabRow({
     <div
       aria-hidden
       data-held-tabs=""
-      className={cn(TAB_STRIP, STRIP_ROW.page, 'pointer-events-none gap-1')}
+      className={cn(TAB_STRIP, STRIP_ROW.page, 'pointer-events-none gap-5')}
     >
       {labels.map((label) => (
         <span
@@ -269,7 +276,7 @@ function TabStrip<T extends string>({
             strip.current = node;
           }}
           aria-label={ariaLabel}
-          className={cn(TAB_STRIP, STRIP_ROW[kind], 'gap-1')}
+          className={cn(TAB_STRIP, STRIP_ROW[kind], 'gap-5')}
         >
           {items.map((item) => (
             <TabsPrimitive.Trigger
@@ -365,8 +372,9 @@ export type SegmentedOption<T extends string> = Readonly<{
 
 /**
  * SegmentedControl — a view switch for two to four exclusive views with no
- * panel (a date range, a metric, a filter): segments on a `well` track, the
- * current one a raised `surface` pill with no underline (owner, 2026-11-19). Radiogroup semantics: one tab stop at
+ * panel (a date range, a metric, a filter, the sidebar's Dashboard | Agent):
+ * a `rule`-framed track one control high, 2px inset, the current segment on
+ * `state-selected`. Radiogroup semantics: one tab stop at
  * the checked option; the arrow keys move focus and selection, wrapping at
  * both ends, Home and End go to the first and last, and PageUp and PageDown
  * keep the browser's page scroll.
@@ -423,7 +431,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'bg-well rounded-card gap-0.5 p-0.5', className)}
+          className={cn(TAB_STRIP, 'border-rule rounded-control border p-px', className)}
         >
           {/* A nested flex row, NOT `display: contents`: some browsers drop a
           contents box from the accessibility tree, costing the group its name. */}

@@ -150,10 +150,7 @@ export function CitationChip({
     <ExternalHttpLink
       {...data}
       href={href}
-      className={cn(
-        CHIP,
-        'border-control-edge bg-control-fill text-ink hover:overlay-hover no-underline',
-      )}
+      className={cn(CHIP, 'border-rule text-ink hover:overlay-hover no-underline')}
     >
       {mark}
       <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
