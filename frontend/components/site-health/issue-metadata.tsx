@@ -1,9 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
-import { Inline } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
 import type { SiteIssue } from '@citeladder/contracts';
 import { dimensionLabel, severityLabel } from '@/lib/site-health/issues';
 
@@ -28,25 +24,4 @@ export function IssueSeverityMark({
 /** Which dimension the issue counts against, as a category tag. */
 export function IssueCategoryTag({ issue }: Readonly<{ issue: Pick<IssueFacts, 'dimension'> }>) {
   return <Tag>{dimensionLabel(issue.dimension)}</Tag>;
-}
-
-/**
- * Severity and dimension on one line, shared by the summary rows, the detail
- * drawer and the page detail so a row and the panel it opens describe the
- * same issue alike. Callers append their own facts as `children`.
- */
-export function IssueMetadata({
-  issue,
-  children,
-}: Readonly<{
-  issue: IssueFacts;
-  children?: ReactNode;
-}>) {
-  return (
-    <Inline as="span" className={textRole('body', 'text-ink-2 flex-wrap')}>
-      <IssueSeverityMark issue={issue} />
-      <IssueCategoryTag issue={issue} />
-      {children}
-    </Inline>
-  );
 }
