@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 
 import { CompetitorSources, NamedInsteadOfYou } from '@/components/brand/competitor-focus-cards';
 import { CompetitorTrend } from '@/components/brand/competitor-trend';
-import { ReportPage } from '@/components/templates/report-page';
+import { RecordPage } from '@/components/templates/record-page';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export function CompetitorScreen() {
   const state = selectionPageState(queries);
   const pageFilters = useSelectionPageFilters({ view: 'competitor', filters, queries });
   return (
-    <ReportPage
+    <RecordPage
       title={name}
       crumb={{
         label: name,
@@ -69,7 +69,7 @@ export function CompetitorScreen() {
           )}
         </SelectionGate>
       )}
-    </ReportPage>
+    </RecordPage>
   );
 }
 

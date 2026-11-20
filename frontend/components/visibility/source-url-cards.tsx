@@ -7,9 +7,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -108,14 +106,10 @@ export function EnginesCard({
         {rows.map((row) => (
           <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
             <TableCell>
-              <span className="grid min-w-0">
-                <ClampText lines={1}>{catalog.label(row.logical_engine)}</ClampText>
-                {catalog.modelLabel(row.logical_engine, row.transport_model) ? (
-                  <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-                    {catalog.modelLabel(row.logical_engine, row.transport_model)}
-                  </ClampText>
-                ) : null}
-              </span>
+              <TableCellLines
+                primary={catalog.label(row.logical_engine)}
+                secondary={catalog.modelLabel(row.logical_engine, row.transport_model)}
+              />
             </TableCell>
             <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
           </TableRow>

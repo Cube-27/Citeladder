@@ -10,8 +10,7 @@ import { DataTable, type DataTableColumn, type DataTableState } from '@/componen
 import { readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
 import { Inline } from '@/components/ui/layout';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
@@ -28,7 +27,7 @@ import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 /** A counted nought in a column of chips, kept apart from an absent one. */
 function ObservedNone() {
-  return <span className={textRole('caption', 'text-ink-2 tabular-nums')}>0</span>;
+  return <span className={textRole('caption', 'tabular-nums')}>0</span>;
 }
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
@@ -159,15 +158,15 @@ function PromptRow({
   return (
     <TableRow>
       <TableCell>
-        <Inline as="span" className="items-start">
+        <Inline as="span">
           <BrandMark name={engines.label(item.logical_engine)} />
-          <span className="grid min-w-0">
-            <ClampText lines={1}>{item.prompt_text || 'Untitled prompt'}</ClampText>
-            <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-              {engines.modelLabel(item.logical_engine, item.transport_model) ||
-                engines.label(item.logical_engine)}
-            </ClampText>
-          </span>
+          <TableCellLines
+            primary={item.prompt_text || 'Untitled prompt'}
+            secondary={
+              engines.modelLabel(item.logical_engine, item.transport_model) ||
+              engines.label(item.logical_engine)
+            }
+          />
         </Inline>
       </TableCell>
       <TableCell numeric>{count(item.citations.length) ?? '0'}</TableCell>
