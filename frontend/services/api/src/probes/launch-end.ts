@@ -11,6 +11,9 @@ import { enqueueTask } from '../queue/enqueue.ts';
 
 const probes = policy.probes;
 
+/** Runs that recorded answers; only these are labelled and read. */
+export const ANSWERED_STATUSES = ['completed', 'partially_completed'];
+
 export function enqueueProbeLabelling(
   db: Database,
   launch: { workspaceId: string; projectId: string; launchId: string },
@@ -25,20 +28,25 @@ export function enqueueProbeLabelling(
   });
 }
 
-/** In the transaction that ends a run: queues its launch's labelling when no sibling is still open. */
+/**
+ * In the transaction that ends a run: queues its launch's labelling once no
+ * sibling is still open. A launch that answered nothing stays failed, unlabelled,
+ * so the reads keep the last labelled probe.
+ */
 export async function labelEndedLaunch(
   db: Database,
   audit: { workspaceId: string; projectId: string; scope: string; launchId: string | null },
 ) {
   if (audit.scope !== probes.audit_scope || audit.launchId === null) return;
   await subjectXactLock(db, `probe_launch:${audit.launchId}`);
-  const open = await db
+  const runs = await db
     .selectFrom('audits')
-    .select('id')
+    .select('status')
     .where('workspace_id', '=', audit.workspaceId)
     .where('launch_id', '=', audit.launchId)
-    .where('status', 'not in', policy.audits.constants.audit_terminal_statuses)
-    .executeTakeFirst();
-  if (open) return;
+    .execute();
+  const terminal = policy.audits.constants.audit_terminal_statuses;
+  if (runs.some((run) => !terminal.includes(run.status))) return;
+  if (!runs.some((run) => ANSWERED_STATUSES.includes(run.status))) return;
   await enqueueProbeLabelling(db, { ...audit, launchId: audit.launchId });
 }

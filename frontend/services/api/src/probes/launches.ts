@@ -13,9 +13,7 @@ import type { Database } from '../db/database.ts';
 import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { logicalEngines } from '../providers/config.ts';
 import { probeRoster } from './answers.ts';
-
-/** Runs that recorded answers; only these are labelled and read. */
-export const ANSWERED_STATUSES = ['completed', 'partially_completed'];
+import { ANSWERED_STATUSES } from './launch-end.ts';
 
 export function probeAudits(db: Database, scope: Scope) {
   return db

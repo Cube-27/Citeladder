@@ -155,8 +155,6 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
         /** Null when this probe got no objection answers, never 0. */
         score: score.nullable(),
         engines: z.array(logicalEngineSchema),
-        /** Since the previous labelled probe; null without one. */
-        change: z.int().nullable(),
         /** Oldest first, this probe last; null where that probe had no objection answers. */
         history: z.array(score.nullable()),
         /** Distinct pages cited by answers raising it; 0 is a real state (no search), null when this probe did not raise it. */

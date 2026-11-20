@@ -126,7 +126,7 @@ function ObjectionTable({
               {group.history.length > 1 ? (
                 <Sparkline
                   values={group.history}
-                  label={`${group.name}: position score over the last ${group.history.length} probes, now ${group.score ?? 'no answers'}`}
+                  label={`${group.name}: position score over the last ${group.history.length} probes, oldest first: ${group.history.map((value) => value ?? 'no answers').join(', ')}`}
                 />
               ) : (
                 <Absence state="not_run" label="No previous probe" />

@@ -99,7 +99,6 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   const rows = groups.map((group) => {
     const series = scored.map(({ asked, scores }) => scoreOf(scores, group.id, asked.length));
     const score = series.at(-1) ?? null;
-    const previous = series.at(-2) ?? null;
     const raising = new Set(
       current.asked
         .filter((answer) => answer.items.some((item) => item.objection_group_id === group.id))
@@ -110,7 +109,6 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
       name: group.name,
       score,
       engines: logicalEngines.filter((engine) => raising.has(engine)),
-      change: score !== null && previous !== null ? score - previous : null,
       history: series,
       ...(raising.size ? pagesOf(group.id) : { sources: null, pages: [] }),
     };

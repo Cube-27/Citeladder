@@ -40,7 +40,8 @@ import {
   themeRequest,
   type LabelAnswer,
 } from './label-model.ts';
-import { ANSWERED_STATUSES, probeAudits } from './launches.ts';
+import { ANSWERED_STATUSES } from './launch-end.ts';
+import { probeAudits } from './launches.ts';
 import { listGroups, saveAnswerItems, saveGroups } from './objection-groups.ts';
 
 const probes = policy.probes;

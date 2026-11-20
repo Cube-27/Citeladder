@@ -435,20 +435,19 @@ describe('probe labelling and reads', () => {
     const objections = await probeObjections(db, t);
     if (objections.state !== 'value') throw new Error('expected a labelled probe');
     expect(
-      objections.groups.map(({ name, score, engines, change, history, sources }) => [
+      objections.groups.map(({ name, score, engines, history, sources }) => [
         name,
         score,
         engines,
-        change,
         history,
         sources,
       ]),
     ).toEqual([
-      ['Too expensive', 100, ['chatgpt'], 3, [97, 100], 0],
+      ['Too expensive', 100, ['chatgpt'], [97, 100], 0],
       // Not raised before is 0 then, never unknown.
-      ['Slow delivery', 90, ['chatgpt'], 90, [0, 90], 0],
+      ['Slow delivery', 90, ['chatgpt'], [0, 90], 0],
       // Not raised in this probe, its sources are not applicable.
-      ['Fit runs small', 0, [], -63, [63, 0], null],
+      ['Fit runs small', 0, [], [63, 0], null],
     ]);
     // The average reads only the groups an engine raised in this probe.
     expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
@@ -564,6 +563,18 @@ describe('probe labelling and reads', () => {
       market.state === 'value' ? market.known_for.map(({ theme }) => theme) : null,
       objections.state === 'value' ? objections.groups.map(({ name }) => name) : null,
     ]).toEqual([['Other'], ['Too expensive']]);
+  });
+
+  it('leaves a probe that answered nothing unlabelled, so the reads keep the last labelled one', async () => {
+    const { t } = await probeTenant();
+    const [firstId] = await launch(t);
+    await answered(t, firstId!);
+    await label(t, labeller(first));
+    const [failedId] = await launch(t);
+    await ended(t, failedId!, 'cancelled');
+    await label(t, labeller(first));
+    const market = await probeMarket(db, t);
+    expect(market.state === 'value' ? market.probe.launch_id : null).toBe(await launchOf(firstId!));
   });
 
   it('refuses to repair a probe run: a new probe is its retry', async () => {

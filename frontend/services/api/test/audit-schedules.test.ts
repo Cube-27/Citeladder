@@ -225,6 +225,16 @@ describe('audit schedule management', () => {
       (await request(a.userId, 'PATCH', a.projectId, `/${row.id}`, { audit_scope: 'probe' }))
         .status,
     ).toBe(422);
+    // An existing probe schedule here only pauses or resumes.
+    await db
+      .updateTable('audit_schedules')
+      .set({ audit_scope: 'probe' })
+      .where('id', '=', row.id)
+      .execute();
+    expect([
+      (await request(a.userId, 'PATCH', a.projectId, `/${row.id}`, { cadence: 'weekly' })).status,
+      (await request(a.userId, 'PATCH', a.projectId, `/${row.id}`, { enabled: false })).status,
+    ]).toEqual([409, 200]);
     expect((await request(a.userId, 'DELETE', a.projectId, `/${row.id}`)).status).toBe(204);
   });
 });

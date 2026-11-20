@@ -115,7 +115,6 @@ function group(
     name,
     score,
     engines,
-    change: null,
     history: [score],
     sources: 0,
     pages: [],

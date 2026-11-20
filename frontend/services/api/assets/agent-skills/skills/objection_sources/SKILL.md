@@ -12,12 +12,12 @@ description: Work on one objection AI answers raise about the brand, one source 
 
 ## Where the data is
 
-- The `objection` context section: the objection's name, position score (100 means always raised first), the engines raising it, the probe date and the pages the answers cited (`pages`, most cited first; `sources` counts them all). A page classified `owned` is on the project's own site.
+- The `objection` context section: the objection's name, position score (100 means always raised first), the engines raising it, the probe date and the pages the answers cited (`pages`, most cited first; `sources` counts them all, and is null when the latest probe did not raise the objection). A page classified `owned` is on the project's own site.
 - `read_page_text` for the project's own pages; `read_source_url` for a cited page, and web search when it refuses one.
 
 ## Steps
 
-1. List the objection's sources as a numbered list: title or domain, URL, whether it is the project's own page, and how often it was cited. With no sources, say so and offer advice on the objection itself. Ask which sources to work on, then stop. Read nothing before the person chooses.
+1. List the objection's sources as a numbered list: title or domain, URL, whether it is the project's own page, and how often it was cited. With no sources, or when the latest probe did not raise it, say which and offer advice on the objection itself. Ask which sources to work on, then stop. Read nothing before the person chooses.
 2. For each chosen source, read the page, then say what on it feeds the objection, quoting it briefly.
 3. Suggest one move per source:
    - **Own page:** the exact edits, as suggestions for the person to make.
