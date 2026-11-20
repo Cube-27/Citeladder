@@ -1,7 +1,7 @@
 import { MARKET_LANGUAGES, marketLabel } from '@citeladder/contracts/markets';
 import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
-import { BrandRadar } from '@/components/perception/brand-radar';
+import { BrandRadar, rosterKey } from '@/components/perception/brand-radar';
 import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-panel';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
@@ -60,7 +60,7 @@ export function PerceptionMarket({
         </TitledSection>
         <TitledSection title="Brand shape" description="Position score per theme">
           <SectionContent>
-            <BrandRadar themes={data.themes} />
+            <BrandRadar key={rosterKey(data.themes)} themes={data.themes} />
           </SectionContent>
         </TitledSection>
       </AppGrid>
@@ -141,17 +141,17 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
         }
       >
         {data.themes.map((row) => {
-          const own = row.entities.find((entity) => entity.kind === 'brand')?.score ?? 0;
-          const leads = row.leader.kind === 'brand' && row.leader.score > 0;
+          const own = row.entities.find((entity) => entity.kind === 'brand');
+          const leads = row.leader.kind === 'brand' && row.leader.named;
           return (
             <TableRow key={row.theme_id}>
               <TableCell>{row.theme}</TableCell>
-              <TableCell numeric>{own}</TableCell>
+              <TableCell numeric>{own?.score ?? 0}</TableCell>
               <TableCell numeric>
-                {own > 0 ? `#${row.rank} of ${row.of}` : <Absence label="Not named" />}
+                {own?.named ? `#${row.rank} of ${row.of}` : <Absence label="Not named" />}
               </TableCell>
               <TableCell>
-                {row.leader.score > 0 ? (
+                {row.leader.named ? (
                   <Inline as="span">
                     {row.leader.name}
                     {row.leader.kind === 'brand' ? <YouTag /> : null}
@@ -161,7 +161,7 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
                 )}
               </TableCell>
               <TableCell numeric>
-                <Gap leads={leads} gap={row.gap} />
+                <Gap leads={leads} named={row.leader.named} gap={row.gap} />
               </TableCell>
             </TableRow>
           );
@@ -171,9 +171,10 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
   );
 }
 
-function Gap({ leads, gap }: Readonly<{ leads: boolean; gap: number }>) {
+function Gap({ leads, named, gap }: Readonly<{ leads: boolean; named: boolean; gap: number }>) {
   if (leads) return <Tag>You lead</Tag>;
-  return gap > 0 ? `−${gap}` : <Absence label="No brand named" />;
+  if (!named) return <Absence label="No brand named" />;
+  return gap > 0 ? `−${gap}` : '0';
 }
 
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [

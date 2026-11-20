@@ -11,6 +11,7 @@ import { createAuditsInTransaction } from '../audits/creation.ts';
 import { byokRoutes, canMeasure, usableRoute } from '../audits/freeze.ts';
 import { probeAnswerCredits } from '../audits/prompt-runs.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
+import { workspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -43,10 +44,11 @@ export async function probePlan(
   { runtime, at }: { runtime: AuditRuntime; at: Date },
 ) {
   const funded = (await workspaceCredentialMode(db, scope.workspaceId)) === 'funded';
-  const [usable, markets, subject] = await Promise.all([
+  const [usable, markets, subject, access] = await Promise.all([
     probeEngineList(db, scope, { funded, runtime, at }),
     listMarkets(db, scope),
     probeSubject(db, scope),
+    workspaceAccess(db, scope.workspaceId, at),
   ]);
   // An engine that cannot measure a market is skipped there, never the whole probe.
   const runs = markets.flatMap(({ id, country_code, language_code }) => {
@@ -67,6 +69,14 @@ export async function probePlan(
     .digest('hex');
   return {
     funded,
+    // The trial allows one ask on ChatGPT; a probe asks three times on every engine.
+    trial: access.status === 'trial_active',
+    // Admission refuses a market whose tasks pass the audit task limit.
+    overLimit: runs.some(
+      (run) =>
+        run.questions.length * probes.repetitions * run.engines.length >
+        runtime.audits.max_tasks_per_audit,
+    ),
     usable,
     engines,
     runs,
@@ -93,15 +103,26 @@ export async function promptSetOf(db: Database, scope: Scope) {
 
 type Plan = Awaited<ReturnType<typeof probePlan>>;
 
-/** Why a plan would run nothing: no usable key, or no usable engine measures any market. */
+/**
+ * Why a plan cannot run: a trial workspace, no usable key, no usable engine
+ * measuring any market, or a market asking more than the audit task limit.
+ */
 export function blockedBy(plan: Plan) {
+  if (plan.trial) return 'trial';
   if (!plan.usable.length) return 'no_key';
-  return plan.runs.length ? null : 'no_market';
+  if (!plan.runs.length) return 'no_market';
+  return plan.overLimit ? 'task_limit' : null;
 }
 
-/** A plan with at least one engine in one market, or why there is none. */
+/** A plan that can run, or the refusal saying why not. */
 export function runnable(plan: Plan) {
   const blocked = blockedBy(plan);
+  if (blocked === 'trial')
+    throw new ApiError(403, 'Market probes are not in the trial', {
+      code: 'capability_not_granted',
+    });
+  if (blocked === 'task_limit')
+    throw new ApiError(422, 'The probe asks more than the task limit in a market');
   if (blocked === 'no_key')
     throw new ApiError(400, 'Add a key for a search-capable engine to run a probe', {
       code: 'execution_credentials_unavailable',

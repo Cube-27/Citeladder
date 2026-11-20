@@ -59,18 +59,30 @@ function themeRow(answers: readonly ProbeAnswer[], roster: readonly TrackedName[
     name,
     key: id ?? BRAND,
     score: scoreOf(scores, id ?? BRAND, answers.length) ?? 0,
+    named: (scores.get(id ?? BRAND)?.raised ?? 0) > 0,
   }));
   const own = entities.find((entity) => entity.kind === 'brand')!;
-  // Ties keep the brand first, so a shared top score reads as "You lead".
+  // Ties keep the brand first, so a shared top score reads as "You lead";
+  // a named business beats an unnamed one on a score that rounded to 0.
   const leader = entities.reduce(
-    (best, entity) => (entity.score > best.score ? entity : best),
+    (best, entity) =>
+      entity.score > best.score || (entity.score === best.score && entity.named && !best.named)
+        ? entity
+        : best,
     own,
   );
+  const shown = ({ kind, id, name, score, named }: (typeof entities)[number]) => ({
+    kind,
+    id,
+    name,
+    score,
+    named,
+  });
   return {
-    entities: entities.map(({ kind, id, name, score }) => ({ kind, id, name, score })),
+    entities: entities.map(shown),
     rank: rankOf(entities, BRAND)!,
     of: entities.length,
-    leader: { kind: leader.kind, id: leader.id, name: leader.name, score: leader.score },
+    leader: shown(leader),
     gap: leader.score - own.score,
   };
 }
@@ -81,7 +93,7 @@ const themeAnswers = (answers: readonly ProbeAnswer[], themeId: string) =>
   );
 
 /** The brand's rank on an engine's top theme: its first real theme, never Other. */
-function rankInTopTheme(
+export function rankInTopTheme(
   own: readonly ProbeAnswer[],
   top: readonly KnownFor[],
   roster: readonly TrackedName[],
@@ -91,8 +103,14 @@ function rankInTopTheme(
   const asked = themeAnswers(own, first);
   if (!asked.length) return { kind: 'not_asked' };
   const row = themeRow(asked, roster);
-  // A gap as large as the leader's score means the brand scored 0: not named.
-  return row.gap < row.leader.score ? { kind: 'rank', rank: row.rank } : { kind: 'not_named' };
+  const named = row.entities.some((entity) => entity.kind === 'brand' && entity.named);
+  return named ? { kind: 'rank', rank: row.rank } : { kind: 'not_named' };
+}
+
+/** The probe's language when every market shares one, else empty. */
+function oneLanguage(markets: readonly { language_code: string }[]) {
+  const [language = '', ...others] = new Set(markets.map((market) => market.language_code));
+  return others.length ? '' : language;
 }
 
 export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMarket> {
@@ -125,7 +143,7 @@ export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMark
     probe: { ...latest.basis, answers: answers.length },
     brand: latest.brand,
     category: subject.category,
-    language_code: latest.basis.markets[0]?.language_code ?? '',
+    language_code: oneLanguage(latest.basis.markets),
     known_for_answers: answers.filter((answer) => answer.question.question === 'known_for').length,
     known_for: knownFor(answers, themes),
     themes: rows,

@@ -152,7 +152,13 @@ Build these before enabling them:
   `label_credits`. Plan amounts are open (proposed: Starter 0, Growth 600, Scale
   2,000, trial 0), and the operator provisioning script needs a value too.
   The same change deletes the probe code's own credit reads, `aiCreditBalance`
-  (`probes/status.ts`) and `heldCredits` (`probes/plan.ts`).
+  (`probes/status.ts`) and `heldCredits` (`probes/plan.ts`). It also fixes
+  probe-schedule drift (owner 2026-11-20: deferred here; no scheduled runs
+  until then): a scheduled run rebuilds its questions from the current themes
+  (`audits/freeze.ts` `panelOf`), so a theme added after confirming raises the
+  cost per run above what the user confirmed, and a removed key fails the
+  whole occurrence in `freezeRoutes` instead of dropping that engine as Run
+  probe does.
 
 Owners: [Billing and entitlements](../billing-entitlements.md),
 [billing provider readiness](../billing-provider-readiness.md) and the
