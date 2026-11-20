@@ -741,9 +741,9 @@ export type Served = {
 };
 /**
  * A recorded site (keyed by `host/path` for one origin, else by path, or `path?key` for a
- * request with that query key) behind the
- * real acquirer: robots and pacing run through the gate, every hop is authorized, and each call
- * is reported like the transport does. `requests` collects the keys actually sent.
+ * request with that query key) behind the real acquirer: robots and pacing run through the
+ * gate, every hop is authorized, and each call is reported like the transport does.
+ * `requests` collects the keys actually sent.
  */
 export function recordedSite(
   pages: Record<string, Served>,
