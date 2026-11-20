@@ -133,27 +133,6 @@
   justify-content: center;
 }
 
-.cl-app-palette {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: var(--control-md);
-  /* 8px each side and 4px gaps, so the placeholder shows in full beside the shortcut hint. */
-  padding: 0 8px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-ink-muted);
-}
-
-.cl-app-palette > span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .cl-app-nav {
   display: flex;
   flex-direction: column;

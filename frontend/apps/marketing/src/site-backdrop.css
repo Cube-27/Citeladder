@@ -1,7 +1,7 @@
 /* Experiment (owner, 2026-11-20): every website page's background, held to
    the viewport while the page scrolls over it and ending where the page above
    the footer ends (the footer keeps its paper). From the bottom up: a
-   near-black base, twelve hairline columns fading out toward the top, a wide
+   near-black base, a wide
    amber glow anchored at the viewport's foot, a soft glow rising up each
    side edge, and a fine grain. The nav bar is part of the background until
    the page scrolls. Colours are the site-hero tokens in globals.css. */
@@ -38,21 +38,10 @@
   --lb-grain: 0.07;
 }
 
-.cl-site-backdrop > div::before,
 .cl-site-backdrop > div::after {
   position: absolute;
   inset: 0;
   content: '';
-}
-
-/* Twelve hairline columns, faintest at the top. */
-.cl-site-backdrop > div::before {
-  background: linear-gradient(90deg, var(--color-site-hero-line) 0 1px, transparent 1px) 0 0 /
-    calc(100% / 12) 100%;
-  mask-image: linear-gradient(transparent, currentcolor 70%);
-}
-
-.cl-site-backdrop > div::after {
   background: var(--site-noise);
   mix-blend-mode: overlay;
   opacity: var(--lb-grain);
