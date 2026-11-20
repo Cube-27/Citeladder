@@ -1,0 +1,87 @@
+/* Experiment (owner, 2026-11-20): every website page's background, held to
+   the viewport while the page scrolls over it and ending where the page above
+   the footer ends (the footer keeps its paper). From the bottom up: a
+   near-black base, twelve hairline columns fading out toward the top, a wide
+   amber glow anchored at the viewport's foot, a soft glow rising up each
+   side edge, and a fine grain. The nav bar is part of the background until
+   the page scrolls. Colours are the site-hero tokens in globals.css. */
+
+/* The page above the footer, reaching up behind the nav bar; its one child
+   sticks to the viewport inside it. */
+.cl-site-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: calc(-1 * var(--marketing-nav-offset)) 0 0;
+  pointer-events: none;
+}
+
+.cl-site-backdrop > div {
+  --lb-grain: 0.05;
+
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(16% 60% at 0% 72%, var(--color-site-hero-side), transparent),
+    radial-gradient(16% 60% at 100% 72%, var(--color-site-hero-side), transparent),
+    radial-gradient(
+      75% 70% at 50% 105%,
+      var(--color-site-hero-amber),
+      var(--color-site-hero-umber) 50%,
+      transparent
+    ),
+    var(--color-site-hero-base);
+}
+
+:root[data-theme='dark'] .cl-site-backdrop > div {
+  --lb-grain: 0.07;
+}
+
+.cl-site-backdrop > div::before,
+.cl-site-backdrop > div::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+/* Twelve hairline columns, faintest at the top. */
+.cl-site-backdrop > div::before {
+  background: linear-gradient(90deg, var(--color-site-hero-line) 0 1px, transparent 1px) 0 0 /
+    calc(100% / 12) 100%;
+  mask-image: linear-gradient(transparent, currentcolor 70%);
+}
+
+.cl-site-backdrop > div::after {
+  background: var(--site-noise);
+  mix-blend-mode: overlay;
+  opacity: var(--lb-grain);
+}
+
+/* The closing band meets the footer: no strip of page between them. */
+.cl-site-main:has(.cl-cta) {
+  padding-bottom: 0;
+}
+
+/* The nav bar sits on the background at the top and takes its own paper and
+   hairline over the first 64px of scroll. Without scroll-driven animations
+   it keeps its paper. */
+@supports (animation-timeline: scroll()) {
+  :root:has(.cl-site-backdrop) .cl-navbar {
+    animation: lb-nav-paper var(--ease-sweep) both;
+    animation-timeline: scroll(root);
+    animation-range: 0 64px;
+  }
+}
+
+@keyframes lb-nav-paper {
+  from {
+    border-bottom-color: transparent;
+    background-color: transparent;
+  }
+
+  to {
+    border-bottom-color: var(--color-line);
+    background-color: var(--site-page);
+  }
+}

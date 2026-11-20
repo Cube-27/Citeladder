@@ -1022,12 +1022,6 @@
   --color-site-well-shade: oklch(25% 0 0 / 7%);
   --color-site-well-edge: oklch(25% 0 0 / 7%);
   --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
-  --color-spot-from: oklch(95% 0.03 55);
-  --color-spot-to: oklch(97.6% 0.012 65);
-  --color-spot-glow: oklch(76% 0.15 45 / 35%);
-  --color-spot-halo: oklch(86% 0.08 55 / 35%);
-  --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
-  --color-spot-vignette: oklch(55% 0.12 40 / 10%);
   /* The home hero's backdrop (experiment, owner 2026-11-20). */
   --color-site-hero-base: oklch(100% 0 0);
   --color-site-hero-line: oklch(25% 0 0 / 5%);
@@ -1066,12 +1060,6 @@
   --color-site-well-shade: oklch(0% 0 0 / 55%);
   --color-site-well-edge: oklch(100% 0 0 / 6%);
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
-  --color-spot-from: oklch(22% 0.04 40);
-  --color-spot-to: oklch(15% 0.015 40);
-  --color-spot-glow: oklch(70.3% 0.194 39.3 / 35%);
-  --color-spot-halo: oklch(60% 0.15 40 / 22%);
-  --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
-  --color-spot-vignette: oklch(0% 0 0 / 55%);
   --color-site-hero-base: oklch(11.6% 0.0023 17);
   --color-site-hero-line: oklch(97.5% 0.01 70 / 3.5%);
   --color-site-hero-amber: oklch(56% 0.13 50 / 27%);

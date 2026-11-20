@@ -3,6 +3,7 @@
 // next to its component and loads only on pages that render it).
 import '@/apps/marketing/src/marketing.css';
 import '@/apps/marketing/src/site-base.css';
+import '@/apps/marketing/src/site-backdrop.css';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics.astro';
 import CookieBanner from '@/components/marketing/chrome/CookieBanner.astro';
 import SpeculationRules from '@/components/content/SpeculationRules.astro';
@@ -121,7 +122,10 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     <a href="#main" class="skip-link">Skip to main content</a>
     <SiteNav path={Astro.url.pathname} />
     {/* Clip, not hide: a wide product frame never scrolls the page sideways, and sticky asides still stick. */}
-    <div class="cl-site-main relative z-1 overflow-x-clip"><slot /></div>
+    <div class="cl-site-main relative z-1 overflow-x-clip">
+      <div class="cl-site-backdrop" aria-hidden="true"><div></div></div>
+      <slot />
+    </div>
     <SiteFooter />
     <CookieBanner />
   </body>
