@@ -38,6 +38,7 @@ const ORIGIN_REFS: readonly [AgentChatOrigin, readonly string[]][] = [
   ['demand', ['demand_signal_id']],
   ['keyword_research', ['search_intelligence_reference']],
   ['prompts', ['prompt_reference']],
+  ['objection', ['objection_group_id']],
 ];
 export function chatOrigin(chat: Pick<Chat, 'context_refs' | 'action_id'>): AgentChatOrigin {
   const refs = jsonObject(chat.context_refs, 'agent_chats.context_refs');

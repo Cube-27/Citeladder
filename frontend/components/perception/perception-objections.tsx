@@ -2,11 +2,13 @@ import type { ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
 import { ObjectionActions } from '@/components/perception/objection-actions';
 import { Absence } from '@/components/ui/absence';
+import { buttonClasses } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { Disclosure } from '@/components/ui/disclosure';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Stack } from '@/components/ui/layout';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Section, SectionContent, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import {
@@ -17,6 +19,7 @@ import {
   UrlText,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
@@ -24,6 +27,9 @@ import { objectionsSummary } from '@/lib/perception/probe';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 
 type Group = ProbeObjectionsValue['groups'][number];
+
+/** The packaged Agent skill an objection's chat pins (AV-37). */
+const OBJECTION_SKILL = 'objection_sources';
 
 /**
  * The Objections tab (AV-36): why AI says a buyer might not choose the brand,
@@ -94,7 +100,6 @@ function ObjectionTable({
   data,
 }: Readonly<{ scope: ProjectScope; data: ProbeObjectionsValue }>) {
   const mayEdit = useWorkspaceCapability('write');
-  const columns = mayEdit ? COLUMNS : COLUMNS.filter((column) => column.key !== 'actions');
   return (
     <TitledSection
       title={`Why buyers might not choose ${data.brand}`}
@@ -102,7 +107,7 @@ function ObjectionTable({
     >
       <DataTable
         label="Objections"
-        columns={columns}
+        columns={COLUMNS}
         state={
           data.groups.length
             ? undefined
@@ -132,15 +137,26 @@ function ObjectionTable({
             <TableCell numeric>
               {group.sources ? group.sources : <Absence state="none" label="No sources" />}
             </TableCell>
-            {mayEdit ? (
-              <TableActionsCell>
+            <TableActionsCell>
+              <ProjectLink
+                href={agentHandoffHref({
+                  objectionGroupId: group.id,
+                  skillId: OBJECTION_SKILL,
+                  prompt: `Help me answer the objection "${group.name}".`,
+                })}
+                aria-label={`Ask agent about ${group.name}`}
+                className={buttonClasses('quiet')}
+              >
+                Ask agent
+              </ProjectLink>
+              {mayEdit ? (
                 <ObjectionActions
                   scope={scope}
                   group={group}
                   others={data.groups.filter((other) => other.id !== group.id)}
                 />
-              </TableActionsCell>
-            ) : null}
+              ) : null}
+            </TableActionsCell>
           </TableRow>
         ))}
       </DataTable>

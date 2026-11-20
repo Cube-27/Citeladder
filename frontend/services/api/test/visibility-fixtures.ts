@@ -372,7 +372,7 @@ export class VisibilityFixtures extends Fixtures {
     return { taskId, analysisId };
   }
 
-  private async analysis(
+  async analysis(
     tenant: Tenant,
     input: ExecutionInput,
     taskId: string,

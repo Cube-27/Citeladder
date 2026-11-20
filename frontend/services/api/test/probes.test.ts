@@ -6,6 +6,7 @@
  */
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
+import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
@@ -448,5 +449,59 @@ describe('probe labelling and reads', () => {
     expect(objections.groups.map(({ name, score }) => [name, score])).toEqual([
       ['Too expensive', 100],
     ]);
+  });
+
+  it("seeds an Agent chat with one objection and its answers' cited sources, in its workspace only", async () => {
+    const owner = await probeTenant();
+    const other = await probeTenant();
+    const [auditId] = await launch(owner.t);
+    await answered(owner.t, auditId);
+    await label(owner.t, labeller(first));
+    const tasks = await db
+      .selectFrom('audit_tasks')
+      .select('id')
+      .where('audit_id', '=', auditId)
+      .execute();
+    for (const task of tasks)
+      await fixtures.analysis(
+        owner.t,
+        {
+          auditId,
+          analysis: { citations: [{ url: 'https://reviews.test/acme', title: 'Acme review' }] },
+        },
+        task.id,
+        'chatgpt',
+        'test',
+      );
+    const fit = await db
+      .selectFrom('probe_objection_groups')
+      .select('id')
+      .where('project_id', '=', owner.t.projectId)
+      .where('name', '=', 'Fit runs small')
+      .executeTakeFirstOrThrow();
+    const context = await readAgentContext(
+      db,
+      owner.t,
+      { objection_group_id: fit.id },
+      'Help me answer it',
+    );
+    expect(context.sections?.objection).toMatchObject({
+      name: 'Fit runs small',
+      score: 63,
+      engines: ['chatgpt'],
+      sources: 1,
+      // Two of the three objection answers raised it, each citing the review.
+      pages: [
+        {
+          url: 'https://reviews.test/acme',
+          title: 'Acme review',
+          classification: 'third_party',
+          citations: 2,
+        },
+      ],
+    });
+    await expect(
+      readAgentContext(db, other.t, { objection_group_id: fit.id }, 'Help me answer it'),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
   });
 });

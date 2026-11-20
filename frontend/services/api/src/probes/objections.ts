@@ -126,3 +126,20 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
     groups: rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.name.localeCompare(b.name)),
   };
 }
+
+/** One objection as the Objections tab shows it, for an Agent chat (AV-37); null when not this project's. */
+export async function probeObjection(db: Database, scope: Scope, groupId: string) {
+  const objections = await probeObjections(db, scope);
+  if (objections.state !== 'value') return null;
+  const group = objections.groups.find((row) => row.id === groupId);
+  if (!group) return null;
+  return {
+    name: group.name,
+    score: group.score,
+    engines: group.engines,
+    answered_by: objections.answered_by,
+    probe_created_at: objections.probe.created_at,
+    sources: group.sources,
+    pages: group.pages,
+  };
+}

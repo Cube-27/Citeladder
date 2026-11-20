@@ -223,6 +223,7 @@ export const agentChatOriginSchema = z.enum([
   'demand',
   'keyword_research',
   'prompts',
+  'objection',
   'action',
   'chat',
 ]);
@@ -560,6 +561,8 @@ export const agentContextRefsSchema = z.strictObject({
   action_url_ids: z.array(uuid()).min(1).max(50).nullish(),
   // One URL with every Action touching it (the URL page's hand-off).
   url_actions_reference: z.strictObject({ site_url_id: uuid() }).nullish(),
+  // One objection group from the Objections tab, with its cited sources (AV-37).
+  objection_group_id: uuid().nullish(),
 });
 /**
  * Typed evidence a new chat starts from. The server resolves and authorizes

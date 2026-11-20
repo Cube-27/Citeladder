@@ -37,6 +37,7 @@ const PARAM = {
   revision: 'revision_id',
   actionUrls: 'action_url_id',
   urlActions: 'url_actions_id',
+  objection: 'objection_id',
 } as const;
 
 /** The most URLs one hand-off names (the server's `action_url_ids` bound). */
@@ -64,6 +65,8 @@ export type HandoffInput = {
   actionUrlIds?: readonly string[];
   /** One URL with every Action touching it. */
   urlActionsSiteUrlId?: string;
+  /** One objection group of the Objections tab. */
+  objectionGroupId?: string;
   prompt?: string | null;
   skillId?: string | null;
   workflowId?: string | null;
@@ -89,6 +92,7 @@ export function agentHandoffHref(input: HandoffInput): string {
   for (const id of input.actionUrlIds?.slice(0, HANDOFF_URLS_MAX) ?? [])
     params.append(PARAM.actionUrls, id);
   set(PARAM.urlActions, input.urlActionsSiteUrlId);
+  set(PARAM.objection, input.objectionGroupId);
   if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
     params.set(PARAM.dataset, input.searchIntelligence.datasetId);
     for (const row of input.searchIntelligence.rowIds) params.append(PARAM.rows, row);
@@ -196,6 +200,7 @@ function originContext(input: HandoffInput): AgentContextRefs {
   if (input.actionId && ticked.length > 0) context.action_url_ids = ticked;
   if (input.urlActionsSiteUrlId)
     context.url_actions_reference = { site_url_id: input.urlActionsSiteUrlId };
+  if (input.objectionGroupId) context.objection_group_id = input.objectionGroupId;
   return context;
 }
 function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
@@ -221,6 +226,8 @@ function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
     context.action_url_ids = ticked.slice(0, HANDOFF_URLS_MAX);
   const urlActions = uuidParam(params, PARAM.urlActions);
   if (urlActions) context.url_actions_reference = { site_url_id: urlActions };
+  const objection = uuidParam(params, PARAM.objection);
+  if (objection) context.objection_group_id = objection;
   return context;
 }
 
@@ -302,6 +309,7 @@ const CHIPS: readonly [
   ['target_site_url_id', (c) => (c.target_url ? null : c.target_site_url_id && 'Selected page')],
   ['opportunity_id', (c) => c.opportunity_id && 'Recommendation'],
   ['demand_signal_id', (c) => c.demand_signal_id && 'Demand signal'],
+  ['objection_group_id', (c) => c.objection_group_id && 'Objection'],
   [
     'search_intelligence_reference',
     (c) =>
@@ -329,6 +337,7 @@ export const CHAT_ORIGIN_LABELS = {
   demand: 'Demand signal',
   keyword_research: 'Keyword research',
   prompts: 'Prompts',
+  objection: 'Objection',
   action: 'Action',
   chat: 'Chat',
 } as const satisfies Record<AgentChatOrigin, string>;
