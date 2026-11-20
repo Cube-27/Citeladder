@@ -10,8 +10,7 @@ import { scheduleCreate } from '../audits/schedule-inputs.ts';
 import { createSchedule, deleteSchedule, updateSchedule } from '../audits/schedules.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
-import { listMarkets } from '../projects/markets.ts';
-import { probeLaunchPlan } from './status.ts';
+import { probePlan, promptSetOf, runnable } from './plan.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 
@@ -51,8 +50,8 @@ async function applySchedule(
     for (const schedule of existing) await deleteSchedule(db, scope, schedule.id); // NOSONAR -- A project holds at most a few, removed in order.
     return;
   }
-  const plan = await probeLaunchPlan(db, scope, runtime);
-  const markets = (await listMarkets(db, scope)).map((market) => market.id);
+  const plan = runnable(await probePlan(db, scope, { runtime, at: new Date() }));
+  const markets = plan.runs.map((run) => run.market.id);
   const [current] = existing;
   if (current) {
     await updateSchedule(db, scope, current.id, {
@@ -67,7 +66,7 @@ async function applySchedule(
     db,
     scope,
     scheduleCreate.parse({
-      prompt_set_id: plan.promptSetId,
+      prompt_set_id: await promptSetOf(db, scope),
       audit_scope: policy.probes.audit_scope,
       cadence,
       engines: plan.engines,

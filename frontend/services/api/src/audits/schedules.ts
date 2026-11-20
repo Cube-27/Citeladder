@@ -101,7 +101,7 @@ export function updateSchedule(
   id: string,
   input: ScheduleUpdate,
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const current = await scoped(trx, scope)
       .selectAll()
       .where('id', '=', id)

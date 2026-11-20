@@ -9,6 +9,7 @@ import {
   objectionGroupSchema as groupSchema,
   probeMarketSchema,
   probeObjectionsSchema,
+  probeRunRequestSchema,
   probeScheduleRequestSchema,
   probeStatusSchema,
 } from '@citeladder/contracts/probes';
@@ -23,7 +24,8 @@ import { probeMarket } from '../probes/market.ts';
 import { deleteGroup, groupRequest, mergeGroups, renameGroup } from '../probes/objection-groups.ts';
 import { probeObjections } from '../probes/objections.ts';
 import { setProbeSchedule } from '../probes/schedule.ts';
-import { probeStatus, runProbe } from '../probes/status.ts';
+import { runProbe } from '../probes/plan.ts';
+import { probeStatus } from '../probes/status.ts';
 import {
   defineDeleteRoute,
   defineGetRoute,
@@ -56,10 +58,12 @@ export const probeRoutes = [
     capability: 'run',
     status: 201,
     params: { path: projectPath, query: {} },
+    body: probeRunRequestSchema,
     response: z.array(auditSchema),
     async handle({ c, db, config }, { path }) {
       const scope = scopeOf(c, path.project_id);
-      const ids = await runProbe(db, scope, auditRuntime(config.settings));
+      const input = await readBody(c, probeRunRequestSchema);
+      const ids = await runProbe(db, scope, input, auditRuntime(config.settings));
       return readAudits(db, scope.workspaceId, ids);
     },
   }),

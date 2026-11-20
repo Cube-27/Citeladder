@@ -16,7 +16,7 @@
   "questions": {
     "known_for": "What is {brand} known for?",
     "objection": "Why might someone not choose {brand}?",
-    "theme": "Which {category} brands are best known for {theme}?"
+    "theme": "Which {category} brands in {country} are best known for {theme}?"
   },
   "max_answer_chars": 6000,
   "max_items_per_answer": 10,

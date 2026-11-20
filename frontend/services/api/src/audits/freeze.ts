@@ -86,6 +86,16 @@ export function marketEngines(
     });
   return { engines, notApplicable };
 }
+
+/** Whether `engine` measures `market`: refused or not applicable there means it does not. */
+export function canMeasure(engine: Engine, market: Market) {
+  try {
+    const context = searchContext(market.country_code, market.language_code);
+    return marketEngines([engine], market, context).engines.length > 0;
+  } catch {
+    return false;
+  }
+}
 export type FrozenRoute = {
   logical_engine: Engine;
   transport_provider: string;
@@ -405,6 +415,44 @@ function parseSeed(randomSeed: string | null | undefined) {
     throw invalid('random_seed must be an integer');
   }
 }
+/**
+ * What an audit asks, on which requested engines, how often. A probe asks its
+ * own frozen questions on search-capable engines a fixed number of times,
+ * skipping an engine that cannot measure this market (the quote skips it too).
+ */
+async function panelOf(
+  db: Database,
+  {
+    workspaceId,
+    projectId,
+    input,
+    market,
+    settings,
+    count,
+  }: {
+    workspaceId: string;
+    projectId: string;
+    input: AuditInput;
+    market: Market;
+    settings: ReturnType<typeof auditSettings>;
+    count: (prompts: number) => void;
+  },
+): Promise<{ prompts: FrozenPrompt[]; requested: Engine[]; repetitions: number }> {
+  if (input.audit_scope === probes.audit_scope)
+    return {
+      prompts: await probePrompts(db, { workspaceId, projectId }, market.country_code),
+      requested: probeEngines(input.engines.filter((engine) => canMeasure(engine, market))),
+      repetitions: probes.repetitions,
+    };
+  const prompts = await loadPrompts(db, workspaceId, projectId, input, settings);
+  count(prompts.length);
+  return {
+    prompts,
+    requested: [...new Set(input.engines)],
+    repetitions: input.repetitions ?? settings.audit_repetitions,
+  };
+}
+
 type PrepareOptions = {
   search?: ReturnType<typeof searchSettings>;
   at?: Date;
@@ -454,19 +502,17 @@ export async function prepareAudit(
   const mode = input.benchmark_mode ?? project.benchmark_mode;
   if (!auditPolicy.benchmark_modes.includes(mode))
     throw invalid(`Unsupported benchmark mode: ${mode}`);
-  // A probe asks its own frozen questions on search-capable engines, a fixed number of times.
-  const probe = input.audit_scope === probes.audit_scope;
-  const prompts: FrozenPrompt[] = probe
-    ? await probePrompts(db, { workspaceId, projectId: project.id })
-    : await loadPrompts(db, workspaceId, project.id, input, settings);
-  const requested = probe ? probeEngines(input.engines) : [...new Set(input.engines)];
+  const { prompts, requested, repetitions } = await panelOf(db, {
+    workspaceId,
+    projectId: project.id,
+    input,
+    market,
+    settings,
+    count: (n) => assertPromptCount(funded, trigger, n, settings),
+  });
   if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
     throw invalid('An engine is unavailable');
   const { engines, notApplicable } = marketEngines(requested, market, project);
-  if (!probe) assertPromptCount(funded, trigger, prompts.length, settings);
-  const repetitions = probe
-    ? probes.repetitions
-    : (input.repetitions ?? settings.audit_repetitions);
   assertRepetitions(repetitions);
   if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
     throw invalid('Audit exceeds the task limit');

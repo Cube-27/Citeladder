@@ -5,6 +5,7 @@
  * snapshots without a library prompt; each carries its question in
  * `generation_evidence.probe`, which the labelling and the reads parse.
  */
+import { MARKET_COUNTRIES } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -49,10 +50,20 @@ function probeCategory(context: unknown, industry: string) {
   return scalarText(record(context).category).trim() || industry.trim();
 }
 
-/** The questions for a brand, category and themes, in asking order. */
+/** A market's country as a theme question names it ("Australia"). */
+export function countryName(countryCode: string) {
+  const code = countryCode.trim().toUpperCase();
+  return MARKET_COUNTRIES.find((country) => country.value === code)?.label ?? code;
+}
+
+/**
+ * The questions for a brand, category, market country and themes, in asking
+ * order. A theme question names the country, or engines answer with global brands.
+ */
 export function probeQuestions(input: {
   brand: string;
   category: string;
+  country: string;
   themes: readonly { id: string; name: string }[];
 }): FrozenPrompt[] {
   const ask = (text: string, question: ProbeQuestion): FrozenPrompt => ({
@@ -75,6 +86,7 @@ export function probeQuestions(input: {
       ask(
         probes.questions.theme
           .replaceAll('{category}', input.category)
+          .replaceAll('{country}', input.country)
           .replaceAll('{theme}', theme.name.toLowerCase()),
         { question: 'theme', theme_id: theme.id, theme_name: theme.name },
       ),
@@ -109,12 +121,13 @@ export async function probeSubject(
   };
 }
 
-/** The frozen prompts of a probe launch. */
+/** The frozen prompts of a probe run in the market of `countryCode`. */
 export async function probePrompts(
   db: Database,
   scope: { workspaceId: string; projectId: string },
+  countryCode: string,
 ) {
-  return probeQuestions(await probeSubject(db, scope));
+  return probeQuestions({ ...(await probeSubject(db, scope)), country: countryName(countryCode) });
 }
 
 /** The requested engines that can run a probe: search-capable ones only (AV-31). */

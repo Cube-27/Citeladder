@@ -12,6 +12,7 @@ import {
   probeMarketSchema,
   probeObjectionsSchema,
   probeStatusSchema,
+  type ProbeRunRequest,
   type ProbeScheduleRequest,
   type ProbeStatus,
 } from '@citeladder/contracts/probes';
@@ -32,8 +33,8 @@ const probesApi = {
       'probes.status',
     ),
   /** One probe per market, each driven to its first answers like a launched run. */
-  run: async (projectId: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.post(root(projectId), undefined, options);
+  run: async (projectId: string, input: ProbeRunRequest, options?: ApiRequestOptions) => {
+    const res = await apiClient.post(root(projectId), input, options);
     const audits = strictValidate(z.array(auditSchema), res, 'probes.run');
     for (const audit of audits) startInteractiveWork(`/audits/${audit.id}/run`, options);
     return audits;
@@ -124,11 +125,15 @@ function refresh(client: QueryClient, scope: ProjectScope) {
 export const probeMutations = {
   run: (scope: ProjectScope) =>
     mutationOptions({
-      mutationFn: () => probesApi.run(scope.projectId, scoped(scope)),
+      /** `fingerprint` is the confirmed quote's: a changed probe is refused, never charged. */
+      mutationFn: (fingerprint: string) =>
+        probesApi.run(scope.projectId, { fingerprint }, scoped(scope)),
       onSuccess: (_audits, _input, _result, { client }) => {
         refresh(client, scope);
         void client.invalidateQueries({ queryKey: queryKeys.runs.all });
       },
+      // A refused quote shows its replacement in the dialog.
+      onError: (_error, _input, _result, { client }) => refresh(client, scope),
     }),
   schedule: (scope: ProjectScope) =>
     mutationOptions({

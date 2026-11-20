@@ -80,7 +80,7 @@ export function ProbeDialog({
             variant="primary"
             disabled={noKey || short}
             pending={run.isPending}
-            onClick={() => run.mutate(undefined, { onSuccess: () => close(false) })}
+            onClick={() => run.mutate(quote.fingerprint, { onSuccess: () => close(false) })}
           >
             Run probe
           </Button>

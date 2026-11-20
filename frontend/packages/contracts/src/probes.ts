@@ -19,6 +19,10 @@ export const objectionGroupMergeRequestSchema = z.object({ into_id: uuid() });
 /** A renamed or merged-into objection group. */
 export const objectionGroupSchema = z.object({ id: uuid(), name: z.string() });
 
+/** `POST /projects/{id}/probes`: the fingerprint of the quote the user confirmed. */
+export const probeRunRequestSchema = z.object({ fingerprint: z.string().min(1) });
+export type ProbeRunRequest = z.infer<typeof probeRunRequestSchema>;
+
 /** `PUT /projects/{id}/probes/schedule`: a cadence, or null to turn the schedule off. */
 export const probeScheduleRequestSchema = z.object({
   cadence: z.enum(['daily', 'weekly']).nullable(),
@@ -39,6 +43,8 @@ const probeQuoteSchema = z.object({
   credits: z.int().nonnegative(),
   /** AI credits left before the probe; null when the balance cannot be read. */
   balance: z.int().nullable(),
+  /** Names this exact plan; Run probe sends it back so a changed plan is refused, not charged. */
+  fingerprint: z.string(),
 });
 export type ProbeQuote = z.infer<typeof probeQuoteSchema>;
 

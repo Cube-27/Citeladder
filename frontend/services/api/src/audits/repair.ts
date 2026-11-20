@@ -13,6 +13,23 @@ import { PROMPT_RUNS, reserveTaskFunding, taskFunding } from './prompt-runs.ts';
 
 export const repairInput = auditRepairRequestSchema;
 const denied = (message: string) => new ApiError(409, message);
+
+/** Each repaired task's funding hold, priced as its parent's scope prices it. */
+function repairHolds(
+  auditScope: string,
+  tasks: readonly { id: string; logical_engine: string; provider_route_snapshot: unknown }[],
+) {
+  const holds = tasks.map((task) => ({
+    id: task.id,
+    ...taskFunding(
+      auditScope,
+      task.logical_engine,
+      record(task.provider_route_snapshot).credential_source === 'byok',
+    ),
+  }));
+  return { capability: holds[0]?.capability ?? PROMPT_RUNS, tasks: holds };
+}
+
 /** A repair is an immutable BYOK child of selected failed frozen slots, never a replay of paid dispatch. */
 export function createRepairAudit(
   db: Database,
@@ -218,19 +235,10 @@ export function createRepairAudit(
       )
       .returningAll()
       .execute();
-    const holds = repaired.map((task) => ({
-      id: task.id,
-      ...taskFunding(
-        parent.audit_scope,
-        task.logical_engine,
-        record(task.provider_route_snapshot).credential_source === 'byok',
-      ),
-    }));
     await reserveTaskFunding(trx, {
       workspaceId,
       auditId: id,
-      capability: holds[0]?.capability ?? PROMPT_RUNS,
-      tasks: holds,
+      ...repairHolds(parent.audit_scope, repaired),
       at,
     });
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');

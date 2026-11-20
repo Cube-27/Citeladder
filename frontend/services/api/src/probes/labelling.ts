@@ -56,6 +56,15 @@ export function enqueueProbeLabelling(db: Database, scope: Scope & { auditId: st
   });
 }
 
+/** At finalization: a probe audit queues its labelling; any other audit does nothing. */
+export async function labelIfProbe(
+  db: Database,
+  audit: { workspaceId: string; auditId: string; project_id: string; audit_scope: string },
+) {
+  if (audit.audit_scope !== probes.audit_scope) return;
+  await enqueueProbeLabelling(db, { ...audit, projectId: audit.project_id });
+}
+
 async function loadProbe(db: Database, task: QueueTask, projectId: string) {
   const auditId = parseUuid(payloadString(task, 'audit_id'));
   if (auditId === null) throw new Error('probe_labelling payload missing audit_id');

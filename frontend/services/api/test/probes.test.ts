@@ -17,7 +17,10 @@ import { enqueueProbeLabelling, probeLabelling } from '../src/probes/labelling.t
 import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
 import { probeObjections } from '../src/probes/objections.ts';
+import { runProbe } from '../src/probes/plan.ts';
 import { setProbeSchedule } from '../src/probes/schedule.ts';
+import { probeStatus } from '../src/probes/status.ts';
+import { addMarket } from '../src/projects/markets.ts';
 import { createTheme, deleteTheme } from '../src/projects/themes.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant, managedPlan } from './audit-fixtures.ts';
@@ -83,7 +86,11 @@ describe('probe admission', () => {
     expect(snapshots.map((row) => [row.prompt_id, row.text, row.cohort])).toEqual([
       [null, 'What is Acme Running known for?', 'probe'],
       [null, 'Why might someone not choose Acme Running?', 'probe'],
-      [null, expect.stringMatching(/^Which .+ brands are best known for comfort\?$/u), 'probe'],
+      [
+        null,
+        expect.stringMatching(/^Which .+ brands in United States are best known for comfort\?$/u),
+        'probe',
+      ],
     ]);
     expect(snapshots[2]!.generation_evidence).toEqual({
       probe: { question: 'theme', theme_id: themeId, theme_name: 'Comfort' },
@@ -128,6 +135,48 @@ describe('probe admission', () => {
     });
     const debits = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'debit');
     expect(debits.map((row) => Number(row.units))).toEqual([LABEL]);
+  });
+
+  it('runs the quoted probe, skipping engines a market cannot measure, and holds exactly the quote', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await managedPlan(db, t.workspaceId);
+    const markets = await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
+    const brazil = markets.find((market) => market.country_code === 'BR')?.id;
+    const { quote } = await probeStatus(db, t);
+    // Brazil has no Gemini (no location control) and no Gemini app search in Portuguese.
+    const perMarket = 3 * policy.probes.repetitions;
+    expect([quote.markets.length, quote.answers]).toEqual([2, (5 + 3) * perMarket]);
+    const ids = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
+    const engines = await db
+      .selectFrom('audit_tasks as k')
+      .innerJoin('audits as a', 'a.id', 'k.audit_id')
+      .select(['a.market_id', 'k.logical_engine'])
+      .where('k.audit_id', 'in', ids)
+      .distinct()
+      .execute();
+    expect(
+      engines
+        .filter((row) => row.market_id === brazil)
+        .map((row) => row.logical_engine)
+        .sort(),
+    ).toEqual(['chatgpt', 'chatgpt_search', 'claude']);
+    const held = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'reservation');
+    expect(held.reduce((sum, row) => sum + Number(row.units), 0)).toBe(quote.credits);
+  });
+
+  it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {
+    const { t } = await probeTenant();
+    const { quote } = await probeStatus(db, t);
+    await createTheme(db, t, { name: 'Price' });
+    await expect(
+      runProbe(db, t, { fingerprint: quote.fingerprint }, runtime),
+    ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    const audits = await db
+      .selectFrom('audits')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect(audits).toEqual([]);
   });
 
   it('keeps one probe schedule per project on every managed probe engine, and Off removes it', async () => {

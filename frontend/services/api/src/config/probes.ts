@@ -51,8 +51,9 @@ function loadProbes(input: unknown) {
   for (const [key, slots] of SLOTS)
     for (const slot of slots)
       if (!config[key].includes(slot)) throw new ConfigError(`Probe ${key} is missing ${slot}`);
-  if (!config.questions.theme.includes('{theme}'))
-    throw new ConfigError('Probe theme question is missing {theme}');
+  for (const slot of ['{theme}', '{country}'])
+    if (!config.questions.theme.includes(slot))
+      throw new ConfigError(`Probe theme question is missing ${slot}`);
   return config;
 }
 
