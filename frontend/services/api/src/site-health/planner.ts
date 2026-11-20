@@ -14,7 +14,13 @@ import type {
   SiteUrls,
   WorkspaceSiteHealthRuntime,
 } from '../generated/db-schema.ts';
-import { enqueueCrawlTasks, fitTrackedSet, insertObservations } from './admission-writes.ts';
+import {
+  enqueueCrawlTasks,
+  fitTrackedSet,
+  insertObservations,
+  type CrawlTaskSeed,
+  type Observation,
+} from './admission-writes.ts';
 import { addAutomaticRoot, candidate, crawlScope } from './frontier.ts';
 import { budgetedPageLimit, reserveCrawlFetches, unresolvedEntitlement } from './fetch-budget.ts';
 import {
@@ -44,65 +50,61 @@ export async function admissionRuntime(db: Database, held: Runtime) {
   return runtime;
 }
 
-async function enqueueCrawlTask(
-  db: Database,
-  crawl: Crawl,
-  input: {
-    kind: string;
-    url: string;
-    siteUrlId?: string;
-    depth?: number;
-    position?: number;
-    priority?: number;
-    generation?: number;
-    delay?: number;
-  },
-) {
-  const [row] = await enqueueCrawlTasks(
-    db,
-    crawl,
-    [
-      {
-        kind: input.kind,
-        url: input.url,
-        hash: canonicalIdentity(input.url).hash,
-        siteUrlId: input.siteUrlId ?? null,
-        depth: input.depth,
-        generation: input.generation,
-        position: input.position,
-        priority: input.priority,
-        delaySeconds: input.delay,
-      },
-    ],
-    'once',
-  );
+type TaskInput = {
+  kind: string;
+  url: string;
+  siteUrlId?: string;
+  depth?: number;
+  position?: number;
+  priority?: number;
+  generation?: number;
+  delay?: number;
+};
+
+const taskSeed = (input: TaskInput): CrawlTaskSeed => ({
+  kind: input.kind,
+  url: input.url,
+  hash: canonicalIdentity(input.url).hash,
+  siteUrlId: input.siteUrlId ?? null,
+  depth: input.depth,
+  generation: input.generation,
+  position: input.position,
+  priority: input.priority,
+  delaySeconds: input.delay,
+});
+
+async function enqueueCrawlTask(db: Database, crawl: Crawl, input: TaskInput) {
+  const [row] = await enqueueCrawlTasks(db, crawl, [taskSeed(input)], 'once');
   return row?.id ?? null;
 }
 
-async function seedObservation(
-  db: Database,
-  crawl: Crawl,
-  url: Selectable<SiteUrls>,
-  rerun = false,
-) {
-  await insertObservations(db, crawl, [
-    {
-      siteUrlId: url.id,
-      sourceKind: rerun ? 'root' : url.latest_source_kind || 'link',
-      valueKind: '',
-      valuePriority: 0,
-      rewriteReason: '',
-      rewriteVersion: '',
-      depth: rerun ? 0 : url.depth,
-      observedUrl: url.normalized_url,
-      finalUrl: url.normalized_url,
-      artifactId: null,
-      parentSiteUrlId: null,
-      statusCode: null,
-      contentType: rerun ? '' : url.latest_content_type || '',
-      title: url.latest_title || '',
-    },
-  ]);
+/** Each tracked page's analysis in one statement: a site's whole tracked set must not fan out per page. */
+function enqueueAnalyses(db: Database, crawl: Crawl, inputs: Omit<TaskInput, 'kind'>[]) {
+  return enqueueCrawlTasks(
+    db,
+    crawl,
+    inputs.map((input) => taskSeed({ ...input, kind: 'analyze' })),
+    'once',
+  );
+}
+
+function seedObservation(url: Selectable<SiteUrls>, rerun = false): Observation {
+  return {
+    siteUrlId: url.id,
+    sourceKind: rerun ? 'root' : url.latest_source_kind || 'link',
+    valueKind: '',
+    valuePriority: 0,
+    rewriteReason: '',
+    rewriteVersion: '',
+    depth: rerun ? 0 : url.depth,
+    observedUrl: url.normalized_url,
+    finalUrl: url.normalized_url,
+    artifactId: null,
+    parentSiteUrlId: null,
+    statusCode: null,
+    contentType: rerun ? '' : url.latest_content_type || '',
+    title: url.latest_title || '',
+  };
 }
 
 /** Queue analysis of the active members, in fill order, within the crawl's page limit. */
@@ -159,22 +161,23 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     } else boundary ??= url;
   }
   // Preserve the boundary observation even when no further task fits the budget.
-  await Promise.all(
-    [...seeded, ...(boundary ? [boundary] : [])].map((url) => seedObservation(db, crawl, url)),
+  await insertObservations(
+    db,
+    crawl,
+    [...seeded, ...(boundary ? [boundary] : [])].map((url) => seedObservation(url)),
   );
-  await Promise.all(
-    seeded.map((url, position) =>
-      enqueueCrawlTask(db, crawl, {
-        kind: 'analyze',
-        url: url.normalized_url,
-        siteUrlId: url.id,
-        position,
-        delay: Math.min(
-          position * Number(crawlSetting('monitored_seed_stagger_seconds')),
-          Number(crawlSetting('monitored_seed_stagger_max_seconds')),
-        ),
-      }),
-    ),
+  await enqueueAnalyses(
+    db,
+    crawl,
+    seeded.map((url, position) => ({
+      url: url.normalized_url,
+      siteUrlId: url.id,
+      position,
+      delay: Math.min(
+        position * Number(crawlSetting('monitored_seed_stagger_seconds')),
+        Number(crawlSetting('monitored_seed_stagger_max_seconds')),
+      ),
+    })),
   );
 }
 
@@ -443,16 +446,15 @@ export async function createPageRerunCrawl(
     rerunPages: urls.length,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
-  await Promise.all(urls.map((url) => seedObservation(db, crawl, url, true)));
-  await Promise.all(
-    urls.map((url, position) =>
-      enqueueCrawlTask(db, crawl, {
-        kind: 'analyze',
-        url: url.normalized_url,
-        siteUrlId: url.id,
-        position,
-      }),
-    ),
+  await insertObservations(
+    db,
+    crawl,
+    urls.map((url) => seedObservation(url, true)),
+  );
+  await enqueueAnalyses(
+    db,
+    crawl,
+    urls.map((url, position) => ({ url: url.normalized_url, siteUrlId: url.id, position })),
   );
   await creationEvents(
     db,
