@@ -22,17 +22,17 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#08090a`                | `#eceef2`          | window and sidebar                   |
+| `ground`         | `#08090a`                | `#f2f2f4`          | window and sidebar                   |
 | `panel`          | `#0f1011`                | `#ffffff`          | the inset content panel              |
 | `raised`         | `#151618`                | `#f7f8f9`          | secondary buttons, table head, menus |
 | `raised-2`       | `#1c1d20`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
-| `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | focused field edge (`line-strong`)   |
+| `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | hovered field edge (`line-strong`)   |
 | `ink`            | `#f7f8f8`                | `#111214`          | text                                 |
 | `ink-2`          | `#8a8f98`                | `#5f636a`          | secondary text, icons                |
-| `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" only                     |
+| `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
 `ground`, `surface` is `panel`, `well` is `raised`, `control-edge` and
@@ -45,8 +45,9 @@ to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
 
-Sans (Spline Sans) for words; mono (Geist Mono) for numbers, dates, URLs and
-counts. Weights 400 and 500 only, in both themes; emphasis is 500, never
+Sans (Spline Sans) for words and numbers alike, numbers in its tabular
+figures (dates, counts, prices, URLs too). Mono (Geist Mono) only for literal
+code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only, in both themes; emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
 
 | Role            | Size / line | Weight                  |
@@ -55,7 +56,7 @@ colour. Sizes are rem so they follow the reader's text size.
 | caption         | 12 / 16     | 400                     |
 | heading         | 16 / 24     | 500                     |
 | page title      | 14 / 20     | 500, in the page header |
-| figure (metric) | 20 / 28     | 500, mono               |
+| figure (metric) | 20 / 28     | 500, tabular            |
 
 The roles are the closed set in
 [`typography.tsx`](../frontend/components/ui/typography.tsx); a call site names
@@ -86,8 +87,8 @@ the job, never a size.
 
 **The accent means "you, here".** It marks you (your brand's row, series and
 the word "You") and here (the current nav item, tab and step, as a 2px mark
-with `aria-current` or `aria-selected`), and the live rung. Never an action,
-status, link, focus ring or decoration.
+with `aria-current` or `aria-selected`), the live rung, and where keyboard
+and input focus is (AR-13). Never an action, status, link or decoration.
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint; a pending button keeps its width.
@@ -98,7 +99,9 @@ skeleton, a flow route its plain ground. Data on screen stays while it
 refreshes.
 
 **Accessibility.** WCAG AA in both themes; meaning never by colour alone; one
-2px `focus` ring, never removed; all motion stops under
+`focus` ring, never removed: a 1px accent edge with a soft accent glow (3px
+at 24%), drawn inward where a frame clips it; the edge holds 3:1 on every
+fill; all motion stops under
 `prefers-reduced-motion`.
 
 ## Standard layouts
@@ -106,12 +109,12 @@ refreshes.
 Pages are placed into these layouts, never arranged by hand (AR-10).
 
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
-  as tall as the page header (workspace switcher, settings icon, collapse
-  toggle), the Dashboard | Agent segmented control, 28-high nav rows (current
-  row lifted onto `panel` with a `rule` hairline in light, `state-selected` in
-  dark, and a 2px accent mark), 12px group labels, foot
-  with Integrations and the account. The main column is the inset panel: 8
-  from the window edges (none on the sidebar side), `rule` edge, radius 8,
+  as tall as the page header (workspace switcher, settings icon), the
+  Dashboard | Agent segmented control, 28-high nav rows (current row on a
+  `#e7e7ea` pill in light, `state-selected` in dark, with a 2px accent
+  mark), 12px group labels, foot with Integrations, the collapse toggle and
+  the account (AR-8). The main column is the inset panel: 8 from the window
+  edges (none on the sidebar side), `rule` edge, radius 8,
   `panel` fill, the page's only scroller. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
 - **Page header**, 44 high with a `rule`: the page title as a breadcrumb
@@ -137,8 +140,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   no meters, rings or bars inside a cell (AR-3).
 - **Table:** `rule` frame, radius 8; head 32 on `raised`, 12px at 500; rows
   40, one line each, hairline dividers, `state-hover` fill; secondary text
-  inline after the primary in `ink-2`; numbers right-aligned in mono; foot 40
-  with the count and an icon pager. The first column takes the spare width,
+  inline after the primary in `ink-2`; numbers right-aligned in tabular
+  figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
   route's column (720; Billing 1040, AR-9) holds a stack of groups 32 apart,
@@ -159,7 +162,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   changed. Destructive actions (cancel plan, leave workspace, delete
   project) are danger buttons in the page's last group, never primary. Plan
   cards are the layout's only cards: one row of equal cards (one per line
-  when they do not fit), prices in mono, the current plan marked by a 2px
+  when they do not fit), prices in tabular figures, the current plan marked by a 2px
   accent rule along its top and the words "Current plan". A model's
   suggestion keeps the dashed draft edge.
 
@@ -205,8 +208,8 @@ One entry per family; wave 2 fills each from the layouts above.
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
 - **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `rule`
-  edge on `panel`, `control-line` on hover; focused, `control-line` plus the
-  focus ring; invalid, a negative edge. 16px leading icon. Checkbox and radio
+  edge on `panel`, `control-line` on hover; focused, an accent edge and its
+  glow; invalid, a negative edge and a negative glow. 16px leading icon. Checkbox and radio
   take the same edge and an `ink` fill when on; the switch is an `ink` track
   when on.
 - **Selects and menus.** A select or filter trigger is a secondary button's
@@ -225,4 +228,5 @@ One entry per family; wave 2 fills each from the layouts above.
   at rest and `state-hover` on hover; a group label folds its rows and a
   folded group still shows the current row. Collapsed (⌘\ or the toggle,
   remembered per browser) the sidebar is a 56 rail of 40 buttons, one per
-  group, each opening a flyout; the toggle sits under the project's mark.
+  group, each opening a flyout; the toggle stays in the foot, straight above
+  the account.

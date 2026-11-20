@@ -31,7 +31,7 @@ const COLUMN_WIDTH = {
   status: { kind: 'steps', steps: 20 },
   /** A category badge longer than a status ("Striking distance", a purpose). */
   category: { kind: 'steps', steps: 24 },
-  /** A date or a date-time, in the mono data face. */
+  /** A date or a date-time, in tabular numerals. */
   date: { kind: 'steps', steps: 24 },
   /** A labelled date-time with its zone. */
   stamp: { kind: 'steps', steps: 24 },
@@ -189,7 +189,7 @@ export function columnRules({
     rules.push(`${cell}{text-align:${kind.align};${size}${pad}}`);
     if (kind.tabular)
       rules.push(
-        `${at(index + offset, 'tbody > tr:not([data-table-state])')}{font-family:var(--font-mono);font-variant-numeric:tabular-nums}`,
+        `${at(index + offset, 'tbody > tr:not([data-table-state])')}{font-variant-numeric:tabular-nums}`,
       );
   });
   if (hidden.length) {

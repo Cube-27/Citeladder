@@ -146,7 +146,7 @@ export function chartTipLeft(x: number, frameWidth: number) {
   return Math.round(Math.min(max, Math.max(TIP_INSET, left)));
 }
 
-/** The tooltip: a sheet with the point's label and one mono value per series. */
+/** The tooltip: a sheet with the point's label and one tabular value per series. */
 export function ChartTipSheet({
   title,
   x,

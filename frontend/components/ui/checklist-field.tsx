@@ -22,7 +22,7 @@ export function FieldGroup({
 }: Readonly<{
   label: string;
   help?: ReactNode;
-  /** "2 of 5": what is selected, in mono `ink-muted`. */
+  /** "2 of 5": what is selected, in tabular `ink-2`. */
   count?: string;
   /** Why the step cannot continue, in `warning`. */
   note?: ReactNode;
@@ -52,7 +52,7 @@ export type ChecklistItem = Readonly<{
   id: string;
   label: string;
   description?: string;
-  /** A mono fact at the row's end (a domain beside a name). */
+  /** A short fact at the row's end (a domain beside a name). */
   meta?: string;
   /** A 20px mark before the label: a BrandMark, an EngineMark in `ink`. */
   leading?: ReactNode;

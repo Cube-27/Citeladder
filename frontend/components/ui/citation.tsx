@@ -31,7 +31,7 @@ export function Citation({
       {index === undefined ? null : (
         <span
           className={cn(
-            'inline-grid min-h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-eyebrow font-normal tracking-normal',
+            'inline-grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-eyebrow tabular-nums font-normal tracking-normal',
             own ? 'bg-surface text-accent-ink' : 'bg-surface-sunken text-ink-secondary',
           )}
         >

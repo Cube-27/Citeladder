@@ -134,11 +134,14 @@ describe('AppShell resizable sidebar', () => {
     const { unmount } = renderShell();
     const frame = () => screen.getByRole('main').parentElement;
     expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
-    // The toggle sits in the sidebar's header, beside Settings (AR-8), not in the page header.
+    // The toggle sits in the sidebar's foot, straight above the account (AR-8).
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
-    const header = toggle.closest<HTMLElement>('[data-sidebar-ident-cell]');
-    expect(header).toContainElement(screen.getByRole('link', { name: 'Settings' }));
-    expect(screen.getByRole('banner')).not.toContainElement(toggle);
+    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+    const controls = [...sidebar.querySelectorAll('a, button')];
+    expect(controls.slice(-2)).toEqual([
+      toggle,
+      screen.getByRole('button', { name: 'Account menu for test.user@example.test' }),
+    ]);
 
     await user.click(toggle);
     expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
@@ -162,11 +165,12 @@ describe('AppShell resizable sidebar', () => {
       ...within(sidebar).getAllByRole('button'),
       ...within(sidebar).getAllByRole('link'),
     ];
-    // Project, the collapse toggle, Dashboard, Agent, Home, Brand, Tracking,
-    // Website, Search, Commerce, Integrations, account: 40px each, 8 inside
-    // the rail's ends and 4 between its parts.
+    // Project, Dashboard, Agent, Home, Brand, Tracking, Website, Search,
+    // Commerce, Integrations, the collapse toggle, account: 40px each, 8
+    // inside the rail's ends and 4 between its parts.
     expect(buttons).toHaveLength(12);
-    expect(within(sidebar).getByRole('button', { name: 'Expand sidebar' })).toBe(buttons[1]);
+    const controls = [...sidebar.querySelectorAll('a, button')];
+    expect(controls.at(-2)).toBe(within(sidebar).getByRole('button', { name: 'Expand sidebar' }));
     expect(2 * 8 + buttons.length * 40 + 4 * 4).toBeLessThanOrEqual(520);
 
     // A group opens its flyout with the right arrow, marking the current page.

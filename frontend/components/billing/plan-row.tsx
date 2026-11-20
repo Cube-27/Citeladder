@@ -63,7 +63,7 @@ export function PlanCard({
           <span className={textRole('label')}>{name}</span>
           {current ? <Tag>Current plan</Tag> : null}
         </div>
-        <span className={textRole('body', 'font-mono tabular-nums')}>{price}</span>
+        <span className={textRole('body', 'tabular-nums')}>{price}</span>
         {children}
       </div>
       {controls ? (

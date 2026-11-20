@@ -32,8 +32,8 @@ export const chartStroke = (tone: ChartTone) => SERIES_STROKE[CHART_SERIES[tone]
 
 export const chartFill = (tone: ChartTone) => SERIES_FILL[CHART_SERIES[tone]];
 
-/** Axis text inside a chart's SVG: 12px mono figures in `ink-2`. */
-export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption font-mono tabular-nums';
+/** Axis text inside a chart's SVG: 12px tabular figures in `ink-2`. */
+export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption tabular-nums';
 
 /** The plot's focusable box, read with the arrow keys; the focus ring follows its corners. */
 export const CHART_PLOT_FRAME = 'focus-ring relative w-full rounded-control';

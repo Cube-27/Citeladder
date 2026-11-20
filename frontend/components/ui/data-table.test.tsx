@@ -86,12 +86,8 @@ describe('DataTable', () => {
     // The date opens on a gutter after the end-aligned count; the count does not after the page.
     expect(rule(4)).toContain('padding-inline-start:calc(var(--table-cell-padding-x) + 12px);');
     expect(rule(5)).toContain('text-align:end;');
-    expect(rules).toContain(
-      ':nth-child(3){font-family:var(--font-mono);font-variant-numeric:tabular-nums}',
-    );
-    expect(rules).toContain(
-      ':nth-child(4){font-family:var(--font-mono);font-variant-numeric:tabular-nums}',
-    );
+    expect(rules).toContain(':nth-child(3){font-variant-numeric:tabular-nums}');
+    expect(rules).toContain(':nth-child(4){font-variant-numeric:tabular-nums}');
     // The checkbox and the identity column are one pinned block.
     expect(frame).toHaveAttribute('data-pinned', '2');
     // The actions column keeps an accessible head.

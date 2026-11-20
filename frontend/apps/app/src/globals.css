@@ -537,7 +537,6 @@
   --color-state-hover: rgb(255 255 255 / 4%);
   --color-state-selected: rgb(255 255 255 / 7%);
   --nav-current-fill: var(--color-state-selected);
-  --nav-current-edge: transparent;
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   /* Black barely shows on a near-black ground, so an overlay also reads by a
@@ -679,7 +678,7 @@
   /* The token table in docs/design.md. The older role names bind onto it:
      chrome is the ground, surface the panel, well the raised fill, rule the
      line, control-line the strong line. */
-  --color-ground: #eceef2;
+  --color-ground: #f2f2f4;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
@@ -688,7 +687,12 @@
   --color-well: var(--color-raised);
   --color-rule: rgb(0 0 0 / 8%);
   --color-control-line: rgb(0 0 0 / 12%);
-  --field-focus-edge: var(--color-control-line);
+  /* Focus (AR-13): a 1px accent edge and a soft accent glow, both themes. */
+  --color-focus: var(--color-accent);
+  --focus-width: 1px;
+  --focus-offset: 0px;
+  --focus-glow: color-mix(in srgb, var(--color-focus) 24%, transparent);
+  --field-focus-edge: var(--color-focus);
   --color-control-edge: var(--color-rule);
   --color-ink: #111214;
   --color-ink-2: #5f636a;
@@ -785,9 +789,8 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  /* The current nav row: lifted onto the panel's white with a hairline. */
-  --nav-current-fill: var(--color-panel);
-  --nav-current-edge: var(--color-rule);
+  /* The current nav row: a grey pill one step down from the ground. */
+  --nav-current-fill: #e7e7ea;
   --panel-inset: 0px;
   /* What a fitted page (a thread, a workbench) leaves for its own scrolling
      region: the panel's inset, the header (as drawn: below `rail`
@@ -1263,6 +1266,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     color: var(--color-ink-2);
   }
   :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
+    font-family: var(--font-sans);
     letter-spacing: 0;
   }
   :root:not([data-public-surface]) .type-code {
@@ -1542,21 +1546,38 @@ a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Keyboard focus is a solid 2px `focus` ring (ink) with a 2px offset, on
-   every interactive element but a field, in both themes: never removed,
-   never the accent. A field lights its own edge instead (the field rule). */
+/* Keyboard focus is a solid `focus` ring on every interactive element but a
+   field, never removed: on the website 2px of ink 2px out; in the app a 1px
+   accent edge on the control with a soft accent glow (AR-13, below). A
+   field lights its own edge instead (the field rule). */
 :focus-visible,
 .focus-ring:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
+  outline: var(--focus-width, 2px) solid var(--color-focus);
+  outline-offset: var(--focus-offset, 2px);
+}
+:root:not([data-public-surface]):not([data-input-modality='pointer'])
+  :is(:focus-visible, .focus-ring:focus-visible):not(
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled],
+    [role='menuitem'][data-state='open'],
+    input,
+    textarea,
+    select,
+    [contenteditable],
+    .focus-ring-inset,
+    .table-frame tr,
+    [data-row-title] a
+  ) {
+  box-shadow: 0 0 0 3px var(--focus-glow);
 }
 
 /* The ring's colour and width hold at rest too, so a `transition-colors`
    control never fades its ring in from its text colour (an `ink-2` ring on
-   a sidebar row) and the resting outline reads as the same 2px ring. */
+   a sidebar row) and the resting outline reads as the same ring. */
 :where(:root:not([data-public-surface]) *) {
   outline-color: var(--color-focus);
-  outline-width: 2px;
+  outline-width: var(--focus-width);
 }
 
 /* After a press (`data-input-modality="pointer"`, kept by
@@ -1575,13 +1596,20 @@ a.focus-ring:active .type-caption {
    inside its scroll row: the same ring, drawn 2px inside. Every other
    control (a dialog's close included) takes the standard ring above. */
 .focus-ring-inset:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
+  outline: var(--focus-width, 2px) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-width, 2px));
+}
+/* The app's inset rings glow inward, where their clipping frame shows it. */
+:root:not([data-public-surface]):not([data-input-modality='pointer'])
+  :is(.focus-ring-inset, .table-frame tr, [data-row-title] a, .palette-field):is(
+    :focus-visible,
+    :has(input:focus-visible:not([data-quiet-focus]))
+  ) {
+  box-shadow: inset 0 0 0 3px var(--focus-glow);
 }
 
-/* A focused field lights its own edge: in the app the `control-line` edge
-   and the one focus ring; on the website the edge thickens inside a `line`
-   halo. An invalid field keeps its crimson edge (its own
+/* A focused field lights its own edge: in the app the accent edge and its
+   glow (AR-13); on the website the edge thickens inside a `line` halo. An invalid field keeps its crimson edge (its own
    `--field-focus-edge`). A framed field lights its frame. */
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
@@ -1593,8 +1621,7 @@ a.focus-ring:active .type-caption {
 }
 :root:not([data-public-surface])
   :is(.focus-input:focus-visible, .focus-frame:has(:where(input, textarea, select):focus-visible)) {
-  box-shadow: none;
-  outline: 2px solid var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus-edge) 24%, transparent);
 }
 
 /* A field the reader did not Tab into (an overlay or Edit action focused it
@@ -1603,6 +1630,7 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface])
   :is([data-quiet-focus]:focus-visible, .focus-frame:has([data-quiet-focus]:focus-visible)) {
   outline: none;
+  box-shadow: none;
 }
 
 /* Containers. Every framed surface inside the app's panel (tables, strips,
@@ -1657,8 +1685,8 @@ a.focus-ring:active .type-caption {
   outline: none;
 }
 :root:not([data-public-surface]) .palette-field:has(input:focus-visible:not([data-quiet-focus])) {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-width));
 }
 
 /* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
@@ -2061,7 +2089,7 @@ label {
     inset: 0;
   }
   & [data-row-title] a:focus-visible {
-    outline-offset: -2px;
+    outline-offset: calc(-1 * var(--focus-width, 2px));
   }
   & :is(a, button, input, [data-truncated]):not([data-row-title], [data-row-title] a) {
     position: relative;
@@ -2336,5 +2364,5 @@ label {
 
 /* A focused row rings inside itself, so the frame never clips it. */
 .table-frame tr:focus-visible {
-  outline-offset: -2px;
+  outline-offset: calc(-1 * var(--focus-width, 2px));
 }

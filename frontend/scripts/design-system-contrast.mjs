@@ -101,6 +101,8 @@ const CONTRAST_PAIRS = [
   },
   { inks: [color('site-mark')], surfaces: [color('site-page')], minimum: 3, only: 'marketing' },
   { inks: ['ink', 'ink-2'].map(color), surfaces: APP_FILLS, minimum: 4.5, only: 'app' },
+  // The focus ring's 1px accent edge (AR-13) carries its 3:1 on every fill.
+  { inks: [color('focus')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
   {
     inks: ['ink', 'ink-2'].map(color),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
