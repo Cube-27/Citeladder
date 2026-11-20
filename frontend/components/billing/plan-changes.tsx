@@ -2,19 +2,11 @@ import { useState } from 'react';
 
 import { X } from 'lucide-react';
 
-import { AppGrid } from '@/components/ui/app-grid';
+import { PlanCard, PlanCards } from '@/components/billing/plan-row';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
-import { Stack } from '@/components/ui/layout';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import type {
   BillingCatalog,
@@ -80,91 +72,111 @@ export function PlanChanges({
     (subscription.scheduled_change !== null &&
       subscription.scheduled_change.state !== 'provider_rejected');
   if (options.length === 0) return null;
+  const monthly = (plan: CatalogPlan) =>
+    plan.base_price
+      ? `${formatMoney(plan.base_price, catalog.currency_minor_units)} / month before tax`
+      : null;
+  // The workspace's own plan stands in its catalogue place among the ones it can move to.
+  const cards = catalog.plans.flatMap((plan): { plan: CatalogPlan; option: Option | null }[] => {
+    if (plan.key === currentPlan.key) return [{ plan, option: null }];
+    const option = options.find((candidate) => candidate.key === plan.key);
+    return option ? [{ plan, option }] : [];
+  });
   return (
-    <Section id="change-plan" aria-labelledby="plan-changes-title">
-      <SectionHeader>
-        <SectionTitle id="plan-changes-title">Change plan</SectionTitle>
-        <SectionDescription>
-          Upgrades are prorated and start once paid. Downgrades start at renewal, with no refund.
-        </SectionDescription>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact">
-        <AppGrid layout="slips">
-          {options.map((option) => (
-            <ControlRow
-              key={option.key}
-              controls={
-                option.direction === 'upgrade' ? (
-                  <Button
-                    variant="secondary"
-                    disabled={held || !option.plan.checkout_available}
-                    onClick={() => controls.upgrade(option.key)}
-                  >
-                    Upgrade to {option.plan.name}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    disabled={held}
-                    onClick={() => setDowngradeTo(option)}
-                  >
-                    Downgrade to {option.plan.name}
-                  </Button>
-                )
-              }
-            >
-              <span className={textRole('body')}>{option.plan.name}</span>
-              {option.plan.base_price ? (
-                <span className={textRole('caption')}>
-                  {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
-                  tax
-                </span>
-              ) : null}
-            </ControlRow>
-          ))}
-        </AppGrid>
-        {options.some(
-          (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
-        ) ? (
-          <p className="type-caption">Upgrades unavailable: checkout is closed.</p>
-        ) : null}
-        {controls.downgradeError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(controls.downgradeError, {
-              action: 'schedule the downgrade',
-            })}
+    <SettingsGroup
+      id="change-plan"
+      title="Change plan"
+      description="Upgrades are prorated and start once paid. Downgrades start at renewal, with no refund."
+    >
+      {controls.downgradeError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(controls.downgradeError, {
+            action: 'schedule the downgrade',
+          })}
+        />
+      ) : null}
+      <PlanCards>
+        {cards.map(({ plan, option }) => (
+          <PlanCard
+            key={plan.key}
+            name={plan.name}
+            price={monthly(plan)}
+            current={option === null}
+            controls={
+              option ? (
+                <ChangeButton
+                  option={option}
+                  held={held}
+                  controls={controls}
+                  onDowngrade={setDowngradeTo}
+                />
+              ) : null
+            }
           />
-        ) : null}
-        <Dialog
-          open={downgradeTo !== null}
-          onOpenChange={(open) => {
-            if (!open) setDowngradeTo(null);
-          }}
-          title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
-          footer={
-            <>
-              <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
-                <Icon icon={X} />
-                Keep {currentPlan.name}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (downgradeTo) controls.downgrade(downgradeTo.key);
-                  setDowngradeTo(null);
-                }}
-              >
-                Schedule downgrade
-              </Button>
-            </>
-          }
-        >
-          <p className={textRole('body', 'text-ink-2')}>
-            {currentPlan.name} continues to the end of this period. No refund.
-          </p>
-        </Dialog>
-      </Stack>
-    </Section>
+        ))}
+      </PlanCards>
+      {options.some(
+        (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
+      ) ? (
+        <p className={textRole('caption')}>Upgrades unavailable: checkout is closed.</p>
+      ) : null}
+      <Dialog
+        open={downgradeTo !== null}
+        onOpenChange={(open) => {
+          if (!open) setDowngradeTo(null);
+        }}
+        title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
+              <Icon icon={X} />
+              Keep {currentPlan.name}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (downgradeTo) controls.downgrade(downgradeTo.key);
+                setDowngradeTo(null);
+              }}
+            >
+              Schedule downgrade
+            </Button>
+          </>
+        }
+      >
+        <p className={textRole('body', 'text-ink-2')}>
+          {currentPlan.name} continues to the end of this period. No refund.
+        </p>
+      </Dialog>
+    </SettingsGroup>
+  );
+}
+
+function ChangeButton({
+  option,
+  held,
+  controls,
+  onDowngrade,
+}: Readonly<{
+  option: Option;
+  held: boolean;
+  controls: PlanChangeControls;
+  onDowngrade: (option: Option) => void;
+}>) {
+  if (option.direction === 'upgrade')
+    return (
+      <Button
+        variant="secondary"
+        disabled={held || !option.plan.checkout_available}
+        onClick={() => controls.upgrade(option.key)}
+      >
+        Upgrade to {option.plan.name}
+      </Button>
+    );
+  return (
+    <Button variant="secondary" disabled={held} onClick={() => onDowngrade(option)}>
+      Downgrade to {option.plan.name}
+    </Button>
   );
 }

@@ -2,7 +2,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { AddNameForm, EditableNameRow } from '@/components/knowledge-base/editable-names';
 import { Absence } from '@/components/ui/absence';
-import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { SettingRows } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
@@ -37,40 +36,36 @@ export function ProjectThemesPanel({
       />
     );
   return (
-    <Stack gap="workspace">
+    <div className="grid min-w-0 gap-3">
       {failed ? (
         <Notice
           kind="mutation"
           notice={mutationNoticeForError(failed.mutation.error, { action: failed.action })}
         />
       ) : null}
-      {themes.data.length ? (
-        <SettingRows label="Themes">
-          {themes.data.map((theme) => (
-            <EditableNameRow
-              key={theme.id}
-              name={theme.name}
-              verb="Rename"
-              mayEdit={mayEdit}
-              pending={pending}
-              onSave={(name) => rename.mutateAsync({ theme, name })}
-              onDelete={() => remove.mutateAsync(theme)}
-            />
-          ))}
-        </SettingRows>
-      ) : (
-        <Absence label="No themes" />
-      )}
-      {mayEdit ? (
-        <AddNameForm
-          title="Add a theme"
-          titleId="add-theme"
-          field="Theme"
-          submit="Add theme"
-          pending={pending}
-          onAdd={(name) => create.mutateAsync(name)}
-        />
-      ) : null}
-    </Stack>
+      <SettingRows label="Themes">
+        {themes.data.map((theme) => (
+          <EditableNameRow
+            key={theme.id}
+            name={theme.name}
+            verb="Rename"
+            mayEdit={mayEdit}
+            pending={pending}
+            onSave={(name) => rename.mutateAsync({ theme, name })}
+            onDelete={() => remove.mutateAsync(theme)}
+          />
+        ))}
+        {themes.data.length || mayEdit ? null : <Absence label="No themes" />}
+        {mayEdit ? (
+          <AddNameForm
+            title="Add a theme"
+            field="Theme"
+            submit="Add theme"
+            pending={pending}
+            onAdd={(name) => create.mutateAsync(name)}
+          />
+        ) : null}
+      </SettingRows>
+    </div>
   );
 }

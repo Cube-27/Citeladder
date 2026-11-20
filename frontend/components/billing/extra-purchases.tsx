@@ -1,14 +1,10 @@
 import { useId, useState } from 'react';
 
-import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
-import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import type {
   BillingCatalog,
@@ -90,50 +86,52 @@ function ExtraRow({
   const reason = gateReason(entry);
   const reasonId = useId();
   return (
-    <ControlRow
-      controls={
-        <Stack gap="tight" className="w-full">
-          <Inline className="flex-wrap justify-end">
-            <label htmlFor={inputId} className="sr-only">
-              Quantity of {entry.name}
-            </label>
-            <Input
-              id={inputId}
-              type="number"
-              inputMode="numeric"
-              min={entry.quantity_min}
-              max={entry.quantity_max}
-              value={typed}
-              disabled={!purchasable || disabled}
-              onChange={(event) => setTyped(event.target.value)}
-              onBlur={() => setTyped(String(quantity))}
-              width="quantity"
-            />
-            <BuyButton
-              name={entry.name}
-              disabled={!purchasable || disabled}
-              reason={reason}
-              reasonId={reasonId}
-              onBuy={() => onBuy(kind, entry.key, quantity)}
-            />
-          </Inline>
-          {reason ? (
-            <p id={reasonId} className={textRole('caption', 'text-ink-2 text-end')}>
-              {reason}
-            </p>
-          ) : null}
-        </Stack>
+    <SettingRow
+      label={entry.name}
+      description={
+        <>
+          {entry.description ? <p>{entry.description}</p> : null}
+          <p>
+            {entry.unit_price
+              ? `${formatMoney(entry.unit_price, catalog.currency_minor_units)} each, one-time, before tax · `
+              : ''}
+            usable for {entry.expiry_days} days or until your plan ends, whichever is first
+          </p>
+        </>
+      }
+      action={
+        <>
+          <label htmlFor={inputId} className="sr-only">
+            Quantity of {entry.name}
+          </label>
+          <Input
+            id={inputId}
+            type="number"
+            inputMode="numeric"
+            min={entry.quantity_min}
+            max={entry.quantity_max}
+            value={typed}
+            disabled={!purchasable || disabled}
+            onChange={(event) => setTyped(event.target.value)}
+            onBlur={() => setTyped(String(quantity))}
+            width="quantity"
+          />
+          <BuyButton
+            name={entry.name}
+            disabled={!purchasable || disabled}
+            reason={reason}
+            reasonId={reasonId}
+            onBuy={() => onBuy(kind, entry.key, quantity)}
+          />
+        </>
       }
     >
-      <span className={textRole('body')}>{entry.name}</span>
-      {entry.description ? <p className="type-caption">{entry.description}</p> : null}
-      <span className={textRole('caption')}>
-        {entry.unit_price
-          ? `${formatMoney(entry.unit_price, catalog.currency_minor_units)} each, one-time, before tax · `
-          : ''}
-        usable for {entry.expiry_days} days or until your plan ends, whichever is first
-      </span>
-    </ControlRow>
+      {reason ? (
+        <p id={reasonId} className={textRole('caption', 'text-end')}>
+          {reason}
+        </p>
+      ) : null}
+    </SettingRow>
   );
 }
 
@@ -160,33 +158,26 @@ function activeExtraGrants(entitlement: BillingEntitlement | null): ExtraGrant[]
 function ActiveExtras({ grants }: Readonly<{ grants: readonly ExtraGrant[] }>) {
   if (grants.length === 0) return null;
   return (
-    <Section aria-labelledby="active-extras-title">
-      <SectionHeader>
-        <SectionTitle id="active-extras-title" level={3}>
-          Active purchases
-        </SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <LedgerList>
-          {grants.map((grant) => (
-            <LedgerItem
-              key={grant.grant_id}
-              title={`+${grant.value} ${capabilityLabel(grant.key).toLowerCase()}`}
-              caption={
-                <>
-                  Usable until{' '}
-                  <DisplayTime
-                    value={grant.effective_valid_until}
-                    dateOnly
-                    fallback="your plan ends"
-                  />
-                </>
-              }
-            />
-          ))}
-        </LedgerList>
-      </SectionContent>
-    </Section>
+    <SettingsGroup title="Active purchases">
+      <SettingRows>
+        {grants.map((grant) => (
+          <SettingRow
+            key={grant.grant_id}
+            label={`+${grant.value} ${capabilityLabel(grant.key).toLowerCase()}`}
+            value={
+              <>
+                Usable until{' '}
+                <DisplayTime
+                  value={grant.effective_valid_until}
+                  dateOnly
+                  fallback="your plan ends"
+                />
+              </>
+            }
+          />
+        ))}
+      </SettingRows>
+    </SettingsGroup>
   );
 }
 
@@ -217,13 +208,10 @@ export function ExtraPurchases({
     ...topups.map((entry) => ({ entry, kind: 'topup' as const })),
   ];
   return (
-    <Section aria-labelledby="extras-title">
-      <SectionHeader>
-        <SectionTitle id="extras-title">Add-ons and top-ups</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact">
-        {extras.length > 0 ? (
-          <AppGrid layout="slips">
+    <>
+      {extras.length > 0 ? (
+        <SettingsGroup title="Add-ons and top-ups">
+          <SettingRows>
             {extras.map(({ entry, kind }) => (
               <ExtraRow
                 key={entry.key}
@@ -234,10 +222,10 @@ export function ExtraPurchases({
                 onBuy={onBuy}
               />
             ))}
-          </AppGrid>
-        ) : null}
-        <ActiveExtras grants={grants} />
-      </Stack>
-    </Section>
+          </SettingRows>
+        </SettingsGroup>
+      ) : null}
+      <ActiveExtras grants={grants} />
+    </>
   );
 }

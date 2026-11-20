@@ -39,7 +39,7 @@ import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TextLink } from '@/components/ui/text-link';
@@ -138,7 +138,7 @@ const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
   // The last use sits under the state: a narrow page has no room for its own column.
   { key: 'status', label: 'Status', sublabel: 'Last used', kind: 'status', width: 'category' },
-  { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
+  { key: 'scopes', label: 'Access', kind: 'text', width: 'name', priority: 'low' },
   { key: 'projects', label: 'Projects', kind: 'text', width: 'status', priority: 'low' },
   { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
 ];
@@ -345,7 +345,7 @@ function ApiKeysBody({
     );
   const { available, keys } = query.data;
   return (
-    <Stack gap="workspace">
+    <>
       {available ? null : (
         <Notice tone="info">
           The REST API needs a paid plan.{' '}
@@ -369,7 +369,7 @@ function ApiKeysBody({
           ))}
         </DataTable>
       )}
-    </Stack>
+    </>
   );
 }
 
@@ -384,12 +384,12 @@ export function ApiKeys() {
 
   return (
     <>
-      <Section>
-        <SectionHeader
-          actions={<KeysHeadActions list={query.data} onCreate={() => setCreating(true)} />}
-        >
-          <SectionTitle>API keys</SectionTitle>
-          <SectionDescription>
+      {/* The key table is the named region; the group only heads it. */}
+      <SettingsGroup
+        title="API keys"
+        region={false}
+        description={
+          <>
             <code className={textRole('code', 'break-words')}>{API_BASE_URL}</code>{' '}
             <CopyButton
               value={API_BASE_URL}
@@ -398,8 +398,10 @@ export function ApiKeys() {
               className="align-middle"
               copiedLabel="Copied the API address"
             />
-          </SectionDescription>
-        </SectionHeader>
+          </>
+        }
+        action={<KeysHeadActions list={query.data} onCreate={() => setCreating(true)} />}
+      >
         <ApiKeysBody
           query={query}
           workspaceId={workspaceId}
@@ -409,7 +411,7 @@ export function ApiKeys() {
             setPending(key);
           }}
         />
-      </Section>
+      </SettingsGroup>
       <CreateKeyDialog
         open={creating}
         workspaceId={workspaceId}

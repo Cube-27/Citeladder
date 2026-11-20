@@ -4,7 +4,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerItemClasses } from '@/components/ui/workspace';
 import { textRole } from '@/components/ui/typography';
 import type { ProviderConnection } from '@citeladder/contracts';
 import {
@@ -140,7 +139,7 @@ export function ProviderRow({
   const closedAction = state.configured ? 'Manage' : 'Connect';
   const toggleLabel = open ? 'Close' : closedAction;
   return (
-    <Stack as="li" gap="compact" className={ledgerItemClasses()}>
+    <Stack as="li" gap="compact">
       <Inline gap="workspace" className="flex-wrap">
         <Inline gap="compact" className="flex-1">
           <BrandMark

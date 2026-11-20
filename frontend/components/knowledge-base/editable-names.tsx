@@ -5,20 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline } from '@/components/ui/layout';
-import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingField, SettingRow } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 
-/** Context's add form for one short name, such as an alias or a theme. */
+/**
+ * Context's add form for one short name, such as an alias or a theme: the
+ * last row of the list it adds to, its field across the row with the add
+ * button at the field's end.
+ */
 export function AddNameForm({
   title,
-  titleId,
   field,
   submit: submitLabel,
   pending,
   onAdd,
 }: Readonly<{
   title: string;
-  titleId: string;
   field: string;
   submit: string;
   pending: boolean;
@@ -38,26 +40,29 @@ export function AddNameForm({
   const empty = !draft.trim();
   return (
     <form
-      aria-labelledby={titleId}
+      aria-label={title}
       onSubmit={(event) => {
         event.preventDefault();
         if (pending || empty) return;
         void submit();
       }}
     >
-      <SettingRows title={title} titleId={titleId}>
-        <SettingField label={field}>
-          {(props) => (
-            <Input {...props} value={draft} onChange={(event) => setDraft(event.target.value)} />
-          )}
-        </SettingField>
-        <Inline className="flex-wrap justify-end">
-          <Button type="submit" variant="primary" disabled={pending || empty}>
-            <Icon icon={Plus} />
-            {submitLabel}
-          </Button>
-        </Inline>
-      </SettingRows>
+      <SettingField label={field}>
+        {(props) => (
+          <Inline className="flex-wrap">
+            <Input
+              {...props}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="min-w-56 flex-1"
+            />
+            <Button type="submit" disabled={pending || empty}>
+              <Icon icon={Plus} />
+              {submitLabel}
+            </Button>
+          </Inline>
+        )}
+      </SettingField>
     </form>
   );
 }

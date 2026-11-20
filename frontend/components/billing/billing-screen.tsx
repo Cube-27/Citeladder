@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react';
 
 import { BillingSupport } from '@/components/billing/billing-policies';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
-import { CurrentPlan, type BillingCancellation } from '@/components/billing/current-plan';
+import {
+  CancelPlan,
+  CurrentPlan,
+  type BillingCancellation,
+} from '@/components/billing/current-plan';
 import { ExtraPurchases, type ExtraPurchase } from '@/components/billing/extra-purchases';
 import { InvoiceHistory } from '@/components/billing/invoice-history';
 import {
@@ -35,7 +39,7 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { Section } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
@@ -165,8 +169,9 @@ function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
 
 /**
  * Billing, in the owner's order (2026-11-10): the plan with everything that
- * changes it, then usage, then invoices. A prepared purchase is reviewed
- * right under the plan that started it; the masthead holds the next step.
+ * changes it, then usage, then invoices; cancelling, the one destructive
+ * action, is the last group. A prepared purchase is reviewed right under the
+ * plan that started it; the masthead holds the next step.
  */
 export function BillingScreen() {
   const { isLoading: entitlementLoading } = useEntitlement();
@@ -257,6 +262,7 @@ export function BillingScreen() {
       <UsageMeters />
       <InvoiceHistory invoices={invoiceQuery.data ?? []} read={invoiceQuery} />
       <BillingSupport contact={catalog?.support_contact ?? null} />
+      <CancelPlan entitlement={entitlement} canManage={canManage} cancellation={cancellation} />
     </SettingsPage>
   );
 }
@@ -283,21 +289,21 @@ function PlanOffers({
 }>) {
   if (catalogRead.isError) {
     return (
-      <Section aria-label="Plans">
+      <SettingsGroup title="Plans">
         <StateBlock
           kind="error"
           title="Couldn't load plans"
           {...readErrorProps(catalogRead)}
           fallback="Couldn't load the plan catalog."
         />
-      </Section>
+      </SettingsGroup>
     );
   }
   if (catalogRead.isLoading || !catalog)
     return (
-      <Section aria-label="Plans">
+      <SettingsGroup title="Plans">
         <StateBlock kind="loading" label="Loading plans…" shape={{ kind: 'list' }} />
-      </Section>
+      </SettingsGroup>
     );
   const subscription = entitlement?.subscription ?? null;
   const currentPlan = subscription ? catalogPlanByKey(catalog, subscription.catalog_key) : null;

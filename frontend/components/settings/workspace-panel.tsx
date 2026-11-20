@@ -5,9 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -41,40 +39,41 @@ export function WorkspacePanel() {
 
   return (
     <>
-      <Section aria-labelledby="workspace-panel-title">
-        <SectionHeader>
-          <SectionTitle id="workspace-panel-title">{activeWorkspace.name}</SectionTitle>
-        </SectionHeader>
-        <Stack gap="workspace">
-          <SettingRows>
-            <SettingRow
-              label="Your role"
-              description={ROLE_SUMMARY[activeWorkspace.role]}
-              value={roleLabel(activeWorkspace.role)}
-            />
-            <SettingRow
-              label="Leave workspace"
-              description={isOwner ? 'Transfer ownership first.' : undefined}
-              action={
-                isOwner ? null : (
-                  <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
-                    <Icon icon={LogOut} />
-                    Leave workspace
-                  </Button>
-                )
-              }
-            />
-          </SettingRows>
-          {leave.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
-            />
-          ) : null}
-        </Stack>
-      </Section>
+      <SettingsGroup title={activeWorkspace.name}>
+        <SettingRows>
+          <SettingRow
+            label="Your role"
+            description={ROLE_SUMMARY[activeWorkspace.role]}
+            value={roleLabel(activeWorkspace.role)}
+          />
+        </SettingRows>
+      </SettingsGroup>
 
       {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}
+
+      {/* Leaving is the tab's one destructive action, so it is the last group. */}
+      <SettingsGroup title="Leave workspace">
+        {leave.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
+          />
+        ) : null}
+        <SettingRows>
+          <SettingRow
+            label={activeWorkspace.name}
+            description={isOwner ? 'Transfer ownership first.' : undefined}
+            action={
+              isOwner ? null : (
+                <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
+                  <Icon icon={LogOut} />
+                  Leave workspace
+                </Button>
+              )
+            }
+          />
+        </SettingRows>
+      </SettingsGroup>
 
       <ConfirmDialog
         request={

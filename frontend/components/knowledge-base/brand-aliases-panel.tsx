@@ -7,10 +7,9 @@ import { AddNameForm, EditableNameRow } from '@/components/knowledge-base/editab
 import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
-import { SettingRow, SettingRows } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { Tag } from '@/components/ui/tag';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 
@@ -31,14 +30,14 @@ export function BrandAliasesPanel({
     save.mutateAsync({ brand: { aliases: [...new Set(next.map((alias) => alias.trim()))] } });
   const suggestions = project.brand.alias_suggestions;
   return (
-    <Stack gap="workspace">
-      {save.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(save.error, { action: 'save the aliases' })}
-        />
-      ) : null}
-      {aliases.length ? (
+    <>
+      <SettingsGroup title="Aliases">
+        {save.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(save.error, { action: 'save the aliases' })}
+          />
+        ) : null}
         <SettingRows label="Aliases">
           {aliases.map((alias, index) => (
             <EditableNameRow
@@ -51,41 +50,44 @@ export function BrandAliasesPanel({
               onDelete={() => saveAliases(aliases.filter((_, at) => at !== index))}
             />
           ))}
-        </SettingRows>
-      ) : (
-        <Absence label="No aliases" />
-      )}
-      {mayEdit && suggestions.length ? (
-        <SettingRows title="Suggested" titleId="alias-suggestions">
-          {suggestions.map((suggestion) => (
-            <SettingRow
-              key={suggestion}
-              label={<span className={textRole('body')}>{suggestion}</span>}
-              action={
-                <Button
-                  variant="secondary"
-                  disabled={save.isPending}
-                  aria-label={`Keep ${suggestion}`}
-                  onClick={() => void saveAliases([...aliases, suggestion]).catch(() => undefined)}
-                >
-                  <Icon icon={Check} />
-                  Keep
-                </Button>
-              }
+          {aliases.length || mayEdit ? null : <Absence label="No aliases" />}
+          {mayEdit ? (
+            <AddNameForm
+              title="Add an alias"
+              field="Alias"
+              submit="Add alias"
+              pending={save.isPending}
+              onAdd={(alias) => saveAliases([...aliases, alias])}
             />
-          ))}
+          ) : null}
         </SettingRows>
+      </SettingsGroup>
+      {mayEdit && suggestions.length ? (
+        <SettingsGroup title="Suggested aliases">
+          <SettingRows>
+            {suggestions.map((suggestion) => (
+              <SettingRow
+                key={suggestion}
+                // Suggested, not yet kept: the dashed draft edge (docs/design.md).
+                label={<Tag kind="draft">{suggestion}</Tag>}
+                action={
+                  <Button
+                    variant="secondary"
+                    disabled={save.isPending}
+                    aria-label={`Keep ${suggestion}`}
+                    onClick={() =>
+                      void saveAliases([...aliases, suggestion]).catch(() => undefined)
+                    }
+                  >
+                    <Icon icon={Check} />
+                    Keep
+                  </Button>
+                }
+              />
+            ))}
+          </SettingRows>
+        </SettingsGroup>
       ) : null}
-      {mayEdit ? (
-        <AddNameForm
-          title="Add an alias"
-          titleId="add-alias"
-          field="Alias"
-          submit="Add alias"
-          pending={save.isPending}
-          onAdd={(alias) => saveAliases([...aliases, alias])}
-        />
-      ) : null}
-    </Stack>
+    </>
   );
 }
