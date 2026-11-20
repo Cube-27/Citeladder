@@ -12,10 +12,14 @@ import { policy } from '../src/config.ts';
 import { poolOptions, type Database } from '../src/db/database.ts';
 import { issueBundle } from '../src/entitlements/grants.ts';
 import type { DB } from '../src/generated/db-schema.ts';
+import { SITE_HEALTH_LANE, TaskQueue, type SiteTask } from '../src/queue/task-queue.ts';
+import { cancelCrawl } from '../src/site-health/controls.ts';
 import { lockRuntime } from '../src/site-health/frontier.ts';
+import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { refreshRuntime } from '../src/site-health/plan-runtime.ts';
 import { createCrawl } from '../src/site-health/planner.ts';
 import { rerunPage } from '../src/site-health/selection.ts';
+import { commitTask } from '../src/site-health/site-task.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -274,4 +278,100 @@ describe('Site Health lock order', () => {
       ),
     ).toEqual(['capacity', 'account']);
   });
+
+  it('lets page commits share the crawl lock, while Stop waits for them and stops the next', async () => {
+    const seed = await fixtures.crawl('running');
+    const owner = 'share-fence';
+    const [first, second, third] = await Promise.all(
+      ['/a', '/b', '/c'].map(async (path) => leased(await fixtures.analyzable(seed, path), owner)),
+    );
+    const ctx = {
+      db,
+      owner,
+      queue: new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: 60 }),
+      signal: new AbortController().signal,
+    };
+    const order: string[] = [];
+    const released = Promise.withResolvers<void>();
+    const holding = Promise.withResolvers<number>();
+    const open = commitTask(ctx, first!, async (trx, lock) => {
+      await lock('share');
+      holding.resolve(await backendPid(trx));
+      await released.promise;
+    }).then((committed) => order.push(`first:${committed}`));
+    const pid = await holding.promise;
+    // A second page commit takes the same crawl lock while the first holds it.
+    expect(await commitTask(ctx, second!, async (_trx, lock) => void (await lock('share')))).toBe(
+      true,
+    );
+    const stop = cancelCrawl(db, seed.workspaceId, seed.crawlId).then(() => order.push('stop'));
+    await blocksAnother(pid);
+    released.resolve();
+    await Promise.all([open, stop]);
+    // A commit after Stop finds the crawl stopped and writes nothing.
+    expect(await commitTask(ctx, third!, async (_trx, lock) => void (await lock('share')))).toBe(
+      false,
+    );
+    expect(order).toEqual(['first:true', 'stop']);
+  });
+
+  it('assesses a crawl again under its lock when a crawl write lands after the reconcile read it', async () => {
+    const seed = await fixtures.crawl('running');
+    await db
+      .updateTable('site_crawls')
+      .set({ discovery_status: 'running', analysis_status: 'running', discovered_url_count: 0 })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    const discover = await fixtures.task(seed, 'discover');
+    // Outstanding analysis keeps the crawl undrained.
+    await fixtures.analyzable(seed, '/a');
+    const writer = await db.startTransaction().execute();
+    try {
+      await lockedCrawl(writer, seed);
+      const reconcile = reconcileCrawl(db, seed.workspaceId, seed.crawlId, { refreshScore: false });
+      // The reconcile read the crawl with its discovery open and now waits on the lock.
+      await blocksAnother(await backendPid(writer));
+      // A discover commit: its page found, its task settled.
+      await writer
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'succeeded', completed_at: new Date() })
+        .where('id', '=', discover)
+        .execute();
+      await writer
+        .updateTable('site_crawls')
+        .set({ discovered_url_count: 1, updated_at: new Date() })
+        .where('id', '=', seed.crawlId)
+        .execute();
+      await writer.commit().execute();
+      await reconcile;
+    } finally {
+      if (!writer.isCommitted) await writer.rollback().execute();
+    }
+    const crawl = await db
+      .selectFrom('site_crawls')
+      .select(['discovery_status', 'analysis_status'])
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    expect(crawl).toEqual({ discovery_status: 'completed', analysis_status: 'running' });
+  });
 });
+
+/** The analyze task leased to `owner`, as a claim hands it to the worker. */
+function leased(page: { taskId: string }, owner: string): Promise<SiteTask> {
+  return db
+    .updateTable('site_crawl_tasks')
+    .set({ status: 'leased', lease_owner: owner, lease_expires_at: new Date(Date.now() + 60_000) })
+    .where('id', '=', page.taskId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+function lockedCrawl(trx: Database, seed: SiteSeed) {
+  return trx
+    .selectFrom('site_crawls')
+    .select('id')
+    .where('workspace_id', '=', seed.workspaceId)
+    .where('id', '=', seed.crawlId)
+    .forNoKeyUpdate()
+    .executeTakeFirstOrThrow();
+}

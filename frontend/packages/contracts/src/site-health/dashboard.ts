@@ -219,28 +219,6 @@ export const aeoReadinessSchema = responseObject({
 const measurementStateSchema = z.enum(['measured', 'limited_evidence', 'not_measured', 'excluded']);
 const dimensionApplicabilitySchema = z.enum(['applicable', 'not_applicable']);
 const searchEligibilitySchema = z.enum(['eligible', 'blocked', 'unknown', 'excluded']);
-const acquisitionEligibilityCheckpointSchema = responseObject({
-  checkpoint_id: z.literal('acquisition.public_representation'),
-  outcome: z.string(),
-  reason: z.string(),
-  source_task_id: uuid().nullable(),
-  source_attempt_id: uuid().nullable(),
-  source_artifact_id: uuid().nullable(),
-});
-const indexEligibilityCheckpointSchema = responseObject({
-  checkpoint_id: z.literal('search.indexability'),
-  outcome: z.string(),
-  reason: z.string(),
-  source_analysis_id: uuid().nullable(),
-  source_evaluation_id: uuid().nullable(),
-});
-const searchPolicyEligibilityCheckpointSchema = responseObject({
-  checkpoint_id: z.enum(['search.crawler_access', 'search.snippet_access']),
-  outcome: z.string(),
-  reason: z.string(),
-  source_analysis_id: uuid().nullable(),
-  source_evaluation_id: uuid().nullable(),
-});
 const overviewDimensionSchema = responseObject({
   key: z.string(),
   label: z.string(),
@@ -286,26 +264,14 @@ const cohortCompositionSchema = responseObject({
 
 // The frozen snapshot keeps its provenance id lists (source evaluations,
 // analyses, artifacts and classification tasks); this response renders the
-// projection without them (owner, 2 Nov 2026).
+// projection without them (owner, 2 Nov 2026), nor the per-page eligibility
+// reasons no screen reads (owner, 2026-11-20).
 export const siteHealthOverviewSchema = responseObject({
   project_id: uuid(),
   crawl_id: uuid(),
   snapshot_id: uuid(),
   search_eligibility: searchEligibilitySchema,
   eligibility_totals: z.record(z.string(), z.number().int()),
-  eligibility_reasons: z.array(
-    responseObject({
-      site_url_id: uuid(),
-      state: searchEligibilitySchema,
-      checkpoints: z.array(
-        z.union([
-          acquisitionEligibilityCheckpointSchema,
-          indexEligibilityCheckpointSchema,
-          searchPolicyEligibilityCheckpointSchema,
-        ]),
-      ),
-    }),
-  ),
   web_fundamentals_score: z.number().nullable(),
   web_fundamentals_coverage: z.number().nullable(),
   web_fundamentals_state: measurementStateSchema,

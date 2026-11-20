@@ -39,7 +39,6 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
   ...COMPLETE_CLASSIFICATION_PROJECTION,
   search_eligibility: 'eligible',
   eligibility_totals: { eligible: 1, blocked: 0, unknown: 0, excluded: 0 },
-  eligibility_reasons: [],
   web_fundamentals_score: 88,
   web_fundamentals_coverage: 1,
   web_fundamentals_state: 'measured',

@@ -1,7 +1,11 @@
+import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
+import type { Database } from '../src/db/database.ts';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
-import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
+import { loadCrawl, pageAuditsSql } from '../src/site-health/reads/crawl.ts';
+import { issueHistory } from '../src/site-health/reads/issue-history.ts';
+import { issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import { testDatabase } from './support.ts';
 import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
@@ -217,4 +221,48 @@ describe("Site Health reads show each tracked page's latest audit", () => {
       site_rerun_id: rerun.crawlId,
     });
   });
+
+  it('reads a running crawl as sets, never probing once per tracked page it has not analyzed', async () => {
+    const seed = await fixtures.crawl('completed');
+    const earlier = await crawlAt(seed, minutes(0));
+    const tracked = [];
+    for (let index = 0; index < PROBE_PAGES; index++)
+      tracked.push(await audit(earlier, `/p-${index}`, SITEMAP, 'missing')); // NOSONAR -- Fixture pages in order.
+    await fixtures.monitor(
+      seed,
+      tracked.map((page) => page.id),
+    );
+    await land(earlier);
+    const running = await crawlAt(seed, minutes(10), { status: 'running' });
+    // The earlier audit still shows for every page the running crawl has not reached.
+    const all = unfilteredIssues('defect');
+    expect(groups(await issues(db, seed.workspaceId, running.crawlId, all, paging))).toEqual([
+      [SITEMAP, PROBE_PAGES],
+    ]);
+    const crawl = await loadCrawl(db, seed.workspaceId, running.crawlId);
+    const scans = await analysisScans(async (trx) => {
+      const { rows } = await sql<{ pages: number }>`
+        select count(*)::int as pages from (${pageAuditsSql(crawl)}) v`.execute(trx);
+      expect(rows).toEqual([{ pages: PROBE_PAGES }]);
+    });
+    // A lateral per tracked page probed the analyses once for each page the crawl never reached.
+    expect(scans).toBeLessThan(PROBE_PAGES);
+  });
 });
+
+const PROBE_PAGES = 24;
+
+/** Index and sequential scans one read starts on the analyses: a per-page plan probes them per page. */
+async function analysisScans(read: (trx: Database) => Promise<unknown>) {
+  const scans = async (trx: Database) => {
+    const { rows } = await sql<{ scans: number }>`
+      select (seq_scan + coalesce(idx_scan, 0))::int as scans
+      from pg_stat_xact_user_tables where relname = 'site_page_analyses'`.execute(trx);
+    return rows[0]?.scans ?? 0;
+  };
+  return db.transaction().execute(async (trx) => {
+    const before = await scans(trx);
+    await read(trx);
+    return (await scans(trx)) - before;
+  });
+}

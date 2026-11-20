@@ -13,13 +13,15 @@ import { sql, type KyselyPlugin, type QueryId, type RootOperationNode } from 'ky
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../../src/config.ts';
+import type { Database } from '../../src/db/database.ts';
+import { issueFixes } from '../../src/site-health/issue-fixes.ts';
 import { publishRunningIssues } from '../../src/site-health/issue-catalog.ts';
 import { issues, unfilteredIssues } from '../../src/site-health/reads/issues.ts';
 import { pages } from '../../src/site-health/reads/pages.ts';
 import { SiteHealthWorker } from '../../src/workers/site-health-worker.ts';
 import { acquisitionHarness } from '../site-health-acquisition-support.ts';
 import { FinalizeFixtures, type SiteSeed } from '../site-health-finalize-fixtures.ts';
-import { testConfig, testDatabase } from '../support.ts';
+import { asOwner, testConfig, testDatabase } from '../support.ts';
 
 const PAGES = Number(process.env.SITE_HEALTH_SCALE_PAGES ?? 5000);
 const SITEMAP_URLS = 40_000;
@@ -175,7 +177,7 @@ async function settleChunk({
         classifier_version: 'fixture',
         presentation_version: 'fixture',
         schema_contract_version: 'fixture',
-        aeo_measurement_state: 'unknown',
+        aeo_measurement_state: 'not_measured',
         aeo_measurement_reason: 'fixture',
         web_fundamentals_state: 'measured',
         web_fundamentals_score: 50,
@@ -278,6 +280,28 @@ function urlset(urls: readonly string[]) {
   return `<urlset>${entries}</urlset>`;
 }
 
+/**
+ * Scans one read starts on the per-page tables, in its own transaction: a plan
+ * that probes them once per tracked page scales with the crawl, not the page.
+ * Printed, never asserted: the count is the planner's choice.
+ */
+async function scanned(read: (trx: Database) => Promise<unknown>) {
+  const scans = async (trx: Database) => {
+    const { rows } = await sql<{ scans: number }>`
+      select coalesce(sum(seq_scan + coalesce(idx_scan, 0)), 0)::int as scans
+      from pg_stat_xact_user_tables
+      where relname in ('site_page_analyses', 'site_crawl_tasks', 'site_page_link_metrics')`.execute(
+      trx,
+    );
+    return rows[0]?.scans ?? 0;
+  };
+  return db.transaction().execute(async (trx) => {
+    const before = await scans(trx);
+    await read(trx);
+    return (await scans(trx)) - before;
+  });
+}
+
 /** Milliseconds a read took: a measurement printed for the PR, never asserted. */
 async function timed<T>(read: () => Promise<T>) {
   const started = performance.now();
@@ -345,6 +369,20 @@ describe('Site Health crawl at scale', () => {
       running.value.items.find((item) => item.rule_id === 'technical.title_present')
         ?.affected_url_count,
     ).toBe(half);
+    // Planned on analyzed statistics, as production autoanalyze leaves them.
+    await asOwner((owner) =>
+      sql`analyze site_urls, monitored_site_urls, site_page_analyses, site_crawl_tasks, site_issues`.execute(
+        owner,
+      ),
+    );
+    const [w, c] = [seed.workspaceId, seed.crawlId];
+    const runningScans = {
+      pages: await scanned((trx) => pages(trx, w, c, {}, 'status', paging)),
+      issues_high: await scanned((trx) =>
+        issues(trx, w, c, { ...unfilteredIssues(null), severity: 'high' }, paging),
+      ),
+      issue_fixes: await scanned((trx) => issueFixes(trx, w, c)),
+    };
     await analyze(seed, PAGES);
 
     const metered = meter();
@@ -387,6 +425,7 @@ describe('Site Health crawl at scale', () => {
         finalize_peak_heap_mb: Math.round(metered.peak.heap / 2 ** 20),
         most_rows_per_read: metered.most,
         running_issues_read_ms: running.ms,
+        running_read_scans: runningScans,
         final_issues_read_ms: final.ms,
         pages_read_ms: pageRead.ms,
       })}\n`,

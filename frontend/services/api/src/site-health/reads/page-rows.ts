@@ -177,6 +177,22 @@ function latestAuditsJoin(crawl: Crawl, siteUrlId?: string) {
     : sql`left join (${pageAuditsSql(crawl)}) latest on latest.site_url_id = u.id`;
 }
 
+/**
+ * The URLs a window ranks (`u`) with their active tracked row (`m`). The
+ * tracked filter leads from the tracked set: an inventory can list ten times
+ * more URLs than the project tracks.
+ */
+function pageSet(trackedOnly: boolean) {
+  return trackedOnly
+    ? sql`from monitored_site_urls m
+      join site_urls u on u.workspace_id = m.workspace_id and u.project_id = m.project_id
+        and u.id = m.site_url_id and m.active`
+    : sql`from site_urls u
+      left join monitored_site_urls m
+        on m.workspace_id = u.workspace_id and m.project_id = u.project_id
+        and m.site_url_id = u.id and m.active`;
+}
+
 /** Rows of the crawl's page window, `limit + 1` of them so the caller can see a next page. */
 export async function pageRows(
   db: Database,
@@ -208,6 +224,8 @@ export async function pageRows(
   // The cursor and the order cut the window first (PERF-007): only its rows
   // pay for the projection's per-row subqueries.
   const latestAudits = latestAuditsJoin(crawl, filters.siteUrlId);
+  const onePage = (column: string) =>
+    filters.siteUrlId ? sql`and ${sql.ref(column)} = ${filters.siteUrlId}::uuid` : sql``;
   const result = await sql<PageRow>`
     with keyed as (
       select
@@ -237,28 +255,29 @@ export async function pageRows(
         l.main_content_inbound_count,
         l.depth_from_home,
         ${spec.value} as sort_value
-      from site_urls u
-      left join monitored_site_urls m
-        on m.workspace_id = u.workspace_id and m.project_id = u.project_id
-        and m.site_url_id = u.id and m.active
+      ${pageSet(filters.monitored === true)}
       -- The page's latest audit as the crawl shows it (SH-B9).
       ${latestAudits}
       left join site_page_analyses a
         on a.workspace_id = u.workspace_id and a.id = latest.analysis_id
-      left join lateral (
-        select t.status, t.error_code from site_crawl_tasks t
-        where t.workspace_id = u.workspace_id and t.crawl_id = ${crawl.id}
-          and t.site_url_id = u.id and ${ROW_TASK}
-        order by ${ROW_TASK_ORDER}, t.created_at desc limit 1
-      ) t on true
-      left join lateral (
+      -- The crawl's tasks and link metrics join as sets, never probed per URL.
+      left join (
+        select distinct on (t.site_url_id) t.site_url_id, t.status, t.error_code
+        from site_crawl_tasks t
+        where t.workspace_id = ${crawl.workspace_id} and t.crawl_id = ${crawl.id}
+          and t.site_url_id is not null and ${ROW_TASK} ${onePage('t.site_url_id')}
+        order by t.site_url_id, ${ROW_TASK_ORDER}, t.created_at desc
+      ) t on t.site_url_id = u.id
+      left join (
         -- The formula the crawl's own link-metrics run wrote, not today's configuration.
-        select * from site_page_link_metrics l
-        where l.workspace_id = u.workspace_id and l.project_id = u.project_id
-          and l.crawl_id = ${crawl.id} and l.site_url_id = u.id
-          and l.extractor_version = ${crawl.extractor_version}
-        order by l.created_at, l.formula_version limit 1
-      ) l on true
+        select distinct on (l.site_url_id) l.site_url_id, l.inbound_count,
+          l.main_content_inbound_count, l.depth_from_home
+        from site_page_link_metrics l
+        where l.workspace_id = ${crawl.workspace_id} and l.project_id = ${crawl.project_id}
+          and l.crawl_id = ${crawl.id} and l.extractor_version = ${crawl.extractor_version}
+          ${onePage('l.site_url_id')}
+        order by l.site_url_id, l.created_at, l.formula_version
+      ) l on l.site_url_id = u.id
       where u.workspace_id = ${crawl.workspace_id} and u.project_id = ${crawl.project_id}
         and exists (
           select 1 from site_url_observations o
@@ -275,7 +294,6 @@ export async function pageRows(
             and ${shownIssueFilter(crawl, 'i', 'a')})`
             : sql``
         }
-        ${filters.monitored === true ? sql`and m.site_url_id is not null` : sql``}
         ${filters.monitored === false ? sql`and m.site_url_id is null` : sql``}
     ), windowed as (
       select * from keyed

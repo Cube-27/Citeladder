@@ -241,16 +241,14 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
   };
 }
 
+/**
+ * A progress event on its display cadence. The crawl row is never rewritten
+ * per page: its analyzed count is counted by the reconcile and the live
+ * counters (CO-3), so page commits share the crawl lock.
+ */
 async function recordProgress(ctx: SiteTaskContext, trx: Database, crawl: Crawl) {
-  const analyzed = crawl.analyzed_url_count + 1;
-  await trx
-    .updateTable('site_crawls')
-    .set({ analyzed_url_count: analyzed, updated_at: new Date() })
-    .where('id', '=', crawl.id)
-    .where('workspace_id', '=', crawl.workspace_id)
-    .execute();
   if (ctx.cadence.analysisEvent.admits(crawl.id))
-    await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', { analyzed });
+    await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', {});
 }
 
 /** Whether setup or discovery published new page context while interpretation ran. */
@@ -288,7 +286,8 @@ async function persist(
   await commitTask(ctx, claimed, async (trx, lock) => {
     // Runtime and membership come before the crawl in Site Health lock order.
     const rows = await guardRows(trx, scope.crawl, scope.task, true);
-    const { crawl, task } = await lock();
+    // Nothing below writes the crawl row.
+    const { crawl, task } = await lock('share');
     if (!guardAllows(crawl, rows)) {
       await cancelTask(trx, task, ctx.owner);
       return;

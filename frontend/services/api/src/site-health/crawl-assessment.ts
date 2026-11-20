@@ -60,7 +60,10 @@ type Summary = {
   analyzeShortfall: number;
 };
 
-async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
+async function taskSummary(
+  db: Database,
+  crawl: Pick<Crawl, 'workspace_id' | 'id'>,
+): Promise<Summary> {
   const rows = await db
     .selectFrom('site_crawl_tasks')
     .select([
@@ -109,6 +112,11 @@ async function failedUrlCount(db: Database, crawl: Crawl) {
     .where(LATEST_GENERATION)
     .executeTakeFirstOrThrow();
   return row.count;
+}
+
+/** Pages the crawl analyzed, the count every reconcile persists. Page commits never write it. */
+export async function analyzedPageCount(db: Database, crawl: Pick<Crawl, 'workspace_id' | 'id'>) {
+  return (await taskSummary(db, crawl)).analyzeSucceeded;
 }
 
 /** Repair counters from their task and observation authorities; admission never moves down. */

@@ -26,7 +26,7 @@ import { createCrawl } from '../site-health/planner.ts';
 import { crawlRequest } from '../site-health/crawl-request.ts';
 import { readSchedule, updateSchedule } from '../site-health/schedules.ts';
 import { createCrawlRequest } from '../site-health/planner-policy.ts';
-import { loadCrawl, rootFailure } from '../site-health/reads/crawl.ts';
+import { loadCrawl, loadProjectedCrawl, rootFailure } from '../site-health/reads/crawl.ts';
 import { crawlProjection } from '../site-health/reads/crawl-projection.ts';
 import { requireAdmitted } from '../site-health/reads/pages.ts';
 import { monitoredSet, rerunPage } from '../site-health/selection.ts';
@@ -84,7 +84,7 @@ export const siteHealthCrawlRoutes = [
         0,
       )(() => worker.runUntilIdle(signal, interactive.admission_seconds));
       return siteCrawlSchema.parse(
-        await crawlProjection(db, await loadCrawl(db, workspaceId, path.crawl_id)),
+        await crawlProjection(db, await loadProjectedCrawl(db, workspaceId, path.crawl_id)),
       );
     },
   }),
@@ -158,7 +158,7 @@ export const siteHealthCrawlRoutes = [
     async handle({ c, db }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
       await cancelCrawl(db, workspaceId, path.crawl_id);
-      const crawl = await loadCrawl(db, workspaceId, path.crawl_id);
+      const crawl = await loadProjectedCrawl(db, workspaceId, path.crawl_id);
       return siteCrawlSchema.parse(
         await crawlProjection(db, crawl, {
           failureSummary: (await rootFailure(db, crawl)).summary,

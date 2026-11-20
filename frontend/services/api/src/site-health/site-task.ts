@@ -30,7 +30,49 @@ import type { SitePageFetcher } from './page-fetch.ts';
 import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 
-export type Crawl = Selectable<SiteCrawls>;
+/**
+ * Every crawl column but the score summary: it grows with the crawl (tens of
+ * kilobytes, read back from TOAST) and only the crawl projection reads it, so
+ * the task, lock and reconcile paths never load it.
+ */
+export const CRAWL_COLUMNS = [
+  'admitted_url_count',
+  'analysis_requested_count',
+  'analysis_status',
+  'analyzed_url_count',
+  'analyzer_version',
+  'completed_at',
+  'configuration',
+  'created_at',
+  'discovered_url_count',
+  'discovery_requested_count',
+  'discovery_status',
+  'error_message',
+  'extractor_version',
+  'failed_url_count',
+  'id',
+  'inventory_complete',
+  'live_counters',
+  'partial_reason',
+  'profile_id',
+  'project_id',
+  'random_seed',
+  'robots_observed_at',
+  'robots_snapshot_id',
+  'root_url',
+  'rule_catalog_version',
+  'sample_mode',
+  'scoring_version',
+  'site_facts',
+  'started_at',
+  'status',
+  'terminal_counters',
+  'updated_at',
+  'workspace_id',
+] as const satisfies readonly Exclude<keyof SiteCrawls, 'score_summary'>[];
+export type Crawl = Pick<Selectable<SiteCrawls>, (typeof CRAWL_COLUMNS)[number]>;
+/** A crawl as its projection reads it, score summary included. */
+export type ProjectedCrawl = Selectable<SiteCrawls>;
 export type HeldTask = { crawl: Crawl; task: SiteTask };
 
 export const statuses = policy.task_queue.statuses;
@@ -134,7 +176,7 @@ export async function loadScope(db: Database, claimed: SiteTask) {
     .executeTakeFirst();
   const crawl = await db
     .selectFrom('site_crawls')
-    .selectAll()
+    .select(CRAWL_COLUMNS)
     .where('id', '=', claimed.crawl_id)
     .where('workspace_id', '=', claimed.workspace_id)
     .executeTakeFirst();
@@ -166,12 +208,12 @@ export async function startCrawl(
         .where('id', '=', crawl.id)
         .where('workspace_id', '=', crawl.workspace_id)
         .where('status', '=', 'queued')
-        .returningAll()
+        .returning(CRAWL_COLUMNS)
         .executeTakeFirst()) ??
       // A sibling started it, or Stop cancelled it, first.
       (await ctx.db
         .selectFrom('site_crawls')
-        .selectAll()
+        .select(CRAWL_COLUMNS)
         .where('id', '=', crawl.id)
         .where('workspace_id', '=', crawl.workspace_id)
         .executeTakeFirst());
@@ -209,31 +251,39 @@ export const finalFailure = (task: SiteTask, retryable: boolean) =>
   !retryable || task.attempt_count + 1 >= task.max_attempts;
 
 /**
+ * How a commit holds the crawl: `update` for one that writes the crawl row;
+ * `share` for one that writes none of it (an analysis), so page commits run
+ * together and still wait for, and are waited on by, every crawl writer.
+ */
+export type CrawlLock = 'update' | 'share';
+
+/**
  * Site Health's one write lock, in its canonical order: the crawl (of a live
  * project), then the claimed task through the queue's fence (still this
  * owner's, unexpired, at the claimed attempt, not terminal). Null when either
- * no longer holds. `keyShare` lets the heartbeat extend the lease while a long
- * transaction holds the task.
+ * no longer holds. A `keyShare` task lets the heartbeat extend the lease while
+ * a long transaction holds the task.
  */
 export async function lockSiteTask(
   trx: Database,
   runner: Pick<SiteTaskRunner, 'queue' | 'owner'>,
   claimed: SiteTask,
-  strength: 'update' | 'keyShare' = 'update',
+  strength: { task?: 'update' | 'keyShare'; crawl?: CrawlLock } = {},
 ): Promise<HeldTask | null> {
-  const crawl = await trx
+  const query = trx
     .selectFrom('site_crawls as crawl')
     .innerJoin('projects as project', (join) =>
       join
         .onRef('project.id', '=', 'crawl.project_id')
         .onRef('project.workspace_id', '=', 'crawl.workspace_id'),
     )
-    .selectAll('crawl')
+    .select(CRAWL_COLUMNS.map((column) => `crawl.${column}` as const))
     .where('crawl.id', '=', claimed.crawl_id)
-    .where('crawl.workspace_id', '=', claimed.workspace_id)
-    .forNoKeyUpdate('crawl')
-    .executeTakeFirst();
-  const task = await runner.queue.fence(trx, claimed, runner.owner, undefined, strength);
+    .where('crawl.workspace_id', '=', claimed.workspace_id);
+  const crawl = await (
+    strength.crawl === 'share' ? query.forShare('crawl') : query.forNoKeyUpdate('crawl')
+  ).executeTakeFirst();
+  const task = await runner.queue.fence(trx, claimed, runner.owner, undefined, strength.task);
   return crawl && task?.crawl_id === claimed.crawl_id ? { crawl, task } : null;
 }
 
@@ -246,12 +296,12 @@ export async function lockSiteTask(
 export async function commitTask(
   ctx: Pick<SiteTaskContext, 'db' | 'owner' | 'queue' | 'signal'>,
   claimed: SiteTask,
-  body: (trx: Database, lock: () => Promise<HeldTask>) => Promise<void>,
+  body: (trx: Database, lock: (crawl?: CrawlLock) => Promise<HeldTask>) => Promise<void>,
 ): Promise<boolean> {
   ctx.signal.throwIfAborted();
   const committed = await asyncCommit(ctx.db, async (trx) => {
-    await body(trx, async () => {
-      const held = await lockSiteTask(trx, ctx, claimed);
+    await body(trx, async (crawl) => {
+      const held = await lockSiteTask(trx, ctx, claimed, { crawl });
       if (!held) throw new Abandoned();
       if (!isActiveCrawl(held.crawl.status)) throw new CrawlStopped();
       return held;
@@ -399,7 +449,7 @@ async function runInTransaction(
 ) {
   await asyncCommit(ctx.db, async (trx) => {
     ctx.signal.throwIfAborted();
-    const held = await lockSiteTask(trx, ctx, claimed, 'keyShare');
+    const held = await lockSiteTask(trx, ctx, claimed, { task: 'keyShare' });
     if (!held) throw new TaskCancelledError('Site Health task lost its lease or scope');
     await run(trx, held.crawl, held.task);
     ctx.signal.throwIfAborted();

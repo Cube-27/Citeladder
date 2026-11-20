@@ -61,7 +61,7 @@ async function commit(
   const { mode, body, durable } = step;
   ctx.signal.throwIfAborted();
   const run = async (trx: Database) => {
-    const held = await lockSiteTask(trx, ctx, claimed, 'keyShare');
+    const held = await lockSiteTask(trx, ctx, claimed, { task: 'keyShare' });
     if (!held) throw new Abandoned();
     if (modeOf(held.crawl) !== mode) throw new Stopped();
     await body(trx, held);

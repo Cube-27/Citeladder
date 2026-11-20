@@ -1,9 +1,10 @@
 /** The crawl contract every Site Health read shares. Nothing here writes. */
-import type { crawlCountersSchema } from '@citeladder/contracts/site-health';
+import { isActiveCrawl, type crawlCountersSchema } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
 
 import type { Database } from '../../db/database.ts';
 import { record, strings } from '../../db/json.ts';
+import type { ProjectedCrawl } from '../site-task.ts';
 import { countDisclosure, type Crawl, type FailureSummary } from './crawl.ts';
 import { crawlCounters } from './crawl-counters.ts';
 
@@ -17,7 +18,7 @@ const text = (value: unknown, fallback: string) =>
   typeof value === 'string' && value !== '' ? value : fallback;
 
 /** The worker-written `score_summary`, or null before scoring. */
-export function scoreSummary(crawl: Crawl) {
+export function scoreSummary(crawl: ProjectedCrawl) {
   const summary = record(crawl.score_summary);
   if (Object.keys(summary).length === 0) return null;
   const byKind = Object.entries(record(summary.by_page_kind)).map(([kind, raw]) => {
@@ -73,7 +74,7 @@ const iso = (value: Date | null) => value?.toISOString() ?? null;
  */
 export async function crawlProjection(
   db: Database,
-  crawl: Crawl,
+  crawl: ProjectedCrawl,
   options: { failureSummary?: FailureSummary | null } = {},
 ) {
   return projectCrawl(crawl, await crawlCounters(db, crawl), options);
@@ -94,7 +95,7 @@ function robotsChoice(crawl: Crawl) {
 
 /** The crawl contract; `counters` come from `crawlCounters`, the one chooser. */
 export function projectCrawl(
-  crawl: Crawl,
+  crawl: ProjectedCrawl,
   counters: Counters,
   options: { failureSummary?: FailureSummary | null } = {},
 ) {
@@ -115,7 +116,10 @@ export function projectCrawl(
     inventory_complete: crawl.inventory_complete,
     partial_reason: crawl.partial_reason,
     visible_url_count: crawl.admitted_url_count,
-    analyzed_count: crawl.analyzed_url_count,
+    // A running crawl's row is recounted only by its reconciles; its live counters lead.
+    analyzed_count: isActiveCrawl(crawl.status)
+      ? Math.max(crawl.analyzed_url_count, counters.analyzed)
+      : crawl.analyzed_url_count,
     failed_count: crawl.failed_url_count,
     discovery_requested_count: crawl.discovery_requested_count,
     analysis_requested_count: crawl.analysis_requested_count,

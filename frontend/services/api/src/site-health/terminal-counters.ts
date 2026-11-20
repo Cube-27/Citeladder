@@ -15,13 +15,17 @@ import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site
 
 import type { Database } from '../db/database.ts';
 import { isTerminal } from './reads/crawl.ts';
-import { taskCounters } from './reads/crawl-counters.ts';
-import type { Crawl } from './site-task.ts';
+import { taskCounters, type TaskCounters } from './reads/crawl-counters.ts';
+import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
 /** Persist the counters of a crawl whose in-memory status is already terminal. */
 export async function persistTerminalCounters(db: Database, crawl: Crawl): Promise<void> {
   if (!isTerminal(crawl)) throw new TypeError('Only a terminal crawl persists its counters');
-  const counters = await taskCounters(db, crawl);
+  await writeTerminalCounters(db, crawl, await taskCounters(db, crawl));
+}
+
+/** Write terminal counters counted before the caller took the crawl lock. */
+export async function writeTerminalCounters(db: Database, crawl: Crawl, counters: TaskCounters) {
   await db
     .updateTable('site_crawls')
     .set({ terminal_counters: JSON.stringify(counters) })
@@ -47,7 +51,7 @@ export async function persistLiveCounters(
   await db.connection().execute(async (conn) => {
     const crawl = await conn
       .selectFrom('site_crawls')
-      .selectAll()
+      .select(CRAWL_COLUMNS)
       .where('workspace_id', '=', target.workspace_id)
       .where('id', '=', target.crawl_id)
       .executeTakeFirst();

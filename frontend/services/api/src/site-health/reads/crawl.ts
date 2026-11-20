@@ -18,7 +18,7 @@ import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { isPageRerun, pageRerunSql } from '../page-rerun.ts';
-import type { Crawl } from '../site-task.ts';
+import { CRAWL_COLUMNS, type Crawl, type ProjectedCrawl } from '../site-task.ts';
 import { siteLevelRuleOf } from './rules.ts';
 
 const reads = policy.site_health.reads;
@@ -34,13 +34,19 @@ export type FailureSummary = {
 
 export const isTerminal = (crawl: Crawl) => isTerminalCrawl(crawl.status);
 
+const crawlRow = (db: Database, workspaceId: string, crawlId: string) =>
+  new WorkspaceScope(workspaceId).selectFrom(db, 'site_crawls').where('id', '=', crawlId);
+
 /** The crawl in the workspace, or 404. */
 export async function loadCrawl(db: Database, workspaceId: string, crawlId: string) {
-  const crawl = await new WorkspaceScope(workspaceId)
-    .selectFrom(db, 'site_crawls')
-    .selectAll()
-    .where('id', '=', crawlId)
-    .executeTakeFirst();
+  const crawl = await crawlRow(db, workspaceId, crawlId).select(CRAWL_COLUMNS).executeTakeFirst();
+  if (crawl === undefined) throw notFound('Crawl');
+  return crawl;
+}
+
+/** The crawl in the workspace with the score summary its projection renders, or 404. */
+export async function loadProjectedCrawl(db: Database, workspaceId: string, crawlId: string) {
+  const crawl = await crawlRow(db, workspaceId, crawlId).selectAll().executeTakeFirst();
   if (crawl === undefined) throw notFound('Crawl');
   return crawl;
 }
@@ -82,7 +88,7 @@ export async function currentSiteCrawl(
   db: Database,
   workspaceId: string,
   projectId: string,
-): Promise<Crawl | null> {
+): Promise<ProjectedCrawl | null> {
   const crawl = await currentSiteCrawlQuery(db, workspaceId, projectId)
     .selectAll()
     .executeTakeFirst();
@@ -134,11 +140,12 @@ function trackedPage(crawl: ViewCrawl, siteUrlId: RawBuilder<unknown>) {
  * crawl shows its progress. A page rerun shows its own page only. `page`
  * narrows the relation to one page reference for a lateral join.
  *
- * The read stays bounded by the tracked set, never the project's history: it
- * takes the crawl's own analyses and those of audits that began after it
- * (through `uq_site_page_analysis_current`), and looks further back, one page
- * at a time, only for a tracked page the crawl never analyzed. An earlier
- * audit cannot outrank the crawl's own analysis of a page.
+ * It reads sets, never a probe per page: a lateral per tracked page probed
+ * every unanalyzed page of a running crawl on each read. The crawl's own
+ * analyses come through `uq_site_page_analysis_current`; other audits are read
+ * only from the project's other crawls, those since the crawl began for every
+ * tracked page and earlier ones for a tracked page the crawl never analyzed.
+ * An earlier audit cannot outrank the crawl's own analysis of a page.
  */
 export function pageAuditsSql(crawl: ViewCrawl, page?: RawBuilder<unknown>) {
   const onePage = (column: string) => (page ? sql`and ${sql.ref(column)} = ${page}` : sql``);
@@ -153,35 +160,27 @@ export function pageAuditsSql(crawl: ViewCrawl, page?: RawBuilder<unknown>) {
     where x.workspace_id = ${crawl.workspace_id} and x.id = ${crawl.id})`;
   return sql`select distinct on (v.site_url_id) v.site_url_id, v.crawl_id, v.analysis_id
     from (
-      -- The crawl's own analyses, and the tracked pages' audits since it began.
+      -- The crawl's own analyses.
+      select a.site_url_id, a.crawl_id, a.id as analysis_id, a.created_at, ${began} as audit_at
+      from site_page_analyses a
+      where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id} and a.is_current
+        ${onePage('a.site_url_id')}
+      union all
+      -- Other audits of tracked pages: those since the crawl began, and earlier
+      -- ones for a page the crawl never analyzed. Led by the project's other
+      -- crawls, so a project with one crawl reads nothing here.
       select a.site_url_id, a.crawl_id, a.id as analysis_id, a.created_at, ${auditAt('c')} as audit_at
       from site_crawls c
-      join site_page_analyses a
-        on a.workspace_id = c.workspace_id and a.crawl_id = c.id and a.is_current
+      join site_page_analyses a on a.workspace_id = c.workspace_id and a.crawl_id = c.id
+        and a.is_current and a.finalized_at is not null
       where c.workspace_id = ${crawl.workspace_id} and c.project_id = ${crawl.project_id}
-        ${onePage('a.site_url_id')}
-        and (c.id = ${crawl.id} or (${auditAt('c')} >= ${began} and ${auditAt('c')} < ${before}))
-        and (c.id = ${crawl.id} or (
-          a.finalized_at is not null and ${trackedPage(crawl, sql.ref('a.site_url_id'))}))
-      union all
-      -- A tracked page the crawl never analyzed: its newest earlier audit.
-      select f.* from monitored_site_urls m
-      cross join lateral (
-        select a.site_url_id, a.crawl_id, a.id as analysis_id, a.created_at,
-          ${auditAt('c')} as audit_at
-        from site_page_analyses a
-        join site_crawls c on c.workspace_id = a.workspace_id and c.id = a.crawl_id
-        where a.workspace_id = m.workspace_id and a.project_id = m.project_id
-          and a.site_url_id = m.site_url_id and a.is_current and a.finalized_at is not null
-          and ${auditAt('c')} < ${before}
-        order by audit_at desc, a.created_at desc, a.id desc limit 1
-      ) f
-      where m.workspace_id = ${crawl.workspace_id} and m.project_id = ${crawl.project_id}
-        and m.active and m.fill_order is not null ${onePage('m.site_url_id')}
-        and not exists (
-          select 1 from site_page_analyses own
-          where own.workspace_id = m.workspace_id and own.crawl_id = ${crawl.id}
-            and own.site_url_id = m.site_url_id and own.is_current)
+        and c.id <> ${crawl.id} and ${auditAt('c')} < ${before} ${onePage('a.site_url_id')}
+        and ${trackedPage(crawl, sql.ref('a.site_url_id'))}
+        -- Uncorrelated, so the crawl's own pages are hashed once.
+        and (${auditAt('c')} >= ${began} or a.site_url_id not in (
+          select own.site_url_id from site_page_analyses own
+          where own.workspace_id = ${crawl.workspace_id} and own.crawl_id = ${crawl.id}
+            and own.is_current))
     ) v
     order by v.site_url_id, v.audit_at desc, v.created_at desc, v.analysis_id desc`;
 }
@@ -216,22 +215,24 @@ export function latestPagesQuery(db: Database, crawl: ViewCrawl) {
  * findings (architecture and sitewide links), which only a site crawl
  * evaluates. A page rerun shows its own current issues. The crawls the view
  * names bound the read to their current issues (`ix_site_issues_current`).
+ * `view` names a CTE holding `pageAuditsSql(crawl)` when the statement reads
+ * the view more than once.
  */
-export function viewIssuesSql(crawl: ViewCrawl, alias = 'i') {
+export function viewIssuesSql(crawl: ViewCrawl, alias = 'i', view?: RawBuilder<unknown>) {
   const ref = (column: string) => sql.ref(`${alias}.${column}`);
   const own = sql`${ref('workspace_id')} = ${crawl.workspace_id} and ${ref('crawl_id')} = ${crawl.id}
     and ${ref('is_current')}`;
   if (isPageRerun(crawl)) return own;
   const siteLevel = siteLevelRuleOf(alias);
-  const view = pageAuditsSql(crawl);
+  const pages = view ?? sql`(${pageAuditsSql(crawl)})`;
   return sql`${ref('workspace_id')} = ${crawl.workspace_id} and ${ref('project_id')} = ${crawl.project_id}
     and ${ref('is_current')}
     and ${ref('crawl_id')} = any(array(
-      select ${crawl.id}::uuid union select v.crawl_id from (${view}) v))
+      select ${crawl.id}::uuid union select v.crawl_id from ${pages} v))
     and (
       (${siteLevel} and ${ref('crawl_id')} = ${crawl.id})
       or (not ${siteLevel} and (${ref('crawl_id')}, ${ref('site_url_id')}) in (
-        select v.crawl_id, v.site_url_id from (${view}) v)))`;
+        select v.crawl_id, v.site_url_id from ${pages} v)))`;
 }
 
 /**
@@ -294,7 +295,7 @@ export async function dashboardCrawl(
   workspaceId: string,
   projectId: string,
   crawlId: string | null,
-): Promise<Crawl | null> {
+): Promise<ProjectedCrawl | null> {
   if (crawlId !== null) return loadProjectCrawl(db, workspaceId, projectId, crawlId);
   const crawls = siteCrawls(db, workspaceId, projectId).selectAll();
   const active = await crawls.where('status', 'in', ACTIVE_CRAWL_STATUSES).executeTakeFirst();
