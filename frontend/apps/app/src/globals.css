@@ -536,6 +536,8 @@
   --color-data-other: oklch(65% 0 0);
   --color-state-hover: rgb(255 255 255 / 4%);
   --color-state-selected: rgb(255 255 255 / 7%);
+  --nav-current-fill: var(--color-state-selected);
+  --nav-current-edge: transparent;
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   /* Black barely shows on a near-black ground, so an overlay also reads by a
@@ -677,7 +679,7 @@
   /* The token table in docs/design.md. The older role names bind onto it:
      chrome is the ground, surface the panel, well the raised fill, rule the
      line, control-line the strong line. */
-  --color-ground: #f4f5f7;
+  --color-ground: #eceef2;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
@@ -689,7 +691,7 @@
   --field-focus-edge: var(--color-control-line);
   --color-control-edge: var(--color-rule);
   --color-ink: #111214;
-  --color-ink-2: #62666d;
+  --color-ink-2: #5f636a;
   /* The primary button's hover: its ink fill one step lighter. */
   --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);
@@ -783,7 +785,9 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: var(--color-state-selected);
+  /* The current nav row: lifted onto the panel's white with a hairline. */
+  --nav-current-fill: var(--color-panel);
+  --nav-current-edge: var(--color-rule);
   --panel-inset: 0px;
   /* What a fitted page (a thread, a workbench) leaves for its own scrolling
      region: the panel's inset, the header (as drawn: below `rail`
@@ -1601,26 +1605,11 @@ a.focus-ring:active .type-caption {
   outline: none;
 }
 
-/* Containers. On the website a container is `surface` with one 1px `line`
-   border. In the app the signed-in shell is one surface: the ground and the
-   surface are one colour, and sections, lede text, figures and empty states
-   sit on it with no box (owner, 2026-11-18). A table is its own `well`
-   shell (below); charts and `framed` sections take a light `rule` frame with
-   no fill; clickable cards,
-   dialogs, drawers and menus keep their box. What sits inside a container
-   never draws a second frame, and an inset (`.surface-inset`: a neutral
-   callout, an inline empty state) is the sunken fill. */
-:root:not([data-public-surface]):not([data-theme='dark']) [data-app-surface] {
-  --color-ground: var(--color-surface);
-}
-/* Dark keeps its near-black ground and draws cards, table bodies and control
-   fills on it, as light does (owner, 2026-11-19). Overlays portal outside the
-   shell and keep their lighter surface. */
-:root[data-theme='dark']:not([data-public-surface]) [data-app-surface] {
-  --color-surface: var(--color-ground);
-  --table-ground: var(--color-ground);
-}
-
+/* Containers. Every framed surface inside the app's panel (tables, strips,
+   setting rows, slips, charts) is the panel's colour in both themes; only a
+   table's head band, hover and selected fills and overlays differ (owner,
+   2026-11-20). What sits inside a container never draws a second frame, and
+   an inset (`.surface-inset`: quoted or raw material) is the sunken fill. */
 .table-frame {
   border: 1px solid var(--color-rule);
 }

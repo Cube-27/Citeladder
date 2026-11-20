@@ -206,8 +206,11 @@ export function SidebarNavGroup({
   );
 }
 
+/** The current row's fill and its hairline (light only). */
+const CURRENT_FILL =
+  'bg-[var(--nav-current-fill)] shadow-[inset_0_0_0_1px_var(--nav-current-edge)]';
 /** The current row's tile, the accent mark at its start and `ink` at 500. */
-const CURRENT_TILE = 'bg-[var(--nav-current-fill)] text-ink before:bg-accent';
+const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink before:bg-accent');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 /** A nav row at rest stays `ink`; only group labels and the mode switch are `ink-2` (owner, 2026-11-19). */
 const NAV_AT_REST = 'text-ink hover:overlay-hover';
@@ -269,9 +272,9 @@ export function sidebarRailButtonClasses(current: boolean) {
 
 /**
  * The Dashboard | Agent switch, the segmented control: a `rule` frame one
- * control tall, segments 2 inside it, the current one on `state-selected`. In
- * the rail it is two stacked rail buttons, the current one on the tile
- * without the mark.
+ * control tall, segments 2 inside it, the current one on the current row's
+ * fill. In the rail it is two stacked rail buttons, the current one on the
+ * tile without the mark.
  */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
@@ -281,12 +284,12 @@ export function sidebarModeTrackClasses(rail: boolean) {
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
-  if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
+  if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
   // Labelled, a segment is its word (no icon), the two sharing the width;
   // wider text spacing ends in an ellipsis.
   return cn(
     'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-    current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST,
+    current ? cn('text-ink', CURRENT_FILL) : AT_REST,
   );
 }
 
@@ -348,7 +351,7 @@ export function SidebarIdentButton({
       aria-current={current ? 'page' : undefined}
       className={cn(
         'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:w-full labelled:h-[var(--control-lg)] labelled:justify-start labelled:px-2 rounded-control flex h-[var(--rail-button)] w-[var(--rail-button)] min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
-        current && 'bg-[var(--nav-current-fill)]',
+        current && CURRENT_FILL,
         className,
       )}
       {...props}

@@ -22,16 +22,16 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#08090a`                | `#f4f5f7`          | window and sidebar                   |
+| `ground`         | `#08090a`                | `#eceef2`          | window and sidebar                   |
 | `panel`          | `#0f1011`                | `#ffffff`          | the inset content panel              |
 | `raised`         | `#151618`                | `#f7f8f9`          | secondary buttons, table head, menus |
 | `raised-2`       | `#1c1d20`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
-| `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | current nav row, selected segment    |
+| `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
 | `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | focused field edge (`line-strong`)   |
 | `ink`            | `#f7f8f8`                | `#111214`          | text                                 |
-| `ink-2`          | `#8a8f98`                | `#62666d`          | secondary text, icons                |
+| `ink-2`          | `#8a8f98`                | `#5f636a`          | secondary text, icons                |
 | `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" only                     |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
@@ -64,8 +64,9 @@ the job, never a size.
 ## Spacing, size and shape
 
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
-- **Controls:** 28 high; 44 below 900px or under a coarse pointer. Icons 16 in
-  `ink-2`. Every target is at least 24×24.
+- **Controls:** 28 high; 44 below 900px or under a coarse pointer, and on
+  sign-in, account and setup pages (the website's height, `control-lg`).
+  Icons 16 in `ink-2`. Every target is at least 24×24.
 - **Radii:** tag 4 (`rounded-mark`), control 6 (`rounded-control`), panel,
   table and strip 8 (`rounded-card`), overlay 12 (`rounded-overlay`); `full`
   only for avatars, dots and switch tracks.
@@ -107,7 +108,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon, collapse
   toggle), the Dashboard | Agent segmented control, 28-high nav rows (current
-  row on `state-selected` with a 2px accent mark), 12px group labels, foot
+  row lifted onto `panel` with a `rule` hairline in light, `state-selected` in
+  dark, and a 2px accent mark), 12px group labels, foot
   with Integrations and the account. The main column is the inset panel: 8
   from the window edges (none on the sidebar side), `rule` edge, radius 8,
   `panel` fill, the page's only scroller. Below 900 the panel fills the
@@ -179,7 +181,10 @@ One entry per family; wave 2 fills each from the layouts above.
   a line. A score is a printed figure.
 - **Containers.** One section head (16/24 at 500, actions right, body 12
   below) and one framed surface (`SLIP_FACE`: `rule` edge, radius 8,
-  `panel`). A framed thing inside a container drops its own edge.
+  `panel`). A framed thing inside a container drops its own edge. Inside the
+  panel every framed surface (tables, strips, setting rows, cards, charts)
+  is `panel` in both themes; only a table's head band, hover and selected
+  fills, insets for quoted or raw material, and overlays take another fill.
 - **Lists and rows.** A list row matches a table row: 40 high, hairlines
   between rows, `state-hover` when it opens something.
 - **Overlays** (dialogs, drawers, command palette). `panel` with a `rule`
