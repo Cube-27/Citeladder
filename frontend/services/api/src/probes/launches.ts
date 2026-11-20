@@ -32,6 +32,7 @@ function launchRows(db: Database, scope: Scope, limit: number, labelled: boolean
         exists(
           selectFrom('probe_labellings as l')
             .select('l.id')
+            .whereRef('l.workspace_id', '=', 'a.workspace_id')
             .whereRef('l.launch_id', '=', 'a.launch_id')
             .where('l.outcome', '=', 'labelled'),
         ),
@@ -41,7 +42,9 @@ function launchRows(db: Database, scope: Scope, limit: number, labelled: boolean
     .orderBy(sql`max(a.created_at)`, 'desc')
     .limit(limit);
   return probeAudits(db, scope)
-    .leftJoin('probe_labellings as l', 'l.launch_id', 'a.launch_id')
+    .leftJoin('probe_labellings as l', (join) =>
+      join.onRef('l.workspace_id', '=', 'a.workspace_id').onRef('l.launch_id', '=', 'a.launch_id'),
+    )
     .select([
       'a.id',
       'a.launch_id',

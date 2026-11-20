@@ -165,7 +165,7 @@ function ObjectionTable({
 /** A group's cited pages; a group this probe did not raise has none to count. */
 function Sources({ sources }: Readonly<{ sources: Group['sources'] }>) {
   if (sources === null) return <Absence state="not_applicable" label="Not raised" />;
-  return sources ? sources : <Absence state="none" label="No sources" />;
+  return sources || <Absence state="none" label="No sources" />;
 }
 
 const PAGE_COLUMNS: readonly DataTableColumn[] = [

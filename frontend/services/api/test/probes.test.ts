@@ -238,11 +238,13 @@ async function answered(t: Tenant, auditId: string) {
   await db
     .updateTable('audit_tasks')
     .set({ status: 'succeeded', answer_text: 'An answer.', completed_at: new Date() })
+    .where('workspace_id', '=', t.workspaceId)
     .where('audit_id', '=', auditId)
     .execute();
   await db
     .updateTable('audits')
     .set({ completed_count: 9, completed_at: new Date() })
+    .where('workspace_id', '=', t.workspaceId)
     .where('id', '=', auditId)
     .execute();
   await ended(t, auditId, 'completed');
@@ -526,6 +528,30 @@ describe('probe labelling and reads', () => {
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
     expect(market.probe.markets.map((row) => row.country_code)).toEqual(['US']);
+  });
+
+  it('labels each market in its own calls, a later market seeing the groups an earlier one named', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
+    await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
+    const { quote } = await probeStatus(db, t, runtime);
+    const [usId, brId] = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
+    await answered(t, usId!);
+    await answered(t, brId!);
+    const sent: string[] = [];
+    await label(
+      t,
+      labeller(first, async (body) => {
+        sent.push(body);
+      }),
+    );
+    const objections = sent.filter((body) => body.includes('not choose'));
+    expect(objections.map((body) => body.includes('(none yet)'))).toEqual([true, false]);
+    const market = await probeMarket(db, t);
+    if (market.state !== 'value') throw new Error('expected a labelled probe');
+    expect(new Set(market.probe.markets.map((row) => row.country_code))).toEqual(
+      new Set(['BR', 'US']),
+    );
   });
 
   it('keeps a probe labelled when a theme and a group are deleted while its calls run', async () => {

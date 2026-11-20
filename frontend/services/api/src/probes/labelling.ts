@@ -1,6 +1,6 @@
 /**
  * The `probe_labelling` analytics executor: once every market run of a probe
- * launch ended, a few bounded model calls label all its answers together
+ * launch ended, one task labels all its answers in bounded per-market calls
  * (known-for themes, objection groups, the brands each theme answer names).
  * The calls are paid for by the AI credits each answer held at admission, so
  * they are metered as included.
@@ -80,10 +80,12 @@ async function loadLaunch(db: Database, task: QueueTask, scope: Scope) {
   return { launchId, configuration: audits[0]?.configuration, answers };
 }
 
-async function labelled(db: Database, launchId: string) {
+async function labelled(db: Database, scope: Scope, launchId: string) {
   const row = await db
     .selectFrom('probe_labellings')
     .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
     .where('launch_id', '=', launchId)
     .executeTakeFirst();
   return row !== undefined;
@@ -125,47 +127,54 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
   const { brand, tracked: roster } = probeRoster(launch.configuration);
   const [themes, groups] = await Promise.all([listThemes(db, scope), listGroups(db, scope)]);
   const calls: ModelCall[] = [];
-  const of = (question: string): LabelAnswer[] =>
-    launch.answers.filter((answer) => answer.question.question === question);
   const max = probes.max_items_per_answer;
-  const known = of('known_for');
-  const objections = of('objection');
-  const labels: Labels = {
-    known: known.length
-      ? await ask(
-          gateway,
-          calls,
-          {
-            user: knownForRequest(probes, {
-              brand,
-              fallback: policy.perception.project_themes.fallback,
-              themes,
-              answers: known,
-            }),
-            schema: covering(knownForOutput, known.length),
-          },
-          (value) => mapKnownFor(value, known, { themes, maxItems: max }),
-        )
-      : [],
-    objections: objections.length
-      ? await ask(
-          gateway,
-          calls,
-          {
-            user: objectionRequest(probes, { brand, groups, answers: objections }),
-            schema: covering(objectionOutput, objections.length),
-          },
-          (value) =>
-            mapObjections(value, objections, {
-              groups,
-              maxItems: max,
-              maxNewGroups: probes.max_new_groups_per_probe,
-              nameMaxChars: probes.group_name_max_chars,
-            }),
-        )
-      : { items: [], newGroups: [] },
-    themes: [],
-  };
+  const labels: Labels = { known: [], objections: { items: [], newGroups: [] }, themes: [] };
+  // One known-for and one objection call per market run keeps each request one
+  // market's size; a later market sees the groups earlier ones named (AV-28).
+  for (const run of Map.groupBy(launch.answers, (answer) => answer.auditId).values()) {
+    const of = (question: string): LabelAnswer[] =>
+      run.filter((answer) => answer.question.question === question);
+    const known = of('known_for');
+    const objections = of('objection');
+    if (known.length) {
+      const request = {
+        user: knownForRequest(probes, {
+          brand,
+          fallback: policy.perception.project_themes.fallback,
+          themes,
+          answers: known,
+        }),
+        schema: covering(knownForOutput, known.length),
+      };
+      const accept = (value: z.infer<typeof knownForOutput>) =>
+        mapKnownFor(value, known, { themes, maxItems: max });
+      labels.known.push(...(await ask(gateway, calls, request, accept))); // NOSONAR -- One call per market, in order.
+    }
+    if (objections.length) {
+      const named = labels.objections.newGroups;
+      const request = {
+        user: objectionRequest(probes, {
+          brand,
+          groups: [...groups, ...named.map((name) => ({ name }))],
+          answers: objections,
+        }),
+        schema: covering(objectionOutput, objections.length),
+      };
+      const accept = (value: z.infer<typeof objectionOutput>) =>
+        mapObjections(value, objections, {
+          groups,
+          named,
+          maxItems: max,
+          maxNewGroups: probes.max_new_groups_per_probe,
+          nameMaxChars: probes.group_name_max_chars,
+        });
+      const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- Each market sees the groups the earlier ones named.
+      labels.objections = {
+        items: [...labels.objections.items, ...mapped.items],
+        newGroups: mapped.newGroups,
+      };
+    }
+  }
   // One call per theme question: each market's question names its country.
   const byQuestion = Map.groupBy(
     launch.answers.filter((answer) => answer.question.question === 'theme'),
@@ -298,7 +307,7 @@ export function probeLabelling(
   return async (task, { db, checkCancelled }) => {
     const scope = { workspaceId: task.workspace_id, projectId: await taskProject(db, task) };
     const launch = await loadLaunch(db, task, scope);
-    if (await labelled(db, launch.launchId)) return;
+    if (await labelled(db, scope, launch.launchId)) return;
     const settle = (outcome: Outcome, calls: ModelCall[] = []) => ({
       error: null,
       persist: persist(scope, launch, outcome, calls),

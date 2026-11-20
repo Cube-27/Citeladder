@@ -43,6 +43,7 @@ export async function labelEndedLaunch(
     .selectFrom('audits')
     .select('status')
     .where('workspace_id', '=', audit.workspaceId)
+    .where('project_id', '=', audit.projectId)
     .where('launch_id', '=', audit.launchId)
     .execute();
   const terminal = policy.audits.constants.audit_terminal_statuses;

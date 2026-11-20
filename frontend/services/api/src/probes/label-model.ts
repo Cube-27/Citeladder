@@ -85,7 +85,7 @@ export function knownForRequest(
 
 export function objectionRequest(
   policy: ProbePolicy,
-  input: { brand: string; groups: readonly Named[]; answers: readonly LabelAnswer[] },
+  input: { brand: string; groups: readonly { name: string }[]; answers: readonly LabelAnswer[] },
 ) {
   return render(policy.objection_template, {
     '{brand}': input.brand,
@@ -149,15 +149,23 @@ export type GroupRef = { kind: 'existing'; id: string } | { kind: 'new'; name: s
 /**
  * Reasons onto the project's objection groups (AV-28). A name an existing
  * group has maps onto it; any other becomes a new group, at most
- * `maxNewGroups` per probe, and reasons past that cap are dropped.
+ * `maxNewGroups` per probe, and reasons past that cap are dropped. `named`
+ * holds the new groups this probe's earlier calls created; `newGroups` returns
+ * them with this call's.
  */
 export function mapObjections(
   output: z.infer<typeof objectionOutput>,
   answers: readonly LabelAnswer[],
-  input: { groups: readonly Named[]; maxItems: number; maxNewGroups: number; nameMaxChars: number },
+  input: {
+    groups: readonly Named[];
+    named?: readonly string[];
+    maxItems: number;
+    maxNewGroups: number;
+    nameMaxChars: number;
+  },
 ) {
   const existing = idsByName(input.groups);
-  const created = new Map<string, string>();
+  const created = new Map((input.named ?? []).map((name) => [nameKey(name), name]));
   const refOf = (raw: string): GroupRef | null => {
     const name = Array.from(cleanName(raw)).slice(0, input.nameMaxChars).join('');
     if (!name) return null;

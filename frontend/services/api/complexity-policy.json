@@ -134,7 +134,6 @@
       "services/api/src/traffic/projection.ts::foldGa4": 13,
       "services/api/src/visibility/prompts.ts::enrichOutcomes": 17,
       "services/api/src/visibility/run-sets.ts::runSetComparisonStatus": 14,
-      "services/api/src/visibility/sources.ts::attachPageLinks": 15,
       "services/api/src/visibility/sources.ts::getVisibilitySources": 19,
       "services/api/src/visibility/sources.ts::sourcePosition": 15,
       "services/api/src/web-evidence/acquisition.ts::robotsPolicy": 15,

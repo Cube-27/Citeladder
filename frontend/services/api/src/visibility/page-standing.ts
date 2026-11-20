@@ -59,7 +59,11 @@ export function pageStanding(
 export async function pageStandings(db: Database, scope: ProjectScope, hashes: readonly string[]) {
   const pages = await db
     .selectFrom('source_pages as page')
-    .leftJoin('source_page_snapshots as snapshot', 'snapshot.id', 'page.latest_snapshot_id')
+    .leftJoin('source_page_snapshots as snapshot', (join) =>
+      join
+        .onRef('snapshot.id', '=', 'page.latest_snapshot_id')
+        .onRef('snapshot.workspace_id', '=', 'page.workspace_id'),
+    )
     .select([
       'page.id',
       'page.url_hash',

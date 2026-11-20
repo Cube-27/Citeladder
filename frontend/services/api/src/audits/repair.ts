@@ -15,6 +15,18 @@ import { PROMPT_RUNS, reserveTaskFunding } from './prompt-runs.ts';
 export const repairInput = auditRepairRequestSchema;
 const denied = (message: string) => new ApiError(409, message);
 
+/** A terminal audit that is not a probe run: a probe's answers are read per launch, so a new probe is its retry. */
+function repairable<Audit extends { audit_scope: string; status: string }>(
+  parent: Audit | undefined,
+) {
+  if (!parent) throw notFound('Audit');
+  if (parent.audit_scope === policy.probes.audit_scope)
+    throw denied('Run a new probe instead of repairing one');
+  if (!auditPolicy.constants.audit_terminal_statuses.includes(parent.status))
+    throw denied('Only a terminal audit can be repaired');
+  return parent;
+}
+
 /** A repair is an immutable BYOK child of selected failed frozen slots, never a replay of paid dispatch. */
 export function createRepairAudit(
   db: Database,
@@ -28,19 +40,15 @@ export function createRepairAudit(
     await requireWorkspaceAccess(trx, workspaceId);
     // The same enqueue lock as a launch, taken before any audit row lock.
     await lockAuditEnqueue(trx, workspaceId);
-    const parent = await trx
-      .selectFrom('audits')
-      .selectAll()
-      .where('workspace_id', '=', workspaceId)
-      .where('id', '=', auditId)
-      .forUpdate()
-      .executeTakeFirst();
-    if (!parent) throw notFound('Audit');
-    // A probe's answers are read per launch; a new probe is its retry.
-    if (parent.audit_scope === policy.probes.audit_scope)
-      throw denied('Run a new probe instead of repairing one');
-    if (!auditPolicy.constants.audit_terminal_statuses.includes(parent.status))
-      throw denied('Only a terminal audit can be repaired');
+    const parent = repairable(
+      await trx
+        .selectFrom('audits')
+        .selectAll()
+        .where('workspace_id', '=', workspaceId)
+        .where('id', '=', auditId)
+        .forUpdate()
+        .executeTakeFirst(),
+    );
     const prompts = await trx
       .selectFrom('audit_prompt_snapshots')
       .selectAll()
