@@ -1,10 +1,11 @@
-/* Experiment (owner, 2026-11-20): the home hero's backdrop, faint vertical
-   scan lines, a light beam rising from behind the product image and a glow
-   at the left edge, under a fine grain. The product image loses its own
-   panel and sits on it. Colours are the site-beam tokens in globals.css. */
+/* Experiment (owner, 2026-11-20): the home hero's backdrop. A near-black
+   ground with soft, uneven vertical bands; a broad warm haze rising from the
+   product image's top edge with a soft light column in it; an orange glow up
+   the left edge; a fine grain. The product image loses its own panel and
+   sits on it. Colours are the site-beam tokens in globals.css. */
 
 .cl-lhero {
-  --lb-grain: 0.06;
+  --lb-grain: 0.05;
 
   position: relative;
   isolation: isolate;
@@ -12,10 +13,10 @@
 }
 
 :root[data-theme='dark'] .cl-lhero {
-  --lb-grain: 0.1;
+  --lb-grain: 0.08;
 }
 
-/* Scan lines at two uneven pitches over the whole hero, then grain. */
+/* Soft bands at four unrelated pitches, so no rhythm shows; stronger lower. */
 .cl-lhero::before,
 .cl-lhero::after {
   position: absolute;
@@ -27,13 +28,31 @@
 
 .cl-lhero::before {
   background:
-    repeating-linear-gradient(90deg, var(--color-site-scanline) 0 1px, transparent 1px 6px),
     repeating-linear-gradient(
       90deg,
-      transparent 0 22px,
-      var(--color-site-scanline) 22px 23px,
-      transparent 23px 41px
+      transparent 0 42px,
+      var(--color-site-scanline) 44.5px,
+      transparent 47px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 76px,
+      var(--color-site-scanline) 79.5px,
+      transparent 83px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 123px,
+      var(--color-site-scanline) 127px,
+      transparent 131px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 189px,
+      var(--color-site-scanline) 194px,
+      transparent 199px
     );
+  mask-image: linear-gradient(transparent -30%, currentcolor 45%);
 }
 
 .cl-lhero::after {
@@ -43,27 +62,34 @@
   opacity: var(--lb-grain);
 }
 
-/* The light rises from the product image's top edge into the copy: a thin
-   bright core, its beam, a pool round its foot, the left edge's glow and a
-   wide warm wash, fading out under the image's top. */
+/* The light, anchored to the product image's top edge and as wide as the
+   viewport: a soft column and its pool, the broad haze, and the left edge's
+   glow. Its foot fades out behind the image. */
 .cl-lhero-frame {
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .cl-lhero .cl-lhero-frame {
+    margin-top: 176px;
+  }
 }
 
 .cl-lhero-frame::before {
   position: absolute;
   z-index: -1;
-  right: -50vw;
-  bottom: calc(100% - 160px);
-  left: -50vw;
-  height: 760px;
+  bottom: calc(100% - 200px);
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: 980px;
   background:
-    radial-gradient(0.35% 70% at 58% 100%, var(--color-site-beam-core), transparent),
-    radial-gradient(1.6% 85% at 58% 100%, var(--color-site-beam), transparent),
-    radial-gradient(9% 26% at 58% 100%, var(--color-site-beam-glow), transparent),
-    radial-gradient(14% 42% at 25% 100%, var(--color-site-beam-glow), transparent),
-    radial-gradient(60% 45% at 50% 100%, var(--color-site-beam-wash), transparent);
-  mask-image: linear-gradient(to top, transparent, currentcolor 160px);
+    radial-gradient(0.8% 42% at 57% 100%, var(--color-site-beam-core), transparent),
+    radial-gradient(2.4% 58% at 57% 100%, var(--color-site-beam), transparent),
+    radial-gradient(13% 20% at 57% 100%, var(--color-site-beam-glow), transparent),
+    radial-gradient(26px 38% at 0% 100%, var(--color-site-beam-glow), transparent),
+    radial-gradient(120px 48% at 0% 100%, var(--color-site-beam-wash), transparent),
+    radial-gradient(80% 38% at 55% 100%, var(--color-site-beam-wash), transparent);
+  mask-image: linear-gradient(to top, transparent, currentcolor 200px);
   content: '';
   pointer-events: none;
 }

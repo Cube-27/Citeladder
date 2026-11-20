@@ -1072,11 +1072,11 @@
   --color-spot-halo: oklch(60% 0.15 40 / 22%);
   --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
   --color-spot-vignette: oklch(0% 0 0 / 55%);
-  --color-site-scanline: oklch(100% 0 0 / 3.5%);
-  --color-site-beam: oklch(60% 0.16 48 / 50%);
-  --color-site-beam-core: oklch(80% 0.14 60 / 65%);
-  --color-site-beam-glow: oklch(50% 0.15 45 / 40%);
-  --color-site-beam-wash: oklch(40% 0.11 45 / 22%);
+  --color-site-scanline: oklch(100% 0 0 / 2.5%);
+  --color-site-beam: oklch(62% 0.15 50 / 45%);
+  --color-site-beam-core: oklch(74% 0.13 58 / 40%);
+  --color-site-beam-glow: oklch(60% 0.16 48 / 60%);
+  --color-site-beam-wash: oklch(38% 0.09 45 / 55%);
   /* Deep, low-glow warm on near-black with light text. */
   --color-site-band-from: oklch(17% 0.03 45);
   --color-site-band-mid: oklch(13% 0.018 42);
