@@ -39,6 +39,7 @@ import {
   currentSiteCrawl,
   isTerminal,
   loadCrawl,
+  loadProjectedCrawl,
   rootFailure,
 } from '../site-health/reads/crawl.ts';
 import { crawlProjection } from '../site-health/reads/crawl-projection.ts';
@@ -50,7 +51,8 @@ import {
   tableExport,
   type TableView,
 } from '../site-health/reads/exports.ts';
-import { issueDetail, issueHistory, issues } from '../site-health/reads/issues.ts';
+import { issueHistory } from '../site-health/reads/issue-history.ts';
+import { issueDetail, issues } from '../site-health/reads/issues.ts';
 import { PAGE_SORTS } from '../site-health/reads/page-rows.ts';
 import { inventory, pageDetail, pages } from '../site-health/reads/pages.ts';
 import {
@@ -227,7 +229,7 @@ export const siteHealthRoutes = [
     params: { path: crawlPath, query: {} },
     response: siteCrawlSchema,
     async handle({ c, db }, { path }) {
-      const crawl = await loadCrawl(db, c.get('workspace').workspaceId, path.crawl_id);
+      const crawl = await loadProjectedCrawl(db, c.get('workspace').workspaceId, path.crawl_id);
       const root = await rootFailure(db, crawl);
       return siteCrawlSchema.parse(
         await crawlProjection(db, crawl, { failureSummary: root.summary }),

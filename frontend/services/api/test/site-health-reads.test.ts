@@ -985,10 +985,18 @@ describe('issue catalog', () => {
       'technical.indexable',
       'technical.title_present',
     ]);
-    // The monitored count follows the live selection beside the persisted catalog.
+    // The persisted catalog keeps its publication's monitored count; a filtered read counts now.
     await monitor(seed, product.id);
-    const monitored = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
-    expect(monitored.summary.monitored_affected_url_count).toBe(1);
+    const kept = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
+    const live = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues?severity=high`,
+      siteIssuesPageSchema,
+    );
+    expect([
+      kept.summary.monitored_affected_url_count,
+      live.summary.monitored_affected_url_count,
+    ]).toEqual([0, 1]);
     // Another workspace never reaches the persisted catalog.
     const outsider = await fixtures.crawl();
     expect((await get(outsider, `/site-crawls/${seed.crawlId}/issues`)).status).toBe(404);

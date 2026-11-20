@@ -32,18 +32,21 @@ const FIXED_STATES = ['marked_fixed', 'resolved'];
  */
 const issuePagesFrom = (crawl: Crawl) => {
   const began = new Date(crawl.started_at ?? crawl.created_at);
+  // The view in one CTE: the statement reads it five times.
+  const view = sql`latest_audits`;
   return sql`
   from (
+    with latest_audits as materialized (${pageAuditsSql(crawl)})
     select v.site_url_id, v.rule_id, v.finding_class
-    from site_issues v where ${viewIssuesSql(crawl, 'v')}
+    from site_issues v where ${viewIssuesSql(crawl, 'v', view)}
     union
     select a.site_url_id, r.rule_id, g.finding_class
-    from (${pageAuditsSql(crawl)}) a
+    from latest_audits a
     join site_issue_states r on r.workspace_id = ${crawl.workspace_id}
       and r.project_id = ${crawl.project_id} and r.site_url_id = a.site_url_id
       and r.source_crawl_id = a.crawl_id and r.state = 'resolved' and r.resolved_at > ${began}
     join (select distinct g.rule_id, g.finding_class from site_issues g
-      where ${viewIssuesSql(crawl, 'g')}) g on g.rule_id = r.rule_id
+      where ${viewIssuesSql(crawl, 'g', view)}) g on g.rule_id = r.rule_id
   ) i
   left join site_issue_states s on s.workspace_id = ${crawl.workspace_id}
     and s.project_id = ${crawl.project_id} and s.site_url_id = i.site_url_id and s.rule_id = i.rule_id

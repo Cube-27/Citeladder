@@ -16,7 +16,7 @@ import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site
 import type { Database } from '../db/database.ts';
 import { isTerminal } from './reads/crawl.ts';
 import { taskCounters } from './reads/crawl-counters.ts';
-import type { Crawl } from './site-task.ts';
+import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
 /** Persist the counters of a crawl whose in-memory status is already terminal. */
 export async function persistTerminalCounters(db: Database, crawl: Crawl): Promise<void> {
@@ -47,7 +47,7 @@ export async function persistLiveCounters(
   await db.connection().execute(async (conn) => {
     const crawl = await conn
       .selectFrom('site_crawls')
-      .selectAll()
+      .select(CRAWL_COLUMNS)
       .where('workspace_id', '=', target.workspace_id)
       .where('id', '=', target.crawl_id)
       .executeTakeFirst();

@@ -18,6 +18,7 @@ import { isTerminal } from './reads/crawl.ts';
 import { crawlProjection } from './reads/crawl-projection.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import { persistTerminalCounters } from './terminal-counters.ts';
+import { analyzedPageCount } from './crawl-assessment.ts';
 
 export async function listCrawls(
   db: Database,
@@ -70,12 +71,15 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
     if (!crawl) throw notFound('Crawl');
     if (isTerminal(crawl)) return;
     const now = new Date();
+    // In-flight page commits hold the crawl share-locked, so this count is final.
+    const analyzed = await analyzedPageCount(trx, crawl);
     await trx
       .updateTable('site_crawls')
       .set({
         status: 'cancelled',
         completed_at: now,
         updated_at: now,
+        analyzed_url_count: analyzed,
         ...(['pending', 'running', 'stopped'].includes(crawl.discovery_status)
           ? { discovery_status: 'cancelled' }
           : {}),

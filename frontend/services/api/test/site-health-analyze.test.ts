@@ -218,9 +218,9 @@ describe('analyze acquisition', () => {
       .execute();
     const canonical = issues.find((row) => row.rule_id === 'technical.canonical_present');
     expect(canonical?.is_current).toBe(true); // Current while the crawl runs (CO-7).
-
     const after = await crawl(seed);
-    expect(after).toMatchObject({ status: 'running', analyzed_url_count: 1 });
+    expect(after).toMatchObject({ status: 'running', analyzed_url_count: 0 });
+    expect((await crawlCounters(db, after)).analyzed).toBe(1);
     expect(after.started_at).not.toBeNull();
     const url = await db
       .selectFrom('site_urls')
@@ -257,7 +257,7 @@ describe('analyze acquisition', () => {
       [discovered.artifactId, false],
       [discovered.artifactId, true],
     ]);
-    expect((await crawl(seed)).analyzed_url_count).toBe(2);
+    expect((await crawlCounters(db, await crawl(seed))).analyzed).toBe(1); // One page, two commits.
   });
 
   it.each(['product', 'category', 'other'])(

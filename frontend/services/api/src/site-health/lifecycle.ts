@@ -1,6 +1,6 @@
 /**
  * A crawl goes terminal here and in its `finalize` task, nowhere else. Every
- * entry point holds the crawl row FOR NO KEY UPDATE and short-circuits on a
+ * entry point writes under the crawl row FOR NO KEY UPDATE and short-circuits on a
  * crawl that is no longer active (a stopped one only recounts), so the
  * per-task reconcile, terminal lease recovery, the stalled backstop and the
  * overdue watchdog are idempotent and safe to run concurrently. A drained
@@ -20,8 +20,14 @@ import { pageRerunSql } from './page-rerun.ts';
 import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { publishRunningIssues } from './issue-catalog.ts';
-import { refreshLiveScoreSummary, refreshRunningScoreSummary } from './snapshot.ts';
-import type { Crawl } from './site-task.ts';
+import {
+  provisionalSummary,
+  refreshLiveScoreSummary,
+  refreshRunningScoreSummary,
+  writeScoreSummary,
+  type LiveSummary,
+} from './snapshot.ts';
+import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 import { persistLiveCounters, persistTerminalCounters } from './terminal-counters.ts';
 import { drainedFinalizeTask, enqueueFinalize, failFinalization } from './terminal-publication.ts';
 
@@ -35,22 +41,26 @@ const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_o
 type ReconcileOptions = {
   /**
    * Rebuild the provisional score while work remains. Only a new analysis can
-   * change it, and the rebuild reloads the whole measurement projection under
-   * the crawl lock, so a settled discover or failed analysis skips it.
+   * change it, and the rebuild reloads the whole measurement projection, so a
+   * settled discover or failed analysis skips it.
    */
   refreshScore?: boolean;
 };
+
+/** The provisional score a drained crawl publishes beside its `finalize` task, if it rebuilds one. */
+type Score = () => Promise<LiveSummary | null>;
 
 /**
  * A drained crawl publishes through its one `finalize` task. One that failed
  * for good (its third attempt, or failed as overdue) ends the crawl failed.
  */
-async function settleDrained(db: Database, crawl: Crawl, options: ReconcileOptions) {
+async function settleDrained(db: Database, crawl: Crawl, score: Score) {
   const task = await drainedFinalizeTask(db, crawl);
   if (task && TERMINAL_TASK.includes(task.status)) return failFinalization(db, crawl, task);
   await saveState(db, crawl);
   if (task) return;
-  if (options.refreshScore ?? true) await refreshLiveScoreSummary(db, crawl);
+  const payload = await score();
+  if (payload) await writeScoreSummary(db, crawl, payload);
   await enqueueFinalize(db, crawl, 'drained');
 }
 
@@ -59,32 +69,105 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: Reconci
   // Stop skips a task another transaction holds; its later settlement recounts.
   if (crawl.status === 'cancelled') return persistTerminalCounters(db, crawl);
   if (!isActiveCrawl(crawl.status)) return;
+  const rescore = options.refreshScore ?? true;
   const { drained } = await assessCrawl(db, crawl);
-  if (drained) return settleDrained(db, crawl, options);
+  if (drained)
+    return settleDrained(db, crawl, async () => (rescore ? provisionalSummary(db, crawl) : null));
   await saveState(db, crawl);
-  if (options.refreshScore ?? true) await refreshLiveScoreSummary(db, crawl);
+  if (rescore) await refreshLiveScoreSummary(db, crawl);
+}
+
+/**
+ * A reconcile's crawl-wide reads, made from an unlocked copy of the row. A
+ * cancelled crawl recounts under the lock: its counter writes move no state
+ * column, so an earlier unlocked count could overwrite a later one.
+ */
+type Assessed =
+  | { kind: 'settled' }
+  | { kind: 'recount' }
+  | { kind: 'active'; crawl: Crawl; drained: boolean; score: LiveSummary | null };
+
+async function assessUnlocked(
+  db: Database,
+  read: Crawl,
+  options: ReconcileOptions,
+): Promise<Assessed> {
+  // A copy: the assessment moves the row's state in memory, and `read` is compared later.
+  const crawl = { ...read };
+  if (crawl.status === 'cancelled') return { kind: 'recount' };
+  if (!isActiveCrawl(crawl.status)) return { kind: 'settled' };
+  const { drained } = await assessCrawl(db, crawl);
+  const rescore =
+    (options.refreshScore ?? true) && !(drained && (await drainedFinalizeTask(db, crawl)));
+  return {
+    kind: 'active',
+    crawl,
+    drained,
+    score: rescore ? await provisionalSummary(db, crawl) : null,
+  };
+}
+
+/** Write what `assessUnlocked` read, under the crawl lock of a row no state write moved since. */
+async function applyAssessed(db: Database, assessed: Extract<Assessed, { kind: 'active' }>) {
+  const { crawl, score } = assessed;
+  if (assessed.drained) return settleDrained(db, crawl, async () => score);
+  await saveState(db, crawl);
+  if (score) await writeScoreSummary(db, crawl, score);
 }
 
 /** NO KEY UPDATE: FOR UPDATE would block the FK checks of every child insert in the crawl. */
 function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
   return db
     .selectFrom('site_crawls')
-    .selectAll()
+    .select(CRAWL_COLUMNS)
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', crawlId)
     .forNoKeyUpdate()
     .executeTakeFirst();
 }
 
+/** Whether a crawl state write landed between the two reads of the row. */
+const stateMoved = (read: Crawl, locked: Crawl) =>
+  locked.updated_at.getTime() !== read.updated_at.getTime() ||
+  (
+    [
+      'status',
+      'discovery_status',
+      'analysis_status',
+      'admitted_url_count',
+      'discovered_url_count',
+    ] as const
+  ).some((column) => locked[column] !== read[column]);
+
+/**
+ * Reconcile a crawl. Its crawl-wide reads (the task summary, the counters, the
+ * provisional score) run before the crawl lock every Stop and crawl writer
+ * waits on; the lock is taken only to write them. Every crawl state write
+ * moves `updated_at`, so a row that moved since the read is assessed again
+ * under the lock. A task settled meanwhile changes no row: its own reconcile
+ * follows its commit.
+ */
 export async function reconcileCrawl(
   db: Database,
   workspaceId: string,
   crawlId: string,
   options: ReconcileOptions = {},
 ) {
+  const read = await db
+    .selectFrom('site_crawls')
+    .select(CRAWL_COLUMNS)
+    .where('workspace_id', '=', workspaceId)
+    .where('id', '=', crawlId)
+    .executeTakeFirst();
+  if (!read) return;
+  const assessed = await assessUnlocked(db, read, options);
+  if (assessed.kind === 'settled') return;
   await db.transaction().execute(async (trx) => {
     const crawl = await lockCrawl(trx, workspaceId, crawlId);
-    if (crawl) await reconcileLockedCrawl(trx, crawl, options);
+    if (!crawl) return;
+    await (assessed.kind === 'active' && !stateMoved(read, crawl)
+      ? applyAssessed(trx, assessed)
+      : reconcileLockedCrawl(trx, crawl, options));
   });
 }
 

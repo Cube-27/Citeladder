@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
-import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
+import { issueHistory } from '../src/site-health/reads/issue-history.ts';
+import { issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import { testDatabase } from './support.ts';
 import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
@@ -217,4 +218,25 @@ describe("Site Health reads show each tracked page's latest audit", () => {
       site_rerun_id: rerun.crawlId,
     });
   });
+
+  it('shows each tracked page a running crawl has not reached by its earlier audit', async () => {
+    const seed = await fixtures.crawl('completed');
+    const earlier = await crawlAt(seed, minutes(0));
+    const tracked = [];
+    for (let index = 0; index < PROBE_PAGES; index++)
+      tracked.push(await audit(earlier, `/p-${index}`, SITEMAP, 'missing')); // NOSONAR -- Fixture pages in order.
+    await fixtures.monitor(
+      seed,
+      tracked.map((page) => page.id),
+    );
+    await land(earlier);
+    const running = await crawlAt(seed, minutes(10), { status: 'running' });
+    // The earlier audit still shows for every page the running crawl has not reached.
+    const all = unfilteredIssues('defect');
+    expect(groups(await issues(db, seed.workspaceId, running.crawlId, all, paging))).toEqual([
+      [SITEMAP, PROBE_PAGES],
+    ]);
+  });
 });
+
+const PROBE_PAGES = 24;

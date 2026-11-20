@@ -17,7 +17,7 @@ import {
 import { liveScoreSummary } from './live-score.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import { snapshotIssues } from './snapshot-issues.ts';
-import type { Crawl } from './site-task.ts';
+import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
 const reads = policy.site_health.reads;
 const versions = reads.measurement_versions;
@@ -336,12 +336,12 @@ export async function addArchitectureIssues(db: Database, crawl: Crawl) {
 }
 
 /** A provisional summary scores the crawl's own analyzed pages (invariant 6); a page rerun keeps none. */
-async function provisionalSummary(db: Database, crawl: Crawl) {
+export async function provisionalSummary(db: Database, crawl: Crawl) {
   return isPageRerun(crawl) ? null : liveScoreSummary(db, crawl);
 }
 
-type LiveSummary = NonNullable<Awaited<ReturnType<typeof liveScoreSummary>>>;
-function writeScoreSummary(db: Database, crawl: Crawl, payload: LiveSummary) {
+export type LiveSummary = NonNullable<Awaited<ReturnType<typeof liveScoreSummary>>>;
+export function writeScoreSummary(db: Database, crawl: Crawl, payload: LiveSummary) {
   return db
     .updateTable('site_crawls')
     .set({ score_summary: JSON.stringify(payload) })
@@ -367,7 +367,7 @@ export async function refreshRunningScoreSummary(
 ) {
   const crawl = await db
     .selectFrom('site_crawls')
-    .selectAll()
+    .select(CRAWL_COLUMNS)
     .where('workspace_id', '=', task.workspace_id)
     .where('id', '=', task.crawl_id)
     .executeTakeFirst();

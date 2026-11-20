@@ -35,7 +35,7 @@ import {
 } from './reads/issues.ts';
 import { viewIssuesSql } from './reads/crawl.ts';
 import { issueGroupId } from './reads/rules.ts';
-import type { Crawl } from './site-task.ts';
+import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
 /** Where in a page's fetched facts each issue family's reference snippet is captured. */
 const SNIPPET_FACTS: Readonly<Record<string, readonly string[]>> = {
@@ -69,17 +69,26 @@ async function firstSnippetRow(
     page_url: string;
     snippet: unknown;
   }>`
-    select i.id as issue_id, i.site_url_id, i.source_artifact_id,
-      coalesce(nullif(u.display_url, ''), u.normalized_url) as page_url,
-      f.normalized_facts #> ${family.path}::text[] as snippet
-    from site_issues i
-    join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
-    join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.crawl_id = i.crawl_id
-      and f.id = i.source_artifact_id
-    where ${viewIssuesSql(crawl)}
-      and i.finding_class = ${family.findingClass} and i.rule_id = ${family.ruleId}
-      and jsonb_typeof(f.normalized_facts #> ${family.path}::text[]) = 'object'
-    order by u.normalized_url, i.id limit 1`.execute(db);
+    with affected as materialized (
+      select i.id, i.crawl_id, i.site_url_id, i.source_artifact_id, u.normalized_url,
+        coalesce(nullif(u.display_url, ''), u.normalized_url) as page_url
+      from site_issues i
+      join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
+      where ${viewIssuesSql(crawl)}
+        and i.finding_class = ${family.findingClass} and i.rule_id = ${family.ruleId}
+    )
+    -- The family's pages in URL order, each fetch read only until one carries a
+    -- snippet: ordering by URL first drove the plan from every project URL.
+    select x.id as issue_id, x.site_url_id, x.source_artifact_id, x.page_url, s.snippet
+    from (select * from affected order by normalized_url, id) x
+    cross join lateral (
+      select f.normalized_facts #> ${family.path}::text[] as snippet
+      from site_fetch_artifacts f
+      where f.workspace_id = ${crawl.workspace_id} and f.crawl_id = x.crawl_id
+        and f.id = x.source_artifact_id
+    ) s
+    where jsonb_typeof(s.snippet) = 'object'
+    order by x.normalized_url, x.id limit 1`.execute(db);
   return rows[0];
 }
 
@@ -174,12 +183,13 @@ export async function publishRunningIssues(
 ) {
   const crawl = await db
     .selectFrom('site_crawls')
-    .selectAll()
+    .select(CRAWL_COLUMNS)
     .where('workspace_id', '=', task.workspace_id)
     .where('id', '=', task.crawl_id)
     .executeTakeFirst();
   if (!crawl || !isActiveCrawl(crawl.status)) return;
-  const classes = await computeIssueCatalog(db, crawl);
+  // One connection: the summary's parallel statements never crowd the runner's task slots.
+  const classes = await db.connection().execute((conn) => computeIssueCatalog(conn, crawl));
   await db.transaction().execute(async (trx) => {
     const locked = await trx
       .selectFrom('site_crawls')
