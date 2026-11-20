@@ -122,11 +122,12 @@
   /* The app's roles (paper and ink with one mark). On
      the website and docs each aliases the website role it stands for, so a
      shared atom drawn with them looks as it always did there; the app binds
-     its own values in `:root:not([data-public-surface])` below. App code
-     uses only these names (scripts/design-system-source-checks.mjs). */
+     its own values in `:root:not([data-public-surface])` below. */
   --color-ground: var(--color-paper);
+  --color-panel: var(--color-surface);
   --color-well: var(--color-surface-sunken);
   --color-raised: var(--color-surface);
+  --color-raised-2: var(--color-surface-sunken);
   --color-rule: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
@@ -512,54 +513,41 @@
   --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
-/* The app's dark: designed, not inverted. The sidebar chrome is the owner's
-   warm near-black #131211 and the page a step lighter (owner, 2026-11-20);
-   the layers above the page are neutral greys, lifted to keep their steps. It rebinds
-   every literal the app's light block below sets: that block follows the
-   system's dark at the same specificity, so it would otherwise win here.
-   The website and docs keep the system's dark above. */
+/* The app's dark (docs/design.md). It rebinds every literal the app's light
+   block below sets: that block follows the system's dark at the same
+   specificity, so it would otherwise win here. The website and docs keep
+   the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  /* Each layer steps at least 1.05 lighter than the one beneath, so a surface
-     reads by its fill alone, with no edge and no shadow. */
-  --color-ground: oklch(21.2% 0 0);
-  --color-chrome: oklch(18.3% 0.0026 67.7);
-  --color-surface: oklch(23.8% 0 0);
-  --color-raised: oklch(25.9% 0 0);
-  --color-well: oklch(27.9% 0 0);
+  --color-ground: #08090a;
+  --color-panel: #0f1011;
+  --color-raised: #151618;
+  --color-raised-2: #1c1d20;
   --color-control-fill: var(--color-well);
   --color-thumb: var(--color-ink-2);
-  --color-rule: oklch(31% 0 0);
-  --color-control-edge: oklch(33.5% 0 0);
-  /* Field, checkbox and radio edges: quiet like Linear's, a step past
-     control-edge so an unchecked ring still shows on a surface. */
-  --color-control-line: oklch(38.5% 0 0);
-  --color-chart-grid: oklch(29% 0 0);
-  --color-ink: oklch(94% 0 0);
-  --color-ink-2: oklch(72% 0 0);
+  --color-rule: rgb(255 255 255 / 8%);
+  --color-control-line: rgb(255 255 255 / 12%);
+  --color-ink: #f7f8f8;
+  --color-ink-2: #8a8f98;
   --color-ink-hover: oklch(85% 0 0);
-  --color-on-ink: oklch(12.5% 0 0);
-  --color-accent: oklch(70.3% 0.194 39.3);
+  --color-accent: #ff6a33;
   --color-accent-text: oklch(75.3% 0.155 41.6);
   /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: oklch(31% 0.041 43);
+  --color-accent-wash: oklch(27% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
-  --color-positive-wash: oklch(29% 0.035 157);
+  --color-positive-wash: oklch(27% 0.035 157);
   --color-negative: oklch(74.8% 0.157 10.3);
   --color-negative-wash: oklch(28% 0.044 7);
   --color-warning: oklch(81.4% 0.14 81.3);
-  --color-warning-wash: oklch(30% 0.0354 86);
+  --color-warning-wash: oklch(27% 0.0354 86);
   --color-info: oklch(76.6% 0.119 265.7);
-  --color-info-wash: oklch(30% 0.0529 266);
+  --color-info-wash: oklch(27% 0.0529 266);
   --color-data-rival-2: oklch(74.2% 0.1035 243.3);
   --color-data-rival-3: oklch(66.3% 0.169 293);
   --color-data-rival-4: oklch(75% 0.1072 183.6);
   --color-data-other: oklch(65% 0 0);
-  /* On these darker grounds a smaller step of white reads: selected over the
-     chrome lands on the well, hover one step short of it. */
-  --color-state-hover: oklch(100% 0 0 / 4%);
-  --color-state-pressed: oklch(100% 0 0 / 8%);
-  --color-state-selected: oklch(100% 0 0 / 6%);
+  --color-state-hover: rgb(255 255 255 / 4%);
+  --color-state-selected: rgb(255 255 255 / 7%);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   --shadow-control: 0 1px 2px oklch(0% 0 0 / 35%);
@@ -567,19 +555,6 @@
      lit top edge (inset: a child that fills the top would cover it). */
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
   --shadow-sheet: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 16px 40px oklch(0% 0 0 / 45%);
-
-  /* Light text on a dark ground reads heavier, so every weight drops by 50.
-     The type roles read --weight-*; the size utilities the app uses read these. */
-  --weight-regular: 350;
-  --weight-medium: 450;
-  --font-weight-normal: 350;
-  --font-weight-medium: 450;
-  --text-body--font-weight: 350;
-  --text-caption--font-weight: 350;
-  --text-data--font-weight: 350;
-  --text-eyebrow--font-weight: 450;
-  --text-figure--font-weight: 450;
-  --text-label--font-weight: 450;
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -713,31 +688,29 @@
   --table-head-ground: var(--color-well);
   --table-ground: var(--color-surface);
   --table-inset: 4px;
-  /* Layers (2.4): ground, chrome, card, inset, overlay; each a fill step. */
-  --color-ground: oklch(97.3% 0.003 265);
-  --color-chrome: oklch(98.8% 0.0013 286);
-  --color-surface: oklch(100% 0 0);
-  --color-well: oklch(96.1% 0.004 271);
-  --color-raised: oklch(100% 0 0);
-  --color-rule: oklch(21% 0.01 268 / 11%);
-  --color-control-line: oklch(83.2% 0.012 265);
+  /* The token table in docs/design.md. The older role names bind onto it:
+     chrome is the ground, surface the panel, well the raised fill, rule the
+     line, control-line the strong line. */
+  --color-ground: #f4f5f7;
+  --color-chrome: var(--color-ground);
+  --color-panel: #ffffff;
+  --color-surface: var(--color-panel);
+  --color-raised: #f7f8f9;
+  --color-raised-2: #eef0f2;
+  --color-well: var(--color-raised);
+  --color-rule: rgb(0 0 0 / 8%);
+  --color-control-line: rgb(0 0 0 / 12%);
   --field-focus-edge: var(--color-control-line);
   --fg: 0 0 6px 3px var(--color-state-pressed);
-  /* The soft edge of a labelled button and of a search or filter control: its
-     words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
-     fields, checkboxes, radios and switches keep `control-line`. */
-  --color-control-edge: oklch(88.2% 0.01 267);
-  --color-ink: oklch(21% 0.01 268);
-  --color-ink-2: oklch(47.4% 0.022 266);
+  --color-control-edge: var(--color-rule);
+  --color-ink: #111214;
+  --color-ink-2: #62666d;
   /* The primary button's hover: its ink fill one step lighter. */
   --color-ink-hover: oklch(32% 0.015 264);
-  --color-on-ink: oklch(100% 0 0);
-  --color-accent: oklch(63.4% 0.1973 37.5);
+  --color-on-ink: var(--color-panel);
+  --color-accent: #e8501a;
   --color-accent-text: oklch(53.1% 0.168 37.6);
   --color-accent-wash: oklch(95% 0.024 47);
-  /* Off the table's #17713f, and rival 3 off #6d55b8 (dark: #5fd08a, #a996ee):
-     those failed the colour-vision separation from negative and rival 2
-     (scripts/design-system-contrast.mjs). */
   --color-positive: oklch(47.1% 0.1065 154.6);
   --color-positive-wash: oklch(95.2% 0.022 160);
   --color-negative: oklch(53.3% 0.191 16);
@@ -750,9 +723,9 @@
   --color-data-rival-3: oklch(43.6% 0.176 291.5);
   --color-data-rival-4: oklch(54.3% 0.0889 188.8);
   --color-data-other: oklch(63% 0.0193 264.4);
-  /* Hover 6% (the system's), pressed 10%, selected 7% ink over the fill beneath. */
-  --color-state-pressed: oklch(from var(--color-ink) l c h / 10%);
-  --color-state-selected: oklch(from var(--color-ink) l c h / 7%);
+  --color-state-hover: rgb(0 0 0 / 3%);
+  --color-state-selected: rgb(0 0 0 / 6%);
+  --color-state-pressed: var(--color-state-selected);
   --color-scrim: oklch(from var(--color-ink) l c h / 45%);
   --color-chart-grid: var(--color-rule);
   /* The website's role names, held to the app's roles so a shared rule that
@@ -830,7 +803,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: color-mix(in oklch, var(--color-ink) 7%, transparent);
+  --nav-current-fill: var(--color-state-selected);
   /* What a Thread page leaves for its own scrolling region: the masthead (as
      drawn: below `rail` its actions take a second row, `Masthead`), a record
      page's h1 (`PageFrame`), the `page-pad-block` above the first content and

@@ -15,9 +15,7 @@ import { lineIndex, parseSource, walk } from './source-ast.mjs';
  *     handler receives the option type; those three controls own the one cast
  *     from Radix's string.
  *
- * check-design-system.mjs runs these in its file walk and ratchets them per
- * file and rule against type-discipline-baseline.json, so recorded debt burns
- * down and a new occurrence fails.
+ * check-frontend-architecture.mjs fails on any finding.
  */
 
 const OBJECT_KEY_READERS = new Set(['keys', 'entries']);
