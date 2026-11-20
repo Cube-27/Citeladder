@@ -123,13 +123,10 @@ function SiteHealthContent({
                 crawl every tab says the same one next step. */}
             {crawl ? (
               <>
-                <StatusStrip
+                <CrawlStatusLine
                   crawl={crawl}
-                  phase={screen.phase}
-                  entitlement={entitlementQuery.data!.site_health}
-                  cancelPending={cancelMutation.isPending}
-                  startPending={startPending}
-                  onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
+                  screen={screen}
+                  mutationsAllowed={mutationsAllowed}
                 />
                 <AnalysisPanel
                   tab={tab}
@@ -153,6 +150,30 @@ function SiteHealthContent({
         )}
       </ReportPage>
     </TabsRoot>
+  );
+}
+
+/** The crawl's status line, above every tab's panel. */
+function CrawlStatusLine({
+  crawl,
+  screen,
+  mutationsAllowed,
+}: Readonly<{
+  crawl: SiteCrawl;
+  screen: ReturnType<typeof useSiteHealthScreen>;
+  mutationsAllowed: boolean;
+}>) {
+  // A failed crawl's notice offers a rerun only to a role that may run one.
+  const rerunAllowed = useWorkspaceCapability('run') && mutationsAllowed;
+  return (
+    <StatusStrip
+      crawl={crawl}
+      phase={screen.phase}
+      entitlement={screen.entitlementQuery.data!.site_health}
+      cancelPending={screen.cancelMutation.isPending}
+      startPending={screen.startPending}
+      onRerun={rerunAllowed ? () => screen.startCrawl() : undefined}
+    />
   );
 }
 
