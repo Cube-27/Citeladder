@@ -73,7 +73,11 @@ function evaluationsById(db: Database, crawl: Crawl, ids: string[], siteOnly = f
 export type ProjectionEvaluation = Awaited<ReturnType<typeof evaluationsById>>[number];
 
 /** The next batch of active selected pages after `after`, in id order. */
-async function selectedAfter(db: Database, crawl: Crawl, after: string | null) {
+async function selectedAfter(
+  db: Database,
+  crawl: Crawl,
+  { after, size }: { after: string | null; size: number },
+) {
   const rows = await db
     .selectFrom('monitored_site_urls')
     .select('site_url_id')
@@ -82,7 +86,7 @@ async function selectedAfter(db: Database, crawl: Crawl, after: string | null) {
     .where('active', '=', true)
     .$if(after !== null, (query) => query.where('site_url_id', '>', after ?? ''))
     .orderBy('site_url_id')
-    .limit(batchSize())
+    .limit(size)
     .execute();
   return rows.map((row) => row.site_url_id);
 }
@@ -163,13 +167,14 @@ async function eachBatch(
   crawl: Crawl,
   visit: (ids: string[], rows: Analysis[]) => Promise<void>,
 ) {
+  const size = batchSize();
   let after: string | null = null;
   for (;;) {
-    const ids: string[] = await selectedAfter(db, crawl, after); // NOSONAR -- Keyset batches, in order.
+    const ids: string[] = await selectedAfter(db, crawl, { after, size }); // NOSONAR -- Keyset batches, in order.
     if (!ids.length) return;
     await visit(ids, await batchAnalyses(db, crawl, ids)); // NOSONAR -- Keyset batches, in order.
     const last = ids.at(-1);
-    if (!last || ids.length < batchSize()) return;
+    if (!last || ids.length < size) return;
     after = last;
   }
 }
@@ -273,7 +278,7 @@ function addCheckCounts(
 export async function measurementProjection(db: Database, crawl: Crawl) {
   const shared = await sharedSiteEvaluations(db, crawl);
   const measurement = new MeasurementFold(crawlSiteChecks(shared.map(persistedEvaluation)));
-  const crawler = shared.filter((row) => row.rule_id === 'search.crawler_access').at(-1);
+  const crawler = shared.findLast((row) => row.rule_id === 'search.crawler_access');
   const eligibility = new EligibilityFold(crawler);
   const classification = new ClassificationFold();
   const readiness = new ReadinessDiagnosticFold();

@@ -1,16 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
-import { CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { type StartCrawlInput } from '@/lib/api/site-health';
-import {
-  refreshCrawlViews,
-  refreshMonitoredUrls,
-  siteHealthMutations,
-  siteHealthQueries,
-} from '@/lib/api/site-health-queries';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import {
   downloadCrawlExport,
@@ -19,17 +13,13 @@ import {
 } from '@/lib/site-health/download';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
+import { useLiveCrawlDashboard } from '@/lib/site-health/use-live-crawl-dashboard';
 import {
-  crawlPollInterval,
-  crawlProgressVersion,
-  crawlViewsDue,
   DEFAULT_PAGES_SORT,
   inventoryModeForPhase,
   isCrawlStalled,
   CRAWL_STATES,
   type InventoryMode,
-  type SeenProgress,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 
@@ -71,16 +61,10 @@ export function pagePreviewQuery(workspaceId: string, dashboard: SiteHealthDashb
  * resolution. Progress is POLLING-FIRST: the credentialed SSE stream is only an
  * invalidation accelerator (a dropped stream never stops progress). Exports are
  * authenticated blob downloads so a non-default workspace's `X-Workspace-Id`
- * is preserved.
- *
- * Polling is ONE subscription. The dashboard query owns the only timer; every
- * other crawl-derived view (pages here, inventory/pages/issues in the sections)
- * refreshes when the crawl's progress fingerprint changes. Five components each
- * running their own 4s timer over the same crawl produced overlapping refetches
- * that resolved out of order, so panels rendered state from different moments.
+ * is preserved. The dashboard and the lists it refreshes stay live through
+ * `useLiveCrawlDashboard`.
  */
 export function useSiteHealthScreen() {
-  const queryClient = useQueryClient();
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
   const [exportError, setExportError] = useState<string | null>(null);
@@ -92,16 +76,7 @@ export function useSiteHealthScreen() {
 
   // An earlier crawl opens by URL (`?crawl_id=`); without one the screen reads the latest.
   const [pinnedCrawlId, setPinnedCrawlId] = useUrlState('crawl_id', optionalStringUrlCodec);
-  const dashboardQuery = useQuery({
-    ...siteHealthQueries.dashboard(requestScope, pinnedCrawlId ?? undefined),
-    // Backed off by crawl age, and stops entirely on a crawl that has gone
-    // silent — an active-forever crawl must not pin the tab to a 4s poll of
-    // five queries indefinitely.
-    refetchInterval: (query) => {
-      const polled = query.state.data?.crawl;
-      return polled ? crawlPollInterval(polled) : false;
-    },
-  });
+  const dashboardQuery = useLiveCrawlDashboard(requestScope, pinnedCrawlId ?? undefined);
 
   const crawl: SiteCrawl | null = dashboardQuery.data?.crawl ?? null;
   const active = crawl ? CRAWL_STATES[crawl.status].active : false;
@@ -112,42 +87,6 @@ export function useSiteHealthScreen() {
   // dashboard request has not landed yet — there is no client-side precedence
   // chain racing three independently-loading queries any more.
   const phase: SiteHealthPhase = dashboardQuery.data?.phase ?? 'resolving';
-
-  // SSE invalidation accelerator (polling stays the baseline). Keep it active
-  // through an expired-lease report so the sweeper's recovery is observed.
-  useCrawlEvents(crawl?.id, projectId, active);
-
-  // Refresh crawl-derived lists only when persisted progress changes, and at
-  // most every CRAWL_VIEW_REFRESH_MS while the crawl runs (a throttled change
-  // still lands when its interval ends). The first sighting
-  // mounts its own queries, and unchanged dashboard polls do no downstream work.
-  const crawlId = crawl?.id ?? null;
-  const crawlStatus = crawl?.status ?? null;
-  const crawlVersion = crawl ? crawlProgressVersion(crawl) : null;
-  const lastSeenRef = useRef<(SeenProgress & { crawlId: string }) | null>(null);
-  useEffect(() => {
-    if (!crawlId || !crawlStatus || crawlVersion === null) return;
-    const previous = lastSeenRef.current;
-    const next = { version: crawlVersion, status: crawlStatus };
-    const now = Date.now();
-    if (previous?.crawlId !== crawlId) {
-      lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
-      return;
-    }
-    if (previous.version === crawlVersion) return;
-    const refresh = () => {
-      lastSeenRef.current = { crawlId, ...next, refreshedAt: Date.now() };
-      void refreshCrawlViews(queryClient, crawlId);
-      void refreshMonitoredUrls(queryClient, projectId);
-    };
-    if (crawlViewsDue(previous, next, now)) {
-      refresh();
-      return;
-    }
-    // A throttled change refreshes once its interval ends, unless newer progress or unmount comes first.
-    const trailing = setTimeout(refresh, previous.refreshedAt + CRAWL_VIEW_REFRESH_MS - now);
-    return () => clearTimeout(trailing);
-  }, [crawlId, crawlStatus, crawlVersion, projectId, queryClient]);
 
   // The live score preview shares the exact first-page query key rendered by
   // ScoredInventory. During an active crawl that first view contains completed

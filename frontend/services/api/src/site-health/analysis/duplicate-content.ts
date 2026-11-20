@@ -72,13 +72,15 @@ export type DuplicateMatch = { url: string; match: 'exact' | 'near'; distance: n
 type Group = { print: Fingerprint; exact: Map<string, string[]>; near: Map<Group, number> };
 const printKey = (print: Fingerprint) => `${print.low}:${print.high}`;
 
-/** The 64 bits cut into `max_hamming_distance + 1` bands: prints within the distance share one. */
+/**
+ * The 64 bits cut into `max_hamming_distance + 1` bands, none empty: prints
+ * within the distance share one (pigeonhole).
+ */
 function bands(print: Fingerprint) {
   const count = settings.max_hamming_distance + 1;
-  const width = Math.ceil(64 / count);
   const keys = Array.from({ length: count }, (_, band) => `${band}:`);
   for (let bit = 0; bit < 64; bit++)
-    keys[Math.floor(bit / width)] += String(
+    keys[Math.floor((bit * count) / 64)] += String(
       ((bit < 32 ? print.low : print.high) >>> (bit & 31)) & 1,
     );
   return keys;
@@ -89,12 +91,7 @@ const closest = (a: DuplicateMatch, b: DuplicateMatch) =>
   Number(b.match === 'exact') - Number(a.match === 'exact') ||
   compareText(a.url, b.url);
 
-/**
- * Each URL's closest duplicates among the others (at most the evidence URLs),
- * exact copies first. Only SimHashes sharing a band are compared, so the cost
- * follows the duplicates, not every pair of a tens-of-thousands-page crawl.
- */
-export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
+function groupByPrint(pages: ReadonlyMap<string, Fingerprint>) {
   const groups = new Map<string, Group>();
   for (const [url, print] of pages) {
     const group = groups.get(printKey(print)) ?? { print, exact: new Map(), near: new Map() };
@@ -103,9 +100,15 @@ export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
     group.exact.set(print.exact, copies);
     groups.set(printKey(print), group);
   }
-  const buckets = new Map<string, Group[]>();
-  for (const group of groups.values()) {
+  for (const group of groups.values())
     for (const urls of group.exact.values()) urls.sort(compareText);
+  return groups;
+}
+
+/** Link every two groups within the distance, comparing only those that share a band. */
+function linkNearGroups(groups: Iterable<Group>) {
+  const buckets = new Map<string, Group[]>();
+  for (const group of groups)
     for (const band of bands(group.print)) {
       const bucket = buckets.get(band) ?? [];
       for (const other of bucket) {
@@ -118,7 +121,16 @@ export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
       bucket.push(group);
       buckets.set(band, bucket);
     }
-  }
+}
+
+/**
+ * Each URL's closest duplicates among the others (at most the evidence URLs),
+ * exact copies first. Only SimHashes sharing a band are compared, so the cost
+ * follows the duplicates, not every pair of a tens-of-thousands-page crawl.
+ */
+export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
+  const groups = groupByPrint(pages);
+  linkNearGroups(groups.values());
   return (url: string): DuplicateMatch[] => {
     const print = pages.get(url);
     const group = print && groups.get(printKey(print));

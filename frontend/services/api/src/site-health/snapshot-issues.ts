@@ -36,37 +36,37 @@ const readinessRow = sql`'aeo_readiness' = any(e.score_roles)`;
 
 export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: string[]) {
   const from = snapshotIssueRows(crawl, analysisIds);
-  const [totals, severities, categories, groups] = await Promise.all([
-    sql<{
-      issues: number;
-      technical: number;
-      technical_pages: number;
-      readiness: number;
-      readiness_pages: number;
-    }>`
+  // In order: the caller's transaction is one connection.
+  const totals = await sql<{
+    issues: number;
+    technical: number;
+    technical_pages: number;
+    readiness: number;
+    readiness_pages: number;
+  }>`
       select count(*)::int as issues,
         count(*) filter (where ${technicalRow})::int as technical,
         count(distinct i.site_url_id) filter (where ${technicalRow})::int as technical_pages,
         count(*) filter (where ${readinessRow})::int as readiness,
         count(distinct i.site_url_id) filter (where ${readinessRow} and e.scope = 'page')::int
           as readiness_pages
-      from ${from}`.execute(db),
-    sql<{ key: string; count: number }>`
-      select i.severity as key, count(*)::int as count from ${from} group by 1`.execute(db),
-    sql<{ key: string; count: number }>`
-      select i.category as key, count(*)::int as count from ${from} group by 1`.execute(db),
-    // One representative row per rule group (its first issue by id), its roles and pages.
-    sql<{
-      rule_id: string;
-      finding_class: string;
-      severity: string;
-      category: string;
-      description: string;
-      remediation: string;
-      evidence: unknown;
-      roles: string[] | null;
-      urls: number;
-    }>`
+      from ${from}`.execute(db);
+  const severities = await sql<{ key: string; count: number }>`
+      select i.severity as key, count(*)::int as count from ${from} group by 1`.execute(db);
+  const categories = await sql<{ key: string; count: number }>`
+      select i.category as key, count(*)::int as count from ${from} group by 1`.execute(db);
+  // One representative row per rule group (its first issue by id), its roles and pages.
+  const groups = await sql<{
+    rule_id: string;
+    finding_class: string;
+    severity: string;
+    category: string;
+    description: string;
+    remediation: string;
+    evidence: unknown;
+    roles: string[] | null;
+    urls: number;
+  }>`
       with matched as (select i.id, i.rule_id, i.finding_class, i.site_url_id, e.score_roles from ${from}),
       grouped as (
         select m.rule_id, m.finding_class, min(m.id::text)::uuid as first_id,
@@ -78,8 +78,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: st
       select g.rule_id, g.finding_class, i.severity, i.category, i.description, i.remediation,
         i.evidence, g.roles, g.urls
       from grouped g join site_issues i
-        on i.workspace_id = ${crawl.workspace_id} and i.id = g.first_id`.execute(db),
-  ]);
+        on i.workspace_id = ${crawl.workspace_id} and i.id = g.first_id`.execute(db);
   const total = firstOf(totals.rows, 'the snapshot issue totals');
   const counted = (rows: { key: string; count: number }[]) =>
     Object.fromEntries(rows.map((row) => [row.key, row.count]));

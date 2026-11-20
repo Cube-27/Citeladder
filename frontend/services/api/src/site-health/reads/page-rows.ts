@@ -166,7 +166,6 @@ function statusFilter(status: string | null | undefined) {
   return sql`and analysis_status = ${status}`;
 }
 
-/** Rows of the crawl's page window, `limit + 1` of them so the caller can see a next page. */
 /**
  * The latest audits join as one set: a lateral per inventory URL ran the view
  * once per page, past the read timeout on an inventory of tens of thousands
@@ -178,6 +177,7 @@ function latestAuditsJoin(crawl: Crawl, siteUrlId?: string) {
     : sql`left join (${pageAuditsSql(crawl)}) latest on latest.site_url_id = u.id`;
 }
 
+/** Rows of the crawl's page window, `limit + 1` of them so the caller can see a next page. */
 export async function pageRows(
   db: Database,
   crawl: Crawl,

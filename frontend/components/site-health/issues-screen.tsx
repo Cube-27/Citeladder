@@ -1,11 +1,11 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { ProjectLink } from '@/components/ui/project-link';
 
 import { Button } from '@/components/ui/button';
 import { ReportPage } from '@/components/templates/report-page';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { ICONS } from '@/lib/icons';
-import { siteHealthQueries } from '@/lib/api/site-health-queries';
+import { useLiveCrawlDashboard } from '@/lib/site-health/use-live-crawl-dashboard';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { Inline } from '@/components/ui/layout';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
@@ -27,7 +27,8 @@ import { IssuesPageLoading } from '@/components/site-health/issues-summary-loadi
  */
 export function IssuesScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  const dashboardQuery = useQuery(siteHealthQueries.dashboard({ workspaceId, projectId }));
+  // A running crawl publishes its Issues in batches; the list follows its progress.
+  const dashboardQuery = useLiveCrawlDashboard({ workspaceId, projectId });
   return (
     <IssuesDataRegion workspaceId={workspaceId} projectId={projectId} dashboard={dashboardQuery} />
   );

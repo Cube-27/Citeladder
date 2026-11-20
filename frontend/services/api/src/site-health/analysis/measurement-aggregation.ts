@@ -78,9 +78,9 @@ class DimensionSum {
 
 /** One page set's aggregate, fed one scored page at a time. */
 class PageSetFold {
-  private web = new RoleSum();
-  private aeo = new RoleSum();
-  private dimensions = EMPTY_DIMENSIONS().map(() => new DimensionSum());
+  private readonly web = new RoleSum();
+  private readonly aeo = new RoleSum();
+  private readonly dimensions = EMPTY_DIMENSIONS().map(() => new DimensionSum());
   private pages = 0;
   add(page: Measurement) {
     this.pages++;
@@ -112,8 +112,8 @@ class PageSetFold {
  * holds it.
  */
 export class MeasurementFold {
-  private all = new PageSetFold();
-  private kinds = new Map<string, PageSetFold>();
+  private readonly all = new PageSetFold();
+  private readonly kinds = new Map<string, PageSetFold>();
   private readonly site: RuleEvaluation[];
   constructor(site: RuleEvaluation[]) {
     this.site = site;

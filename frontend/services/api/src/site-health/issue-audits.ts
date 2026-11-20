@@ -53,7 +53,11 @@ function redirected(finalUrl: string, trackedHash: string) {
 const batchSize = () => policy.site_health.crawl.finalize.projection_pages;
 
 /** The next batch of pages the crawl audited after `after`, in id order. */
-async function auditedPagesAfter(db: Database, crawl: Crawl, after: string | null) {
+async function auditedPagesAfter(
+  db: Database,
+  crawl: Crawl,
+  { after, size }: { after: string | null; size: number },
+) {
   const { rows } = await sql<{ site_url_id: string }>`
     select p.site_url_id from (
       select a.site_url_id from site_page_analyses a
@@ -65,7 +69,7 @@ async function auditedPagesAfter(db: Database, crawl: Crawl, after: string | nul
         and t.task_kind = 'analyze' and t.status = 'failed' and t.site_url_id is not null
     ) p
     where ${after === null ? sql`true` : sql`p.site_url_id > ${after}::uuid`}
-    order by p.site_url_id limit ${batchSize()}`.execute(db);
+    order by p.site_url_id limit ${size}`.execute(db);
   return rows.map((row) => row.site_url_id);
 }
 
@@ -78,13 +82,14 @@ export async function eachPageAuditBatch(
   crawl: Crawl,
   visit: (audits: PageAudit[]) => Promise<void>,
 ) {
+  const size = batchSize();
   let after: string | null = null;
   for (;;) {
-    const ids: string[] = await auditedPagesAfter(db, crawl, after); // NOSONAR -- Keyset batches, in order.
+    const ids: string[] = await auditedPagesAfter(db, crawl, { after, size }); // NOSONAR -- Keyset batches, in order.
     if (!ids.length) return;
     await visit(await pageAudits(db, crawl, ids)); // NOSONAR -- Keyset batches, in order.
     const last = ids.at(-1);
-    if (!last || ids.length < batchSize()) return;
+    if (!last || ids.length < size) return;
     after = last;
   }
 }

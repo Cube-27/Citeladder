@@ -99,11 +99,11 @@ export type EligibilityBatch = {
 
 /** The crawl's eligibility, fed in selected-page order; `crawler` is the crawl's one site verdict. */
 export class EligibilityFold {
-  private totals = { eligible: 0, blocked: 0, unknown: 0, excluded: 0 };
-  private statuses = { audited: 0, blocked: 0, excluded: 0, error: 0, pending: 0 };
-  private reasons: Record<string, unknown>[] = [];
-  private taskIds: string[] = [];
-  private attemptIds: string[] = [];
+  private readonly totals = { eligible: 0, blocked: 0, unknown: 0, excluded: 0 };
+  private readonly statuses = { audited: 0, blocked: 0, excluded: 0, error: 0, pending: 0 };
+  private readonly reasons: Record<string, unknown>[] = [];
+  private readonly taskIds: string[] = [];
+  private readonly attemptIds: string[] = [];
   private readonly crawler: Evaluation | undefined;
   constructor(crawler: Evaluation | undefined) {
     this.crawler = crawler;

@@ -101,7 +101,7 @@ class DimensionFold {
 }
 
 export class ReadinessDiagnosticFold {
-  private dimensions = new Map<string, DimensionFold>();
+  private readonly dimensions = new Map<string, DimensionFold>();
   private total = 0;
   private taken = 0;
   private affected = 0;
@@ -223,7 +223,7 @@ type Area = {
 };
 
 export class WebDiagnosticFold {
-  private areas = new Map<string, Area>(
+  private readonly areas = new Map<string, Area>(
     reads.web_fundamentals_areas.map((area) => [
       area,
       {

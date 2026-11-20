@@ -39,9 +39,11 @@ const fixtureDb = testDatabase(
 const fixtures = new FinalizeFixtures(fixtureDb);
 const harness = acquisitionHarness(db, fixtures);
 afterAll(async () => {
-  await fixtures.cleanup();
-  await fixtureDb.destroy();
-  await db.destroy();
+  try {
+    await fixtures.cleanup();
+  } finally {
+    await Promise.all([fixtureDb.destroy(), db.destroy()]);
+  }
 });
 
 const CRAWL_TABLES = new Set(['site_page_analyses', 'site_rule_evaluations', 'site_issues']);
