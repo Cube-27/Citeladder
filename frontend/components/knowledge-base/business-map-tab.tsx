@@ -10,7 +10,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { BusinessFacts, OfferingsGrid, SuggestionsNotice } from './business-editor';
 import { SaveFoot } from './save-foot';
-import { useBusinessDraft, type BusinessDraftState } from './use-business-draft';
+import type { BusinessDraftState } from './use-business-draft';
 
 /**
  * Agent › Context › Business map: the facts that steer prompt generation,
@@ -19,10 +19,15 @@ import { useBusinessDraft, type BusinessDraftState } from './use-business-draft'
  * panel's foot while anything is unsaved.
  */
 export function BusinessMapTab({
+  business,
   projectId,
   workspaceId,
-}: Readonly<{ projectId: string; workspaceId: string }>) {
-  const business = useBusinessDraft({ projectId, workspaceId });
+}: Readonly<{
+  /** The draft, held by the page so it outlives a tab switch. */
+  business: BusinessDraftState;
+  projectId: string;
+  workspaceId: string;
+}>) {
   // The list bound the API enforces arrives with the prompt-set list.
   const sets = useQuery(promptsQueries.sets({ workspaceId, projectId }));
   const mayEdit = useWorkspaceCapability('write');

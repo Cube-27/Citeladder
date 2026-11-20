@@ -475,6 +475,21 @@ describe('Business map', () => {
     });
   });
 
+  it('keeps unsaved map edits across tab switches', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderContext({ profile: golfProfile, tab: 'map', handlers: mapReads(golfMap) });
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Add offering' }),
+      'Hitting mats{Enter}',
+    );
+    await user.click(screen.getByRole('tab', { name: 'Competitors' }));
+    await user.click(screen.getByRole('tab', { name: 'Business map' }));
+    expect(await screen.findByRole('listitem', { name: 'Hitting mats' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save business map' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+  });
+
   it('tells an unrecognized saved business model apart from none', async () => {
     const view = renderContext({
       profile: { ...emptyProfile, business_context: { business_model: 'franchise' } },

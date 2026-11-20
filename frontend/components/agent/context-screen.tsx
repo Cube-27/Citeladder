@@ -10,6 +10,7 @@ import {
   TrackedCompetitorsCard,
 } from '@/components/knowledge-base/brand-profile-cards';
 import { BusinessMapTab } from '@/components/knowledge-base/business-map-tab';
+import { useBusinessDraft } from '@/components/knowledge-base/use-business-draft';
 import {
   useBrandProfileForm,
   type BrandProfileForm,
@@ -62,6 +63,8 @@ function ContextWorkspace({
     profile: profile.data,
   });
   const instructions = useAgentInstructions(workspaceId, project.id);
+  // Held above the tabs, like the profile form, so a tab switch keeps unsaved edits.
+  const business = useBusinessDraft({ workspaceId, projectId: project.id });
 
   return (
     <TabsRoot value={requestedTab} onValueChange={setTab}>
@@ -76,6 +79,9 @@ function ContextWorkspace({
           form={form}
           brandFacts={<BrandFactsTab facts={facts} workspaceId={workspaceId} project={project} />}
           instructions={<AgentInstructionsCard instructions={instructions} />}
+          businessMap={
+            <BusinessMapTab business={business} projectId={project.id} workspaceId={workspaceId} />
+          }
         />
       </SettingsPage>
     </TabsRoot>
@@ -89,6 +95,7 @@ function ContextPanels({
   form,
   brandFacts,
   instructions,
+  businessMap,
 }: Readonly<{
   project: Project;
   workspaceId: string;
@@ -96,6 +103,7 @@ function ContextPanels({
   form: BrandProfileForm;
   brandFacts: ReactNode;
   instructions: ReactNode;
+  businessMap: ReactNode;
 }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
@@ -108,9 +116,7 @@ function ContextPanels({
           <ProjectThemesPanel scope={{ workspaceId, projectId: project.id }} mayEdit={mayEdit} />
         </SettingsGroup>
       </TabPanel>
-      <TabPanel value="map">
-        <BusinessMapTab projectId={project.id} workspaceId={workspaceId} />
-      </TabPanel>
+      <TabPanel value="map">{businessMap}</TabPanel>
       <TabPanel value="competitors">
         <TrackedCompetitorsCard project={project} />
       </TabPanel>
