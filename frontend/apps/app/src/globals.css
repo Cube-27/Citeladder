@@ -364,6 +364,9 @@
   --motion-reveal: 700ms;
   --motion-reveal-step: 80ms;
   --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The home hero's light breathes once every 10s (experiment, owner 2026-11-20). */
+  --motion-breathe: 10s;
+  --ease-breathe: ease-in-out;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* The app's one "working" mark: a single accent
@@ -1029,11 +1032,13 @@
   --color-spot-warm: oklch(72.3% 0.18 42.6 / 30%);
   --color-spot-vignette: oklch(55% 0.12 40 / 10%);
   /* The home hero's backdrop (experiment, owner 2026-11-20). */
-  --color-site-scanline: oklch(25% 0 0 / 4%);
-  --color-site-beam: oklch(72% 0.17 50 / 40%);
-  --color-site-beam-core: oklch(80% 0.14 60 / 55%);
-  --color-site-beam-glow: oklch(72% 0.17 45 / 28%);
-  --color-site-beam-wash: oklch(75% 0.15 50 / 12%);
+  --color-site-hero-base: oklch(100% 0 0);
+  --color-site-hero-line: oklch(25% 0 0 / 5%);
+  --color-site-hero-amber: oklch(78% 0.12 55 / 50%);
+  --color-site-hero-umber: oklch(88% 0.06 60 / 30%);
+  --color-site-hero-core-hot: oklch(86% 0.1 68);
+  --color-site-hero-core: oklch(72% 0.16 52);
+  --color-site-hero-halo: oklch(75% 0.15 52 / 35%);
   /* The closing band: pale warm silk with ink text. Contrast is checked over
      every stop with any two layers stacked. */
   --color-site-band-from: oklch(97.6% 0.018 70);
@@ -1072,11 +1077,13 @@
   --color-spot-halo: oklch(60% 0.15 40 / 22%);
   --color-spot-warm: oklch(70.3% 0.194 39.3 / 30%);
   --color-spot-vignette: oklch(0% 0 0 / 55%);
-  --color-site-scanline: oklch(100% 0 0 / 2.5%);
-  --color-site-beam: oklch(62% 0.15 50 / 45%);
-  --color-site-beam-core: oklch(74% 0.13 58 / 40%);
-  --color-site-beam-glow: oklch(60% 0.16 48 / 60%);
-  --color-site-beam-wash: oklch(38% 0.09 45 / 55%);
+  --color-site-hero-base: oklch(11.6% 0.0023 17);
+  --color-site-hero-line: oklch(97.5% 0.01 70 / 3.5%);
+  --color-site-hero-amber: oklch(56% 0.13 50 / 42%);
+  --color-site-hero-umber: oklch(30% 0.07 48 / 22%);
+  --color-site-hero-core-hot: oklch(89% 0.09 72);
+  --color-site-hero-core: oklch(70% 0.16 52);
+  --color-site-hero-halo: oklch(70% 0.16 52 / 35%);
   /* Deep, low-glow warm on near-black with light text. */
   --color-site-band-from: oklch(17% 0.03 45);
   --color-site-band-mid: oklch(13% 0.018 42);

@@ -1,58 +1,48 @@
-/* Experiment (owner, 2026-11-20): the home hero's backdrop. A near-black
-   ground with soft, uneven vertical bands; a broad warm haze rising from the
-   product image's top edge with a soft light column in it; an orange glow up
-   the left edge; a fine grain. The product image loses its own panel and
-   sits on it. Colours are the site-beam tokens in globals.css. */
+/* Experiment (owner, 2026-11-20): the home hero as one lit stage, product
+   image included. From the bottom up: a near-black base, twelve hairline
+   columns fading out toward the top, a wide amber glow anchored at the foot,
+   a light beam (a hot core in a blurred halo) rising right of centre, and a
+   fine grain. The beam and glow breathe slowly. The product image has no
+   panel and fades out at its foot into the glow; the stage fades into the
+   page under it. Colours are the site-hero tokens in globals.css. */
 
 .cl-lhero {
   --lb-grain: 0.05;
+  --lb-foot: 160px;
 
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  padding-bottom: 96px;
+  background:
+    linear-gradient(to bottom, transparent calc(100% - var(--lb-foot)), var(--site-page)),
+    radial-gradient(
+      70% 62% at 50% 96%,
+      var(--color-site-hero-amber),
+      var(--color-site-hero-umber) 55%,
+      transparent
+    ),
+    var(--color-site-hero-base);
 }
 
 :root[data-theme='dark'] .cl-lhero {
-  --lb-grain: 0.08;
+  --lb-grain: 0.07;
 }
 
-/* Soft bands at four unrelated pitches, so no rhythm shows; stronger lower. */
+/* Twelve hairline columns, faintest at the top. */
 .cl-lhero::before,
 .cl-lhero::after {
   position: absolute;
-  z-index: -2;
+  z-index: -3;
   inset: 0;
   content: '';
   pointer-events: none;
 }
 
 .cl-lhero::before {
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 42px,
-      var(--color-site-scanline) 44.5px,
-      transparent 47px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 76px,
-      var(--color-site-scanline) 79.5px,
-      transparent 83px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 123px,
-      var(--color-site-scanline) 127px,
-      transparent 131px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 189px,
-      var(--color-site-scanline) 194px,
-      transparent 199px
-    );
-  mask-image: linear-gradient(transparent -30%, currentcolor 45%);
+  background: linear-gradient(90deg, var(--color-site-hero-line) 0 1px, transparent 1px) 0 0 /
+    calc(100% / 12) 100%;
+  mask-image: linear-gradient(transparent, currentcolor 60%, transparent);
 }
 
 .cl-lhero::after {
@@ -62,39 +52,73 @@
   opacity: var(--lb-grain);
 }
 
-/* The light, anchored to the product image's top edge and as wide as the
-   viewport: a soft column and its pool, the broad haze, and the left edge's
-   glow. Its foot fades out behind the image. */
-.cl-lhero-frame {
-  position: relative;
+/* The beam, drawn on the container so it measures from the hero's foot:
+   a blurred halo behind a narrow hot core, both breathing. */
+.cl-lhero > .cl-container::before,
+.cl-lhero > .cl-container::after {
+  position: absolute;
+  z-index: -2;
+  bottom: calc(var(--lb-foot) * 0.6);
+  left: 58%;
+  height: 55%;
+  content: '';
+  pointer-events: none;
+  transform: translateX(-50%);
+  transform-origin: bottom;
+  animation: lb-breathe var(--motion-breathe) var(--ease-breathe) infinite;
 }
 
-@media (min-width: 1024px) {
-  .cl-lhero .cl-lhero-frame {
-    margin-top: 176px;
+.cl-lhero > .cl-container::before {
+  width: 72px;
+  background: linear-gradient(to top, var(--color-site-hero-halo), transparent);
+  filter: blur(38px);
+}
+
+.cl-lhero > .cl-container::after {
+  width: 3px;
+  background: linear-gradient(
+    to top,
+    var(--color-site-hero-core-hot),
+    var(--color-site-hero-core) 35%,
+    transparent
+  );
+  filter: blur(5px);
+}
+
+@keyframes lb-breathe {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: translateX(-50%) scaleY(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
   }
 }
 
-.cl-lhero-frame::before {
-  position: absolute;
-  z-index: -1;
-  bottom: calc(100% - 200px);
-  left: calc(50% - 50vw);
-  width: 100vw;
-  height: 980px;
-  background:
-    radial-gradient(0.8% 42% at 57% 100%, var(--color-site-beam-core), transparent),
-    radial-gradient(2.4% 58% at 57% 100%, var(--color-site-beam), transparent),
-    radial-gradient(13% 20% at 57% 100%, var(--color-site-beam-glow), transparent),
-    radial-gradient(26px 38% at 0% 100%, var(--color-site-beam-glow), transparent),
-    radial-gradient(120px 48% at 0% 100%, var(--color-site-beam-wash), transparent),
-    radial-gradient(80% 38% at 55% 100%, var(--color-site-beam-wash), transparent);
-  mask-image: linear-gradient(to top, transparent, currentcolor 200px);
-  content: '';
-  pointer-events: none;
+@media (prefers-reduced-motion: reduce) {
+  .cl-lhero > .cl-container::before,
+  .cl-lhero > .cl-container::after {
+    animation: none;
+  }
 }
 
-/* The product image stands on the backdrop itself: no panel, grain or pad. */
+/* The product image: no panel, a little more room above it, and a foot that
+   fades out into the glow. */
+@media (min-width: 1024px) {
+  .cl-lhero .cl-lhero-frame {
+    margin-top: 120px;
+  }
+}
+
+.cl-lhero .cl-lhero-frame {
+  max-height: 760px;
+  overflow: hidden;
+  mask-image: linear-gradient(currentcolor 45%, transparent 96%);
+}
+
 .cl-lhero .cl-frame--hero > .cl-frame-card {
   padding: 0;
   background: none;
