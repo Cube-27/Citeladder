@@ -2,12 +2,10 @@ import {
   createContext,
   useContext,
   useEffect,
-  useLayoutEffect,
   useRef,
   type ButtonHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
-  type RefObject,
 } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
@@ -16,13 +14,12 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Tabs: text with one underline (the Segmented switch is a pill on a track, below). The strip is one row that
- * scrolls sideways inside itself (its scrollbar hidden) when its items
- * overflow, with no hairline of its own (owner, 2026-11-19: only the current
- * item's underline; a page strip's band draws the strip rule); each item is
- * `body` in `ink-2`, and the current one is `ink` at `label` weight with the
- * 2px accent underline ("you are here"), sliding from item to item. One face
- * for page tabs and in-section tabs.
+ * Tabs: pills with no track (owner, 2026-11-20: every underline tab became the
+ * Dashboard/Agent pill). The strip is one row that scrolls sideways inside
+ * itself (its scrollbar hidden) when its items overflow; each item is `body`
+ * in `ink-2`, and the current one is the raised pill (`.face`) in `ink`, the
+ * same pill and height as a segment above a table. One face for page tabs and
+ * in-section tabs.
  */
 const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
@@ -61,106 +58,32 @@ function useRevealSelected(selected: string | null) {
 }
 
 /**
- * Places the strip's one accent underline (`TabMark`) under its current
- * item, and again whenever any item resizes (a count before it grows) or
- * the items or selection change; globals.css slides it there. Without a
- * current item each item draws its own.
+ * One item, a pill 4 less than a control (28, so a segment's track is one
+ * control high) with 12 each side. The raised pill (the layered button face,
+ * `.face`) alone marks the current item, at one weight, so a selection never
+ * changes width. A tab that is not current hovers on the state tile; a
+ * segment sits on its track and needs none.
  */
-function useTabMark(strip: RefObject<HTMLDivElement | null>, selected: string | null) {
-  useLayoutEffect(() => {
-    const list = strip.current;
-    return list ? followTabMark(list) : undefined;
-  }, [strip, selected]);
-}
-
-function placeTabMark(list: HTMLElement) {
-  const item = list.querySelector<HTMLElement>(SELECTED_ITEM);
-  if (!item) {
-    delete list.dataset.tabMarkReady;
-    return;
-  }
-  list.style.setProperty('--tab-mark-x', `${item.offsetLeft}px`);
-  list.style.setProperty('--tab-mark-w', `${item.offsetWidth}px`);
-  list.dataset.tabMarkReady = '';
-}
-
-/** Places the mark now and on every later resize or item change; returns the cleanup. */
-function followTabMark(list: HTMLElement): (() => void) | undefined {
-  placeTabMark(list);
-  if (typeof ResizeObserver === 'undefined') return undefined;
-  const resize = new ResizeObserver(() => placeTabMark(list));
-  const watch = () => {
-    resize.disconnect();
-    resize.observe(list);
-    for (const item of list.querySelectorAll('.tab-face')) resize.observe(item);
-  };
-  watch();
-  const mutation = new MutationObserver(() => {
-    watch();
-    placeTabMark(list);
-  });
-  mutation.observe(list, {
-    subtree: true,
-    childList: true,
-    attributeFilter: ['aria-selected', 'aria-checked'],
-  });
-  return () => {
-    resize.disconnect();
-    mutation.disconnect();
-  };
-}
-
-/** The strip's sliding underline; a direct child of the strip. */
-function TabMark() {
-  return (
-    <span
-      aria-hidden
-      data-tab-mark=""
-      className="bg-accent pointer-events-none absolute bottom-0 left-0 hidden"
-    />
-  );
-}
-
-/**
- * One item: the label, and the current item's accent rung at its foot.
- * A page tab fills the page's tab strip (as high as the filter strip, its
- * label centred), a section tab is one control high (32, 44 below 900px or
- * under a coarse pointer); both take 12 each side and hover on a 6% tile one
- * control high less 4 top and bottom. A segment is a pill 4 less than a control,
- * so its track is one control high; the raised pill (the layered button face,
- * `.face`) alone marks the current segment, at one weight, so a
- * switch never changes width.
- */
-type TabKind = 'page' | 'section' | 'segment';
-
-const TAB_KIND: Record<TabKind, string> = {
-  page: 'min-h-[var(--page-tabs-height,var(--control-md))] before:inset-y-[calc((var(--page-tabs-height,var(--control-md))_-_var(--control-md))/2_+_4px)]',
-  section: 'min-h-[var(--control-md)] before:inset-y-1',
-  segment: 'min-h-[calc(var(--control-md)_-_4px)] rounded-control px-3',
-};
+type TabKind = 'tab' | 'segment';
 
 function tabFace({
   kind,
   selected,
   className,
 }: Readonly<{ kind: TabKind; selected: boolean; className?: string }>) {
-  const tab = kind !== 'segment';
   return cn(
-    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
-    TAB_KIND[kind],
-    tab &&
-      'isolate px-3 before:absolute before:inset-x-0 before:-z-10 before:rounded-mark before:content-[""]',
-    tab && !selected && 'not-disabled:hover:before:bg-state-hover',
-    tab &&
-      'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
-    tab &&
-      (selected
-        ? 'text-ink after:bg-accent font-medium'
-        : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent'),
-    !tab && (selected ? 'face text-ink' : 'text-ink-2 not-disabled:hover:text-ink'),
+    'tab-face focus-ring-inset type-body rounded-control relative inline-flex min-h-[calc(var(--control-md)_-_4px)] shrink-0 items-center justify-center gap-1 px-3 whitespace-nowrap transition-[color,background-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    selected ? 'face text-ink' : 'text-ink-2 not-disabled:hover:text-ink',
+    kind === 'tab' && !selected && 'not-disabled:hover:bg-state-hover',
     className,
   );
 }
+
+/** A tab strip's row: the pills centred in it; a page strip keeps the page band's height. */
+const STRIP_ROW = {
+  page: 'min-h-[var(--page-tabs-height,var(--control-md))] items-center',
+  section: 'items-center',
+} as const;
 
 /**
  * The website's segmented track and segment, kept for its product screens
@@ -281,12 +204,16 @@ export function HeldTabRow({
 }: Readonly<{ labels: readonly string[]; selected?: string }>) {
   const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
   return (
-    <div aria-hidden data-held-tabs="" className={cn(TAB_STRIP, 'pointer-events-none gap-1')}>
+    <div
+      aria-hidden
+      data-held-tabs=""
+      className={cn(TAB_STRIP, STRIP_ROW.page, 'pointer-events-none gap-1')}
+    >
       {labels.map((label) => (
         <span
           key={label}
           data-selected={label === current || undefined}
-          className={tabFace({ kind: 'page', selected: label === current })}
+          className={tabFace({ kind: 'tab', selected: label === current })}
         >
           {label}
         </span>
@@ -329,10 +256,9 @@ function TabStrip<T extends string>({
   ariaLabel,
   onIntent,
   kind = 'section',
-}: Readonly<TabStripProps<T> & { kind?: Exclude<TabKind, 'segment'> }>) {
+}: Readonly<TabStripProps<T> & { kind?: keyof typeof STRIP_ROW }>) {
   const active = useContext(ActiveTabContext);
   const strip = useRevealSelected(active);
-  useTabMark(strip, active);
   return (
     <ScrollFrame stepper="row">
       {(ref, region) => (
@@ -343,7 +269,7 @@ function TabStrip<T extends string>({
             strip.current = node;
           }}
           aria-label={ariaLabel}
-          className={cn(TAB_STRIP, 'gap-1')}
+          className={cn(TAB_STRIP, STRIP_ROW[kind], 'gap-1')}
         >
           {items.map((item) => (
             <TabsPrimitive.Trigger
@@ -356,13 +282,12 @@ function TabStrip<T extends string>({
                 onIntent?.(item.value);
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
-              className={tabFace({ kind, selected: item.value === active })}
+              className={tabFace({ kind: 'tab', selected: item.value === active })}
             >
               {item.label}
               {item.count === undefined ? null : <ControlCount count={item.count} />}
             </TabsPrimitive.Trigger>
           ))}
-          <TabMark />
         </TabsPrimitive.List>
       )}
     </ScrollFrame>

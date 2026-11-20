@@ -2468,22 +2468,6 @@ label {
   }
 }
 
-/* Tabs and segments: one accent underline slides to the current item
-   (tabs.tsx places it); until it is placed each item draws its own. */
-[data-tab-mark] {
-  width: var(--tab-mark-w);
-  height: var(--mark-width);
-  translate: var(--tab-mark-x);
-  transition: var(--motion-open) var(--ease-fluid);
-  transition-property: translate, width;
-}
-[data-tab-mark-ready] > [data-tab-mark] {
-  display: block;
-}
-[data-tab-mark-ready] .tab-face::after {
-  background: none;
-}
-
 /* A focused row rings inside itself, so the frame never clips it. */
 .table-frame tr:focus-visible {
   outline-offset: -2px;
