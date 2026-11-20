@@ -245,8 +245,8 @@ when each tier runs. This section covers the commands.
 
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
 `vp check --fix` on staged JS/TS/CSS/JSON files, the design-system policy
-(`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX, Astro or
-SVG files are staged, and the source token-size limit below.
+(`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX or Astro
+files are staged, and the source token-size limit below.
 
 #### Source file size
 
@@ -271,20 +271,11 @@ code unchanged, with no renames of exported symbols or behaviour changes, in its
 own commit when possible. Never shrink a file by deleting comments or
 compressing code, and never extend the ignore list or baseline to pass.
 
-The design-system policy checks breakage, theming and exposure, never a visual
-choice ([decision](decisions.md#platform-and-schema)). It ratchets its
-stylesheet (parse and self-referencing custom property) and SVG colour rules
-against `frontend/scripts/design-system-baseline.json`: a file's count per
-rule may fall but never rise, and a new file starts at zero. When a count falls,
-lower the baseline with `node scripts/check-design-system.mjs --write-baseline`
-from `frontend/`; never raise it to make a change pass. The generated token
-blocks in `docs/design.md` are refreshed with
-`node scripts/audit-design-tokens.mjs --write` (quality fix mode runs it).
-
-The same run ratchets the type-discipline rules
-(`frontend/scripts/type-discipline-checks.mjs`) against
-`frontend/scripts/type-discipline-baseline.json`; `--write-baseline` lowers both
-baselines.
+`pnpm check:policy` runs the design-system policy (no literal colours outside
+the token stylesheet, WCAG AA contrast of token pairs, Radix only inside
+`components/ui`, the app's Tailwind `@source` list) and the architecture guard,
+which also fails on any type-discipline finding
+(`frontend/scripts/type-discipline-checks.mjs`) and on any tracked font file.
 
 ```bash
 # from frontend/; later arguments override the defaults

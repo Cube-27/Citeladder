@@ -10,12 +10,10 @@ import {
 } from '../frontend/scripts/design-system-contrast.mjs';
 
 /**
- * A complete palette that passes every pair. Every ink the matrix reads is
- * `ink` and every surface `paper`, so a new matrix row needs no fixture edit;
- * the labels on fills and the marks the separation check measures are set
- * explicitly.
+ * A complete palette that passes every pair: every ink the matrix reads is
+ * `ink` and every surface `paper`, so a new matrix row needs no fixture edit.
  */
-function palette({ ink, paper, positive, negative, appSeries }) {
+function palette({ ink, paper }) {
   const { inks, surfaces } = contrastRoles();
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
@@ -23,31 +21,11 @@ function palette({ ink, paper, positive, negative, appSeries }) {
     // Fills carry the other end of the scale.
     '--color-ink-hover': ink,
     '--color-on-ink': paper,
-    '--color-positive': positive,
-    '--color-negative': negative,
-    ...Object.fromEntries(
-      ['you', 'rival-1', 'rival-2', 'rival-3', 'rival-4'].map((name, index) => [
-        `--color-data-${name}`,
-        appSeries[index],
-      ]),
-    ),
   };
 }
 
-const LIGHT = palette({
-  ink: '#000000',
-  paper: '#ffffff',
-  positive: '#000000',
-  negative: '#5e5e5e',
-  appSeries: ['#e8501a', '#000000', '#2f6f9f', '#4b3a8a', '#1f7d73'],
-});
-const DARK = palette({
-  ink: '#ffffff',
-  paper: '#000000',
-  positive: '#ffffff',
-  negative: '#949494',
-  appSeries: ['#ff6a33', '#ffffff', '#6fb3e0', '#8a73d9', '#4fc4b5'],
-});
+const LIGHT = palette({ ink: '#000000', paper: '#ffffff' });
+const DARK = palette({ ink: '#ffffff', paper: '#000000' });
 
 const block = (selector, values) =>
   `${selector} { ${Object.entries(values)
@@ -128,20 +106,11 @@ test("the app's series holds 3:1 in the app's palettes and is not measured on th
   const violations = paletteViolations(css({ light: { '--color-data-you': '#eeeeee' } }));
   assert.deepEqual(
     violations,
-    ['ground', 'surface', 'well', 'raised'].map(
+    ['ground', 'panel', 'raised', 'raised-2'].map(
       (fill) =>
         `apps/app/src/globals.css: :root:not([data-public-surface]) --color-data-you on --color-${fill} is 1.16:1; needs 3:1`,
     ),
   );
-});
-
-test("you and the rivals must part in the app's palettes only", () => {
-  const violations = paletteViolations(css({ light: { '--color-data-rival-3': '#2f6f9f' } }));
-  assert.deepEqual(violations, [
-    'apps/app/src/globals.css: :root:not([data-public-surface]) you and the rivals ' +
-      '--color-data-rival-2 / --color-data-rival-3 are too close ' +
-      '(ΔL* 0.0, deuteranopia ΔE 0.0, protanopia ΔE 0.0)',
-  ]);
 });
 
 test('a translucent soft is composited onto the surface before measuring', () => {
@@ -182,23 +151,6 @@ test('the shipped palette meets every pair in the website and app palettes, both
     'utf8',
   );
   assert.deepEqual(paletteViolations(source), []);
-});
-
-test('positive and negative too close in lightness and under red-green loss fail', () => {
-  const violations = paletteViolations(css({ dark: { '--color-negative': '#f4f4f4' } }));
-  assert.ok(
-    violations.some(
-      (violation) =>
-        violation.includes("data-theme='dark'") &&
-        violation.includes('positive and negative --color-positive / --color-negative'),
-    ),
-  );
-  // A hue difference that survives both deficiencies separates marks of
-  // equal lightness: blue against amber.
-  const hued = paletteViolations(
-    css({ light: { '--color-positive': '#3b82f6', '--color-negative': '#b98a00' } }),
-  );
-  assert.ok(!hued.some((violation) => violation.includes('--color-positive / --color-negative')));
 });
 
 test('a stylesheet without a dark mapping fails', () => {

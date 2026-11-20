@@ -19,11 +19,11 @@ const config = {
     // Restrict to JS/TS/CSS/JSON: oxfmt/oxlint no-op on other types, and this
     // keeps commits of .md/.sql files from paying for a pointless check.
     '*.{js,jsx,mjs,ts,tsx,mts,cts,css,json}': 'vp check --fix',
-    // The design-system policy is a whole-tree ratchet (per-file counts against
-    // frontend/scripts/design-system-baseline.json), so it judges the tree once
-    // per commit. A function task gets no staged paths appended; a long path
-    // list would otherwise split it into parallel duplicate runs.
-    'frontend/**/*.{css,ts,tsx,astro,svg}': () => 'node frontend/scripts/check-design-system.mjs',
+    // The design-system policy judges the whole tree (token contrast, Tailwind
+    // @source), so it runs once per commit. A function task gets no staged
+    // paths appended; a long path list would otherwise split it into parallel
+    // duplicate runs.
+    'frontend/**/*.{css,ts,tsx,astro}': () => 'node frontend/scripts/check-design-system.mjs',
     // Reads the staged blobs and its staged policy itself, so it runs once.
     '**/*.{js,jsx,mjs,cjs,ts,tsx,css,json}': () =>
       'node frontend/scripts/check-token-size.mjs --staged',

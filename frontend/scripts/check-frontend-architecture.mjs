@@ -1,5 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { typeDisciplineFindings } from './type-discipline-checks.mjs';
 
 const root = process.cwd();
 const failures = [];
@@ -29,6 +32,7 @@ function sourceFiles(directory) {
   const absolute = path.join(root, directory);
   if (!fs.existsSync(absolute)) return [];
   return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+    if (['node_modules', 'dist', 'build'].includes(entry.name)) return [];
     const relative = `${directory}/${entry.name}`;
     if (entry.isDirectory()) return sourceFiles(relative);
     return /\.(?:ts|tsx)$/.test(entry.name) ? [relative] : [];
@@ -59,6 +63,25 @@ if (fs.existsSync(facade)) {
   if (/\bfetch\s*\(/.test(source) || /from\s+['"]\.\/client['"]/.test(source)) {
     failures.push('lib/api/index.ts must not own transport.');
   }
+}
+
+for (const file of ['apps', 'components', 'lib', 'packages', 'services'].flatMap(sourceFiles)) {
+  if (/\.(?:test|spec)\.tsx?$|\.d\.ts$|\/(?:test|e2e|generated)\//.test(file)) continue;
+  for (const { line, message } of typeDisciplineFindings(
+    fs.readFileSync(path.join(root, file), 'utf8'),
+    file,
+  ))
+    failures.push(`${file}:${line}: ${message}`);
+}
+
+// Fonts come from the private Cube-27/cube27-fonts repo via `pnpm fonts:pull`:
+// some are licensed for self-hosting, not redistribution, and git's index is
+// what gets published.
+const tracked = execFileSync('/usr/bin/git', ['-C', root, 'ls-files', '--', ':(top)'], {
+  encoding: 'utf8',
+}).split('\n');
+for (const file of tracked.filter((name) => /\.(?:woff2?|ttf|otf)$/i.test(name))) {
+  failures.push(`${file}: font files come from the private font repo, never git`);
 }
 
 if (failures.length) {

@@ -117,31 +117,3 @@ export function nameText(node) {
       return '';
   }
 }
-
-/** Unwrap the expression wrappers that carry no class information. */
-export function unwrap(node) {
-  let current = node;
-  while (
-    current &&
-    (current.type === 'ParenthesizedExpression' ||
-      current.type === 'TSAsExpression' ||
-      current.type === 'TSSatisfiesExpression' ||
-      current.type === 'TSNonNullExpression')
-  ) {
-    current = current.expression;
-  }
-  return current;
-}
-
-/** Every string and template fragment in a module, with its source offset. */
-export function stringFragments(program) {
-  const fragments = [];
-  walk(program, (node) => {
-    const text =
-      node.type === 'TemplateElement'
-        ? (node.value.cooked ?? node.value.raw ?? '')
-        : stringValue(node);
-    if (text) fragments.push({ text, start: node.start });
-  });
-  return fragments;
-}
