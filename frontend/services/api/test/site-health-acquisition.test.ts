@@ -446,6 +446,24 @@ describe('discover', () => {
       codes.robots_unavailable,
     ],
     [
+      'a redirect to an origin whose robots.txt is access-blocked',
+      {
+        '/': { status: 301, redirect: 'https://shop.example.test/' },
+        'shop.example.test/robots.txt': { status: 403 },
+      },
+      'failed',
+      codes.access_blocked,
+    ],
+    [
+      'a redirect to an origin whose robots.txt is refused',
+      {
+        '/': { status: 301, redirect: 'https://shop.example.test/' },
+        'shop.example.test/robots.txt': { status: 301, redirect: '/robots.txt' },
+      },
+      'failed',
+      codes.robots_unavailable,
+    ],
+    [
       'a redirect off the crawl scope',
       { '/': { status: 301, redirect: 'https://elsewhere.test/' } },
       'failed',
@@ -463,6 +481,19 @@ describe('discover', () => {
       .execute();
     expect(attempts.at(-1)?.error_code).toBe(code);
     expect(await crawlRow(seed)).toMatchObject({ admitted_url_count: 0, discovered_url_count: 0 });
+  });
+
+  it('asks a redirect origin’s unreachable robots.txt no more than its transient attempts', async () => {
+    const seed = await crawl();
+    const root = await queued(seed, 'discover');
+    const requests: string[] = [];
+    const pages = {
+      '/': { status: 301, redirect: 'https://shop.example.test/' },
+      'shop.example.test/robots.txt': { status: 503 },
+    };
+    await run(worker(pages, requests), root);
+    expect(await task(root)).toMatchObject({ error_code: codes.robots_unavailable });
+    expect(requests.filter((key) => key === 'shop.example.test/robots.txt')).toHaveLength(3);
   });
 
   it('discovers past a robots disallow when the crawl ignores robots.txt, and records it', async () => {

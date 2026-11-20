@@ -133,6 +133,7 @@ beforeAll(async () => {
   await quote(first, 'Acme Road Runner', '110', 'USD', 'runnerstore.com');
   await quote(second, 'Acme Road Runner', '130', 'USD', 'runnerstore.com');
   await quote(third, 'Acme Road Runner', '99', 'EUR', 'shoes.example.eu');
+  await quote(second, 'Rival Pacer', '95', 'USD', 'pacer.example');
   trailCategory = (
     await db
       .selectFrom('commerce_categories')
@@ -237,6 +238,8 @@ describe('Products table read', () => {
 
   it('pages by keyset cursor and refuses a cursor from other filters', async () => {
     const names: string[] = [];
+    // Each page joins its rows' prices, merchants and categories after the cut.
+    const joined: unknown[] = [];
     let cursor: string | null = null;
     do {
       const page: CommerceProductPage = (
@@ -247,9 +250,23 @@ describe('Products table read', () => {
       ).body;
       expect(page.total).toBe(4);
       names.push(...page.items.map((row) => row.name));
+      joined.push(
+        ...page.items.map((row) => [
+          row.mentioned_price.median,
+          row.mentioned_price.quoted,
+          row.merchants.map((m) => m.domain),
+          row.category_ids.length,
+        ]),
+      );
       cursor = page.next_cursor;
     } while (cursor);
     expect(names).toEqual(['Acme Road Runner', 'Rival Pacer', 'Acme Trail Climber', 'Zoom Glide']);
+    expect(joined).toEqual([
+      [120, 2, ['runnerstore.com', 'shoes.example.eu'], 1],
+      [95, 1, ['pacer.example'], 0],
+      [null, 0, [], 1],
+      [null, 0, [], 0],
+    ]);
 
     const first = await read(t, 'window=90&source=all&sort=win_rate&limit=1');
     const replayed = await read(

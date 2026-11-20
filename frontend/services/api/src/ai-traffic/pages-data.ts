@@ -159,12 +159,12 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
       (select url_hash,status_code,sum(requests)::integer n from bot_activity_daily where ${owned} and ${days}
         and identity='exact' and verification='verified' and status_code>=400
         and ${botFilter} group by url_hash,status_code) e group by url_hash),
+    landing_flags as (select url_hash,jsonb_agg(distinct flag) as analytics_quality
+      from ai_referral_landing_daily,jsonb_array_elements_text(analytics_quality) flag where ${owned} and ${days} group by url_hash),
     landing as (select url_hash,min(canonical_url) as canonical_url,min(display_path) as display_path,min(folder) as folder,min(resource_class) as resource_class,sum(sessions)::integer as sessions,sum(key_events) as key_events,
       jsonb_agg(distinct reporting_timezone) as referral_timezones,${rollupIds} as landing_ids,
-      (select coalesce(jsonb_agg(distinct flag),'[]') from ai_referral_landing_daily q,
-        jsonb_array_elements_text(q.analytics_quality) flag where q.workspace_id=${scope.workspaceId}::uuid
-        and q.project_id=${scope.projectId}::uuid and q.url_hash=l.url_hash and q.reporting_date between ${w.start}::date and ${w.end}::date) as analytics_quality
-      from ai_referral_landing_daily l where ${owned} and ${days} group by url_hash),
+      coalesce(lf.analytics_quality,'[]') as analytics_quality
+      from ai_referral_landing_daily l left join landing_flags lf using(url_hash) where ${owned} and ${days} group by url_hash,lf.analytics_quality),
     citation_runs as (${citationRuns(db, scope, windowBounds(w, options)).select('m.owned_citation_pages')}),
     citation as (select p.url_hash,min(p.canonical_url) as canonical_url,count(*)::integer as citations,${citationIds} as citation_ids,${auditIds} as audit_ids
       from citation_runs r cross join lateral jsonb_to_recordset(r.owned_citation_pages) as p(url_hash text,canonical_url text,citation_ids jsonb)

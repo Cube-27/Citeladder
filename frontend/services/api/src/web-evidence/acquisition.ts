@@ -266,9 +266,14 @@ export class PageAcquirer {
     this.settings = settings;
     this.floor = floor;
   }
-  async robots(origin: string): Promise<RobotsPolicy> {
+  /** The unexpired cached policy for `origin`, without asking the host. */
+  cachedRobots(origin: string): Promise<RobotsPolicy> | null {
     const cached = this.#cache.get(origin);
-    if (cached && cached.expires > Date.now()) return cached.value;
+    return cached && cached.expires > Date.now() ? cached.value : null;
+  }
+  async robots(origin: string): Promise<RobotsPolicy> {
+    const cached = this.cachedRobots(origin);
+    if (cached) return cached;
     const value = this.#robots(origin);
     this.#cache.set(origin, { expires: Date.now() + this.settings.robotsTtl * 1000, value });
     if (this.settings.robotsAuthorities && this.#cache.size > this.settings.robotsAuthorities) {
