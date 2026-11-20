@@ -24,7 +24,7 @@ import { POP_FACE } from '@/components/ui/slip';
 export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
 
 /**
- * One 32px row, which never shrinks when a long menu scrolls: `radius-mark`,
+ * One 28px row (a control's height), which never shrinks when a long menu scrolls: `radius-mark`,
  * 4/8 padding, 14/20 `ink`, a 16px lead column for an icon or a check. In a
  * menu with a checkable row, every row reserves that column (`Lead`), so
  * labels align whether checked or not. Hover and keyboard highlight take the
@@ -339,7 +339,7 @@ export function MenuControlRow({
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <div className="text-body-sm text-ink flex min-h-8 items-center justify-between gap-4 px-2 py-1">
+    <div className="type-body text-ink flex min-h-[var(--control-md)] items-center justify-between gap-4 px-2 py-1">
       <span>{label}</span>
       {children}
     </div>

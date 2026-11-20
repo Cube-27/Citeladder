@@ -17,22 +17,18 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The four buttons, layered (globals.css `.face`: a faint gradient and a
- * soft low shadow; borders unchanged): `primary` is the one accent-filled
- * action a view is for, `secondary` the white (near-black in dark) face with
- * the soft `control-edge` (its words name it, so the edge needs no 3:1),
- * `quiet` flat with no edge (`ink-2`, `ink` on hover) for toolbars, rows and
- * navigation (the ink tints below), `danger` a flat secondary face with a
- * crimson label (filled only in a confirm dialog, `danger-confirm`). A face
- * draws its own hover, pressed and open tints and drops its shadow on press; in
- * the app a held press also scales the button to 97% (`press`, globals.css).
+ * The four buttons (docs/design.md Buttons), flat in the app: `primary` the
+ * one `ink`-filled action a view is for, `secondary` `raised` with a `rule`
+ * edge, `quiet` transparent with no edge (`ink-2`, `ink` on hover) for
+ * toolbars, rows and navigation, `danger` a secondary face with a negative
+ * label (filled only in a confirm dialog, `danger-confirm`). The website
+ * keeps its layered `.face` (globals.css, scoped to `data-public-surface`).
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
 /**
- * Heights 32 (default) and 44 (flow pages); below 900px or under a coarse
- * pointer every control is 44. Controls in one row
- * share one size.
+ * Heights 28 (default) and 44 (flow pages); below 900px or under a coarse
+ * pointer every control is 44. Controls in one row share one size.
  */
 export type ButtonSize = 'md' | 'lg';
 
@@ -40,11 +36,12 @@ export type ButtonSize = 'md' | 'lg';
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
-/** The labelled button's layered face; the website draws a softer hairline (marketing.css). */
-const SOFT_EDGE = 'face border border-control-edge';
+/** The raised face, a step up on hover, press or an open menu. */
+const RAISED_FACE =
+  'face bg-raised border border-rule not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
-// The app's one disabled look (well fill, no edge) is in globals.css, after
-// every variant. The website keeps its 45% disabled face.
+// The app's one disabled look (raised fill, rule edge) is in globals.css,
+// after every variant. The website keeps its 45% disabled face.
 const BUTTON_BASE =
   'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
@@ -55,15 +52,15 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary: 'face face-primary border border-primary-to',
-  secondary: cn(SOFT_EDGE, 'text-ink'),
+  primary: 'face face-primary bg-ink border border-ink text-on-ink not-disabled:hover:bg-ink-hover',
+  secondary: cn(RAISED_FACE, 'text-ink'),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
-  danger: cn(SOFT_EDGE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
+  danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
   'danger-confirm':
-    'face face-filled text-on-ink border border-negative not-disabled:hover:opacity-90',
+    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
 /** The button face for an element that is not a `Button` (a link styled as one). */

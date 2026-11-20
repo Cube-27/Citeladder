@@ -1,4 +1,4 @@
-import { ArrowDown, FileText, X } from 'lucide-react';
+import { ArrowDown, FileText } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
 import { IconButton } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
+import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { wellClasses } from '@/components/ui/slip';
 import { cn } from '@/lib/utils';
@@ -215,25 +216,26 @@ export function RemovableChip({
   onRemove,
 }: Readonly<{ label: string; onRemove?: () => void }>) {
   return (
-    <li className={CHIP}>
-      <span className={textRole('caption', 'truncate text-ink-2')}>{label}</span>
-      {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
+    <li className="max-w-full">
+      <ChipTag label={label} onRemove={onRemove}>
+        {label}
+      </ChipTag>
     </li>
   );
 }
 
-const CHIP =
-  'border-rule text-ink-2 inline-flex max-w-full items-center gap-1 rounded-control border px-3 py-0.5';
-
-function RemoveControl({ label, onRemove }: Readonly<{ label: string; onRemove: () => void }>) {
-  return (
-    <Pressable
-      className="focus-ring hover:text-ink rounded-mark flex w-auto"
-      aria-label={`Remove ${label}`}
-      onClick={onRemove}
-    >
-      <Icon icon={X} />
-    </Pressable>
+/** A composer chip is a Tag, removable while composing. */
+function ChipTag({
+  label,
+  onRemove,
+  children,
+}: Readonly<{ label: string; onRemove?: () => void; children: ReactNode }>) {
+  return onRemove ? (
+    <Tag kind="removable" removeLabel={label} onRemove={onRemove}>
+      {children}
+    </Tag>
+  ) : (
+    <Tag>{children}</Tag>
   );
 }
 
@@ -250,16 +252,17 @@ export function PastedTextChip({
   const lines = text.split('\n').length;
   const label = `Pasted text, ${lines} ${lines === 1 ? 'line' : 'lines'}`;
   return (
-    <li className={CHIP}>
-      <Pressable
-        className="focus-ring hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1"
-        aria-label={`View ${label}`}
-        onClick={() => setOpen(true)}
-      >
-        <Icon icon={FileText} />
-        <span className={textRole('caption', 'truncate text-ink-2')}>{label}</span>
-      </Pressable>
-      {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
+    <li className="max-w-full">
+      <ChipTag label={label} onRemove={onRemove}>
+        <Pressable
+          className="focus-ring hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1"
+          aria-label={`View ${label}`}
+          onClick={() => setOpen(true)}
+        >
+          <Icon icon={FileText} className="my-0" />
+          <span className="truncate">{label}</span>
+        </Pressable>
+      </ChipTag>
       <Dialog open={open} onOpenChange={setOpen} title="Pasted text" width="wide">
         <pre className={textRole('body', 'text-ink font-mono break-words whitespace-pre-wrap')}>
           {text}
