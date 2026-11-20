@@ -3826,6 +3826,7 @@ CREATE INDEX ix_monitored_site_urls_site_url_id ON public.monitored_site_urls US
 CREATE INDEX ix_monitored_site_urls_ws_active ON public.monitored_site_urls USING btree (workspace_id, active);
 
 CREATE UNIQUE INDEX uq_monitored_site_urls_fill_order ON public.monitored_site_urls USING btree (project_id, fill_order);
+CREATE STATISTICS public.st_monitored_site_urls_workspace_project (dependencies) ON workspace_id, project_id FROM public.monitored_site_urls;
 
 CREATE TABLE public.robots_snapshots (
     id uuid NOT NULL,
@@ -4745,6 +4746,7 @@ CREATE INDEX ix_site_urls_last_seen_crawl_id ON public.site_urls USING btree (la
 CREATE INDEX ix_site_urls_project_keyset ON public.site_urls USING btree (project_id, normalized_url, id);
 
 CREATE INDEX ix_site_urls_workspace_id ON public.site_urls USING btree (workspace_id);
+CREATE STATISTICS public.st_site_urls_workspace_project (dependencies) ON workspace_id, project_id FROM public.site_urls;
 
 CREATE TABLE public.workspace_site_health_runtime (
     id uuid NOT NULL,
