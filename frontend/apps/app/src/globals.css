@@ -1025,9 +1025,9 @@
   /* The home hero's backdrop (experiment, owner 2026-11-20). */
   --color-site-hero-base: oklch(100% 0 0);
   --color-site-hero-line: oklch(25% 0 0 / 5%);
-  --color-site-hero-amber: oklch(78% 0.12 55 / 32%);
-  --color-site-hero-umber: oklch(88% 0.06 60 / 20%);
-  --color-site-hero-side: oklch(80% 0.11 55 / 20%);
+  --color-site-hero-amber: oklch(78% 0.12 55 / 19%);
+  --color-site-hero-umber: oklch(88% 0.06 60 / 12%);
+  --color-site-hero-side: oklch(80% 0.11 55 / 12%);
   /* The closing band: pale warm silk with ink text. Contrast is checked over
      every stop with any two layers stacked. */
   --color-site-band-from: oklch(97.6% 0.018 70);
@@ -1062,9 +1062,9 @@
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
   --color-site-hero-base: oklch(11.6% 0.0023 17);
   --color-site-hero-line: oklch(97.5% 0.01 70 / 3.5%);
-  --color-site-hero-amber: oklch(56% 0.13 50 / 27%);
-  --color-site-hero-umber: oklch(30% 0.07 48 / 15%);
-  --color-site-hero-side: oklch(55% 0.13 50 / 16%);
+  --color-site-hero-amber: oklch(56% 0.13 50 / 16%);
+  --color-site-hero-umber: oklch(30% 0.07 48 / 9%);
+  --color-site-hero-side: oklch(55% 0.13 50 / 10%);
   /* Deep, low-glow warm on near-black with light text. */
   --color-site-band-from: oklch(17% 0.03 45);
   --color-site-band-mid: oklch(13% 0.018 42);
