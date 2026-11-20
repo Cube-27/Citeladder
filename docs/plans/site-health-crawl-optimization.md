@@ -37,6 +37,14 @@ Recorded from the owner's answers in chat on 2026-11-17.
   evaluations across crawls under SH-B9), and a snapshot stores no list of
   evaluation ids. Evidence tables are partitioned by crawl month, so a later
   retention policy is a partition drop.
+- **CO-7, batched publication at scale (owner, 2026-11-20).** Crawls of up
+  to tens of thousands of pages (a 51,000-URL inventory) must complete on the
+  current infrastructure, with no extra spend. While a crawl runs, analysis,
+  the score and the Issues publish in batches. A cancelled crawl keeps
+  everything published so far. Every crawl-wide step works in bounded batches:
+  setup, finalize, the projection and the reads. Slow is acceptable; failing
+  is not. The
+  [Site Health doc](../site-health.md#crawl-lifecycle) owns the contract.
 - **Deferred to the backlog:** fused discover and analyze for walked pages
   (measure how many crawls still walk first), and incremental recrawl.
 
