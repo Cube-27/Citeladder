@@ -10,12 +10,13 @@ import {
 } from '@/lib/prompts/builder-business';
 
 /**
- * The "About your business" step's state: the saved brand profile and
- * business map as a draft, and one save that writes each owner only what
- * changed — the profile first, so the map never names an offering the
+ * The business facts' edit state, shared by the Prompt Builder's first step
+ * and Agent › Context › Business map: the saved brand profile and business
+ * map as a draft, and one save that writes each owner only what changed or
+ * was accepted — the profile first, so the map never names an offering the
  * profile does not list yet.
  */
-export function useBuilderBusiness({
+export function useBusinessDraft({
   projectId,
   workspaceId,
 }: Readonly<{ projectId: string; workspaceId: string }>) {
@@ -36,6 +37,7 @@ export function useBuilderBusiness({
   const saveBusiness = useMutation(projectMutations.saveBusiness(scope));
   const save = {
     isPending: saveBusiness.isPending,
+    error: saveBusiness.error,
     /** Write what changed; the draft becomes the saved state once both owners land. */
     mutateAsync: () =>
       saveBusiness.mutateAsync(
@@ -57,8 +59,10 @@ export function useBuilderBusiness({
     retrying: profileQuery.isFetching || mapQuery.isFetching,
     draft,
     setDraft: setEdited,
+    /** Drops every unsaved edit. */
+    discard: () => setEdited(null),
     dirty,
     save,
   };
 }
-export type BuilderBusiness = ReturnType<typeof useBuilderBusiness>;
+export type BusinessDraftState = ReturnType<typeof useBusinessDraft>;

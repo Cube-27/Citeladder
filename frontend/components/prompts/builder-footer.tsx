@@ -8,7 +8,7 @@ import { pluralCount } from '@/lib/format';
 import { PROMPTS_HREF } from '@/lib/prompts/routes';
 
 import { liveBuilderStep, type BuilderStep } from './builder-steps';
-import type { BuilderBusiness } from './use-builder-business';
+import type { BusinessDraftState } from '@/components/knowledge-base/use-business-draft';
 import type { BuilderTopics } from './use-builder-topics';
 
 /** The footer's left end: Cancel, back to Prompts. */
@@ -39,7 +39,7 @@ export function BuilderStepActions({
 }: Readonly<{
   step: BuilderStep;
   setStep: (step: BuilderStep) => void;
-  business: BuilderBusiness;
+  business: BusinessDraftState;
   topics: BuilderTopics;
   canGenerate: boolean;
   isGenerating: boolean;

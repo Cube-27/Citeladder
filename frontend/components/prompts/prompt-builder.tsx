@@ -23,15 +23,16 @@ import { BUILDER_STEPS, builderStepCodec, liveBuilderStep } from './builder-step
 import { BuilderTopicsStep } from './builder-topics-step';
 import { CandidateReviewPanel, useCandidateSelection } from './candidate-review';
 import { GenerateErrorAlert, GenerateResultAlert } from './generation-alerts';
-import { useBuilderBusiness, type BuilderBusiness } from './use-builder-business';
+import {
+  useBusinessDraft,
+  type BusinessDraftState,
+} from '@/components/knowledge-base/use-business-draft';
 import { useBuilderTopics, type BuilderTopics } from './use-builder-topics';
 import { StepsLayout } from '@/components/templates/steps-layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type PromptBuilderProps = {
-  /** The offering the business step opens on, scrolled into view. */
-  initialOffering: string | null;
   projectId: string;
   workspaceId: string;
   topics: Topic[];
@@ -63,7 +64,7 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
     props;
   const scope = { workspaceId, projectId };
   const [step, setStep] = useUrlState(BUILDER_STEP_PARAM, builderStepCodec);
-  const business = useBuilderBusiness({ projectId, workspaceId });
+  const business = useBusinessDraft({ projectId, workspaceId });
   const seedsQuery = useQuery(topicsQueries.seedQueries(scope));
   const topicStep = useBuilderTopics({ scope, topics });
   const [edited, setEdited] = useState<RunSettings | null>(null);
@@ -109,7 +110,6 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
             runContext={settings.runContext}
             onRunContextChange={(runContext) => setEdited({ ...settings, runContext })}
             limits={limits}
-            initialOffering={props.initialOffering}
           />
         );
       case 'topics':
@@ -227,7 +227,7 @@ function RunProblem({ built }: Readonly<{ built: ReturnType<typeof runRequest> }
 function UnsavedNotice({
   business,
   topics,
-}: Readonly<{ business: BuilderBusiness; topics: BuilderTopics }>) {
+}: Readonly<{ business: BusinessDraftState; topics: BuilderTopics }>) {
   const unsaved = [
     business.dirty ? 'your business edits are not saved' : null,
     topics.pending ? 'your topic changes are not confirmed' : null,

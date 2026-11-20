@@ -5,7 +5,6 @@ import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Absence } from '@/components/ui/absence';
-import { ChipInput } from '@/components/ui/chip-input';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
@@ -33,7 +32,7 @@ function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
 }
 
-/** The profile's one save, shared by the Company and Audience cards. */
+/** The Company facts form's one save. */
 function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
   return (
     <SaveFoot
@@ -48,7 +47,8 @@ function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
 /**
  * Category, buyer type and market scope decide which questions prompt
  * generation asks, so a wrong onboarding answer must stay correctable here,
- * beside the description and positioning. Short facts are rows with their
+ * beside the target audience, description and positioning. Offerings are the
+ * Business map tab's (and the Prompt Builder's). Short facts are rows with their
  * control at the right; long text takes the row's width under its label.
  */
 export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>) {
@@ -57,7 +57,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
     <SettingsGroup title="Company facts">
       <ProfileSaveNotices form={form} />
       <SettingRows foot={<ProfileSaveFoot form={form} />}>
-        <SettingField label="What you sell">
+        <SettingField label="Category">
           {(field) => (
             <Textarea
               {...field}
@@ -88,6 +88,17 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           disabled={saving}
           onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
         />
+        <SettingField label="Target audience">
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={3}
+              disabled={saving}
+              value={draft.target_audience}
+              onChange={(event) => form.setDraft({ ...draft, target_audience: event.target.value })}
+            />
+          )}
+        </SettingField>
         <SettingField label="Description">
           {(field) => (
             <Textarea
@@ -146,44 +157,6 @@ function FacetChoice<T extends string>({
         />
       )}
     </SettingField>
-  );
-}
-
-/**
- * Who the business sells to, and its offerings one chip each, so an offering
- * whose name holds a comma ("simulator bays for golf courses, and community
- * centres") stays one offering. A typed but unadded offering is held by the
- * form and saved with the list.
- */
-export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
-  const { draft, saving } = form;
-  return (
-    <SettingsGroup title="Audience and offerings">
-      <ProfileSaveNotices form={form} />
-      <SettingRows foot={<ProfileSaveFoot form={form} />}>
-        <SettingField label="Target audience">
-          {(field) => (
-            <Textarea
-              {...field}
-              rows={4}
-              disabled={saving}
-              value={draft.target_audience}
-              onChange={(event) => form.setDraft({ ...draft, target_audience: event.target.value })}
-            />
-          )}
-        </SettingField>
-        <ChipInput
-          label="Products and services"
-          items={draft.products_services.map((value) => ({ value }))}
-          onChange={(items) =>
-            form.setDraft({ ...draft, products_services: items.map((item) => item.value) })
-          }
-          pending={form.pendingOffering}
-          onPendingChange={form.setPendingOffering}
-          disabled={saving}
-        />
-      </SettingRows>
-    </SettingsGroup>
   );
 }
 

@@ -1,233 +1,219 @@
 import { Check, X } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
-import { Tag } from '@/components/ui/tag';
-import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
-/** One chip: a value, and whether it is still an unconfirmed suggestion. */
+/** One value, and whether it is still a model's or discovery's unaccepted suggestion. */
 export type ChipItem = Readonly<{ value: string; suggested?: boolean }>;
 
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-// No `hit-area`: a suggested chip's Confirm and Remove sit side by side, so
-// each keeps its own box, their centres 24 apart (WCAG 2.5.8 spacing).
-const CHIP_BUTTON =
-  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
-
-/**
- * One value as a 24px `surface-sunken` chip with a 20px remove button. A
- * suggestion is marked "Suggested" and offers Confirm until a person accepts
- * it, so a model's guess never reads as a reviewed fact.
- */
-function Chip({
-  item,
-  disabled,
-  onRemove,
-  onConfirm,
-}: Readonly<{
-  item: ChipItem;
-  disabled?: boolean;
-  onRemove: () => void;
-  onConfirm: () => void;
-}>) {
-  return (
-    <li
-      className={cn(
-        'border-rule text-ink-2 type-caption rounded-mark inline-flex min-h-5 max-w-full items-center gap-1 border ps-1.5 pe-0.5 whitespace-nowrap',
-        item.suggested && 'border-control-line border-dashed',
-      )}
-    >
-      <span className="min-w-0 truncate" title={item.value}>
-        {item.value}
-      </span>
-      {item.suggested ? <span className="shrink-0">Suggested</span> : null}
-      {item.suggested ? (
-        <button
-          type="button"
-          aria-label={`Confirm ${item.value}`}
-          disabled={disabled}
-          onClick={onConfirm}
-          className={CHIP_BUTTON}
-        >
-          <Icon icon={Check} className="my-0" />
-        </button>
-      ) : null}
-      <button
-        type="button"
-        aria-label={`Remove ${item.value}`}
-        disabled={disabled}
-        onClick={onRemove}
-        className={cn(CHIP_BUTTON, item.suggested && 'ms-1')}
-      >
-        <Icon icon={X} className="my-0" />
-      </button>
-    </li>
-  );
+/** `items` with each new value appended once (any case), up to `max`. */
+function appended(items: readonly ChipItem[], values: readonly string[], max?: number) {
+  const next = [...items];
+  for (const raw of values) {
+    const value = raw.trim();
+    if (!value || next.some((item) => sameValue(item.value, value))) continue;
+    if (max !== undefined && next.length >= max) break;
+    next.push({ value });
+  }
+  return next;
 }
 
+const TOKEN_REMOVE =
+  'focus-ring text-ink-2 hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark opacity-0 transition-opacity group-hover/token:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 disabled:hidden';
+
 /**
- * ChipInput — a list of short values as removable chips with an add field at
- * the end, all inside Input's box (36px minimum, the soft xs ring, `radius-md`),
- * wrapping to more lines as chips are added. Enter or leaving the field adds
- * what was typed; Backspace in an empty add field removes the last chip; a
- * repeat (any case) is ignored. A value is one entry however many commas it
- * holds, so an offering such as "bays for golf courses, and community
- * centres" stays one offering. With `max`, an "n/max" counter shows and the
- * add field stops at the limit. An owner that saves the typed but unadded
- * value too holds it through `pending` and `onPendingChange`.
+ * ValuesInput — several short values in one box: each a token, then an add
+ * field filling the rest of the line. Enter (and a comma, with `commaAdds`)
+ * adds what was typed; leaving the field adds it too; pasting several lines
+ * (or comma-separated values) adds each. Backspace in the empty field removes
+ * the last token; ArrowLeft walks the tokens, where Delete removes one, so
+ * Tab only ever moves between fields. A suggestion is drawn dashed; `onAccept`
+ * offers one tick that accepts the box's suggestions. `cell` drops the edge
+ * for a grid cell, which shows its frame only while focused.
  */
-export function ChipInput({
+export function ValuesInput({
   label,
-  hint,
   items,
   onChange,
-  placeholder,
-  disabled,
+  onAccept,
   max,
+  disabled,
+  placeholder,
+  commaAdds = false,
+  variant = 'field',
   pending: heldPending,
   onPendingChange,
 }: Readonly<{
+  /** Names the values; the add field is "Add to …". */
   label: string;
-  hint?: string;
   items: readonly ChipItem[];
   onChange: (items: ChipItem[]) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  /** The most entries the owner accepts. */
+  /** Accepts this box's suggestions; offered only while it holds one. */
+  onAccept?: () => void;
   max?: number;
+  disabled?: boolean;
+  placeholder?: string;
+  commaAdds?: boolean;
+  variant?: 'field' | 'cell';
   /** The typed value, when the owner holds it. */
   pending?: string;
   onPendingChange?: (value: string) => void;
 }>) {
-  const id = useId();
+  const box = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
   const [ownPending, setOwnPending] = useState('');
   const pending = heldPending ?? ownPending;
   const setPending = onPendingChange ?? setOwnPending;
-  const trimmed = pending.trim();
   const full = max !== undefined && items.length >= max;
+  const separator = commaAdds ? /[\n\r,]+/ : /[\n\r]+/;
+
   const add = () => {
-    if (trimmed === '' || full || items.some((item) => sameValue(item.value, trimmed))) return;
-    onChange([...items, { value: trimmed }]);
+    const next = appended(items, [pending], max);
+    if (next.length === items.length) return;
+    onChange(next);
     setPending('');
   };
-  return (
-    // A named group: its chips are a list of the same name, and the add field
-    // is "Add to …", so each part says what it belongs to.
-    <fieldset className="flex min-w-0 flex-col gap-2">
-      <legend className="text-body-sm text-ink mb-2">{label}</legend>
-      {/* The add field grows to fill the rest of its line, so a press on the
-          box's empty space lands in it. */}
-      <div
-        className={cn(
-          'focus-frame flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-control p-1 transition-[border-color,box-shadow]',
-          FIELD_EDGE,
-          disabled && 'cursor-not-allowed opacity-45',
-        )}
-      >
-        {items.length ? (
-          <ul aria-label={label} className="contents">
-            {items.map((item) => (
-              <Chip
-                key={item.value}
-                item={item}
-                disabled={disabled}
-                onRemove={() => onChange(items.filter((other) => other !== item))}
-                onConfirm={() =>
-                  onChange(items.map((other) => (other === item ? { value: other.value } : other)))
-                }
-              />
-            ))}
-          </ul>
-        ) : null}
-        <input
-          aria-label={`Add to ${label}`}
-          value={pending}
-          placeholder={placeholder}
-          aria-describedby={hint ? `${id}-hint` : undefined}
-          disabled={disabled || full}
-          onChange={(event) => setPending(event.target.value)}
-          onBlur={add}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              add();
-            } else if (event.key === 'Backspace' && pending === '' && items.length) {
-              event.preventDefault();
-              onChange(items.slice(0, -1));
-            }
-          }}
-          className="text-ink placeholder:text-ink-2 text-body-sm min-h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
-        />
-      </div>
-      <ChipInputNote hintId={`${id}-hint`} hint={hint} count={items.length} max={max} />
-    </fieldset>
-  );
-}
+  const removers = () => [
+    ...(box.current?.querySelectorAll<HTMLButtonElement>('[data-token-remove]') ?? []),
+  ];
+  const removeAt = (index: number) => {
+    onChange(items.filter((_, position) => position !== index));
+    const before = removers()[index - 1];
+    if (before) before.focus();
+    else field.current?.focus();
+  };
+  const onFieldKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || (commaAdds && event.key === ',')) {
+      event.preventDefault();
+      add();
+    } else if (event.key === 'Backspace' && pending === '' && items.length) {
+      event.preventDefault();
+      onChange(items.slice(0, -1));
+    } else if (event.key === 'ArrowLeft' && event.currentTarget.selectionStart === 0) {
+      const last = removers().at(-1);
+      if (last) {
+        event.preventDefault();
+        last.focus();
+      }
+    }
+  };
+  const onTokenKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const all = removers();
+    if (event.key === 'ArrowLeft') all[index - 1]?.focus();
+    else if (event.key === 'ArrowRight') (all[index + 1] ?? field.current)?.focus();
+    else if (event.key === 'Backspace' || event.key === 'Delete') removeAt(index);
+    else return;
+    event.preventDefault();
+  };
+  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const parts = event.clipboardData.getData('text').split(separator);
+    if (parts.length < 2) return;
+    event.preventDefault();
+    onChange(appended(items, [pending, ...parts], max));
+    setPending('');
+  };
+  const accepting = onAccept !== undefined && items.some((item) => item.suggested);
 
-/** The hint on the left and, with `max`, the "n/max" counter on the right. */
-function ChipInputNote({
-  hintId,
-  hint,
-  count,
-  max,
-}: Readonly<{ hintId: string; hint?: string; count: number; max?: number }>) {
-  if (!hint && max === undefined) return null;
   return (
-    <div className="flex items-start justify-between gap-3">
-      {hint ? (
-        <p id={hintId} className="text-caption text-ink-2">
-          {hint}
-        </p>
-      ) : (
-        <span />
+    // The add field grows to fill the rest of its line, so a press there lands in it.
+    <div
+      ref={box}
+      className={cn(
+        'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1 rounded-control p-1 transition-[border-color,box-shadow]',
+        // The accept tick sits in the top corner, clear of the wrapping tokens.
+        accepting && 'pe-8',
+        variant === 'field'
+          ? cn('min-h-[var(--control-md)]', FIELD_EDGE)
+          : 'min-h-10 border border-transparent hover:bg-state-hover',
+        disabled && 'cursor-not-allowed opacity-45',
       )}
-      {max !== undefined ? (
-        <span
-          className={cn(
-            'ms-auto shrink-0 text-caption tabular-nums',
-            count >= max ? 'text-ink' : 'text-ink-2',
-          )}
+    >
+      {items.length ? (
+        <ul aria-label={label} className="contents">
+          {items.map((item, index) => (
+            <li
+              key={item.value}
+              className={cn(
+                'group/token type-body rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
+                item.suggested ? 'border-control-line border border-dashed' : 'bg-state-selected',
+              )}
+            >
+              <span className="min-w-0 truncate" title={item.value}>
+                {item.value}
+                {item.suggested ? <span className="sr-only"> (suggested)</span> : null}
+              </span>
+              <button
+                type="button"
+                data-token-remove=""
+                tabIndex={-1}
+                aria-label={`Remove ${item.value}`}
+                disabled={disabled}
+                onClick={() => removeAt(index)}
+                onKeyDown={(event) => onTokenKey(event, index)}
+                className={TOKEN_REMOVE}
+              >
+                <Icon icon={X} className="my-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <input
+        ref={field}
+        aria-label={`Add to ${label}`}
+        value={pending}
+        placeholder={items.length ? undefined : placeholder}
+        disabled={disabled || full}
+        onChange={(event) => setPending(event.target.value)}
+        onBlur={add}
+        onKeyDown={onFieldKey}
+        onPaste={onPaste}
+        className="text-ink placeholder:text-ink-2 type-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
+      />
+      {accepting ? (
+        <button
+          type="button"
+          aria-label={`Accept ${label}`}
+          disabled={disabled}
+          onClick={onAccept}
+          className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control absolute end-1 top-1 grid size-6 place-items-center"
         >
-          {`${count}/${max}`}
-        </span>
+          <Icon icon={Check} className="my-0" />
+        </button>
       ) : null}
     </div>
   );
 }
 
-/** One read-only chip; `media` is a leading mark such as a `BrandMark`. */
-export type StaticChip = ChipItem & Readonly<{ key?: string; media?: ReactNode }>;
-
 /**
- * Short values read, not edited (a business map's roles, a project's
- * competitors), as one wrapping row of Tags. A suggestion says so. No values
- * reads "Not set".
+ * ChipInput — a named group of short values: its legend, the ValuesInput and,
+ * with `max`, an "n/max" counter. A value is one entry however many commas it
+ * holds, so a category such as "bays for golf courses, and community centres"
+ * stays one.
  */
-export function ChipList({
+export function ChipInput({
   label,
-  items,
-}: Readonly<{
-  /** Names the list when nothing visible does. */
-  label?: string;
-  items: readonly StaticChip[];
-}>) {
-  if (!items.length) return <Absence state="not_set" />;
+  max,
+  ...input
+}: Readonly<Omit<Parameters<typeof ValuesInput>[0], 'variant' | 'commaAdds'>>) {
   return (
-    <ul aria-label={label} className="flex min-w-0 flex-wrap items-center gap-2">
-      {items.map((item) => (
-        <li key={item.key ?? item.value} className="max-w-full">
-          <Tag>
-            {item.media}
-            <span className="min-w-0 truncate" title={item.value}>
-              {item.value}
-            </span>
-            {item.suggested ? <span className="text-ink-2 shrink-0">Suggested</span> : null}
-          </Tag>
-        </li>
-      ))}
-    </ul>
+    <fieldset className="flex min-w-0 flex-col gap-2">
+      <legend className="text-body-sm text-ink mb-2">{label}</legend>
+      <ValuesInput label={label} max={max} {...input} />
+      {max !== undefined ? (
+        <span
+          className={cn(
+            'ms-auto text-caption tabular-nums',
+            input.items.length >= max ? 'text-ink' : 'text-ink-2',
+          )}
+        >
+          {`${input.items.length}/${max}`}
+        </span>
+      ) : null}
+    </fieldset>
   );
 }

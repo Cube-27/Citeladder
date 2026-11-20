@@ -5,11 +5,14 @@ import type { BrandProfile, BusinessMap } from '@citeladder/contracts';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 
 import {
+  acceptAll,
   businessDraft,
   mapChanges,
   personaChoices,
   profileChanges,
   showsServiceAreas,
+  suggestionCount,
+  withField,
   withOfferings,
 } from './builder-business';
 
@@ -148,6 +151,38 @@ describe('the business step draft', () => {
         { offering: MAT, attributes: [], situations: [], audiences: [], exclusions: [] },
       ],
     });
+  });
+
+  it('accepts what discovery inferred and the map suggested, sending an accepted field unchanged', () => {
+    const saved = businessDraft(
+      {
+        ...profile,
+        business_context: {
+          ...profile.business_context,
+          field_sources: {
+            buyer_roles: 'inferred',
+            service_areas: 'reviewed',
+            category_terms: 'reviewed',
+            business_model: 'reviewed',
+          },
+        },
+      },
+      map,
+    );
+    // An inferred list is a suggestion; an empty one (jobs) is not.
+    expect(saved.suggested).toEqual(['buyerRoles']);
+    expect(suggestionCount(saved)).toBe(2);
+
+    const accepted = acceptAll(saved);
+    expect(suggestionCount(accepted)).toBe(0);
+    expect(profileChanges(accepted, saved)).toEqual({ buyer_roles: ['Club coach'] });
+    expect(mapChanges(accepted, saved)?.offerings?.[0]?.situations).toEqual([
+      { value: 'small garden', review_state: 'confirmed' },
+    ]);
+    // Editing an inferred list makes it the person's own.
+    const edited = withField(saved, 'buyerRoles', ['Club coach', 'Parent']);
+    expect(edited.suggested).toEqual([]);
+    expect(profileChanges(edited, saved)).toEqual({ buyer_roles: ['Club coach', 'Parent'] });
   });
 
   it('labels every business model the API accepts', () => {

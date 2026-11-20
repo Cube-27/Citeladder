@@ -2,7 +2,6 @@
 export const CONTEXT_TABS = [
   // Short labels: the tabs fit the compact column on one row.
   { value: 'facts', label: 'Company' },
-  { value: 'audience', label: 'Audience' },
   { value: 'themes', label: 'Themes' },
   { value: 'map', label: 'Business map' },
   { value: 'competitors', label: 'Competitors' },

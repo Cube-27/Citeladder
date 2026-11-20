@@ -65,13 +65,21 @@ export function PageFrame({
   filters,
   fill,
   fitted,
+  width: ownWidth,
   children,
-}: PageFrameSlots & Readonly<{ fill?: true; fitted?: true; children: ReactNode }>) {
+}: PageFrameSlots &
+  Readonly<{
+    fill?: true;
+    fitted?: true;
+    /** A view's own column, where it differs from its route's (one wide tab). */
+    width?: PageWidth;
+    children: ReactNode;
+  }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
   const hasTrail = parents.length > 0;
-  const width = fill ? 'full' : routeWidth(pathname);
+  const width = fill ? 'full' : (ownWidth ?? routeWidth(pathname));
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const searchParams = useSearchParams()[0];

@@ -34,9 +34,9 @@ sites are out of scope.
   the sidebar foot, in the same spot expanded and collapsed. Owner,
   2026-11-20.
 - **AR-9 Widths.** Keep today's narrow pages (1040 column: Overview, Projects,
-  Issues, Actions, page detail, Agent, Billing; 720 column: Settings, Runs,
-  Agent context). Side space is better than space in the middle. Owner,
-  2026-11-20.
+  Issues, Actions, page detail, Agent, Billing, and Agent context's Business
+  map tab; 720 column: Settings, Runs, the other Agent context tabs). Side
+  space is better than space in the middle. Owner, 2026-11-20.
 - **AR-10 Layouts first.** Define standard page layouts, then place content in
   them; never arrange a page by hand. Settings and Agent context need a
   rework, not only new components; Actions mostly needs the new components.
@@ -46,6 +46,17 @@ sites are out of scope.
 - **AR-12 Sign-in and setup.** Sign-in and the account pages keep their split
   screen with the product showcase and the form unboxed on the surface (no
   card), and setup keeps its own layout; both take the app's new look.
+  Owner, 2026-11-20.
+- **AR-13 No helper text.** No description under a group heading or field
+  unless it carries information the label cannot (a limit, a count, an
+  error). Owner, 2026-11-20.
+- **AR-14 Business facts.** The Prompt Builder and Agent context's Business
+  map both edit the business facts, with one shared offerings grid, and no
+  third place does: Context's Audience tab merges into Company and stops
+  editing offerings. Prompt Builder has its own sidebar row under Tracking and
+  keeps its steps in a left rail. Owner, 2026-11-20.
+- **AR-15 Shares as split bars.** Distribution shares and the intent mix are
+  bars dragged in 5% steps that always total 100, not percentage fields.
   Owner, 2026-11-20.
 - **AR-13 Focus.** Focus rings use a subtle accent edge and glow instead of
   ink. Owner, 2026-11-20.

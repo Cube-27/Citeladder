@@ -1,72 +1,80 @@
 import { Search, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { AppGrid } from '@/components/ui/app-grid';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { RadioGroup } from '@/components/ui/radio-group';
+import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { SplitBar } from '@/components/ui/split-bar';
+import { StateBlock } from '@/components/ui/state-block';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits, SeedQueries, Topic } from '@citeladder/contracts';
+import { PROMPT_BUILDER } from '@/lib/config/prompts';
+import { formatCount } from '@/lib/format';
 import {
   INTENT_KEYS,
   seedSourceOf,
   type RunSettings,
   type SeedChoice,
 } from '@/lib/prompts/builder-run';
-import { StateBlock } from '@/components/ui/state-block';
 
-const INTENT_LABELS = {
-  informational: 'Informational',
-  commercial: 'Commercial',
-  transactional: 'Transactional',
-} as const satisfies Record<(typeof INTENT_KEYS)[number], string>;
+const INTENT_SEGMENTS = [
+  { key: 'informational', label: 'Informational' },
+  { key: 'commercial', label: 'Commercial' },
+  { key: 'transactional', label: 'Transactional' },
+] as const satisfies readonly { key: (typeof INTENT_KEYS)[number]; label: string }[];
+const SHARE_SEGMENTS = [
+  { key: 'unbranded', label: 'Unbranded' },
+  { key: 'branded', label: 'Branded' },
+  { key: 'comparison', label: 'Competitor alternatives' },
+] as const;
 const SOURCE_LABELS: Record<SeedChoice, string> = {
   search_console: 'Search Console',
   search_intelligence: 'Keyword research',
   none: 'None',
 };
 
-function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
-  return (
-    <Stack as="fieldset" gap="compact" className="min-w-0">
-      <legend className={textRole('subheading')}>{title}</legend>
-      {children}
-    </Stack>
-  );
-}
+/** A typed percentage as a whole number within 0 to 100; anything else reads 0. */
+const share = (text: string) => {
+  const value = Math.round(Number(text));
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
+};
 
-function PercentField({
-  label,
-  hint,
-  value,
-  disabled,
+/**
+ * Unbranded, branded and competitor-alternative prompts as one split of the
+ * run, so the two shares can never pass 100%. Without a tracked competitor
+ * the split has no competitor part and sends none.
+ */
+function ShareMix({
+  settings,
   onChange,
+  hasCompetitors,
 }: Readonly<{
-  label: string;
-  hint?: string;
-  value: string;
-  disabled?: boolean;
-  onChange: (value: string) => void;
+  settings: RunSettings;
+  onChange: (settings: RunSettings) => void;
+  hasCompetitors: boolean;
 }>) {
+  const branded = share(settings.brandedPercent);
+  const comparison = hasCompetitors
+    ? Math.min(share(settings.comparisonPercent), 100 - branded)
+    : 0;
+  const segments = hasCompetitors ? SHARE_SEGMENTS : SHARE_SEGMENTS.slice(0, 2);
+  const values = [100 - branded - comparison, branded, comparison].slice(0, segments.length);
   return (
-    <Field label={label} hint={hint}>
-      {(field) => (
-        <Input
-          {...field}
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={100}
-          width="quantity"
-          value={value}
-          disabled={disabled}
-          endContent="%"
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </Field>
+    <SplitBar
+      label="Branded share"
+      segments={segments}
+      values={values}
+      onChange={([, nextBranded = 0, nextComparison = 0]) =>
+        onChange({
+          ...settings,
+          brandedPercent: String(nextBranded),
+          comparisonPercent: String(nextComparison),
+        })
+      }
+    />
   );
 }
 
@@ -93,7 +101,7 @@ function PersonaChoices({
     );
   const full = selected.length >= max;
   return (
-    <Stack gap="tight">
+    <SettingRows label="Personas">
       {choices.map((persona) => {
         const checked = selected.includes(persona);
         return (
@@ -110,8 +118,7 @@ function PersonaChoices({
           />
         );
       })}
-      <span className="type-caption">Up to {max}.</span>
-    </Stack>
+    </SettingRows>
   );
 }
 
@@ -146,13 +153,19 @@ function SeedList({
     onChange({ ...settings, unticked });
   };
   return (
-    <Stack gap="compact">
+    <SettingRows label="Search queries">
       {topics.flatMap((topic) => {
         const own = queries.filter((query) => query.topic_id === topic.id);
         if (!own.length) return [];
+        const kept = own.filter((query) => !settings.unticked.has(query.id)).length;
         return [
           <Stack key={topic.id} as="fieldset" gap="tight">
-            <legend className={textRole('body', 'text-ink-2')}>{topic.name}</legend>
+            <legend className={textRole('label', 'flex w-full justify-between gap-2 pb-1')}>
+              {topic.name}
+              <span className={textRole('caption', 'tabular-nums')}>
+                {`${formatCount(kept)} of ${formatCount(own.length)}`}
+              </span>
+            </legend>
             {own.map((query) => (
               <Checkbox
                 key={query.id}
@@ -164,14 +177,15 @@ function SeedList({
           </Stack>,
         ];
       })}
-    </Stack>
+    </SettingRows>
   );
 }
 
 /**
  * Step 3: how the run divides. Every control starts at a default that suits
  * most businesses: 80% unbranded, intents 25/50/25, seeds from the first
- * connected search source.
+ * connected search source. Shares and the intent mix are split bars that
+ * move in 5% steps and always total 100.
  */
 export function BuilderDistributionStep({
   settings,
@@ -195,84 +209,96 @@ export function BuilderDistributionStep({
   /** Run state and unsaved-step warnings, above the controls. */
   notices: ReactNode;
 }>) {
-  const branded = Number(settings.brandedPercent);
   const sources: SeedChoice[] = [...(seeds.data?.sources.map((item) => item.source) ?? []), 'none'];
+  const intent = INTENT_SEGMENTS.map((segment) => share(settings.intent[segment.key]));
+  const mix = PROMPT_BUILDER.defaultIntentMix;
+  const resetIntent = () =>
+    onChange({
+      ...settings,
+      intent: {
+        informational: String(mix.informational),
+        commercial: String(mix.commercial),
+        transactional: String(mix.transactional),
+      },
+    });
   return (
     <Stack gap="section">
       {notices}
-      <Field label="Number of prompts" hint={`1 to ${limits.generation_count_max}`}>
-        {(field) => (
-          <Input
-            {...field}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={limits.generation_count_max}
-            width="quantity"
-            value={settings.count}
-            onChange={(event) => onChange({ ...settings, count: event.target.value })}
+      <SettingsGroup title="Size and share">
+        <SettingRows>
+          <SettingField inline label="Number of prompts" hint={`1–${limits.generation_count_max}`}>
+            {(field) => (
+              <Input
+                {...field}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={limits.generation_count_max}
+                width="quantity"
+                value={settings.count}
+                onChange={(event) => onChange({ ...settings, count: event.target.value })}
+              />
+            )}
+          </SettingField>
+          <ShareMix settings={settings} onChange={onChange} hasCompetitors={hasCompetitors} />
+        </SettingRows>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Intent mix"
+        action={
+          <Button variant="quiet" onClick={resetIntent}>
+            Reset
+          </Button>
+        }
+      >
+        <SettingRows>
+          <SplitBar
+            label="Intent mix"
+            segments={INTENT_SEGMENTS}
+            values={intent}
+            onChange={([informational = 0, commercial = 0, transactional = 0]) =>
+              onChange({
+                ...settings,
+                intent: {
+                  informational: String(informational),
+                  commercial: String(commercial),
+                  transactional: String(transactional),
+                },
+              })
+            }
           />
-        )}
-      </Field>
-      <AppGrid layout="halves">
-        <PercentField
-          label="Branded share"
-          hint={Number.isFinite(branded) ? `${Math.max(0, 100 - branded)}% unbranded` : undefined}
-          value={settings.brandedPercent}
-          onChange={(brandedPercent) => onChange({ ...settings, brandedPercent })}
-        />
-        <PercentField
-          label="Competitor alternatives"
-          hint={hasCompetitors ? undefined : 'Track a competitor first'}
-          value={hasCompetitors ? settings.comparisonPercent : '0'}
-          disabled={!hasCompetitors}
-          onChange={(comparisonPercent) => onChange({ ...settings, comparisonPercent })}
-        />
-      </AppGrid>
-      <Section title="Intent mix">
-        <AppGrid layout="thirds">
-          {INTENT_KEYS.map((key) => (
-            <PercentField
-              key={key}
-              label={INTENT_LABELS[key]}
-              value={settings.intent[key]}
-              onChange={(value) =>
-                onChange({ ...settings, intent: { ...settings.intent, [key]: value } })
-              }
-            />
-          ))}
-        </AppGrid>
-      </Section>
-      <Section title="Personas to balance across">
+        </SettingRows>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Personas"
+        status={
+          <span className={textRole('caption', 'tabular-nums')}>
+            {`${formatCount(settings.personas.length)} of ${formatCount(limits.distribution_personas_max)}`}
+          </span>
+        }
+      >
         <PersonaChoices
           choices={personaChoices}
           selected={settings.personas}
           max={limits.distribution_personas_max}
           onChange={(personas) => onChange({ ...settings, personas })}
         />
-      </Section>
-      <Section title="Search data">
+      </SettingsGroup>
+      <SettingsGroup title="Search data">
         {seeds.data ? (
-          <>
-            <RadioGroup<SeedChoice>
-              variant="cards"
-              columns={sources.length >= 3 ? 3 : 2}
+          <Stack gap="compact">
+            <SegmentedControl<SeedChoice>
               ariaLabel="Search data source"
               value={seedSourceOf(settings, seeds.data)}
               options={sources.map((source) => ({ value: source, label: SOURCE_LABELS[source] }))}
-              onValueChange={(seedSource) =>
-                onChange({ ...settings, seedSource, unticked: new Set() })
-              }
+              onChange={(seedSource) => onChange({ ...settings, seedSource, unticked: new Set() })}
             />
-            {sources.length > 1 ? null : (
-              <span className="type-caption">No search data connected</span>
-            )}
             <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
-          </>
+          </Stack>
         ) : (
           seeds.status
         )}
-      </Section>
+      </SettingsGroup>
     </Stack>
   );
 }

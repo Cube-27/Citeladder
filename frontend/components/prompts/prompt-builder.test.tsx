@@ -83,7 +83,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-type Sent = { profile?: unknown; confirm?: unknown; seedReads?: number };
+type Sent = { profile?: unknown; map?: unknown; confirm?: unknown; seedReads?: number };
 
 function serve(sent: Sent) {
   mswServer.use(
@@ -99,6 +99,10 @@ function serve(sent: Sent) {
         ...profile,
         business_context: { ...profile.business_context, buyer_roles: ['Club coach', 'Parent'] },
       });
+    }),
+    http.put(`/api/v1/projects/${projectId}/business-map`, async ({ request }) => {
+      sent.map = await request.json();
+      return HttpResponse.json(map);
     }),
     http.post(`/api/v1/projects/${projectId}/topics/preview`, () =>
       HttpResponse.json({
@@ -135,7 +139,6 @@ function renderBuilder(
   window.history.replaceState(null, '', `/prompts/build?step=${step}`);
   renderWithProviders(
     <PromptBuilder
-      initialOffering={null}
       projectId={projectId}
       workspaceId={workspaceId}
       topics={[topic]}
@@ -153,54 +156,69 @@ function renderBuilder(
 describe('PromptBuilder', () => {
   it('prefills the business step and saves only what changed before moving on', async () => {
     const user = userEvent.setup({ delay: null });
-    const sent: { profile?: unknown; confirm?: unknown } = {};
+    const sent: Sent = {};
     serve(sent);
     renderBuilder('business');
 
-    // Prefilled from saved knowledge; an offering with commas is one chip.
-    const offerings = await screen.findByRole('list', { name: 'What you sell' });
+    // Prefilled from saved knowledge; an offering with commas is one offering.
+    const offerings = await screen.findByRole('list', { name: 'Offerings' });
     expect(
       within(offerings)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
+        .getAllByRole('listitem', { name: /./ })
+        .map((row) => row.getAttribute('aria-label')),
     ).toEqual([OFFERING]);
-    expect(screen.queryByRole('group', { name: 'Service areas' })).not.toBeInTheDocument();
+    // A national business has no service areas.
+    expect(screen.queryByRole('textbox', { name: 'Add to Service areas' })).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Add to Buyer roles' }), 'Parent{Enter}');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(sent.profile).toEqual({ buyer_roles: ['Club coach', 'Parent'] }));
+    // Only the profile changed, so the map is not written.
+    expect(sent.map).toBeUndefined();
     expect(await screen.findByRole('button', { name: 'Suggest topics' })).toBeVisible();
     // The step is in the address, so a reload or Back keeps it; the done step reopens.
     expect(window.location.search).toBe('?step=topics');
     await user.click(screen.getByRole('button', { name: /About your business/ }));
     expect(window.location.search).toBe('');
-    expect(await screen.findByRole('list', { name: 'What you sell' })).toBeVisible();
+    expect(await screen.findByRole('list', { name: 'Offerings' })).toBeVisible();
   });
 
-  it('lists each offering as one row that opens in place, one at a time, by keyboard', async () => {
+  it('fills offerings in their grid rows by keyboard and paste, then saves the map', async () => {
     const user = userEvent.setup({ delay: null });
-    serve({});
+    const sent: Sent = {};
+    serve(sent);
     renderBuilder('business');
-    await user.type(
-      await screen.findByRole('textbox', { name: 'Add to What you sell' }),
-      'Hitting mats{Enter}',
+
+    // Typing an offering and tabbing on adds its row.
+    await user.type(await screen.findByRole('textbox', { name: 'Add offering' }), 'Hitting mats');
+    await user.tab();
+    await user.click(screen.getByRole('textbox', { name: 'Add to Who buys: Hitting mats' }));
+    // A comma or Enter adds a value; Tab moves to the next cell.
+    await user.keyboard('beginners,club coaches{Enter}');
+    await user.tab();
+    expect(screen.getByRole('textbox', { name: 'Add to Situations: Hitting mats' })).toHaveFocus();
+    // A pasted list adds a value per line.
+    await user.paste('small garden\nlow garage');
+    await user.click(screen.getByRole('button', { name: 'Remove low garage' }));
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await waitFor(() =>
+      expect(sent.map).toEqual({
+        offerings: [
+          { offering: OFFERING, attributes: [], situations: [], audiences: [], exclusions: [] },
+          {
+            offering: 'Hitting mats',
+            attributes: [],
+            situations: [{ value: 'small garden', review_state: 'confirmed' }],
+            audiences: [
+              { value: 'beginners', review_state: 'confirmed' },
+              { value: 'club coaches', review_state: 'confirmed' },
+            ],
+            exclusions: [],
+          },
+        ],
+      }),
     );
-    const net = screen.getByRole('button', { name: (name) => name.startsWith(OFFERING) });
-    const mats = screen.getByRole('button', { name: /^Hitting mats/ });
-    expect(net).toHaveTextContent(`${OFFERING}—Not set`);
-    expect(screen.queryByRole('group', { name: 'Who buys it' })).not.toBeInTheDocument();
-
-    net.focus();
-    await user.keyboard('{Enter}');
-    expect(net).toHaveAttribute('aria-expanded', 'true');
-    expect(net).toHaveFocus();
-    await user.type(screen.getByRole('textbox', { name: 'Add to Who buys it' }), 'Parents{Enter}');
-    expect(net).toHaveTextContent('1 buyer · 0 situations · 0 attributes');
-
-    mats.focus();
-    await user.keyboard(' ');
-    expect(mats).toHaveAttribute('aria-expanded', 'true');
-    expect(net).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getAllByRole('textbox', { name: 'Add to Who buys it' })).toHaveLength(1);
+    expect(sent.profile).toEqual({ products_services: [OFFERING, 'Hitting mats'] });
   });
 
   it('confirms reviewed topics as one plan, writing nothing before', async () => {
@@ -267,15 +285,21 @@ describe('PromptBuilder', () => {
     expect(
       await screen.findByRole('checkbox', { name: 'best golf net for a small garden' }),
     ).toBeChecked();
-    expect(screen.getByRole('spinbutton', { name: /Competitor alternatives/ })).toBeDisabled();
+    // Without a tracked competitor the share split has no competitor part.
+    expect(screen.queryByRole('slider', { name: /Competitor alternatives/ })).toBeNull();
+    // Each split moves in 5% steps and sends the same numbers as before.
+    screen.getByRole('slider', { name: 'Unbranded and Branded' }).focus();
+    await user.keyboard('{ArrowLeft}');
+    screen.getByRole('slider', { name: 'Informational and Commercial' }).focus();
+    await user.keyboard('{ArrowRight}');
     await user.click(screen.getByRole('button', { name: 'Generate' }));
     expect(generate).toHaveBeenCalledWith({
       count: 10,
       topic_ids: [],
       distribution: {
-        branded_share: 0.2,
+        branded_share: 0.25,
         comparison_share: 0,
-        intent_mix: { informational: 25, commercial: 50, transactional: 25 },
+        intent_mix: { informational: 30, commercial: 45, transactional: 25 },
         personas: ['Club coach'],
       },
       seed_source: 'search_console',

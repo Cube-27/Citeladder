@@ -1,7 +1,7 @@
 import { useIsMutating, useMutation, useQuery } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
 import { useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { PageFrame } from '@/components/templates/page-frame';
 import { StateBlock } from '@/components/ui/state-block';
@@ -11,7 +11,7 @@ import { promptsMutations } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { topicsQueries } from '@/lib/api/topics';
 import { useProjectHref } from '@/lib/navigation/project-destination';
-import { BUILDER_OFFERING_PARAM, PROMPTS_HREF } from '@/lib/prompts/routes';
+import { PROMPTS_HREF } from '@/lib/prompts/routes';
 import { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -43,7 +43,6 @@ function BuilderForProject() {
   const { promptSet, limits, isLoading, error, ensurePromptSet, retry, retrying } = usePromptSet();
   const topicsQuery = useQuery(topicsQueries.list(scope));
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
 
@@ -93,7 +92,6 @@ function BuilderForProject() {
     // A project switch is a new session, so no draft saves against another project.
     <PromptBuilder
       key={projectId}
-      initialOffering={searchParams.get(BUILDER_OFFERING_PARAM)}
       projectId={projectId}
       workspaceId={workspaceId}
       topics={topics}

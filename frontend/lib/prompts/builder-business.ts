@@ -1,8 +1,9 @@
 /**
- * The Prompt Builder's "About your business" step as data: a draft read from
- * the saved brand profile and business map, and the edits each owner needs
- * to save it. Only changed fields are sent, because the API marks every sent
- * field reviewed; map suggestions keep their state until a person confirms.
+ * The business facts the Prompt Builder and Agent › Context › Business map
+ * edit, as data: a draft read from the saved brand profile and business map,
+ * and the edits each owner needs to save it. Only changed or accepted fields
+ * are sent, because the API marks every sent field reviewed; map suggestions
+ * keep their state until a person confirms.
  */
 import { businessModelSchema, marketScopeSchema } from '@citeladder/contracts/project';
 import { z } from 'zod';
@@ -30,6 +31,8 @@ export type BusinessDraft = {
    * (generation reads none) and drop when an entry they name is removed.
    */
   maps: OfferingMapDraft[];
+  /** Fields discovery inferred that no person has saved yet: drafts until accepted. */
+  suggested: SuggestedField[];
 };
 
 /** The business-context lists the builder edits, each with its API field. */
@@ -40,7 +43,11 @@ const CONTEXT_LISTS = [
   ['jobs', 'jobs_to_be_done'],
 ] as const satisfies readonly (readonly [keyof BusinessDraft, keyof BrandProfileUpdateRequest])[];
 
+export type ContextListKey = (typeof CONTEXT_LISTS)[number][0];
+export type SuggestedField = ContextListKey | 'businessModel';
+
 const stringList = z.array(z.string()).catch([]);
+const fieldSources = z.record(z.string(), z.unknown()).catch({});
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /** An offering's saved map, or an empty one for an offering the map has not described yet. */
@@ -60,15 +67,69 @@ function offeringMap(map: BusinessMap, offering: string): OfferingMapDraft {
 export function businessDraft(profile: BrandProfile, map: BusinessMap): BusinessDraft {
   const context = profile.business_context;
   const model = businessModelSchema.safeParse(context.business_model);
-  return {
-    offerings: [...profile.products_services],
+  const fields = {
     buyerRoles: stringList.parse(context.buyer_roles),
     serviceAreas: stringList.parse(context.service_areas),
     categoryTerms: stringList.parse(context.category_terms),
     jobs: stringList.parse(context.jobs_to_be_done),
     businessModel: model.success ? model.data : null,
-    maps: profile.products_services.map((offering) => offeringMap(map, offering)),
   };
+  // Only a field a person saved is `reviewed`; a set value without that is discovery's.
+  const sources = fieldSources.parse(context.field_sources ?? {});
+  const inferred = (key: SuggestedField, field: keyof BrandProfileUpdateRequest) =>
+    sources[field] !== 'reviewed' && (key === 'businessModel' ? fields[key] : fields[key].length);
+  return {
+    offerings: [...profile.products_services],
+    ...fields,
+    maps: profile.products_services.map((offering) => offeringMap(map, offering)),
+    suggested: [
+      ...CONTEXT_LISTS.filter(([key, field]) => inferred(key, field)).map(([key]) => key),
+      ...(inferred('businessModel', 'business_model') ? ['businessModel' as const] : []),
+    ],
+  };
+}
+
+const MAP_DIMENSIONS = ['audiences', 'situations', 'attributes'] as const;
+export type MapDimension = (typeof MAP_DIMENSIONS)[number];
+
+const confirmed = (entries: readonly MapEntryDraft[]): MapEntryDraft[] =>
+  entries.map((entry) => ({ ...entry, review_state: 'confirmed' }));
+
+/** The draft with one field set; a person's edit makes an inferred field theirs. */
+export function withField<K extends SuggestedField>(
+  draft: BusinessDraft,
+  key: K,
+  value: BusinessDraft[K],
+): BusinessDraft {
+  return { ...draft, [key]: value, suggested: draft.suggested.filter((item) => item !== key) };
+}
+
+/** One offering's dimension with every suggestion confirmed. */
+export function acceptCell(map: OfferingMapDraft, dimension: MapDimension): OfferingMapDraft {
+  return { ...map, [dimension]: confirmed(map[dimension]) };
+}
+
+/** Every suggestion accepted: inferred fields become a person's, map entries confirmed. */
+export function acceptAll(draft: BusinessDraft): BusinessDraft {
+  return {
+    ...draft,
+    suggested: [],
+    maps: draft.maps.map((map) =>
+      MAP_DIMENSIONS.reduce((next, dimension) => acceptCell(next, dimension), map),
+    ),
+  };
+}
+
+/** How many values are still suggestions: each entry of an inferred list, and each map entry. */
+export function suggestionCount(draft: BusinessDraft): number {
+  const fields = draft.suggested.reduce(
+    (sum, key) => sum + (key === 'businessModel' ? 1 : draft[key].length),
+    0,
+  );
+  const entries = draft.maps
+    .flatMap((map) => MAP_DIMENSIONS.flatMap((dimension) => map[dimension]))
+    .filter((entry) => entry.review_state === 'suggested').length;
+  return fields + entries;
 }
 
 /** The draft with `offerings` replaced; maps follow, a new offering starting empty. */
@@ -95,17 +156,22 @@ export function showsServiceAreas(context: Record<string, unknown>): boolean {
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** The brand-profile fields the draft changed; empty when nothing did. */
+/** The brand-profile fields the draft changed or accepted; empty when it did neither. */
 export function profileChanges(
   draft: BusinessDraft,
   saved: BusinessDraft,
 ): BrandProfileUpdateRequest {
+  const accepted = (key: SuggestedField) =>
+    saved.suggested.includes(key) && !draft.suggested.includes(key);
   const update: BrandProfileUpdateRequest = {};
   if (!same(draft.offerings, saved.offerings)) update.products_services = draft.offerings;
-  if (draft.businessModel && draft.businessModel !== saved.businessModel)
+  if (
+    draft.businessModel &&
+    (draft.businessModel !== saved.businessModel || accepted('businessModel'))
+  )
     update.business_model = draft.businessModel;
   for (const [key, field] of CONTEXT_LISTS)
-    if (!same(draft[key], saved[key])) update[field] = draft[key];
+    if (!same(draft[key], saved[key]) || accepted(key)) update[field] = draft[key];
   return update;
 }
 
@@ -120,8 +186,6 @@ function liveExclusions(map: OfferingMapDraft): OfferingMapDraft['exclusions'] {
     (pair) => values.has(pair.first.toLowerCase()) && values.has(pair.second.toLowerCase()),
   );
 }
-
-const MAP_DIMENSIONS = ['audiences', 'situations', 'attributes'] as const;
 
 /**
  * The full business-map edit when any offering's audiences, situations or
