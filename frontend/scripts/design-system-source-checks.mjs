@@ -73,6 +73,41 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
   );
 }
 
+const COLOUR_LITERAL = /#[\da-f]{3,8}\b|(?<![\w-])(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/i;
+const CLASS_COLOUR_LITERAL =
+  /(?<![\w-])(?:[\w-]+:)*[a-z]+(?:-[a-z]+)*-\[(?:#|(?:rgba?|hsla?|oklch|oklab|lab|lch)\()/i;
+
+function styleAttributeColours(attribute) {
+  let found = false;
+  walk(attribute, (node) => {
+    const text =
+      node.type === 'TemplateElement' ? (node.value.cooked ?? node.value.raw) : stringValue(node);
+    if (text && COLOUR_LITERAL.test(text)) found = true;
+  });
+  return found;
+}
+
+/**
+ * A colour written as a literal in JSX - an arbitrary class (`text-[rgb(…)]`)
+ * or an inline style - skips the theme, so dark mode never repaints it.
+ */
+export function literalColourViolations(source, label) {
+  if (!/^(?:apps|components|lib)\//.test(label) || !label.endsWith('.tsx')) return [];
+  if (/\.(?:test|spec)\.tsx$/.test(label)) return [];
+  const violations = jsxClassData(source, label)
+    .filter((entry) => CLASS_COLOUR_LITERAL.test(entry.classes))
+    .map((entry) => `${label}:${entry.line}: colours come from theme tokens, not a class literal`);
+  const lineOf = lineIndex(source);
+  walk(parseSource(source, label), (node) => {
+    if (node.type !== 'JSXAttribute' || nameText(node.name) !== 'style') return;
+    if (styleAttributeColours(node.value))
+      violations.push(
+        `${label}:${lineOf(node.start)}: colours come from theme tokens, not an inline style`,
+      );
+  });
+  return violations;
+}
+
 /** Product controls must route behavior through shared owners. */
 const RAW_PRODUCT_CONTROL_MESSAGES = new Map([
   ['select', 'native select must use components/ui/select'],

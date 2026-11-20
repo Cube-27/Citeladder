@@ -5,6 +5,7 @@ import { extname, join, relative, resolve } from 'node:path';
 import {
   appSourceViolations,
   directRadixImportViolations,
+  literalColourViolations,
   productControlViolations,
   productUiSourceViolations,
   textContrastViolations,
@@ -111,6 +112,7 @@ for (const path of files(root)) {
   // is wrong on a marketing surface too.
   violations.push(
     ...textRoleBackgroundViolations(source, label),
+    ...literalColourViolations(source, label),
     ...productUiSourceViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
     ...appVocabularyViolations(source, label, ownsProductUi),
