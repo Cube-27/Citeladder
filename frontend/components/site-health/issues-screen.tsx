@@ -1,12 +1,16 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { ProjectLink } from '@/components/ui/project-link';
 
 import { Button } from '@/components/ui/button';
 import { ReportPage } from '@/components/templates/report-page';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { ICONS } from '@/lib/icons';
-import { siteHealthQueries } from '@/lib/api/site-health-queries';
-import type { SiteHealthDashboard } from '@citeladder/contracts';
+import { useLiveCrawlDashboard } from '@/lib/site-health/use-live-crawl-dashboard';
+import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
+import { Inline } from '@/components/ui/layout';
+import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
+import { dashboardRunNotice } from '@/lib/site-health/run-notice';
+import { CRAWL_STATES, crawlDisplayStatus } from '@/lib/site-health/status';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -23,7 +27,8 @@ import { IssuesPageLoading } from '@/components/site-health/issues-summary-loadi
  */
 export function IssuesScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  const dashboardQuery = useQuery(siteHealthQueries.dashboard({ workspaceId, projectId }));
+  // A running crawl publishes its Issues in batches; the list follows its progress.
+  const dashboardQuery = useLiveCrawlDashboard({ workspaceId, projectId });
   return (
     <IssuesDataRegion workspaceId={workspaceId} projectId={projectId} dashboard={dashboardQuery} />
   );
@@ -124,5 +129,31 @@ function IssuesLoadedRegion({
       </ReportPage>
     );
   }
-  return <IssuesCatalog workspaceId={workspaceId} projectId={projectId} crawlId={crawl.id} />;
+  return (
+    <IssuesCatalog
+      workspaceId={workspaceId}
+      projectId={projectId}
+      crawlId={crawl.id}
+      notice={<IssuesRunNotice crawl={crawl} />}
+    />
+  );
+}
+
+/**
+ * A running crawl publishes its Issues in batches, and a stopped or failed one
+ * keeps what it found: either way the list is incomplete, so it says so.
+ */
+function IssuesRunNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
+  const message = CRAWL_STATES[crawlDisplayStatus(crawl)].active
+    ? 'Crawl in progress. Issues update in batches as pages are analyzed.'
+    : dashboardRunNotice(crawl)?.message;
+  if (!message) return null;
+  return (
+    <Notice tone="info">
+      <Inline className="flex-wrap">
+        <CrawlStatusBadge crawl={crawl} />
+        <span>{message}</span>
+      </Inline>
+    </Notice>
+  );
 }

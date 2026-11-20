@@ -151,19 +151,44 @@ describe('terminal checks from persisted evidence', () => {
       }).map(([url, text]) => [url, contentFingerprint(text)!]),
     );
     const matches = duplicateMatches(pages);
-    expect(matches.get('https://example.test/a')).toEqual([
+    expect(matches('https://example.test/a')).toEqual([
       { url: 'https://example.test/b', match: 'exact', distance: 0 },
       { url: 'https://example.test/c', match: 'near', distance: expect.any(Number) },
     ]);
-    expect(matches.get('https://example.test/d')).toEqual([]);
+    expect(matches('https://example.test/d')).toEqual([]);
     expect(contentFingerprint('Too short to compare.')).toBeNull();
     const flagged = duplicateContent({
       kind: 'compared',
       words: 240,
       compared: 3,
-      matches: matches.get('https://example.test/a')!,
+      matches: matches('https://example.test/a'),
     });
     expect([flagged.outcome, flagged.reason_code]).toEqual(['missing', 'exact_duplicate']);
+    // Bits flipped in three of the four bands still share the fourth; four bands share none.
+    const print = (url: string, flips: number[]) => {
+      let [low, high] = [0x1234_5678, 0x9abc_def0];
+      for (const bit of flips)
+        if (bit < 32) low ^= 1 << bit;
+        else high ^= 1 << (bit - 32);
+      return [url, { exact: url, words: 60, low: low >>> 0, high: high >>> 0 }] as const;
+    };
+    const copies = Array.from({ length: 12 }, (_, at) => `https://example.test/copy-${at + 10}`);
+    const banded = duplicateMatches(
+      new Map([
+        print('https://example.test/base', []),
+        print('https://example.test/three', [1, 20, 40]),
+        print('https://example.test/four', [2, 21, 41, 60]),
+        ...copies.map((url) => [url, { ...print(url, [])[1], exact: 'copy' }] as const),
+      ]),
+    );
+    expect(
+      banded('https://example.test/three').map((match) => [match.url, match.distance]),
+    ).toEqual([['https://example.test/base', 3], ...copies.slice(0, 9).map((url) => [url, 3])]);
+    expect(banded('https://example.test/copy-10').slice(0, 2)).toEqual([
+      { url: 'https://example.test/copy-11', match: 'exact', distance: 0 },
+      { url: 'https://example.test/copy-12', match: 'exact', distance: 0 },
+    ]);
+    expect(banded('https://example.test/four').map((match) => match.url)).toEqual([]);
     expect(duplicateContent({ kind: 'excluded', reason: 'canonicalized_elsewhere' }).outcome).toBe(
       'not_applicable',
     );

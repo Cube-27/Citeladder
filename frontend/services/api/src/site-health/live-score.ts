@@ -3,7 +3,7 @@
  * analyzed tracked page's stored provisional scores, with counts, in a few
  * grouped queries (owner, 2026-11-17). It never reads rule evaluations, so its
  * cost does not grow with checks per page. The terminal summary is still the
- * full rebuild from evaluations (`loadMeasurementProjection`).
+ * full rebuild from evaluations (`measurementProjection`).
  */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
@@ -131,14 +131,18 @@ function classificationErrors(db: Database, crawl: Crawl) {
 }
 
 async function counts(db: Database, crawl: Crawl) {
-  const issues = await currentAnalyses(db, crawl)
-    .innerJoin('site_issues as i', (join) =>
-      join
-        .onRef('i.analysis_id', '=', 'p.id')
-        .onRef('i.workspace_id', '=', 'p.workspace_id')
-        .onRef('i.crawl_id', '=', 'p.crawl_id'),
-    )
+  // The crawl's current issues on active tracked pages, through `ix_site_issues_current` (CO-7).
+  const issues = await db
+    .selectFrom('site_issues as i')
     .select(sql<number>`count(*)::int`.as('count'))
+    .where('i.workspace_id', '=', crawl.workspace_id)
+    .where('i.crawl_id', '=', crawl.id)
+    .where('i.is_current', '=', true)
+    .where(
+      sql<boolean>`exists (select 1 from monitored_site_urls m
+        where m.workspace_id = i.workspace_id and m.project_id = ${crawl.project_id}
+          and m.site_url_id = i.site_url_id and m.active)`,
+    )
     .executeTakeFirstOrThrow();
   const selected = await db
     .selectFrom('monitored_site_urls')

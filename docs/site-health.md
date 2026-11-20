@@ -248,9 +248,10 @@ active until it publishes (`finalize-task.ts`, owner decision CO-2):
    appends a final analysis per page (`supersedes_analysis_id`) and flips
    `is_current`; the first commit also marks the aliases. A page that already
    has its final revision drops out, so a replayed batch does nothing, and
-   readers see provisional and final revisions mixed meanwhile;
-3. one durable transaction then refreshes issue currency, the catalog and issue
-   states, persists the snapshot and score summary (none for a page rerun),
+   readers see provisional and final revisions mixed meanwhile. Each batch
+   also refreshes the issue currency of its own pages;
+3. one durable transaction then publishes the last state: the catalog and issue
+   states, the snapshot and score summary (none for a page rerun),
    sets `completed`, `partially_completed` (with `partial_reason`; an analysis
    that met a page that is gone or not HTML is no shortfall, as in discovery) or `failed`
    (nothing analyzed, and either discovery found nothing or every applicable
@@ -258,6 +259,19 @@ active until it publishes (`finalize-task.ts`, owner decision CO-2):
    `terminal-counters.ts`), settles the fetch reservation and the task, and,
    for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
    if any analysis succeeded, otherwise hands off to the analytics refresh.
+
+**Bounded batches (owner decision CO-7, 2026-11-20).** Crawls of tens of
+thousands of pages publish on the current infrastructure (an e2-micro database,
+a 1 GiB runner), so no crawl-wide step holds the whole crawl. Site setup tracks
+the sitemap's pages and queues their analysis one window of
+`INVENTORY_CHUNK` URLs per short commit. Finalization keeps each page's links
+and hreflang targets as indices into one shared URL table. The snapshot and
+score summary fold the selected pages in keyset batches of
+`finalize.projection_pages` (`score-summary.ts`), issue states land a batch of
+pages at a time, and the snapshot's issue rollups and the catalog are SQL
+aggregates. The scale fixture (`test/scale/`, its own CI job) runs a
+generated crawl through setup, analysis, a batched publication and finalize,
+and asserts that no read returns more than one batch of analyses.
 
 A `finalize` that fails retries on the normal backoff; after its third attempt
 (or failed as overdue) the next reconcile ends the crawl `failed` with the
@@ -663,8 +677,11 @@ coverage, and without an observed homepage the unreachable rule is `unknown`
 (`homepage_not_observed`).
 
 **Duplicate content** (`analysis/duplicate-content.ts`) compares pages
-pairwise (exact SHA-256 and near SimHash), without transitive clustering; a page
-outside the comparison is `not_applicable` with the reason.
+(exact SHA-256 and near SimHash), without transitive clustering; a page
+outside the comparison is `not_applicable` with the reason. Only SimHashes
+sharing one of `max_hamming_distance + 1` bit bands are compared, which finds
+every pair within the distance without comparing every pair of a large crawl,
+and each page keeps its closest evidence URLs, exact copies first.
 
 ```text
 role / pillar score = 100 * satisfied / (satisfied + missing), over applicable checks
@@ -782,12 +799,13 @@ promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.t
 Page detail, Issues, history, Changes, snapshots, exports, the Agent and MCP
 read the same persisted final results.
 
-A crawl's current issues are those whose evaluation a current, finalized
-analysis names, plus its architecture findings. `site_issues.is_current`
-persists that, and the Issues catalog, detail and export filter on it
-(`issue-currency.ts`). The terminal publication, an analysis appended over a
-finalized one, and a duplicate alias retiring analyses recompute it in their own
-transaction; architecture findings are written current. Issues and evaluations
+A crawl's current issues are those whose evaluation a current analysis names,
+provisional or final, plus its architecture findings (CO-7: a running crawl
+shows what it has found so far). `site_issues.is_current` persists that, and
+the Issues catalog, detail and export filter on it (`issue-currency.ts`). Each
+writer that changes it updates only the issues of the analyses it touched, in
+its own transaction: an analysis written over an earlier one, a finalize batch,
+a duplicate alias retiring analyses. Architecture findings are written current. Issues and evaluations
 are otherwise never rewritten. A site crawl's reads show each page's current
 issues from its latest audit, plus its own site-level findings
 ([each page's latest audit](#crawl-lifecycle)).
@@ -846,15 +864,20 @@ rerun. A site-level finding
 (architecture, sitewide links) is judged only by a full crawl, so Re-run all
 never names its page.
 
-The same refresh, the architecture writer after its findings, and a page rerun
-landing in the site crawl that shows it persist the crawl's unfiltered Issues
-catalog per finding class, over the issues the crawl shows (`site_issue_catalogs`,
+The terminal publication, the architecture writer after its findings, a page
+rerun landing in the site crawl that shows it and, while a crawl runs, its
+batched publication persist the crawl's unfiltered Issues catalog per finding
+class, over the issues the crawl shows (`site_issue_catalogs`,
 `issue-catalog.ts`): the ranked groups as the list shows them and the summary
-tiles, plus each group's exact source issue and evaluation IDs (`sources`,
-kept for provenance and never served). An unfiltered Issues read pages that persisted list. A filtered read
-(search, severity, category, dimension, rule, page or page kind) computes its
-groups and summary from the current issues, as does a crawl whose catalog is
-not written yet (nothing is final before the terminal publication). The
+tiles, all SQL aggregates bounded by the rule groups. A running crawl publishes
+it every `issue_publication_page_interval` analyzed pages (CO-7), computed
+outside the crawl lock and written only while the crawl is still active, so
+the terminal catalog is never overwritten; the Issues screen labels a running
+crawl's list as in progress and a stopped or failed one's as incomplete. An
+unfiltered Issues read pages that persisted list. A filtered read (search,
+severity, category, dimension, rule, page or page kind) computes its groups and
+summary from the current issues, as does a crawl whose catalog is not written
+yet. The
 monitored affected count is read per request in both: the monitored selection
 is live configuration.
 

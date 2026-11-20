@@ -166,6 +166,17 @@ function statusFilter(status: string | null | undefined) {
   return sql`and analysis_status = ${status}`;
 }
 
+/**
+ * The latest audits join as one set: a lateral per inventory URL ran the view
+ * once per page, past the read timeout on an inventory of tens of thousands
+ * (CO-7). One page keeps the lateral.
+ */
+function latestAuditsJoin(crawl: Crawl, siteUrlId?: string) {
+  return siteUrlId
+    ? sql`left join lateral (${pageAuditsSql(crawl, sql.ref('u.id'))}) latest on true`
+    : sql`left join (${pageAuditsSql(crawl)}) latest on latest.site_url_id = u.id`;
+}
+
 /** Rows of the crawl's page window, `limit + 1` of them so the caller can see a next page. */
 export async function pageRows(
   db: Database,
@@ -196,6 +207,7 @@ export async function pageRows(
   const unmeasured = sql`case when ${duplicate} then 'excluded' else 'not_measured' end`;
   // The cursor and the order cut the window first (PERF-007): only its rows
   // pay for the projection's per-row subqueries.
+  const latestAudits = latestAuditsJoin(crawl, filters.siteUrlId);
   const result = await sql<PageRow>`
     with keyed as (
       select
@@ -230,7 +242,7 @@ export async function pageRows(
         on m.workspace_id = u.workspace_id and m.project_id = u.project_id
         and m.site_url_id = u.id and m.active
       -- The page's latest audit as the crawl shows it (SH-B9).
-      left join lateral (${pageAuditsSql(crawl, sql.ref('u.id'))}) latest on true
+      ${latestAudits}
       left join site_page_analyses a
         on a.workspace_id = u.workspace_id and a.id = latest.analysis_id
       left join lateral (

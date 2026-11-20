@@ -17,6 +17,7 @@ import { asyncCommit, type SiteTask } from '../queue/task-queue.ts';
 import { insertEvaluations, type EvaluationGroup } from './analysis-rows.ts';
 import { duplicateAliases, markDuplicates } from './canonical-alias.ts';
 import { assessCrawl } from './crawl-assessment.ts';
+import { syncIssueCurrency } from './issue-currency.ts';
 import { prepareFinalization, type Finalization } from './lifecycle-finalize.ts';
 import {
   Abandoned,
@@ -169,6 +170,8 @@ export async function runFinalize(ctx: SiteTaskContext, claimed: SiteTask) {
       // Read after the root's batch inserted its crawl-wide site checks.
       sources ??= await crawlSiteSources(trx, held.crawl);
       await appendFinalRevisions(trx, held.crawl, pending, sources);
+      // The batch's issues (its new cross-page findings among them) are current now.
+      await syncIssueCurrency(trx, held.crawl, pending);
     };
     const committed = await commit(ctx, claimed, { mode, body: write }); // NOSONAR -- One short transaction per batch, in order.
     if (!committed) return;

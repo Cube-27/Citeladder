@@ -213,10 +213,11 @@ describe('analyze acquisition', () => {
     );
     const issues = await db
       .selectFrom('site_issues')
-      .select('rule_id')
+      .select(['rule_id', 'is_current'])
       .where('analysis_id', '=', analysis!.id)
       .execute();
-    expect(issues.map((row) => row.rule_id)).toContain('technical.canonical_present');
+    const canonical = issues.find((row) => row.rule_id === 'technical.canonical_present');
+    expect(canonical?.is_current).toBe(true); // Current while the crawl runs (CO-7).
 
     const after = await crawl(seed);
     expect(after).toMatchObject({ status: 'running', analyzed_url_count: 1 });

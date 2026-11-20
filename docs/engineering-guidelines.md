@@ -230,14 +230,28 @@ build when these files change.
 ### Work that grows with the data stays off shared locks and lanes
 
 **Rule:** A read or loop whose cost grows with a crawl, project or history
-runs outside shared locks, in bounded batches, and on a lane that cannot
-starve another.
+runs outside shared locks, in bounded batches (memory as well as time), and on
+a lane that cannot starve another. Every crawl-wide step (setup, finalize,
+publication, reads) loads at most one keyset batch or aggregates in SQL, and
+the scale fixture (`test/scale/`) covers the largest crawl an entitlement can
+grant.
 **Why:** #938: the live score summary reread every analysis under the crawl
 lock, and throughput fell from 225 to 2 pages a minute. #497 and #936:
 lanes starved behind crawls and discovery backlogs. #958: sitemap probes
-timed out on large sites.
+timed out on large sites. 2026-11-20: an operator grant of 5,000 tracked URLs
+(on a 51,000-URL inventory) made a crawl 20 times larger than any tested one.
+Setup held the crawl lock past the lock timeout. The live score and the Pages
+read passed the 30 s read timeout. The finalize step loaded the whole crawl
+into memory, so three runner executions in a row ran out of heap, and nothing
+was published. The 51,000-page fixture then showed two more failures. A
+per-chunk lookup led by the tracked set took 25 s per chunk. A pairwise
+duplicate-content loop (1.3 billion comparisons) held the event loop until the
+finalize lease expired.
 **Check:** A query without `LIMIT` or a keyset inside a locked transaction or
-a per-task hook. A per-task step that rereads a whole crawl.
+a per-task hook. A per-task step that rereads a whole crawl. An array or map
+filled from every page, evaluation or issue of a crawl. A nested loop over a
+crawl's pages, or a lookup led by the growing side instead of the batch. A new entitlement
+ceiling without a matching `SITE_HEALTH_SCALE_PAGES` run.
 
 ### Independent awaits run together
 

@@ -19,6 +19,7 @@ import { assessCrawl, LIFECYCLE_KINDS, saveState } from './crawl-assessment.ts';
 import { pageRerunSql } from './page-rerun.ts';
 import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
+import { publishRunningIssues } from './issue-catalog.ts';
 import { refreshLiveScoreSummary, refreshRunningScoreSummary } from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
 import { persistLiveCounters, persistTerminalCounters } from './terminal-counters.ts';
@@ -147,6 +148,15 @@ function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
  * the live counters an active crawl's reads render are recounted onto its row
  * (CO-3).
  */
+/** A running crawl's score and Issues publications, each on its own cadence (CO-7). */
+async function publishAnalysisProgress(
+  db: Database,
+  { task, cadence, pages }: { task: SettledTask; cadence: CrawlCadences; pages: number },
+) {
+  if (cadence.score.admits(task.crawl_id, { pages })) await refreshRunningScoreSummary(db, task);
+  if (cadence.issues.admits(task.crawl_id)) await publishRunningIssues(db, task);
+}
+
 export async function reconcileAfterTask(db: Database, task: SettledTask, cadence: CrawlCadences) {
   const row = await settledRow(db, task);
   if (!row || !TERMINAL_TASK.includes(row.status)) return;
@@ -164,8 +174,7 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
         });
       break;
     case 'analysis_progress':
-      if (cadence.score.admits(task.crawl_id, { pages: row.admitted_url_count }))
-        await refreshRunningScoreSummary(db, task);
+      await publishAnalysisProgress(db, { task, cadence, pages: row.admitted_url_count });
       break;
     default: {
       const unhandled: never = kind;

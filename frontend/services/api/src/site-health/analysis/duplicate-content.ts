@@ -1,8 +1,8 @@
 /**
  * Exact and near-duplicate main content across one crawl's analyzed pages.
  * Lexical only: a SHA-256 of the normalized word sequence for exact copies and
- * a 64-bit SimHash over word shingles for near copies, compared pairwise
- * (crawls analyze at most a few hundred pages).
+ * a 64-bit SimHash over word shingles for near copies, compared within shared
+ * SimHash bands.
  */
 import { createHash } from 'node:crypto';
 import { policy } from '../../config.ts';
@@ -68,25 +68,88 @@ export function contentFingerprint(text: string): Fingerprint | null {
 
 export type DuplicateMatch = { url: string; match: 'exact' | 'near'; distance: number };
 
-/** Each URL's duplicates among the others, closest first. */
-export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
-  const entries = [...pages];
-  const matches = new Map<string, DuplicateMatch[]>(entries.map(([url]) => [url, []]));
-  for (let left = 0; left < entries.length; left++) {
-    const [leftUrl, leftPrint] = entries[left]!;
-    for (let right = left + 1; right < entries.length; right++) {
-      const [rightUrl, rightPrint] = entries[right]!;
-      const exact = leftPrint.exact === rightPrint.exact;
-      const distance = exact ? 0 : hammingDistance(leftPrint, rightPrint);
-      if (!exact && distance > settings.max_hamming_distance) continue;
-      const match = exact ? 'exact' : 'near';
-      matches.get(leftUrl)!.push({ url: rightUrl, match, distance });
-      matches.get(rightUrl)!.push({ url: leftUrl, match, distance });
-    }
+/** Pages sharing one SimHash, and within it each exact copy set, in URL order. */
+type Group = { print: Fingerprint; exact: Map<string, string[]>; near: Map<Group, number> };
+const printKey = (print: Fingerprint) => `${print.low}:${print.high}`;
+
+/**
+ * The 64 bits cut into `max_hamming_distance + 1` bands, none empty: prints
+ * within the distance share one (pigeonhole).
+ */
+function bands(print: Fingerprint) {
+  const count = settings.max_hamming_distance + 1;
+  const keys = Array.from({ length: count }, (_, band) => `${band}:`);
+  for (let bit = 0; bit < 64; bit++)
+    keys[Math.floor((bit * count) / 64)] += String(
+      ((bit < 32 ? print.low : print.high) >>> (bit & 31)) & 1,
+    );
+  return keys;
+}
+
+const closest = (a: DuplicateMatch, b: DuplicateMatch) =>
+  a.distance - b.distance ||
+  Number(b.match === 'exact') - Number(a.match === 'exact') ||
+  compareText(a.url, b.url);
+
+function groupByPrint(pages: ReadonlyMap<string, Fingerprint>) {
+  const groups = new Map<string, Group>();
+  for (const [url, print] of pages) {
+    const group = groups.get(printKey(print)) ?? { print, exact: new Map(), near: new Map() };
+    const copies = group.exact.get(print.exact) ?? [];
+    copies.push(url);
+    group.exact.set(print.exact, copies);
+    groups.set(printKey(print), group);
   }
-  for (const list of matches.values())
-    list.sort((a, b) => a.distance - b.distance || compareText(a.url, b.url));
-  return matches;
+  for (const group of groups.values())
+    for (const urls of group.exact.values()) urls.sort(compareText);
+  return groups;
+}
+
+/** Link every two groups within the distance, comparing only those that share a band. */
+function linkNearGroups(groups: Iterable<Group>) {
+  const buckets = new Map<string, Group[]>();
+  for (const group of groups)
+    for (const band of bands(group.print)) {
+      const bucket = buckets.get(band) ?? [];
+      for (const other of bucket) {
+        if (group.near.has(other)) continue;
+        const distance = hammingDistance(group.print, other.print);
+        if (distance > settings.max_hamming_distance) continue;
+        group.near.set(other, distance);
+        other.near.set(group, distance);
+      }
+      bucket.push(group);
+      buckets.set(band, bucket);
+    }
+}
+
+/**
+ * Each URL's closest duplicates among the others (at most the evidence URLs),
+ * exact copies first. Only SimHashes sharing a band are compared, so the cost
+ * follows the duplicates, not every pair of a tens-of-thousands-page crawl.
+ */
+export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
+  const groups = groupByPrint(pages);
+  linkNearGroups(groups.values());
+  return (url: string): DuplicateMatch[] => {
+    const print = pages.get(url);
+    const group = print && groups.get(printKey(print));
+    if (!print || !group) return [];
+    const found: DuplicateMatch[] = [];
+    const take = (urls: string[], match: DuplicateMatch['match'], distance: number) => {
+      let taken = 0;
+      for (const other of urls) {
+        if (taken >= limits.evidence_urls) return;
+        if (other === url) continue;
+        found.push({ url: other, match, distance });
+        taken++;
+      }
+    };
+    for (const [hash, urls] of group.exact) take(urls, hash === print.exact ? 'exact' : 'near', 0);
+    for (const [other, distance] of group.near)
+      for (const urls of other.exact.values()) take(urls, 'near', distance);
+    return found.toSorted(closest).slice(0, limits.evidence_urls);
+  };
 }
 
 export type DuplicateComparison =

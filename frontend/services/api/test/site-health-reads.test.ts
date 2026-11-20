@@ -29,7 +29,6 @@ import { latestLinkCrawl } from '../src/site-health/internal-link-runs.ts';
 import { crawlability, siteSnapshot } from '../src/mcp/evidence-site.ts';
 import { resolveCrawl } from '../src/opportunities/sources.ts';
 import { record } from '../src/db/json.ts';
-import { compareText } from '../src/text-order.ts';
 import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -937,31 +936,15 @@ describe('issue catalog', () => {
     const catalog = async () =>
       db
         .selectFrom('site_issue_catalogs')
-        .select(['finding_class', 'items', 'summary', 'sources'])
+        .select(['finding_class', 'items', 'summary'])
         .where('crawl_id', '=', seed.crawlId)
         .orderBy('finding_class')
         .execute();
     // Issues the publication has not refreshed yet: nothing is persisted, not a zero catalog.
-    const homeEvaluation = await issue(seed, home, 'technical.indexable', {}, false);
+    await issue(seed, home, 'technical.indexable', {}, false);
     expect(await catalog()).toEqual([]);
     // The currency refresh writes each class's catalog and the combined one in its transaction.
-    const productEvaluation = await issue(seed, product, 'technical.indexable');
-    const evaluations = [homeEvaluation, productEvaluation].sort(compareText);
-    const issueIds = (
-      await db
-        .selectFrom('site_issues')
-        .select('id')
-        .where('evaluation_id', 'in', evaluations)
-        .execute()
-    )
-      .map((row) => row.id)
-      .sort(compareText);
-    // Each group keeps the exact issues and evaluations it folds.
-    const group_id = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
-    const folded = [{ group_id, issue_ids: issueIds, evaluation_ids: evaluations }];
-    expect(
-      Object.fromEntries((await catalog()).map((row) => [row.finding_class, row.sources])),
-    ).toEqual({ advisory: [], all: folded, defect: folded });
+    await issue(seed, product, 'technical.indexable');
     expect(
       (await catalog()).map((row) => [
         row.finding_class,

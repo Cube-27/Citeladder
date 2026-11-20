@@ -296,6 +296,50 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # One generated Site Health crawl of 5,000 pages through setup, analysis,
+  # batched publication and finalize (docs/site-health.md, CO-7). It asserts
+  # the batch boundary and prints peak heap and read times.
+  site-health-scale:
+    name: Site Health scale fixture
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: citeladder
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      CITELADDER_DISABLE_DOTENV: '1'
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
+      API_TEST_DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
+      API_TEST_OWNER_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      SITE_HEALTH_SCALE_PAGES: '5000'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-frontend
+      - name: Apply the SQL schema baseline
+        working-directory: frontend/services/api
+        run: pnpm migrate
+      - name: Site Health crawl at 5,000 pages (PostgreSQL)
+        working-directory: frontend/services/api
+        run: pnpm test:scale
+
   e2e:
     name: E2E (playwright)
     needs: changes
@@ -489,7 +533,19 @@ jobs:
   result:
     name: CI result
     needs:
-      [changes, frontend, frontend-tests, contract, api, api-tests, e2e, workers, security, infra]
+      [
+        changes,
+        frontend,
+        frontend-tests,
+        contract,
+        api,
+        api-tests,
+        site-health-scale,
+        e2e,
+        workers,
+        security,
+        infra,
+      ]
     if: always()
     permissions: {}
     runs-on: ubuntu-latest

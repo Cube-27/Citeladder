@@ -524,6 +524,12 @@ it('scores a running crawl as the mean of its tracked pages’ stored scores', a
     .execute();
   const evaluation = await fixtures.evaluation(seed, home, 'technical.indexable', 'missing');
   await fixtures.issue(seed, home, 'technical.indexable', evaluation);
+  // A running crawl's issues are current as its analyses write them (CO-7).
+  await db
+    .updateTable('site_issues')
+    .set({ is_current: true })
+    .where('evaluation_id', '=', evaluation)
+    .execute();
   expect(await liveScoreSummary(db, await crawlOf(seed.crawlId))).toMatchObject({
     classification_state: 'complete',
     classification_expected_page_count: 3,
