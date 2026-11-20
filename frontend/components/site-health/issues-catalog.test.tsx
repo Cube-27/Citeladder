@@ -87,24 +87,18 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // Defect types first, then the advisory types the tabs also list.
+    // Defect types, then the advisory types the tabs also list, the pages, then each severity.
+    const strip = await screen.findByRole('group', { name: 'Issue summary' });
     expect(
-      await screen.findByRole('heading', { name: '47 issue types · 2 advisories' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('50 pages affected')).toBeInTheDocument();
-    // Each severity reads as its count; the ring beside them is decorative.
-    const severities = screen.getByRole('group', { name: 'Issue types by severity' });
-    expect(
-      within(severities)
+      within(strip)
         .getAllByRole('term')
         .map((term) => term.textContent),
-    ).toEqual(['High', 'Medium', 'Low']);
+    ).toEqual(['Issue types', 'Advisories', 'Pages affected', 'High', 'Medium', 'Low']);
     expect(
-      within(severities)
+      within(strip)
         .getAllByRole('definition')
         .map((value) => value.textContent),
-    ).toEqual(['12', '23', '12']);
-    expect(screen.queryByRole('img', { name: '47 issue types' })).toBeNull();
+    ).toEqual(['47', '2', '50', '12', '23', '12']);
     const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
     // Each names its fix in one sentence.
     const [first, second] = within(fixFirst).getAllByRole('listitem');

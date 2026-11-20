@@ -77,12 +77,12 @@ const severityMarks = {
 } as const satisfies Record<string, Mark>;
 
 /**
- * Priority is an order, not a state: no hue, and three ascending bars with
- * three, two or one filled tell the three apart; the empty bars are drawn, so
- * the glyph keeps its shape at every level.
+ * Priority is an order: three ascending bars with three, two or one filled
+ * tell the three apart, and the empty bars are drawn, so the glyph keeps its
+ * shape. High alone takes a hue, so it stands apart from Medium at a glance.
  */
 const priorityMarks = {
-  high: mark('neutral', { bars: 3 }),
+  high: mark('negative', { bars: 3 }),
   medium: mark('neutral', { bars: 2 }),
   low: mark('neutral', { bars: 1 }),
 } as const satisfies Record<string, Mark>;
@@ -135,7 +135,7 @@ function MarkGlyph({ tone, glyph }: Mark) {
   if (glyph === 'live') return <Spinner />;
   if (glyph === 'dot')
     return <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', TONE_DOT[tone])} />;
-  return <PriorityBars filled={glyph.bars} />;
+  return <PriorityBars filled={glyph.bars} tone={tone} />;
 }
 
 /** Bar heights and left edges in a 16px box, lowest first. */
@@ -145,9 +145,15 @@ const PRIORITY_BARS = [
   { x: 12, height: 12 },
 ] as const;
 
-function PriorityBars({ filled }: Readonly<{ filled: 1 | 2 | 3 }>) {
+function PriorityBars({ filled, tone }: Readonly<{ filled: 1 | 2 | 3; tone: StatusTone }>) {
   return (
-    <svg aria-hidden width={16} height={16} viewBox="0 0 16 16" className="shrink-0">
+    <svg
+      aria-hidden
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      className={cn('shrink-0', tone === 'negative' && 'text-negative')}
+    >
       {PRIORITY_BARS.map((bar, index) => (
         <rect
           key={bar.x}

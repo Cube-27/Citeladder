@@ -1,6 +1,7 @@
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StatusMark } from '@/components/ui/status-mark';
+import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import {
   ACTION_GOAL_HINT,
@@ -39,11 +40,13 @@ export function GoalStrip({
           key: goal,
           label,
           loading: !failed && !goals,
-          // A narrow cell cuts the words after the count, never the count.
+          // The count is the figure; its words follow in the caption, cut before the count is.
           value: entry ? (
-            <span className="flex min-w-0" title={phrase ?? undefined}>
-              <span className="shrink-0 whitespace-pre">{`${formatCount(entry.count)} `}</span>
-              <span className="min-w-0 truncate">{goalCountWords(goal, entry.count)}</span>
+            <span className="flex min-w-0 items-baseline gap-2" title={phrase ?? undefined}>
+              <span className="shrink-0">{formatCount(entry.count)}</span>
+              <span className={textRole('caption', 'min-w-0 truncate')}>
+                {goalCountWords(goal, entry.count)}
+              </span>
             </span>
           ) : null,
           missingState: 'unavailable',
