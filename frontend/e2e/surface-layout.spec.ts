@@ -233,9 +233,9 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       const style = getComputedStyle(node);
       return { edge: style.borderColor, outline: style.outlineStyle, glow: style.boxShadow };
     });
-    // An app field glows over its own resting edge instead of drawing a ring.
-    expect(ordinary).toMatchObject({ edge: ordinaryEdge, outline: 'none' });
-    expect(ordinary.glow).not.toBe('none');
+    // A focused app field takes the `control-line` edge and the one focus ring, no glow.
+    expect(ordinary).toMatchObject({ outline: 'solid', glow: 'none' });
+    expect(ordinary.edge).not.toBe(ordinaryEdge);
     // Isolate the primitive's rendering contract from form validation policy.
     await field.evaluate((node) => {
       node.setAttribute('aria-invalid', 'true');
@@ -257,8 +257,8 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
         glow: style.boxShadow,
       };
     });
-    // The danger edge survives focus under the same glow every field shares.
-    expect(focused).toEqual({ edge, outline: 'none', glow: ordinary.glow });
+    // The danger edge survives focus under the same ring every field shares.
+    expect(focused).toEqual({ edge, outline: 'solid', glow: 'none' });
   }
   await page.emulateMedia({ forcedColors: 'active' });
   await field.focus();
@@ -276,15 +276,15 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   const restingEdge = await frame.evaluate((node) => getComputedStyle(node).borderColor);
   await password.click();
   await expect(password).toBeFocused();
-  // One boundary: the frame glows over its resting edge around the input and
-  // its end target; neither draws a ring, and the input draws no glow.
+  // One boundary: the frame around the input and its end target takes the
+  // `control-line` edge and the ring; the input draws neither.
   const lit = await frame.evaluate(async (node) => {
     await Promise.all(node.getAnimations().map((animation) => animation.finished));
     const style = getComputedStyle(node);
     return { edge: style.borderColor, outline: style.outlineStyle, glow: style.boxShadow };
   });
-  expect(lit).toMatchObject({ edge: restingEdge, outline: 'none' });
-  expect(lit.glow).not.toBe('none');
+  expect(lit).toMatchObject({ outline: 'solid', glow: 'none' });
+  expect(lit.edge).not.toBe(restingEdge);
   expect(await password.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
   expect(await password.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
   await page.keyboard.press('Tab');
@@ -305,7 +305,6 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   await expect(async () => {
     expect(await frame.evaluate((node) => getComputedStyle(node).borderColor)).toBe(invalidEdge);
   }).toPass();
-  await expect(frame).toHaveCSS('box-shadow', lit.glow);
   await password.evaluate((node) => node.removeAttribute('aria-invalid'));
 
   await stubAuthedShell(page);
@@ -315,9 +314,8 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   const inputEdge = await prompt.evaluate((node) => getComputedStyle(node).borderColor);
   await prompt.click();
   await expect(prompt).toBeFocused();
-  // The composer is the box: its frame takes the same glow as the password
-  // frame above, and no ring.
-  expect(await form.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  // The composer is the box: its frame takes the same ring as the password frame above.
+  await expect(form).toHaveCSS('outline-style', lit.outline);
   await expect(form).toHaveCSS('box-shadow', lit.glow);
   // One boundary: the field inside draws no edge, halo or outline of its own.
   expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).toBe(inputEdge);
