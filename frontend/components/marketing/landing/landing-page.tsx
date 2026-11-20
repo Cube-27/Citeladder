@@ -20,6 +20,7 @@ import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import './integrations.css';
+import './landing-backdrop.css';
 
 function Hero() {
   return (

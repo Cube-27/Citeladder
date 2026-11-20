@@ -1,0 +1,79 @@
+/* Experiment (owner, 2026-11-20): the home hero's backdrop, faint vertical
+   scan lines, a light beam rising from behind the product image and a glow
+   at the left edge, under a fine grain. The product image loses its own
+   panel and sits on it. Colours are the site-beam tokens in globals.css. */
+
+.cl-lhero {
+  --lb-grain: 0.06;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+:root[data-theme='dark'] .cl-lhero {
+  --lb-grain: 0.1;
+}
+
+/* Scan lines at two uneven pitches over the whole hero, then grain. */
+.cl-lhero::before,
+.cl-lhero::after {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+}
+
+.cl-lhero::before {
+  background:
+    repeating-linear-gradient(90deg, var(--color-site-scanline) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 22px,
+      var(--color-site-scanline) 22px 23px,
+      transparent 23px 41px
+    );
+}
+
+.cl-lhero::after {
+  z-index: -1;
+  background: var(--site-noise);
+  mix-blend-mode: overlay;
+  opacity: var(--lb-grain);
+}
+
+/* The light rises from the product image's top edge into the copy: a thin
+   bright core, its beam, a pool round its foot, the left edge's glow and a
+   wide warm wash, fading out under the image's top. */
+.cl-lhero-frame {
+  position: relative;
+}
+
+.cl-lhero-frame::before {
+  position: absolute;
+  z-index: -1;
+  right: -50vw;
+  bottom: calc(100% - 160px);
+  left: -50vw;
+  height: 760px;
+  background:
+    radial-gradient(0.35% 70% at 58% 100%, var(--color-site-beam-core), transparent),
+    radial-gradient(1.6% 85% at 58% 100%, var(--color-site-beam), transparent),
+    radial-gradient(9% 26% at 58% 100%, var(--color-site-beam-glow), transparent),
+    radial-gradient(14% 42% at 25% 100%, var(--color-site-beam-glow), transparent),
+    radial-gradient(60% 45% at 50% 100%, var(--color-site-beam-wash), transparent);
+  mask-image: linear-gradient(to top, transparent, currentcolor 160px);
+  content: '';
+  pointer-events: none;
+}
+
+/* The product image stands on the backdrop itself: no panel, grain or pad. */
+.cl-lhero .cl-frame--hero > .cl-frame-card {
+  padding: 0;
+  background: none;
+}
+
+.cl-lhero .cl-frame--hero > .cl-frame-card::before {
+  content: none;
+}
