@@ -26,17 +26,10 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   );
 }
 
-/** A count in a small box, wide enough for three digits so a changing count moves nothing. */
-function CountBox({ count }: Readonly<{ count: number }>) {
+/** A row's count after its name, wide enough for three digits so a changing count moves nothing. */
+function CountText({ children }: Readonly<{ children: string }>) {
   return (
-    <span
-      className={textRole(
-        'captionStrong',
-        'border-rule inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded-mark border px-1 tabular-nums',
-      )}
-    >
-      {formatCount(count)}
-    </span>
+    <span className={textRole('body', 'text-ink-2 min-w-7 shrink-0 tabular-nums')}>{children}</span>
   );
 }
 
@@ -58,19 +51,19 @@ export function TreeStatusRow({
       aria-expanded={open}
       className={cn(
         textRole('subheading'),
-        'hover:overlay-hover flex h-10 items-center gap-2 px-2',
+        'hover:overlay-hover rounded-control flex h-10 items-center gap-2 px-2',
         className,
       )}
     >
       <TreeChevron open={open} />
       <StateDot tone={tone} />
       {name}
-      <span className={textRole('body', 'text-ink-2 min-w-7 tabular-nums')}>{count}</span>
+      <CountText>{count}</CountText>
     </Pressable>
   );
 }
 
-/** A group's shaded row: chevron, name, count box and any trailing mark. */
+/** A group's row: chevron, name, count and any trailing mark. */
 export function TreeGroupRow({
   open,
   name,
@@ -86,13 +79,13 @@ export function TreeGroupRow({
       aria-expanded={open}
       className={cn(
         textRole('subheading'),
-        'bg-well hover:overlay-hover flex h-10 scroll-mt-4 items-center gap-2 px-2',
+        'hover:overlay-hover rounded-control flex h-10 scroll-mt-4 items-center gap-2 px-2',
         className,
       )}
     >
       <TreeChevron open={open} />
       <span className="min-w-0 truncate">{name}</span>
-      <CountBox count={count} />
+      <CountText>{formatCount(count)}</CountText>
       {mark}
     </Pressable>
   );
@@ -128,7 +121,7 @@ export function TreeGroupingRow({
       <span className="relative flex">{tick}</span>
       <span className="pointer-events-none min-w-0 truncate">{name}</span>
       <span className="pointer-events-none flex">
-        <CountBox count={count} />
+        <CountText>{formatCount(count)}</CountText>
       </span>
     </div>
   );

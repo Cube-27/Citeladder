@@ -1,21 +1,22 @@
-import { useId } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
-import { IssueMetadata } from '@/components/site-health/issue-metadata';
+import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
+import { FigureStrip } from '@/components/ui/figure-strip';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { OpenRow } from '@/components/ui/list-row';
-import { CountDonut } from '@/components/ui/part-donut';
-import { StatusMark } from '@/components/ui/status-mark';
+import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
+import { ROWS_SHELL } from '@/components/ui/work-rows';
 import { IssuesSummaryLoading } from '@/components/site-health/issues-summary-loading';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
-import { formatCount, pluralCount } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { firstSentence, issueTitle, severityCount } from '@/lib/site-health/issues';
+import { cn } from '@/lib/utils';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The top of the Issues screen: how many issue types the crawl has, how many
@@ -45,8 +46,6 @@ export function IssuesSummary({
     );
   if (!query.data) return <IssuesSummaryLoading />;
   const { summary, items } = query.data;
-  // The severity card is far shorter than the priority list, so it takes the
-  // full row above it rather than stretching beside it.
   return (
     <Stack gap="workspace" className="min-w-0">
       <SeverityCard summary={summary} />
@@ -55,61 +54,45 @@ export function IssuesSummary({
   );
 }
 
-/** Issue types by severity: the count, the high-severity count, the pages they reach. */
+/**
+ * The crawl in one metric strip: issue types, advisories, the pages they
+ * reach, then the issue types at each severity. A real zero prints as 0.
+ */
 function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
-  const titleId = useId();
-  const total = summary.defect_issue_type_count;
-  const counts = SEVERITIES.map((severity) => ({
-    ...severity,
-    count: severityCount(summary.severity_counts, severity.key),
-  }));
-  // The legend and ring sit at the card's right, beside the title (owner, 2026-11-17).
-  const breakdown = counts.some((severity) => severity.count > 0) ? (
-    <CountDonut
-      label="Issue types by severity"
-      parts={counts.map((severity) => ({
-        key: severity.key,
-        term: (
-          <StatusMark variant="severity" value={severity.key}>
-            {severity.label}
-          </StatusMark>
-        ),
-        value: severity.count,
-        stroke: severity.stroke,
-      }))}
-    />
-  ) : null;
+  const figure = (key: string, label: string, value: number) => ({
+    key,
+    label,
+    value: formatCount(value),
+  });
   return (
-    <Section aria-labelledby={titleId}>
-      <SectionHeader actions={breakdown}>
-        <h2 id={titleId} className={textRole('figure')}>
-          {issueTypesLabel(total, summary.advisory_issue_type_count)}
-        </h2>
-        {total > 0 ? (
-          <SectionDescription>
-            {pluralCount(summary.affected_url_count, 'page')} affected
-          </SectionDescription>
-        ) : null}
-      </SectionHeader>
-    </Section>
+    <FigureStrip
+      label="Issue summary"
+      segments={[
+        figure('types', 'Issue types', summary.defect_issue_type_count),
+        figure('advisories', 'Advisories', summary.advisory_issue_type_count),
+        figure('pages', 'Pages affected', summary.affected_url_count),
+        ...SEVERITIES.map((severity) =>
+          figure(
+            severity.key,
+            severity.label,
+            severityCount(summary.severity_counts, severity.key),
+          ),
+        ),
+      ]}
+    />
   );
 }
 
-/** Each severity's ring ink matches its StatusMark's tone. */
 const SEVERITIES = [
-  { key: 'high', label: 'High', stroke: 'stroke-negative' },
-  { key: 'medium', label: 'Medium', stroke: 'stroke-warning' },
-  { key: 'low', label: 'Low', stroke: 'stroke-data-other' },
+  { key: 'high', label: 'High' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
 ] as const;
 
-/** The defect types, then the advisory types the tabs also list (owner, 2026-11-18). */
-function issueTypesLabel(total: number, advisories: number): string {
-  const defects = total === 0 ? 'No issue types to fix' : pluralCount(total, 'issue type');
-  if (advisories === 0) return defects;
-  return `${defects} · ${formatCount(advisories)} ${advisories === 1 ? 'advisory' : 'advisories'}`;
-}
-
-/** The worst issues, worst first, each opening its own detail. */
+/**
+ * The worst issues, worst first, in 40px rows that each open the issue's
+ * detail: its title and fix in one line, its severity, its pages.
+ */
 function FixFirst({
   issues,
   fixes,
@@ -125,27 +108,37 @@ function FixFirst({
       <SectionHeader>
         <SectionTitle id="issues-fix-first">Fix these first</SectionTitle>
       </SectionHeader>
-      <ol className={ledgerClasses()}>
+      <ol className={cn(ROWS_SHELL, 'divide-rule m-0 list-none divide-y p-0')}>
         {issues.map((issue) => {
           const fix = fixOf.get(issue.group_id);
           return (
-            <li key={issue.group_id} className={ledgerItemClasses()}>
-              <OpenRow
-                onOpen={() => onOpen(issue.group_id)}
-                title={issueTitle(issue)}
-                meta={
-                  <IssueMetadata issue={issue}>
-                    <span className="tabular-nums">
-                      {formatCount(issue.affected_url_count)}{' '}
-                      {issue.affected_url_count === 1 ? 'page affected' : 'pages affected'}
-                    </span>
-                    {fix && fix.fixed_url_count > 0 ? (
-                      <span className="tabular-nums">{fixedLabel(fix)}</span>
-                    ) : null}
-                  </IssueMetadata>
-                }
-                caption={issue.remediation ? firstSentence(issue.remediation) : null}
-              />
+            <li key={issue.group_id}>
+              <Pressable
+                onClick={() => onOpen(issue.group_id)}
+                className="hover:overlay-hover flex min-h-10 w-full min-w-0 items-center gap-2 px-4 text-start"
+              >
+                <span className={textRole('body', 'min-w-0 shrink truncate')}>
+                  {issueTitle(issue)}
+                </span>
+                <span
+                  className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1 truncate')}
+                >
+                  {issue.remediation ? firstSentence(issue.remediation) : null}
+                </span>
+                {fix && fix.fixed_url_count > 0 ? (
+                  <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>
+                    {fixedLabel(fix)}
+                  </span>
+                ) : null}
+                <span className="ms-auto flex shrink-0">
+                  <IssueSeverityMark issue={issue} />
+                </span>
+                <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>
+                  {formatCount(issue.affected_url_count)}{' '}
+                  {issue.affected_url_count === 1 ? 'page affected' : 'pages affected'}
+                </span>
+                <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+              </Pressable>
             </li>
           );
         })}

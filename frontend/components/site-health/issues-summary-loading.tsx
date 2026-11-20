@@ -1,32 +1,31 @@
 import { Stack } from '@/components/ui/layout';
-import { OpenRowSkeleton } from '@/components/ui/open-row-skeleton';
-import { SectionHeaderSkeleton } from '@/components/ui/loading-parts';
-import { Section } from '@/components/ui/section';
-import { SkeletonFrame } from '@/components/ui/skeleton-block';
+import { TextLineSkeleton } from '@/components/ui/loading-parts';
+import { Section, SectionHeader } from '@/components/ui/section';
+import { FigureBlocks, SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { ToolbarTableLoading } from '@/components/ui/table-loading';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { ROWS_SHELL } from '@/components/ui/work-rows';
+import { cn } from '@/lib/utils';
 
 /**
- * The Issues summary's two sections at their loaded height (the severity ring
- * sets the first, three captioned rows the second), so the table below does
- * not move.
+ * The Issues summary at its loaded height (the six-figure strip, then three
+ * 40px rows), so the table below does not move.
  */
 export function IssuesSummaryLoading() {
   return (
     <SkeletonFrame label="Loading the issue summary" variant="summary">
       <Stack gap="workspace" className="min-w-0">
+        <FigureBlocks count={6} />
         <Section>
-          <SectionHeaderSkeleton title="figure" ring />
-        </Section>
-        <Section>
-          <SectionHeaderSkeleton title="heading" />
-          <ol aria-hidden className={ledgerClasses()}>
+          <SectionHeader>
+            <TextLineSkeleton text="heading" width="short" />
+          </SectionHeader>
+          <span aria-hidden className={cn(ROWS_SHELL, 'divide-rule grid divide-y')}>
             {[0, 1, 2].map((row) => (
-              <li key={row} className={ledgerItemClasses()}>
-                <OpenRowSkeleton />
-              </li>
+              <span key={row} className="flex h-10 items-center px-4">
+                <SkeletonBlock className="h-4 w-3/5" />
+              </span>
             ))}
-          </ol>
+          </span>
         </Section>
       </Stack>
     </SkeletonFrame>
