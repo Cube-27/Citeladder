@@ -21,6 +21,7 @@ export const ROUTE_FAMILIES = [
   'opportunities',
   'performance',
   'performance-sync',
+  'probes',
   'readiness',
   'projects',
   'overview',

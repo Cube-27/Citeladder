@@ -50,6 +50,7 @@ import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
 import { perception } from './config/perception.ts';
+import { probes } from './config/probes.ts';
 import { turnstile } from './config/turnstile.ts';
 import {
   billingSettings,
@@ -155,6 +156,7 @@ export const policy = {
   brand_logos: brandLogos,
   internal_links: internalLinks,
   perception,
+  probes,
 };
 
 /** Where the service listens; platform variables, resolved like every other setting. */

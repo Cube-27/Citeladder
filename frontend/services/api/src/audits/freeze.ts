@@ -22,6 +22,8 @@ import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupanc
 import { WorkspaceEntitlements, requireFlag } from '../entitlements/access.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
+import { policy } from '../config.ts';
+import { probeEngines, probePrompts, type FrozenPrompt } from '../probes/questions.ts';
 import {
   isSearchSurface,
   searchContext,
@@ -36,6 +38,7 @@ import {
 } from '../search-surfaces/dataforseo.ts';
 
 const invalid = (message: string) => new ApiError(400, message);
+const probes = policy.probes;
 
 /**
  * The requested engines that run in this market. An engine with no location
@@ -207,6 +210,45 @@ function usableCandidate(
     return false;
   }
 }
+/** The workspace's own active routes and their connections, default first. */
+export function byokRoutes(db: Database, workspaceId: string) {
+  return db
+    .selectFrom('provider_routes as r')
+    .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
+    .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
+    .select([
+      'r.logical_engine',
+      'r.transport_provider',
+      'r.transport_model',
+      'c.id as connection_id',
+      'c.base_url',
+      'c.paused_at',
+      'c.pause_until',
+      'c.last_test_status',
+      sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
+    ])
+    .where('r.workspace_id', '=', workspaceId)
+    .where('c.workspace_id', '=', workspaceId)
+    .where('w.is_system', '=', false)
+    .where('c.credential_source', '=', 'byok')
+    .where('r.active', '=', true)
+    .where('c.active', '=', true)
+    .orderBy('r.is_default', 'desc')
+    .orderBy('r.created_at')
+    .orderBy('r.id')
+    .execute();
+}
+/** The first of `candidates` that can run `engine` now: keyed, tested, unpaused, approved. */
+export function usableRoute<Candidate extends RouteCandidate>(
+  candidates: readonly Candidate[],
+  engine: Engine,
+  { providerSettings, at }: { providerSettings: ProviderSettings; at: Date },
+) {
+  const provider = providerPolicy.routes[engine].transport_provider;
+  return candidates.find((candidate) =>
+    usableCandidate(candidate, engine, provider, providerSettings, at),
+  );
+}
 type SearchProject = {
   serp_location_code: number;
   serp_language_code: string;
@@ -254,42 +296,12 @@ async function freezeRoutes({
   at: Date;
 }) {
   // A managed workspace's own routes are never used, so they are not read.
-  const candidates = funded
-    ? []
-    : await db
-        .selectFrom('provider_routes as r')
-        .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
-        .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
-        .select([
-          'r.logical_engine',
-          'r.transport_provider',
-          'r.transport_model',
-          'c.id as connection_id',
-          'c.base_url',
-          'c.paused_at',
-          'c.pause_until',
-          'c.last_test_status',
-          sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
-        ])
-        .where('r.workspace_id', '=', workspaceId)
-        .where('c.workspace_id', '=', workspaceId)
-        .where('w.is_system', '=', false)
-        .where('c.credential_source', '=', 'byok')
-        .where('r.active', '=', true)
-        .where('c.active', '=', true)
-        .orderBy('r.is_default', 'desc')
-        .orderBy('r.created_at')
-        .orderBy('r.id')
-        .execute();
+  const candidates = funded ? [] : await byokRoutes(db, workspaceId);
   const routes: FrozenRoute[] = [];
   for (const engine of engines) {
     const catalog = providerPolicy.routes[engine];
     const observed = surfaceKindOf(engine) !== 'llm';
-    const selected = funded
-      ? undefined
-      : candidates.find((candidate) =>
-          usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
-        );
+    const selected = funded ? undefined : usableRoute(candidates, engine, { providerSettings, at });
     if (!funded && !selected)
       throw new ApiError(400, `No active provider route configured for ${engine}`, {
         code: 'execution_credentials_unavailable',
@@ -442,13 +454,19 @@ export async function prepareAudit(
   const mode = input.benchmark_mode ?? project.benchmark_mode;
   if (!auditPolicy.benchmark_modes.includes(mode))
     throw invalid(`Unsupported benchmark mode: ${mode}`);
-  const prompts = await loadPrompts(db, workspaceId, project.id, input, settings);
-  const requested = [...new Set(input.engines)];
+  // A probe asks its own frozen questions on search-capable engines, a fixed number of times.
+  const probe = input.audit_scope === probes.audit_scope;
+  const prompts: FrozenPrompt[] = probe
+    ? await probePrompts(db, { workspaceId, projectId: project.id })
+    : await loadPrompts(db, workspaceId, project.id, input, settings);
+  const requested = probe ? probeEngines(input.engines) : [...new Set(input.engines)];
   if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
     throw invalid('An engine is unavailable');
   const { engines, notApplicable } = marketEngines(requested, market, project);
-  assertPromptCount(funded, trigger, prompts.length, settings);
-  const repetitions = input.repetitions ?? settings.audit_repetitions;
+  if (!probe) assertPromptCount(funded, trigger, prompts.length, settings);
+  const repetitions = probe
+    ? probes.repetitions
+    : (input.repetitions ?? settings.audit_repetitions);
   assertRepetitions(repetitions);
   if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
     throw invalid('Audit exceeds the task limit');
@@ -551,7 +569,7 @@ export async function prepareAudit(
           commerce_measurement: await freezeCommerceContext(
             db,
             { workspaceId, projectId: project.id },
-            prompts.map((prompt) => prompt.id),
+            prompts.flatMap((prompt) => (prompt.id ? [prompt.id] : [])),
           ),
         }
       : {}),

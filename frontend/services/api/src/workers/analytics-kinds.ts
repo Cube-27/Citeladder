@@ -11,6 +11,7 @@ import { demandKinds } from '../demand/analytics-kinds.ts';
 import { opportunityKinds } from '../opportunities/analytics-kinds.ts';
 import { pageDocumentKinds } from '../page-documents/analytics-kinds.ts';
 import { perceptionKinds } from '../perception/analytics-kinds.ts';
+import { probeKinds } from '../probes/analytics-kinds.ts';
 import type { AnalyticsKind, AnalyticsKinds } from '../queue/executor.ts';
 import { referralKinds } from '../referrals/analytics-kinds.ts';
 import { searchIntelligenceKinds } from '../search-intelligence/analytics-kinds.ts';
@@ -33,6 +34,7 @@ export const ANALYTICS_KINDS: AnalyticsKinds = Object.freeze({
   ...demandKinds,
   ...opportunityKinds,
   ...perceptionKinds,
+  ...probeKinds,
 });
 
 /** Every registered kind, in stable text order. */

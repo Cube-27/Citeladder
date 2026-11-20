@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { PROMPT_RUNS, reservePromptRuns } from './prompt-runs.ts';
+import { PROMPT_RUNS, reserveTaskFunding, taskFunding } from './prompt-runs.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
@@ -358,14 +358,22 @@ async function persistTasks(
       })
       .execute();
   }
-  const runs = await reservePromptRuns(db, {
+  const funding = inserted.map(({ route }) =>
+    taskFunding(plan.configuration.audit_scope, route.logical_engine, route.connection_id !== null),
+  );
+  const runs = await reserveTaskFunding(db, {
     workspaceId: scope.workspaceId,
     auditId,
-    taskIds: inserted.map((task) => task.taskId),
+    capability: funding[0]?.capability ?? PROMPT_RUNS,
+    tasks: inserted.map((task, index) => ({ id: task.taskId, units: funding[index]!.units })),
     at,
   });
   for (const [index, { taskId, slot, route, engine }] of inserted.entries()) {
-    const run = { accountId: runs.accountId, reservationId: runs.reservationIds[index]! };
+    const run = {
+      accountId: runs.accountId,
+      reservationId: runs.reservationIds[index]!,
+      ...funding[index]!,
+    };
     const binding = await bindTask(options, taskId, route, run); // NOSONAR -- One transaction: each binding reads and writes in order.
     await db // NOSONAR -- One transaction: statements run in order.
       .updateTable('audit_tasks')
@@ -403,7 +411,7 @@ async function persistTasks(
       ? {
           funding: {
             credential_mode: 'funded',
-            capability_key: PROMPT_RUNS,
+            capability_key: funding[0]?.capability ?? PROMPT_RUNS,
             funding_account_id: funded.accountId,
             admission_at: at.toISOString(),
             budget_period_start: funded.month.toISOString(),
@@ -434,7 +442,7 @@ async function bindTask(
   binding: TaskBinding,
   taskId: string,
   route: FrozenAudit['routes'][number],
-  run: { accountId: string; reservationId: string },
+  run: { accountId: string; reservationId: string; capability: string; units: number },
 ) {
   const { db, scope, plan, funded } = binding;
   const byok = route.connection_id !== null;
@@ -466,10 +474,10 @@ async function bindTask(
       ? {
           funding: {
             credential_mode: 'funded',
-            capability_key: PROMPT_RUNS,
+            capability_key: run.capability,
             funding_account_id: run.accountId,
             reservation_id: run.reservationId,
-            reserved_units: 1,
+            reserved_units: run.units,
             grant_allocations: allocations,
             entitlement: funded.provenance,
           },

@@ -8,7 +8,7 @@ import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { surfaceKindOf } from '../providers/config.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { leasedStatuses } from '../queue/next-due.ts';
-import { settlePromptRun } from './prompt-runs.ts';
+import { settlePromptRun, TASK_CAPABILITIES } from './prompt-runs.ts';
 import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 
@@ -285,7 +285,7 @@ export class AuditMaintenance {
       )
       .select(['t.id', 't.workspace_id', 't.audit_id'])
       .where('l.subject_kind', '=', 'audit')
-      .where('l.capability_key', '=', policy.entitlements.prompt_runs)
+      .where('l.capability_key', 'in', TASK_CAPABILITIES)
       .where('t.status', 'in', policy.task_queue.terminal)
       .groupBy(['t.id', 't.workspace_id', 't.audit_id'])
       .having(

@@ -10,6 +10,7 @@ import { approvedEndpoint } from '../providers/connections.ts';
 import type { FrozenRoute, prepareAudit } from './freeze.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
 import { getLogger } from '../logging.ts';
+import { TASK_CAPABILITIES } from './prompt-runs.ts';
 
 export type FrozenAudit = Awaited<ReturnType<typeof prepareAudit>>;
 const unresolved = (workspaceId: string, accountId?: string) => {
@@ -209,7 +210,7 @@ export async function platformRoute(
     .where('subject_id', '=', proof.taskId)
     .where('reservation_id', '=', proof.reservationId)
     .where('entry_kind', '=', 'reservation')
-    .where('capability_key', '=', policy.entitlements.prompt_runs)
+    .where('capability_key', 'in', TASK_CAPABILITIES)
     .executeTakeFirst();
   if (!hold) throw unavailableCredential();
   const candidates = await db

@@ -1,0 +1,356 @@
+/**
+ * Market probes against real PostgreSQL: admission freezes the probe's own
+ * questions and holds AI credits per answer (refused cleanly when they run
+ * out), labelling persists themes, fixed objection groups and theme ranks,
+ * the reads score them, and everything stays inside its workspace.
+ */
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+import { auditRuntime } from '../src/audits/config.ts';
+import { createAudits } from '../src/audits/creation.ts';
+import { auditInput } from '../src/audits/inputs.ts';
+import { settlePromptRun } from '../src/audits/prompt-runs.ts';
+import { policy } from '../src/config.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
+import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
+import { enqueueProbeLabelling, probeLabelling } from '../src/probes/labelling.ts';
+import { probeMarket } from '../src/probes/market.ts';
+import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
+import { probeObjections } from '../src/probes/objections.ts';
+import { createTheme } from '../src/projects/themes.ts';
+import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
+import { auditTenant } from './audit-fixtures.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
+import { testDatabase } from './support.ts';
+import { VisibilityFixtures } from './visibility-fixtures.ts';
+
+const db = testDatabase();
+const fixtures = new VisibilityFixtures(db);
+const runtime = auditRuntime({});
+const settings = loadWorkerSettings({});
+const LABEL = policy.probes.label_credits;
+afterEach(() => fixtures.cleanup());
+afterAll(() => db.destroy());
+
+type Tenant = Awaited<ReturnType<typeof auditTenant>>;
+
+/** A BYOK tenant (a ChatGPT key) with AI credits, one theme and one competitor. */
+async function probeTenant(credits = 1000) {
+  const t = await auditTenant(db, fixtures);
+  await grant(db, await billingAccount(db, t.workspaceId), { key: 'ai_credits', value: credits });
+  const theme = await createTheme(db, t, { name: 'Comfort' });
+  const rivalId = await fixtures.competitor(t.projectId, { name: 'Rival Shoes' });
+  return { t, themeId: theme.id, rivalId };
+}
+
+function launch(t: Tenant) {
+  return createAudits(
+    db,
+    t.workspaceId,
+    auditInput.parse({
+      project_id: t.projectId,
+      prompt_set_id: t.setId,
+      engines: ['chatgpt', 'google_ai_overview'],
+      audit_scope: 'probe',
+      random_seed: '7',
+    }),
+    {},
+    runtime,
+  );
+}
+
+const ledger = (workspaceId: string) =>
+  db
+    .selectFrom('consumable_ledger')
+    .select(['capability_key', 'entry_kind', 'units'])
+    .where('workspace_id', '=', workspaceId)
+    .where('subject_kind', '=', 'audit')
+    .orderBy('capability_key')
+    .orderBy('entry_kind')
+    .execute();
+
+describe('probe admission', () => {
+  it("freezes the brand and theme questions, three asks each on probe engines, holding only labelling credits on the customer's key", async () => {
+    const { t, themeId } = await probeTenant();
+    const [auditId] = await launch(t);
+    const snapshots = await db
+      .selectFrom('audit_prompt_snapshots')
+      .select(['prompt_id', 'text', 'cohort', 'generation_evidence'])
+      .where('audit_id', '=', auditId)
+      .orderBy('prompt_index')
+      .execute();
+    expect(snapshots.map((row) => [row.prompt_id, row.text, row.cohort])).toEqual([
+      [null, 'What is Acme Running known for?', 'probe'],
+      [null, 'Why might someone not choose Acme Running?', 'probe'],
+      [null, expect.stringMatching(/^Which .+ brands are best known for comfort\?$/u), 'probe'],
+    ]);
+    expect(snapshots[2]!.generation_evidence).toEqual({
+      probe: { question: 'theme', theme_id: themeId, theme_name: 'Comfort' },
+    });
+    const tasks = await db
+      .selectFrom('audit_tasks')
+      .select(['logical_engine'])
+      .where('audit_id', '=', auditId)
+      .execute();
+    // AI Overviews is not a probe engine; ChatGPT answers each question three times.
+    expect(tasks).toHaveLength(9);
+    expect(new Set(tasks.map((task) => task.logical_engine))).toEqual(new Set(['chatgpt']));
+    const holds = await ledger(t.workspaceId);
+    expect(holds.every((row) => row.capability_key === 'ai_credits')).toBe(true);
+    expect(holds.reduce((sum, row) => sum + Number(row.units), 0)).toBe(9 * LABEL);
+  });
+
+  it('refuses a probe its AI credits cannot cover with ai_credits_exhausted, queuing nothing', async () => {
+    const { t } = await probeTenant(9 * LABEL - 1);
+    await expect(launch(t)).rejects.toMatchObject({ status: 403, code: 'ai_credits_exhausted' });
+    const audits = await db
+      .selectFrom('audits')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect(audits).toEqual([]);
+  });
+
+  it("spends a recorded answer's whole hold and releases a failed one's", async () => {
+    const { t } = await probeTenant();
+    const [auditId] = await launch(t);
+    const [ok, failed] = await db
+      .selectFrom('audit_tasks')
+      .selectAll()
+      .where('audit_id', '=', auditId)
+      .orderBy('randomized_position')
+      .limit(2)
+      .execute();
+    await db.transaction().execute(async (trx) => {
+      await settlePromptRun(trx, ok!, true, new Date());
+      await settlePromptRun(trx, failed!, false, new Date());
+    });
+    const debits = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'debit');
+    expect(debits.map((row) => Number(row.units))).toEqual([LABEL]);
+  });
+});
+
+/** Answers every task and completes the probe, as execution and finalization would. */
+async function answered(t: Tenant, auditId: string) {
+  await db
+    .updateTable('audit_tasks')
+    .set({ status: 'succeeded', answer_text: 'An answer.', completed_at: new Date() })
+    .where('audit_id', '=', auditId)
+    .execute();
+  await db
+    .updateTable('audits')
+    .set({ status: 'completed', completed_count: 9, completed_at: new Date() })
+    .where('id', '=', auditId)
+    .execute();
+  await enqueueProbeLabelling(db, { workspaceId: t.workspaceId, projectId: t.projectId, auditId });
+}
+
+/** A fake gateway answering each labelling request by its question. */
+function labeller(outputs: { known: unknown; objection: unknown; theme: unknown }) {
+  const fetch = vi.fn(async (_url: unknown, init?: { body?: unknown }) => {
+    const sent = String(init?.body ?? '');
+    let content = outputs.theme;
+    if (sent.includes('known for?')) content = outputs.known;
+    else if (sent.includes('not choose')) content = outputs.objection;
+    return Response.json({
+      model: 'returned-model',
+      choices: [{ message: { content: JSON.stringify(content) }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 100, completion_tokens: 20 },
+    });
+  });
+  const gateway = createModelGateway(
+    {
+      ...gatewaySettings({}),
+      apiKey: 'test-only',
+      model: 'test',
+      baseUrl: 'https://model.test/v1',
+    },
+    { fetch, sleep: async () => {} },
+  );
+  return () => gateway;
+}
+
+async function label(t: Tenant, factory: () => ReturnType<ReturnType<typeof labeller>>) {
+  const ids = (
+    await db
+      .selectFrom('analytics_tasks')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', policy.probes.task_kind)
+      .execute()
+  ).map((row) => row.id);
+  const worker = new AnalyticsWorker(db, settings, {
+    executors: { probe_labelling: probeLabelling(factory) },
+    taskScope: { workspaceId: t.workspaceId, taskIds: ids },
+  });
+  await worker.runUntilIdle();
+}
+
+const first = {
+  known: {
+    answers: [
+      {
+        answer: 1,
+        points: [
+          { theme: 'comfort', quote: '' },
+          { theme: 'Funding', quote: '' },
+        ],
+      },
+      { answer: 2, points: [{ theme: 'Comfort', quote: '' }] },
+      { answer: 3, points: [] },
+    ],
+  },
+  objection: {
+    answers: [
+      {
+        answer: 1,
+        reasons: [
+          { group: 'Too expensive', quote: '' },
+          { group: 'Fit runs small', quote: '' },
+        ],
+      },
+      { answer: 2, reasons: [{ group: 'too expensive', quote: '' }] },
+      {
+        answer: 3,
+        reasons: [
+          { group: 'Fit runs small', quote: '' },
+          { group: 'Too Expensive', quote: '' },
+        ],
+      },
+    ],
+  },
+  theme: {
+    answers: [
+      { answer: 1, brands: ['Acme Running', 'Rival Shoes'] },
+      { answer: 2, brands: ['Rival Shoes', 'Big Co', 'Acme Running'] },
+      { answer: 3, brands: ['Rival Shoes'] },
+    ],
+  },
+};
+
+describe('probe labelling and reads', () => {
+  it('labels a probe once, scores Market and Objections, then maps the next probe onto the same groups', async () => {
+    const { t, themeId, rivalId } = await probeTenant();
+    const [firstId] = await launch(t);
+    await answered(t, firstId);
+    await label(t, labeller(first));
+    const market = await probeMarket(db, t);
+    if (market.state !== 'value') throw new Error('expected a labelled probe');
+    expect(
+      market.known_for.map(({ theme, score, raised_in }) => [theme, score, raised_in]),
+    ).toEqual([
+      ['Comfort', 67, 2],
+      ['Other', 30, 1],
+    ]);
+    expect(market.themes).toEqual([
+      {
+        theme_id: themeId,
+        theme: 'Comfort',
+        answers: 3,
+        entities: [
+          { kind: 'brand', id: null, name: 'Acme Running', score: 60 },
+          { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97 },
+        ],
+        rank: 2,
+        of: 2,
+        leader: { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97 },
+        gap: 37,
+      },
+    ]);
+    expect(market.engines).toEqual([
+      {
+        engine: 'chatgpt',
+        top_themes: [
+          { theme_id: themeId, theme: 'Comfort' },
+          { theme_id: null, theme: 'Other' },
+        ],
+        rank_in_top_theme: 2,
+      },
+    ]);
+
+    const [secondId] = await launch(t);
+    await answered(t, secondId);
+    await label(
+      t,
+      labeller({
+        ...first,
+        objection: {
+          answers: [1, 2, 3].map((answer) => ({
+            answer,
+            reasons: [
+              { group: 'TOO EXPENSIVE', quote: '' },
+              { group: 'Slow delivery', quote: '' },
+            ],
+          })),
+        },
+      }),
+    );
+    // A re-delivered task labels nothing twice.
+    await enqueueProbeLabelling(db, {
+      workspaceId: t.workspaceId,
+      projectId: t.projectId,
+      auditId: secondId,
+    });
+    const objections = await probeObjections(db, t);
+    if (objections.state !== 'value') throw new Error('expected a labelled probe');
+    expect(
+      objections.groups.map(({ name, score, engines, change, history, sources }) => [
+        name,
+        score,
+        engines,
+        change,
+        history,
+        sources,
+      ]),
+    ).toEqual([
+      ['Too expensive', 100, ['chatgpt'], 3, [97, 100], 0],
+      // Not raised before is 0 then, never unknown.
+      ['Slow delivery', 90, ['chatgpt'], 90, [0, 90], 0],
+      ['Fit runs small', 0, [], -63, [63, 0], 0],
+    ]);
+    const labellings = await db
+      .selectFrom('probe_labellings')
+      .select('outcome')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect(labellings).toEqual([{ outcome: 'labelled' }, { outcome: 'labelled' }]);
+  });
+
+  it('merges and renames groups inside their project only', async () => {
+    const owner = await probeTenant();
+    const other = await probeTenant();
+    const [auditId] = await launch(owner.t);
+    await answered(owner.t, auditId);
+    await label(owner.t, labeller(first));
+    const groups = await db
+      .selectFrom('probe_objection_groups')
+      .select(['id', 'name'])
+      .where('project_id', '=', owner.t.projectId)
+      .orderBy('name')
+      .execute();
+    const [fit, price] = groups;
+    // Another workspace reads nothing and edits nothing.
+    expect(
+      await probeObjections(db, { workspaceId: other.t.workspaceId, projectId: owner.t.projectId }),
+    ).toEqual({
+      state: 'none',
+    });
+    await expect(
+      renameGroup(
+        db,
+        { workspaceId: other.t.workspaceId, projectId: owner.t.projectId, groupId: fit!.id },
+        { name: 'Taken' },
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      mergeGroups(db, { ...other.t, groupId: fit!.id, intoId: price!.id }),
+    ).rejects.toMatchObject({ status: 404 });
+    // The owner merges fit into price: every reason now scores under price.
+    await mergeGroups(db, { ...owner.t, groupId: fit!.id, intoId: price!.id });
+    const objections = await probeObjections(db, owner.t);
+    if (objections.state !== 'value') throw new Error('expected a labelled probe');
+    expect(objections.groups.map(({ name, score }) => [name, score])).toEqual([
+      ['Too expensive', 100],
+    ]);
+  });
+});

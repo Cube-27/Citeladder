@@ -9,7 +9,7 @@ import { lockAuditEnqueue, reserveAuditCapacity } from './admission.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 import { compareText } from '../text-order.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
-import { reservePromptRuns } from './prompt-runs.ts';
+import { PROMPT_RUNS, reserveTaskFunding, taskFunding } from './prompt-runs.ts';
 
 export const repairInput = auditRepairRequestSchema;
 const denied = (message: string) => new ApiError(409, message);
@@ -218,10 +218,19 @@ export function createRepairAudit(
       )
       .returningAll()
       .execute();
-    await reservePromptRuns(trx, {
+    const holds = repaired.map((task) => ({
+      id: task.id,
+      ...taskFunding(
+        parent.audit_scope,
+        task.logical_engine,
+        record(task.provider_route_snapshot).credential_source === 'byok',
+      ),
+    }));
+    await reserveTaskFunding(trx, {
       workspaceId,
       auditId: id,
-      taskIds: repaired.map((task) => task.id),
+      capability: holds[0]?.capability ?? PROMPT_RUNS,
+      tasks: holds,
       at,
     });
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');

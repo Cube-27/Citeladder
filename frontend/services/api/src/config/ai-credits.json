@@ -12,6 +12,7 @@
     "commerce_buyer_prompts": "credits",
     "answer_perception": "included",
     "fact_verification": "included",
+    "probe_labelling": "included",
     "commerce_shelf": "included",
     "content_angles": "included",
     "prompt_quality_judge": "not_charged",

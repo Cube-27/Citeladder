@@ -47,3 +47,8 @@ command details.
   Send native test output to one reusable log in the worktree's Git directory
   rather than a new file per run.
 - Report exit status and inspect failure tails first.
+- The local database is shared with other builders and the owner's dev
+  servers. Never change its settings (`ALTER DATABASE`, `ALTER SYSTEM`, server
+  config); use `SET LOCAL` inside your own transaction. Never generate more than
+  about 1,000 fixture rows or run scale, load or timing runs locally; scale
+  fixtures run in CI.

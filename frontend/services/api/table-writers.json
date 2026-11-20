@@ -234,6 +234,9 @@
     "performance_dimension_stats": ["src/traffic/snapshot.ts"],
     "platform_calls": ["src/billing/metering.ts"],
     "policy_acceptances": ["src/workspaces/policies.ts"],
+    "probe_answer_items": ["src/probes/labelling.ts", "src/probes/objection-groups.ts"],
+    "probe_labellings": ["src/probes/labelling.ts"],
+    "probe_objection_groups": ["src/probes/labelling.ts", "src/probes/objection-groups.ts"],
     "project_markets": ["src/projects/markets.ts"],
     "project_themes": ["src/projects/themes.ts"],
     "projects": [

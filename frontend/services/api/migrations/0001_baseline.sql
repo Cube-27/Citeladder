@@ -1745,6 +1745,88 @@ CREATE INDEX ix_project_themes_workspace_id_project_id ON public.project_themes 
 
 CREATE UNIQUE INDEX uq_project_theme_name ON public.project_themes USING btree (project_id, lower((name)::text));
 
+-- Probe objection groups (AV-28): the first probe groups reasons by meaning,
+-- later probes map onto these and add one only for something new.
+CREATE TABLE public.probe_objection_groups (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    name character varying(120) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.probe_objection_groups
+    ADD CONSTRAINT probe_objection_groups_pkey PRIMARY KEY (id);
+
+CREATE INDEX ix_probe_objection_groups_workspace_id_project_id ON public.probe_objection_groups USING btree (workspace_id, project_id);
+
+CREATE UNIQUE INDEX uq_probe_objection_group_name ON public.probe_objection_groups USING btree (project_id, lower((name)::text));
+
+-- One labelling outcome per probe run.
+CREATE TABLE public.probe_labellings (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    labelling_version character varying(64) NOT NULL,
+    outcome character varying(32) NOT NULL,
+    outcome_reason character varying(64),
+    model_provider character varying(32),
+    model character varying(255),
+    usage jsonb,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_probe_labellings_outcome CHECK ((outcome IN ('labelled', 'unavailable')))
+);
+
+ALTER TABLE ONLY public.probe_labellings
+    ADD CONSTRAINT probe_labellings_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.probe_labellings
+    ADD CONSTRAINT uq_probe_labellings_audit_id UNIQUE (audit_id);
+
+ALTER TABLE ONLY public.probe_labellings
+    ADD CONSTRAINT uq_probe_labellings_ws_id UNIQUE (workspace_id, id);
+
+CREATE INDEX ix_probe_labellings_workspace_id_project_id ON public.probe_labellings USING btree (workspace_id, project_id);
+
+-- What each probe answer raised, in its order: a theme (null is Other) for
+-- known-for answers, a group for objections, a tracked business for theme answers.
+CREATE TABLE public.probe_answer_items (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    labelling_id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    question character varying(16) NOT NULL,
+    rank integer NOT NULL,
+    theme_id uuid,
+    objection_group_id uuid,
+    entity_kind character varying(16),
+    entity_id uuid,
+    entity_name character varying(255),
+    quote text NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_probe_answer_items_question CHECK ((question IN ('known_for', 'objection', 'theme'))),
+    CONSTRAINT ck_probe_answer_items_rank CHECK ((rank >= 0)),
+    CONSTRAINT ck_probe_answer_items_objection CHECK (((question = 'objection') = (objection_group_id IS NOT NULL))),
+    CONSTRAINT ck_probe_answer_items_entity CHECK ((((question = 'theme') = (entity_kind IS NOT NULL)) AND ((entity_kind IS NULL) OR (entity_kind IN ('brand', 'competitor'))) AND ((entity_kind = 'competitor') = (entity_id IS NOT NULL))))
+);
+
+ALTER TABLE ONLY public.probe_answer_items
+    ADD CONSTRAINT probe_answer_items_pkey PRIMARY KEY (id);
+
+CREATE INDEX ix_probe_answer_items_audit_id ON public.probe_answer_items USING btree (audit_id);
+
+CREATE INDEX ix_probe_answer_items_labelling_id ON public.probe_answer_items USING btree (labelling_id);
+
+CREATE INDEX ix_probe_answer_items_objection_group_id ON public.probe_answer_items USING btree (objection_group_id) WHERE (objection_group_id IS NOT NULL);
+
+CREATE INDEX ix_probe_answer_items_task_id ON public.probe_answer_items USING btree (task_id);
+
+CREATE INDEX ix_probe_answer_items_theme_id ON public.probe_answer_items USING btree (theme_id) WHERE (theme_id IS NOT NULL);
+
 CREATE TABLE public.unintended_domains (
     id uuid NOT NULL,
     project_id uuid NOT NULL,
@@ -6733,6 +6815,24 @@ ALTER TABLE ONLY public.topics
 
 ALTER TABLE ONLY public.project_themes
     ADD CONSTRAINT project_themes_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.probe_objection_groups
+    ADD CONSTRAINT probe_objection_groups_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.probe_labellings
+    ADD CONSTRAINT probe_labellings_audit_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.probe_answer_items
+    ADD CONSTRAINT probe_answer_items_labelling_fkey FOREIGN KEY (workspace_id, labelling_id) REFERENCES public.probe_labellings(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.probe_answer_items
+    ADD CONSTRAINT probe_answer_items_task_fkey FOREIGN KEY (workspace_id, project_id, audit_id, task_id) REFERENCES public.audit_tasks(workspace_id, project_id, audit_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.probe_answer_items
+    ADD CONSTRAINT probe_answer_items_theme_id_fkey FOREIGN KEY (theme_id) REFERENCES public.project_themes(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.probe_answer_items
+    ADD CONSTRAINT probe_answer_items_objection_group_id_fkey FOREIGN KEY (objection_group_id) REFERENCES public.probe_objection_groups(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.unintended_domains
     ADD CONSTRAINT unintended_domains_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;

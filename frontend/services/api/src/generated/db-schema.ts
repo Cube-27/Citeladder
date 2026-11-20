@@ -2378,6 +2378,47 @@ export interface PolicyAcceptances {
   workspace_id: string;
 }
 
+export interface ProbeAnswerItems {
+  audit_id: string;
+  created_at: Timestamp;
+  entity_id: string | null;
+  entity_kind: string | null;
+  entity_name: string | null;
+  id: string;
+  labelling_id: string;
+  objection_group_id: string | null;
+  project_id: string;
+  question: string;
+  quote: string;
+  rank: number;
+  task_id: string;
+  theme_id: string | null;
+  workspace_id: string;
+}
+
+export interface ProbeLabellings {
+  audit_id: string;
+  created_at: Timestamp;
+  id: string;
+  labelling_version: string;
+  model: string | null;
+  model_provider: string | null;
+  outcome: string;
+  outcome_reason: string | null;
+  project_id: string;
+  usage: Json | null;
+  workspace_id: string;
+}
+
+export interface ProbeObjectionGroups {
+  created_at: Timestamp;
+  id: string;
+  name: string;
+  project_id: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
 export interface ProjectMarkets {
   country_code: string;
   created_at: Timestamp;
@@ -3848,6 +3889,9 @@ export interface DB {
   performance_dimension_stats: PerformanceDimensionStats;
   platform_calls: PlatformCalls;
   policy_acceptances: PolicyAcceptances;
+  probe_answer_items: ProbeAnswerItems;
+  probe_labellings: ProbeLabellings;
+  probe_objection_groups: ProbeObjectionGroups;
   project_markets: ProjectMarkets;
   project_themes: ProjectThemes;
   projects: Projects;
