@@ -93,6 +93,7 @@ locals {
       APP_ENV                     = "production"
       DB_SSL_MODE                 = "require"
       DB_MAX_OVERFLOW             = "0"
+      DB_POOL_SIZE                = "6"
       FRONTEND_URL                = "https://${var.app_domain_name}"
       MCP_ENABLED                 = "true"
       PUBLIC_WEBSITE_URL          = "https://${var.domain_name}"
