@@ -123,7 +123,7 @@
           "light": "oklch(17.8% 0 0)",
           "dark": "oklch(96.7% 0 0)"
         },
-        "usage": "Headings, primary text and numbers on paper, surface, surface-sunken and every -soft tint (accent-soft, positive-soft, negative-soft, warning-soft, info-soft): callout bodies are ink. Also the primary button fill and the inverted tile."
+        "usage": "Headings, primary text and numbers on paper, surface, surface-sunken and every -soft tint (accent-soft, positive-soft, negative-soft, warning-soft, info-soft): callout bodies are ink. Also the inverted tile; never a button fill (the primary is the primary-* gradient)."
       },
       {
         "name": "ink-hover",
@@ -131,7 +131,7 @@
           "light": "oklch(28.5% 0 0)",
           "dark": "oklch(87.6% 0 0)"
         },
-        "usage": "Primary button fill on hover."
+        "usage": "An ink fill on hover: the switch track and the calendar's selected day."
       },
       {
         "name": "ink-secondary",
@@ -155,7 +155,7 @@
           "light": "oklch(100% 0 0)",
           "dark": "oklch(17.8% 0 0)"
         },
-        "usage": "Text and icons on an ink fill: the primary button label, the inverted tile."
+        "usage": "Text and icons on an ink fill: the inverted tile, an ink badge, the calendar's selected day."
       },
       {
         "name": "accent",
@@ -163,7 +163,7 @@
           "light": "oklch(63.4% 0.1973 37.5)",
           "dark": "oklch(70.3% 0.194 39.3)"
         },
-        "usage": "Flare, the only hue: the logo bars and \"Cite\", active rungs, your own brand's citation number and chart series, the selected nav marker in the app. A mark, never body text, a button fill or a background."
+        "usage": "Flare, the only hue: the logo bars and \"Cite\", active rungs, your own brand's citation number and chart series, the selected nav marker in the app. A mark, never body text, a button fill or a background; the primary button draws a deeper shade of it (primary-from, primary-to)."
       },
       {
         "name": "accent-ink",
@@ -331,7 +331,63 @@
           "light": "{surface}",
           "dark": "{surface}"
         },
-        "usage": "The fill of a labelled control: secondary and danger buttons, selects, search and filter fields, operable tags. The website aliases the surface; the app's dark binds the well."
+        "usage": "The fill of a labelled control that is not a button: selects, search and filter fields, operable tags. The website aliases the surface; the app's dark binds the well."
+      },
+      {
+        "name": "button-from",
+        "value": {
+          "light": "oklch(100% 0 0)",
+          "dark": "oklch(27.3% 0.004 84.6)"
+        },
+        "usage": "The top of a secondary or danger button's vertical gradient (the layered button, owner 2026-11-20), in the app and on the website."
+      },
+      {
+        "name": "button-to",
+        "value": {
+          "light": "oklch(94.9% 0.008 91.5)",
+          "dark": "oklch(24.1% 0.004 48.6)"
+        },
+        "usage": "The bottom of a secondary button's gradient and its flat fill underneath."
+      },
+      {
+        "name": "button-edge",
+        "value": {
+          "light": "oklch(87.3% 0.01 87.5)",
+          "dark": "oklch(31.8% 0.0045 67.7)"
+        },
+        "usage": "The website secondary button's 1px soft hairline (owner's reference, 2026-11-20); its words name it, so it needs no 3:1. App buttons keep control-edge."
+      },
+      {
+        "name": "primary-from",
+        "value": {
+          "light": "oklch(54.5% 0.175 37.5)",
+          "dark": "oklch(54.5% 0.173 39.3)"
+        },
+        "usage": "The top of the primary button's gradient: the accent deepened so white text holds 4.5:1 there and under the hover lift. Never a mark, text or background."
+      },
+      {
+        "name": "primary-to",
+        "value": {
+          "light": "oklch(48.5% 0.158 37.5)",
+          "dark": "oklch(48.5% 0.157 39.3)"
+        },
+        "usage": "The bottom of the primary button's gradient, its flat fill underneath (a disabled website primary) and its 1px border in the app, the fill's own colour as the ink primary's was."
+      },
+      {
+        "name": "primary-edge",
+        "value": {
+          "light": "oklch(40.5% 0.135 37.5)",
+          "dark": "oklch(40.5% 0.134 39.3)"
+        },
+        "usage": "The website primary button's 1px border, a step darker than its fill (owner, 2026-11-20). The app's primary keeps a fill-coloured border."
+      },
+      {
+        "name": "on-primary",
+        "value": {
+          "light": "oklch(100% 0 0)",
+          "dark": "oklch(100% 0 0)"
+        },
+        "usage": "Text and icons on the primary button, white in both themes."
       },
       {
         "name": "thumb",
@@ -823,7 +879,15 @@
           "light": "0 1px 2px oklch(21% 0.034 263 / 6%)",
           "dark": "0 1px 2px oklch(0% 0 0 / 35%)"
         },
-        "usage": "The app's shadow under a labelled control's control-edge: secondary and danger buttons, link-buttons, operable tags. None on the website and docs."
+        "usage": "The app's shadow under a labelled control's control-edge that is not a button: operable tags, menu triggers. None on the website and docs."
+      },
+      {
+        "name": "shadow-button",
+        "value": {
+          "light": "inset 0 1px 0 oklch(100% 0 0 / 6%), 0 1px 1px oklch(0% 0 0 / 10%), 0 2px 6px -1px oklch(0% 0 0 / 6%)",
+          "dark": "inset 0 1px 0 oklch(100% 0 0 / 5%), 0 1px 1px oklch(0% 0 0 / 50%), 0 2px 6px -1px oklch(0% 0 0 / 30%)"
+        },
+        "usage": "The layered button (owner, 2026-11-20): a thin lit top edge inside and a soft small drop shadow, under every primary, secondary and danger button in the app and on the website. A press removes it."
       },
       {
         "name": "shadow-xs",

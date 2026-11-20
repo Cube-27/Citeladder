@@ -17,14 +17,15 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The four buttons. Actions are ink, never the accent:
- * `primary` is the one ink-filled action a view is for, `secondary` a
- * `control-fill` button with the soft `control-edge` and `shadow-control` (its
- * words name it, so the edge needs no 3:1), `quiet` no edge (`ink-2`, `ink`
- * on hover) for toolbars, rows and navigation, `danger` the secondary face
- * with a crimson label (filled only in a confirm dialog, `danger-confirm`).
- * Hover is the 6% ink tint, pressed and open the 10% tint; in the app a
- * held press also scales the button to 97% (`press`, globals.css).
+ * The four buttons, layered (globals.css `face-*`: a faint gradient and
+ * a soft low shadow; borders unchanged): `primary` is the one accent-filled
+ * action a view is for, `secondary` the white (near-black in dark) face with
+ * the soft `control-edge` (its words name it, so the edge needs no 3:1),
+ * `quiet` flat with no edge (`ink-2`, `ink` on hover) for toolbars, rows and
+ * navigation, `danger` the secondary face with a crimson label (filled only
+ * in a confirm dialog, `danger-confirm`). Hover is the 6% ink tint (the
+ * primary lifts lighter), pressed and open the 10% tint and no shadow; in the
+ * app a held press also scales the button to 97% (`press`, globals.css).
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
@@ -39,8 +40,8 @@ export type ButtonSize = 'md' | 'lg';
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
-/** The labelled button's soft edge; the website keeps its control line (globals.css). */
-const SOFT_EDGE = 'bg-control-fill border border-control-edge shadow-control';
+/** The labelled button's layered face; the website draws a softer hairline (globals.css). */
+const SOFT_EDGE = 'face-secondary border border-control-edge';
 
 // The app's one disabled look (well fill, no edge) is in globals.css, after
 // every variant. The website keeps its 45% disabled face.
@@ -55,14 +56,18 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'bg-ink text-on-ink border border-ink not-disabled:hover:bg-ink-hover aria-disabled:hover:bg-ink',
+    'face-primary border border-primary-to [[data-public-surface]_&]:border-primary-edge not-disabled:not-aria-disabled:hover:overlay-lift not-disabled:not-aria-disabled:active:overlay-sink',
   secondary: cn(SOFT_EDGE, 'text-ink', HOVER_OVERLAY),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
-  danger: cn(SOFT_EDGE, 'text-negative [[data-public-surface]_&]:border-negative', HOVER_OVERLAY),
-  'danger-confirm': 'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
+  danger: cn(
+    'face-danger border border-control-edge text-negative [[data-public-surface]_&]:border-negative',
+    HOVER_OVERLAY,
+  ),
+  'danger-confirm':
+    'face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
 /** The button face for an element that is not a `Button` (a link styled as one). */
