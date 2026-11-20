@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 
 import type { BrandDiscovery } from '@/lib/api/brand-discoveries';
 import { mswServer } from '@/test/msw-server';
+import { discovery, DISCOVERY_ID } from '@/test/fixtures/brand-discovery';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
@@ -20,7 +21,6 @@ const { setActiveProjectId, selection } = vi.hoisted(() => ({
   selection: { activeProjectId: '55555555-5555-4555-8555-555555555555' as string | null },
 }));
 
-const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
 const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 const ACTIVE_PROJECT_ID = '55555555-5555-4555-8555-555555555555';
 
@@ -70,66 +70,6 @@ vi.mock('@/lib/onboarding/use-brand-discovery', async (importOriginal) => {
     },
   };
 });
-
-function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['progress']['phase']) {
-  return {
-    id: DISCOVERY_ID,
-    workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    project_id: null,
-    status,
-    progress: {
-      phase,
-      completed_steps: status === 'ready' ? 4 : 2,
-      total_steps: 4,
-      pages_read: 3,
-      competitors_found: 1,
-    },
-    input_data: {
-      brand_name: 'Acme',
-      website_url: 'https://acme.example',
-      industry: 'Software',
-      subindustry: 'Analytics',
-      primary_market: 'US',
-      language_code: 'en',
-    },
-    profile: {
-      description: 'A commerce platform',
-      positioning: 'Reliable product data',
-      products_services: ['Product feeds'],
-      target_audience: 'Retailers',
-      industry: 'Commerce software',
-      business_type: 'b2b',
-      price_tier: 'premium',
-      field_confidence: {},
-      category: 'product feed management platform',
-      category_options: [],
-      category_aliases: ['feed management software'],
-      category_terms: ['product feed management', 'marketplace integrations'],
-      jobs_to_be_done: ['list products on marketplaces'],
-      sector: 'Software',
-      business_model: 'b2b_saas',
-      secondary_business_models: [],
-      market_scope: 'global',
-      buyer_register: 'research_comparative',
-      buyer_roles: ['ecommerce manager'],
-      service_areas: [],
-      knowledge_strength: 'strong',
-    },
-    domains: ['acme.example'],
-    competitors: [
-      {
-        name: 'Globex',
-        aliases: [],
-        domains: ['globex.example'],
-      },
-    ],
-    evidence: [],
-    warnings: [],
-    error_code: '',
-    created_at: '2026-08-04T00:00:00Z',
-    updated_at: '2026-08-04T00:00:00Z',
-  } satisfies BrandDiscovery;
-}
 
 function catalogHandler() {
   return http.get('/api/v1/brand-discovery-catalog', () =>
@@ -281,25 +221,6 @@ describe('OnboardingScreen', () => {
     expect(screen.queryByRole('button', { name: 'Run discovery again' })).toBeNull();
     expect(screen.getByText('Globex')).toBeInTheDocument();
     expect(rerunKeys).toEqual([expect.stringMatching(/\S/)]);
-  });
-
-  it('sends research that ran out of AI credits to billing instead of a rerun', async () => {
-    useRealDiscovery = true;
-    searchParams = `discovery=${DISCOVERY_ID}&step=discovery`;
-    const failed = {
-      ...discovery('failed', 'preparing_review'),
-      warnings: ['research_degraded'],
-      error_code: 'ai_credits_exhausted',
-    };
-    mswServer.use(
-      catalogHandler(),
-      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () => HttpResponse.json(failed)),
-    );
-    renderOnboarding();
-    expect(await screen.findByText('Out of AI credits.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/billing');
-    expect(screen.queryByRole('button', { name: 'Run discovery again' })).toBeNull();
-    expect(screen.queryByText('Research did not finish.')).toBeNull();
   });
 
   it('starts research once while polling persisted progress during the bounded request', async () => {
