@@ -226,7 +226,7 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
         ['Customer support', 'buyer_choice', 0.8],
         ['Quality', 'buyer_choice', 0.75],
         ['Sizing', 'buyer_choice', 0.75],
-        ['Packaging', 'buyer_choice', 0.5],
+        ['Packaging', 'buyer_choice', 0.4],
       ].map(([name, kind, confidence]) => ({ name, kind, confidence })),
     },
     { competitors: 'invalid' },
