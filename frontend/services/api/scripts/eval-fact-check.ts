@@ -114,6 +114,8 @@ async function pipeline(fixture: Answer, brand: Brand) {
         competitors: brand.competitors.map((name) => ({ name, domains: [] })),
       }),
       policy: settings,
+      // The fact-check fixtures carry no cohort: they read as unbranded prompts.
+      promptNamesBrand: false,
     }),
   };
   const extraction = await callStructured(

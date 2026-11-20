@@ -60,6 +60,8 @@ async function evaluate(fixture: Fixture) {
       languageCode: fixture.language,
       config,
       policy: settings,
+      // The calibration fixtures carry no cohort: they read as unbranded prompts.
+      promptNamesBrand: false,
     }),
   };
   const { system, user } = perceptionPrompt(pkg, settings);
