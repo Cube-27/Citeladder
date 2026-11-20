@@ -19,13 +19,13 @@ const UNCOUNTED_AXIS = 5;
  * screen, so the skeleton holds the loaded table's height.
  */
 export function pendingAxisLength(selected: Visibility, dimension: MatrixDimension): number {
-  const known =
-    dimension === 'engine'
-      ? selected.per_engine.length
-      : dimension === 'brand'
-        ? selected.rankings.length
-        : UNCOUNTED_AXIS;
-  return Math.min(AXIS_LIMIT, Math.max(1, known));
+  return Math.min(AXIS_LIMIT, Math.max(1, countedAxisLength(selected, dimension)));
+}
+
+function countedAxisLength(selected: Visibility, dimension: MatrixDimension): number {
+  if (dimension === 'engine') return selected.per_engine.length;
+  if (dimension === 'brand') return selected.rankings.length;
+  return UNCOUNTED_AXIS;
 }
 
 /** The read failed or is loading: the card's body says so instead of a table. */

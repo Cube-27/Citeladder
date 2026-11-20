@@ -1,5 +1,5 @@
 import type { RankingRow, WinCounts } from '@citeladder/contracts';
-import { endSentence } from '@/lib/format';
+import { endSentence, formattedText } from '@/lib/format';
 import { formatRank } from '@/lib/visibility/dashboard';
 
 /** Where one roster competitor's page lives: keyed by its roster name. */
@@ -107,7 +107,7 @@ export function standingHeadline(standing: BrandStanding): {
     case 'ranked': {
       const sub = [neighbourLine(standing), tieLine(standing.tied)].filter(Boolean).join(' ');
       return {
-        headline: `You're ${formatRank(standing.rank)} in AI visibility`,
+        headline: `You're ${formattedText(formatRank(standing.rank))} in AI visibility`,
         sub: sub || null,
       };
     }

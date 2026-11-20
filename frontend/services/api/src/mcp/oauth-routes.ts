@@ -39,11 +39,12 @@ async function registrationBody(request: Request): Promise<unknown> {
         const next = await reader.read(); // NOSONAR -- A stream yields chunks in order; the size cap stops early.
         if (next.done) break;
         size += next.value.byteLength;
-        if (size > limit) {
-          await reader.cancel();
-          throw new ApiError(413, 'Request body too large');
-        }
+        if (size > limit) break;
         chunks.push(next.value);
+      }
+      if (size > limit) {
+        await reader.cancel();
+        throw new ApiError(413, 'Request body too large');
       }
     } finally {
       reader.releaseLock();

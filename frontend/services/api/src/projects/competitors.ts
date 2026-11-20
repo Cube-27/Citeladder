@@ -98,7 +98,7 @@ export async function listCompetitors(db: Database, scope: ProjectScope): Promis
  * read, within the project ceiling. Adding and accepting a suggestion both
  * insert through here.
  */
-export async function insertCompetitor(
+export function insertCompetitor(
   trx: Database,
   {
     scope,

@@ -345,7 +345,12 @@ export async function recheckOpen(db: Database, owner: Owner, outputId: string, 
   for (const suggestion of suggestions) {
     const located = locate(suggestion, chain);
     if (located.ok) continue;
-    await appendEvent(db, owner, suggestion, { status: 'stale', by, reason: located.reason });
+    await /* NOSONAR -- One transaction connection: events append in order. */ appendEvent(
+      db,
+      owner,
+      suggestion,
+      { status: 'stale', by, reason: located.reason },
+    );
     staled++;
   }
   return staled;

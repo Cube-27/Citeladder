@@ -47,7 +47,7 @@ type ApiDocument = z.infer<typeof apiDocument>;
  * The docs' resources, in sidebar order. The spec's tags are finer than a
  * reader's mental model, so a small tag folds into its parent here.
  */
-const RESOURCES = [
+const RESOURCES: readonly Readonly<{ id: string; label: string; tags: readonly string[] }>[] = [
   { id: 'projects', label: 'Projects', tags: ['projects', 'markets'] },
   { id: 'prompts', label: 'Prompts', tags: ['prompts', 'prompt-sets'] },
   { id: 'topics', label: 'Topics', tags: ['topics'] },
@@ -60,7 +60,7 @@ const RESOURCES = [
   { id: 'search-intelligence', label: 'Search intelligence', tags: ['search-intelligence'] },
   { id: 'business-map', label: 'Business map', tags: ['business-map'] },
   { id: 'actions', label: 'Actions', tags: ['actions', 'urls'] },
-] as const;
+];
 
 const PARAMETER_TITLES = {
   path: 'Path parameters',
@@ -76,13 +76,13 @@ const slugify = (text: string) =>
 
 /** The resource an operation's tag belongs to; an unmapped tag is a resource of its own. */
 function resourceOf(tag: string) {
-  const rank = RESOURCES.findIndex((resource) => resource.tags.some((own) => own === tag));
+  const rank = RESOURCES.findIndex((resource) => resource.tags.includes(tag));
   const found = RESOURCES[rank];
   if (found)
     return {
       id: found.id,
       label: found.label,
-      rank: [rank, found.tags.findIndex((own) => own === tag)],
+      rank: [rank, found.tags.indexOf(tag)],
     };
   return { id: tag, label: tag.replaceAll('-', ' '), rank: [RESOURCES.length, 0] };
 }

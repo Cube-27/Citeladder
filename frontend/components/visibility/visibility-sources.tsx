@@ -197,6 +197,7 @@ export function SourcesPanel({
     rows,
     domain: activeDomain,
   });
+  const tableAnswered = answered(readNotCited ? nearMissQuery : sourceQuery);
 
   return (
     <Stack gap="workspace">
@@ -243,7 +244,7 @@ export function SourcesPanel({
 
       {/* The table leads; the usage over time and the type mix explain it below.
           Both chart citations, which near misses by definition are not. */}
-      {answered(readNotCited ? nearMissQuery : sourceQuery) ? (
+      {tableAnswered ? (
         <>
           {readNotCited ? null : (
             <AppGrid layout="main-aside">

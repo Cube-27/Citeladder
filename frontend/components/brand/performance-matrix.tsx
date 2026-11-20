@@ -40,6 +40,12 @@ const metricCodec = stringUrlCodec(
 const rowsCodec = stringUrlCodec(DIMENSIONS, 'engine');
 const columnsCodec = stringUrlCodec(DIMENSIONS, 'brand');
 
+/** A hand-edited address can name one dimension twice; the grid needs two. */
+function distinctColumns(rows: MatrixDimension, columns: MatrixDimension): MatrixDimension {
+  if (columns !== rows) return columns;
+  return rows === 'brand' ? 'engine' : 'brand';
+}
+
 const dimensionLabel = (dimension: MatrixDimension) =>
   MATRIX_DIMENSIONS.find((option) => option.value === dimension)?.label ?? dimension;
 
@@ -56,8 +62,7 @@ export function PerformanceMatrix({
   const [metric, setMetric] = useUrlState('matrix_metric', metricCodec);
   const [rows, setRows] = useUrlState('matrix_rows', rowsCodec);
   const [linkedColumns, setColumns] = useUrlState('matrix_columns', columnsCodec);
-  // A hand-edited address can name one dimension twice; the grid needs two.
-  const columns = linkedColumns === rows ? (rows === 'brand' ? 'engine' : 'brand') : linkedColumns;
+  const columns = distinctColumns(rows, linkedColumns);
   const axisText = useAxisText();
   const data = query.data;
   const rowText = data ? axisText(data.axes, rows) : [];

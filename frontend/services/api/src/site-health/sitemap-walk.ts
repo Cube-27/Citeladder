@@ -178,9 +178,10 @@ export async function walkSitemaps(
       Math.min(settings.concurrency, settings.maxDocuments - attempted),
     );
     attempted += wave.length;
-    const answers = await Promise.all(
-      wave.map(async (entry) => ({ entry, read: await readSitemap(ctx, entry.url, settings) })),
-    ); // NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one.
+    const answers =
+      await /* NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one. */ Promise.all(
+        wave.map(async (entry) => ({ entry, read: await readSitemap(ctx, entry.url, settings) })),
+      );
     ctx.signal.throwIfAborted();
     for (const { entry, read } of answers) collect(walk, entry, read);
   }

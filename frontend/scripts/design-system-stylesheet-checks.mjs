@@ -121,8 +121,12 @@ export function landingThemeViolations(root) {
   );
 }
 
+const LENGTH_LITERAL = /(?<![\w.-])(\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|%)/gi;
+
 /** A non-zero length literal: a radius written as a number rather than a token. */
-const LENGTH_LITERAL = /(?<![\w.-])(?:\d*[1-9]\d*(?:\.\d+)?|\d*\.\d*[1-9]\d*)(?:px|rem|em|%)/i;
+function hasLengthLiteral(value) {
+  return [...value.matchAll(LENGTH_LITERAL)].some(([, number]) => Number(number) !== 0);
+}
 
 /**
  * The website's theme rules for one stylesheet or Astro `<style>` text:
@@ -138,7 +142,7 @@ export function websiteStyleViolations(source, file) {
   const radii = css.matchAll(
     /(?:^|[;{\s])(?:border(?:-[a-z]+)*-radius|--[\w-]*radius[\w-]*)\s*:\s*([^;{}]*)/gi,
   );
-  if ([...radii].some(([, value]) => LENGTH_LITERAL.test(value)))
+  if ([...radii].some(([, value]) => hasLengthLiteral(value)))
     violations.push(`${file}: radii must come from the token file's radius tokens`);
   if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
     violations.push(`${file}: rendered text must be at least 12px`);

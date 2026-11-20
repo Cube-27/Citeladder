@@ -48,13 +48,16 @@ export function sentimentFigureValue(sentiment: NetSentiment | null | undefined)
   missingLabel: string;
 } {
   const reading = sentimentReading(sentiment);
-  const missingLabel =
-    reading.kind === 'no_mentions'
-      ? NOT_NAMED
-      : reading.kind === 'too_few'
-        ? `${availabilityLabel('too_few')} classified`
-        : availabilityLabel('not_measured');
-  return { value: reading.kind === 'value' ? reading.net : null, missingLabel };
+  return {
+    value: reading.kind === 'value' ? reading.net : null,
+    missingLabel: missingSentimentLabel(reading.kind),
+  };
+}
+
+function missingSentimentLabel(kind: ReturnType<typeof sentimentReading>['kind']): string {
+  if (kind === 'no_mentions') return NOT_NAMED;
+  if (kind === 'too_few') return `${availabilityLabel('too_few')} classified`;
+  return availabilityLabel('not_measured');
 }
 
 /**

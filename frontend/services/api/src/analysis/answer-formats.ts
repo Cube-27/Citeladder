@@ -22,7 +22,7 @@ const FORMAT_OF = new Map<string, AnswerFormat>(
 );
 const ADS = new Set<string>(answerEvidence.ad_item_types);
 // A markdown link that is not an image: `[text](https://...)`.
-const LINK = /(?<!!)\[[^\]]*\]\((https?:\/\/[^\s)]+)/gu;
+const LINK = /(?<!!)\[[^[\]]*\]\((https?:\/\/[^\s)]+)/gu;
 
 export type AnswerFormatColumns = {
   answer_format_state: 'observed' | 'unavailable' | 'not_applicable';

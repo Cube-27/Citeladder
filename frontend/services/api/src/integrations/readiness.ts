@@ -116,11 +116,9 @@ export async function readProjectReadiness(db: Database, scope: Scope) {
     : [];
   const rollups = connectionIds.map((id) => connectionRollup(windows, id));
   const backfill = backfillState(rollups);
-  const covered = rollups.map((row) => row.through);
+  const covered = rollups.flatMap((row) => (row.through === null ? [] : [row.through]));
   const importedThrough =
-    covered.length && covered.every((value) => value !== null)
-      ? (covered as string[]).sort(compareText)[0]
-      : null;
+    covered.length && covered.length === rollups.length ? covered.toSorted(compareText)[0] : null;
   const [performance, demand, opportunities] = await Promise.all([
     workspace
       .selectFrom(db, 'traffic_snapshots')

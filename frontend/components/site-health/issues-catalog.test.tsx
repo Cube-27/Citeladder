@@ -299,7 +299,7 @@ describe('IssuesCatalog', () => {
     // The table ends at its last issue: no blank space is held under it (owner,
     // 2026-11-19). The open drawer hides the page behind it.
     const table = screen.getByRole('region', { name: 'Issues', hidden: true });
-    expect(table.querySelectorAll('tbody tr').length).toBe(1);
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(table.querySelector('tbody + tbody')).toBeNull();
   });
 

@@ -524,7 +524,7 @@ export class AgentRuntime {
       for (const [number, document] of staged) {
         const saved = turn.documents.find(({ output }) => output.number === number);
         // A revision keeps its predecessor's sources and adds this turn's.
-        await saveAgentOutput(
+        await /* NOSONAR -- One transaction connection: outputs save in order. */ saveAgentOutput(
           trx,
           chat,
           {
