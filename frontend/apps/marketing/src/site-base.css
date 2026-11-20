@@ -47,7 +47,8 @@
   --site-rule-from: var(--color-site-rule-from);
   --site-rule-to: var(--color-site-rule-to);
   --tint-neutral: var(--color-site-well);
-  --site-well-shade: linear-gradient(180deg, var(--color-site-well-shade), transparent 12px);
+  /* Wells are set apart by their fill alone: no inner shade (experiment, owner 2026-11-20). */
+  --site-well-shade: none;
   --site-band-vignette: var(--color-site-vignette);
 
   /* Film-grain noise: grey speckle centred on mid-grey, so an `overlay`
