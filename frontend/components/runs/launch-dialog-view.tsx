@@ -154,9 +154,9 @@ function BatchField({
  * Provider setup inside the launch dialog, instead of a second dialog stacked
  * on this one. It grows inside the dialog body, the one scroll, and a verified
  * save refreshes the shared connections query, which turns the engine chips on
- * without leaving the dialog.
+ * without leaving the dialog. Run probe offers it too when no key can probe.
  */
-function InlineProviderSetup({
+export function InlineProviderSetup({
   connecting,
   onClose,
 }: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void }>) {

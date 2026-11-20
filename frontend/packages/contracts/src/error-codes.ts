@@ -162,6 +162,8 @@ const API_ERROR_CODES = [
   'policy_revision_changed',
   'price_ref_mismatch',
   'pricing_changed',
+  'probe_engines',
+  'probe_quote_changed',
   'project_work_running',
   'prompt_count_exceeded',
   'prompt_count_policy_unconfigured',

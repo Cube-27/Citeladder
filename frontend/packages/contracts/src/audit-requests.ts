@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-import { auditScheduleCadenceSchema } from './audits.ts';
+import { auditScheduleCadenceSchema, auditScopeSchema } from './audits.ts';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema } from './providers.ts';
 
@@ -14,7 +14,6 @@ const uuid = () => z.uuid();
 
 /** A launch's markets: `null` is the project's default market. */
 const marketIds = z.array(uuid().nullable()).min(1);
-const auditScopeSchema = z.enum(['brand', 'commerce']);
 
 /**
  * `POST /audits/estimate`: the prompts measured (a whole `prompt_set_id`, or

@@ -304,7 +304,10 @@ export const APP_ROUTES = [
     screen: screens.perception,
     // Fact-checking, shown only to the pilot, is last and arrives after; so does its fifth figure.
     loading: cards([figures(4), chart], {
-      tabs: held('tab', PERCEPTION_TABS.slice(0, 1)),
+      tabs: held(
+        'tab',
+        PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking'),
+      ),
       filters: true,
     }),
     nav: [

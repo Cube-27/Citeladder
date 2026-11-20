@@ -30,5 +30,7 @@ export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt s
 export const auditLaunchInput = auditFields
   .omit({ project_id: true })
   .extend({ max_attempts: z.int().min(1) })
-  .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
+  .refine(selectedPrompts, 'Select a prompt set or prompt IDs')
+  // The estimate guard counts library prompts; a probe asks its own questions.
+  .refine((input) => input.audit_scope !== 'probe', 'Run probes from Perception');
 export type AuditInput = z.output<typeof auditInput>;

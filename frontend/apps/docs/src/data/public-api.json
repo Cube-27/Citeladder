@@ -2075,8 +2075,7 @@
           },
           "audit_scope": {
             "default": "brand",
-            "type": "string",
-            "enum": ["brand", "commerce"]
+            "$ref": "#/components/schemas/AuditScope"
           },
           "model_provenance": {
             "default": [],
@@ -2454,8 +2453,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "audit_scope": {
-            "type": "string",
-            "enum": ["brand", "commerce"]
+            "$ref": "#/components/schemas/AuditScope"
           },
           "cadence": {
             "$ref": "#/components/schemas/AuditScheduleCadence"
@@ -2572,6 +2570,10 @@
       "AuditScheduleCadence": {
         "type": "string",
         "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"]
+      },
+      "AuditScope": {
+        "type": "string",
+        "enum": ["brand", "commerce", "probe"]
       },
       "AuditStatus": {
         "type": "string",
@@ -18079,8 +18081,7 @@
                   },
                   "audit_scope": {
                     "default": "brand",
-                    "type": "string",
-                    "enum": ["brand", "commerce"]
+                    "$ref": "#/components/schemas/AuditScope"
                   },
                   "cadence": {
                     "$ref": "#/components/schemas/AuditScheduleCadence"
@@ -18376,8 +18377,7 @@
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
                   "audit_scope": {
-                    "type": "string",
-                    "enum": ["brand", "commerce"]
+                    "$ref": "#/components/schemas/AuditScope"
                   },
                   "cadence": {
                     "$ref": "#/components/schemas/AuditScheduleCadence"
@@ -19948,8 +19948,7 @@
                   },
                   "audit_scope": {
                     "default": "brand",
-                    "type": "string",
-                    "enum": ["brand", "commerce"]
+                    "$ref": "#/components/schemas/AuditScope"
                   },
                   "random_seed": {
                     "type": ["string", "null"]

@@ -14,6 +14,9 @@ const uuid = () => z.uuid();
 // Audits (runs) + executions + evidence
 // ---------------------------------------------------------------------------
 
+/** What a run measures: brand visibility, the Commerce shelf, or a market probe (AV-29). */
+export const auditScopeSchema = z.enum(['brand', 'commerce', 'probe']);
+
 export const auditStatusSchema = z.enum([
   'draft',
   'validating',
@@ -57,7 +60,7 @@ export const auditSchema = responseObject({
   /** Whether a cooperative cancel is still accepted at this status. */
   cancelable: z.boolean(),
   benchmark_mode: z.string(),
-  audit_scope: z.enum(['brand', 'commerce']).default('brand'),
+  audit_scope: auditScopeSchema.default('brand'),
   model_provenance: z.array(modelProvenanceSchema).default([]),
   repetitions: z.number().int(),
   random_seed: z.string(),
@@ -90,7 +93,7 @@ export const auditScheduleSchema = responseObject({
   workspace_id: uuid(),
   project_id: uuid(),
   prompt_set_id: uuid(),
-  audit_scope: z.enum(['brand', 'commerce']),
+  audit_scope: auditScopeSchema,
   cadence: auditScheduleCadenceSchema,
   interval_minutes: z.number().int().nullable(),
   timezone: z.string(),

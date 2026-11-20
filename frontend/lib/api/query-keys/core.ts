@@ -63,6 +63,11 @@ export const projectKeys = {
   businessMap: (scope: ProjectScope) => projects.read('business-map', scope),
   brandFacts: (scope: ProjectScope) => projects.read('brand-facts', scope),
   themes: (scope: ProjectScope) => projects.read('themes', scope),
+  /** The probe bar: quote, newest probe and schedule. */
+  probes: (scope: ProjectScope) => projects.read('probes', scope),
+  /** A probe read; `basis` names the newest probe and its state, so a finished one re-reads. */
+  probeRead: (scope: ProjectScope, view: 'market' | 'objections', basis: string) =>
+    projects.read('probes', scope, view, basis),
   markets: (scope: ProjectScope) => projects.read('markets', scope),
 };
 

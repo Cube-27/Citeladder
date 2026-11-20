@@ -4,7 +4,7 @@ import { afterAll, expect, it } from 'vitest';
 import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
-import { reservePromptRuns, settlePromptRun } from '../src/audits/prompt-runs.ts';
+import { PROMPT_RUNS, reserveTaskFunding, settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
 import { remaining } from '../src/entitlements/ledger.ts';
@@ -183,10 +183,11 @@ it('serializes the trial’s 20 prompt runs, returns failed runs and spends a su
   }
   const reserveAll = (batch: AuditTask[]) =>
     db.transaction().execute((trx) =>
-      reservePromptRuns(trx, {
+      reserveTaskFunding(trx, {
         workspaceId: t.workspaceId,
         auditId,
-        taskIds: batch.map((task) => task.id),
+        capability: PROMPT_RUNS,
+        tasks: batch.map((task) => ({ id: task.id, units: 1 })),
         at: new Date(),
       }),
     );

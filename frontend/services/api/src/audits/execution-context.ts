@@ -3,7 +3,6 @@ import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { sql } from 'kysely';
 import { openReservedUnits } from '../entitlements/ledger.ts';
 import type { Database } from '../db/database.ts';
-import { policy } from '../config.ts';
 import type { SettingSource } from '../config/settings.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type Engine } from '../providers/config.ts';
@@ -15,6 +14,7 @@ import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
 import { readFrozenConfiguration } from './frozen-configuration.ts';
+import { TASK_CAPABILITIES } from './prompt-runs.ts';
 
 const fundingSchema = z.object({ reservation_id: z.uuid(), funding_account_id: z.uuid() });
 const routeSchema = z.object({
@@ -66,7 +66,7 @@ async function assertFundingHold(
     .where('subject_kind', '=', 'audit')
     .where('subject_id', '=', task.id)
     .where('reservation_id', '=', route.funding.reservation_id)
-    .where('capability_key', '=', policy.entitlements.prompt_runs)
+    .where('capability_key', 'in', TASK_CAPABILITIES)
     .executeTakeFirstOrThrow();
   if (!hold.reserved || (!task.provider_submission_ref && BigInt(hold.remaining) < 1n))
     throw unavailable();

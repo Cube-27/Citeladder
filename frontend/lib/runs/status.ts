@@ -149,6 +149,12 @@ export function classificationBadgeValue(
   }
 }
 
+const RUN_SCOPES: Record<Audit['audit_scope'], string> = {
+  brand: 'Brand',
+  commerce: 'Commerce',
+  probe: 'Market',
+};
+
 /**
  * A run's own name: what it measured and the day it was created, and a
  * repair run (a rerun of another's failures) says so ("Brand audit · Nov 11, 2026").
@@ -157,8 +163,9 @@ export function runTitle(
   audit: Pick<Audit, 'audit_scope' | 'parent_audit_id' | 'created_at'>,
   timeZone = 'UTC',
 ): string {
-  const scope = audit.audit_scope === 'commerce' ? 'Commerce' : 'Brand';
-  const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} audit`;
+  const scope = RUN_SCOPES[audit.audit_scope];
+  const noun = audit.audit_scope === 'probe' ? 'probe' : 'audit';
+  const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} ${noun}`;
   return `${kind} · ${formatDisplayDate(audit.created_at, timeZone)}`;
 }
 
