@@ -136,7 +136,6 @@ function RankingTable({
         ...(brands ? [SHARE_COLUMN] : []),
       ]}
       rowCount={count}
-      rowLines={2}
       state={count ? undefined : empty}
     >
       {brands
@@ -193,7 +192,6 @@ function ProductList({
         VISIBILITY,
       ]}
       rowCount={rows.length}
-      rowLines={2}
       state={rows.length ? undefined : emptyTable(empty)}
     >
       {rows.map((row) => (

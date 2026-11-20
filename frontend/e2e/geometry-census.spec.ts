@@ -167,6 +167,12 @@ function measure({ route }: { route: string }) {
       add('figure-target.gap', element, cell - element.getBoundingClientRect().height);
       continue;
     }
+    // An absence's reason (components/ui/absence.tsx) hangs off a 24px target on
+    // the value's line, not a control: measured as its own role.
+    if (element.matches('button:has(> [data-absence])')) {
+      add('absence-target.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { Button } from '@/components/ui/button';
-import { CHART_AXIS_TEXT, CHART_FILL, CHART_STROKE, type ChartTone } from '@/components/ui/chart';
+import { CHART_AXIS_TEXT, chartFill, chartStroke, type ChartTone } from '@/components/ui/chart';
 import { ChartTable } from '@/components/ui/chart-frame';
 import { Inline, Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
@@ -103,7 +103,7 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
           <polygon
             key={keyOf(entity)}
             points={polygon(scores(entity))}
-            className={cn(CHART_STROKE[tone], CHART_FILL[tone])}
+            className={cn(chartStroke(tone), chartFill(tone))}
             fillOpacity={brand ? 0.28 : 0.12}
             strokeWidth={brand ? 2 : 1.25}
           />
@@ -126,7 +126,7 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
                   cx={4}
                   cy={4}
                   r={4}
-                  className={on && tone ? CHART_FILL[tone] : 'fill-rule'}
+                  className={on && tone ? chartFill(tone) : 'fill-rule'}
                 />
               </svg>
               {entity.name}

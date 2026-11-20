@@ -11,7 +11,6 @@ import { Input } from './input';
 import { Kbd } from './kbd';
 import { BusyRung, RungMeter } from '@/components/ui/rung-meter';
 import { Rungs } from './rungs';
-import { ScoreRing } from './score-ring';
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { TrendChart } from './trend-chart';
@@ -193,14 +192,6 @@ describe('EngineMark', () => {
     const mark = container.querySelector('svg');
     expect(mark).toHaveAttribute('data-engine-mark', 'claude');
     expect(mark).toHaveAttribute('aria-hidden', 'true');
-  });
-});
-
-describe('ScoreRing', () => {
-  it('announces the clamped score once, not again through its numeral', () => {
-    render(<ScoreRing value={140} label="Site Health score" />);
-    expect(screen.getByRole('img', { name: 'Site Health score: 100 out of 100' })).toBeVisible();
-    expect(screen.getByText('100')).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

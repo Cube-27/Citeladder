@@ -147,8 +147,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
   return (
     <TabPanel value="crawlers">
       <SectionStack>
-        {/* Status and breakdown stack their qualifiers: two-line rows. */}
-        <DataTable label="Recognized crawlers" columns={CRAWLER_COLUMNS} rowLines={2} {...table}>
+        <DataTable label="Recognized crawlers" columns={CRAWLER_COLUMNS} {...table}>
           {page?.items.map((b) => (
             <TableRow key={b.bot_id}>
               <TableCell>{b.label}</TableCell>
@@ -239,7 +238,6 @@ export function TrafficActivity(scope: CrawlTableScope) {
         <DataTable
           label="Retained automated request activity"
           columns={ACTIVITY_COLUMNS}
-          rowLines={2}
           {...table}
           state={catalogState(catalog) ?? table.state}
         >
@@ -330,12 +328,7 @@ function CoverageTable({
   });
   return (
     <TitledSection title="Coverage by source and reporting day">
-      <DataTable
-        label="Coverage by source and reporting day"
-        columns={COVERAGE_COLUMNS} // Every row stacks a qualifier under its value.
-        rowLines={2}
-        {...table}
-      >
+      <DataTable label="Coverage by source and reporting day" columns={COVERAGE_COLUMNS} {...table}>
         {data?.items.map((r) => (
           <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
             <TableCell>

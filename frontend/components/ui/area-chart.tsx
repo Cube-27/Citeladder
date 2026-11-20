@@ -26,7 +26,7 @@ import {
   ChartTooltipCard,
   GRID_PROPS,
   LINE_CURSOR,
-  SERIES_COLOR,
+  seriesColor,
   ShapeMark,
 } from '@/components/ui/chart-tooltip';
 import {
@@ -239,10 +239,10 @@ function AreaPlot({
             <linearGradient key={line.name} id={`${id}-${index}`} x1="0" y1="0" x2="0" y2="1">
               <stop
                 offset="0%"
-                stopColor={SERIES_COLOR[line.tone]}
+                stopColor={seriesColor(line.tone)}
                 stopOpacity={line.tone === 'you' ? 0.28 : 0.08}
               />
-              <stop offset="100%" stopColor={SERIES_COLOR[line.tone]} stopOpacity={0} />
+              <stop offset="100%" stopColor={seriesColor(line.tone)} stopOpacity={0} />
             </linearGradient>
           ))}
         </defs>
@@ -319,7 +319,7 @@ function AreaPlot({
         {[...lines.keys()].reverse().map((at) => {
           const line = lines[at];
           if (!line) return null;
-          const color = SERIES_COLOR[line.tone];
+          const color = seriesColor(line.tone);
           return (
             <Area
               key={line.name}
@@ -373,7 +373,7 @@ function LineDot({
         y={cy}
         r={3}
         shape={line.shape ?? 'circle'}
-        color={SERIES_COLOR[line.tone]}
+        color={seriesColor(line.tone)}
         outline
       />
     </g>
@@ -402,7 +402,7 @@ function AreaTip({
       note={point.versionChange?.note}
       rows={lines.map((line) => ({
         name: line.name,
-        color: SERIES_COLOR[line.tone],
+        color: seriesColor(line.tone),
         shape: line.shape,
         mark: line.mark,
         value: shown(line.values[row.index]),

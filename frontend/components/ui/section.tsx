@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
+import { SLIP_FACE } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -10,15 +11,15 @@ import { cn } from '@/lib/utils';
  *               actions at the right) and its body sit straight on the page
  *               surface; on the page a `rule` separates it from its neighbours,
  *               32 on each side (globals.css, "Section dividers").
- *   `framed`  — opt-in, for the few blocks that earn a box: a light `rule`
- *               frame at the card radius, padded 16, with no fill or shadow.
+ *   `framed`  — opt-in, for the few blocks that earn a box: the one framed
+ *               surface (`SLIP_FACE`), padded by the card padding.
  * Tables and charts draw their own frame; a section never boxes them again.
  */
 export type SectionVariant = 'surface' | 'framed';
 
 const SECTION_FACE: Record<SectionVariant, string> = {
   surface: '',
-  framed: 'border-rule rounded-card border p-[var(--card-padding)]',
+  framed: cn(SLIP_FACE, 'p-[var(--card-padding)]'),
 };
 
 /**
@@ -51,7 +52,7 @@ export function Section({
  * group, or a count as caption text) top-aligned at the right end of the title
  * row, 8 apart. When the row is too narrow the actions wrap under the caption,
  * left-aligned. A status belongs on the title's line, 8 after it. The body
- * starts 16 below, with no rule between.
+ * starts 12 below, with no rule between.
  */
 export function SectionHeader({
   children,
@@ -66,7 +67,7 @@ export function SectionHeader({
 >) {
   if (!actions) {
     return (
-      <header {...props} className={cn('flex flex-col gap-1 not-last:mb-4', className)}>
+      <header {...props} className={cn('flex flex-col gap-1 not-last:mb-3', className)}>
         {children}
       </header>
     );
@@ -74,7 +75,7 @@ export function SectionHeader({
   return (
     <header
       {...props}
-      className={cn('flex flex-wrap items-start justify-between gap-2 not-last:mb-4', className)}
+      className={cn('flex flex-wrap items-start justify-between gap-2 not-last:mb-3', className)}
     >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>

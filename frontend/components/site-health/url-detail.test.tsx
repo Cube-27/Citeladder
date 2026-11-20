@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { figureText } from '@/test/figures';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders as raw, selectionAs, type TestRole } from '@/test/render';
@@ -379,13 +380,10 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    for (const name of [
-      'Web fundamentals score: 46 out of 100',
-      'AEO readiness score: 64 out of 100',
-    ])
-      expect(screen.getByRole('img', { name })).toBeVisible();
-    // Completion is a share, ringed like the scores and read as a percentage.
-    expect(screen.getByRole('img', { name: 'AEO checklist completion: 75%' })).toBeVisible();
+    expect(figureText('Web fundamentals')).toBe('46');
+    expect(figureText('AEO readiness')).toBe('64');
+    // Completion is a share, read as a percentage.
+    expect(figureText('AEO checklist completion')).toBe('75%');
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {
@@ -657,7 +655,8 @@ describe('UrlDetail', () => {
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
     expect(within(advisory).getByText('AEO')).toBeInTheDocument();
     // The page's scores lead, above its issues.
-    const score = screen.getByRole('img', { name: /^Web fundamentals score:/ });
+    expect(figureText('Web fundamentals')).toBe('46');
+    const score = document.querySelector('[data-figure-strip]')!;
     expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

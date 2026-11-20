@@ -1,16 +1,7 @@
-import {
-  useContext,
-  useId,
-  type ComponentProps,
-  type CSSProperties,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useContext, useId, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
-  columnLayout,
-  columnsMinWidth,
   DataTableColumns,
   useFlexibleColumnCheck,
   type DataTableColumn,
@@ -22,7 +13,6 @@ import {
   usePinnedPadding,
   type DataTableInlineEmpty,
   type DataTableState,
-  type RowLines,
 } from '@/components/ui/data-table-body';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
@@ -34,7 +24,7 @@ import {
   useScrollFrame,
   type ScrollFrameState,
 } from '@/components/ui/scroll-edges';
-import { Table, TableTitleLinesContext } from '@/components/ui/table';
+import { Table } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import { StateBlock } from '@/components/ui/state-block';
@@ -48,22 +38,22 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
 
 /**
  * DataTable — the record table organism: an optional header bar (title,
- * toolbar) on the page surface, then the table alone in a light frame (the
- * head row, 36, with no fill as its first row; body rows of 40, 56 for two
- * lines, with `rule` lines between rows only), and a footer bar under the
- * frame with the Pager and the sideways steppers. The page passes data,
- * columns and rows; it sets no geometry.
+ * toolbar) on the page surface, then the table in its `rule` frame (head 32
+ * on `raised`, rows 40 with hairlines between them), and a footer bar with
+ * the Pager and the sideways steppers. The page passes data, columns and
+ * rows; it sets no geometry.
  *
  *   columns — each column declares its kind, which sets the head's and every
- *            cell's alignment, face, minimum width and truncation together
- *            (`columnLayout`). When the floors do not fit the frame,
+ *            cell's alignment, face and width together (`columnRules`): the
+ *            flexible column takes the spare width, the others hug their
+ *            content. When the floors do not fit the frame,
  *            `priority: 'low'` columns hide, the last first (`useFittedColumns`).
  *   pinned — the identity column (with the selection checkbox in the same
  *            pinned block) stays in view while the table scrolls sideways,
  *            and the scroller's scroll padding equals the pinned width, so a
  *            focused cell is never under it.
- *   rows   — every cell is one line, cut with an ellipsis and the full value
- *            in a tooltip; `rowLines={2}` stacks a value over a caption
+ *   rows   — every row is one line, cut with an ellipsis and the full value
+ *            in a tooltip; secondary text follows the primary inline
  *            (`TableCellLines`). A short page draws no blank rows; a view
  *            under `reserveRows` holds its page as plain space.
  *   states — loading keeps the head and draws a page of block rows; a filter
@@ -84,7 +74,6 @@ export function DataTable({
   children,
   rowCount,
   pageSize,
-  rowLines = 1,
   state,
   pager,
   busy,
@@ -107,8 +96,6 @@ export function DataTable({
   rowCount?: number;
   /** Rows per page: the footprint reserved for rows and for every state. */
   pageSize?: number;
-  /** Lines per row: 2 for a caption under the value, 3 for a two-line title over it. */
-  rowLines?: RowLines;
   /** What to show instead of rows. */
   state?: DataTableState | DataTableInlineEmpty;
   pager?: DataTablePager;
@@ -130,7 +117,7 @@ export function DataTable({
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
   const parts = dataTableParts({ title, label, headingId, columns, selection });
-  const { frameRef, probe, fitScope, shown, shownKeys } = useFittedColumns({
+  const { frameRef, probe, scope, shown, shownKeys } = useFittedColumns({
     columns,
     selection: Boolean(selection),
   });
@@ -163,38 +150,31 @@ export function DataTable({
         <DataTableFrame
           hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
-          minWidth={tableMinWidth({ columns: shown, selection: Boolean(selection) })}
-          layout={columnLayout({ columns, shown, selection: Boolean(selection) })}
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}
-          fitScope={fitScope}
+          scope={scope}
           probe={probe}
+          foot={
+            <DataTableFoot footer={note} pager={paging.pager} steppers={footed ? steppers : null} />
+          }
         >
-          <DataTableColumns columns={columns} shown={shown} selection={selection} />
-          <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
-            <DataTableBody
-              cells={parts.colSpan}
-              colSpan={shown.length + (selection ? 1 : 0)}
-              state={replacing ? undefined : state}
-              // Loading cannot know yet whether the rows fit on one page: it
-              // draws the page asked for, the likelier loaded height.
-              pageSize={state?.kind === 'loading' ? pageSize : paging.pageSize}
-              rowCount={rowCount}
-              rowLines={rowLines}
-              reserve={reserveRows}
-            >
-              <ShownColumnsContext value={shownKeys}>
-                {state === undefined ? children : null}
-              </ShownColumnsContext>
-            </DataTableBody>
-          </TableTitleLinesContext>
+          <DataTableColumns columns={columns} selection={selection} />
+          <DataTableBody
+            cells={parts.colSpan}
+            colSpan={shown.length + (selection ? 1 : 0)}
+            state={replacing ? undefined : state}
+            // Loading cannot know yet whether the rows fit on one page: it
+            // draws the page asked for, the likelier loaded height.
+            pageSize={state?.kind === 'loading' ? pageSize : paging.pageSize}
+            rowCount={rowCount}
+            reserve={reserveRows}
+          >
+            <ShownColumnsContext value={shownKeys}>
+              {state === undefined ? children : null}
+            </ShownColumnsContext>
+          </DataTableBody>
         </DataTableFrame>
-        <DataTableFoot
-          footer={note}
-          pager={dropsTable(replacing, reserveRows) ? undefined : paging.pager}
-          steppers={footed ? steppers : null}
-        />
       </HeldFootprint>
     </section>
   );
@@ -320,49 +300,31 @@ function ReplacingState({
 }
 
 /**
- * The table's minimum width at the narrow and desktop layouts: the shown
- * columns' floors, so no column (the identity column above all) is squeezed
- * below its role. A page sets no floor of its own: one the low-priority fit
- * cannot see would scroll a table whose columns fit.
- */
-function tableMinWidth({
-  columns,
-  selection,
-}: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean }>): CSSProperties {
-  return {
-    '--data-table-min': columnsMinWidth({ columns, selection, desktop: false }),
-    '--data-table-min-desktop': columnsMinWidth({ columns, selection, desktop: true }),
-  } as CSSProperties;
-}
-
-/**
- * The table in its scrolling frame. `layout` is the column map the cell
- * rules read; `pinned` is how many leading columns stay in view (the
- * identity column, and the selection box before it).
+ * The table in its scrolling frame. `scope` is what the column rules target;
+ * `pinned` is how many leading columns stay in view (the identity column,
+ * and the selection box before it).
  */
 function DataTableFrame({
   hidden,
   scroll,
-  minWidth,
-  layout,
   naming,
   pinned,
   frameRef,
-  fitScope,
+  scope,
   probe,
+  foot,
   children,
 }: Readonly<{
   hidden: boolean;
   scroll: ScrollFrameState;
-  minWidth: CSSProperties;
-  layout: ReturnType<typeof columnLayout>;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
-  /** The scope the hiding rule for low-priority columns targets, while any hide. */
-  fitScope: string | undefined;
-  /** The hidden boxes that measure the column floors, and the hiding rule. */
+  scope: string;
+  /** The column rules, and the hidden boxes that measure the column floors. */
   probe: ReactNode;
+  /** The foot band: the note, the steppers and the Pager. */
+  foot: ReactNode;
   children: ReactNode;
 }>) {
   usePinnedPadding(scroll.ref, pinned);
@@ -370,33 +332,31 @@ function DataTableFrame({
     <div
       ref={frameRef}
       data-data-table-frame=""
-      {...layout}
-      data-fit={fitScope}
+      data-table-scope={scope}
       data-pinned={pinned}
       hidden={hidden}
       className="relative isolate min-w-0"
-      style={minWidth}
     >
       {probe}
       <div {...scroll.frame} className="relative min-w-0">
         <Table
-          fixed
           {...naming}
           wrapperRef={scroll.ref}
           region={scroll.region}
           wrapperClassName="@container"
-          className="desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]"
         >
           {children}
         </Table>
       </div>
+      {foot}
     </div>
   );
 }
 
 /**
- * The footer bar: the note (source, period, time zone) on the left, the
- * steppers and the Pager on the right; nothing when there is neither.
+ * The foot band, 40 high under a hairline inside the frame: the note
+ * (source, period, time zone) on the left, the steppers and the Pager on the
+ * right; nothing when there is neither.
  */
 function DataTableFoot({
   footer,
@@ -407,19 +367,22 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-[var(--table-bar-inset,16px)] pt-3"
+      className="border-rule flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-4 py-1"
     >
       {footer ? (
-        <div className="type-caption grid min-h-8 min-w-0 content-center gap-1">{footer}</div>
+        <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>
       ) : null}
       <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
-        {steppers}
-        {/* A rule after the steppers, so the two arrow pairs never read as one pager. */}
+        {/* Beside a pager the steppers end on a rule, so the two arrow pairs never
+            read as one pager; a phone swipes instead and shows the pager alone. */}
         {pager ? (
-          <div className="[[data-scroll-steppers]+&]:border-rule flex items-center [[data-scroll-steppers]+&]:border-s [[data-scroll-steppers]+&]:ps-4">
+          <>
+            <div className="border-rule not-rail:hidden border-e pe-4 empty:hidden">{steppers}</div>
             <Pager {...pager} />
-          </div>
-        ) : null}
+          </>
+        ) : (
+          steppers
+        )}
       </div>
     </div>
   );
@@ -461,9 +424,7 @@ function pagingLayout(
 /**
  * The header bar, on the surface above the frame: the title, then the
  * toolbar on one row, the description one caption line under it, and the
- * steppers when no footer bar exists; 12 above the frame. It starts on the
- * page's left edge, or inside a container at the container's padding
- * (`--table-bar-inset`, globals.css), as does the footer bar.
+ * steppers when no foot band exists; 12 above the frame, on the frame's left edge.
  */
 function DataTableHeader({
   title,
@@ -483,9 +444,7 @@ function DataTableHeader({
   steppers: ReactNode;
 }>) {
   if (!title && !toolbar && !description && !actions) {
-    return steppers ? (
-      <div className="flex justify-end px-[var(--table-bar-inset,16px)] pb-2">{steppers}</div>
-    ) : null;
+    return steppers ? <div className="flex justify-end pb-2">{steppers}</div> : null;
   }
   const head = (
     <>
@@ -499,13 +458,10 @@ function DataTableHeader({
       ) : null}
     </>
   );
-  if (!actions)
-    return (
-      <header className="grid min-w-0 gap-1 px-[var(--table-bar-inset,16px)] pb-3">{head}</header>
-    );
+  if (!actions) return <header className="grid min-w-0 gap-1 pb-3">{head}</header>;
   // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
-    <header className="flex flex-wrap items-start justify-between gap-2 px-[var(--table-bar-inset,16px)] pb-3">
+    <header className="flex flex-wrap items-start justify-between gap-2 pb-3">
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
     </header>

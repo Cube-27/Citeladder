@@ -180,7 +180,6 @@ export function PendingInvitations({
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}
-        rowLines={2}
         state={invitationsState(read)}
       >
         {invitations.map((invitation) => (

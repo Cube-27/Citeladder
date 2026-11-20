@@ -100,7 +100,7 @@ export function Drawer({
             {children}
           </div>
           {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-4">
+            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-3">
               {footer}
             </footer>
           ) : null}

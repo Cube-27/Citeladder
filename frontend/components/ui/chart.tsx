@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { SERIES_FILL, SERIES_STROKE, type SeriesTone } from '@/components/ui/step-chart-parts';
 import { percentText } from '@/lib/format';
 
 /**
@@ -18,21 +19,18 @@ export function chartTone(item: Readonly<{ other?: boolean }>, index: number): C
   return index >= 3 ? 5 : ((index + 1) as ChartTone);
 }
 
-export const CHART_STROKE: Record<ChartTone, string> = {
-  1: 'stroke-data-you',
-  2: 'stroke-data-rival-1',
-  3: 'stroke-data-rival-2',
-  4: 'stroke-data-other',
-  5: 'stroke-data-rival-2',
-};
+/** The series role each position plots in; the colours are the series' own (`SERIES_STROKE`). */
+const CHART_SERIES = {
+  1: 'you',
+  2: 'rival-1',
+  3: 'rival-2',
+  4: 'other',
+  5: 'rival-2',
+} as const satisfies Record<ChartTone, SeriesTone>;
 
-export const CHART_FILL: Record<ChartTone, string> = {
-  1: 'bg-data-you fill-data-you',
-  2: 'bg-data-rival-1 fill-data-rival-1',
-  3: 'bg-data-rival-2 fill-data-rival-2',
-  4: 'bg-data-other fill-data-other',
-  5: 'bg-data-rival-2 fill-data-rival-2',
-};
+export const chartStroke = (tone: ChartTone) => SERIES_STROKE[CHART_SERIES[tone]];
+
+export const chartFill = (tone: ChartTone) => SERIES_FILL[CHART_SERIES[tone]];
 
 /** Axis text inside a chart's SVG: 12px mono figures in `ink-2`. */
 export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption font-mono tabular-nums';

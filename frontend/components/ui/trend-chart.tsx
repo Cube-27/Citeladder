@@ -5,9 +5,9 @@ import {
   CHART_DASH,
   CHART_HEIGHT_PX,
   CHART_PLOT_FRAME,
-  CHART_FILL,
-  CHART_STROKE,
+  chartFill,
   chartPath,
+  chartStroke,
   chartTone,
   useChartWidth,
   type ChartHeight,
@@ -33,7 +33,7 @@ import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-c
 
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 
-/** A line's position tone in the shared key and tooltip: the hue `CHART_STROKE` plots it in. */
+/** A line's position tone in the shared key and tooltip: the hue `chartStroke` plots it in. */
 const KEY_TONE: Record<ChartTone, SeriesTone> = {
   1: 'you',
   2: 'rival-1',
@@ -309,7 +309,7 @@ function TrendPlot({
             strokeDasharray={CHART_DASH[line.tone]}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={CHART_STROKE[line.tone]}
+            className={chartStroke(line.tone)}
           />
           {/* Across a break the line goes on faint and dashed: the series
               reads as one line, and the solid stroke never joins points
@@ -323,11 +323,11 @@ function TrendPlot({
               strokeWidth={1.5}
               strokeDasharray="3 4"
               strokeLinecap="round"
-              className={cn(CHART_STROKE[line.tone], 'opacity-40')}
+              className={cn(chartStroke(line.tone), 'opacity-40')}
             />
           ))}
           {isolatedPoints(points).map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} className={CHART_FILL[line.tone]} />
+            <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} className={chartFill(line.tone)} />
           ))}
         </g>
       ))}
@@ -349,13 +349,7 @@ function TrendPlot({
 
 function TrendDot({ x, y, tone }: Readonly<{ x: number; y: number; tone: ChartTone }>) {
   return (
-    <circle
-      cx={x}
-      cy={y}
-      r={4}
-      strokeWidth={2}
-      className={cn('stroke-surface', CHART_FILL[tone])}
-    />
+    <circle cx={x} cy={y} r={4} strokeWidth={2} className={cn('stroke-surface', chartFill(tone))} />
   );
 }
 

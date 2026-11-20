@@ -16,8 +16,8 @@ import {
   useStripWidth,
 } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
-import { ScoreRing } from '@/components/ui/score-ring';
 import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import {
   type Absent,
   availabilityLabel,
@@ -27,19 +27,11 @@ import {
 } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-type FigureValue =
-  | {
-      value: ReactNode | Absent;
-      score?: undefined;
-      /** A glyph before the label; give one to every figure of a strip or to none. */
-      icon?: LucideIcon;
-    }
-  /** A 0–100 score: its number after a small ScoreRing, named by `label`. */
-  | {
-      score: Readonly<{ value: number; label: string; unit?: '%' }>;
-      value?: undefined;
-      icon?: undefined;
-    };
+type FigureValue = {
+  value: ReactNode | Absent;
+  /** A glyph before the label; give one to every figure of a strip or to none. */
+  icon?: LucideIcon;
+};
 
 type FigureAction =
   | { onSelect?: undefined; actionLabel?: undefined; selected?: undefined }
@@ -79,18 +71,14 @@ export type FigureSegment = Readonly<
 >;
 
 /**
- * FigureStrip — key figures as one flat row: hairlines above and below, thin
- * dividers between cells, no cards, no gaps (globals.css "FigureStrip"). Cells
- * share the width equally; rows come from `figureRows`, and a wrapped row
- * keeps the same dividers. On the page itself (not in a card) the strip is
- * full-bleed across the gutters, its text inset (globals.css). A cell is two
- * lines, 72 tall: the muted label with
- * its marker and one info hint (caption, basis and comparison joined with
- * " · ") right after it, then the value in body ink with its Delta inline on
- * one baseline. A value at the foot keeps a row's baselines level when a label
- * wraps. A score's value is its number after a 20px ScoreRing (never a bar). A
- * named value (a model, a brand) carries its own logo; a sentiment its dot.
- * A figure with `action` makes its label the link.
+ * FigureStrip — key figures as one `rule`-framed strip, cells divided by
+ * hairlines, never cards (AR-3, globals.css "FigureStrip"). Cells share the
+ * width equally; rows come from `figureRows`, and a wrapped row keeps the
+ * same dividers. A cell is the 12px label with its marker and one info hint
+ * (caption, basis and comparison joined with " · "), then the 20/28 mono
+ * value with its Delta inline on one baseline. No ring, meter or bar sits in
+ * a cell. A named value (a model, a brand) carries its own logo; a sentiment
+ * its dot. A figure with `action` makes its label the link.
  *
  * A figure with `onSelect` is pressable: the whole cell is the target, named
  * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`) and fills
@@ -129,14 +117,13 @@ export function FigureStrip({
         className="flex min-w-0 flex-wrap"
       >
         {segments.map((segment, index) => {
-          const { size, rowStart } = cells[index] ?? { size: 1, rowStart: true };
+          const size = cells[index] ?? 1;
           return (
             <FigureCell
               key={segment.key}
               segment={segment}
               subLine={subLine}
               rowSize={size}
-              rowStart={rowStart}
               narrow={twoLineLabels || cellWidth(width, size) < FIGURE_MIN_WIDTH}
             />
           );
@@ -150,20 +137,17 @@ function FigureCell({
   segment,
   subLine,
   rowSize,
-  rowStart,
   narrow,
 }: Readonly<{
   segment: FigureSegment;
   subLine: boolean;
   rowSize: number;
-  rowStart: boolean;
   narrow: boolean;
 }>) {
   const pressable = Boolean(segment.onSelect);
   return (
     <div
       data-figure-cell=""
-      data-row-start={rowStart || undefined}
       data-sub-line={subLine || undefined}
       // A narrow row's labels may take two lines, so every label in it reserves two.
       data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
@@ -222,7 +206,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   return (
     // Below 768 a marker that does not fit beside the label goes under it,
     // so the label never wraps a word to a line.
-    <dt className="type-body text-ink-2 phone:flex-wrap phone:gap-y-1 flex min-w-0 items-center gap-2">
+    <dt className="type-caption text-ink-2 phone:flex-wrap phone:gap-y-1 flex min-w-0 items-center gap-2">
       {Glyph ? <Glyph aria-hidden className="size-4 shrink-0" /> : null}
       {text}
       {segment.marker || hint ? (
@@ -241,8 +225,8 @@ function pressableLayer(segment: FigureSegment) {
 }
 
 /**
- * Line 2: the value (or its absence) and its Delta on one baseline; a score's
- * number follows its ring. A figure whose label is hidden carries its hint here.
+ * Line 2: the value (or its absence) and its Delta on one baseline. A figure
+ * whose label is hidden carries its hint here.
  */
 function FigureValueLine({ segment, subLine }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
@@ -280,7 +264,7 @@ function reportsChange(delta: ReactNode): boolean {
   return true;
 }
 
-const VALUE_TEXT = 'type-heading text-ink tabular-nums';
+const VALUE_TEXT = textRole('figure');
 
 function FigureValue({ segment }: FigurePart) {
   if (segment.loading)
@@ -290,18 +274,6 @@ function FigureValue({ segment }: FigurePart) {
         <Block className="h-4 w-16" />
       </span>
     );
-  if (segment.score) {
-    const { value, label, unit } = segment.score;
-    return (
-      <span className="flex min-w-0 items-center gap-2 self-center">
-        <ScoreRing value={value} label={label} unit={unit} tone="auto" size="inline" />
-        <span aria-hidden className={VALUE_TEXT}>
-          {Math.max(0, Math.min(100, Math.round(value)))}
-          {unit}
-        </span>
-      </span>
-    );
-  }
   const { value } = segment;
   if (value == null) return <Absence state={segment.missingState} label={segment.missingLabel} />;
   if (isAbsent(value)) return <Absence state={value.absent} label={segment.missingLabel} />;

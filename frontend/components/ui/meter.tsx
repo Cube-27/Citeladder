@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
- * A score out of 100 is a `ScoreRing`; work in progress is a `RungMeter`.
+ * A score out of 100 is a printed figure; work in progress is a `RungMeter`.
  *
  * `value: null` is an unmeasured value, never zero: an empty track, no
  * `aria-valuenow`, the Absence mark as its value and "Not measured" spoken.

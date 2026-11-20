@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,54 +7,44 @@ import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 
 /**
- * A column's width, by what the column holds — never a number a page picks:
- * spacing steps, or what is left (`flex`). The table is laid out fixed from
- * these, so paging, filtering or a long value never moves a column. `flex`
- * takes what the others leave; give it to the one text column that should
- * absorb the width, so no figure column grows past its role.
+ * A column's width by what it holds, never a number a page picks. `flex`
+ * columns share what the others leave (normally the first column alone);
+ * every other role hugs its content, at least its role's floor in spacing
+ * steps, so no gap opens between columns (AR-4) and a short page barely moves
+ * a column.
  */
 const COLUMN_WIDTH = {
   flex: { kind: 'rest' },
-  /**
-   * As `flex`, for text read whole (a prompt): low-priority columns hide
-   * before it narrows under these steps; the table scrolls only under `flex`'s floor.
-   */
+  /** As `flex`, for text read whole (a prompt): low-priority columns hide before it narrows under these steps. */
   reading: { kind: 'rest', steps: 86 },
   /** A row's ordinal on the page (#, rank). */
-  index: { kind: 'steps', steps: 12 },
-  /**
-   * A count, a rate or a short figure ("100.0%", "+12.3 pp", "99,999") with
-   * its padding; a longer header widens it (`labelFloor`), so spare width
-   * goes to the flexible column rather than past the figure.
-   */
-  figure: { kind: 'steps', steps: 24 },
+  index: { kind: 'steps', steps: 10 },
+  /** A count, a rate or a short figure ("100.0%", "+12.3 pp", "99,999"). */
+  figure: { kind: 'steps', steps: 16 },
   /** Up to three 16px marks and a "+n" count (the brands named, the sites cited). */
-  marks: { kind: 'steps', steps: 26 },
-  /** As `figure`, for a header of three words that wraps to two lines ("Owned citation rate"). */
-  shortMetric: { kind: 'steps', steps: 28 },
-  /**
-   * A figure whose header names its unit ("AI referral sessions", "Longest
-   * receipt gap"): the figure role is too narrow for the label.
-   */
-  metric: { kind: 'steps', steps: 40 },
+  marks: { kind: 'steps', steps: 24 },
+  /** As `figure`, under a header of three words. */
+  shortMetric: { kind: 'steps', steps: 16 },
+  /** A figure whose header names its unit ("AI referral sessions"). */
+  metric: { kind: 'steps', steps: 16 },
   /** A status badge or a short label. */
-  status: { kind: 'steps', steps: 32 },
+  status: { kind: 'steps', steps: 20 },
   /** A category badge longer than a status ("Striking distance", a purpose). */
-  category: { kind: 'steps', steps: 44 },
-  /** A date or a date-time, in the mono data face ("Jan 1, 2026, 12:00 AM"). */
-  date: { kind: 'steps', steps: 56 },
-  /** A labelled date-time with its zone ("Accepted: Nov 15, 2026, 02:44 AM UTC"). */
-  stamp: { kind: 'steps', steps: 68 },
+  category: { kind: 'steps', steps: 24 },
+  /** A date or a date-time, in the mono data face. */
+  date: { kind: 'steps', steps: 24 },
+  /** A labelled date-time with its zone. */
+  stamp: { kind: 'steps', steps: 24 },
   /** A second text column beside the flexible one (an engine, a role). */
-  name: { kind: 'steps', steps: 56 },
+  name: { kind: 'steps', steps: 24 },
   /** A row's trailing link or icon control. */
-  action: { kind: 'steps', steps: 24 },
+  action: { kind: 'steps', steps: 10 },
   /** A row's one labelled button, an icon and a word ("Review"). */
-  button: { kind: 'steps', steps: 32 },
+  button: { kind: 'steps', steps: 20 },
   /** One compact control under a one-word header ("Enabled", "Actions"). */
-  control: { kind: 'steps', steps: 20 },
+  control: { kind: 'steps', steps: 10 },
   /** A row's trailing buttons, up to two (`TableActionsCell`). */
-  rowActions: { kind: 'steps', steps: 64 },
+  rowActions: { kind: 'steps', steps: 20 },
 } as const satisfies Record<
   string,
   { kind: 'rest'; steps?: number } | { kind: 'steps'; steps: number }
@@ -67,8 +57,8 @@ type DataTableColumnWidth = keyof typeof COLUMN_WIDTH;
 
 /**
  * What a column holds. The kind sets the head and every cell of the column
- * together: alignment, face, default width and how a long value is cut, so a
- * head can never disagree with its column.
+ * together: alignment, face, default width, so a head can never disagree
+ * with its column.
  */
 type ColumnKind = 'identity' | 'text' | 'number' | 'date' | 'status' | 'url' | 'actions';
 
@@ -133,7 +123,7 @@ function widthOf(column: DataTableColumn): DataTableColumnWidth {
   return column.width ?? KIND[columnKind(column)].width;
 }
 
-/** Whether the column takes what the fixed columns leave. */
+/** Whether the column takes what the hugging columns leave. */
 export function isFlexible(column: DataTableColumn): boolean {
   return COLUMN_WIDTH[widthOf(column)].kind === 'rest';
 }
@@ -151,50 +141,73 @@ function gutters(columns: readonly DataTableColumn[]): boolean[] {
   );
 }
 
+/** The extra start padding of a column that opens on a gutter. */
+const GUTTER_PX = 12;
+
 /**
- * The table's column map for the cell rules in data-table.css: the 1-based
- * positions of the end-aligned, start-aligned and tabular columns, and of the
- * shown columns that open on a gutter, the selection column counted, so every
- * cell follows its column's kind whatever the page passed to the cell.
+ * The table's column rules, scoped to one frame: every head and cell of a
+ * column at its kind's alignment and face, the flexible columns sharing the
+ * spare width (cut to it, never below the identity minimum), every other
+ * column hugging its content above its floor, and the low-priority columns
+ * the fit hides. A row with a spanning cell (a state, the reserved space, a
+ * full-row note) keeps its cells; it spans the shown columns (`useShownSpan`).
+ * When the trailing columns hide, the last shown cell takes the end inset.
  */
-export function columnLayout({
+export function columnRules({
+  scope,
   columns,
-  shown,
+  hidden,
   selection,
 }: Readonly<{
+  scope: string;
   columns: readonly DataTableColumn[];
-  shown: readonly DataTableColumn[];
+  hidden: readonly number[];
   selection: boolean;
-}>): Readonly<{
-  'data-end-cols': string;
-  'data-start-cols': string;
-  'data-tabular-cols': string;
-  'data-gutter-cols': string;
-}> {
+}>): string {
   const offset = selection ? 2 : 1;
-  const position = (column: DataTableColumn) => columns.indexOf(column) + offset;
-  const at = (test: (spec: KindSpec) => boolean) =>
-    columns
-      .flatMap((column) => (test(KIND[columnKind(column)]) ? [position(column)] : []))
-      .join(' ');
-  const gutter = gutters(shown);
-  return {
-    'data-end-cols': at((spec) => spec.align === 'end'),
-    'data-start-cols': at((spec) => spec.align === 'start'),
-    'data-tabular-cols': at((spec) => spec.tabular),
-    'data-gutter-cols': shown
-      .flatMap((column, index) => (gutter[index] ? [position(column)] : []))
-      .join(' '),
-  };
+  const at = (position: number, rows = 'tr:not([data-table-state])') =>
+    `[data-table-scope="${scope}"] ${rows} > :nth-child(${position})`;
+  const hiddenSet = new Set(hidden);
+  const shown = columns.filter((_, index) => !hiddenSet.has(index));
+  const shownGutters = gutters(shown);
+  const gutter = new Set(shown.filter((_, index) => shownGutters[index]));
+  const share = `${(100 / Math.max(1, shown.filter(isFlexible).length)).toFixed(3)}%`;
+  // The select box column is exactly its width, so the pinned identity cell's offset matches it.
+  const select = `width:${SELECT_WIDTH};min-width:${SELECT_WIDTH};padding-inline-end:8px`;
+  const rules = selection ? [`${at(1)}{${select}}`] : [];
+  columns.forEach((column, index) => {
+    const cell = at(index + offset);
+    const kind = KIND[columnKind(column)];
+    const role = COLUMN_WIDTH[widthOf(column)];
+    const pad = gutter.has(column)
+      ? `padding-inline-start:calc(var(--table-cell-padding-x) + ${GUTTER_PX}px);`
+      : '';
+    const size =
+      role.kind === 'rest'
+        ? `width:${share};max-width:0;min-width:var(--data-table-identity-min);`
+        : `width:1px;white-space:nowrap;min-width:${steps(role.steps)};`;
+    rules.push(`${cell}{text-align:${kind.align};${size}${pad}}`);
+    if (kind.tabular)
+      rules.push(
+        `${at(index + offset, 'tbody > tr:not([data-table-state])')}{font-family:var(--font-mono);font-variant-numeric:tabular-nums}`,
+      );
+  });
+  if (hidden.length) {
+    const cells = hidden.map((index) => at(index + offset, 'tr:not(:has(> [colspan]))'));
+    rules.push(`${cells.join(',')}{display:none}`);
+    const last = shown.at(-1);
+    if (last && last !== columns.at(-1))
+      rules.push(`${at(columns.indexOf(last) + offset)}{padding-inline-end:16px}`);
+  }
+  return rules.join('');
 }
 
 /** Column sets already warned about, so a table re-rendering warns once. */
 const warnedColumnSets = new Set<string>();
 
 /**
- * Development only: a table whose every column is a fixed role cuts its text
- * while the fixed columns leave width unused. Give the text column `flex`
- * (the default).
+ * Development only: a table whose every column hugs leaves its spare width
+ * spread over figures. Give the text column `flex` (the default).
  */
 export function useFlexibleColumnCheck({
   columns,
@@ -210,7 +223,7 @@ export function useFlexibleColumnCheck({
     if (warnedColumnSets.has(signature)) return;
     warnedColumnSets.add(signature);
     console.warn(
-      `DataTable "${name}" has no flexible column (width "flex"): its text truncates while its fixed columns leave space unused.`,
+      `DataTable "${name}" has no flexible column (width "flex"): its spare width spreads over its figures.`,
     );
   }, [columns, title, label]);
 }
@@ -226,9 +239,7 @@ const HEAD_MARK_PX = 16;
 /** A cell's inline padding: 12 a side, 16 at the table's first and last edge. */
 const CELL_PAD_PX = 12;
 const EDGE_PAD_PX = 16;
-/** The extra start padding of a column that opens on a gutter (`gutters`), as in data-table.css. */
-const GUTTER_PX = 12;
-/** A date-time on one line ("Sep 30, 2026, 12:59 PM") with its padding: dates never cut. */
+/** A date-time on one line ("Sep 30, 2026, 12:59 PM") with its padding. */
 const DATE_FLOOR_STEPS = 48;
 
 type ColumnEdge = Readonly<{ first: boolean; last: boolean; gutter: boolean }>;
@@ -243,12 +254,14 @@ function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
 }
 
 /**
- * The narrowest a column may be: its role's steps (a flexible column the
- * identity minimum), a date's full width, and never less than its head label.
+ * The width the low-priority fit expects a column to take: its role's floor
+ * (a flexible column the identity minimum, a `reading` column its reading
+ * width), a date's full width, and never less than its head label.
  */
-function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
+export function fitFloor(column: DataTableColumn, edge: ColumnEdge): string {
   const role = COLUMN_WIDTH[widthOf(column)];
   const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
+  if (role.kind === 'rest' && 'steps' in role) parts.push(steps(role.steps));
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
   const label = labelFloor(column, edge);
   if (label) parts.push(label);
@@ -256,14 +269,7 @@ function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
   return edge.gutter ? `calc(${floor} + ${GUTTER_PX}px)` : floor;
 }
 
-/** The width the low-priority fit keeps for a column: a `reading` column's reading width, else its floor. */
-export function fitFloor(column: DataTableColumn, edge: ColumnEdge): string {
-  const role = COLUMN_WIDTH[widthOf(column)];
-  const floor = columnFloor(column, edge);
-  return role.kind === 'rest' && 'steps' in role ? `max(${floor}, ${steps(role.steps)})` : floor;
-}
-
-/** Each shown column with its edge: the select column, when present, is the first edge. */
+/** Each column with its edge: the select column, when present, is the first edge. */
 export function withEdges(columns: readonly DataTableColumn[], selection: boolean) {
   const gutter = gutters(columns);
   return columns.map((column, index) => ({
@@ -276,83 +282,25 @@ export function withEdges(columns: readonly DataTableColumn[], selection: boolea
   }));
 }
 
-/** A column's `col` width: a fixed role at its floor, or what is left. */
-function columnWidth(column: DataTableColumn, edge: ColumnEdge): string | undefined {
-  return isFlexible(column) ? undefined : columnFloor(column, edge);
-}
-
-/**
- * The narrowest the table may be so that no column is squeezed: the sum of
- * the column floors (`columnFloor`) and the select column; below it the frame
- * scrolls sideways with the identity column pinned. The narrow layout leaves
- * out `desktopOnly` columns.
- */
-export function columnsMinWidth({
-  columns,
-  selection,
-  desktop,
-}: Readonly<{
-  columns: readonly DataTableColumn[];
-  selection: boolean;
-  desktop: boolean;
-}>): string {
-  const shown = columns.filter((column) => desktop || !column.desktopOnly);
-  const fixed = selection ? [steps(SELECT_STEPS)] : [];
-  const rest: string[] = [];
-  for (const { column, edge } of withEdges(shown, selection)) {
-    (isFlexible(column) ? rest : fixed).push(columnFloor(column, edge));
-  }
-  // A fixed layout splits what is left evenly, so each flexible column needs the widest floor.
-  const restMin = rest.length > 0 ? `${rest.length} * max(${rest.join(', ')})` : '0px';
-  return `calc(${fixed.join(' + ') || '0px'} + ${restMin})`;
-}
-
-/**
- * The column widths and the header row, with the select-all column first.
- * The width is a custom property so the narrow layout (globals.css) can give
- * the identity column the rest and collapse a `desktopOnly` column. A hidden
- * low-priority column has no `col`; its head and cells hide by position
- * (`useFittedColumns`), so the shown cells meet the shown `col`s in order.
- */
-export function DataTableColumns({
-  columns,
-  shown,
-  selection,
-}: Readonly<{
-  columns: readonly DataTableColumn[];
-  shown: readonly DataTableColumn[];
-  selection?: DataTableSelection;
-}>) {
-  return (
-    <>
-      <colgroup>
-        {selection ? <col style={colWidth(steps(SELECT_STEPS), steps(SELECT_STEPS))} /> : null}
-        {withEdges(shown, Boolean(selection)).map(({ column, edge }, index) => (
-          <col
-            key={column.key}
-            style={colWidth(columnWidth(column, edge), columnFloor(column, edge))}
-            data-identity-col={index === 0 || undefined}
-            data-desktop-only={column.desktopOnly || undefined}
-          />
-        ))}
-      </colgroup>
-      <TableHeader>
-        <TableRow>
-          {selection ? <SelectAllHead selection={selection} /> : null}
-          {columns.map((column) => (
-            <ColumnHead key={column.key} column={column} />
-          ))}
-        </TableRow>
-      </TableHeader>
-    </>
-  );
-}
-
 /** The select-all column's width. */
 export const SELECT_WIDTH = steps(SELECT_STEPS);
 
-const colWidth = (width: string | undefined, floor: string) =>
-  ({ '--col-width': width, '--col-floor': floor }) as CSSProperties;
+/** The header row, with the select-all column first. */
+export function DataTableColumns({
+  columns,
+  selection,
+}: Readonly<{ columns: readonly DataTableColumn[]; selection?: DataTableSelection }>) {
+  return (
+    <TableHeader>
+      <TableRow>
+        {selection ? <SelectAllHead selection={selection} /> : null}
+        {columns.map((column) => (
+          <ColumnHead key={column.key} column={column} />
+        ))}
+      </TableRow>
+    </TableHeader>
+  );
+}
 
 function SelectAllHead({ selection }: Readonly<{ selection: DataTableSelection }>) {
   return (
@@ -390,22 +338,13 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
       />
     );
   }
-  // The column's floor fits its label on one line; wrapping is the fallback
-  // for a face wider than the floor's estimate, never an overlap.
   const hidden = column.hideLabel || columnKind(column) === 'actions';
   return (
-    <TableHead
-      numeric={numeric}
-      desktopOnly={column.desktopOnly}
-      className="whitespace-normal"
-      aria-sort={column.order}
-    >
+    <TableHead numeric={numeric} desktopOnly={column.desktopOnly} aria-sort={column.order}>
       {hidden ? <span className="sr-only">{column.label || 'Actions'}</span> : column.label}
       {column.order ? <OrderMark order={column.order} /> : null}
       {column.sublabel ? (
-        <span className={textRole('caption', 'block truncate')} title={column.sublabel}>
-          {column.sublabel}
-        </span>
+        <span className={textRole('caption', 'block')}>{column.sublabel}</span>
       ) : null}
     </TableHead>
   );

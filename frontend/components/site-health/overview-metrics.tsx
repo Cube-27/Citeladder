@@ -29,13 +29,8 @@ function auditSegment({
   if (value === null) {
     return { ...base, value: unavailable ?? <Absence state="not_measured" /> };
   }
-  return {
-    ...base,
-    score:
-      valueUnit === 'percent'
-        ? { value, label: title, unit: '%' }
-        : { value, label: `${title} score` },
-  };
+  const score = Math.max(0, Math.min(100, Math.round(value)));
+  return { ...base, value: valueUnit === 'percent' ? `${score}%` : String(score) };
 }
 
 /** The Site Health scores, as one FigureStrip. */

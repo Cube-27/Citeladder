@@ -10,8 +10,6 @@ export type DataTableState = Exclude<StateBlockProps, { inline: true }>;
 /** The one-line empty state (`StateBlock` `inline`), for a small table. */
 export type DataTableInlineEmpty = Extract<StateBlockProps, { inline: true }>;
 
-export type RowLines = 1 | 2 | 3;
-
 /**
  * The rows, with no blank rows after a short page (a reserved page keeps its
  * height as plain space); or, while loading, a page of block rows under the
@@ -23,7 +21,6 @@ export function DataTableBody({
   state,
   pageSize,
   rowCount,
-  rowLines,
   reserve,
   children,
 }: Readonly<{
@@ -34,7 +31,6 @@ export function DataTableBody({
   state?: DataTableState | DataTableInlineEmpty;
   pageSize?: number;
   rowCount?: number;
-  rowLines: RowLines;
   /** Hold the rest of the page as blank space. */
   reserve: boolean;
   children?: ReactNode;
@@ -45,7 +41,6 @@ export function DataTableBody({
         columns={cells}
         label={state.label ?? 'Loading…'}
         rows={pageSize ?? LOADING_ROWS}
-        rowLines={rowLines}
       />
     );
   }
@@ -55,8 +50,8 @@ export function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)*var(--data-table-row))] align-top"
-            style={stateFootprint(pageSize ?? 0, rowLines)}
+            className="h-[calc(var(--data-table-rows)*var(--table-row-height))] align-top"
+            style={footprint(pageSize ?? 0)}
           >
             <InFrame>
               <StateBlock {...state} />
@@ -72,17 +67,17 @@ export function DataTableBody({
   // row of its body and draws no line, like any table's last row.
   return (
     <>
-      <TableBody style={rowHeight(rowLines)}>{children}</TableBody>
+      <TableBody>{children}</TableBody>
       {rest > 0 ? (
         <TableBody>
           <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
             aria-hidden="true"
             data-table-spacer=""
-            style={stateFootprint(rest, rowLines)}
+            style={footprint(rest)}
           >
             <TableCell
               colSpan={colSpan}
-              className="h-[calc(var(--data-table-rows)*var(--data-table-row))]"
+              className="h-[calc(var(--data-table-rows)*var(--table-row-height))]"
             />
           </tr>
         </TableBody>
@@ -92,15 +87,14 @@ export function DataTableBody({
 }
 
 /**
- * Loading: a page of rows of `well` blocks under the real column heads, one
- * block per cell at the row's own height, so arriving rows move nothing.
+ * Loading: a page of rows of blocks under the real column heads, one block
+ * per cell at the row's own height, so arriving rows move nothing.
  */
 function LoadingBody({
   columns,
   label,
   rows,
-  rowLines,
-}: Readonly<{ columns: number; label: string; rows: number; rowLines: RowLines }>) {
+}: Readonly<{ columns: number; label: string; rows: number }>) {
   const cells = Array.from({ length: columns }, (_, index) => index);
   return (
     <TableBody aria-busy="true">
@@ -109,7 +103,7 @@ function LoadingBody({
           key={row}
           aria-hidden={row === 0 ? undefined : true}
           data-table-loading=""
-          style={{ height: ROW_HEIGHT[rowLines] }}
+          className="h-[var(--table-row-height)]"
         >
           {cells.map((cell) => (
             <td key={cell} className="px-[var(--table-cell-padding-x)]">
@@ -135,30 +129,8 @@ function InFrame({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** A row's height by its lines: 40 for one, 56 for a value over a caption, 76 for a two-line title. */
-const ROW_HEIGHT = {
-  1: 'var(--table-row-height)',
-  2: 'var(--table-row-height-2)',
-  3: 'calc(var(--table-row-height-2) + var(--text-body--line-height))',
-} as const satisfies Record<RowLines, string>;
-
-/**
- * Every row of a table of captioned rows is at least 56, a row without a
- * caption included, so the rows of one table never differ; a two-line title
- * grows only its own row.
- */
-function rowHeight(rowLines: RowLines): CSSProperties | undefined {
-  if (rowLines === 1) return undefined;
-  return { '--table-row-height': ROW_HEIGHT[2] } as CSSProperties;
-}
-
-/** The custom properties a state or spacer cell's height reads: `rows` rows of `rowLines`. */
-function stateFootprint(rows: number, rowLines: RowLines) {
-  return {
-    '--data-table-rows': rows,
-    '--data-table-row': ROW_HEIGHT[rowLines],
-  } as CSSProperties;
-}
+/** The custom property a state or spacer cell's height reads: `rows` rows. */
+const footprint = (rows: number) => ({ '--data-table-rows': rows }) as CSSProperties;
 
 /** Rows a loading table without a page size draws. */
 const LOADING_ROWS = 5;

@@ -96,12 +96,7 @@ export function CompetitorSuggestions({
         ) : null}
         <DecisionFailure mutation={acceptMutation} action="add that competitor" />
         <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
-        <DataTable
-          label={TITLE}
-          columns={columns(canWrite)}
-          rowLines={2}
-          state={tableState(suggestionsQuery)}
-        >
+        <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
           {rows.map((candidate) => (
             <TableRow key={candidate.id}>
               <TableCell>

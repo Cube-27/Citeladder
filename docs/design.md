@@ -147,8 +147,30 @@ One entry per family; wave 2 fills each from the layouts above.
 - **Tags and status.** Tag: 20 high, radius 4, `rule` edge, 12px `ink-2`.
   Status pill: radius full, 6px coloured dot, 12px at 500.
 - **Navigation.** To be specified in wave 2.
-- **Tables and metric strip.** See Standard layouts.
-- **Overlays** (menus, popovers, dialogs, drawers). To be specified in wave 2.
-- **States** (loading, empty, error, notice). To be specified in wave 2.
+- **Tables.** Geometry as in Standard layouts. A page declares each
+  column's kind and width role, never a pixel width; `DataTable` turns them
+  into one scoped rule set (`columnRules`): `flex` columns share the spare
+  width and cut their text, every other role hugs its content above a small
+  floor, so no gap opens between columns. When the floors do not fit, `low`
+  columns hide, the last first; below that the table scrolls with the first
+  column pinned. Every row is one line; secondary text follows the primary
+  inline (`TableCellLines`). The foot band sits inside the frame.
+- **Metric strip** (`FigureStrip`). Cells share a row equally and wrap into
+  rows of equal cells; each cell draws its dividers on its start and top
+  edge and the frame clips the outer ones, so a wrapped strip never doubles
+  a line. A score is a printed figure.
+- **Containers.** One section head (16/24 at 500, actions right, body 12
+  below) and one framed surface (`SLIP_FACE`: `rule` edge, radius 8,
+  `panel`). A framed thing inside a container drops its own edge.
+- **Lists and rows.** A list row matches a table row: 40 high, hairlines
+  between rows, `state-hover` when it opens something.
+- **Overlays** (dialogs, drawers, command palette). `panel` with a `rule`
+  edge at radius 12 and the sheet shadow; header and body padded 24, the
+  footer 12 by 24 under a hairline.
+- **States.** Loading draws the final geometry (a table its head over block
+  rows, a strip its cells). Empty and error sit quietly inside the frame of
+  the content they replace. A notice is a `rule`-edged strip with the
+  tone's 6px dot and the tone's word for screen readers, never a fill.
 - **Charts.** Your series is the accent, drawn last; a missing period is a
-  gap, never a zero. To be specified in wave 2.
+  gap, never a zero. Series colours come from one map by identity
+  (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.

@@ -74,16 +74,13 @@ function balancedPairs(count: number): number[] {
 
 /**
  * Each figure's column count, in order (the `--row` its cell's flex-basis
- * reads in globals.css), and whether it opens its row, where no divider
- * precedes it. Every row takes the first row's columns, so a shorter last row
+ * reads in globals.css). Every row takes the first row's columns, so a shorter last row
  * keeps the same cell width and its dividers line up with the row above.
  */
-export function figureRowCells(fit: StripFit): { size: number; rowStart: boolean }[] {
+export function figureRowCells(fit: StripFit): number[] {
   const rows = figureRows(fit);
   const columns = rows[0] ?? 1;
-  return rows.flatMap((count) =>
-    Array.from({ length: count }, (_, index) => ({ size: columns, rowStart: index === 0 })),
-  );
+  return rows.flatMap((count) => Array.from({ length: count }, () => columns));
 }
 
 /**

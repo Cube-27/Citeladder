@@ -172,7 +172,7 @@ export function DisclosureRow({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
-        className={cn(listRowClasses(), pressableRowClasses, 'min-h-14')}
+        className={cn(listRowClasses(), pressableRowClasses, 'min-h-10')}
       >
         <span className="grid min-w-0 flex-1 gap-1">
           <ClampText className={textRole('label', 'text-ink')}>{title}</ClampText>

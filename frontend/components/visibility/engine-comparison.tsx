@@ -33,7 +33,6 @@ export function EngineComparison({
       <DataTable
         label="By model"
         columns={COLUMNS}
-        rowLines={2}
         state={
           engines.length
             ? undefined

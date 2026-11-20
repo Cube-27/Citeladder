@@ -83,7 +83,7 @@ export function WorkRow({
 }>) {
   return (
     <tr
-      className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-14 not-first:border-t')}
+      className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-10 not-first:border-t')}
     >
       <td className="relative z-10 flex">{tick}</td>
       <td className="min-w-0">
