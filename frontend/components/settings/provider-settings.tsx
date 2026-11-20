@@ -1,5 +1,5 @@
 import { ProviderList } from '@/components/providers/provider-list';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 
 /**
  * BYOK Provider Settings panel, rendered inside the Settings screen's
@@ -11,10 +11,8 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
  */
 export function ProviderSettings() {
   return (
-    <TitledSection title="Measurement providers">
-      <SectionContent>
-        <ProviderList ruled={false} />
-      </SectionContent>
-    </TitledSection>
+    <SettingsGroup title="Measurement providers">
+      <ProviderList framed />
+    </SettingsGroup>
   );
 }

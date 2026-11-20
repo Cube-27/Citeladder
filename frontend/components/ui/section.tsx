@@ -98,11 +98,6 @@ export function SectionTitle({
   );
 }
 
-/** SectionTitleLine — the title with the section's status right after it, 8 apart. */
-export function SectionTitleLine({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
-}
-
 /** SectionDescription — one or two sentences under the title, `body` in `ink-2`, at most 72 characters wide. */
 export function SectionDescription({
   children,
@@ -114,11 +109,6 @@ export function SectionDescription({
       {children}
     </p>
   );
-}
-
-/** A form section's foot: its actions right-aligned 24 below the body, with no rule between. */
-export function SectionFoot({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mt-6 flex flex-wrap justify-end gap-2">{children}</div>;
 }
 
 /** The section's body. */

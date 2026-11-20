@@ -10,11 +10,9 @@ import { SettingsPage } from '@/components/templates/settings-page';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
-import { Inline, Stack } from '@/components/ui/layout';
-import { InlineFigure, textRole } from '@/components/ui/typography';
-import { Value } from '@/components/ui/value';
+import { InlineFigure } from '@/components/ui/typography';
 import {
   billingDetailsError,
   billingQueries,
@@ -147,10 +145,10 @@ function CheckoutFields({
 }>) {
   if (selection.kind !== 'checkout') return null;
   return (
-    <Stack gap="workspace">
+    <>
       <BillingCountryInput country={country} setCountry={setCountry} />
       <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
-    </Stack>
+    </>
   );
 }
 
@@ -162,9 +160,18 @@ function PriceInfo({
   catalog: BillingCatalog;
 }>) {
   if (price?.kind === 'price')
-    return <Value text="figure" value={formatMoney(price.money, catalog.currency_minor_units)} />;
+    return (
+      <SettingRow
+        label="Price"
+        value={
+          <span className="font-mono tabular-nums">
+            {formatMoney(price.money, catalog.currency_minor_units)}
+          </span>
+        }
+      />
+    );
   if (price?.kind === 'unavailable')
-    return <p className={textRole('body')}>Checkout is unavailable for this credential mode.</p>;
+    return <SettingRow label="Price" value="Checkout is unavailable for this credential mode." />;
   return null;
 }
 
@@ -224,23 +231,41 @@ function SelectedPurchase({
   const usage = selection.byok ? 'byok' : 'funded';
   const price = plan ? headlinePrice(plan, usage) : null;
   return (
-    <Section aria-label="Selected purchase">
-      <SectionHeader>
-        <SectionTitle>{plan?.name ?? extra?.name}</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="workspace">
-        <p className={textRole('body')}>
-          <InlineFigure>{selection.quantity}</InlineFigure> ×{' '}
-          {selection.byok ? 'Your own keys' : 'Managed'}
-        </p>
+    <SettingsGroup title={plan?.name ?? extra?.name}>
+      <SettingRows
+        foot={
+          <PurchaseButton
+            canBuy={canBuy}
+            workspaceId={workspaceId}
+            pending={pending}
+            quoted={quoted}
+            priceUnavailable={Boolean(price && price.kind !== 'price')}
+            onPurchase={onPurchase}
+          />
+        }
+      >
+        <SettingRow
+          label="Quantity"
+          value={
+            <>
+              <InlineFigure className="font-mono">{selection.quantity}</InlineFigure> ×{' '}
+              {selection.byok ? 'Your own keys' : 'Managed'}
+            </>
+          }
+        />
         <PriceInfo price={price} catalog={catalog} />
         {extra?.unit_price ? (
-          <p className={textRole('body')}>
-            <InlineFigure>
-              {formatMoney(extra.unit_price, catalog.currency_minor_units)}
-            </InlineFigure>{' '}
-            per unit before tax
-          </p>
+          <SettingRow
+            label="Unit price"
+            value={
+              <>
+                <InlineFigure className="font-mono">
+                  {formatMoney(extra.unit_price, catalog.currency_minor_units)}
+                </InlineFigure>{' '}
+                per unit before tax
+              </>
+            }
+          />
         ) : null}
         <CheckoutFields
           selection={selection}
@@ -249,16 +274,8 @@ function SelectedPurchase({
           details={details}
           setDetails={setDetails}
         />
-        <PurchaseButton
-          canBuy={canBuy}
-          workspaceId={workspaceId}
-          pending={pending}
-          quoted={quoted}
-          priceUnavailable={Boolean(price && price.kind !== 'price')}
-          onPurchase={onPurchase}
-        />
-      </Stack>
-    </Section>
+      </SettingRows>
+    </SettingsGroup>
   );
 }
 
@@ -275,23 +292,21 @@ function QuoteConfirmation({
 }>) {
   if (!checkout.prepared?.quote || !catalog) return null;
   return (
-    <Section aria-labelledby="current-quote-title">
-      <SectionHeader>
-        <SectionTitle id="current-quote-title">Current quote</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="workspace">
+    <SettingsGroup title="Current quote">
+      <SettingRows
+        foot={
+          <Button variant="primary" disabled={pending} onClick={onConfirm}>
+            {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
+          </Button>
+        }
+      >
         <BillingQuoteSummary
           quote={checkout.prepared.quote}
           currencyMinorUnits={catalog.currency_minor_units}
         />
         <CheckoutConsent recurring={checkout.prepared.kind === 'base'} />
-        <Inline className="justify-end">
-          <Button variant="primary" disabled={pending} onClick={onConfirm}>
-            {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
-          </Button>
-        </Inline>
-      </Stack>
-    </Section>
+      </SettingRows>
+    </SettingsGroup>
   );
 }
 

@@ -138,7 +138,28 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   inline after the primary in `ink-2`; numbers right-aligned in mono; foot 40
   with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
-- **Settings layout** (Settings, Agent context, Billing): specified in wave 3.
+- **Settings layout** (Settings, Agent context, Billing, Pricing): the
+  route's column (720; Billing 1040, AR-9) holds a stack of groups 32 apart,
+  with no rule between them; a tab panel stacks its groups the same way. A
+  group (`SettingsGroup`) is a heading (16/24 at 500, a status 8 after it), an
+  optional one-line 12px `ink-2` caption 4 below, the group's one action
+  right-aligned on the heading's line (secondary), then 12 below its body.
+  The body is one `rule`-framed list (`SettingRows`: radius 8, `panel`) of
+  setting rows with a hairline between them; or, for a list of things
+  (members, keys, connections, invoices, offerings), a `DataTable`. Notices
+  about a group sit between its head and its body. A row (`SettingRow`) is
+  padded 12 by 16, at least 52 high: a 14/500 label with an optional 12px
+  `ink-2` help line under it at the left; at the right its value in `ink-2`
+  or its control (switch, select, button). A text field (`SettingField`) sits
+  under its label across the row; a short choice (`inline`) stays at the
+  right. Immediate controls save on change; a form that needs Save puts one
+  primary Save in the frame's foot, right-aligned, disabled until something
+  changed. Destructive actions (cancel plan, leave workspace, delete
+  project) are danger buttons in the page's last group, never primary. Plan
+  cards are the layout's only cards: one row of equal cards (one per line
+  when they do not fit), prices in mono, the current plan marked by a 2px
+  accent rule along its top and the words "Current plan". A model's
+  suggestion keeps the dashed draft edge.
 
 ## Components
 

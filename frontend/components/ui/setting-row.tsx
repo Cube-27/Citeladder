@@ -1,57 +1,104 @@
 import { useId, type ReactNode } from 'react';
 
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
+import { SLIP_FACE } from '@/components/ui/slip';
+import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * A list of setting rows: 12 above and below each row, none above the first
- * or below the last, and no rule between rows (owner, 2026-11-20: only
- * section lines). A nested list (a form's rows) is one row of its parent and
- * spaces its own rows the same way. A `title` heads a group of rows inside a
- * section (Brand facts' Add a fact), 12 above them.
+ * One group of the Settings layout (docs/design.md): its heading, an optional
+ * one-line caption 4 below, the group's one action at the right of the
+ * heading, then 12 below its body: a `SettingRows` frame, a `DataTable`, or a
+ * read's state. Notices about the group sit between the head and the body.
+ * A group whose body is one table is not a region itself (`region={false}`):
+ * the table is the region, under the same name.
  */
-export function SettingRows({
-  label,
+export function SettingsGroup({
   title,
-  titleId,
-  className,
+  status,
+  description,
+  action,
+  id,
+  region = true,
   children,
 }: Readonly<{
-  label?: string;
-  title?: string;
-  titleId?: string;
-  className?: string;
+  title: ReactNode;
+  /** A status mark on the heading's line, 8 after it. */
+  status?: ReactNode;
+  description?: ReactNode;
+  /** The group's one action (Invite, Create key): secondary, at the heading's right. */
+  action?: ReactNode;
+  /** The section's anchor, for a page link to it (`#change-plan`). */
+  id?: string;
+  region?: boolean;
   children: ReactNode;
 }>) {
-  const rows = (
-    <div
-      data-setting-rows=""
-      aria-label={label}
-      role={label ? 'group' : undefined}
-      className={cn('grid min-w-0 *:py-3 *:first:pt-0 *:last:pb-0', className)}
-    >
-      {children}
-    </div>
-  );
-  if (!title) return rows;
+  const titleId = useId();
   return (
-    <div className="grid min-w-0 gap-3 pt-6">
-      <h3 id={titleId} className={textRole('subheading')}>
-        {title}
-      </h3>
-      {rows}
-    </div>
+    <section
+      id={id}
+      aria-labelledby={region ? titleId : undefined}
+      data-settings-group=""
+      className="grid min-w-0 gap-3"
+    >
+      <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+        <div className="grid min-w-0 flex-1 basis-60 gap-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2
+              id={titleId}
+              className={textRole('heading', 'flex min-w-0 items-center gap-2 break-words')}
+            >
+              {title}
+            </h2>
+            {status}
+          </div>
+          {description ? <p className={textRole('caption')}>{description}</p> : null}
+        </div>
+        {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
+      </header>
+      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
+    </section>
   );
 }
 
 /**
- * One settings row: at the left its name and, under it, a muted line saying
- * what it does; at the right, on the same line, its current value in `ink-2`
- * and its action (a button, a select). A row's own content that needs the
- * width (a notice, a long list) goes in `children`, under the row. `control`
- * is a form control in the 320 column `SettingField` uses, for a control
- * that names itself (a select, a checkbox group).
+ * A group's framed list of rows: the one framed surface, a hairline between
+ * rows, each row (whatever it is) padded 12 by 16 and at least 52 high. A
+ * form's Save goes in `foot`, right-aligned under the last row.
+ */
+export function SettingRows({
+  label,
+  foot,
+  children,
+}: Readonly<{ label?: string; foot?: ReactNode; children: ReactNode }>) {
+  return (
+    <div
+      data-setting-rows=""
+      aria-label={label}
+      role={label ? 'group' : undefined}
+      className={settingRowsClasses()}
+    >
+      {children}
+      {foot ? <div className="flex flex-wrap items-center justify-end gap-2">{foot}</div> : null}
+    </div>
+  );
+}
+
+/** The frame's recipe, for a list that must be a `ul` (a provider per `li`). */
+export function settingRowsClasses(className?: string) {
+  return cn(
+    SLIP_FACE,
+    'divide-rule grid min-w-0 divide-y overflow-hidden *:min-h-13 *:px-4 *:py-3',
+    className,
+  );
+}
+
+/**
+ * One setting row: its name and, under it, a caption saying what it does; at
+ * the right its current value in `ink-2` and its action (a switch, a select,
+ * a button). `control` is a form control that names itself, in a 320 column.
+ * Content that needs the row's width (a notice) goes in `children`, under it.
  */
 export function SettingRow({
   label,
@@ -69,54 +116,46 @@ export function SettingRow({
   action?: ReactNode;
   children?: ReactNode;
 }>) {
-  const end = value !== undefined && value !== null ? true : Boolean(action);
+  const hasValue = value !== undefined && value !== null;
   return (
-    <div data-setting-row="" className="grid min-w-0 gap-3">
+    <div data-setting-row="" className="grid min-w-0 content-center gap-3">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <RowName label={label} description={description} />
-        {end ? (
-          <div className="flex max-w-full min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-            {value === undefined || value === null ? null : (
+        {hasValue || action ? (
+          <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
+            {hasValue ? (
               <div className={textRole('body', 'text-ink-2 min-w-0 text-end break-words')}>
                 {value}
               </div>
-            )}
+            ) : null}
             {action}
           </div>
         ) : null}
-        {control ? <div className={CONTROL_COLUMN}>{control}</div> : null}
+        {control ? <div className="grid w-80 max-w-full min-w-0 *:w-full">{control}</div> : null}
       </div>
       {children}
     </div>
   );
 }
 
-const CONTROL_COLUMN = 'grid w-80 max-w-full min-w-0 gap-1 *:w-full';
-/** A short choice (a select of single words) at the right, no wider than it needs. */
-const COMPACT_COLUMN = 'grid w-44 max-w-full min-w-0 gap-1 *:w-full';
-
 /**
- * A form field as a settings row: its label and hint at the left, the control
- * at the right in one 320 column (so a form's controls line up), its error
- * under the control. `wide` puts the control under the label across the row,
- * for text that needs the width (a description, a list of entries).
+ * A form field as a settings row: its label and hint, then the control under
+ * them across the row, its error under the control. `inline` puts a short
+ * choice (a select) at the row's right instead, no wider than it needs.
  */
 export function SettingField({
   label,
   hint,
   error,
   required,
-  wide = false,
-  compact = false,
+  inline = false,
   children,
 }: Readonly<{
   label: string;
   hint?: string;
   error?: ReactNode;
   required?: boolean;
-  wide?: boolean;
-  /** A narrow column for a short choice, instead of the 320 one. */
-  compact?: boolean;
+  inline?: boolean;
   children: (props: ControlProps) => ReactNode;
 }>) {
   const id = useId();
@@ -129,44 +168,33 @@ export function SettingField({
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy || undefined,
   });
-  const name = (
-    <div className="grid min-w-0 flex-1 basis-60 content-start gap-1">
-      <label htmlFor={id} className={textRole('label')}>
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="text-ink-2 ms-0.5">
-            *
-          </span>
-        ) : null}
-      </label>
-      {hint ? (
-        <p id={hintId} className={textRole('body', 'text-ink-2')}>
-          {hint}
-        </p>
-      ) : null}
-    </div>
-  );
-  const foot = error ? <FieldFoot id={errorId} error={error} /> : null;
-  if (wide)
-    return (
-      <div data-setting-row="" className="grid min-w-0 gap-3">
-        {name}
-        <div className="grid min-w-0 gap-1">
-          {control}
-          {foot}
-        </div>
-      </div>
-    );
   return (
     <div
       data-setting-row=""
-
-      className="flex min-w-0 flex-wrap items-start justify-between gap-x-6 gap-y-2"
+      className={
+        inline
+          ? 'flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2'
+          : 'grid min-w-0 gap-2'
+      }
     >
-      {name}
-      <div className={compact ? COMPACT_COLUMN : CONTROL_COLUMN}>
+      <div className="grid min-w-0 flex-1 basis-60 content-start gap-0.5">
+        <label htmlFor={id} className={textRole('label')}>
+          {label}
+          {required ? (
+            <span aria-hidden="true" className="text-ink-2 ms-0.5">
+              *
+            </span>
+          ) : null}
+        </label>
+        {hint ? (
+          <p id={hintId} className={textRole('caption')}>
+            {hint}
+          </p>
+        ) : null}
+      </div>
+      <div className={cn('grid min-w-0 gap-1', inline && 'w-44 max-w-full *:w-full')}>
         {control}
-        {foot}
+        {error ? <FieldFoot id={errorId} error={error} /> : null}
       </div>
     </div>
   );
@@ -174,10 +202,10 @@ export function SettingField({
 
 function RowName({ label, description }: Readonly<{ label: ReactNode; description?: ReactNode }>) {
   return (
-    <div className="grid min-w-0 flex-1 basis-60 gap-1">
+    <div className="grid min-w-0 flex-1 basis-60 gap-0.5">
       <div className={textRole('label')}>{label}</div>
       {description === undefined || description === null ? null : (
-        <div className={textRole('body', 'text-ink-2 min-w-0 break-words')}>{description}</div>
+        <div className={textRole('caption', 'min-w-0 break-words')}>{description}</div>
       )}
     </div>
   );

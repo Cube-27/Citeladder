@@ -6,9 +6,8 @@ import { z } from 'zod';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { ChipList, type ChipItem } from '@/components/ui/chip-input';
-import { SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { Absence } from '@/components/ui/absence';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile } from '@citeladder/contracts';
@@ -16,7 +15,6 @@ import { businessDraft, showsServiceAreas } from '@/lib/prompts/builder-business
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { StateBlock, screenState } from '@/components/ui/state-block';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 import { OfferingsTable } from './offerings-table';
 
@@ -83,16 +81,13 @@ function MapGroup({
   action?: ReactNode;
 }>) {
   return (
-    <Section aria-labelledby="business-map">
-      <SectionHeader actions={action}>
-        <SectionTitle id="business-map">{title}</SectionTitle>
-      </SectionHeader>
+    <SettingsGroup title={title} action={action}>
       <SettingRows label="Business details">
         {fields.map((field) => (
           <SettingRow key={field.label} label={field.label} value={fieldValue(field)} />
         ))}
       </SettingRows>
-    </Section>
+    </SettingsGroup>
   );
 }
 
@@ -120,12 +115,9 @@ export function BusinessMapSummary({
   );
   if (read.kind === 'state')
     return (
-      <Section aria-labelledby="business-map">
-        <SectionHeader actions={edit}>
-          <SectionTitle id="business-map">Business map</SectionTitle>
-        </SectionHeader>
+      <SettingsGroup title="Business map" action={edit}>
         <StateBlock {...read.state} />
-      </Section>
+      </SettingsGroup>
     );
   const draft = businessDraft(profile, read.data);
   const inferred = inferredFields(profile);
@@ -139,9 +131,9 @@ export function BusinessMapSummary({
     businessModelField(profile, inferred('business_model')),
   ];
   return (
-    <Stack gap="workspace">
+    <>
       <MapGroup title="Business map" fields={details} action={edit} />
       <OfferingsTable maps={draft.maps} />
-    </Stack>
+    </>
   );
 }

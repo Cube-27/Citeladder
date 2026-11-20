@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { UsageTable } from '@/components/billing/usage-meter';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -46,14 +46,9 @@ export function UsageMeters() {
   const usageQuery = useQuery(billingQueries.usage(workspaceId));
 
   return (
-    <Section aria-labelledby="usage-title">
-      <SectionHeader>
-        <SectionTitle id="usage-title">Usage</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <UsageBody query={usageQuery} />
-      </SectionContent>
-    </Section>
+    <SettingsGroup title="Usage">
+      <UsageBody query={usageQuery} />
+    </SettingsGroup>
   );
 }
 

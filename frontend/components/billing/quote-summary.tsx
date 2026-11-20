@@ -4,7 +4,6 @@ import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
 import { Stack } from '@/components/ui/layout';
-import { wellClasses } from '@/components/ui/slip';
 
 const TREATMENT_LABEL: Record<BillingQuote['tax_treatment'], string> = {
   CGST_SGST: 'GST within Maharashtra (CGST + SGST)',
@@ -41,7 +40,7 @@ export function BillingQuoteSummary({
     }
   }
   return (
-    <Stack as="output" gap="compact" className={wellClasses('type-body text-ink-2')}>
+    <Stack as="output" gap="compact" className="type-body text-ink-2">
       <span className="text-ink-2">
         Quote · {TREATMENT_LABEL[quote.tax_treatment]} · valid until{' '}
         <DisplayTime value={quote.expires_at} />
