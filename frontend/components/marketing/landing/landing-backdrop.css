@@ -1,10 +1,10 @@
 /* Experiment (owner, 2026-11-20): the home page's whole background, fixed to
    the viewport while the page scrolls over it. From the bottom up: a
    near-black base, twelve hairline columns fading out toward the top, a wide
-   amber glow anchored at the viewport's foot, a light beam (a hot core in a
-   blurred halo) rising right of centre, and a fine grain. The beam breathes
-   slowly. The hero's product image has no panel and fades out at its foot.
-   Colours are the site-hero tokens in globals.css. */
+   amber glow anchored at the viewport's foot, a soft glow rising up each
+   side edge, and a fine grain. The nav bar is part of the background until
+   the page scrolls. The hero's product image has no panel and fades out at
+   its foot. Colours are the site-hero tokens in globals.css. */
 
 .cl-landing-backdrop {
   --lb-grain: 0.05;
@@ -15,6 +15,8 @@
   overflow: hidden;
   pointer-events: none;
   background:
+    radial-gradient(16% 60% at 0% 72%, var(--color-site-hero-side), transparent),
+    radial-gradient(16% 60% at 100% 72%, var(--color-site-hero-side), transparent),
     radial-gradient(
       75% 70% at 50% 105%,
       var(--color-site-hero-amber),
@@ -48,58 +50,26 @@
   opacity: var(--lb-grain);
 }
 
-/* The beam: a blurred halo behind a narrow hot core, rising from the foot. */
-.cl-landing-backdrop > i {
-  position: absolute;
-  bottom: 0;
-  left: 58%;
-  height: 55%;
-  transform-origin: bottom;
-  animation: lb-breathe var(--motion-breathe) var(--ease-breathe) infinite;
-}
-
-.cl-landing-backdrop > i::before,
-.cl-landing-backdrop > i::after {
-  position: absolute;
-  bottom: 0;
-  height: 100%;
-  content: '';
-  transform: translateX(-50%);
-}
-
-.cl-landing-backdrop > i::before {
-  width: 72px;
-  background: linear-gradient(to top, var(--color-site-hero-halo), transparent);
-  filter: blur(38px);
-}
-
-.cl-landing-backdrop > i::after {
-  width: 3px;
-  background: linear-gradient(
-    to top,
-    var(--color-site-hero-core-hot),
-    var(--color-site-hero-core) 35%,
-    transparent
-  );
-  filter: blur(5px);
-}
-
-@keyframes lb-breathe {
-  0%,
-  100% {
-    opacity: 0.8;
-    transform: scaleY(0.92);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scaleY(1);
+/* The nav bar sits on the background at the top and takes its own paper and
+   hairline over the first 64px of scroll. Without scroll-driven animations
+   it keeps its paper. */
+@supports (animation-timeline: scroll()) {
+  :root:has(.cl-landing-backdrop) .cl-navbar {
+    animation: lb-nav-paper var(--ease-sweep) both;
+    animation-timeline: scroll(root);
+    animation-range: 0 64px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cl-landing-backdrop > i {
-    animation: none;
+@keyframes lb-nav-paper {
+  from {
+    border-bottom-color: transparent;
+    background-color: transparent;
+  }
+
+  to {
+    border-bottom-color: var(--color-line);
+    background-color: var(--site-page);
   }
 }
 

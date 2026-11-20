@@ -257,9 +257,7 @@ function Trust() {
 export function LandingPage() {
   return (
     <>
-      <div className="cl-landing-backdrop" aria-hidden="true">
-        <i />
-      </div>
+      <div className="cl-landing-backdrop" aria-hidden="true" />
       <Hero />
       <PageSection label="Monitored answer engines" spacing="compact">
         <EngineStrip
