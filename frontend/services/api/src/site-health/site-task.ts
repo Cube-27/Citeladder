@@ -488,6 +488,11 @@ async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unkn
       const task = await ctx.queue.fence(trx, claimed, ctx.owner);
       if (task && task.conflict_count < ctx.settings.conflictMax)
         await settleTask(trx, ctx, task, { kind: 'conflict', errorDetail: detail, cause: error });
+    }).catch((contended: unknown) => {
+      // A cancel or sibling still holds the task row: lease recovery settles it at
+      // expiry. Throwing would fail the whole runner lane for one task's lock wait.
+      if (!isRetryableContention(contended)) throw contended;
+      logger.warning('site_task_settle_contended', { task_id: claimed.id });
     });
   }
 }

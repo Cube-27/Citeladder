@@ -192,11 +192,23 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
       );
       const fresh = chunk.filter(({ item }) => !ids.has(item.hash)).map(({ item }) => item);
       for (const [hash, id] of await upsertSiteUrls(trx, crawl, fresh)) ids.set(hash, id);
-      await insertObservations(
+      const added = await insertObservations(
         trx,
         crawl,
         fresh.map((item) => candidateObservation(ids.get(item.hash)!, item, null)),
       );
+      // Each chunk shows on the crawl as it lands; a large sitemap otherwise reads
+      // "0 pages discovered" for minutes. `persist` settles the exact count.
+      if (added > 0)
+        await trx
+          .updateTable('site_crawls')
+          .set((eb) => ({
+            admitted_url_count: eb('admitted_url_count', '+', added),
+            updated_at: new Date(),
+          }))
+          .where('id', '=', crawl.id)
+          .where('workspace_id', '=', crawl.workspace_id)
+          .execute();
       await insertSitemapEntries(
         trx,
         crawl,
