@@ -126,20 +126,24 @@ unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.
 Worker-owned lease and crawl backstops still run in each lane, including idle
 passes. Runner and tick own background execution. After durable admission, the
-browser starts a separate authorized POST for onboarding discovery, Site Health,
+browser starts a separate authorized POST for onboarding discovery,
 Internal Links, audits, Agent turns, integration syncs, Performance range
 projections and Commerce competitor discovery. These requests reuse existing
 workers scoped to the admitted work, with bounded admission and provider
-deadlines, so initial progress does not require a new Cloud Run job. PostgreSQL
-leases arbitrate concurrent API and runner claims. Interactive crawls and
-competitor discovery also honor the shared drain lock to preserve crawler pacing.
+deadlines, so initial progress does not require a new Cloud Run job. Site
+Health crawls are the exception: only the runner drains them
+([Site Health](site-health.md)). PostgreSQL
+leases arbitrate concurrent API and runner claims. Interactive competitor
+discovery also honors the shared drain lock to preserve crawler pacing.
 Reads remain persisted-only;
 large workloads, future retries and scheduled work retain background execution.
 No per-owner daemon remains.
 One PostgreSQL advisory lock admits one drain at a time across executions.
 
 With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
-mutations per request at the PostgreSQL connection boundary. Autocommit or
+mutations per request at the PostgreSQL connection boundary, from query builder
+statements and a raw `INSERT INTO`/`UPDATE` naming the table alike (the crawl
+task writer is raw SQL). Autocommit or
 successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
 and no-op writes do not. After the request settles, it starts a bounded Cloud Run
 job-start request using service-account metadata credentials without awaiting it,
