@@ -175,6 +175,7 @@ export async function entitlementRead(
     subscription: sub
       ? {
           catalog_key: sub.catalog_key,
+          credential_mode: sub.credential_mode,
           status: sub.status,
           current_period_end: sub.current_period_end?.toISOString() ?? null,
           cancel_at_period_end: sub.cancel_at_period_end,

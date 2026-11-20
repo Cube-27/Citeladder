@@ -189,6 +189,7 @@ function activation(kind: string, catalogKey: string, amount: number, quantity =
 
 const ACTIVE_STARTER = {
   catalog_key: 'tier_1',
+  credential_mode: 'byok',
   status: 'active',
   current_period_end: '2026-09-01T00:00:00Z',
   cancel_at_period_end: false,
@@ -255,6 +256,7 @@ describe('BillingScreen', () => {
   it('renders the plan from the catalog with no retired free/paid vocabulary', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',
+      credential_mode: 'byok',
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
@@ -459,6 +461,7 @@ describe('BillingScreen', () => {
   it('requires the cancellation dialog before mutating', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',
+      credential_mode: 'byok',
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
@@ -495,6 +498,7 @@ describe('BillingScreen', () => {
   it('offers to resume a held cancellation until its deadline', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',
+      credential_mode: 'byok',
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: true,
@@ -526,6 +530,7 @@ describe('BillingScreen', () => {
   it('shows a refused cancellation once, in its dialog, and starts the next attempt clean', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',
+      credential_mode: 'byok',
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,

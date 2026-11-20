@@ -48,6 +48,7 @@ const PERMITTED_ENTITLEMENT = {
   valid_until: ENTITLEMENT_PERIOD_END,
   subscription: {
     catalog_key: 'tier_2',
+    credential_mode: 'byok',
     status: 'active',
     current_period_end: ENTITLEMENT_PERIOD_END,
     cancel_at_period_end: false,
