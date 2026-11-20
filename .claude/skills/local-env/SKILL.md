@@ -12,7 +12,9 @@ each state. Read the section you need; never print `local/env/secrets.json`.
 
 ## Serve and seed
 
-1. `docker compose up -d` from the repo root (Postgres only, 127.0.0.1:55432).
+1. `docker compose up -d db` from the repo root starts Postgres only (127.0.0.1:55432). Plain
+   `docker compose up -d` also runs the `migrate` service (migrations, the dev login and the billing
+   catalog), which a re-created database needs once before seeding.
 2. From `frontend/services/api` in the main checkout:
    - `node local/seed.ts` completes the seed (idempotent); `--fresh` rebuilds it with current dates.
    - `node local/env/serve.mjs <checkout>` serves the API (8100) and app (3001) from any checkout or

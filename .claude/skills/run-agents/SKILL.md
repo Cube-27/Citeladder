@@ -38,8 +38,8 @@ GitHub: plain git as the logged-in account, no `GH_TOKEN`, every `gh` call with 
 
 - **Shared local database.** One Postgres serves every worktree (`validate-change`'s shared-database
   rule). Schema changes go in through CI's fresh database; an agent never resets or re-creates the shared
-  one. While the owner keeps a single baseline (`docs/decisions.md`), schema changes edit
-  `0001_baseline.sql`.
+  one. Where a schema change goes (a forward migration, or an owner-authorized baseline exception) is
+  invariant 17 and `docs/decisions.md`; a task names the exception when one applies.
 - **Production is the owner's.** Resets, deploys, provisioning (`local-env`, "Production accounts") and
   any prod database session: the agent reports the exact command and the owner runs it.
 - **Owner words.** Each task quotes the owner verbatim and lists every ask; reference images are copied into
