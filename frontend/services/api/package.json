@@ -26,6 +26,7 @@
     "migrate": "node scripts/migrate-local.ts",
     "test": "vitest run",
     "test:local": "node scripts/api-test.ts",
+    "test:scale": "vitest run --config vitest.scale.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",
     "jev:calibrate": "node scripts/jev-calibration.ts",
