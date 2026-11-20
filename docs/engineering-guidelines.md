@@ -131,6 +131,21 @@ had to retrofit `QueryState` screen by screen.
 **Check:** `data?.items ?? []`, `!data` or `.length === 0` driving an empty
 state without checking `isSuccess`. `isError` ignored whenever `data` exists.
 
+### Website product pictures scale the desktop layout, never reflow
+
+**Rule:** A drawn app screen on the website (`.cl-frame--scale`) is laid
+out at its natural desktop width and height at every viewport and scaled
+whole to its frame, like a screenshot. No media or container query inside a
+screen hides, stacks or re-sizes its parts for a narrow viewport.
+**Why:** The home hero and product page heroes were reflowed into a tall,
+sidebar-less phone layout twice (#843/#845, then the `cl-figures` strip
+queries in #1058); the owner reported it both times.
+**Check:** The marketing E2E "product frames fit the viewport" asserts at
+390px that each hero screen's `offsetWidth` is its natural width and the
+drawn sidebar is visible. In review: a `max-width` media query or
+`@container` rule under `components/marketing/screens/` that targets a
+`.cl-screen` part.
+
 ## Value states
 
 ### Absence goes through `Absence` and nowhere else

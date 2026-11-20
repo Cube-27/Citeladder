@@ -511,6 +511,29 @@ test.describe('marketing routes', () => {
         expect(overflow, `${path} at ${width}px overflow`).toBeLessThanOrEqual(1);
       }
     }
+
+    // A hero picture is the desktop screen scaled down whole, never reflowed
+    // to a phone layout: natural layout width, every column, a well that ends
+    // where the scaled screen does.
+    await page.setViewportSize({ width: 390, height: 900 });
+    for (const { path, part } of [
+      { path: '/', part: '.cl-app-side' },
+      { path: '/platform', part: '.cl-screen-cols > :nth-child(2)' },
+    ]) {
+      await page.goto(path);
+      const screen = page.locator('main .cl-frame--scale .cl-screen').first();
+      await expect(screen.locator(part).first()).toBeVisible();
+      const geometry = await screen.evaluate((element: HTMLElement) => ({
+        laidOut: element.offsetWidth,
+        natural: Number.parseFloat(getComputedStyle(element).getPropertyValue('--screen-natural')),
+        drawn: element.getBoundingClientRect().height,
+        well: element.closest('.cl-frame-well')?.getBoundingClientRect().height ?? 0,
+      }));
+      expect(geometry.laidOut, `${path} layout width`).toBe(geometry.natural);
+      expect(Math.abs(geometry.well - geometry.drawn), `${path} well height`).toBeLessThanOrEqual(
+        1,
+      );
+    }
   });
 
   test('published content slugs return 200 and unknown slugs return 404', async ({ page }) => {
