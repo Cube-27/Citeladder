@@ -75,9 +75,13 @@ export function businessDraft(profile: BrandProfile, map: BusinessMap): Business
     businessModel: model.success ? model.data : null,
   };
   // Only a field a person saved is `reviewed`; a set value without that is discovery's.
+  // A field the editor hides (service areas outside a local market) is never a draft.
   const sources = fieldSources.parse(context.field_sources ?? {});
+  const hidden = (key: SuggestedField) => key === 'serviceAreas' && !showsServiceAreas(context);
   const inferred = (key: SuggestedField, field: keyof BrandProfileUpdateRequest) =>
-    sources[field] !== 'reviewed' && (key === 'businessModel' ? fields[key] : fields[key].length);
+    sources[field] !== 'reviewed' &&
+    !hidden(key) &&
+    (key === 'businessModel' ? fields[key] : fields[key].length);
   return {
     offerings: [...profile.products_services],
     ...fields,
