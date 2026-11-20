@@ -500,6 +500,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/pricing',
+    width: 'compact',
     title: 'Pricing',
     scope: 'workspace',
     screen: screens.pricing,

@@ -11,7 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { TitledSection } from '@/components/ui/section';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -175,8 +175,8 @@ export function PendingInvitations({
   // Hidden only once a read confirms there is nothing pending; a failed read says so.
   if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
-    // The table is the named region; the section only heads it.
-    <TitledSection title="Pending invitations">
+    // The table is the named region; the group only heads it.
+    <SettingsGroup title="Pending invitations" region={false}>
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}
@@ -216,7 +216,7 @@ export function PendingInvitations({
           </TableRow>
         ))}
       </DataTable>
-    </TitledSection>
+    </SettingsGroup>
   );
 }
 

@@ -3,17 +3,9 @@ import { useState, type ReactNode } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
-import { PlanRow } from '@/components/billing/plan-row';
-import { AppGrid } from '@/components/ui/app-grid';
+import { PlanCards, PlanRow } from '@/components/billing/plan-row';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { Stack } from '@/components/ui/layout';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type {
   BillingCatalog,
@@ -70,7 +62,7 @@ const MODE_NOTE: Record<CredentialMode, string | null> = {
 /**
  * A new subscription: the plans the workspace may buy, in either mode. While
  * self-serve checkout is closed the app says so instead of listing prices, as
- * the public pricing page does. Unframed: the caller puts it in its card.
+ * the public pricing page does.
  */
 export function ChoosePlan({
   catalog,
@@ -89,7 +81,7 @@ export function ChoosePlan({
   // Contact is the page's one real next step while checkout is closed.
   if (newPlanCheckoutClosed(catalog))
     return (
-      <div id="choose-plan">
+      <SettingsGroup id="choose-plan" title="Choose a plan" region={false}>
         <StateBlock
           kind="empty"
           icon={MessageSquare}
@@ -108,43 +100,44 @@ export function ChoosePlan({
             </Button>
           }
         />
-      </div>
+      </SettingsGroup>
     );
   return (
-    <Section id="choose-plan" aria-labelledby="choose-plan-title">
-      <SectionHeader>
-        <SectionTitle id="choose-plan-title">Choose a plan</SectionTitle>
-        {MODE_NOTE[mode] ? <SectionDescription>{MODE_NOTE[mode]}</SectionDescription> : null}
-      </SectionHeader>
-      <Stack as={SectionContent} gap="workspace">
-        <SegmentedControl
-          value={mode}
-          onChange={setMode}
-          options={MODES}
-          ariaLabel="Provider keys"
-          className="w-fit"
+    <SettingsGroup id="choose-plan" title="Choose a plan">
+      <SettingRows label="Billing details">
+        <SettingRow
+          label="Provider keys"
+          description={MODE_NOTE[mode]}
+          action={
+            <SegmentedControl
+              value={mode}
+              onChange={setMode}
+              options={MODES}
+              ariaLabel="Provider keys"
+            />
+          }
         />
         <BillingCountryInput country={country} setCountry={setCountry} />
         <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
-        <AppGrid layout="slips">
-          {catalog.plans.map((plan) => (
-            <PlanRow
-              key={plan.key}
-              plan={plan}
-              mode={mode}
-              currencyMinorUnits={catalog.currency_minor_units}
-              country={country}
-              billingDetails={details}
-              pending={pending && chosen === plan.key}
-              locked={!canManage || pending}
-              onCheckout={(key, billingDetails) => {
-                setChosen(key);
-                subscribe(key, billingDetails, mode);
-              }}
-            />
-          ))}
-        </AppGrid>
-      </Stack>
-    </Section>
+      </SettingRows>
+      <PlanCards>
+        {catalog.plans.map((plan) => (
+          <PlanRow
+            key={plan.key}
+            plan={plan}
+            mode={mode}
+            currencyMinorUnits={catalog.currency_minor_units}
+            country={country}
+            billingDetails={details}
+            pending={pending && chosen === plan.key}
+            locked={!canManage || pending}
+            onCheckout={(key, billingDetails) => {
+              setChosen(key);
+              subscribe(key, billingDetails, mode);
+            }}
+          />
+        ))}
+      </PlanCards>
+    </SettingsGroup>
   );
 }

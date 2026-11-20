@@ -131,7 +131,7 @@ describe('ExtraPurchases', () => {
     expect(seats).toHaveAccessibleDescription(CLOSED);
     // Each gated Buy's reason is a visible caption in its own row.
     expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
-    expect(seats.closest('[data-control-row]')).toHaveTextContent(CLOSED);
+    expect(seats.closest('[data-setting-row]')).toHaveTextContent(CLOSED);
     const markets = screen.getByRole('button', { name: 'Buy Markets' });
     expect(markets).toHaveAccessibleDescription(captions === 2 ? CLOSED : '');
     fireEvent.click(seats);

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { settingRowsClasses } from '@/components/ui/setting-row';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { providerQueries } from '@/lib/api/providers';
 import type { LogicalEngine } from '@citeladder/contracts';
@@ -9,6 +10,9 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { ProviderRow } from './provider-row';
 import { StateBlock } from '@/components/ui/state-block';
 
+/** A ruled list's rows: 12 either side of each rule, flush at the list's own edges. */
+const LEDGER_ROWS = '*:py-3 *:first:pt-0 *:last:pb-0';
+
 /**
  * The workspace's BYOK credentials, one row per provider. Shared by Settings
  * and the launch dialog's inline setup so both connect the same way.
@@ -16,13 +20,13 @@ import { StateBlock } from '@/components/ui/state-block';
  * Rows are driven by `/provider-catalog`: a transport appears once, with every
  * engine it measures, so one DataForSEO login covers all its surfaces.
  * `expandEngine` opens the row that measures that engine on arrival (the
- * launch dialog's clicked engine chip). Settings draws no rule between rows
- * (`ruled={false}`); the launch dialog keeps them.
+ * launch dialog's clicked engine chip). Settings draws the rows in its
+ * group's frame (`framed`); the launch dialog keeps a ruled list.
  */
 export function ProviderList({
   expandEngine = null,
-  ruled = true,
-}: Readonly<{ expandEngine?: LogicalEngine | null; ruled?: boolean }>) {
+  framed = false,
+}: Readonly<{ expandEngine?: LogicalEngine | null; framed?: boolean }>) {
   const catalogQuery = useQuery(providerQueries.catalog());
   const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
@@ -60,7 +64,7 @@ export function ProviderList({
   const connections = connectionsQuery.data ?? [];
   const expand = expandEngine ? transportForEngine(groups, expandEngine) : null;
   return (
-    <ul className={ruled ? ledgerClasses() : 'grid'}>
+    <ul className={framed ? settingRowsClasses() : ledgerClasses(LEDGER_ROWS)}>
       {groups.map((group) => (
         <ProviderRow
           key={group.transport}

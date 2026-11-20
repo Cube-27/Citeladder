@@ -1,6 +1,5 @@
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
 import { Tag } from '@/components/ui/tag';
-import { BillingPlan } from '@/components/ui/billing-plan';
 import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { Notice } from '@/components/ui/notice';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
 /** Subscriptions a customer can still cancel; any other state has nothing left to cancel. */
 const CANCELLABLE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
@@ -86,6 +86,7 @@ function ScheduledChange({
   );
 }
 
+/** What the workspace is on: the plan's row, its notices above it. */
 export function CurrentPlan({
   entitlement,
   currentPlan,
@@ -101,52 +102,82 @@ export function CurrentPlan({
 }>) {
   const subscription = entitlement?.subscription ?? null;
   return (
-    <BillingPlan
-      label="Current plan"
-      name={currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
-      // The kind of access is a classification, not a state: neutral. The
-      // unresolved case is a fault, and the warning below says so.
-      badge={<Tag>{accessLabel(entitlement)}</Tag>}
-      detail={
-        <SubscriptionDetail
-          subscription={subscription}
-          periodEnd={subscription?.current_period_end}
-        />
-      }
-      action={
-        canManage && subscription ? (
-          <CancellationControl subscription={subscription} cancellation={cancellation} />
-        ) : null
-      }
-    >
+    <SettingsGroup title="Current plan">
       <PlanNotices entitlement={entitlement} planName={planName} />
-      <ResumeNotice subscription={subscription} cancellation={cancellation} />
-      <CancelDialog cancellation={cancellation} />
-    </BillingPlan>
+      <SettingRows>
+        <SettingRow
+          label={currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
+          description={
+            <SubscriptionDetail
+              subscription={subscription}
+              periodEnd={subscription?.current_period_end}
+            />
+          }
+          action={
+            <>
+              {/* The kind of access is a classification, not a state: neutral. The
+                  unresolved case is a fault, and the warning above says so. */}
+              <Tag>{accessLabel(entitlement)}</Tag>
+              {canManage && subscription?.resumable_until ? (
+                <Button
+                  variant="secondary"
+                  disabled={cancellation.resuming}
+                  onClick={cancellation.resume}
+                >
+                  {cancellation.resuming ? 'Resuming…' : 'Resume plan'}
+                </Button>
+              ) : null}
+            </>
+          }
+        >
+          <ResumeNotice subscription={subscription} cancellation={cancellation} />
+        </SettingRow>
+      </SettingRows>
+    </SettingsGroup>
   );
 }
 
-/** Resume a held cancellation, or schedule one for a plan that renews: the page's one danger action. */
-function CancellationControl({
-  subscription,
+/**
+ * Scheduling a cancellation for a plan that renews: the page's one danger
+ * action, so its own last group. Nothing to show once one is scheduled.
+ */
+export function CancelPlan({
+  entitlement,
+  canManage,
   cancellation,
-}: Readonly<{ subscription: Subscription; cancellation: BillingCancellation }>) {
-  if (subscription.resumable_until)
-    return (
-      <Button variant="secondary" disabled={cancellation.resuming} onClick={cancellation.resume}>
-        {cancellation.resuming ? 'Resuming…' : 'Resume plan'}
-      </Button>
-    );
-  if (subscription.cancel_at_period_end || !CANCELLABLE_STATUSES.has(subscription.status))
+}: Readonly<{
+  entitlement: BillingEntitlement | null;
+  canManage: boolean;
+  cancellation: BillingCancellation;
+}>) {
+  const subscription = entitlement?.subscription ?? null;
+  if (
+    !canManage ||
+    !subscription ||
+    subscription.resumable_until ||
+    subscription.cancel_at_period_end ||
+    !CANCELLABLE_STATUSES.has(subscription.status)
+  )
     return null;
   return (
-    <Button
-      variant="danger"
-      disabled={cancellation.pending}
-      onClick={() => cancellation.setOpen(true)}
-    >
-      {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
-    </Button>
+    <SettingsGroup title="Cancel plan">
+      <SettingRows>
+        <SettingRow
+          label="Cancel at period end"
+          description="Access runs to the end of this period. No refund."
+          action={
+            <Button
+              variant="danger"
+              disabled={cancellation.pending}
+              onClick={() => cancellation.setOpen(true)}
+            >
+              {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+            </Button>
+          }
+        />
+      </SettingRows>
+      <CancelDialog cancellation={cancellation} />
+    </SettingsGroup>
   );
 }
 

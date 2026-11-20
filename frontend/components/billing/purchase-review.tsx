@@ -4,14 +4,7 @@ import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { BillingCatalog } from '@/lib/api/billing';
@@ -49,16 +42,33 @@ export function PurchaseReview({
   const upgradedPlan =
     prepared.kind === 'upgrade' ? catalogPlanByKey(catalog, prepared.catalog_key) : undefined;
   return (
-    <Section aria-labelledby="purchase-review-title">
-      <SectionHeader>
-        <SectionTitle id="purchase-review-title">{KIND_TITLE[prepared.kind]}</SectionTitle>
-        <SectionDescription>
+    <SettingsGroup
+      title={KIND_TITLE[prepared.kind]}
+      description={
+        <>
           {itemName(prepared.catalog_key)}
           {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
           {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}
-        </SectionDescription>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact">
+        </>
+      }
+    >
+      <SettingRows
+        foot={
+          <>
+            <Button variant="quiet" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
+              <Icon icon={X} />
+              Not now
+            </Button>
+            <Button
+              variant="primary"
+              disabled={checkout.confirming}
+              onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
+            >
+              {checkout.confirming ? 'Opening checkout…' : 'Confirm and pay'}
+            </Button>
+          </>
+        }
+      >
         <BillingQuoteSummary
           quote={prepared.quote}
           currencyMinorUnits={catalog.currency_minor_units}
@@ -78,20 +88,7 @@ export function PurchaseReview({
           </p>
         ) : null}
         <CheckoutConsent recurring={prepared.kind === 'base'} />
-        <Inline className="flex-wrap justify-end">
-          <Button variant="quiet" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
-            <Icon icon={X} />
-            Not now
-          </Button>
-          <Button
-            variant="primary"
-            disabled={checkout.confirming}
-            onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
-          >
-            {checkout.confirming ? 'Opening checkout…' : 'Confirm and pay'}
-          </Button>
-        </Inline>
-      </Stack>
-    </Section>
+      </SettingRows>
+    </SettingsGroup>
   );
 }

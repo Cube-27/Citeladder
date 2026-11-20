@@ -306,15 +306,6 @@ export function TreeItemForm({
 }
 
 /**
- * A card's list of `ItemRow`s, which lay out by its width rather than the
- * window's. Its rows stay inside the content column, their text lined up
- * with the section head, apart by their padding with no rule between.
- */
-export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="@container min-w-0">{children}</ul>;
-}
-
-/**
  * A two-line item in a list its card frames (a data source and its
  * property), one grid: a 20px icon, the text column (the title, which wraps
  * and never cuts, over one caption line), the item's status, then its

@@ -3,10 +3,9 @@ import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 
-import { Stack } from '@/components/ui/layout';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * A website page in a new tab. The origin may be unset in development (a
@@ -55,30 +54,38 @@ export function BillingSupport({
   const email = contact?.email || PARENT_COMPANY.email;
   const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
-    <Section aria-labelledby="billing-support-title">
-      <SectionHeader>
-        <SectionTitle id="billing-support-title">Billing help</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact">
-        <p className={textRole('body')}>
-          Email{' '}
-          <TextLink asChild text="inherit">
-            <a href={`mailto:${email}`}>{email}</a>
-          </TextLink>
-          {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
-          <TextLink asChild variant="external" text="inherit">
-            <a href={url} target="_blank" rel="noreferrer" className="whitespace-nowrap">
-              contact form
-            </a>
-          </TextLink>
-          .
-        </p>
-        <p className={textRole('caption')}>
-          <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
-          <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
-          <PolicyLink path="/terms">Terms of Service</PolicyLink>
-        </p>
-      </Stack>
-    </Section>
+    <SettingsGroup title="Billing help">
+      <SettingRows>
+        <SettingRow
+          label="Email"
+          value={
+            <TextLink asChild text="inherit">
+              <a href={`mailto:${email}`}>{email}</a>
+            </TextLink>
+          }
+        />
+        {contact?.phone ? <SettingRow label="Phone" value={contact.phone} /> : null}
+        <SettingRow
+          label="Contact"
+          value={
+            <TextLink asChild variant="external" text="inherit">
+              <a href={url} target="_blank" rel="noreferrer" className="whitespace-nowrap">
+                contact form
+              </a>
+            </TextLink>
+          }
+        />
+        <SettingRow
+          label="Policies"
+          value={
+            <>
+              <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
+              <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
+              <PolicyLink path="/terms">Terms of Service</PolicyLink>
+            </>
+          }
+        />
+      </SettingRows>
+    </SettingsGroup>
   );
 }

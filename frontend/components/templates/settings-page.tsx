@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
-import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
+import { PageFrame, type PageFrameSlots } from './page-frame';
 
 /**
- * Settings: the page header, tab strip, then one section per group in the
- * route's compact column, a rule between groups. A group's head sits on top
- * and its rows (`SettingRow`) below; only a form field stops at 640 (globals.css).
+ * The Settings layout (docs/design.md): the page header and tab strip, then
+ * the route's column holding a stack of `SettingsGroup`s 32 apart, each tab
+ * panel stacking its own the same way (globals.css, `data-settings-sections`).
  */
 export function SettingsPage({
   children,
@@ -14,7 +14,7 @@ export function SettingsPage({
   return (
     <PageFrame {...slots}>
       <div data-settings-sections="" className="min-w-0">
-        <PageSections>{children}</PageSections>
+        {children}
       </div>
     </PageFrame>
   );

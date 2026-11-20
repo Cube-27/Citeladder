@@ -16,12 +16,10 @@ import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { PasswordInput } from '@/components/ui/password-field';
-import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -71,40 +69,32 @@ function SignInMethods({
  * why under itself and takes focus. A rejected change (a wrong current
  * password) is said under Current password.
  */
-function PasswordForm({ form }: Readonly<{ form: ReturnType<typeof usePasswordForm> }>) {
+function PasswordFields({ form }: Readonly<{ form: ReturnType<typeof usePasswordForm> }>) {
   const {
     register,
     formState: { errors },
   } = form.fields;
   return (
-    <form noValidate onSubmit={(event) => void form.submit(event)}>
-      <SettingRows>
-        <SettingRow label="Password" />
-        {PASSWORD_INPUTS.map((input) => (
-          <SettingField
-            key={input.name}
-            label={input.label}
-            required
-            error={errors[input.name]?.message}
-          >
-            {(control) => (
-              <PasswordInput
-                label={input.label}
-                autoComplete={input.autoComplete}
-                placeholder={input.placeholder}
-                inputProps={register(input.name)}
-                control={control}
-              />
-            )}
-          </SettingField>
-        ))}
-        <div className="flex justify-end">
-          <Button type="submit" variant="primary" disabled={form.change.isPending}>
-            Change password and sign out
-          </Button>
-        </div>
-      </SettingRows>
-    </form>
+    <SettingRow label="Password">
+      {PASSWORD_INPUTS.map((input) => (
+        <SettingField
+          key={input.name}
+          label={input.label}
+          required
+          error={errors[input.name]?.message}
+        >
+          {(control) => (
+            <PasswordInput
+              label={input.label}
+              autoComplete={input.autoComplete}
+              placeholder={input.placeholder}
+              inputProps={register(input.name)}
+              control={control}
+            />
+          )}
+        </SettingField>
+      ))}
+    </SettingRow>
   );
 }
 
@@ -187,8 +177,8 @@ function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Erro
 }
 
 /**
- * The account's sign-in, password and session controls, as settings
- * sections. Place it inside `SectionStack`.
+ * The account's sign-in, password and session controls, as two settings
+ * groups.
  */
 export default function AccountSecurity() {
   const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
@@ -211,18 +201,30 @@ export default function AccountSecurity() {
   });
   const hasPassword = security.data?.methods.includes('password') ?? false;
   const canLinkGoogle = hasPassword && !security.data?.methods.includes('google');
+  const dirty = passwordForm.fields.formState.isDirty;
   return (
     <>
-      {/* One card for how you sign in: the methods, the password and Google. */}
-      <Section aria-labelledby="settings-sign-in-title">
-        <SectionHeader>
-          <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
-        </SectionHeader>
-        <Stack gap="workspace">
-          <SettingRows>
+      {/* One group for how you sign in: the methods, the password and Google. */}
+      <SettingsGroup title="Sign-in">
+        {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
+        <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
+        <form noValidate onSubmit={(event) => void passwordForm.submit(event)}>
+          <SettingRows
+            foot={
+              hasPassword ? (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!dirty || passwordForm.change.isPending}
+                >
+                  Change password and sign out
+                </Button>
+              ) : null
+            }
+          >
             <SignInMethods security={security} />
             {hasPassword ? (
-              <PasswordForm form={passwordForm} />
+              <PasswordFields form={passwordForm} />
             ) : (
               <SettingRow
                 label="Password"
@@ -250,14 +252,9 @@ export default function AccountSecurity() {
               />
             ) : null}
           </SettingRows>
-          {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
-          <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
-        </Stack>
-      </Section>
-      <Section aria-labelledby="settings-sessions-title">
-        <SectionHeader>
-          <SectionTitle id="settings-sessions-title">Sessions</SectionTitle>
-        </SectionHeader>
+        </form>
+      </SettingsGroup>
+      <SettingsGroup title="Sessions">
         <SettingRows>
           <SettingRow
             label="Sign out all sessions"
@@ -276,7 +273,7 @@ export default function AccountSecurity() {
             }
           />
         </SettingRows>
-      </Section>
+      </SettingsGroup>
       <Dialog
         open={confirm === 'sign-out'}
         onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}

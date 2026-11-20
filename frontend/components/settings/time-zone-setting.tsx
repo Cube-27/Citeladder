@@ -1,18 +1,15 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { Select } from '@/components/ui/select';
-import { SettingRow } from '@/components/ui/setting-row';
+import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import {
   saveTimeZonePreference,
   useDisplayTimeZone,
   useTimeZonePreference,
 } from '@/lib/display-timezone';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type Choice = 'auto' | 'UTC' | 'custom';
 
@@ -57,12 +54,18 @@ export function TimeZoneSetting() {
     }
   };
 
+  const custom = choice === 'custom';
   return (
-    <Section aria-labelledby="settings-timezone-title">
-      <SectionHeader>
-        <SectionTitle id="settings-timezone-title">Display timezone</SectionTitle>
-      </SectionHeader>
-      <Stack gap="item">
+    <SettingsGroup title="Display timezone">
+      <SettingRows
+        foot={
+          custom ? (
+            <Button variant="secondary" disabled={!namedZone.trim()} onClick={saveNamedZone}>
+              Save timezone
+            </Button>
+          ) : null
+        }
+      >
         <SettingRow
           label="Timezone"
           description={displayZone}
@@ -77,27 +80,24 @@ export function TimeZoneSetting() {
         >
           {error?.at === 'choice' ? <Notice tone="negative">{error.message}</Notice> : null}
         </SettingRow>
-        {choice === 'custom' ? (
-          <Field label="IANA timezone" error={error?.at === 'zone' ? error.message : undefined}>
+        {custom ? (
+          <SettingField
+            label="IANA timezone"
+            error={error?.at === 'zone' ? error.message : undefined}
+          >
             {(field) => (
-              <Inline className="flex-wrap">
-                <Input
-                  {...field}
-                  value={namedZone}
-                  onChange={(event) => {
-                    setEdit({ choice: 'custom', namedZone: event.target.value });
-                  }}
-                  placeholder="Asia/Kolkata"
-                  className="min-w-56 flex-1"
-                />
-                <Button variant="secondary" onClick={saveNamedZone}>
-                  Save timezone
-                </Button>
-              </Inline>
+              <Input
+                {...field}
+                value={namedZone}
+                onChange={(event) => {
+                  setEdit({ choice: 'custom', namedZone: event.target.value });
+                }}
+                placeholder="Asia/Kolkata"
+              />
             )}
-          </Field>
+          </SettingField>
         ) : null}
-      </Stack>
-    </Section>
+      </SettingRows>
+    </SettingsGroup>
   );
 }
