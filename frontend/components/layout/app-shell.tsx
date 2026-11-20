@@ -84,8 +84,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
  * The sidebar: the header (project switcher, Settings, collapse toggle), the
  * Dashboard | Agent switch, the mode's list (the route decides the mode),
  * then Integrations and the account. Collapsed (never in the drawer) it is
- * the 56px rail: one button per group, flyouts for the groups, and nothing
- * scrolls.
+ * the 56px rail: one button per group and flyouts for the groups.
  */
 function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   const collapsed = useSidebarCollapsed();

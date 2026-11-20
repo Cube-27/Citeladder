@@ -295,13 +295,20 @@ export function RailFlyoutSlot({ children }: Readonly<{ children: ReactNode }>) 
   return <div className="px-2 py-1">{children}</div>;
 }
 
-/** The rail's buttons, top to bottom in one column on the centre axis. */
+/**
+ * The rail's buttons, top to bottom in one column on the centre axis. In a
+ * window too short for all of them (under 520) the column scrolls, its
+ * scrollbar hidden, rather than cutting off the last groups.
+ */
 export function SidebarRailList({
   label,
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <nav aria-label={label} className="min-h-0 flex-1 overflow-hidden">
+    <nav
+      aria-label={label}
+      className="min-h-0 flex-1 [scrollbar-width:none] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
+    >
       <ul className="flex flex-col items-center">{children}</ul>
     </nav>
   );
