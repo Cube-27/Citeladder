@@ -124,7 +124,7 @@ function widthOf(column: DataTableColumn): DataTableColumnWidth {
 }
 
 /** Whether the column takes what the hugging columns leave. */
-export function isFlexible(column: DataTableColumn): boolean {
+function isFlexible(column: DataTableColumn): boolean {
   return COLUMN_WIDTH[widthOf(column)].kind === 'rest';
 }
 
