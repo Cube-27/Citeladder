@@ -4,13 +4,18 @@
  * Merging moves every labelled reason onto the kept group; deleting a group
  * deletes its reasons, so it no longer reads as an objection.
  */
+import { randomUUID } from 'node:crypto';
+
 import { objectionGroupRequestSchema } from '@citeladder/contracts/probes';
+import type { Insertable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
+import type { ProbeAnswerItems } from '../generated/db-schema.ts';
+import { nameKey } from './label-model.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 
@@ -31,6 +36,31 @@ export function listGroups(db: Database, scope: Scope) {
     .orderBy('created_at')
     .orderBy('id')
     .execute();
+}
+
+/** Creates a probe's new groups (a concurrent probe may have made one) and maps every name to its id. */
+export async function saveGroups(db: Database, scope: Scope, names: readonly string[], at: Date) {
+  if (names.length)
+    await db
+      .insertInto('probe_objection_groups')
+      .values(
+        names.map((name) => ({
+          id: randomUUID(),
+          workspace_id: scope.workspaceId,
+          project_id: scope.projectId,
+          name,
+          created_at: at,
+          updated_at: at,
+        })),
+      )
+      .onConflict((conflict) => conflict.doNothing())
+      .execute();
+  const groups = await listGroups(db, scope);
+  return new Map(groups.map((group) => [nameKey(group.name), group.id]));
+}
+
+export async function saveAnswerItems(db: Database, rows: Insertable<ProbeAnswerItems>[]) {
+  if (rows.length) await db.insertInto('probe_answer_items').values(rows).execute();
 }
 
 export async function renameGroup(
