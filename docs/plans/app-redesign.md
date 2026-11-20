@@ -42,6 +42,10 @@ sites are out of scope.
   Owner, 2026-11-20.
 - **AR-11 Code size.** A PR that grows the line count needs a reason; never
   pad or game line counts either way. Owner, 2026-11-20.
+- **AR-12 Sign-in and setup.** Sign-in and the account pages keep their split
+  screen with the product showcase and the form unboxed on the surface (no
+  card), and setup keeps its own layout; both take the app's new look.
+  Owner, 2026-11-20.
 
 ## Visual spec and standard layouts
 
