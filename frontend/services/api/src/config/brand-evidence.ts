@@ -82,10 +82,12 @@ export const brandEvidence = {
     'wishlist',
   ],
   // A retailer's customer-service pages often sit under `services/` or `store/`,
-  // which rank as offering hubs; whole phrases, so "Gift hampers" stays.
+  // which rank as offering hubs; these rank last instead. Whole phrases, so
+  // "Gift hampers" is unaffected; "click collect" is "Click & Collect".
   utility_link_phrases: [
     'buy now pay later',
     'click and collect',
+    'click collect',
     'find a store',
     'gift card',
     'gift cards',

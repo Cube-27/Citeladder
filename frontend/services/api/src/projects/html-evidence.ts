@@ -93,13 +93,18 @@ function hasPhrase(words: readonly string[], phrases: readonly string[]) {
   const text = ` ${words.join(' ')} `;
   return phrases.some((phrase) => text.includes(` ${phrase} `));
 }
-/** An account, legal or customer-service page, never an offering. */
-function isUtilityLink(words: readonly string[], url: URL, label: string) {
-  return (
-    hasTerm(words, cfg.utility_link_terms) ||
-    hasPhrase(tokens(url.pathname), cfg.utility_link_phrases) ||
-    hasPhrase(tokens(label), cfg.utility_link_phrases)
-  );
+/**
+ * A link's rank among offerings: a customer-service phrase last (a gift-card
+ * seller's only product page still counts), an offering hub first.
+ */
+function offeringRank(link: { url: string; label: string }) {
+  const path = tokens(new URL(link.url).pathname);
+  if (
+    hasPhrase(path, cfg.utility_link_phrases) ||
+    hasPhrase(tokens(link.label), cfg.utility_link_phrases)
+  )
+    return -1;
+  return Number(hasTerm(path, cfg.offering_hub_terms));
 }
 function labelFamily(label: string) {
   const words = label.toLowerCase().split(/\s+/u);
@@ -129,7 +134,7 @@ export function offeringLinks(pages: readonly PageEvidence[]) {
         cfg.locale_labels.includes(label) ||
         link.label.length < cfg.offering_label_min_chars ||
         link.label.split(/\s+/u).length > cfg.offering_label_max_words ||
-        isUtilityLink(words, url, label) ||
+        hasTerm(words, cfg.utility_link_terms) ||
         hasTerm(words, cfg.editorial_link_terms) ||
         hasTerm(tokens(label), cfg.junk_label_terms) ||
         new RegExp(cfg.detail_path_pattern, 'iu').test(url.href) ||
@@ -140,11 +145,7 @@ export function offeringLinks(pages: readonly PageEvidence[]) {
       seen.add(link.url);
       return true;
     })
-    .sort(
-      (a, b) =>
-        Number(hasTerm(tokens(new URL(b.url).pathname), cfg.offering_hub_terms)) -
-        Number(hasTerm(tokens(new URL(a.url).pathname), cfg.offering_hub_terms)),
-    );
+    .sort((a, b) => offeringRank(b) - offeringRank(a));
   const prefixes = new Map<string, number>();
   const sourcePages = new Map<string, number>();
   const families = new Map<string, number>();
