@@ -16,7 +16,7 @@
         shell's places, until React replaces #root. The sidebar is 224 from
         1280px, 200 from 900, none below, or the stored width; 56 with no rows
         when the preference script finds it collapsed. It pads 8 and stacks its
-        parts 8 apart: the switcher's block (44) in a 44 header, the 28-high
+        parts 8 apart (the selected segment opaque, state-selected over the ground): the switcher's block (44) in a 44 header, the 28-high
         framed switch, rows 28 high 2 apart (44 under a coarse pointer). The
         panel sits 8 from the window (none on the sidebar's side, none below
         900) with a 44 header. boot-shell.test.ts holds these to the live
@@ -139,7 +139,7 @@
       }
       [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
       [data-boot-mode='agent'] [data-boot-seg='agent'] {
-        background: rgb(0 0 0 / 6%);
+        background: #e6e6e8;
         color: #111214;
       }
       .boot-list {
@@ -262,7 +262,7 @@
       }
       [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
       [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
-        background: rgb(255 255 255 / 7%);
+        background: #1a1b1c;
       }
     </style>
     <link rel="icon" href="/favicon.ico" sizes="any" />
