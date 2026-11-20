@@ -118,9 +118,11 @@ export function EditableNameRow({
           variant="secondary"
           disabled={pending || !editing.trim()}
           onClick={() => {
-            // The draft stays open until the save lands, so a failed save loses nothing.
-            onSave(editing.trim()).then(
-              () => setEditing(null),
+            // The draft stays open until the save lands, so a failed save loses
+            // nothing; a draft edited since the save was sent stays open too.
+            const sent = editing;
+            onSave(sent.trim()).then(
+              () => setEditing((current) => (current === sent ? null : current)),
               () => undefined,
             );
           }}

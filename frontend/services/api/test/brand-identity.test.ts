@@ -224,6 +224,13 @@ describe('project themes', () => {
     const delivery = await add('Delivery');
     expect([price.status, delivery.status]).toEqual([201, 201]);
     expect([(await add('price')).status, (await add('other')).status]).toEqual([409, 422]);
+    // Inner spaces collapse, so a spacing variant is the same theme.
+    const spaced = await add('Customer   support');
+    expect([spaced.body.name, (await add('customer support')).status]).toEqual([
+      'Customer support',
+      409,
+    ]);
+    await request(`/themes/${spaced.body.id}`, { method: 'DELETE' });
     const renamed = await call<Theme>(`/themes/${delivery.body.id}`, {
       method: 'PATCH',
       body: { name: 'Delivery speed' },

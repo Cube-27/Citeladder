@@ -23,11 +23,11 @@ import type { ProjectScope } from './brand-profile.ts';
 const limits = policy.perception.project_themes;
 
 export const themeRequest = projectThemeRequestSchema.extend({
+  // Spaces collapse as perception matches names, so two names never read as one theme.
   name: z
     .string()
-    .trim()
-    .min(1)
-    .max(limits.name_max_chars)
+    .transform((name) => name.replaceAll(/\s+/gu, ' ').trim())
+    .pipe(z.string().min(1).max(limits.name_max_chars))
     .refine((name) => name.toLowerCase() !== limits.fallback.toLowerCase(), {
       message: `${limits.fallback} is every project's fallback theme`,
     }),
