@@ -62,6 +62,7 @@ export const projectKeys = {
   brandProfile: (scope: ProjectScope) => projects.read('brand-profile', scope),
   businessMap: (scope: ProjectScope) => projects.read('business-map', scope),
   brandFacts: (scope: ProjectScope) => projects.read('brand-facts', scope),
+  themes: (scope: ProjectScope) => projects.read('themes', scope),
   markets: (scope: ProjectScope) => projects.read('markets', scope),
 };
 

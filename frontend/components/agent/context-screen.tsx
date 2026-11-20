@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { AgentInstructionsCard, useAgentInstructions } from '@/components/agent/agent-instructions';
 import { BrandAliasesPanel } from '@/components/knowledge-base/brand-aliases-panel';
 import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
+import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-panel';
 import {
   AudienceCard,
   CompanyFactsCard,
@@ -38,7 +39,8 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
 
 /**
  * What the agent knows about the business before it reads any evidence, one
- * tab per subject: the company facts, audience and offerings, the read-only
+ * tab per subject: the company facts, audience and offerings, the themes
+ * Perception classifies answers against, the read-only
  * business map the Prompt Builder edits, the tracked competitors, the pilot's
  * Brand facts, and the project's Agent instructions. Each tab is one or two
  * sections of setting rows; a form section carries its own Save in its foot.
@@ -94,6 +96,7 @@ function ContextPanels({
   brandFacts: ReactNode;
   instructions: ReactNode;
 }>) {
+  const mayEdit = useWorkspaceCapability('write');
   return (
     <>
       <TabPanel value="facts">
@@ -105,6 +108,9 @@ function ContextPanels({
         <ProfileTab profile={profile} form={form}>
           <AudienceCard form={form} />
         </ProfileTab>
+      </TabPanel>
+      <TabPanel value="themes">
+        <ProjectThemesPanel scope={{ workspaceId, projectId: project.id }} mayEdit={mayEdit} />
       </TabPanel>
       <TabPanel value="map">
         {profile.data ? (
