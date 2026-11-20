@@ -1,80 +1,79 @@
-/* Experiment (owner, 2026-11-20): the home hero as one lit stage, product
-   image included. From the bottom up: a near-black base, twelve hairline
-   columns fading out toward the top, a wide amber glow anchored at the foot,
-   a light beam (a hot core in a blurred halo) rising right of centre, and a
-   fine grain. The beam and glow breathe slowly. The product image has no
-   panel and fades out at its foot into the glow; the stage fades into the
-   page under it. Colours are the site-hero tokens in globals.css. */
+/* Experiment (owner, 2026-11-20): the home page's whole background, fixed to
+   the viewport while the page scrolls over it. From the bottom up: a
+   near-black base, twelve hairline columns fading out toward the top, a wide
+   amber glow anchored at the viewport's foot, a light beam (a hot core in a
+   blurred halo) rising right of centre, and a fine grain. The beam breathes
+   slowly. The hero's product image has no panel and fades out at its foot.
+   Colours are the site-hero tokens in globals.css. */
 
-.cl-lhero {
+.cl-landing-backdrop {
   --lb-grain: 0.05;
-  --lb-foot: 160px;
 
-  position: relative;
-  isolation: isolate;
+  position: fixed;
+  z-index: -1;
+  inset: 0;
   overflow: hidden;
-  padding-bottom: 96px;
+  pointer-events: none;
   background:
-    linear-gradient(to bottom, transparent calc(100% - var(--lb-foot)), var(--site-page)),
     radial-gradient(
-      70% 62% at 50% 96%,
+      75% 70% at 50% 105%,
       var(--color-site-hero-amber),
-      var(--color-site-hero-umber) 55%,
+      var(--color-site-hero-umber) 50%,
       transparent
     ),
     var(--color-site-hero-base);
 }
 
-:root[data-theme='dark'] .cl-lhero {
+:root[data-theme='dark'] .cl-landing-backdrop {
   --lb-grain: 0.07;
 }
 
-/* Twelve hairline columns, faintest at the top. */
-.cl-lhero::before,
-.cl-lhero::after {
+.cl-landing-backdrop::before,
+.cl-landing-backdrop::after {
   position: absolute;
-  z-index: -3;
   inset: 0;
   content: '';
-  pointer-events: none;
 }
 
-.cl-lhero::before {
+/* Twelve hairline columns, faintest at the top. */
+.cl-landing-backdrop::before {
   background: linear-gradient(90deg, var(--color-site-hero-line) 0 1px, transparent 1px) 0 0 /
     calc(100% / 12) 100%;
-  mask-image: linear-gradient(transparent, currentcolor 60%, transparent);
+  mask-image: linear-gradient(transparent, currentcolor 70%);
 }
 
-.cl-lhero::after {
-  z-index: -1;
+.cl-landing-backdrop::after {
   background: var(--site-noise);
   mix-blend-mode: overlay;
   opacity: var(--lb-grain);
 }
 
-/* The beam, drawn on the container so it measures from the hero's foot:
-   a blurred halo behind a narrow hot core, both breathing. */
-.cl-lhero > .cl-container::before,
-.cl-lhero > .cl-container::after {
+/* The beam: a blurred halo behind a narrow hot core, rising from the foot. */
+.cl-landing-backdrop > i {
   position: absolute;
-  z-index: -2;
-  bottom: calc(var(--lb-foot) * 0.6);
+  bottom: 0;
   left: 58%;
   height: 55%;
-  content: '';
-  pointer-events: none;
-  transform: translateX(-50%);
   transform-origin: bottom;
   animation: lb-breathe var(--motion-breathe) var(--ease-breathe) infinite;
 }
 
-.cl-lhero > .cl-container::before {
+.cl-landing-backdrop > i::before,
+.cl-landing-backdrop > i::after {
+  position: absolute;
+  bottom: 0;
+  height: 100%;
+  content: '';
+  transform: translateX(-50%);
+}
+
+.cl-landing-backdrop > i::before {
   width: 72px;
   background: linear-gradient(to top, var(--color-site-hero-halo), transparent);
   filter: blur(38px);
 }
 
-.cl-lhero > .cl-container::after {
+.cl-landing-backdrop > i::after {
   width: 3px;
   background: linear-gradient(
     to top,
@@ -89,24 +88,23 @@
   0%,
   100% {
     opacity: 0.8;
-    transform: translateX(-50%) scaleY(0.92);
+    transform: scaleY(0.92);
   }
 
   50% {
     opacity: 1;
-    transform: translateX(-50%) scaleY(1);
+    transform: scaleY(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cl-lhero > .cl-container::before,
-  .cl-lhero > .cl-container::after {
+  .cl-landing-backdrop > i {
     animation: none;
   }
 }
 
-/* The product image: no panel, a little more room above it, and a foot that
-   fades out into the glow. */
+/* The hero's product image: no panel, more room above it, and a foot that
+   fades out into the background. */
 @media (min-width: 1024px) {
   .cl-lhero .cl-lhero-frame {
     margin-top: 120px;
