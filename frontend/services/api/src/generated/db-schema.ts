@@ -2388,17 +2388,6 @@ export interface ProjectMarkets {
   workspace_id: string;
 }
 
-export interface ProjectThemes {
-  created_at: Timestamp;
-  id: string;
-  name: string;
-  position: number;
-  project_id: string;
-  source: string;
-  updated_at: Timestamp;
-  workspace_id: string;
-}
-
 export interface Projects {
   benchmark_mode: string;
   brand_name: string;
@@ -2417,6 +2406,17 @@ export interface Projects {
   subindustry: string;
   updated_at: Timestamp;
   website_url: string;
+  workspace_id: string;
+}
+
+export interface ProjectThemes {
+  created_at: Timestamp;
+  id: string;
+  name: string;
+  position: number;
+  project_id: string;
+  source: string;
+  updated_at: Timestamp;
   workspace_id: string;
 }
 
