@@ -41,7 +41,9 @@ export function StepsLayout<T extends string>({
   const index = steps.findIndex((step) => step.value === current);
   return (
     <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 min-w-0 flex-col">
-      <div className="desktop:flex-row flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
+      {/* `relative` contains absolute descendants (`sr-only` text); without it they
+          escape the clip, lengthen the document and the window scrolls the shell away. */}
+      <div className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
         <nav aria-label={label} className="flex w-56 shrink-0 flex-col">
           <ol className="flex min-w-0 flex-col gap-1">
             {steps.map((step, position) => (
