@@ -24,6 +24,7 @@ const config = scoringConfig({
   ],
 });
 const limits = { max_entities: 8, max_passage_chars_per_entity: 1200 };
+const plain = { languageCode: 'en', config, policy: limits, promptNamesBrand: false };
 
 function pkgFor(answer: string) {
   return {
@@ -31,7 +32,7 @@ function pkgFor(answer: string) {
     template_version: 't1',
     language: 'en',
     prompt: 'best tools?',
-    entities: entityPassages({ answer, languageCode: 'en', config, policy: limits }),
+    entities: entityPassages({ ...plain, answer }),
   };
 }
 
@@ -39,7 +40,7 @@ describe('perception passages', () => {
   it('sends the naming sentence plus one either side, brand first, competitors by first mention', () => {
     const answer =
       'Intro line. Then more. Rival is cheap. Filler one. Filler two. Filler three. Acme is great. Acme support is slow. End.';
-    expect(entityPassages({ answer, languageCode: 'en', config, policy: limits })).toEqual([
+    expect(entityPassages({ ...plain, answer })).toEqual([
       {
         entity_id: 'brand:acme',
         name: 'Acme',
@@ -59,7 +60,7 @@ describe('perception passages', () => {
 
   it('stores code-point offsets with astral and CJK text before the mention', () => {
     const answer = '😀😀 很好。Acme 很好。';
-    const [brand] = entityPassages({ answer, languageCode: 'zh', config, policy: limits });
+    const [brand] = entityPassages({ ...plain, answer, languageCode: 'zh' });
     const span = brand!.spans[0]!;
     expect(Array.from(answer).slice(span.start, span.end).join('')).toBe(span.text);
     expect(span.start).toBe(0);
@@ -73,20 +74,32 @@ describe('perception passages', () => {
   it('caps each entity passage budget in code points', () => {
     const answer = `Acme ${'x'.repeat(50)}.`;
     const [brand] = entityPassages({
+      ...plain,
       answer,
-      languageCode: 'en',
-      config,
       policy: { max_entities: 8, max_passage_chars_per_entity: 10 },
     });
     expect(brand!.spans).toEqual([{ start: 0, end: 10, text: 'Acme xxxxx' }]);
   });
 
+  it('reads the whole answer as the brand passage when the prompt names the brand', () => {
+    const answer = 'Rated 2.4/5. Holes within 3 months. Limited plus sizes. Rival is better.';
+    const passages = (promptNamesBrand: boolean) =>
+      entityPassages({ ...plain, answer, promptNamesBrand }).map((entity) => [
+        entity.name,
+        entity.spans.map((span) => span.text),
+      ]);
+    expect(passages(true)).toEqual([
+      ['Acme', [answer]],
+      ['Rival', ['Limited plus sizes. Rival is better.']],
+    ]);
+    expect(passages(false)).toEqual([['Rival', ['Limited plus sizes. Rival is better.']]]);
+  });
+
   it('keeps a late mention inside a window cut to the budget', () => {
     const answer = `${'x'.repeat(40)} Acme is great.`;
     const [brand] = entityPassages({
+      ...plain,
       answer,
-      languageCode: 'en',
-      config,
       policy: { max_entities: 8, max_passage_chars_per_entity: 12 },
     });
     expect(brand!.spans).toEqual([{ start: 35, end: 47, text: 'xxxxx Acme i' }]);
@@ -407,6 +420,7 @@ describe('perception calibration fixtures', () => {
           competitors: fixture.competitors.map((name) => ({ name, domains: [] })),
         }),
         policy: limits,
+        promptNamesBrand: false,
       }).map((entity) => entity.name);
       return Object.keys(fixture.labels)
         .filter((name) => !named.includes(name))

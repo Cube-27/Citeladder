@@ -65,6 +65,7 @@ describe('frozen answer-engine execution', () => {
         config: scoringConfig({ brand_name: 'Acme' }),
         answerText: result.answer_text,
         promptText: 'Which options fit?',
+        promptNamesBrand: false,
         citations: result.citations,
         searchEvents: result.search_events,
         searchUsed: result.search_used,
@@ -616,6 +617,7 @@ describe('frozen answer-engine execution', () => {
       languageCode: 'en',
       config: scoringConfig({ brand_name: 'Acme Running' }),
       policy: { max_entities: 5, max_passage_chars_per_entity: 600 },
+      promptNamesBrand: false,
     });
     expect(brand?.spans.map((span) => span.text)).toEqual([
       'For road running, Acme Running lasts the longest in independent tests.\n\nRival is cheaper.',

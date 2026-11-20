@@ -58,11 +58,13 @@ async function answer(
     reason?: string;
     citations?: string[];
     engine?: string;
+    cohort?: string;
   },
 ) {
   const { taskId, analysisId } = await fixtures.execution(tenant, {
     auditId,
     engine: input.engine,
+    cohort: input.cohort,
     promptText: 'best tools?',
     theme: 'Tools',
     analysis: { citations: (input.citations ?? []).map((url) => ({ url })) },
@@ -371,6 +373,50 @@ describe('GET /visibility/perception', () => {
       [{ mentions: 1, classified: 1, positive: 0, negative: 1, net_sentiment: -100 }],
       [null],
     ]);
+  });
+
+  it('serves brand-question answers under the branded and all selections only (AV-24)', async () => {
+    const own = await fixtures.tenant();
+    const run = await fixtures.audit(own, { configuration: CONFIGURATION });
+    await answer(own, run, {
+      outcome: 'classified',
+      entities: [{ name: 'Acme', kind: 'brand', label: 'positive' }],
+    });
+    await answer(own, run, {
+      outcome: 'classified',
+      cohort: 'brand_diagnostic',
+      entities: [{ name: 'Acme', kind: 'brand', label: 'negative' }],
+    });
+    const brandScore = async (cohort: string) => {
+      const { body } = await get(own, `/api/v1/projects/${own.projectId}/visibility/perception`, {
+        audit_id: run,
+        cohort,
+      });
+      const { positive, negative } = (body.brand as { score: Record<string, number> }).score;
+      return [cohort, positive, negative];
+    };
+    expect([
+      await brandScore('core'),
+      await brandScore('comparison'),
+      await brandScore('all'),
+    ]).toEqual([
+      ['core', 1, 0],
+      ['comparison', 0, 1],
+      ['all', 1, 1],
+    ]);
+    // Insights' sentiment reads keep the measured cohorts: "all" there is unbranded and comparison.
+    const insights = await perceivedAnswers(db, {
+      workspaceId: own.workspaceId,
+      projectId: own.projectId,
+      marketId: null,
+      auditId: run,
+      auditIds: null,
+      logicalEngine: null,
+      cohort: 'all',
+      fromAt: null,
+      toAt: null,
+    });
+    expect(insights?.length).toBe(1);
   });
 
   it('reads pending before any classification lands, then unavailable with its reason', async () => {

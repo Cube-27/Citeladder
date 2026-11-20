@@ -145,9 +145,15 @@ function classifyFanout(query: string) {
     .map(([name]) => name);
 }
 
+/** Whether a prompt snapshot's frozen cohort names the brand, so its whole answer is about it. */
+export const cohortNamesBrand = (cohort: string) =>
+  policy.visibility.brand_named_cohorts.includes(cohort);
+
 export function scoreExecution(input: {
   answerText: string;
   promptText: string;
+  /** The prompt's frozen cohort names the brand: it counts as mentioned (AV-26). */
+  promptNamesBrand: boolean;
   searchEvents: JsonObject[];
   citations: JsonObject[];
   searchUsed: boolean;
@@ -187,7 +193,8 @@ export function scoreExecution(input: {
     search_used: input.searchUsed,
     search_query_count: input.searchEvents.length,
     search_query_text_available: queryTextAvailable,
-    brand_mentioned: brandOffset !== null,
+    // An empty answer names nothing, whatever the prompt asked.
+    brand_mentioned: brandOffset !== null || (input.promptNamesBrand && answer !== ''),
     brand_first_offset: brandOffset,
     brand_injected_in_search: queryTextAvailable ? !promptBrand && brandAt(query) !== null : null,
     prompt_contains_brand: promptBrand,

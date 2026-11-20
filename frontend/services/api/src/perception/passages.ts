@@ -116,31 +116,46 @@ function clip(start: number, end: number, mention: number, budget: number) {
   return { start: from, end: from + budget };
 }
 
-/** Passages for each named entity: brand first, then competitors by first mention. */
+/**
+ * Passages for each named entity: brand first, then competitors by first
+ * mention. Under a brand-named prompt the brand's passage is the whole answer
+ * from its start, within the budget, whether or not it writes the name (AV-26).
+ */
 export function entityPassages(input: {
   answer: string;
   languageCode: string;
   config: ScoringConfig;
   policy: Pick<PerceptionPolicy, 'max_entities' | 'max_passage_chars_per_entity'>;
+  promptNamesBrand: boolean;
 }): EntityPassages[] {
   const { answer, policy } = input;
   if (!answer.trim()) return [];
   const ranges = sentences(answer, input.languageCode);
   const points = codePointIndex(answer);
   const chars = Array.from(answer);
-  const named = trackedEntities(input.config).flatMap((entity) => {
+  type Named = {
+    entity: ReturnType<typeof trackedEntities>[number];
+    occurrences: number[];
+    first: number;
+    /** Fixed windows (the whole answer), or null to window the occurrences. */
+    windows: Range[] | null;
+  };
+  const named = trackedEntities(input.config).flatMap((entity): Named[] => {
+    if (input.promptNamesBrand && entity.kind === 'brand')
+      return [{ entity, occurrences: [0], first: 0, windows: [{ start: 0, end: answer.length }] }];
     const occurrences = countedMatches(entity.aliases, answer, entity.matching).map((m) => m.index);
     const [first] = occurrences;
-    return first === undefined ? [] : [{ entity, occurrences, first }];
+    return first === undefined ? [] : [{ entity, occurrences, first, windows: null }];
   });
   const [brand, competitors] = [
     named.filter(({ entity }) => entity.kind === 'brand'),
     named.filter(({ entity }) => entity.kind !== 'brand').sort((a, b) => a.first - b.first),
   ];
-  return [...brand, ...competitors].slice(0, policy.max_entities).map(({ entity, occurrences }) => {
+  const selected = [...brand, ...competitors].slice(0, policy.max_entities);
+  return selected.map(({ entity, occurrences, windows: fixed }) => {
     let budget = policy.max_passage_chars_per_entity;
     const spans: Span[] = [];
-    for (const window of windows(occurrences, ranges)) {
+    for (const window of fixed ?? windows(occurrences, ranges)) {
       if (budget <= 0) break;
       const mention = occurrences.find((offset) => offset >= window.start) ?? window.start;
       const { start, end } = clip(

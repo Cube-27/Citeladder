@@ -1,4 +1,5 @@
 import {
+  aliasSpellings,
   countsAnywhere,
   DENSE_SCRIPT,
   normalizeAlias,
@@ -10,14 +11,18 @@ import type { ScoringConfig } from './scoring.ts';
 import { policy } from '../config.ts';
 const word = String.raw`[\p{L}\p{N}_]`;
 const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+const promptNamed =
+  'The prompt names the brand, so the whole answer is read as about it; the answer itself does not write the name.';
 const limitation =
   "Explicit-language detection over English phrasing in a 45-character window around the entity's FIRST mention. Not sentiment, not a calibrated judgement, and not a reading of the whole answer.";
 
-/** Every raw-text match of `alias`; a space-free script matches inside words. */
-function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
-  const normalized = normalizeAlias(alias);
-  if (!normalized) return [];
-  const words = normalized.split(' ');
+/** Every raw-text match of `alias` through each of its spellings. */
+const aliasMatches = (alias: string, answer: string) =>
+  aliasSpellings(alias).flatMap((words) => spellingMatches(words, answer));
+
+/** Every raw-text match of one spelling; a space-free script matches inside words. */
+function spellingMatches(words: readonly string[], answer: string): RegExpExecArray[] {
+  const normalized = words.join(' ');
   const tokens = words.map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
   // The separator is disjoint from the token alphabet (letters, marks, digits,
   // '_', and '&' when an "and" token can match it), so a near-miss cannot
@@ -146,5 +151,17 @@ export function trackedEntities(config: ScoringConfig) {
 export function assessEntities(answer: string, config: ScoringConfig) {
   return trackedEntities(config).map((entity) =>
     assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching),
+  );
+}
+
+/**
+ * The assessments under a prompt that names the brand (AV-26): the whole
+ * answer is about it, so a brand the answer never writes is still mentioned.
+ */
+export function brandNamed(rows: ReturnType<typeof assessEntities>) {
+  return rows.map((row) =>
+    row.entity_kind === 'brand' && row.state === 'absent'
+      ? { ...row, state: 'mentioned', limitation: promptNamed }
+      : row,
   );
 }

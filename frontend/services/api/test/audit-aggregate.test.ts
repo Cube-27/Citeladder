@@ -18,6 +18,7 @@ function execution(
     config,
     answerText,
     promptText: 'Which shoes?',
+    promptNamesBrand: false,
     citations,
     searchEvents: queries.map((query) => ({ query })),
     searchUsed: true,
