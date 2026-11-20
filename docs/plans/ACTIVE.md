@@ -5,6 +5,10 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
+- [App redesign](app-redesign.md) (owner, 2026-11-20): one compact component
+  set and standard page layouts for the signed-in app, built in three waves
+  (foundation, components and shell, pages) with owner decisions AR-1 to
+  AR-11.
 - [Audit remediation](audit-remediation.md) (owner, 2026-11-12): fixes from the
   2026-11-12 codebase audit in 11 prioritized specs of parallel PRs, beginning
   with production safety and the deploy trust root. Its open owner decisions
