@@ -167,6 +167,12 @@ function measure({ route }: { route: string }) {
       add('figure-target.gap', element, cell - element.getBoundingClientRect().height);
       continue;
     }
+    // An absence's reason (components/ui/absence.tsx) hangs off a 24px target on
+    // the value's line, not a control: measured as its own role.
+    if (element.matches('button:has(> [data-absence])')) {
+      add('absence-target.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (
@@ -512,6 +518,10 @@ function expectRoleInvariants(records: readonly Box[], required: readonly string
   expectOneValue(records, SLIP_INSET_ROLES);
   expectOneValue(records, ['field-end-target.size', 'field-end-target.hit']);
   for (const role of NONE_ROLES) expectNone(records, role);
+  const smallAbsence = [...valuesOf(records, ['absence-target.height']).keys()].filter(
+    (value) => value < MIN_TARGET_SIZE,
+  );
+  expect.soft(smallAbsence, `an absence target is at least ${MIN_TARGET_SIZE}px`).toEqual([]);
   const small = [...valuesOf(records, ['field-end-target.size']).keys()].filter(
     (value) => value < MIN_TARGET_SIZE,
   );

@@ -151,7 +151,6 @@ export function PromptTable({
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
-      rowLines={2}
       selection={
         selection
           ? {
@@ -187,13 +186,11 @@ export function PromptTable({
               />
             ) : null}
             <TableCell>
-              {/* The question is the keyboard's way in: two lines, or one over
-                  a caption, its whole text in a tooltip. The caption names the
-                  prompt's set when there are several brand sets, and says when
-                  audits skip the prompt. */}
+              {/* The question is the keyboard's way in, its whole text in a
+                  tooltip. The secondary text names the prompt's set when there
+                  are several brand sets, and says when audits skip the prompt. */}
               <TableCellLines
                 title
-                wrap
                 primary={<PromptQuestion prompt={prompt} openAnswer={openAnswer} />}
                 secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
               />

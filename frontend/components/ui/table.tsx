@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useRef,
   type HTMLAttributes,
   type MouseEvent,
@@ -29,9 +27,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * Table — the app's data table:
- *  - in the app a `well` shell holds the caption-strong column heads
- *    (`scope="col"`, `ink` while sorted) over an inset `surface` body panel
- *  - `table-row-height` rows (44 in the app) with `rule` lines between them;
+ *  - in the app a `rule` frame holds a 32 head band on `raised` (caption
+ *    at 500, `scope="col"`, `ink` while sorted) over the panel body
+ *  - `table-row-height` rows (40 in the app) with `rule` lines between them;
  *    every row tints on hover as one piece, pinned cells included
  *    (data-table.css); `highlight` marks your own row (one row per
  *    table, never for emphasis); no zebra stripes, no column rules
@@ -42,7 +40,7 @@ import { cn } from '@/lib/utils';
  *  - `fixed` takes column widths from the header cells, never from the rows
  *    shown, so paging, sorting and loading never move the columns
  * The wrapper scrolls, so the sticky header pins on vertical scroll. On its
- * own in the app it draws the shell; inside a DataTable the DataTable's frame does.
+ * own in the app it draws the frame; inside a DataTable the DataTable's frame does.
  */
 const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
 export function Table({
@@ -200,12 +198,6 @@ function isPlainText(children: ReactNode) {
   );
 }
 
-/**
- * The lines a `TableCellLines` title may take: one by default; two only in a
- * `DataTable` of three-line rows (`rowLines={3}`).
- */
-export const TableTitleLinesContext = createContext<1 | 2>(1);
-
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
     // Padding 8 and 8: the row hairline is drawn inside the row (data-table.css).
@@ -267,35 +259,30 @@ export function TableCell({
 }
 
 /**
- * A value over one caption line (a query over its page), each cut to one line
- * with the rest in a tooltip. `title` inks the value as an item title; a blank
- * `secondary` (a non-breaking space) keeps a captionless row two lines tall.
+ * A value with its secondary text inline after it in `ink-2` (a query, then
+ * its page), on the row's one line. The secondary text gives way first; each
+ * part cut keeps its whole text in a tooltip. `title` inks the value as an
+ * item title.
  */
 export function TableCellLines({
   primary,
   secondary,
   secondaryTooltip,
   title = false,
-  wrap = false,
 }: Readonly<{
   primary: ReactNode;
   secondary?: ReactNode;
-  /** The caption's tooltip when it is cut, e.g. the full URL behind a path. */
+  /** The secondary text's tooltip when it is cut, e.g. the full URL behind a path. */
   secondaryTooltip?: ReactNode;
   title?: boolean;
-  /** Text read whole (a prompt): with no caption, the value takes both lines of a two-line row. */
-  wrap?: boolean;
 }>) {
-  const context = useContext(TableTitleLinesContext);
-  const titleLines = wrap && !secondary ? 2 : context;
   return (
-    // The title and its caption are one fact: 4 apart.
-    <span data-cell-lines="" className="grid min-w-0 gap-1">
-      <ClampText rowTitle lines={titleLines} className={title ? textRole('body') : undefined}>
+    <span data-cell-lines="" className="flex min-w-0 items-baseline gap-2">
+      <ClampText rowTitle className={cn('max-w-full shrink-0', title && textRole('body'))}>
         {primary}
       </ClampText>
       {secondary ? (
-        <ClampText lines={1} tooltip={secondaryTooltip} className={textRole('caption')}>
+        <ClampText tooltip={secondaryTooltip} className="text-ink-2">
           {secondary}
         </ClampText>
       ) : null}

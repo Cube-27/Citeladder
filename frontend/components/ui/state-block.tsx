@@ -334,7 +334,7 @@ function EmptyBody({
       >
         <Glyph className="size-4" />
       </span>
-      <Heading className={textRole('heading', 'mt-[var(--state-title-gap,16px)] text-balance')}>
+      <Heading className={textRole('subheading', 'mt-[var(--state-title-gap,16px)] text-balance')}>
         {heading}
       </Heading>
       {description ? (

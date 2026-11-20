@@ -195,11 +195,7 @@ function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
                   ...(group.score === null ? [] : [`Score ${group.score}`]),
                 ].join(' · ')}
               >
-                <DataTable
-                  label={`Sources behind ${group.name}`}
-                  columns={PAGE_COLUMNS}
-                  rowLines={2}
-                >
+                <DataTable label={`Sources behind ${group.name}`} columns={PAGE_COLUMNS}>
                   {group.pages.map((page) => (
                     <TableRow key={page.url}>
                       <TableCell>

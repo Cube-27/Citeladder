@@ -3,7 +3,7 @@ import { Cell, Pie, PieChart } from 'recharts';
 
 import { chartPercent } from '@/components/ui/chart';
 import { ChartTable } from '@/components/ui/chart-frame';
-import { roleColor, SERIES_COLOR } from '@/components/ui/chart-tooltip';
+import { roleColor, seriesColor } from '@/components/ui/chart-tooltip';
 import {
   SERIES_FILL,
   SeriesTonesContext,
@@ -48,7 +48,7 @@ type Row = Readonly<{
 
 function partInk(status: PartStatus | undefined, tone: SeriesTone): NonNullable<Row['ink']> {
   if (status) return { part: status, ...STATUS_INK[status] };
-  return { part: tone, color: SERIES_COLOR[tone], fill: SERIES_FILL[tone] };
+  return { part: tone, color: seriesColor(tone), fill: SERIES_FILL[tone] };
 }
 
 /**

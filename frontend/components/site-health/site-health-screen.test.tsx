@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { figureText } from '@/test/figures';
 import { mswServer } from '@/test/msw-server';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
@@ -123,9 +124,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
 
     renderScreen();
     await user.click(await screen.findByRole('tab', { name: 'Overview' }));
-    expect(
-      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
-    ).toBeVisible();
+    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
 
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
@@ -370,9 +369,7 @@ describe('SiteHealthScreen — loading frames', () => {
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
     snapshot.release();
-    expect(
-      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
-    ).toBeVisible();
+    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
     expect(loadingRegions()).toHaveLength(0);
   });
 
@@ -392,9 +389,7 @@ describe('SiteHealthScreen — loading frames', () => {
     );
 
     const { queryClient } = renderScreen();
-    expect(
-      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
-    ).toBeVisible();
+    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
 
     refresh = held();
     void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.all });
@@ -402,9 +397,7 @@ describe('SiteHealthScreen — loading frames', () => {
       expect(queryClient.isFetching({ queryKey: queryKeys.siteHealth.all })).toBeGreaterThan(0),
     );
 
-    expect(
-      screen.getByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
-    ).toBeVisible();
+    expect(figureText('Web fundamentals')).toBe('80');
     expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();

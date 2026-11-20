@@ -17,7 +17,7 @@ export function ToolbarTableLoading({
 }: Readonly<{ label: string; columns: number; rows?: number; view?: boolean }>) {
   return (
     <SkeletonFrame label={label} variant="table" className="grid min-w-0">
-      <header className="grid min-w-0 px-[var(--table-bar-inset,16px)] pb-3">
+      <header className="grid min-w-0 pb-3">
         <FilterBar
           view={view ? <span className="block h-[var(--control-md)]" /> : undefined}
           search={<span />}

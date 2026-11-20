@@ -1,5 +1,3 @@
-import { RefreshCw } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Drawer } from '@/components/ui/drawer';
@@ -54,7 +52,6 @@ export function RunNotice({
     return (
       <Notice
         tone="info"
-        icon={RefreshCw}
         action={
           onCancel ? (
             <Button variant="secondary" disabled={cancelling} onClick={() => onCancel(run.id)}>

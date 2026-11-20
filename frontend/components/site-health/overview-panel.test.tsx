@@ -1,8 +1,9 @@
 import { http, HttpResponse } from 'msw';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
+import { figureText } from '@/test/figures';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import {
@@ -201,18 +202,15 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(
-      screen.getByRole('img', { name: 'Web fundamentals score: 81 out of 100' }),
-    ).toBeVisible();
-    expect(screen.getByRole('img', { name: 'AEO readiness score: 62 out of 100' })).toBeVisible();
+    expect(figureText('Web fundamentals')).toBe('81');
+    expect(figureText('AEO readiness')).toBe('62');
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    // The two completion shares are rings too.
-    expect(screen.getByRole('img', { name: 'AEO checklist completion: 50%' })).toBeVisible();
+    expect(figureText('AEO checklist completion')).toBe('50%');
     // Coverage is a share of the pages found, so it reads as a percentage, not a score.
-    expect(screen.getByRole('img', { name: 'Crawl coverage: 40%' })).toBeVisible();
-    // Scores are rings, never a bar or rungs.
+    expect(figureText('Crawl coverage')).toBe('40%');
+    // Scores are printed figures, never a bar or rungs.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
@@ -249,7 +247,7 @@ describe('OverviewPanel', () => {
     );
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
-    expect(await screen.findByRole('img', { name: 'Crawl coverage: 20%' })).toBeVisible();
+    await waitFor(() => expect(figureText('Crawl coverage')).toBe('20%'));
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {

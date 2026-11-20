@@ -13,14 +13,7 @@ import { cn } from '@/lib/utils';
  * cursor, gradient fills and a tooltip card. Colours are the series roles, so
  * you stay the accent and a rival keeps its page-wide hue.
  */
-export const SERIES_COLOR: Record<SeriesTone, string> = {
-  you: 'var(--color-data-you)',
-  'rival-1': 'var(--color-data-rival-1)',
-  'rival-2': 'var(--color-data-rival-2)',
-  'rival-3': 'var(--color-data-rival-3)',
-  'rival-4': 'var(--color-data-rival-4)',
-  other: 'var(--color-data-other)',
-};
+export const seriesColor = (tone: SeriesTone) => `var(--color-data-${tone})`;
 
 /** Axis props every cartesian chart shares: no lines, muted caption ticks. */
 export const AXIS_PROPS = {
@@ -102,7 +95,7 @@ export function ShapeMark({
 
 export type TooltipRow = Readonly<{
   name: string;
-  /** Its indicator's colour, a CSS colour (`SERIES_COLOR[tone]`). */
+  /** Its indicator's colour, a CSS colour (`seriesColor(tone)`). */
   color: string;
   value: Formatted;
   shape?: MarkerShape;

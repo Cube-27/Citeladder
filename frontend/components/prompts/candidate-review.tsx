@@ -107,7 +107,6 @@ export function CandidateReview({
           noun: 'suggestions',
         }}
         columns={COLUMNS}
-        rowLines={2}
       >
         {candidates.map((candidate) => {
           const topicName = candidate.topic_id ? topicNames.get(candidate.topic_id) : undefined;

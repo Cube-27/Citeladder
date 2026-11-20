@@ -68,12 +68,30 @@ describe('DataTable', () => {
         </TableRow>
       </DataTable>,
     );
-    const frame = container.querySelector('[data-data-table-frame]');
-    expect(frame).toHaveAttribute('data-end-cols', '3 5');
-    expect(frame).toHaveAttribute('data-start-cols', '2 4');
-    expect(frame).toHaveAttribute('data-tabular-cols', '3 4');
+    const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
+    const scope = frame.dataset.tableScope!;
+    const rules = frame.querySelector('style')!.textContent!.replaceAll(scope, 'S');
+    const rule = (position: number) =>
+      new RegExp(
+        String.raw`\[data-table-scope="S"\] tr:not\(\[data-table-state\]\) > :nth-child\(${position}\)\{([^}]*)\}`,
+        'u',
+      ).exec(rules)?.[1];
+    // The page takes the spare width; the count, the date and the actions hug their content.
+    expect(rule(2)).toBe(
+      'text-align:start;width:100.000%;max-width:0;min-width:var(--data-table-identity-min);',
+    );
+    expect(rule(3)).toBe(
+      'text-align:end;width:1px;white-space:nowrap;min-width:calc(var(--spacing) * 16);',
+    );
     // The date opens on a gutter after the end-aligned count; the count does not after the page.
-    expect(frame).toHaveAttribute('data-gutter-cols', '4');
+    expect(rule(4)).toContain('padding-inline-start:calc(var(--table-cell-padding-x) + 12px);');
+    expect(rule(5)).toContain('text-align:end;');
+    expect(rules).toContain(
+      ':nth-child(3){font-family:var(--font-mono);font-variant-numeric:tabular-nums}',
+    );
+    expect(rules).toContain(
+      ':nth-child(4){font-family:var(--font-mono);font-variant-numeric:tabular-nums}',
+    );
     // The checkbox and the identity column are one pinned block.
     expect(frame).toHaveAttribute('data-pinned', '2');
     // The actions column keeps an accessible head.
@@ -135,7 +153,6 @@ describe('DataTable', () => {
         columns={[{ key: 'query', label: 'Query' }]}
         pageSize={3}
         rowCount={1}
-        rowLines={2}
         reserveRows={reserveRows}
       >
         <TableRow>
@@ -364,93 +381,20 @@ describe('DataTable', () => {
     expect(steps()).toEqual(['start']);
   });
 
-  it('sets every column a floor and the table a minimum of their sum, so nothing squeezes', () => {
-    // The CSS lengths at the app's tokens: 4px steps, a 200px identity minimum, 12px captions.
-    const TOKENS: Record<string, number> = {
-      '--spacing': 4,
-      '--data-table-identity-min': 200,
-      '--text-caption': 12,
-    };
-    const px = (css: string) =>
-      Number(
-        new Function(
-          `return ${css
-            .replaceAll(/var\((--[\w-]+)\)/gu, (_, name: string) => String(TOKENS[name]))
-            .replaceAll('px', '')
-            .replaceAll('max(', 'Math.max(')
-            .replaceAll('calc(', '(')}`,
-        )(),
-      ).toFixed(1);
-    const layout = (props: Pick<DataTableProps, 'columns'>) => {
-      const { container, unmount } = render(<DataTable label="Keys" {...props} />);
-      const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
-      const result = {
-        narrow: px(frame.style.getPropertyValue('--data-table-min')),
-        desktop: px(frame.style.getPropertyValue('--data-table-min-desktop')),
-        cols: [...container.querySelectorAll<HTMLElement>('col')].map((col) => {
-          const width = col.style.getPropertyValue('--col-width');
-          return width ? px(width) : 'rest';
-        }),
-      };
-      unmount();
-      return result;
-    };
-    // The API keys table: the key's name beside fixed columns, one desktop-only.
-    expect(
-      layout({
-        columns: [
-          { key: 'name', label: 'Key' },
-          { key: 'scopes', label: 'Access', width: 'name' },
-          { key: 'projects', label: 'Projects', width: 'status', desktopOnly: true },
-          { key: 'used', label: 'Last used', width: 'date' },
-          { key: 'revoke', label: 'Revoke', width: 'action' },
-        ],
-      }),
-    ).toEqual({
-      narrow: '744.0',
-      desktop: '872.0',
-      cols: ['rest', '224.0', '128.0', '224.0', '96.0'],
-    });
-    // A sorted head wider than its figure role, a date in a figure role that
-    // opens on a 12px gutter after the figure, and two flexible columns that
-    // split what is left evenly, each at the wider floor.
-    expect(
-      layout({
-        columns: [
-          { key: 'keyword', label: 'Keyword' },
-          {
-            key: 'traffic',
-            label: 'Est. monthly traffic',
-            kind: 'number',
-            sort: { active: false, descending: false, onSort: () => undefined },
-          },
-          { key: 'seen', label: 'Seen', kind: 'date', width: 'figure' },
+  it('splits the spare width between flexible columns and hides a low column with its cells', () => {
+    const { container } = render(
+      <DataTable
+        label="Crawlers"
+        columns={[
+          { key: 'name', label: 'Crawler' },
+          { key: 'seen', label: 'Seen', kind: 'number', priority: 'low' },
           { key: 'breakdown', label: 'Folder and resource breakdown' },
-        ],
-      }),
-    ).toEqual({ narrow: '861.6', desktop: '861.6', cols: ['rest', '184.0', '204.0', 'rest'] });
-    // The Prompts table: figures at their label or 96px, mark stacks at 104px
-    // plus the gutter where they follow a right-aligned figure, and the spare
-    // width left to the reading column alone.
-    const hint = 'What it measures.';
-    expect(
-      layout({
-        columns: [
-          { key: 'prompt', label: 'Prompt', kind: 'identity', width: 'reading' },
-          { key: 'topic', label: 'Topic', width: 'status' },
-          { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
-          { key: 'mentions', label: 'Mentions', width: 'marks', hint },
-          { key: 'citations', label: 'Citations', width: 'figure', kind: 'number', hint },
-          { key: 'sources', label: 'Sources', width: 'marks', hint },
-          { key: 'position', label: 'Position', width: 'figure', kind: 'number', hint },
-          { key: 'actions', label: 'Actions', width: 'control', kind: 'actions' },
-        ],
-      }),
-    ).toEqual({
-      narrow: '928.0',
-      desktop: '928.0',
-      cols: ['rest', '128.0', '96.0', '116.0', '96.0', '116.0', '96.0', '80.0'],
-    });
+        ]}
+      />,
+    );
+    const rules = container.querySelector('[data-data-table-frame] style')!.textContent!;
+    expect(rules.match(/width:50\.000%/gu)).toHaveLength(2);
+    expect(rules).not.toContain('display:none');
   });
 
   it('warns in development when no column can absorb the width', () => {
@@ -474,7 +418,7 @@ describe('DataTable', () => {
       />,
     );
     expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'DataTable "Fixed figures" has no flexible column (width "flex"): its text truncates while its fixed columns leave space unused.',
+      'DataTable "Fixed figures" has no flexible column (width "flex"): its spare width spreads over its figures.',
     ]);
     warn.mockRestore();
   });

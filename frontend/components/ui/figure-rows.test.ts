@@ -45,16 +45,8 @@ describe('figureRows', () => {
   });
 
   it('gives a wrapped row the columns of the first, so its dividers line up', () => {
-    expect(figureRowCells({ count: 7, width: 1168 })).toEqual([
-      { size: 4, rowStart: true },
-      { size: 4, rowStart: false },
-      { size: 4, rowStart: false },
-      { size: 4, rowStart: false },
-      { size: 4, rowStart: true },
-      { size: 4, rowStart: false },
-      { size: 4, rowStart: false },
-    ]);
-    expect(figureRowCells({ count: 3, width: 234 }).map(({ size }) => size)).toEqual([1, 1, 1]);
+    expect(figureRowCells({ count: 7, width: 1168 })).toEqual([4, 4, 4, 4, 4, 4, 4]);
+    expect(figureRowCells({ count: 3, width: 234 })).toEqual([1, 1, 1]);
   });
 
   it('keeps three figures on a row down to 128px cells', () => {

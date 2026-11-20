@@ -119,7 +119,6 @@ export function PagesTable({
     <DataTable
       label="Pages"
       columns={pagesColumns(sort, onSortChange)}
-      rowLines={2}
       toolbar={toolbar}
       state={state}
       pager={pager}
@@ -151,7 +150,7 @@ export function PagesTable({
             <TableCell>
               <Stack as="span" gap="tight" className="min-w-0">
                 <Inline as="span">
-                  <ClampText lines={1}>
+                  <ClampText className="max-w-full shrink-0">
                     <TextLink
                       text="emphasis"
                       underline="hover"
@@ -168,10 +167,10 @@ export function PagesTable({
                     </StatusMark>
                   )}
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
+                  <span className="text-ink-2 min-w-0 overflow-hidden">
+                    <UrlText url={page.display_url} origin={origin} />
+                  </span>
                 </Inline>
-                <span className="type-caption min-w-0">
-                  <UrlText url={page.display_url} origin={origin} />
-                </span>
                 <LinkedFromLine page={page} />
               </Stack>
             </TableCell>

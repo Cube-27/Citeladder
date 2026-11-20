@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import { figureText } from '@/test/figures';
 import { renderWithProviders as render } from '@/test/render';
 import { describe, expect, it } from 'vite-plus/test';
 
@@ -56,10 +57,8 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(
-      screen.getByRole('img', { name: 'Web fundamentals score: 73 out of 100' }),
-    ).toBeVisible();
-    expect(screen.getByRole('img', { name: 'AEO readiness score: 61 out of 100' })).toBeVisible();
-    expect(screen.getByRole('img', { name: 'AEO checklist completion: 70%' })).toBeVisible();
+    expect(figureText('Web fundamentals')).toBe('73');
+    expect(figureText('AEO readiness')).toBe('61');
+    expect(figureText('AEO checklist completion')).toBe('70%');
   });
 });

@@ -81,7 +81,7 @@ describe('Delta', () => {
 });
 
 describe('FigureStrip', () => {
-  it('names a missing value, prints a real zero, rings a score once and makes a pressable figure a toggle', () => {
+  it('names a missing value, prints a real zero and makes a pressable figure a toggle', () => {
     const onSelect = vi.fn();
     const onConnect = vi.fn();
     renderWithProviders(
@@ -98,7 +98,7 @@ describe('FigureStrip', () => {
           {
             key: 'score',
             label: 'Crawl',
-            score: { value: 72, label: 'Crawl score' },
+            value: '72',
             sub: 'Last crawl',
             action: { label: 'View details', href: '/issues' },
           },
@@ -118,9 +118,6 @@ describe('FigureStrip', () => {
     const cell = (label: string) => within(group).getByText(label).closest('[data-figure-cell]');
     expect(cell('TTFB')).toHaveTextContent('Not measured');
     expect(cell('Errors')?.textContent).toBe('Errors0');
-    // A score is a ring with its number inside, never a bar or rungs, and the number prints once.
-    expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
-    expect(within(group).queryByRole('progressbar')).not.toBeInTheDocument();
     // Two rows: the basis is the label's hint, never a line of its own.
     expect(cell('Crawl')?.textContent).toBe('CrawlLast crawl72');
     expect(

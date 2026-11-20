@@ -64,7 +64,6 @@ export function SearchIntelligenceCompetitors({
       title="Competitive footprint"
       description={noneFetched ? 'Competitive footprint not fetched yet' : undefined}
       columns={noneFetched ? COMPETITOR_COLUMNS.slice(0, 1) : COMPETITOR_COLUMNS}
-      rowLines={2}
       state={
         competitors.length
           ? undefined

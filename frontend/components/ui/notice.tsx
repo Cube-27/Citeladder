@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
-import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
-import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
@@ -14,12 +12,12 @@ import { cn } from '@/lib/utils';
 
 export type NoticeTone = 'info' | 'positive' | 'warning' | 'negative';
 
-/** Each tone's wash, glyph ink, glyph and the word a screen reader hears first. */
-const TONE: Record<NoticeTone, { wash: string; ink: string; icon: LucideIcon; word: string }> = {
-  info: { wash: 'bg-info-wash', ink: 'text-info', icon: Info, word: 'Note' },
-  positive: { wash: 'bg-positive-wash', ink: 'text-positive', icon: CircleCheck, word: 'Done' },
-  warning: { wash: 'bg-warning-wash', ink: 'text-warning', icon: TriangleAlert, word: 'Warning' },
-  negative: { wash: 'bg-negative-wash', ink: 'text-negative', icon: CircleAlert, word: 'Error' },
+/** Each tone's dot and the word a screen reader hears first. */
+const TONE: Record<NoticeTone, { dot: string; word: string }> = {
+  info: { dot: 'bg-info', word: 'Note' },
+  positive: { dot: 'bg-positive', word: 'Done' },
+  warning: { dot: 'bg-warning', word: 'Warning' },
+  negative: { dot: 'bg-negative', word: 'Error' },
 };
 
 type MessageNotice = Readonly<{
@@ -30,8 +28,6 @@ type MessageNotice = Readonly<{
   children?: ReactNode;
   /** One secondary Button or a TextLink. */
   action?: ReactNode;
-  /** Overrides the tone's glyph. */
-  icon?: LucideIcon;
   /**
    * A standing caveat on the page (a warning beside a destructive control),
    * not news: it is read in place and never announced as an alert.
@@ -82,9 +78,10 @@ export function readErrorProps(read: RetryableRead) {
 }
 
 /**
- * Notice — the app's one inline message (`Callout` is the website's): the tone's glyph, a
- * sentence and at most one action, on the tone's wash with the control
- * radius. Failures of a write (`kind="mutation"`) and of a read
+ * Notice — the app's one inline message (`Callout` is the website's): a
+ * `rule`-edged strip on the panel, the tone's 6px dot beside the tone's word
+ * for a screen reader, a sentence and at most one action; never a loud fill.
+ * Failures of a write (`kind="mutation"`) and of a read
  * (`kind="read"`) are notices too, so a failure renders one way everywhere;
  * both offer to copy the support reference when the API sent one. Negative and
  * warning notices are alerts, the rest a polite status.
@@ -110,7 +107,6 @@ function MessageNoticeView({
   title,
   children,
   action,
-  icon,
   standing = false,
   className,
 }: MessageNotice) {
@@ -127,13 +123,12 @@ function MessageNoticeView({
         textRole('body'),
         // Actions that do not fit beside the text wrap under it, at the right;
         // below 768 they sit under the message, on its left edge.
-        'rounded-control flex flex-wrap items-start gap-2 px-3 py-2',
-        style.wash,
+        'border-rule bg-surface rounded-card flex flex-wrap items-start gap-2 border px-3 py-2',
         className,
       )}
     >
-      <span aria-hidden className={cn('inline-flex h-5 shrink-0 items-center', style.ink)}>
-        <Icon icon={icon ?? style.icon} className="my-0" />
+      <span aria-hidden className="inline-flex h-5 shrink-0 items-center">
+        <span className={cn('size-1.5 rounded-full', style.dot)} />
       </span>
       <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-1">
         {title != null ? (

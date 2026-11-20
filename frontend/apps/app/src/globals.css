@@ -675,10 +675,9 @@
 :root:not([data-public-surface]) {
   /* Inherited: no paragraph ends on a lone word; nowrap rows keep one line. */
   text-wrap: pretty;
-  /* A table is a `well` shell holding its head, around an inset `surface` body. */
+  /* A table's head band is `raised`, its body the panel. */
   --table-head-ground: var(--color-well);
   --table-ground: var(--color-surface);
-  --table-inset: 4px;
   /* The token table in docs/design.md. The older role names bind onto it:
      chrome is the ground, surface the panel, well the raised fill, rule the
      line, control-line the strong line. */
@@ -769,12 +768,12 @@
   /* Density (2.2): controls 28 (owner, 2026-11-19), and 44 on flow pages;
      below 900px or under a coarse pointer every control is 44 (block below);
      tags 24; every target at least 24. Navigation rows 28 (44 in the
-     drawer). Table header one control, body rows 36. */
+     drawer). Table head 32, body rows 40. */
   --control-md: 28px;
   --control-lg: 44px;
   --control-coarse: 44px;
   --nav-row-height: 28px;
-  --table-row-height: 36px;
+  --table-row-height: 40px;
 
   /* Standard layouts (docs/design.md): the page header 44, the tab strip 36,
      the toolbar strip one control and 8 above and below, each closed by a
@@ -1264,7 +1263,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     color: var(--color-ink-2);
   }
   :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
-    font-family: var(--font-sans);
     letter-spacing: 0;
   }
   :root:not([data-public-surface]) .type-code {
@@ -2000,48 +1998,29 @@ label {
   }
 }
 
-/* Every app table, in a container or not (owner, 2026-11-19, after HeroUI's
-   table): a `well` shell at the overlay radius holds the head row, and the
-   body is a `surface` panel inset 4 from the shell's sides and foot, its
-   corners at the card radius. The shell is the DataTable frame, outside the
-   scroll mask, so a fading edge fades into the shell; it clips (not
-   `hidden`), so sticky heads still pin. A Table on its own draws the shell
-   on its scroll frame, as a border, so its sticky head pins inside it.
-   Title, toolbar and pager sit on the page above and below the shell. */
-:root:not([data-public-surface]) [data-data-table] {
-  --table-bar-inset: 0px;
-}
-:root:not([data-public-surface]) [data-data-table-frame] {
-  padding: 0 var(--table-inset) var(--table-inset);
-  border-radius: var(--radius-overlay);
-  background: var(--table-head-ground);
+/* Every app table: a `rule` frame at radius 8 on the panel, a 32 head band
+   on `raised` under a hairline, 40 rows with hairlines between them. The
+   DataTable frame draws the edge (its foot band sits inside it) and clips
+   (not `hidden`), so sticky heads still pin; a Table on its own draws it on
+   its scroll frame. Title and toolbar sit on the page above the frame. */
+:root:not([data-public-surface]) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--table-ground);
   overflow: clip;
 }
-/* Rows are a height with their content centred in it: 4 above and below, so
-   a 32 control fits a 44 row and a value over its caption a 56 one. */
 :root:not([data-public-surface]) .table-frame {
-  --table-row-height: 44px;
-  --table-row-height-2: 56px;
   --table-cell-padding-y: 4px;
-  border: 0;
   border-radius: 0;
-  background: transparent;
 }
-:root:not([data-public-surface]) [data-data-table-frame] .table-frame {
-  border-radius: 0 0 var(--radius-card) var(--radius-card);
+:root:not([data-public-surface]) [data-data-table-frame] .table-frame,
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+  [data-data-table-frame] {
+  border: 0;
 }
-:root:not([data-public-surface]) .table-frame:not([data-data-table] *) {
-  border: var(--table-inset) solid var(--table-head-ground);
-  border-top-width: 0;
-  border-radius: var(--radius-overlay);
-  background: var(--table-head-ground);
-}
-
-/* The head row sits on the shell: 36 high, caption-strong, sentence case,
-   ink-2, no rule under it; its shell fill keeps a sticky head opaque over
-   scrolled rows. The body panel's corners round on its corner cells. */
 :root:not([data-public-surface]) .table-frame thead th {
-  height: 36px;
+  height: 32px;
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
   font-weight: var(--weight-medium);
@@ -2049,23 +2028,11 @@ label {
   text-transform: none;
   color: var(--color-ink-2);
   background: var(--table-head-ground);
+  box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 :root:not([data-public-surface]) .table-frame tbody > tr > * {
   background-color: var(--table-ground);
 }
-:root:not([data-public-surface]) .table-frame tbody > tr:first-child > :first-child {
-  border-start-start-radius: var(--radius-card);
-}
-:root:not([data-public-surface]) .table-frame tbody > tr:first-child > :last-child {
-  border-start-end-radius: var(--radius-card);
-}
-:root:not([data-public-surface]) .table-frame tbody > tr:last-child > :first-child {
-  border-end-start-radius: var(--radius-card);
-}
-:root:not([data-public-surface]) .table-frame tbody > tr:last-child > :last-child {
-  border-end-end-radius: var(--radius-card);
-}
-/* The head row is its cells' 36, not a body row's height. */
 :root:not([data-public-surface]) .table-frame thead > tr {
   height: auto;
 }
@@ -2226,45 +2193,27 @@ label {
   );
 }
 
-/* FigureStrip (`figureRows`): one flat row of figures, each as wide as the
-   first row's share, with no gap and no card. A hairline runs above the strip,
-   under every row and under the strip's full width (a shorter last row leaves
-   a gap); a thin divider opens every cell but a row's first. Lines
-   are inset shadows, so they add no height: a cell is 12 + label 20 + 4 +
-   value 24 + 12 = 72. Cells stretch to their row's height and the value sits
-   at the foot, so a wrapped label never moves its value off the baseline. */
+/* FigureStrip (`figureRows`, AR-3): one `rule`-framed strip at radius 8,
+   cells as wide as the first row's share, divided by hairlines. Each cell
+   draws its dividers outside its own start and top edge; the frame clips the
+   ones on its edge, so a wrapped strip never doubles a line. A cell is
+   10 + label 16 + 2 + value 28 + 10. The value sits at the foot, so a wrapped
+   label never moves it off the row's baseline. */
 [data-figure-strip] {
-  box-shadow:
-    inset 0 1px 0 var(--color-rule),
-    inset 0 -1px 0 var(--color-rule);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  overflow: hidden;
 }
 [data-figure-cell] {
   flex: 0 0 calc(100% / var(--row));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
-  row-gap: 4px;
-  padding: 12px 16px;
+  row-gap: 2px;
+  padding: 10px 16px;
   box-shadow:
-    inset 0 -1px 0 var(--color-rule),
-    inset 1px 0 0 var(--color-rule);
-}
-[data-figure-cell][data-row-start] {
-  box-shadow: inset 0 -1px 0 var(--color-rule);
-}
-/* On the page itself (not in a card, slip or dialog) the strip is full-bleed
-   like the strips above it: its rules and dividers run across the gutters,
-   and only the text is inset, the first cell's on the content edge (owner,
-   2026-11-18). */
-[data-page-body]
-  [data-figure-strip]:not(:where(.surface-card *, .surface-slip *, [role='dialog'] *)) {
-  margin-inline: calc(-1 * var(--content-gutter));
-  & > [data-figure-cell] {
-    padding: 12px 24px;
-  }
-  & > [data-figure-cell][data-row-start] {
-    padding-inline-start: var(--content-gutter);
-  }
+    -1px 0 0 var(--color-rule),
+    0 -1px 0 var(--color-rule);
 }
 /* A label wraps between words only, never mid-word and never cut. */
 [data-figure-cell] dt {
@@ -2273,12 +2222,12 @@ label {
   hyphens: manual;
 }
 [data-figure-cell][data-label-lines='2'] dt {
-  min-height: calc(2 * var(--text-body-sm--line-height));
+  min-height: calc(2 * var(--text-caption--line-height));
 }
 [data-figure-cell] > [data-figure-value] {
   grid-row: 2;
   align-self: end;
-  min-height: var(--text-heading--line-height);
+  min-height: var(--text-figure--line-height);
 }
 /* An absent value is its muted mark at body size on the value's 24px line. */
 [data-figure-value] [data-absence] {

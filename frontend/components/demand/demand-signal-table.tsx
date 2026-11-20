@@ -123,7 +123,6 @@ export function DemandSignalTable({
       title="Demand signals"
       description={description}
       columns={COLUMNS}
-      rowLines={2}
       state={
         rows.length === 0
           ? { kind: 'filtered', heading: 'No signals match your filter', onClear: onClearFilters }

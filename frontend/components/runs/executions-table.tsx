@@ -71,7 +71,6 @@ export function ExecutionsTable({
         toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
         columns={COLUMNS}
         state={state ?? unmatched}
-        rowLines={2}
         rowCount={pageRows.length}
         pageSize={pageCount > 1 ? pageSize : undefined}
         pager={{

@@ -23,10 +23,8 @@ export function HintedTableHead({
   numeric,
   desktopOnly,
 }: Readonly<{ label: string; hint: string } & HeadOptions>) {
-  // Like a plain header, a label longer than its column wraps under itself
-  // instead of painting over the next header.
   return (
-    <TableHead numeric={numeric} desktopOnly={desktopOnly} className="whitespace-normal">
+    <TableHead numeric={numeric} desktopOnly={desktopOnly}>
       <Tooltip content={hint}>
         <button
           type="button"
@@ -103,7 +101,7 @@ export function SortableTableHead({
           numeric ? 'flex-row-reverse justify-start text-right' : align.row,
         )}
       >
-        <span className="truncate">{label}</span>
+        <span>{label}</span>
         <ArrowDown
           className={cn(
             'size-3 shrink-0 transition-transform',
@@ -112,11 +110,7 @@ export function SortableTableHead({
           aria-hidden
         />
       </span>
-      {sublabel ? (
-        <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>
-          {sublabel}
-        </span>
-      ) : null}
+      {sublabel ? <span className={textRole('caption')}>{sublabel}</span> : null}
     </button>
   );
   return (

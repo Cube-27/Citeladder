@@ -9,27 +9,19 @@ import {
 } from 'react';
 
 import {
+  columnRules,
   fitFloor,
-  isFlexible,
   SELECT_WIDTH,
   withEdges,
   type DataTableColumn,
 } from '@/components/ui/data-table-columns';
 
-/** A column as the fit sees it: its floor in px, whether it takes the rest, whether it may hide. */
-export type FitColumn = Readonly<{ floor: number; flexible: boolean; low: boolean }>;
+/** A column as the fit sees it: its floor in px, and whether it may hide. */
+export type FitColumn = Readonly<{ floor: number; low: boolean }>;
 
-/**
- * The narrowest the table may be, in px: the fixed floors and the select
- * column, plus each flexible column at the widest flexible floor (a fixed
- * layout splits what is left evenly).
- */
-export function tableFloor(columns: readonly FitColumn[], select: number): number {
-  const flexible = columns.filter((column) => column.flexible);
-  const fixed = columns.reduce((sum, column) => sum + (column.flexible ? 0 : column.floor), select);
-  const widest = Math.max(0, ...flexible.map((column) => column.floor));
-  return fixed + flexible.length * widest;
-}
+/** The narrowest the table may be, in px: every column's floor and the select column. */
+const tableFloor = (columns: readonly FitColumn[], select: number) =>
+  columns.reduce((sum, column) => sum + column.floor, select);
 
 /**
  * The indices of the low-priority columns to hide so the table fits its
@@ -67,9 +59,9 @@ const sameList = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
 
 /**
- * Which low-priority columns the frame has no room for. A hidden probe
- * resolves every column's CSS floor to px inside the frame, and a resize
- * observer re-fits as the frame changes, before paint.
+ * The table's column rules, and which low-priority columns the frame has no
+ * room for. A hidden probe resolves every column's floor to px inside the
+ * frame, and a resize observer re-fits as the frame changes, before paint.
  */
 export function useFittedColumns({
   columns,
@@ -97,7 +89,6 @@ export function useFittedColumns({
       const next = hiddenLowColumns({
         columns: columns.map((column, index) => ({
           floor: floors[index] ?? 0,
-          flexible: isFlexible(column),
           low: column.priority === 'low',
         })),
         select: selection ? select : 0,
@@ -114,48 +105,24 @@ export function useFittedColumns({
 
   const hiddenSet = new Set(hidden);
   const shown = columns.filter((_, index) => !hiddenSet.has(index));
-  const position = (index: number) => index + (selection ? 2 : 1);
-  const positions = hidden.map(position);
-  const last = shown.at(-1);
-  const end = last && last !== columns.at(-1) ? position(columns.indexOf(last)) : undefined;
   return {
     frameRef,
     shown,
     shownKeys: new Set(shown.map((column) => column.key)),
-    /** The frame's scope for the hiding rule; undefined while nothing hides. */
-    fitScope: positions.length ? scope : undefined,
-    probe: hasLow ? (
+    scope,
+    probe: (
       <>
-        <FloorProbe ref={probeRef} columns={columns} selection={selection} />
-        {positions.length ? <style>{hidingRule({ scope, positions, end })}</style> : null}
+        {hasLow ? <FloorProbe ref={probeRef} columns={columns} selection={selection} /> : null}
+        <style>{columnRules({ scope, columns, hidden, selection })}</style>
       </>
-    ) : null,
+    ),
   };
 }
 
 /**
- * Hides the head and cells at the given 1-based positions in one table. A
- * row with a spanning cell (a state, the reserved space, a full-row note)
- * keeps its cells; it spans the shown columns (`useShownSpan`). When the
- * trailing columns hide, the last shown cell takes the table's end inset,
- * which `:last-child` would still give the hidden cell.
- */
-function hidingRule({
-  scope,
-  positions,
-  end,
-}: Readonly<{ scope: string; positions: readonly number[]; end: number | undefined }>): string {
-  const cell = (position: number) =>
-    `[data-fit="${scope}"] tr:not(:has(> [colspan])) > :nth-child(${position})`;
-  const hide = `${positions.map(cell).join(',')}{display:none}`;
-  return end === undefined
-    ? hide
-    : `${hide}:root:not([data-public-surface]) ${cell(end)}{padding-inline-end:16px}`;
-}
-
-/**
- * One zero-height box per column at the width the fit keeps for it (`fitFloor`), the select column first;
- * a `desktopOnly` column measures zero where the narrow layout drops it.
+ * One zero-height box per column at the width the fit expects it to take
+ * (`fitFloor`), the select column first; a `desktopOnly` column measures zero
+ * where the narrow layout drops it.
  */
 function FloorProbe({
   ref,

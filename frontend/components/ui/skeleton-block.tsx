@@ -220,27 +220,22 @@ export function TableBlocks({
 }
 
 /**
- * FigureStrip's row (`figureRows`) and cells, with its lines and dividers
- * (globals.css): a 14px label block at 50% on the label's 20px line over a
- * 24×80 value block that fills the value's 24px line, 72 tall.
+ * FigureStrip's frame, rows (`figureRows`) and cells, with its dividers
+ * (globals.css): a 12px label block on the label's 16px line over a 20×80
+ * value block on the value's 28px line.
  */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   const { ref, width } = useStripWidth<HTMLSpanElement>();
   const cells = figureRowCells({ count, width });
   return (
     <span ref={ref} data-figure-strip="" className="flex min-w-0 flex-wrap">
-      {cells.map(({ size, rowStart }, index) => (
-        <span
-          key={index}
-          data-figure-cell=""
-          data-row-start={rowStart || undefined}
-          style={{ '--row': size } as CSSProperties}
-        >
-          <span className="flex h-5 items-center">
-            <SkeletonBlock className="h-3.5 w-1/2" />
+      {cells.map((size, index) => (
+        <span key={index} data-figure-cell="" style={{ '--row': size } as CSSProperties}>
+          <span className="flex h-4 items-center">
+            <SkeletonBlock className="h-3 w-1/2" />
           </span>
           <span data-figure-value="" className="flex items-center">
-            <SkeletonBlock className="h-6 w-20 max-w-full" />
+            <SkeletonBlock className="h-5 w-20 max-w-full" />
           </span>
         </span>
       ))}

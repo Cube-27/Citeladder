@@ -1,5 +1,3 @@
-import { AlertTriangle } from 'lucide-react';
-
 import type { FailureOutcome } from '@/components/agent/thread-items';
 import type { AgentMessage } from '@/lib/api/agent';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -36,7 +34,6 @@ export function TurnFailure({
   return (
     <Notice
       tone={FAILURE_TONE[outcome]}
-      icon={outcome === 'unknown' ? AlertTriangle : undefined}
       title={
         count > 1 ? (
           <>

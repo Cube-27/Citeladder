@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { CHART_FILL, CHART_STROKE, chartPath } from '@/components/ui/chart';
+import { chartFill, chartPath, chartStroke } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 import type { Change } from './demo-data';
@@ -129,7 +129,7 @@ export function VignetteBar({ share }: Readonly<{ share: number }>) {
   const width = Math.min(1, Math.max(0, share)) * 100;
   return (
     <span aria-hidden className="cl-vig-bar">
-      <span className={CHART_FILL[1]} style={{ width: `${width}%` }} />
+      <span className={chartFill(1)} style={{ width: `${width}%` }} />
     </span>
   );
 }
@@ -198,7 +198,7 @@ export function VignetteChart({
                 vectorEffect="non-scaling-stroke"
               />
             ))}
-            <path d={area} className={CHART_FILL[1]} fillOpacity={0.12} />
+            <path d={area} className={chartFill(1)} fillOpacity={0.12} />
             <path
               d={line}
               fill="none"
@@ -206,12 +206,12 @@ export function VignetteChart({
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              className={CHART_STROKE[1]}
+              className={chartStroke(1)}
             />
           </svg>
           {last ? (
             <span
-              className={cn('cl-vig-dot', CHART_FILL[1])}
+              className={cn('cl-vig-dot', chartFill(1))}
               style={{ left: `${last[0]}%`, top: `${last[1]}%` }}
             />
           ) : null}

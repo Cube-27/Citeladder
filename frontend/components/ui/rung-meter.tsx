@@ -9,7 +9,7 @@ const MAX = 100;
 
 /**
  * RungMeter — ten rungs for work in progress out of 100; a 0 to 100 score is
- * a `ScoreRing`, never rungs. Rungs fill in `ink` on a `well` track, the label
+ * a printed figure, never rungs. Rungs fill in `ink` on a `well` track, the label
  * above them and the percentage beside the label while both fit (else under it).
  */
 export function RungMeter({ label, value }: Readonly<{ label: string; value: number }>) {
