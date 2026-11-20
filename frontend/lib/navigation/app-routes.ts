@@ -364,10 +364,8 @@ export const APP_ROUTES = [
     width: 'compact',
     title: 'Context',
     screen: screens.context,
-    // The Company facts form's five fields. Brand facts, for the pilot only, joins the row's end.
-    loading: cards([facts(5)], {
-      tabs: held('tab', CONTEXT_TABS.slice(0, -1)),
-    }),
+    // The Company facts form's five fields.
+    loading: cards([facts(5)], { tabs: held('tab', CONTEXT_TABS) }),
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({

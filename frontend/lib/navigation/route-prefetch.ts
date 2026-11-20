@@ -145,7 +145,7 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/agent/context': routeReads(
     () => import('@/lib/api/projects'),
-    // The profile fills the first tab; the brand-facts gate decides which tabs exist.
+    // The profile fills the first tab; the brand-facts gate decides whether facts show.
     ({ projectQueries }, client, scope) => {
       warmQuery(client, projectQueries.brandProfile(scope));
       warmQuery(client, projectQueries.brandFacts(scope));

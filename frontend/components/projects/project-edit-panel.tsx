@@ -30,13 +30,12 @@ import { StateBlock } from '@/components/ui/state-block';
  * setup edit form.
  *
  * Deliberately a flat panel, not a stepper. The old edit surface was a
- * five-step wizard, which is the wrong shape for changing one alias: a wizard
+ * five-step wizard, which is the wrong shape for changing one domain: a wizard
  * is for a task you do once, a panel is for a thing you keep. Everything is
- * visible at once and Save sends only what changed.
+ * visible at once. The brand's aliases are edited in Context › Brand facts.
  *
- * Comma-separated text for the list fields rather than per-row editors. These
- * are short lists of short strings, and a row-with-remove-button UI for
- * aliases was a meaningful chunk of the old form's weight for no real gain.
+ * Comma-separated text for the list fields rather than per-row editors: these
+ * are short lists of short strings.
  */
 const splitList = (value: string): string[] =>
   value
@@ -108,7 +107,6 @@ export function ProjectEditPanel({
   // Lazy initializers: these join/map the project's arrays, and a bare
   // `useState(expr)` re-runs `expr` on every keystroke in this panel only to
   // throw the result away.
-  const [aliases, setAliases] = useState(() => project.brand.aliases.join(', '));
   const [brandRule, setBrandRule] = useState(() => mentionRuleDraft(project.brand.matching));
   const [ownedDomains, setOwnedDomains] = useState(() => project.owned_domains.join(', '));
   const [unintendedDomains, setUnintendedDomains] = useState(() =>
@@ -140,7 +138,6 @@ export function ProjectEditPanel({
         website_url: websiteUrl.trim(),
         country_code: country.trim().toUpperCase(),
         language_code: language.trim(),
-        brand: { aliases: splitList(aliases) },
         owned_domains: splitList(ownedDomains),
         unintended_domains: splitList(unintendedDomains),
         competitors: competitors.flatMap((competitor) => {
@@ -221,16 +218,6 @@ export function ProjectEditPanel({
                 {...props}
                 value={websiteUrl}
                 onChange={(event) => setWebsiteUrl(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="Brand aliases" hint="Comma separated">
-            {(props) => (
-              <Input
-                {...props}
-                value={aliases}
-                onChange={(event) => setAliases(event.target.value)}
-                placeholder="Acme Inc, Acme Co"
               />
             )}
           </Field>
