@@ -41,11 +41,8 @@ plan and for your questions record all recommended answers as my decision".
   fanouts table counts the queries exactly as engines returned them and gains Share,
   Change (against the previous comparable run) and Brands matched, with Top, Rising and
   Falling, under the tab's filters.
-- **AV-9, market probes (W12).** Funded from customer audit credits like a normal run.
-  The first version uses the closed theme list, not open clusters. Probes run on demand,
-  with an optional schedule.
-- **AV-10, objection probes (W13).** Funded the same way as W12. W13 ships after W12 is
-  calibrated.
+- **AV-9, market probes.** Replaced on 2026-11-20 by AV-27 and AV-29 to AV-36.
+- **AV-10, objection probes.** Replaced on 2026-11-20 by AV-28 to AV-37.
 - **AV-11, competitor discovery (W14).** The existing perception template is extended to
   extract untracked business names. It is already platform-funded, so this adds no call.
 - **AV-12, fact-check workflow (W15).** Verdict overrides count in accuracy, with an
@@ -83,11 +80,9 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
   (2026-11-18, with two reference products' API docs): a full API reference section on
   the docs site, with a page per endpoint and request and response examples. Shipped in
   #967.
-- **AV-21, one migration for this plan.** "dont add more migrations since nothing is
-  deployed yet so all changes of this session in terms of migration should go into 0002
-  itself" (2026-11-18): every schema change of this plan goes into
-  `0002_ai_visibility_gaps.sql`, one header comment per part. Production is still on
-  `0001_baseline` only (verified 2026-11-18).
+- **AV-21, migrations for this plan.** The plan's schema is in `0001_baseline.sql` after
+  the 2026-11-19 refold. Phase 2 schema changes go into `0001_baseline.sql` while the
+  owner maintains a single baseline (owner, 2026-11-20).
 - **AV-22, Keyword research.** "it should be keyword research so change the sidebar
   option to keyword researach not keywords" (2026-11-18): the page at
   `/search-intelligence` is named Keyword research in the sidebar, its title, the
@@ -95,6 +90,64 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
 - **AV-23, palette deep links.** "Add the three" (2026-11-18): the command palette lists
   Fact-checking, Query fanouts and Prompt builder under their sidebar groups, opening
   that tab or page.
+
+## Owner decisions (2026-11-20)
+
+Recorded from the owner's answers in chat on 2026-11-20, after a feasibility study on the
+real Kerry snapshot (`services/api/local/snapshots/kerry-2026-11-18/`) and a live test of
+open themes and objections on six brands in six industries (Claude Sonnet with web
+search, three repeats each; open themes repeated 46–70% between runs, top objections
+repeated 3 of 3).
+
+- **AV-24, fix detection first.** Before any probe, brand detection is fixed and the
+  branded answers every audit already collects are shown on Perception. Today 8 of 20
+  branded answers in the snapshot read the brand as absent (answers write "Best&Less" or
+  "it"), and Perception reads only unbranded answers.
+- **AV-25, aliases.** Context › Brand facts gains an Aliases section: identified
+  spellings are suggested, and the user adds, edits and deletes them inline. Matching
+  also normalises case, "&"/"and", spaces and punctuation, on whole words.
+- **AV-26, whole answer for brand-named prompts.** For prompts that name the brand
+  (branded prompts and probe prompts) the brand counts as mentioned and perception reads
+  the whole answer. Unbranded prompts keep sentence matching.
+- **AV-27, project themes.** Onboarding research identifies and saves 5 to 8
+  high-confidence, buyer-facing themes (never company facts such as funding, ownership
+  or history), never more than 8. They are not shown during onboarding. The user adds,
+  renames and deletes themes like prompt topics, in Context and on the Market tab, with
+  no upper limit. Probe answers map onto the project's themes.
+- **AV-28, objections fixed after the first probe.** The first probe groups objections by
+  meaning; later probes map onto those groups and add a group only for something
+  genuinely new. The user can rename, merge or delete groups.
+- **AV-29, one probe, both kinds.** Market (W12) and Objections (W13) ship together; one
+  probe run asks both kinds of question. This replaces "W13 after W12 is calibrated".
+- **AV-30, three asks.** Each probe question is asked three times per engine per run.
+- **AV-31, engines.** Only search-capable engines run probes, and only those with saved
+  keys; with none, Run probe offers key entry as the Launch a run dialog does.
+  Managed-mode workspaces probe on CiteLadder's keys.
+- **AV-32, you only.** Direct questions ("What is X known for?", "Why might someone not
+  choose X?") are asked about the project's brand only. Competitor positions come from
+  the theme questions ("Which [category] brands are best known for [theme]?"), asked for
+  every approved theme.
+- **AV-33, cadence.** Probes run on demand (Run probe, cost shown first) with an optional
+  schedule.
+- **AV-34, funding.** Probes are charged in AI credits, shown before running. Managed
+  mode: credits cover the engine answers and CiteLadder's model calls.
+  Bring-your-own-key: engine answers bill the customer's keys; credits cover only
+  CiteLadder's classification and grouping calls.
+- **AV-35, score.** Market and Objections tables lead with the position score only: 100
+  when named first, minus 10 per later place, 0 when not raised, averaged over the runs'
+  answers.
+- **AV-36, UI.** Market and Objections are built as the approved mockup draws them, with
+  "audit credits" read as AI credits. There is no objection detail page (sources already
+  show on the Objections tab) and no "Draft rebuttal" button.
+- **AV-37, Ask agent.** An objection's "Ask agent" opens Agent chat with that objection.
+  The Agent lists the objection's sources (external, sometimes the project's own pages)
+  and asks which to work on; for each chosen source it reads the page and suggests edits
+  to the user's own pages, outreach to the author (it may draft the email), or, when the
+  cause is outside the site (product review ratings, a missing feature), advice only. It
+  never acts on its own; the user chooses each step.
+- **AV-38, proof before merge.** Before a probe PR merges, its builder runs the finished
+  probe on three real brands with the Claude key and reports themes, objections, ranks
+  and run-to-run steadiness in the PR for the owner.
 
 ## Where it lives
 
@@ -281,20 +334,31 @@ labels. Rename them to the sidebar's words.
 
 ## Phase 2: new collection that costs provider money
 
-**W12 Market positioning probes (L, two PRs, AV-9).**
-- A probe cohort through the existing audit pipeline (admission, funding, leases,
-  commit-before-I/O). It asks each engine what the brand is known for and which brands
-  lead each theme.
-- The model maps phrases to the closed theme list.
-- Code computes association and prominence from mention order with a configured position
-  decay, plus rank and the biggest gap.
+Order: P2-1 → P2-2 → P2-3 → P2-4. Each is one PR.
 
-**W13 Objection probes (L, AV-10).**
-- Reuses the W12 machinery and asks why a buyer might not choose the brand.
-- The model groups objections into reviewed groups.
-- Code scores position as 100 minus 10 per rank step, floored at 0 and averaged over
-  completed runs. A non-mention counts as 0.
-- Each objection shows its sources, and the Agent can draft rebuttal content.
+**P2-1 Detection and branded answers (M; AV-24–26).** Aliases in Context › Brand facts
+with suggestions and inline editing; normalised whole-word matching; whole-answer reading
+for brand-named prompts; Perception reads serve the branded cohort (the selection's cohort
+mapping includes it, labelled). Applies from the next audit, no backfill. Ships this plan
+update.
+
+**P2-2 Project themes (M; AV-27).** Onboarding research saves 5–8 high-confidence
+buyer-facing themes (hidden in onboarding). Theme editing in Context and on the Market
+tab, like prompt topics.
+
+**P2-3 Probe run and the Market and Objections tabs (L, may split API and UI;
+AV-28–36, AV-38).** A probe cohort through the existing audit pipeline (admission,
+leases, commit-before-I/O): per search-capable engine with a key, three asks each of
+"What is [brand] known for?", "Why might someone not choose [brand]?" and, per approved
+theme, "Which [category] brands are best known for [theme]?". The model maps known-for
+phrases to the project's themes (buyer-facing only) and groups objections into the
+project's fixed groups. Code computes the position scores, ranks, leader and gap.
+Sources per objection come from the answers' citations; "no sources" is a real state.
+AI-credit cost shown before running; optional schedule. The Market and Objections tabs
+as the mockup draws them. Real-brand check in the PR.
+
+**P2-4 Ask agent on an objection (M; AV-37).** The Ask agent hand-off and the Agent
+workflow above, read-only, every step chosen by the user.
 
 ## Phase 3: docs site and changelog (AV-19)
 
