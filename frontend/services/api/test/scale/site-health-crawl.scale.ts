@@ -19,7 +19,7 @@ import { pages } from '../../src/site-health/reads/pages.ts';
 import { SiteHealthWorker } from '../../src/workers/site-health-worker.ts';
 import { acquisitionHarness } from '../site-health-acquisition-support.ts';
 import { FinalizeFixtures, type SiteSeed } from '../site-health-finalize-fixtures.ts';
-import { testDatabase } from '../support.ts';
+import { testConfig, testDatabase } from '../support.ts';
 
 const PAGES = Number(process.env.SITE_HEALTH_SCALE_PAGES ?? 5000);
 const SITEMAP_URLS = 40_000;
@@ -32,10 +32,15 @@ const RULES = [
 ] as const;
 
 const db = testDatabase();
-const fixtures = new FinalizeFixtures(db);
+// Fixture work only: removing a tens-of-thousands-page workspace outlasts the service statement bound.
+const fixtureDb = testDatabase(
+  testConfig({ DB_STATEMENT_TIMEOUT_MS: '300000', DB_COMMAND_TIMEOUT_SECONDS: '300' }),
+);
+const fixtures = new FinalizeFixtures(fixtureDb);
 const harness = acquisitionHarness(db, fixtures);
 afterAll(async () => {
   await fixtures.cleanup();
+  await fixtureDb.destroy();
   await db.destroy();
 });
 

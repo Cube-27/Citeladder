@@ -276,7 +276,7 @@ function duplicateComparisons(pages: Analyzed[]) {
       kind: 'compared',
       words: fingerprint.words,
       compared: fingerprints.size - 1,
-      matches: matches.get(url) ?? [],
+      matches: matches(url),
     };
   };
 }

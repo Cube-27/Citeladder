@@ -74,19 +74,19 @@ async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
     .where('active', '=', true)
     .executeTakeFirstOrThrow();
   if (!hashes.length) return { hashes: new Set<string>(), active: Number(active.count) };
+  // Driven from the candidates through both unique (project, ...) keys: a join
+  // led by the tracked set grew per chunk to 25 s at 30,000 pages.
   const rows = await trx
-    .selectFrom('monitored_site_urls as m')
-    .innerJoin('site_urls as u', (join) =>
-      join
-        .onRef('u.id', '=', 'm.site_url_id')
-        .onRef('u.workspace_id', '=', 'm.workspace_id')
-        .onRef('u.project_id', '=', 'm.project_id'),
-    )
+    .selectFrom('site_urls as u')
     .select('u.url_hash')
-    .where('m.workspace_id', '=', crawl.workspace_id)
-    .where('m.project_id', '=', crawl.project_id)
-    .where('m.fill_order', 'is not', null)
+    .where('u.workspace_id', '=', crawl.workspace_id)
+    .where('u.project_id', '=', crawl.project_id)
     .where('u.url_hash', '=', sql<string>`any(${hashes}::text[])`)
+    .where(
+      sql<boolean>`exists (select 1 from monitored_site_urls m
+        where m.project_id = u.project_id and m.site_url_id = u.id
+          and m.workspace_id = u.workspace_id and m.fill_order is not null)`,
+    )
     .execute();
   return { hashes: new Set(rows.map((row) => row.url_hash)), active: Number(active.count) };
 }

@@ -677,8 +677,11 @@ coverage, and without an observed homepage the unreachable rule is `unknown`
 (`homepage_not_observed`).
 
 **Duplicate content** (`analysis/duplicate-content.ts`) compares pages
-pairwise (exact SHA-256 and near SimHash), without transitive clustering; a page
-outside the comparison is `not_applicable` with the reason.
+(exact SHA-256 and near SimHash), without transitive clustering; a page
+outside the comparison is `not_applicable` with the reason. Only SimHashes
+sharing one of `max_hamming_distance + 1` bit bands are compared, which finds
+every pair within the distance without comparing every pair of a large crawl,
+and each page keeps its closest evidence URLs, exact copies first.
 
 ```text
 role / pillar score = 100 * satisfied / (satisfied + missing), over applicable checks
