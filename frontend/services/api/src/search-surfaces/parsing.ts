@@ -116,7 +116,10 @@ function fragments(element: Record<string, unknown>) {
     ...list(table.table_header).map(text),
     ...list(table.table_content).map((row) => list(row).map(text).filter(Boolean).join(' ')),
     ...list(element.items).map(text),
-    ...objects(element.components).map((part) => text(part.text) || text(part.markdown)),
+    ...objects(element.components).flatMap((part) => [
+      text(part.title),
+      text(part.text) || text(part.markdown),
+    ]),
   ].filter(Boolean);
   return values.length ? values : [text(element.markdown)].filter(Boolean);
 }

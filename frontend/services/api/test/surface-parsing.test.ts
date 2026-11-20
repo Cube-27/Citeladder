@@ -63,6 +63,7 @@ describe('observed surface parsing', () => {
         'A podiatrist compares stability shoes.',
         'How to choose',
         'Look for firm midsoles.',
+        'Fit',
         'Try shoes late in the day.',
         'Replace them every 500 miles.',
       ].join('\n\n'),
