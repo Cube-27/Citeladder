@@ -513,7 +513,7 @@ describe('AI Traffic state and navigation', () => {
     renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
     expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Connect Google Analytics 4' })).toBeVisible();
-    expect(screen.queryByRole('heading', { name: 'Key figures' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'AI traffic key figures' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Period:/ })).not.toBeInTheDocument();
 
     const user = userEvent.setup();

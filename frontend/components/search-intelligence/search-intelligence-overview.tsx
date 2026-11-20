@@ -2,7 +2,7 @@ import { Database } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -26,9 +26,13 @@ export type SearchMetric = readonly [
   options?: Readonly<{ asOf?: boolean; sub?: FigureSegment['sub'] }>,
 ];
 
-export function SearchMetrics({ metrics }: Readonly<{ metrics: readonly SearchMetric[] }>) {
+export function SearchMetrics({
+  metrics,
+  label,
+}: Readonly<{ metrics: readonly SearchMetric[]; label?: string }>) {
   return (
     <FigureStrip
+      label={label}
       segments={metrics.map(([label, dataset, field, options]) => ({
         key: label,
         label,
@@ -74,32 +78,28 @@ export function SearchIntelligenceOverview({
   return (
     <Stack gap="workspace" className="min-w-0">
       {/* The page's question first: how much of organic search this website holds. */}
-      <Section aria-labelledby="keyword-research-figures">
-        <SectionHeader>
-          <SectionTitle id="keyword-research-figures">Your search footprint</SectionTitle>
-        </SectionHeader>
-        <SearchMetrics
-          metrics={[
-            ['Organic keywords', footprint, 'organic_keywords', { asOf: true }],
-            ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
-            [
-              'Top-10 keywords',
-              footprint,
-              'top_10_keywords',
-              {
-                sub:
-                  footprint && share != null ? (
-                    <>
-                      <SearchValue value={share} digits={1} />% of ranking keywords
-                    </>
-                  ) : undefined,
-              },
-            ],
-            ['Referring domains', backlinks, 'referring_domains', { asOf: true }],
-            ['Backlinks', backlinks, 'backlinks', { asOf: true }],
-          ]}
-        />
-      </Section>
+      <SearchMetrics
+        label="Your search footprint"
+        metrics={[
+          ['Organic keywords', footprint, 'organic_keywords', { asOf: true }],
+          ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
+          [
+            'Top-10 keywords',
+            footprint,
+            'top_10_keywords',
+            {
+              sub:
+                footprint && share != null ? (
+                  <>
+                    <SearchValue value={share} digits={1} />% of ranking keywords
+                  </>
+                ) : undefined,
+            },
+          ],
+          ['Referring domains', backlinks, 'referring_domains', { asOf: true }],
+          ['Backlinks', backlinks, 'backlinks', { asOf: true }],
+        ]}
+      />
       <SearchIntelligenceCompetitors
         datasets={datasets}
         competitors={competitors}

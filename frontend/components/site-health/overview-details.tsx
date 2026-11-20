@@ -11,7 +11,7 @@ import { Delta } from '@/components/ui/delta';
 import { Drawer } from '@/components/ui/drawer';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { AreaChart } from '@/components/ui/area-chart';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
@@ -107,19 +107,15 @@ function DimensionLedger({
       {dimensions.map((dimension) => (
         <TableRow key={dimension.key}>
           <TableCell>
-            {/* Name over one caption line: the ledger is a scanning
-                surface, and a wrapping sentence pushes the score columns
-                off a screenful. Full text stays available on hover. */}
-            <div className="grid min-w-0">
-              <ClampText lines={1} className={textRole('emphasis', 'text-ink')}>
-                {dimension.label}
-              </ClampText>
-              <ClampText lines={1} className="type-caption">
-                {dimension.reason === 'measured_at_site_scope'
+            <TableCellLines
+              title
+              primary={dimension.label}
+              secondary={
+                dimension.reason === 'measured_at_site_scope'
                   ? `Measured at site scope · ${dimension.description}`
-                  : dimension.description}
-              </ClampText>
-            </div>
+                  : dimension.description
+              }
+            />
           </TableCell>
           {/* The number only; a pillar with no score says why. */}
           <TableCell numeric>

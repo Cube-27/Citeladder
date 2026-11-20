@@ -149,8 +149,8 @@ export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) 
 }
 
 /**
- * A row that opens in place (an issue on a page): the title over a subline of
- * its facts, 56 tall, with a chevron at the end and `aria-expanded`. Open, its
+ * A row that opens in place (an issue on a page): the title, then its facts
+ * inline, 40 tall, with a chevron at the end and `aria-expanded`. Open, its
  * body sits under it on `well` (12 down, 16 across, radius 6). Like `OpenRow`
  * it bleeds 12 past its list, so every row's text starts on one edge.
  */
@@ -174,9 +174,17 @@ export function DisclosureRow({
         onClick={() => setOpen(!open)}
         className={cn(listRowClasses(), pressableRowClasses, 'min-h-10')}
       >
-        <span className="grid min-w-0 flex-1 gap-1">
-          <ClampText className={textRole('label', 'text-ink')}>{title}</ClampText>
-          <span className={textRole('caption', 'text-ink-2 flex flex-wrap items-center gap-3')}>
+        <span className="flex min-w-0 flex-1 items-center gap-3">
+          {/* As in a table row, the facts give way before the title. */}
+          <ClampText className={textRole('label', 'text-ink max-w-full shrink-0')}>
+            {title}
+          </ClampText>
+          <span
+            className={textRole(
+              'caption',
+              'text-ink-2 flex min-w-0 items-center gap-3 overflow-hidden',
+            )}
+          >
             {meta}
           </span>
         </span>

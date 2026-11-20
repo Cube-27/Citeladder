@@ -28,8 +28,9 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
-import type { CrawlRobotsHandling, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
+import type { CrawlRobotsHandling, SiteCrawl } from '@citeladder/contracts';
 import { StartCrawlControl } from '@/components/site-health/robots-choice';
+import { StatusStrip } from '@/components/site-health/status-strip';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
@@ -118,18 +119,28 @@ function SiteHealthContent({
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
             <SiteHealthRefreshFailures screen={screen} />
-            {/* Before the first crawl every tab says the same one next step. */}
+            {/* Every tab opens on the crawl's status line; before the first
+                crawl every tab says the same one next step. */}
             {crawl ? (
-              <AnalysisPanel
-                tab={tab}
-                crawlId={crawl.id}
-                projectId={projectId}
-                workspaceId={workspaceId}
-                screen={screen}
-                entitlement={entitlementQuery.data!.site_health}
-                mutationsAllowed={mutationsAllowed}
-                linksRead={links.read}
-              />
+              <>
+                <StatusStrip
+                  crawl={crawl}
+                  phase={screen.phase}
+                  entitlement={entitlementQuery.data!.site_health}
+                  cancelPending={cancelMutation.isPending}
+                  startPending={startPending}
+                  onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
+                />
+                <AnalysisPanel
+                  tab={tab}
+                  crawlId={crawl.id}
+                  projectId={projectId}
+                  workspaceId={workspaceId}
+                  screen={screen}
+                  mutationsAllowed={mutationsAllowed}
+                  linksRead={links.read}
+                />
+              </>
             ) : (
               <FirstCrawl
                 canRun={canRun}
@@ -327,7 +338,6 @@ function AnalysisPanel({
   projectId,
   workspaceId,
   screen,
-  entitlement,
   mutationsAllowed,
   linksRead,
 }: Readonly<{
@@ -336,19 +346,12 @@ function AnalysisPanel({
   projectId: string;
   workspaceId: string;
   screen: ReturnType<typeof useSiteHealthScreen>;
-  entitlement: SiteHealthEntitlement;
   mutationsAllowed: boolean;
   linksRead: LinksRead;
 }>) {
   switch (tab) {
     case 'pages':
-      return (
-        <SiteHealthDashboardLayout
-          screen={screen}
-          entitlement={entitlement}
-          mutationsAllowed={mutationsAllowed}
-        />
-      );
+      return <SiteHealthDashboardLayout screen={screen} mutationsAllowed={mutationsAllowed} />;
     case 'overview':
       return (
         <OverviewPanel

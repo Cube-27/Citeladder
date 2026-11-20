@@ -16,7 +16,6 @@ import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
 import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
-import { SectionContent, TitledSection } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 const CLASS_LABELS = {
@@ -95,17 +94,14 @@ export function ChangesPanel({
       ) : null}
       {/* Without a comparable pair the table's own state says why, once. */}
       {counts ? (
-        <TitledSection title="Tracked field changes since the previous crawl">
-          <SectionContent>
-            <FigureStrip
-              segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
-                key,
-                label,
-                value: counts[key] ?? 0,
-              }))}
-            />
-          </SectionContent>
-        </TitledSection>
+        <FigureStrip
+          label="Tracked field changes since the previous crawl"
+          segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
+            key,
+            label,
+            value: counts[key] ?? 0,
+          }))}
+        />
       ) : null}
       <DataTable
         label="Website changes"

@@ -1,11 +1,13 @@
 import { Fragment, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListTree } from 'lucide-react';
 
 import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
 import { OrphanPageDrawer, orphanSegment } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { AppGrid } from '@/components/ui/app-grid';
+import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/ui/project-link';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
@@ -306,15 +308,14 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
       <Section>
         <SectionHeader
           actions={
-            <TextLink href="/site?tab=internal-links">Review internal link suggestions</TextLink>
+            <Button asChild variant="secondary">
+              <ProjectLink href="/site?tab=internal-links">
+                Review internal link suggestions
+              </ProjectLink>
+            </Button>
           }
         >
-          <SectionTitle>
-            <Inline as="span">
-              <Icon icon={Link2} className="text-ink-2" />
-              Internal linking
-            </Inline>
-          </SectionTitle>
+          <SectionTitle>Internal linking</SectionTitle>
         </SectionHeader>
         <SectionContent>
           <FigureStrip
@@ -349,12 +350,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
       </Section>
       <Section>
         <SectionHeader>
-          <SectionTitle>
-            <Inline as="span">
-              <Icon icon={ListTree} className="text-ink-2" />
-              Structure depth
-            </Inline>
-          </SectionTitle>
+          <SectionTitle>Structure depth</SectionTitle>
         </SectionHeader>
         <SectionContent>
           <Stack>
@@ -372,7 +368,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                     }
                     value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
                     label={`${DEPTH_LABELS[bucket.key]} share of pages`}
-                    tone="accent"
+                    tone="neutral"
                   />
                 ))}
               </Stack>

@@ -332,7 +332,7 @@ function FigureLabelLink({
 }: Readonly<{ action: FigureLink; children: ReactNode }>) {
   if (action.onSelect)
     return (
-      <TextLink asChild underline="hover" className="text-ink-2">
+      <TextLink asChild text="inherit" underline="hover" className="text-ink-2">
         <button type="button" className="text-start" onClick={action.onSelect}>
           {children}
         </button>
@@ -342,6 +342,7 @@ function FigureLabelLink({
     <TextLink
       href={action.href}
       projectId={action.projectId}
+      text="inherit"
       underline="hover"
       className="text-ink-2"
     >

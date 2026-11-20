@@ -94,7 +94,7 @@ function IssueList({
   );
 }
 
-/** One issue: its title over its severity and category, opening its body in place. */
+/** One issue: its title, then its severity and category, opening its body in place. */
 function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: ReactNode }>) {
   return (
     <DisclosureRow

@@ -22,7 +22,8 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(screen.getAllByText('Not measured')).toHaveLength(3);
+    // The three scores, and the two page counts that need a crawl.
+    expect(screen.getAllByText('Not measured')).toHaveLength(5);
   });
 
   it('preserves unavailable measurement states when scores are absent', () => {

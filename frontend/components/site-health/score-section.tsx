@@ -31,6 +31,16 @@ export function ScoreSection({
           unavailable: unavailable(summary?.aeo_measurement_state),
           href: '/site?tab=aeo-readiness',
         },
+        {
+          title: 'Pages discovered',
+          value: crawl?.visible_url_count ?? null,
+          valueUnit: 'count',
+        },
+        {
+          title: 'Pages analyzed',
+          value: crawl ? crawl.counters.analyzed || crawl.analyzed_count : null,
+          valueUnit: 'count',
+        },
       ]}
     />
   );
