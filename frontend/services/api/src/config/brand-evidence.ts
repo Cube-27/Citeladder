@@ -81,6 +81,22 @@ export const brandEvidence = {
     'terms',
     'wishlist',
   ],
+  // A retailer's customer-service pages often sit under `services/` or `store/`,
+  // which rank as offering hubs; whole phrases, so "Gift hampers" stays.
+  utility_link_phrases: [
+    'buy now pay later',
+    'click and collect',
+    'find a store',
+    'gift card',
+    'gift cards',
+    'gift voucher',
+    'gift vouchers',
+    'giftcard',
+    'giftcards',
+    'store finder',
+    'store locator',
+    'stores near me',
+  ],
   junk_label_terms: ['banner', 'icon', 'image', 'img', 'logo', 'thumbnail'],
   locale_labels: [
     'dansk',

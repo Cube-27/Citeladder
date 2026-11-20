@@ -89,6 +89,10 @@ function tokens(value: string) {
 function hasTerm(values: readonly string[], terms: readonly string[]) {
   return values.some((word) => terms.includes(word));
 }
+function hasPhrase(words: readonly string[], phrases: readonly string[]) {
+  const text = ` ${words.join(' ')} `;
+  return phrases.some((phrase) => text.includes(` ${phrase} `));
+}
 function labelFamily(label: string) {
   const words = label.toLowerCase().split(/\s+/u);
   const index = words.findIndex(
@@ -118,6 +122,8 @@ export function offeringLinks(pages: readonly PageEvidence[]) {
         link.label.length < cfg.offering_label_min_chars ||
         link.label.split(/\s+/u).length > cfg.offering_label_max_words ||
         hasTerm(words, cfg.utility_link_terms) ||
+        hasPhrase(tokens(url.pathname), cfg.utility_link_phrases) ||
+        hasPhrase(tokens(label), cfg.utility_link_phrases) ||
         hasTerm(words, cfg.editorial_link_terms) ||
         hasTerm(tokens(label), cfg.junk_label_terms) ||
         new RegExp(cfg.detail_path_pattern, 'iu').test(url.href) ||

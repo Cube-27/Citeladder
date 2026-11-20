@@ -392,6 +392,29 @@ it('extracts visible text and ranks offering navigation while dropping active su
   expect(rasterType(Buffer.from('<svg>script</svg>'))).toBeNull();
   expect(rasterType(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe('image/png');
 });
+it("reads a retailer's departments, not its customer-service pages under services or store", () => {
+  const nav = [
+    ['/services/gift-cards', 'Gift Cards'],
+    ['/services/buy-now-pay-later', 'Buy Now Pay Later'],
+    ['/store/finder', 'Store Finder'],
+    ['/womens', 'Women'],
+    ['/kids', 'Kids'],
+    ['/baby', 'Baby'],
+    ['/gift-hampers', 'Gift hampers'],
+  ]
+    .map(([href, label]) => `<a href="${href}">${label}</a>`)
+    .join('');
+  const page = extractPage(
+    Buffer.from(`<html><body>${nav}</body></html>`),
+    'https://shop.example/',
+  );
+  expect(offeringLinks([page]).map((item) => item.label)).toEqual([
+    'Women',
+    'Kids',
+    'Baby',
+    'Gift hampers',
+  ]);
+});
 it('retains supported field citations but refuses a field citing only unknown evidence', () => {
   const evidence = [{ evidence_ref: 'fp-1' }] as ResearchEvidence[];
   const identity = identityEnvelope.parse({
