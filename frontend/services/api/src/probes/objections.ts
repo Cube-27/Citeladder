@@ -104,18 +104,23 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
     return {
       id: group.id,
       name: group.name,
-      score: score ?? 0,
+      score,
       engines: logicalEngines.filter((engine) => raising.has(engine)),
       change: score !== null && previous !== null ? score - previous : null,
       history: series,
       ...pagesOf(group.id),
     };
   });
+  // A late, rare objection can average to 0 and still be raised by an engine.
+  const raised = rows.filter((row) => row.engines.length > 0);
   return {
     state: 'value',
     probe: { ...latest.run, answers: latestAnswers.length },
     brand: roster.brand,
     answers: current.asked.length,
-    groups: rows.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)),
+    average: raised.length
+      ? Math.round(raised.reduce((sum, row) => sum + (row.score ?? 0), 0) / raised.length)
+      : null,
+    groups: rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.name.localeCompare(b.name)),
   };
 }

@@ -4,6 +4,7 @@ import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { Button } from '@/components/ui/button';
 import { CHART_AXIS_TEXT, CHART_FILL, CHART_STROKE, type ChartTone } from '@/components/ui/chart';
+import { ChartTable } from '@/components/ui/chart-frame';
 import { Inline, Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { cn } from '@/lib/utils';
@@ -66,7 +67,15 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
     entity.kind === 'brand' ? BRAND_TONE : RIVAL_TONES[shown.indexOf(keyOf(entity))];
   return (
     <Stack gap="item">
-      {/* The rank table below reads the same scores; the drawing is decorative. */}
+      <ChartTable
+        label="Brand shape: position score per theme"
+        columns={themes.map((row) => row.theme)}
+        rows={roster.map((entity) => ({
+          name: entity.name,
+          values: scores(entity).map(String),
+        }))}
+        notes={[]}
+      />
       <svg aria-hidden focusable="false" viewBox="0 0 400 300" className="block h-auto w-full">
         {RINGS.map((ring) => (
           <polygon

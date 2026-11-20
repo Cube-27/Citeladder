@@ -143,7 +143,7 @@ describe('probe admission', () => {
     await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
     const perMarket = 3 * policy.probes.repetitions;
     // On its own ChatGPT key the workspace probes both markets.
-    const { quote } = await probeStatus(db, t);
+    const { quote } = await probeStatus(db, t, runtime);
     expect([quote.markets.length, quote.answers]).toEqual([2, 2 * perMarket]);
     const ids = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
     const held = (await ledger(t.workspaceId)).filter((row) => row.entry_kind === 'reservation');
@@ -151,15 +151,17 @@ describe('probe admission', () => {
       2,
       quote.credits,
     ]);
+    // The quote's balance is what holds may still draw: the launch's holds leave it.
+    expect((await probeStatus(db, t, runtime)).quote.balance).toBe(quote.balance! - quote.credits);
     // Managed, Brazil skips Gemini (no location control) and the Gemini app (no Portuguese).
     await managedPlan(db, t.workspaceId);
-    const managed = (await probeStatus(db, t)).quote;
+    const managed = (await probeStatus(db, t, runtime)).quote;
     expect(managed.answers).toBe((5 + 3) * perMarket);
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {
     const { t } = await probeTenant();
-    const { quote } = await probeStatus(db, t);
+    const { quote } = await probeStatus(db, t, runtime);
     await createTheme(db, t, { name: 'Price' });
     await expect(
       runProbe(db, t, { fingerprint: quote.fingerprint }, runtime),
@@ -398,6 +400,8 @@ describe('probe labelling and reads', () => {
       ['Slow delivery', 90, ['chatgpt'], 90, [0, 90], 0],
       ['Fit runs small', 0, [], -63, [63, 0], 0],
     ]);
+    // The average reads only the groups an engine raised in this probe.
+    expect(objections.average).toBe(95);
     const labellings = await db
       .selectFrom('probe_labellings')
       .select('outcome')

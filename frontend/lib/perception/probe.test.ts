@@ -106,7 +106,11 @@ describe('marketSummary', () => {
   });
 });
 
-function group(name: string, score: number, engines: ProbeObjectionsValue['probe']['engines']) {
+function group(
+  name: string,
+  score: number | null,
+  engines: ProbeObjectionsValue['probe']['engines'],
+) {
   return {
     id: `00000000-0000-4000-8000-0000000000${name.length}0`,
     name,
@@ -120,12 +124,13 @@ function group(name: string, score: number, engines: ProbeObjectionsValue['probe
 }
 
 describe('objectionsSummary', () => {
-  it('counts raised groups, the widest one and their average score', () => {
+  it('counts raised groups and the widest one', () => {
     const summary = objectionsSummary({
       state: 'value',
       probe,
       brand: 'Acme',
       answers: 6,
+      average: 68,
       groups: [
         group('Too expensive', 90, ['chatgpt']),
         group('Slow delivery', 45, ['chatgpt', 'claude']),
@@ -134,7 +139,6 @@ describe('objectionsSummary', () => {
     });
     expect(summary).toMatchObject({
       headline: 'Too expensive is the objection AI raises first',
-      average: 68,
       widest: { name: 'Slow delivery' },
     });
     expect(summary.raised.map((item) => item.name)).toEqual(['Too expensive', 'Slow delivery']);
@@ -146,11 +150,11 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 6,
+      average: null,
       groups: [group('Fit', 0, [])],
     });
     expect(summary).toMatchObject({
       headline: 'AI raises no objections to Acme',
-      average: null,
       widest: undefined,
     });
   });
@@ -161,6 +165,7 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 30,
+      average: 0,
       groups: [group('Fit', 0, ['claude']), group('Slow', 0, [])],
     });
     expect(summary.raised.map((item) => item.name)).toEqual(['Fit']);
@@ -173,8 +178,10 @@ describe('objectionsSummary', () => {
       probe,
       brand: 'Acme',
       answers: 0,
-      groups: [],
+      average: null,
+      groups: [group('Fit', null, [])],
     });
     expect(summary.headline).toBe('No engine answered the objection question');
+    expect(summary.raised).toEqual([]);
   });
 });

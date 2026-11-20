@@ -35,17 +35,14 @@ function headline(brand: string, top: string | undefined, best: ThemeRow | undef
 /** The Objections tab's headline and KPI picks: groups the probe raised. */
 export function objectionsSummary(data: ProbeObjectionsValue) {
   // A late, rare objection can average to 0 and still be raised by an engine.
-  const raised = data.groups.filter((group) => group.score > 0 || group.engines.length > 0);
+  const raised = data.groups.filter((group) => group.engines.length > 0);
   const [first] = raised;
   const widest = raised.reduce<(typeof raised)[number] | undefined>(
     (most, group) =>
       most === undefined || group.engines.length > most.engines.length ? group : most,
     undefined,
   );
-  const average = raised.length
-    ? Math.round(raised.reduce((sum, group) => sum + group.score, 0) / raised.length)
-    : null;
-  return { raised, widest, average, headline: objectionsHeadline(data, first?.name) };
+  return { raised, widest, headline: objectionsHeadline(data, first?.name) };
 }
 
 function objectionsHeadline(data: ProbeObjectionsValue, first: string | undefined) {

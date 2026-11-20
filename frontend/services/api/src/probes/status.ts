@@ -5,40 +5,34 @@
 import { auditScheduleCadenceSchema } from '@citeladder/contracts/audits';
 import type { ProbeQuote, ProbeStatus } from '@citeladder/contracts/probes';
 
-import { auditRuntime } from '../audits/config.ts';
+import type { AuditRuntime } from '../audits/config.ts';
 import { policy } from '../config.ts';
-import { inTransaction, type Database } from '../db/database.ts';
-import { billingAccountId, LedgerError, remaining } from '../entitlements/ledger.ts';
+import type { Database } from '../db/database.ts';
+import { grantBalances } from '../entitlements/ledger.ts';
+import { loadAccountState } from '../entitlements/state.ts';
 import { probeLaunches } from './launches.ts';
 import { probePlan } from './plan.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 const probes = policy.probes;
 
-/** AI credits the account can spend now; null when no balance is readable. */
+/**
+ * AI credits the account can spend now; null when no balance is readable. A
+ * read, so it takes no capacity lock: admission re-checks under its own.
+ */
 async function aiCreditBalance(db: Database, workspaceId: string, at: Date) {
-  return inTransaction(db, async (trx) => {
-    const accountId = await billingAccountId(trx, workspaceId);
-    if (!accountId) return null;
-    try {
-      const { units } = await remaining(trx, {
-        accountId,
-        workspaceId,
-        capability: policy.entitlements.ai_credits,
-        at,
-      });
-      return units;
-    } catch (error) {
-      if (error instanceof LedgerError) return null;
-      throw error;
-    }
-  });
+  const state = await loadAccountState(db, workspaceId, at);
+  if (!state || state.error) return null;
+  const grants = state.selected.filter((grant) => grant.key === policy.entitlements.ai_credits);
+  const balances = await grantBalances(db, state.account.id, grants);
+  return [...balances.values()].reduce((sum, balance) => sum + balance.remaining, 0);
 }
 
 /** What Run probe would ask and its exact AI-credit cost: only the engine-market pairs that run. */
-async function probeQuote(db: Database, scope: Scope, at = new Date()): Promise<ProbeQuote> {
+async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Promise<ProbeQuote> {
+  const at = new Date();
   const [plan, balance] = await Promise.all([
-    probePlan(db, scope, { runtime: auditRuntime(), at }),
+    probePlan(db, scope, { runtime, at }),
     aiCreditBalance(db, scope.workspaceId, at),
   ]);
   return {
@@ -55,9 +49,13 @@ async function probeQuote(db: Database, scope: Scope, at = new Date()): Promise<
 }
 
 /** The probe bar: the quote, the newest launch and the probe schedule. */
-export async function probeStatus(db: Database, scope: Scope): Promise<ProbeStatus> {
+export async function probeStatus(
+  db: Database,
+  scope: Scope,
+  runtime: AuditRuntime,
+): Promise<ProbeStatus> {
   const [quote, [latest], schedule] = await Promise.all([
-    probeQuote(db, scope),
+    probeQuote(db, scope, runtime),
     probeLaunches(db, scope, { limit: 1 }),
     db
       .selectFrom('audit_schedules')

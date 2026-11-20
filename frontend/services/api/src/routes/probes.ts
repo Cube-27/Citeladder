@@ -50,7 +50,8 @@ export const probeRoutes = [
     path: root,
     params: { path: projectPath, query: {} },
     response: probeStatusSchema,
-    handle: ({ c, db }, { path }) => probeStatus(db, scopeOf(c, path.project_id)),
+    handle: ({ c, db, config }, { path }) =>
+      probeStatus(db, scopeOf(c, path.project_id), auditRuntime(config.settings)),
   }),
   definePostRoute({
     ...activeProject,
@@ -77,8 +78,9 @@ export const probeRoutes = [
     async handle({ c, db, config }, { path }) {
       const scope = scopeOf(c, path.project_id);
       const input = await readBody(c, probeScheduleRequestSchema);
-      await setProbeSchedule(db, scope, input, auditRuntime(config.settings));
-      return probeStatus(db, scope);
+      const runtime = auditRuntime(config.settings);
+      await setProbeSchedule(db, scope, input, runtime);
+      return probeStatus(db, scope, runtime);
     },
   }),
   defineGetRoute({

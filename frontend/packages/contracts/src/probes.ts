@@ -139,11 +139,14 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
     brand: z.string(),
     /** Objection answers the scores average over. */
     answers: z.int().nonnegative(),
+    /** The mean score of the groups an engine raised in this probe; null when none was. */
+    average: score.nullable(),
     groups: z.array(
       z.object({
         id: uuid(),
         name: z.string(),
-        score,
+        /** Null when this probe got no objection answers, never 0. */
+        score: score.nullable(),
         engines: z.array(logicalEngineSchema),
         /** Since the previous labelled probe; null without one. */
         change: z.int().nullable(),

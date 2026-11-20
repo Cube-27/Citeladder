@@ -44,7 +44,7 @@ export function PerceptionObjections({
 
 function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
   const timeZone = useDisplayTimeZone();
-  const { raised, widest, average, headline } = objectionsSummary(data);
+  const { raised, widest, headline } = objectionsSummary(data);
   const segments: FigureSegment[] = [
     {
       key: 'found',
@@ -61,7 +61,7 @@ function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
     {
       key: 'average',
       label: 'Average position score',
-      value: average === null ? null : String(average),
+      value: data.average === null ? null : String(data.average),
       sub: '100 means always raised first',
     },
   ];
@@ -112,7 +112,7 @@ function ObjectionTable({
         {data.groups.map((group) => (
           <TableRow key={group.id}>
             <TableCell>{group.name}</TableCell>
-            <TableCell numeric>{group.score}</TableCell>
+            <TableCell numeric>{group.score ?? <Absence label="Not asked" />}</TableCell>
             <TableCell numeric>
               {group.engines.length} of {data.probe.engines.length}
             </TableCell>
@@ -163,7 +163,11 @@ function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
             {cited.map((group) => (
               <Disclosure
                 key={group.id}
-                title={`${group.name} · ${pluralCount(group.pages.length, 'page')} · Score ${group.score}`}
+                title={[
+                  group.name,
+                  pluralCount(group.pages.length, 'page'),
+                  ...(group.score === null ? [] : [`Score ${group.score}`]),
+                ].join(' · ')}
               >
                 <DataTable
                   label={`Sources behind ${group.name}`}
