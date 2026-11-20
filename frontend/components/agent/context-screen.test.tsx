@@ -187,7 +187,9 @@ describe('Context layout', () => {
     });
     renderContext({
       tab: 'brand-facts',
-      activeProject: makeProject({ brand: { aliases: ['Best&Less'], logo_url: null } }),
+      activeProject: makeProject({
+        brand: { alias_suggestions: [], aliases: ['Best&Less'], logo_url: null },
+      }),
       handlers: [
         http.get('/api/v1/projects/:id/brand-facts', async () => {
           await gate;
@@ -219,7 +221,9 @@ describe('Context layout', () => {
   it('keeps the aliases and hides the facts outside the pilot', async () => {
     renderContext({
       tab: 'brand-facts',
-      activeProject: makeProject({ brand: { aliases: ['Best&Less'], logo_url: null } }),
+      activeProject: makeProject({
+        brand: { alias_suggestions: [], aliases: ['Best&Less'], logo_url: null },
+      }),
     });
     expect(await screen.findByText('Best&Less')).toBeVisible();
     await waitFor(() =>

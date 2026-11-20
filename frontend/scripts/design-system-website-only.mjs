@@ -9,7 +9,6 @@ const WEBSITE_ONLY_OWNERS = {
   callout: 'Notice',
   card: 'Section, Slip or Well',
   'trend-chart': 'StepChart',
-  sparkline: 'StepChart',
 };
 
 export const WEBSITE_ONLY_UI = new Set(

@@ -46,7 +46,7 @@ const PROJECT_ROW = {
   language_code: 'en',
   benchmark_mode: 'consumer_like',
   default_repetitions: 1,
-  brand: { aliases: [], logo_url: null },
+  brand: { alias_suggestions: [], aliases: [], logo_url: null },
   owned_domains: ['acme.example'],
   unintended_domains: [],
   competitors: [],

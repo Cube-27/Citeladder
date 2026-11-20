@@ -6,17 +6,15 @@ import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-p
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { ProbeLede } from '@/components/perception/probe-lede';
+import type { FigureSegment } from '@/components/ui/figure-strip';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
-import { Section, SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
 import { marketSummary } from '@/lib/perception/probe';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -78,7 +76,6 @@ export function PerceptionMarket({
 }
 
 function Lede({ data }: Readonly<{ data: ProbeMarketValue }>) {
-  const timeZone = useDisplayTimeZone();
   const { top, topRow, led, biggestGap, headline } = marketSummary(data);
   const language = MARKET_LANGUAGES.find((item) => item.value === data.language_code)?.label;
   const segments: FigureSegment[] = [
@@ -111,17 +108,12 @@ function Lede({ data }: Readonly<{ data: ProbeMarketValue }>) {
     },
   ];
   return (
-    <Section>
-      <SectionContent>
-        <Stack gap="item">
-          <p className={textRole('caption', 'text-ink-2')}>
-            From the market probe · {formatDisplayDate(data.probe.created_at, timeZone)}
-          </p>
-          <h2 className={textRole('heading')}>{headline}</h2>
-          <FigureStrip label="Market position" segments={segments} subLine />
-        </Stack>
-      </SectionContent>
-    </Section>
+    <ProbeLede
+      createdAt={data.probe.created_at}
+      headline={headline}
+      label="Market position"
+      segments={segments}
+    />
   );
 }
 
@@ -210,15 +202,31 @@ function EngineTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
               )}
             </TableCell>
             <TableCell numeric>
-              {row.rank_in_top_theme === null ? (
-                <Absence label={row.top_themes.length ? 'Not named' : 'No top theme'} />
-              ) : (
-                `#${row.rank_in_top_theme}`
-              )}
+              <RankInTopTheme rank={row.rank_in_top_theme} />
             </TableCell>
           </TableRow>
         ))}
       </DataTable>
     </TitledSection>
   );
+}
+
+/** The brand's rank on an engine's top theme, or which of three reasons there is none. */
+function RankInTopTheme({
+  rank,
+}: Readonly<{ rank: ProbeMarketValue['engines'][number]['rank_in_top_theme'] }>) {
+  switch (rank.kind) {
+    case 'rank':
+      return `#${rank.rank}`;
+    case 'not_named':
+      return <Absence state="none" label="Not named" />;
+    case 'not_asked':
+      return <Absence state="not_run" label="Theme not asked" />;
+    case 'no_theme':
+      return <Absence state="not_applicable" label="No top theme" />;
+    default: {
+      const unreachable: never = rank;
+      return unreachable;
+    }
+  }
 }

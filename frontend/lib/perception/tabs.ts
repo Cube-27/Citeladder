@@ -7,4 +7,9 @@ export const PERCEPTION_TABS = [
   { value: 'fact-checking', label: 'Fact-checking' },
 ] as const;
 
+/** The tabs everyone sees: fact-checking is the pilot's only. */
+export const PUBLIC_PERCEPTION_TABS = PERCEPTION_TABS.filter(
+  (item) => item.value !== 'fact-checking',
+);
+
 export type PerceptionTab = (typeof PERCEPTION_TABS)[number]['value'];

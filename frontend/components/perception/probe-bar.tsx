@@ -51,12 +51,21 @@ function lastRun(run: ProbeRun | null, date: (iso: string) => string): string {
   }
 }
 
-/** The probe's last run, its schedule and Run probe, above Market and Objections. */
+/**
+ * The probe's last run, its schedule and Run probe, above Market and Objections.
+ * Off saves at once; Daily or Weekly confirms the cost per run first.
+ */
 export function ProbeBar({
   scope,
   status,
   onRun,
-}: Readonly<{ scope: ProjectScope; status: ProbeStatus; onRun: () => void }>) {
+  onSchedule,
+}: Readonly<{
+  scope: ProjectScope;
+  status: ProbeStatus;
+  onRun: () => void;
+  onSchedule: (cadence: 'daily' | 'weekly') => void;
+}>) {
   const timeZone = useDisplayTimeZone();
   const mayRun = useWorkspaceCapability('run');
   const mayWrite = useWorkspaceCapability('write');
@@ -79,7 +88,9 @@ export function ProbeBar({
               value={cadenceOf(status.schedule)}
               options={CADENCES}
               disabled={!mayWrite || schedule.isPending}
-              onValueChange={(cadence) => schedule.mutate(cadence === 'off' ? null : cadence)}
+              onValueChange={(cadence) =>
+                cadence === 'off' ? schedule.mutate({ cadence: null }) : onSchedule(cadence)
+              }
             />
             <Button
               variant="primary"

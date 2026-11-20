@@ -40,7 +40,7 @@ const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const project = makeProject({
   id: PROJECT_ID,
   workspace_id: '22222222-2222-4222-8222-222222222222',
-  brand: { aliases: ['Acme Inc'] },
+  brand: { alias_suggestions: [], aliases: ['Acme Inc'] },
   owned_domains: ['acme.com'],
   competitors: [
     {
@@ -119,6 +119,7 @@ describe('ProjectEditPanel', () => {
       ...project,
       brand_name: 'Target',
       brand: {
+        alias_suggestions: [],
         aliases: [],
         matching: {
           mode: 'context_required' as const,

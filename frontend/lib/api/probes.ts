@@ -118,7 +118,8 @@ export const probeQueries = {
     }),
 };
 
-function refresh(client: QueryClient, scope: ProjectScope) {
+/** Re-reads the probe bar and quote: balances and keys change outside this page. */
+export function refreshProbeStatus(client: QueryClient, scope: ProjectScope) {
   void client.invalidateQueries({ queryKey: queryKeys.projects.probes(scope) });
 }
 
@@ -129,36 +130,38 @@ export const probeMutations = {
       mutationFn: (fingerprint: string) =>
         probesApi.run(scope.projectId, { fingerprint }, scoped(scope)),
       onSuccess: (_audits, _input, _result, { client }) => {
-        refresh(client, scope);
+        refreshProbeStatus(client, scope);
         void client.invalidateQueries({ queryKey: queryKeys.runs.all });
       },
       // A refused quote shows its replacement in the dialog.
-      onError: (_error, _input, _result, { client }) => refresh(client, scope),
+      onError: (_error, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
   schedule: (scope: ProjectScope) =>
     mutationOptions({
-      mutationFn: (cadence: ProbeScheduleRequest['cadence']) =>
-        probesApi.schedule(scope.projectId, { cadence }, scoped(scope)),
+      /** Turning it on sends the confirmed quote's fingerprint, as Run probe does. */
+      mutationFn: (input: ProbeScheduleRequest) =>
+        probesApi.schedule(scope.projectId, input, scoped(scope)),
       onSuccess: (status, _input, _result, { client }) => {
         client.setQueryData(queryKeys.projects.probes(scope), status);
         void client.invalidateQueries({ queryKey: queryKeys.runs.schedules(scope) });
       },
+      onError: (_error, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
   renameGroup: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: ({ id, name }: { id: string; name: string }) =>
         probesApi.renameGroup(scope.projectId, id, name, scoped(scope)),
-      onSuccess: (_group, _input, _result, { client }) => refresh(client, scope),
+      onSuccess: (_group, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
   mergeGroup: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: ({ id, intoId }: { id: string; intoId: string }) =>
         probesApi.mergeGroup(scope.projectId, id, intoId, scoped(scope)),
-      onSuccess: (_group, _input, _result, { client }) => refresh(client, scope),
+      onSuccess: (_group, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
   removeGroup: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (id: string) => probesApi.removeGroup(scope.projectId, id, scoped(scope)),
-      onSuccess: (_data, _input, _result, { client }) => refresh(client, scope),
+      onSuccess: (_data, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
 };

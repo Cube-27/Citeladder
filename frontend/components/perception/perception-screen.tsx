@@ -10,7 +10,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { PERCEPTION_TABS, type PerceptionTab } from '@/lib/perception/tabs';
+import { PERCEPTION_TABS, PUBLIC_PERCEPTION_TABS, type PerceptionTab } from '@/lib/perception/tabs';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
@@ -86,9 +86,7 @@ function usePerceptionTab() {
     pilot,
     tab,
     setTab,
-    items: pilot
-      ? PERCEPTION_TABS
-      : PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking'),
+    items: pilot ? PERCEPTION_TABS : PUBLIC_PERCEPTION_TABS,
     probe: tab === 'market' || tab === 'objections' ? tab : null,
   };
 }

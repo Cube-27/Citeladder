@@ -23,7 +23,7 @@ import type {
 } from './route-types';
 import { CONTEXT_TABS } from '../agent/context-tabs.ts';
 import { TRAFFIC_TABS } from '../ai-traffic/tabs.ts';
-import { PERCEPTION_TABS } from '../perception/tabs.ts';
+import { PUBLIC_PERCEPTION_TABS } from '../perception/tabs.ts';
 import { SEARCH_INTELLIGENCE_TABS } from '../search-intelligence/tabs.ts';
 import { SETTINGS_TABS } from '../settings/tabs.ts';
 import { SITE_HEALTH_TABS } from '../site-health/tabs.ts';
@@ -304,10 +304,7 @@ export const APP_ROUTES = [
     screen: screens.perception,
     // Fact-checking, shown only to the pilot, is last and arrives after; so does its fifth figure.
     loading: cards([figures(4), chart], {
-      tabs: held(
-        'tab',
-        PERCEPTION_TABS.filter((item) => item.value !== 'fact-checking'),
-      ),
+      tabs: held('tab', PUBLIC_PERCEPTION_TABS),
       filters: true,
     }),
     nav: [
