@@ -183,7 +183,11 @@ async function generateIdentity(
     signal?.throwIfAborted();
     logModelFailure('identity', error, started);
     // A refusal (credits, pricing) answers the same on every attempt; a model failure may not.
-    throw new ResearchFailure(cfg.error_brand_identity_unavailable, !(error instanceof ApiError));
+    if (!(error instanceof ApiError))
+      throw new ResearchFailure(cfg.error_brand_identity_unavailable, true);
+    // Spent credits settle as their own code, so the reader is sent to billing, not a rerun.
+    const credits = error.code === 'ai_credits_exhausted';
+    throw new ResearchFailure(credits ? error.code : cfg.error_brand_identity_unavailable, false);
   } finally {
     deadline.clear();
   }

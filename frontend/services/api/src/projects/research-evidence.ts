@@ -239,7 +239,7 @@ export function createResearchClient(
       const params = new URLSearchParams({
         url: item.source_url,
         live: String(live),
-        max: String(settings.keenable_fetch_max_chars),
+        max_chars: String(settings.keenable_fetch_max_chars),
       });
       const raw = await request(`/v1/fetch?${params}`);
       const body = z.record(z.string(), z.unknown()).parse(raw.data ?? raw);

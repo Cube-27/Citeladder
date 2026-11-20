@@ -56,8 +56,9 @@ competitors, and a first-party redirect to another store is out of scope.
 
 An identity request that fails, times out or returns an unusable answer is never
 saved as a review without competitors: the task retries within its attempts,
-and the last attempt, or a credit or pricing refusal at once, fails the
-discovery with `brand_identity_unavailable`. Without a configured model there is
+and the last attempt, or a pricing refusal at once, fails the discovery with
+`brand_identity_unavailable`. Spent AI credits fail it at once with
+`ai_credits_exhausted`, which onboarding answers with billing, not a rerun. Without a configured model there is
 no identity or category, so competitor suggestion is skipped and the review
 warns. Other research failures (external research, the competitor search or
 suggestions) degrade to a reviewable result with warnings. Onboarding makes no
