@@ -300,14 +300,20 @@ describe('Site Health lock order', () => {
       await released.promise;
     }).then((committed) => order.push(`first:${committed}`));
     const pid = await holding.promise;
-    // A second page commit takes the same crawl lock while the first holds it.
-    expect(await commitTask(ctx, second!, async (_trx, lock) => void (await lock('share')))).toBe(
-      true,
-    );
-    const stop = cancelCrawl(db, seed.workspaceId, seed.crawlId).then(() => order.push('stop'));
-    await blocksAnother(pid);
-    released.resolve();
-    await Promise.all([open, stop]);
+    try {
+      // A second page commit takes the same crawl lock while the first holds it.
+      expect(await commitTask(ctx, second!, async (_trx, lock) => void (await lock('share')))).toBe(
+        true,
+      );
+      const stop = cancelCrawl(db, seed.workspaceId, seed.crawlId).then(() => order.push('stop'));
+      await blocksAnother(pid);
+      released.resolve();
+      await Promise.all([open, stop]);
+    } finally {
+      // A failed step still ends the first commit, so its crawl lock never outlives the test.
+      released.resolve();
+      await open;
+    }
     // A commit after Stop finds the crawl stopped and writes nothing.
     expect(await commitTask(ctx, third!, async (_trx, lock) => void (await lock('share')))).toBe(
       false,

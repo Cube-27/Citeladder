@@ -22,7 +22,7 @@ import { compareText } from '../text-order.ts';
  * every partition once per evaluation.
  */
 function snapshotIssueRows(crawl: Crawl, analysisIds: string[]) {
-  return sql`select i.id, i.rule_id, i.finding_class, i.site_url_id, i.severity, i.category,
+  return sql`select i.id, i.crawl_id, i.rule_id, i.finding_class, i.site_url_id, i.severity, i.category,
       e.scope, e.score_roles
     from site_issues i
     join site_rule_evaluations e on e.id = i.evaluation_id and e.workspace_id = i.workspace_id
@@ -73,6 +73,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: st
     -- One representative row per rule group (its first issue by id), its roles and pages.
     grouped as (
       select g.rule_id, g.finding_class, min(g.id::text)::uuid as first_id,
+        (array_agg(g.crawl_id order by g.id::text))[1] as first_crawl_id,
         count(distinct g.site_url_id)::int as urls,
         array_agg(distinct r.role) filter (where r.role is not null) as roles
       from m g left join lateral unnest(g.score_roles) r(role) on true
@@ -92,7 +93,8 @@ export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: st
           'category', i.category, 'description', i.description, 'remediation', i.remediation,
           'evidence', i.evidence, 'roles', g.roles, 'urls', g.urls)), '[]'::jsonb)
         from grouped g join site_issues i
-          on i.workspace_id = ${crawl.workspace_id} and i.id = g.first_id) as groups`.execute(db);
+          on i.workspace_id = ${crawl.workspace_id} and i.crawl_id = g.first_crawl_id
+            and i.id = g.first_id) as groups`.execute(db);
   const total = firstOf(rows, 'the snapshot issue rollups');
   const top = total.groups
     .map((row) => {
