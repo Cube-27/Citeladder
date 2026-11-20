@@ -22,12 +22,18 @@ function appended(items: readonly ChipItem[], values: readonly string[], max?: n
   return next;
 }
 
+/** The keys that add a typed value, and how a pasted text splits into values. */
+const SEPARATORS = {
+  line: { keys: ['Enter'], split: /[\n\r]+/ },
+  comma: { keys: ['Enter', ','], split: /[\n\r,]+/ },
+} as const satisfies Record<string, { keys: readonly string[]; split: RegExp }>;
+
 const TOKEN_REMOVE =
   'focus-ring text-ink-2 hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark opacity-0 transition-opacity group-hover/token:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 disabled:hidden';
 
 /**
  * ValuesInput — several short values in one box: each a token, then an add
- * field filling the rest of the line. Enter (and a comma, with `commaAdds`)
+ * field filling the rest of the line. Enter (and a comma, with `separates="comma"`)
  * adds what was typed; leaving the field adds it too; pasting several lines
  * (or comma-separated values) adds each. Backspace in the empty field removes
  * the last token; ArrowLeft walks the tokens, where Delete removes one, so
@@ -43,7 +49,7 @@ export function ValuesInput({
   max,
   disabled,
   placeholder,
-  commaAdds = false,
+  separates = 'line',
   variant = 'field',
   pending: heldPending,
   onPendingChange,
@@ -57,7 +63,8 @@ export function ValuesInput({
   max?: number;
   disabled?: boolean;
   placeholder?: string;
-  commaAdds?: boolean;
+  /** What ends a value: a line (Enter, pasted lines), or also a comma. */
+  separates?: keyof typeof SEPARATORS;
   variant?: 'field' | 'cell';
   /** The typed value, when the owner holds it. */
   pending?: string;
@@ -69,7 +76,7 @@ export function ValuesInput({
   const pending = heldPending ?? ownPending;
   const setPending = onPendingChange ?? setOwnPending;
   const full = max !== undefined && items.length >= max;
-  const separator = commaAdds ? /[\n\r,]+/ : /[\n\r]+/;
+  const separator = SEPARATORS[separates];
 
   const add = () => {
     const next = appended(items, [pending], max);
@@ -87,7 +94,7 @@ export function ValuesInput({
     else field.current?.focus();
   };
   const onFieldKey = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || (commaAdds && event.key === ',')) {
+    if (separator.keys.includes(event.key)) {
       event.preventDefault();
       add();
     } else if (event.key === 'Backspace' && pending === '' && items.length) {
@@ -110,7 +117,7 @@ export function ValuesInput({
     event.preventDefault();
   };
   const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const parts = event.clipboardData.getData('text').split(separator);
+    const parts = event.clipboardData.getData('text').split(separator.split);
     if (parts.length < 2) return;
     event.preventDefault();
     onChange(appended(items, [pending, ...parts], max));
@@ -235,7 +242,7 @@ export function ChipInput({
   label,
   max,
   ...input
-}: Readonly<Omit<Parameters<typeof ValuesInput>[0], 'variant' | 'commaAdds'>>) {
+}: Readonly<Omit<Parameters<typeof ValuesInput>[0], 'variant' | 'separates'>>) {
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="text-body-sm text-ink mb-2">{label}</legend>

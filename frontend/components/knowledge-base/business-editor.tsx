@@ -118,7 +118,7 @@ function OfferingRow({
           </p>
           <ValuesInput
             variant="cell"
-            commaAdds
+            separates="comma"
             label={`${dimension.label}: ${map.offering}`}
             items={entryItems(map[dimension.key])}
             onChange={(items) => onChange({ ...map, [dimension.key]: itemEntries(items) })}
@@ -313,7 +313,7 @@ export function BusinessFacts({
           >
             <ValuesInput
               variant="cell"
-              commaAdds
+              separates="comma"
               label={list.label}
               items={listItems(draft[list.key], draft.suggested.includes(list.key))}
               onChange={(items) =>
