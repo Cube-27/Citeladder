@@ -6,7 +6,7 @@ description: Run a CiteLadder design round - blind rubric review of the seeded a
 # Design climb
 
 The round's process, rubric and design rules are the `design-head` skill's ("Running a round",
-`references/rubric.md`); the owner invokes that skill, and the designer reads its files. This skill adds
+`references/rubric.md`), which the designer loads. This skill adds
 CiteLadder's mechanics. Agents run through the `orchestrate` skill (tmux mode); the run folder is scratch
 and is deleted when the round closes.
 
