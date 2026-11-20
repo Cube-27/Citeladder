@@ -717,14 +717,16 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
 - **Scope.** A probe launch is one audit per market in the `probe` audit scope
   sharing a `launch_id`, launched or scheduled only through
   [the probe owner](../frontend/services/api/src/probes/); generic launch and
-  schedule requests refuse the scope. Every other audit reader selects its own
+  schedule requests refuse the scope and only pause or resume a probe schedule. Every other audit reader selects its own
   scope (visibility, perception, run metrics and AI Traffic exclude probes).
 - **Funding.** Probe tasks hold AI credits, shown before running and before a
   schedule turns on (the quote fingerprint); see
   [billing](billing-entitlements.md). A probe run is never repaired.
-- **Labelling.** When a launch's last run ends, one `probe_labelling` task
-  labels every market's answers together, so a first probe groups objections
-  once; the outcome (`labelled` or `unavailable`) is recorded once per launch.
+- **Labelling.** When a launch's last run ends and any run answered, one
+  `probe_labelling` task labels every market's answers, one market per model
+  call; a later market maps onto the groups earlier ones named, so a first
+  probe groups objections once. The outcome (`labelled` or `unavailable`) is
+  recorded once per launch; a launch that answered nothing stays `failed`.
   A theme or group deleted while it runs reads as Other or drops.
 - **Scores.** [Position scores](../frontend/services/api/src/probes/scores.ts)
   are computed by code over the answered runs only; a read's basis names only
