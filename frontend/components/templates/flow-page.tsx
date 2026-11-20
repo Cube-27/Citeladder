@@ -4,14 +4,12 @@ import { useId, type ReactNode } from 'react';
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
-import { SLIP_FACE } from '@/components/ui/slip';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
 import { websiteHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
 
-/** The one card a page outside the shell draws on the ground: Flow, Setup and the full-page Notice. */
-export const FLOW_CARD = cn(SLIP_FACE, 'p-6');
+import { FLOW_CARD } from './notice-page';
 
 /**
  * The CiteLadder logo linking home. The public home lives on the website

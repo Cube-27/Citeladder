@@ -3,12 +3,18 @@ import type { ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
+import { SLIP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-import { FLOW_CARD } from './flow-page';
 import { PageFrame } from './page-frame';
+
+/**
+ * The one card a page outside the shell draws on the ground: Flow, Setup and
+ * the full-page Notice. It lives here because the Notice loads eagerly.
+ */
+export const FLOW_CARD = cn(SLIP_FACE, 'p-6');
 
 /**
  * What a full-page notice says: a gate, a dead end, a failure, or the

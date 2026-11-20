@@ -2,7 +2,8 @@ import { Check, ChevronLeft } from 'lucide-react';
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
-import { FLOW_CARD, FlowLogo } from '@/components/templates/flow-page';
+import { FlowLogo } from '@/components/templates/flow-page';
+import { FLOW_CARD } from '@/components/templates/notice-page';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { RungTrail } from '@/components/ui/rung-trail';
