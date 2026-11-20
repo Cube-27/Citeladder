@@ -15,7 +15,12 @@ export function marketSummary(data: ProbeMarketValue) {
     (worst, row) => (worst === undefined || row.gap > worst.gap ? row : worst),
     undefined,
   );
-  const topRow = top ? data.themes.find((row) => row.theme_id === top.theme_id) : undefined;
+  // A rank is shown only where answers named the brand: an all-zero theme ranks everyone first.
+  const topRow = data.themes.find(
+    (row) =>
+      row.theme_id === top?.theme_id &&
+      row.entities.some((entity) => entity.kind === 'brand' && entity.score > 0),
+  );
   return { top, topRow, led, biggestGap, headline: headline(data.brand, top?.theme, best[0]) };
 }
 

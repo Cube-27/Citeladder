@@ -152,7 +152,7 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
               <TableCell>{row.theme}</TableCell>
               <TableCell numeric>{own}</TableCell>
               <TableCell numeric>
-                #{row.rank} of {row.of}
+                {own > 0 ? `#${row.rank} of ${row.of}` : <Absence label="Not named" />}
               </TableCell>
               <TableCell>
                 {row.leader.score > 0 ? (
@@ -164,13 +164,20 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
                   <Absence label="No brand named" />
                 )}
               </TableCell>
-              <TableCell numeric>{leads ? <Tag>You lead</Tag> : `−${row.gap}`}</TableCell>
+              <TableCell numeric>
+                <Gap leads={leads} gap={row.gap} />
+              </TableCell>
             </TableRow>
           );
         })}
       </DataTable>
     </TitledSection>
   );
+}
+
+function Gap({ leads, gap }: Readonly<{ leads: boolean; gap: number }>) {
+  if (leads) return <Tag>You lead</Tag>;
+  return gap > 0 ? `−${gap}` : <Absence label="No brand named" />;
 }
 
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [

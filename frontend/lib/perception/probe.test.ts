@@ -68,6 +68,7 @@ describe('marketSummary', () => {
       headline: 'AI describes Acme as Comfort, and that is also where it competes best',
       led: ['Comfort'],
       gap: 'Price',
+      topRank: 1,
     },
     {
       name: 'leads another theme than the top one',
@@ -76,6 +77,7 @@ describe('marketSummary', () => {
       headline: 'AI describes Acme as Comfort, and it competes best on Price',
       led: ['Price'],
       gap: 'Comfort',
+      topRank: 2,
     },
     {
       name: 'a zero tie is not a lead',
@@ -84,6 +86,7 @@ describe('marketSummary', () => {
       headline: 'AI describes Acme as Comfort',
       led: [],
       gap: undefined,
+      topRank: undefined,
     },
     {
       name: 'only Other raised',
@@ -92,12 +95,14 @@ describe('marketSummary', () => {
       headline: 'How AI describes Acme',
       led: [],
       gap: 'Comfort',
+      topRank: undefined,
     },
-  ])('$name', ({ themes, knownFor, headline, led, gap }) => {
+  ])('$name', ({ themes, knownFor, headline, led, gap, topRank }) => {
     const summary = marketSummary(market(themes, knownFor));
     expect(summary.headline).toBe(headline);
     expect(summary.led.map((row) => row.theme)).toEqual(led);
     expect(summary.biggestGap?.theme).toBe(gap);
+    expect(summary.topRow?.rank).toBe(topRank);
   });
 });
 
