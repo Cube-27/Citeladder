@@ -140,6 +140,7 @@ describe('probe admission', () => {
   it('runs the quoted probe, skipping engines a market cannot measure, and holds exactly the quote', async () => {
     const { t } = await probeTenant(1_000_000);
     await managedPlan(db, t.workspaceId);
+    await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
     const markets = await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
     const brazil = markets.find((market) => market.country_code === 'BR')?.id;
     const { quote } = await probeStatus(db, t);

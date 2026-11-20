@@ -66,10 +66,11 @@ describe('position score', () => {
 });
 
 describe('probe questions and funding', () => {
-  it('asks two brand questions and one per theme naming the category', () => {
+  it('asks two brand questions and one per theme naming the category and market', () => {
     const asked = probeQuestions({
       brand: 'Best&Less',
-      category: 'discount clothing stores',
+      category: 'discount clothing',
+      country: 'Australia',
       themes: [{ id: '0f3b1c9e-0000-4000-8000-000000000001', name: 'Low Prices' }],
     });
     expect(
@@ -78,7 +79,7 @@ describe('probe questions and funding', () => {
       ['What is Best&Less known for?', 'probe', { probe: { question: 'known_for' } }],
       ['Why might someone not choose Best&Less?', 'probe', { probe: { question: 'objection' } }],
       [
-        'Which discount clothing stores brands are best known for low prices?',
+        'Which discount clothing brands in Australia are best known for low prices?',
         'probe',
         {
           probe: {
