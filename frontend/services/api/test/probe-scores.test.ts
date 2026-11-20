@@ -15,6 +15,7 @@ import {
   mapThemeBrands,
   themeOutput,
 } from '../src/probes/label-model.ts';
+import { rankInTopTheme } from '../src/probes/market.ts';
 import { probeQuestions } from '../src/probes/questions.ts';
 import { distinctPlaces, firstPlaces, positionScores, rankOf } from '../src/probes/scores.ts';
 
@@ -69,6 +70,38 @@ describe('position score', () => {
     expect([rankOf(entries, 'brand'), rankOf(entries, 'b'), rankOf(entries, 'a')]).toEqual([
       2, 2, 1,
     ]);
+  });
+});
+
+describe('rank in top theme', () => {
+  const themeId = '0f3b1c9e-0000-4000-8000-0000000000c1';
+  const roster = [
+    { kind: 'brand' as const, id: null, name: 'Acme', aliases: [] },
+    { kind: 'competitor' as const, id: 'rival', name: 'Rival', aliases: [] },
+  ];
+  /** 21 theme answers naming Rival first; the brand at place 9 in `brandNamed` of them. */
+  const asked = (brandNamed: number) =>
+    Array.from({ length: 21 }, (_, n) => ({
+      taskId: `task-${n}`,
+      engine: 'chatgpt' as const,
+      question: { question: 'theme' as const, theme_id: themeId, theme_name: 'Comfort' },
+      items: [{ id: 'rival', rank: 0 }, ...(n < brandNamed ? [{ id: null, rank: 9 }] : [])].map(
+        ({ id, rank }) => ({
+          question: 'theme',
+          rank,
+          theme_id: null,
+          objection_group_id: null,
+          entity_kind: id ? 'competitor' : 'brand',
+          entity_id: id,
+        }),
+      ),
+    }));
+  const top = [{ theme_id: themeId, theme: 'Comfort', score: 50 }];
+
+  it('ranks a brand named once even when its averaged score rounds to 0', () => {
+    // One mention at place 9 over 21 answers scores 10 / 21, rounded to 0.
+    expect(rankInTopTheme(asked(1), top, roster)).toEqual({ kind: 'rank', rank: 2 });
+    expect(rankInTopTheme(asked(0), top, roster)).toEqual({ kind: 'not_named' });
   });
 });
 

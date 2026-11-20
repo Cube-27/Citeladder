@@ -77,7 +77,7 @@ export function ProbeDialog({
     { label: 'Markets', value: quote.markets.map(marketLabel).join(', ') },
     {
       label: 'Questions',
-      value: `${quote.questions} per engine and market, asked ${quote.repetitions} times`,
+      value: `${quote.questions} per engine in each market it can measure, asked ${quote.repetitions} times`,
     },
     { label: 'Answers', value: formatCount(quote.answers) },
     { label: copy.cost, value: <b>{formatCount(quote.credits)} AI credits</b> },
@@ -139,7 +139,7 @@ export function ProbeDialog({
   );
 }
 
-/** Why nothing would run: a key to add, or markets no keyed engine can measure. */
+/** Why Run probe is off: the trial, a key to add, unmeasurable markets or too many questions. */
 function Blocked({
   blocked,
   connecting,
@@ -152,6 +152,18 @@ function Blocked({
   switch (blocked) {
     case null:
       return null;
+    case 'trial':
+      return (
+        <Notice tone="info" action={<TextLink href={PLANS_HREF}>See plans</TextLink>}>
+          Market probes are not in the trial.
+        </Notice>
+      );
+    case 'task_limit':
+      return (
+        <Notice tone="info">
+          This probe asks more questions than one run allows. Remove a theme to run it.
+        </Notice>
+      );
     case 'no_key':
       return (
         <>

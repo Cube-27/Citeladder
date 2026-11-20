@@ -106,7 +106,8 @@ add-on and top-up can include, never its price or frequency; the values in
 `billing-authoring.ts` are placeholders. Top-ups are for paid plans only.
 
 **B61 — Owner, 2026-11-06.** The public trial gets 500 AI credits for its whole
-length, no top-ups; Agent access stays excluded.
+length, no top-ups; Agent access stays excluded. Market probes are not in the
+trial either (Owner, 2026-11-20): the probe dialog says so and disables Run.
 
 **B68 — Owner, 2026-11-07.** Included and uncharged platform calls are bounded by
 a $25-per-UTC-day internal-cost ceiling across all workspaces

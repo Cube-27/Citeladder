@@ -30,7 +30,7 @@ import { createTheme, deleteTheme } from '../src/projects/themes.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant, managedPlan } from './audit-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase();
@@ -171,6 +171,41 @@ describe('probe admission', () => {
     await expect(
       runProbe(db, t, { fingerprint: quote.fingerprint }, runtime),
     ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    const audits = await db
+      .selectFrom('audits')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect(audits).toEqual([]);
+  });
+
+  it('blocks Run probe past the task limit in a market, and in a trial, refusing the launch', async () => {
+    const { t } = await probeTenant();
+    // Three questions asked three times on ChatGPT: exactly the limit.
+    const limited = auditRuntime({ AUDIT_MAX_TASKS_PER_AUDIT: '9' });
+    const quote = async () => (await probeStatus(db, t, limited)).quote;
+    expect((await quote()).blocked).toBeNull();
+    await createTheme(db, t, { name: 'Price' });
+    const over = await quote();
+    expect(over.blocked).toBe('task_limit');
+    await expect(runProbe(db, t, { fingerprint: over.fingerprint }, limited)).rejects.toMatchObject(
+      { status: 422 },
+    );
+    // The trial allows one ask on ChatGPT; a probe asks three times.
+    const account = await billingAccount(db, t.workspaceId);
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({ profile_key: policy.entitlements.public_trial.profile })
+        .where('billing_account_id', '=', account)
+        .where('key', '=', 'workspace_access')
+        .execute(),
+    );
+    const trial = (await probeStatus(db, t, runtime)).quote;
+    expect(trial.blocked).toBe('trial');
+    await expect(
+      runProbe(db, t, { fingerprint: trial.fingerprint }, runtime),
+    ).rejects.toMatchObject({ status: 403, code: 'capability_not_granted' });
     const audits = await db
       .selectFrom('audits')
       .select('id')
@@ -389,16 +424,16 @@ describe('probe labelling and reads', () => {
         theme_id: themeId,
         theme: 'Comfort',
         entities: [
-          { kind: 'brand', id: null, name: 'Acme Running', score: 60 },
-          { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97 },
+          { kind: 'brand', id: null, name: 'Acme Running', score: 60, named: true },
+          { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97, named: true },
         ],
         rank: 2,
         of: 2,
-        leader: { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97 },
+        leader: { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97, named: true },
         gap: 37,
       },
     ]);
-    expect(market.known_for_answers).toBe(3);
+    expect([market.known_for_answers, market.language_code]).toEqual([3, 'en']);
     expect(market.engines).toEqual([
       {
         engine: 'chatgpt',
@@ -552,6 +587,8 @@ describe('probe labelling and reads', () => {
     expect(new Set(market.probe.markets.map((row) => row.country_code))).toEqual(
       new Set(['BR', 'US']),
     );
+    // English and Portuguese markets: no one language to show.
+    expect(market.language_code).toBe('');
   });
 
   it('keeps a probe labelled when a theme and a group are deleted while its calls run', async () => {

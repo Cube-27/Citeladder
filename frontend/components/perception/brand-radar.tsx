@@ -30,6 +30,9 @@ function point(index: number, count: number, value: number) {
   return [CX + Math.cos(angle) * reach, CY + Math.sin(angle) * reach] as const;
 }
 
+/** Names the businesses a radar draws: key the radar by it so a new roster resets its picks. */
+export const rosterKey = (themes: Themes) => (themes[0]?.entities ?? []).map(keyOf).join('|');
+
 const polygon = (values: readonly number[]) =>
   values.map((value, index) => point(index, values.length, value).join(',')).join(' ');
 

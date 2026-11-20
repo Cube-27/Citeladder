@@ -5,9 +5,9 @@ type ThemeRow = ProbeMarketValue['themes'][number];
 /** The Market tab's headline and KPI picks, from a labelled probe. */
 export function marketSummary(data: ProbeMarketValue) {
   const top = data.known_for.find((item) => item.theme_id !== null && item.score > 0);
-  // Ties put the brand first, so a led theme is one the brand tops with a score.
+  // Ties put the brand first, so a led theme is one the brand tops having been named.
   const led = data.themes.filter(
-    (row) => row.rank === 1 && row.leader.kind === 'brand' && row.leader.score > 0,
+    (row) => row.rank === 1 && row.leader.kind === 'brand' && row.leader.named,
   );
   const best = [...led].sort((a, b) => b.leader.score - a.leader.score);
   const gaps = data.themes.filter((row) => row.gap > 0);
@@ -19,7 +19,7 @@ export function marketSummary(data: ProbeMarketValue) {
   const topRow = data.themes.find(
     (row) =>
       row.theme_id === top?.theme_id &&
-      row.entities.some((entity) => entity.kind === 'brand' && entity.score > 0),
+      row.entities.some((entity) => entity.kind === 'brand' && entity.named),
   );
   return { top, topRow, led, biggestGap, headline: headline(data.brand, top?.theme, best[0]) };
 }

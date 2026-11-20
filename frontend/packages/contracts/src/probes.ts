@@ -38,10 +38,13 @@ export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
 const probeQuoteSchema = z.object({
   /** Managed (`funded`) workspaces probe on CiteLadder's keys; others on their own saved keys. */
   credential_mode: credentialModeSchema,
-  /** Engines that would run; empty when `blocked` says why. */
+  /** Engines that would run; empty when no key or no market blocks the probe. */
   engines: z.array(logicalEngineSchema),
-  /** Why nothing would run: no usable key, or no key's engine measures any market. */
-  blocked: z.enum(['no_key', 'no_market']).nullable(),
+  /**
+   * Why Run probe is refused: a trial workspace, no usable key, no key's
+   * engine measures any market, or a market asks past the audit task limit.
+   */
+  blocked: z.enum(['trial', 'no_key', 'no_market', 'task_limit']).nullable(),
   markets: z.array(auditMarketSchema),
   /** Questions per engine and market: two about the brand plus one per theme. */
   questions: z.int().nonnegative(),
@@ -91,6 +94,8 @@ const entitySchema = z.object({
   name: z.string(),
 });
 
+const scoredEntitySchema = entitySchema.extend({ score, named: z.boolean() });
+
 export const probeMarketSchema = z.discriminatedUnion('state', [
   z.object({ state: z.literal('none') }),
   z.object({
@@ -108,11 +113,15 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
       z.object({
         theme_id: uuid(),
         theme: z.string(),
-        /** The brand first, then competitors, each with its position score on this theme. */
-        entities: z.array(entitySchema.extend({ score })),
+        /**
+         * The brand first, then competitors, each with its position score on
+         * this theme and whether any answer named it: a late or rare mention
+         * can round to 0 and still be named.
+         */
+        entities: z.array(scoredEntitySchema),
         rank: z.int().positive(),
         of: z.int().positive(),
-        leader: entitySchema.extend({ score }),
+        leader: scoredEntitySchema,
         gap: z.int().nonnegative(),
       }),
     ),

@@ -24,18 +24,21 @@ function theme(
   name: string,
   own: number,
   other: number,
+  ownNamed = own > 0,
 ): ProbeMarketValue['themes'][number] {
   const ownFirst = own >= other;
   return {
     theme_id: `00000000-0000-4000-8000-00000000000${id}`,
     theme: name,
     entities: [
-      { ...brand, score: own },
-      { ...rival, score: other },
+      { ...brand, score: own, named: ownNamed },
+      { ...rival, score: other, named: other > 0 },
     ],
     rank: ownFirst ? 1 : 2,
     of: 2,
-    leader: ownFirst ? { ...brand, score: own } : { ...rival, score: other },
+    leader: ownFirst
+      ? { ...brand, score: own, named: ownNamed }
+      : { ...rival, score: other, named: other > 0 },
     gap: ownFirst ? 0 : other - own,
   };
 }
@@ -86,6 +89,15 @@ describe('marketSummary', () => {
       led: [],
       gap: undefined,
       topRank: undefined,
+    },
+    {
+      name: 'a brand named late enough to score 0 still ranks',
+      themes: [theme('1', 'Comfort', 0, 50, true)],
+      knownFor: ['Comfort'],
+      headline: 'AI describes Acme as Comfort',
+      led: [],
+      gap: 'Comfort',
+      topRank: 2,
     },
     {
       name: 'only Other raised',
