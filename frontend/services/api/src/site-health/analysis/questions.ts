@@ -208,11 +208,10 @@ function controlTarget(control: HtmlElement) {
  * but the answer is in the served HTML that crawlers read.
  */
 function collapsedPanel(control: HtmlElement, panel: HtmlElement, scope: Scope) {
-  return (
-    attribute(control, 'aria-expanded').trim().toLowerCase() === 'false' &&
-    outsideContainers(panel, scope.containers) &&
-    [...ancestors(panel)].some((node) => node === scope.region)
-  );
+  if (attribute(control, 'aria-expanded').trim().toLowerCase() !== 'false') return false;
+  if (!outsideContainers(panel, scope.containers)) return false;
+  const chain: readonly HtmlNode[] = [...ancestors(panel)];
+  return chain.includes(scope.region);
 }
 
 function panelState(

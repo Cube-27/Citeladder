@@ -161,9 +161,9 @@ async function refreshDailyInsights(db: Database, now: Date, canAdmit: () => boo
     limit ${crawlLogs.sweep_batch_size}`.execute(db);
   for (const scope of due.rows) {
     if (!canAdmit()) return false;
-    await db
+    await db // NOSONAR -- One project at a time keeps each enqueue inside the tick's admission budget.
       .transaction()
-      .execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope, now })); // NOSONAR -- One project at a time keeps each enqueue inside the tick's admission budget.
+      .execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope, now }));
   }
   if (due.rows.length < crawlLogs.sweep_batch_size) insightsSweptDay = day;
   return true;

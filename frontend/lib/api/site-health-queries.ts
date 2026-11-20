@@ -312,7 +312,7 @@ async function refreshWhenRerunLands(
       ]);
       return;
     }
-    await new Promise<void>((resolve) => {
+    await /* NOSONAR -- Poll interval between rerun checks. */ new Promise<void>((resolve) => {
       setTimeout(resolve, RERUN_POLL_INTERVAL_MS);
     });
   }

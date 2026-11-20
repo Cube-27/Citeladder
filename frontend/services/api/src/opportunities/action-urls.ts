@@ -176,8 +176,7 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
   // Cohort pages come from evidence; only this project's existing URLs are kept.
   for (let start = 0; start < rows.length; start += INSERT_BATCH) {
     const batch = rows.slice(start, start + INSERT_BATCH);
-    // NOSONAR -- One transaction: batches run in order.
-    await sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
+    await /* NOSONAR -- One transaction: batches run in order. */ sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
       select v.workspace_id, v.project_id, v.action_id, v.site_url_id
       from (values ${sql.join(
         batch.map(

@@ -346,7 +346,7 @@ export async function pageStates(
 ) {
   const states = new Map<number, PageState>();
   for (const document of documents) {
-    const { entries } = await documentBoard(db, workspaceId, document.outputId);
+    const { entries } = await documentBoard(db, workspaceId, document.outputId); // NOSONAR -- One transaction connection: boards read in order.
     states.set(document.number, {
       fields: document.fields,
       digest: turnDigest(entries),
@@ -388,7 +388,7 @@ export async function saveSuggestions(
 ) {
   for (const [number, outputId] of turn.outputs) {
     const mine = staged.filter((suggestion) => suggestion.document === number);
-    if (mine.length) await saveDocumentSuggestions(db, chat, outputId, mine, turn);
+    if (mine.length) await saveDocumentSuggestions(db, chat, outputId, mine, turn); // NOSONAR -- One transaction connection: documents save in order.
   }
 }
 
@@ -406,7 +406,7 @@ async function saveDocumentSuggestions(
   const replaced = new Set(mine.flatMap((suggestion) => suggestion.replaces));
   for (const suggestion of await loadSuggestions(db, chat.workspace_id, outputId))
     if (replaced.has(suggestion.row.id) && statusOf(suggestion) === 'open')
-      await appendEvent(db, owner, suggestion, { status: 'stale', by, reason: 'replaced' });
+      await appendEvent(db, owner, suggestion, { status: 'stale', by, reason: 'replaced' }); // NOSONAR -- One transaction connection: events append in order.
   for (const suggestion of mine) {
     const { target } = suggestion;
     if (
@@ -414,7 +414,7 @@ async function saveDocumentSuggestions(
       revision.body.slice(target.at.start, target.at.end) !== target.exact
     )
       throw new TypeError('A staged suggestion does not match its committed revision');
-    await insertSuggestion(
+    await /* NOSONAR -- One transaction connection: suggestions insert in order. */ insertSuggestion(
       db,
       { ...owner, outputId, revision, by },
       {

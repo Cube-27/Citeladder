@@ -119,6 +119,10 @@ const dashboardQuery = (query: DashboardParams) => ({
   cohort: query.cohort,
 });
 
+const GRANULARITY_NAMES = policy.visibility.trend_granularities
+  .map((value) => `\`${value}\``)
+  .join(', ');
+
 // `topic` here is a claim's fact-check topic, not a project topic.
 const CLAIM_FILTERS = {
   ...PERCEPTION_SELECTION,
@@ -404,7 +408,7 @@ export const visibilityRoutes = [
         granularity: {
           scalar: { kind: 'str' },
           default: policy.visibility.trend_default_granularity,
-          description: `The length of each series point: ${policy.visibility.trend_granularities.map((value) => `\`${value}\``).join(', ')}. \`run\` plots one point per run.`,
+          description: `The length of each series point: ${GRANULARITY_NAMES}. \`run\` plots one point per run.`,
         },
         transport_model: {
           scalar: { kind: 'str' },

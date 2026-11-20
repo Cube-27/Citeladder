@@ -30,6 +30,7 @@ const RULES = [
   ['technical.title_present', 'missing'],
   ['search.snippet_access', 'satisfied'],
 ] as const;
+const CATALOG = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
 
 const db = testDatabase();
 // Fixture work only: removing a tens-of-thousands-page workspace outlasts the service statement bound.
@@ -63,12 +64,12 @@ function meter() {
       tables.set(queryId, primaryTable(node));
       return node;
     },
-    transformResult: async ({ result, queryId }) => {
+    transformResult: ({ result, queryId }) => {
       const table = tables.get(queryId) ?? '';
       tables.delete(queryId);
       if (CRAWL_TABLES.has(table)) most[table] = Math.max(most[table] ?? 0, result.rows.length);
       peak.heap = Math.max(peak.heap, process.memoryUsage().heapUsed);
-      return result;
+      return Promise.resolve(result);
     },
   };
   return { db: db.withPlugin(plugin), most, peak };
@@ -105,157 +106,176 @@ async function analyze(seed: SiteSeed, limit: number) {
     .limit(limit)
     .execute();
   const now = new Date();
-  const catalog = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
-  for (let offset = 0; offset < tasks.length; offset += CHUNK) {
-    const chunk = tasks.slice(offset, offset + CHUNK).map((task, index) => ({
-      ...task,
-      index: offset + index,
-      artifactId: randomUUID(),
-      analysisId: randomUUID(),
-      evaluations: RULES.map(([rule, outcome]) => ({ id: randomUUID(), rule, outcome })),
-    }));
-    await db
-      .insertInto('site_fetch_artifacts')
-      .values(
-        chunk.map((page) => ({
-          id: page.artifactId,
-          workspace_id: seed.workspaceId,
-          crawl_id: seed.crawlId,
-          task_id: page.id,
-          requested_url: page.requested_url,
-          final_url: page.requested_url,
-          status_code: 200,
-          content_type: 'text/html',
-          content_hash: page.artifactId.replaceAll('-', ''),
-          normalized_facts: JSON.stringify(facts(page.requested_url, page.index)),
-          extractor_version: policy.site_health.versions.extractor,
-          fetched_at: now,
-          created_at: now,
-          fetch_purpose: 'analyze',
-          acquisition_policy_version: 'fixture',
-          acquisition_transport: 'recorded',
-          acquisition_trigger: 'fixture',
-          http_version: 'HTTP/1.1',
-          impersonation_profile: '',
-        })),
-      )
-      .execute();
-    await db
-      .insertInto('site_page_analyses')
-      .values(
-        chunk.map((page) => ({
-          id: page.analysisId,
+  for (let offset = 0; offset < tasks.length; offset += CHUNK)
+    await settleChunk({ seed, chunk: chunkOf(tasks, offset), now }); // NOSONAR -- Chunks write in order so the fixture's memory stays one chunk.
+  return tasks.length;
+}
+
+type AnalyzeTask = Readonly<{ id: string; site_url_id: string | null; requested_url: string }>;
+
+function chunkOf(tasks: readonly AnalyzeTask[], offset: number) {
+  return tasks.slice(offset, offset + CHUNK).map((task, index) => ({
+    ...task,
+    index: offset + index,
+    artifactId: randomUUID(),
+    analysisId: randomUUID(),
+    evaluations: RULES.map(([rule, outcome]) => ({ id: randomUUID(), rule, outcome })),
+  }));
+}
+
+/** One chunk's artifacts, analyses, evaluations and issues, in foreign-key order. */
+async function settleChunk({
+  seed,
+  chunk,
+  now,
+}: Readonly<{ seed: SiteSeed; chunk: ReturnType<typeof chunkOf>; now: Date }>) {
+  await db
+    .insertInto('site_fetch_artifacts')
+    .values(
+      chunk.map((page) => ({
+        id: page.artifactId,
+        workspace_id: seed.workspaceId,
+        crawl_id: seed.crawlId,
+        task_id: page.id,
+        requested_url: page.requested_url,
+        final_url: page.requested_url,
+        status_code: 200,
+        content_type: 'text/html',
+        content_hash: page.artifactId.replaceAll('-', ''),
+        normalized_facts: JSON.stringify(facts(page.requested_url, page.index)),
+        extractor_version: policy.site_health.versions.extractor,
+        fetched_at: now,
+        created_at: now,
+        fetch_purpose: 'analyze',
+        acquisition_policy_version: 'fixture',
+        acquisition_transport: 'recorded',
+        acquisition_trigger: 'fixture',
+        http_version: 'HTTP/1.1',
+        impersonation_profile: '',
+      })),
+    )
+    .execute();
+  await db
+    .insertInto('site_page_analyses')
+    .values(
+      chunk.map((page) => ({
+        id: page.analysisId,
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: page.site_url_id!,
+        artifact_id: page.artifactId,
+        status: 'completed',
+        is_current: true,
+        page_kind: page.index === 0 ? 'homepage' : 'product',
+        analyzer_version: policy.site_health.versions.analyzer,
+        scoring_version: 'fixture',
+        profile_version: 'fixture',
+        traits_version: 'fixture',
+        classifier_version: 'fixture',
+        presentation_version: 'fixture',
+        schema_contract_version: 'fixture',
+        aeo_measurement_state: 'unknown',
+        aeo_measurement_reason: 'fixture',
+        web_fundamentals_state: 'measured',
+        web_fundamentals_score: 50,
+        technical_critical_complete: false,
+        technical_determinate_weight: 0,
+        technical_earned_weight: 0,
+        technical_expected_weight: 0,
+        source_evaluation_ids: page.evaluations.map((row) => row.id),
+        created_at: now,
+      })),
+    )
+    .execute();
+  const evaluations = chunk.flatMap((page) =>
+    page.evaluations.map(({ id, rule, outcome }) => ({
+      page,
+      id,
+      rule: CATALOG.get(rule)!,
+      outcome,
+    })),
+  );
+  await db
+    .insertInto('site_rule_evaluations')
+    .values(
+      evaluations.map(({ page, id, rule, outcome }) => ({
+        id,
+        workspace_id: seed.workspaceId,
+        analysis_id: page.analysisId,
+        source_artifact_id: page.artifactId,
+        rule_id: rule.rule_id,
+        rule_version: rule.rule_version,
+        dimension: rule.dimension,
+        category: rule.category,
+        severity: rule.severity,
+        finding_class: rule.finding_class,
+        scope: rule.scope,
+        weight: rule.weight,
+        outcome,
+        display_applicability: true,
+        score_applicability: true,
+        reason_code: 'fixture',
+        readiness_dimension: '',
+        readiness_weight: 0,
+        analyzer_version: policy.site_health.versions.analyzer,
+        extractor_version: policy.site_health.versions.extractor,
+        created_at: now,
+      })),
+    )
+    .execute();
+  // The analyze writer's issues are current at once (CO-7).
+  await db
+    .insertInto('site_issues')
+    .values(
+      evaluations
+        .filter(({ outcome }) => outcome === 'missing')
+        .map(({ page, id, rule }) => ({
+          id: randomUUID(),
           workspace_id: seed.workspaceId,
           project_id: seed.projectId,
           crawl_id: seed.crawlId,
           site_url_id: page.site_url_id!,
-          artifact_id: page.artifactId,
-          status: 'completed',
-          is_current: true,
-          page_kind: page.index === 0 ? 'homepage' : 'product',
-          analyzer_version: policy.site_health.versions.analyzer,
-          scoring_version: 'fixture',
-          profile_version: 'fixture',
-          traits_version: 'fixture',
-          classifier_version: 'fixture',
-          presentation_version: 'fixture',
-          schema_contract_version: 'fixture',
-          aeo_measurement_state: 'unknown',
-          aeo_measurement_reason: 'fixture',
-          web_fundamentals_state: 'measured',
-          web_fundamentals_score: 50,
-          technical_critical_complete: false,
-          technical_determinate_weight: 0,
-          technical_earned_weight: 0,
-          technical_expected_weight: 0,
-          source_evaluation_ids: page.evaluations.map((row) => row.id),
-          created_at: now,
-        })),
-      )
-      .execute();
-    const evaluations = chunk.flatMap((page) =>
-      page.evaluations.map(({ id, rule, outcome }) => ({
-        page,
-        id,
-        rule: catalog.get(rule)!,
-        outcome,
-      })),
-    );
-    await db
-      .insertInto('site_rule_evaluations')
-      .values(
-        evaluations.map(({ page, id, rule, outcome }) => ({
-          id,
-          workspace_id: seed.workspaceId,
           analysis_id: page.analysisId,
+          evaluation_id: id,
           source_artifact_id: page.artifactId,
           rule_id: rule.rule_id,
-          rule_version: rule.rule_version,
           dimension: rule.dimension,
           category: rule.category,
           severity: rule.severity,
           finding_class: rule.finding_class,
-          scope: rule.scope,
-          weight: rule.weight,
-          outcome,
-          display_applicability: true,
-          score_applicability: true,
-          reason_code: 'fixture',
-          readiness_dimension: '',
-          readiness_weight: 0,
+          evidence: JSON.stringify({}),
+          description: rule.description,
+          remediation: rule.remediation,
           analyzer_version: policy.site_health.versions.analyzer,
-          extractor_version: policy.site_health.versions.extractor,
+          rule_version: rule.rule_version,
+          is_current: true,
           created_at: now,
         })),
-      )
-      .execute();
-    // The analyze writer's issues are current at once (CO-7).
-    await db
-      .insertInto('site_issues')
-      .values(
-        evaluations
-          .filter(({ outcome }) => outcome === 'missing')
-          .map(({ page, id, rule }) => ({
-            id: randomUUID(),
-            workspace_id: seed.workspaceId,
-            project_id: seed.projectId,
-            crawl_id: seed.crawlId,
-            site_url_id: page.site_url_id!,
-            analysis_id: page.analysisId,
-            evaluation_id: id,
-            source_artifact_id: page.artifactId,
-            rule_id: rule.rule_id,
-            dimension: rule.dimension,
-            category: rule.category,
-            severity: rule.severity,
-            finding_class: rule.finding_class,
-            evidence: JSON.stringify({}),
-            description: rule.description,
-            remediation: rule.remediation,
-            analyzer_version: policy.site_health.versions.analyzer,
-            rule_version: rule.rule_version,
-            is_current: true,
-            created_at: now,
-          })),
-      )
-      .execute();
-    await db
+    )
+    .execute();
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({ status: 'succeeded', classification_expected: true, completed_at: now })
+    .where('workspace_id', '=', seed.workspaceId)
+    .where(
+      'id',
+      'in',
+      chunk.map((page) => page.id),
+    )
+    .execute();
+  for (const page of chunk)
+    await db // NOSONAR -- One artifact per task, in order.
       .updateTable('site_crawl_tasks')
-      .set({ status: 'succeeded', classification_expected: true, completed_at: now })
-      .where(
-        'id',
-        'in',
-        chunk.map((page) => page.id),
-      )
+      .set({ result_artifact_id: page.artifactId })
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('id', '=', page.id)
       .execute();
-    for (const page of chunk)
-      await db // NOSONAR -- One artifact per task, in order.
-        .updateTable('site_crawl_tasks')
-        .set({ result_artifact_id: page.artifactId })
-        .where('id', '=', page.id)
-        .execute();
-  }
-  return tasks.length;
+}
+
+function urlset(urls: readonly string[]) {
+  const entries = urls.map((url) => `<url><loc>${url}</loc></url>`).join('');
+  return `<urlset>${entries}</urlset>`;
 }
 
 /** Milliseconds a read took: a measurement printed for the PR, never asserted. */
@@ -284,7 +304,7 @@ describe('Site Health crawl at scale', () => {
         `/pages-${index}.xml`,
         {
           contentType: 'application/xml',
-          body: `<urlset>${urls.map((url) => `<url><loc>${url}</loc></url>`).join('')}</urlset>`,
+          body: urlset(urls),
         },
       ]),
     );

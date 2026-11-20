@@ -23,12 +23,14 @@ export const ANSWER =
   'Acme Pro costs $49 per month. Acme integrates with Slack. Rival support is slow.';
 
 export function fakeGateway(contents: string[], model = 'test') {
-  const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-    Response.json({
-      model: 'returned-model',
-      choices: [{ message: { content: contents.shift() ?? 'not json' }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 100, completion_tokens: 20 },
-    }),
+  const fetch = vi.fn((_url: string | URL | Request, _init?: RequestInit) =>
+    Promise.resolve(
+      Response.json({
+        model: 'returned-model',
+        choices: [{ message: { content: contents.shift() ?? 'not json' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 100, completion_tokens: 20 },
+      }),
+    ),
   );
   const gateway = createModelGateway(
     {

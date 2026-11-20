@@ -114,7 +114,7 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
       .executeTakeFirstOrThrow();
   }
   async function run(site: SiteHealthWorker, ...taskIds: string[]) {
-    for (const id of taskIds) await site.execute(await lease(id, site.owner));
+    for (const id of taskIds) await site.execute(await lease(id, site.owner)); // NOSONAR -- Tasks run in the order given, as the worker would.
   }
   /** Lease and run one `site_setup` task under the given settings, as the worker's runner would. */
   async function walkSetup(

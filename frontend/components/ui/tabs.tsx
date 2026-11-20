@@ -151,16 +151,13 @@ function tabFace({
     tab &&
       'isolate px-3 before:absolute before:inset-x-0 before:-z-10 before:rounded-mark before:content-[""]',
     tab && !selected && 'not-disabled:hover:before:bg-state-hover',
-    tab
-      ? [
-          'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
-          selected
-            ? 'text-ink after:bg-accent font-medium'
-            : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent',
-        ]
-      : selected
-        ? 'face text-ink'
-        : 'text-ink-2 not-disabled:hover:text-ink',
+    tab &&
+      'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
+    tab &&
+      (selected
+        ? 'text-ink after:bg-accent font-medium'
+        : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent'),
+    !tab && (selected ? 'face text-ink' : 'text-ink-2 not-disabled:hover:text-ink'),
     className,
   );
 }

@@ -251,11 +251,12 @@ export class PageSuggestions {
             batch.map((item) => item.edit),
           )
         ) {
-          await appendEvent(db, context.scope, entry.suggestion, {
-            status: 'stale',
-            by: context.by,
-            reason: 'dependency_changed',
-          });
+          await /* NOSONAR -- One transaction connection: events append in order. */ appendEvent(
+            db,
+            context.scope,
+            entry.suggestion,
+            { status: 'stale', by: context.by, reason: 'dependency_changed' },
+          );
           staled++;
           continue;
         }
@@ -270,12 +271,17 @@ export class PageSuggestions {
         );
         revision = revised.revision;
         for (const { entry, edit } of batch)
-          await appendEvent(db, context.scope, entry.suggestion, {
-            status: 'applied',
-            by: context.by,
-            revisionId: revised.revision.id,
-            position: revised.positionOf(edit),
-          });
+          await /* NOSONAR -- One transaction connection: events append in order. */ appendEvent(
+            db,
+            context.scope,
+            entry.suggestion,
+            {
+              status: 'applied',
+              by: context.by,
+              revisionId: revised.revision.id,
+              position: revised.positionOf(edit),
+            },
+          );
         staled += await recheckOpen(db, context.scope, context.document.output.id, context.by);
       }
       const { entries } = await documentBoard(db, scope.workspaceId, context.document.output.id);
@@ -296,10 +302,15 @@ export class PageSuggestions {
     return this.change(scope, target, async (db, context) => {
       const open = context.entries.filter((entry) => entry.status === 'open');
       for (const entry of open)
-        await appendEvent(db, context.scope, entry.suggestion, {
-          status: 'dismissed',
-          by: context.by,
-        });
+        await /* NOSONAR -- One transaction connection: events append in order. */ appendEvent(
+          db,
+          context.scope,
+          entry.suggestion,
+          {
+            status: 'dismissed',
+            by: context.by,
+          },
+        );
       return { dismissed: open.length };
     });
   }
@@ -309,11 +320,16 @@ export class PageSuggestions {
     let staled = 0;
     for (const entry of context.entries)
       if (entry.located && !entry.located.ok) {
-        await appendEvent(db, context.scope, entry.suggestion, {
-          status: 'stale',
-          by: context.by,
-          reason: entry.located.reason,
-        });
+        await /* NOSONAR -- One transaction connection: events append in order. */ appendEvent(
+          db,
+          context.scope,
+          entry.suggestion,
+          {
+            status: 'stale',
+            by: context.by,
+            reason: entry.located.reason,
+          },
+        );
         staled++;
       }
     return staled;

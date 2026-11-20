@@ -268,7 +268,7 @@ async function siteHealthSuggestions(
     const field = FIELD_RULES[check.rule_id];
     if (!field || !check.display_applicability || !FAILING.has(check.outcome)) continue;
     const rule = RULES.get(check.rule_id);
-    await insertSuggestion(
+    await /* NOSONAR -- One transaction connection: suggestions insert in order. */ insertSuggestion(
       db,
       {
         workspaceId: chat.workspace_id,

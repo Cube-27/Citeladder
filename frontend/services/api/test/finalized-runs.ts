@@ -84,10 +84,11 @@ export function finalizedRuns(db: Database, fixtures: VisibilityFixtures) {
       {},
       runtime,
     );
-    const claim = () => queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
-    for (let claimed = await claim(); claimed[0]; claimed = await claim()) {
-      const owner = claimed[0].lease_owner;
-      const running = await queue.markRunning(claimed[0], owner);
+    const runNext = async () => {
+      const [claimed] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
+      if (!claimed) return false;
+      const owner = claimed.lease_owner;
+      const running = await queue.markRunning(claimed, owner);
       const context = await loadExecutionContext(db, running!.task, owner, runtime, auditTestKey, {
         at: new Date(),
         env: {},
@@ -104,7 +105,11 @@ export function finalizedRuns(db: Database, fixtures: VisibilityFixtures) {
         },
         deriveExecution,
       );
-    }
+      return true;
+    };
+    let more = true;
+    while (more)
+      more = await /* NOSONAR -- Tasks run one at a time, as one worker runs them. */ runNext();
     await finalizeAudit(db, t.workspaceId, auditId!, async () => {});
     return auditId!;
   }
