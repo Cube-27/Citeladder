@@ -193,7 +193,7 @@ describe('Website Changes', () => {
     handlers('available');
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
     expect(
-      await screen.findByRole('heading', {
+      await screen.findByRole('group', {
         name: 'Tracked field changes since the previous crawl',
       }),
     ).toBeInTheDocument();

@@ -10,8 +10,7 @@ import { Section } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
@@ -296,26 +295,24 @@ function NoAction() {
   return <Absence state="not_set" label="No Action yet" />;
 }
 
-/** A page by its title over its path; the source page's title links to its page detail. */
+/** A page by its title, then its path inline; the source page's title links to its page detail. */
 function PageCell({
   page,
   href,
 }: Readonly<{ page: Pick<InternalLink['source'], 'title' | 'url'>; href?: string }>) {
   const name = page.title || readableUrl(new URL(page.url).pathname);
   return (
-    <span className="grid max-w-sm min-w-0">
-      {href ? (
-        <ClampText tooltip={name}>
-          <TextLink text="body" underline="hover" href={href}>
+    <TableCellLines
+      primary={
+        href ? (
+          <TextLink text="inherit" underline="hover" href={href}>
             {name}
           </TextLink>
-        </ClampText>
-      ) : (
-        <ClampText tooltip={name}>{name}</ClampText>
-      )}
-      <span className="type-caption flex min-w-0">
-        <UrlText url={page.url} origin={new URL(page.url).origin} />
-      </span>
-    </span>
+        ) : (
+          name
+        )
+      }
+      secondary={<UrlText url={page.url} origin={new URL(page.url).origin} />}
+    />
   );
 }

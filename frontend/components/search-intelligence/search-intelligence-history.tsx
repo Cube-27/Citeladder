@@ -93,6 +93,7 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
           data={points((row) => row.backlinks)}
           yFormat={compactCount}
           format={formatCount}
+          you={false}
         />
       </Stack>
       <Stack gap="compact" className="min-w-0 content-start">
@@ -104,6 +105,7 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
           series={[{ label: 'Lost backlinks', values: data.map((row) => row.lost) }]}
           yFormat={compactCount}
           format={formatCount}
+          you={false}
         />
       </Stack>
     </AppGrid>

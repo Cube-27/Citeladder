@@ -24,14 +24,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-} from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
@@ -73,47 +66,43 @@ export function OverviewFigures({
   const crawlMissing =
     crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Key figures</SectionTitle>
-        <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
-      </SectionHeader>
-      <SectionContent>
-        <Stack gap="compact">
-          <FigureStrip
-            label="AI traffic key figures"
-            segments={[
-              referralFigure(data.referrals, ga4),
-              ...crawlFigures(data.crawl, crawlAvailable),
-              citationFigure(data.citations),
-            ]}
+    // The status line (the crawl logs' coverage and freshness), then the strip.
+    <Stack gap="workspace" className="min-w-0">
+      <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
+      <Stack gap="compact">
+        <FigureStrip
+          label="AI traffic key figures"
+          segments={[
+            referralFigure(data.referrals, ga4),
+            ...crawlFigures(data.crawl, crawlAvailable),
+            citationFigure(data.citations),
+          ]}
+        />
+        {/* Each missing source's one next step, once, under the figures it would fill. */}
+        {ga4Missing ? (
+          <StateBlock
+            kind="empty"
+            inline
+            message={ga4Step.note}
+            action={
+              <Button asChild>
+                <ProjectLink href="/ai-traffic?tab=referrals" projectId={projectId}>
+                  {ga4Step.action}
+                </ProjectLink>
+              </Button>
+            }
           />
-          {/* Each missing source's one next step, once, under the figures it would fill. */}
-          {ga4Missing ? (
-            <StateBlock
-              kind="empty"
-              inline
-              message={ga4Step.note}
-              action={
-                <Button asChild>
-                  <ProjectLink href="/ai-traffic?tab=referrals" projectId={projectId}>
-                    {ga4Step.action}
-                  </ProjectLink>
-                </Button>
-              }
-            />
-          ) : null}
-          {crawlMissing ? (
-            <StateBlock
-              kind="empty"
-              inline
-              message={CRAWL_EMPTY.not_connected}
-              action={<ActionButton action="connectCrawlLogs" onClick={onConnectCrawl} />}
-            />
-          ) : null}
-        </Stack>
-      </SectionContent>
-    </Section>
+        ) : null}
+        {crawlMissing ? (
+          <StateBlock
+            kind="empty"
+            inline
+            message={CRAWL_EMPTY.not_connected}
+            action={<ActionButton action="connectCrawlLogs" onClick={onConnectCrawl} />}
+          />
+        ) : null}
+      </Stack>
+    </Stack>
   );
 }
 
@@ -338,7 +327,7 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
   const coverage = COVERAGE_NOTE[crawl.coverage] ?? null;
   if (!coverage && !crawl.last_processed_at) return null;
   return (
-    <SectionDescription className="min-w-0">
+    <p className="type-body text-ink-2 min-w-0">
       {coverage}
       {coverage && crawl.last_processed_at ? ' ' : null}
       {crawl.last_processed_at ? (
@@ -346,7 +335,7 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
           {crawl.reporting_timezone} · Processed <DisplayTime value={crawl.last_processed_at} />.
         </>
       ) : null}
-    </SectionDescription>
+    </p>
   );
 }
 

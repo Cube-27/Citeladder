@@ -5,7 +5,8 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { Absence } from '@/components/ui/absence';
 import type { SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
-import { endSentence, formatCount } from '@/lib/format';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { endSentence, formatCount, formatStripTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { crawlFailureCopy, dashboardRunNotice } from '@/lib/site-health/run-notice';
@@ -140,17 +141,16 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
   );
 }
 
+/** A settled crawl: its outcome and when it ran; its page counts lead the figure strip below. */
 function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
+  const timeZone = useDisplayTimeZone();
   const notice = dashboardRunNotice(crawl);
-  const analyzed = crawl.counters.analyzed || crawl.analyzed_count;
+  const ranAt = crawl.completed_at ?? crawl.started_at ?? crawl.created_at;
   return (
     <ProgressRow
       crawl={crawl}
-      narration={notice?.message ?? 'Latest crawl results'}
-      counts={[
-        { label: 'Pages discovered', value: crawl.visible_url_count },
-        { label: 'Pages analyzed', value: analyzed },
-      ]}
+      narration={notice?.message ?? `Latest crawl · ${formatStripTimestamp(ranAt, timeZone)}`}
+      counts={[]}
     />
   );
 }
@@ -202,7 +202,7 @@ function ProgressRow({
               {narration}
             </span>
           </Inline>
-          <Inline as="dl" gap="meta">
+          <Inline as="dl" gap="meta" className="empty:hidden">
             {counts.map((count) => (
               <Inline key={count.label} gap="item">
                 <dt className="type-body text-ink-2">{count.label}</dt>

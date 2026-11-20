@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import { Absence } from '@/components/ui/absence';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@citeladder/contracts';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { formatCount } from '@/lib/format';
 
-/** One Site Health score as a FigureStrip figure: its ring and where to act. */
+/** One Site Health figure in the FigureStrip, and where to act on it. */
 export type AuditMetric = {
   title: string;
   value: number | null;
-  /** `percent` is a share on the ring; it reads as a percentage. */
-  valueUnit?: 'score' | 'percent';
+  /** A score and a percent are 0–100; a count is a page count. */
+  valueUnit?: 'score' | 'percent' | 'count';
   href?: string;
   unavailable?: ReactNode;
 };
@@ -29,6 +30,7 @@ function auditSegment({
   if (value === null) {
     return { ...base, value: unavailable ?? <Absence state="not_measured" /> };
   }
+  if (valueUnit === 'count') return { ...base, value: formatCount(value) };
   const score = Math.max(0, Math.min(100, Math.round(value)));
   return { ...base, value: valueUnit === 'percent' ? `${score}%` : String(score) };
 }
