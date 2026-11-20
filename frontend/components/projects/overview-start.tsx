@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { textRole } from '@/components/ui/typography';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */
@@ -47,19 +48,27 @@ function startSteps(data: CommandCenter): SetupStep[] {
 
 /**
  * The one card a project sees before its Overview has figures: the steps as
- * one checklist, the step you are on carrying its one button. Widgets join it
+ * one checklist under its progress, the step you are on carrying its one button. Widgets join it
  * as their data arrives. Each step's button is its named action's one look.
  */
 export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
   const firstRun = !data.measurement;
+  const steps = startSteps(data);
+  const done = steps.filter((step) => step.state === 'done').length;
   return (
     <Section aria-labelledby="overview-start">
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <span className={textRole('caption', 'flex h-6 items-center tabular-nums')}>
+            {done} of {steps.length} done
+          </span>
+        }
+      >
         <SectionTitle id="overview-start">
           {firstRun ? 'Get your first results' : 'Track prompts again'}
         </SectionTitle>
       </SectionHeader>
-      <SetupSteps label="Steps to your first results" steps={startSteps(data)} />
+      <SetupSteps label="Steps to your first results" steps={steps} />
     </Section>
   );
 }

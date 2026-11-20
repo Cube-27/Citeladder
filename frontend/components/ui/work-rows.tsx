@@ -5,23 +5,18 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/**
- * The table shell every app table takes (owner, 2026-11-19): a `well` shell
- * at the overlay radius holding the column heads, and the rows on a
- * `surface` panel inset 4 from its sides and foot.
- */
-export const ROWS_SHELL =
-  'rounded-overlay bg-[var(--table-head-ground)] px-[var(--table-inset)] pb-[var(--table-inset)]';
-export const ROWS_PANEL = 'bg-surface rounded-card overflow-hidden';
+/** The table frame: a `rule` edge at radius 8 on the panel, clipping its rows. */
+export const ROWS_SHELL = 'border-rule rounded-card bg-surface overflow-clip border';
 
 /**
- * A tree leaf's work rows in the table shell: a column-head row, then
- * 56px rows of tick, title (with a muted line), scope, impact and source.
- * The columns are fixed, so no row moves another; below desktop, scope and
- * source fold away, and below 768 impact narrows to its word.
+ * A tree leaf's work rows in the table frame: a 32px head on `raised`, then
+ * 40px one-line rows of tick, title (its muted line inline after it), scope,
+ * impact and source. The columns are fixed, so no row moves another; below
+ * desktop, scope and source fold away; below 768 the muted line folds too, so the
+ * title keeps the cell, and impact keeps 88 for its bars and word.
  */
 const GRID =
-  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_72px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
+  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
 const WIDE = 'hidden desktop:block';
 
 export function WorkRows({
@@ -42,7 +37,12 @@ export function WorkRows({
     <div className={ROWS_SHELL}>
       <table aria-label={label} className="block w-full">
         <thead className="block">
-          <tr className={cn(GRID, textRole('captionStrong', 'text-ink-2 h-8'))}>
+          <tr
+            className={cn(
+              GRID,
+              textRole('captionStrong', 'text-ink-2 bg-well border-rule h-8 border-b'),
+            )}
+          >
             <th aria-label="Select" />
             <th className="text-left">{title}</th>
             <th className={cn(WIDE, 'text-left')}>{scope}</th>
@@ -50,12 +50,9 @@ export function WorkRows({
             <th className={cn(WIDE, 'text-left')}>{source}</th>
           </tr>
         </thead>
-        <tbody className={cn(ROWS_PANEL, 'block')}>{children}</tbody>
+        <tbody className="block">{children}</tbody>
       </table>
-      {/* Show more is a second inset panel under the rows, in the same shell. */}
-      {more ? (
-        <div className={cn(ROWS_PANEL, 'mt-[var(--table-inset)] *:border-t-0')}>{more}</div>
-      ) : null}
+      {more}
     </div>
   );
 }
@@ -86,20 +83,22 @@ export function WorkRow({
       className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-10 not-first:border-t')}
     >
       <td className="relative z-10 flex">{tick}</td>
-      <td className="min-w-0">
+      <td className="flex min-w-0 items-baseline gap-2">
         <TextLink
           href={href}
-          text="label"
+          text="body"
           underline="hover"
-          className="block truncate before:absolute before:inset-x-0 before:inset-y-0"
+          className="phone:flex-1 min-w-0 shrink truncate before:absolute before:inset-x-0 before:inset-y-0"
         >
           {title}
         </TextLink>
-        <span className={textRole('caption', 'block truncate')}>{caption}</span>
+        <span className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1 truncate')}>
+          {caption}
+        </span>
       </td>
-      <td className={cn(WIDE, textRole('caption', 'truncate tabular-nums'))}>{scope}</td>
-      <td className={textRole('caption', 'flex')}>{impact}</td>
-      <td className={cn(WIDE, textRole('caption', 'truncate'))}>{source}</td>
+      <td className={cn(WIDE, textRole('body', 'text-ink-2 truncate tabular-nums'))}>{scope}</td>
+      <td className={textRole('body', 'flex')}>{impact}</td>
+      <td className={cn(WIDE, textRole('body', 'text-ink-2 truncate'))}>{source}</td>
     </tr>
   );
 }
