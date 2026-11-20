@@ -92,7 +92,7 @@ function ReorderRow({
   };
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Drag and Alt+arrow enhance the row; its "…" menu is the complete reorder path.
-    <li
+    <li // NOSONAR -- Alt+arrow bubbles from the focused link; the "…" menu is the complete keyboard path.
       draggable={!pending}
       onKeyDown={onKeyDown}
       onDragStart={(event) => {
