@@ -27,12 +27,21 @@ test('built app hydrates root, deep links and direct HTML while blocking injecte
       body: JSON.stringify({ error: { code: 'unauthorized', message: 'Sign in' } }),
     }),
   );
+  // Enforced and report-only violations alike: each one is a report production receives.
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    Reflect.set(window, 'cspViolations', seen);
+    document.addEventListener('securitypolicyviolation', (event) => {
+      seen.push(`${event.effectiveDirective} ${event.blockedURI} ${event.sourceFile}`);
+    });
+  });
   for (const path of ['/', '/login', '/index.html']) {
     const response = await page.goto(`http://127.0.0.1:8793${path}`);
     expect(response?.headers()['content-security-policy']).toBeTruthy();
     expect(response?.headers()['cache-control']).toBe('no-cache');
     expect(response?.headers()['x-robots-tag']).toContain('noindex');
     await expect(page.getByRole('heading', { name: /sign in|welcome back/i })).toBeVisible();
+    expect(await page.evaluate(() => Reflect.get(window, 'cspViolations'))).toEqual([]);
   }
   await page.evaluate(() => {
     const script = document.createElement('script');
