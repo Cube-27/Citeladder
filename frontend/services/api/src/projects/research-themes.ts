@@ -25,10 +25,12 @@ const words = (text: string) =>
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 
+/** The identity's kept themes; none without an identity. */
 export function researchThemes(
-  candidates: readonly Candidate[],
+  identity: { themes: readonly Candidate[] } | null,
   limits: PerceptionPolicy['project_themes'],
 ): string[] {
+  const candidates = identity?.themes ?? [];
   const facts = limits.company_fact_terms.map((term) => ` ${words(term).join(' ')} `);
   const seen = new Set([limits.fallback.toLowerCase()]);
   return candidates

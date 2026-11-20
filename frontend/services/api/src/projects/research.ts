@@ -470,7 +470,7 @@ export async function researchBrand(
       model_calls: modelCalls,
       field_evidence_refs: identity?.field_evidence_refs ?? {},
       // Saved as the project's themes at completion; never shown in onboarding.
-      themes: researchThemes(identity?.themes ?? [], policy.perception.project_themes),
+      themes: researchThemes(identity, policy.perception.project_themes),
       metrics: {
         keenable_calls_used: budget.used,
         first_party_capture_version: policy.brand_evidence.version,
