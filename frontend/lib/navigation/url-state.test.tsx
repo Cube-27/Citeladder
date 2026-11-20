@@ -207,6 +207,10 @@ describe('router registration', () => {
     positions.push(scrollTop);
 
     expect(positions).toEqual([0, 0, 300, 600]);
+    // A malformed fragment is no anchor: the visit still opens at the top.
+    scrollPanelTo(200);
+    await act(() => router.navigate('/issues#%'));
+    expect(scrollTop).toBe(0);
     router.dispose();
   });
 

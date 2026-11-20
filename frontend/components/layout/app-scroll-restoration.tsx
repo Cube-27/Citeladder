@@ -19,8 +19,9 @@ export function AppScrollRestoration() {
     if (!panel) return;
     const pathChanged = shownPath.current !== pathname;
     shownPath.current = pathname;
+    const anchor = hash ? document.getElementById(fragmentId(hash)) : null;
     if (navigationType === 'POP') panel.scrollTop = positions.current.get(key) ?? 0;
-    else if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
+    else if (anchor) anchor.scrollIntoView();
     else if (pathChanged) panel.scrollTop = 0;
     const save = () => positions.current.set(key, panel.scrollTop);
     panel.addEventListener('scroll', save, { passive: true });
@@ -28,4 +29,13 @@ export function AppScrollRestoration() {
   }, [key, pathname, hash, navigationType]);
 
   return null;
+}
+
+/** The id a fragment names; a malformed one (`#%`) names none. */
+function fragmentId(hash: string): string {
+  try {
+    return decodeURIComponent(hash.slice(1));
+  } catch {
+    return '';
+  }
 }
