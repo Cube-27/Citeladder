@@ -34,10 +34,10 @@ export function FlowLogo() {
  * A bar as tall as the page header holds the logo and a way out (`barEnd`, the
  * account menu) with the theme switch. Under it, on the ground, one 480px
  * panel (`rule` edge, radius 8, 24 padding) starting a fifth of the way down
- * the window, with the app's controls. `footer` is one caption line at the
- * foot. With `aside` (account access's showcase, the right half from
- * `desktop:`) the column sits unboxed on the surface instead of the ground.
- * Multi-step setup uses SetupPage instead.
+ * the window, its controls at the website's height (`control-lg`). `footer`
+ * is one caption line at the foot. With `aside` (account access's showcase,
+ * the right half from `desktop:`) the column sits unboxed on the surface
+ * instead of the ground. Multi-step setup uses SetupPage instead.
  */
 export function FlowPage({
   label,
@@ -77,7 +77,7 @@ export function FlowPage({
         <main
           id="main"
           aria-label={label}
-          className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)]"
+          className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
         >
           <div className={cn(!aside && FLOW_CARD, 'flex flex-col gap-4')}>
             {kicker === null ? null : <p className={textRole('captionStrong')}>{kicker}</p>}

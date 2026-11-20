@@ -164,7 +164,7 @@ function PriceInfo({
       <SettingRow
         label="Price"
         value={
-          <span className="font-mono tabular-nums">
+          <span className="tabular-nums">
             {formatMoney(price.money, catalog.currency_minor_units)}
           </span>
         }
@@ -248,7 +248,7 @@ function SelectedPurchase({
           label="Quantity"
           value={
             <>
-              <InlineFigure className="font-mono">{selection.quantity}</InlineFigure> ×{' '}
+              <InlineFigure>{selection.quantity}</InlineFigure> ×{' '}
               {selection.byok ? 'Your own keys' : 'Managed'}
             </>
           }
@@ -259,7 +259,7 @@ function SelectedPurchase({
             label="Unit price"
             value={
               <>
-                <InlineFigure className="font-mono">
+                <InlineFigure>
                   {formatMoney(extra.unit_price, catalog.currency_minor_units)}
                 </InlineFigure>{' '}
                 per unit before tax

@@ -109,13 +109,11 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
       }
       mode={<ModeSwitch rail={rail} />}
       nav={nav}
-      foot={
-        <>
-          <SidebarFootNav rail={rail} />
-          <div className="labelled:items-stretch flex min-w-0 flex-col items-center">
-            <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
-          </div>
-        </>
+      foot={<SidebarFootNav rail={rail} />}
+      account={
+        <div className="labelled:items-stretch flex min-w-0 flex-col items-center">
+          <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
+        </div>
       }
     />
   );

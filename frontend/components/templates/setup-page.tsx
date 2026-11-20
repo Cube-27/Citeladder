@@ -28,6 +28,7 @@ type StepWidth = keyof typeof STEP_COLUMN;
  * while the page scrolls, with the logo, the steps in the centre (a numbered
  * stepper; "Step n of N" on phones) and the way out, account menu and theme
  * switch at the right. A rule along the rail's foot fills as steps complete.
+ * The steps' controls take the website's height (`control-lg`).
  */
 export function SetupPage({
   label,
@@ -68,7 +69,11 @@ export function SetupPage({
           </div>
         ) : null}
       </header>
-      <main id="main" aria-label={label} className="flex flex-1 flex-col">
+      <main
+        id="main"
+        aria-label={label}
+        className="flex flex-1 flex-col [--control-md:var(--control-lg)]"
+      >
         {children}
       </main>
     </div>

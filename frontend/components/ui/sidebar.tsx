@@ -23,20 +23,27 @@ import { cn } from '@/lib/utils';
 
 /**
  * The Sidebar organism's parts, labelled and as the collapsed rail, 8 inside
- * the column's edges. Top to bottom: the header (the project switcher, the
- * Settings link and the collapse toggle in one row as tall as the page
- * header), the mode switch, the mode's list, then the foot (Integrations and
- * the account). Only the list scrolls. In the 56px rail every 40px button
- * shares one centre axis, 4 between the parts, the toggle straight under the
- * project's mark, so it keeps its place at the top of the sidebar whichever
- * way it shows; its twelve buttons fit a window 520 high (16 + 12 × 40 + 16).
+ * the column's edges. Top to bottom: the header (the project switcher and the
+ * Settings link in one row as tall as the page header), the mode switch, the
+ * mode's list, then the foot (Integrations, the collapse toggle and the
+ * account). Only the list scrolls. In the 56px rail every 40px button shares
+ * one centre axis, 4 between the parts, the toggle straight above the
+ * account, so it keeps its place at the foot whichever way the sidebar shows
+ * (AR-8); its twelve buttons fit a window 520 high (16 + 12 × 40 + 16).
  */
 export function SidebarFrame({
   ident,
   mode,
   nav,
   foot,
-}: Readonly<{ ident: ReactNode; mode: ReactNode; nav: ReactNode; foot: ReactNode }>) {
+  account,
+}: Readonly<{
+  ident: ReactNode;
+  mode: ReactNode;
+  nav: ReactNode;
+  foot: ReactNode;
+  account: ReactNode;
+}>) {
   return (
     <div className="h-full overflow-hidden">
       {/* In the shell's column the content keeps the width the column eases
@@ -50,11 +57,14 @@ export function SidebarFrame({
           className="labelled:h-[var(--masthead-height)] labelled:flex-row flex shrink-0 flex-col items-center gap-1 in-data-[nav-drawer]:pe-10"
         >
           {ident}
-          <SidebarCollapseToggle />
         </div>
         {mode}
         {nav}
-        <div className="labelled:gap-0.5 flex shrink-0 flex-col">{foot}</div>
+        <div className="labelled:gap-0.5 flex shrink-0 flex-col">
+          {foot}
+          <SidebarCollapseToggle />
+          {account}
+        </div>
       </div>
     </div>
   );
@@ -206,8 +216,10 @@ export function SidebarNavGroup({
   );
 }
 
+/** The current row's fill. */
+const CURRENT_FILL = 'bg-[var(--nav-current-fill)]';
 /** The current row's tile, the accent mark at its start and `ink` at 500. */
-const CURRENT_TILE = 'bg-[var(--nav-current-fill)] text-ink before:bg-accent';
+const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink before:bg-accent');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 /** A nav row at rest stays `ink`; only group labels and the mode switch are `ink-2` (owner, 2026-11-19). */
 const NAV_AT_REST = 'text-ink hover:overlay-hover';
@@ -269,9 +281,9 @@ export function sidebarRailButtonClasses(current: boolean) {
 
 /**
  * The Dashboard | Agent switch, the segmented control: a `rule` frame one
- * control tall, segments 2 inside it, the current one on `state-selected`. In
- * the rail it is two stacked rail buttons, the current one on the tile
- * without the mark.
+ * control tall, segments 2 inside it, the current one on the current row's
+ * fill. In the rail it is two stacked rail buttons, the current one on the
+ * tile without the mark.
  */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
@@ -281,12 +293,12 @@ export function sidebarModeTrackClasses(rail: boolean) {
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
-  if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
+  if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
   // Labelled, a segment is its word (no icon), the two sharing the width;
   // wider text spacing ends in an ellipsis.
   return cn(
     'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-    current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST,
+    current ? cn('text-ink', CURRENT_FILL) : AT_REST,
   );
 }
 
@@ -348,7 +360,7 @@ export function SidebarIdentButton({
       aria-current={current ? 'page' : undefined}
       className={cn(
         'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:w-full labelled:h-[var(--control-lg)] labelled:justify-start labelled:px-2 rounded-control flex h-[var(--rail-button)] w-[var(--rail-button)] min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
-        current && 'bg-[var(--nav-current-fill)]',
+        current && CURRENT_FILL,
         className,
       )}
       {...props}
@@ -379,9 +391,8 @@ export function SidebarIdentButton({
 }
 
 /**
- * Collapse the sidebar to its rail, or open it again: last in the sidebar's
- * header, beside Settings, and under the project's mark in the rail (AR-8).
- * Below 900px and in the drawer, where the menu button opens the sidebar
+ * Collapse the sidebar to its rail, or open it again: in the sidebar's foot,
+ * straight above the account, labelled or as the rail (AR-8). Below 900px and in the drawer, where the menu button opens the sidebar
  * instead, it is hidden.
  */
 function SidebarCollapseToggle() {
@@ -391,10 +402,10 @@ function SidebarCollapseToggle() {
       icon={collapsed ? PanelLeftOpen : PanelLeftClose}
       label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       shortcut={COLLAPSE_SHORTCUT}
-      tooltipSide={collapsed ? 'right' : 'bottom'}
+      tooltipSide={collapsed ? 'right' : 'top'}
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       onClick={() => setSidebarCollapsed(!collapsed)}
-      className="rail:inline-flex not-labelled:size-[var(--rail-button)] hidden shrink-0 in-data-[nav-drawer]:hidden"
+      className="rail:inline-flex not-labelled:size-[var(--rail-button)] labelled:self-start hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
     />
   );
 }

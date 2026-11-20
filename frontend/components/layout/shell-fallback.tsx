@@ -156,23 +156,21 @@ function PlaceholderSidebar() {
       }
       nav={nav}
       foot={
-        <>
-          <ul className={rail ? 'flex flex-col items-center' : 'flex flex-col gap-0.5'}>
-            {rail ? (
-              FOOT_NAV_ITEMS.map(({ href, icon: Icon }) => (
-                <li key={href}>
-                  <span className={sidebarRailButtonClasses(current({ href }))}>
-                    <Icon aria-hidden />
-                  </span>
-                </li>
-              ))
-            ) : (
-              <Rows items={FOOT_NAV_ITEMS} pathname={pathname} />
-            )}
-          </ul>
-          <IdentBlock />
-        </>
+        <ul className={rail ? 'flex flex-col items-center' : 'flex flex-col gap-0.5'}>
+          {rail ? (
+            FOOT_NAV_ITEMS.map(({ href, icon: Icon }) => (
+              <li key={href}>
+                <span className={sidebarRailButtonClasses(current({ href }))}>
+                  <Icon aria-hidden />
+                </span>
+              </li>
+            ))
+          ) : (
+            <Rows items={FOOT_NAV_ITEMS} pathname={pathname} />
+          )}
+        </ul>
       }
+      account={<IdentBlock />}
     />
   );
 }

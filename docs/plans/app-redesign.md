@@ -21,7 +21,8 @@ sites are out of scope.
   between Type and Issues is the defect to avoid). Owner, 2026-11-20.
 - **AR-5 Kept rules.** The line language (solid observed, dashed draft, `—`
   absent, printed `0`) and the accent meaning "you, here" from
-  [design](../design.md) stay. Owner, 2026-11-20.
+  [design](../design.md) stay; the accent also marks focus (AR-13). Owner,
+  2026-11-20.
 - **AR-6 Old design system.** Delete the design-system checks except three:
   no literal colours in app code, WCAG AA contrast of token pairs, and no
   direct Radix imports outside `components/ui`. Rewrite
@@ -29,9 +30,9 @@ sites are out of scope.
   per component; drop rulings it no longer needs. Owner, 2026-11-20.
 - **AR-7 App only.** Website and docs keep their look; the app's tokens split
   from theirs so the app can change freely. Owner, 2026-11-20.
-- **AR-8 Sidebar collapse.** Keep the icon rail; move the collapse toggle into
-  the sidebar header beside the settings icon, in the same spot expanded and
-  collapsed. Owner, 2026-11-20.
+- **AR-8 Sidebar collapse.** Keep the icon rail; the collapse toggle sits in
+  the sidebar foot, in the same spot expanded and collapsed. Owner,
+  2026-11-20.
 - **AR-9 Widths.** Keep today's narrow pages (1040 column: Overview, Projects,
   Issues, Actions, page detail, Agent, Billing; 720 column: Settings, Runs,
   Agent context). Side space is better than space in the middle. Owner,
@@ -46,6 +47,8 @@ sites are out of scope.
   screen with the product showcase and the form unboxed on the surface (no
   card), and setup keeps its own layout; both take the app's new look.
   Owner, 2026-11-20.
+- **AR-13 Focus.** Focus rings use a subtle accent edge and glow instead of
+  ink. Owner, 2026-11-20.
 
 ## Visual spec and standard layouts
 

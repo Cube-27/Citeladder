@@ -17,7 +17,7 @@ export type ControlProps = {
  * 8px to the control, and one line of help or error below in `caption`.
  * Never help and error together: the error replaces the help, in crimson
  * with its glyph, linked to the control. An optional counter ("48/200") sits
- * at the right of that line in mono, turning `ink` at the limit.
+ * at the right of that line in tabular numerals, turning `ink` at the limit.
  * `layout="row"` puts the label in a 160 column at the left and the control
  * with its help or error at the right; at phone width the two stack.
  */

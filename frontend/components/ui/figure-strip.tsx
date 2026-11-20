@@ -75,7 +75,7 @@ export type FigureSegment = Readonly<
  * hairlines, never cards (AR-3, globals.css "FigureStrip"). Cells share the
  * width equally; rows come from `figureRows`, and a wrapped row keeps the
  * same dividers. A cell is the 12px label with its marker and one info hint
- * (caption, basis and comparison joined with " · "), then the 20/28 mono
+ * (caption, basis and comparison joined with " · "), then the 20/28 tabular
  * value with its Delta inline on one baseline. No ring, meter or bar sits in
  * a cell. A named value (a model, a brand) carries its own logo; a sentiment
  * its dot. A figure with `action` makes its label the link.

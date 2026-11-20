@@ -98,13 +98,13 @@ export function ActionUrls({
   );
 }
 
-/** A URL by its path in the mono face, its last segment strong, so a list of one site's pages reads by what differs. */
+/** A URL by its path, its last segment strong, so a list of one site's pages reads by what differs. */
 function UrlPath({ url }: Readonly<{ url: string }>) {
   const path = actionTarget({ target_kind: 'page', target_label: url });
   const home = !path.startsWith('/');
   const cut = path.lastIndexOf('/') + 1;
   return (
-    <span className={textRole('code', 'text-ink-2 block truncate')} title={url}>
+    <span className={textRole('caption', 'block truncate')} title={url}>
       {home ? null : path.slice(0, cut)}
       <b className={textRole('emphasis', 'text-ink')}>{home ? '/' : path.slice(cut)}</b>
     </span>
