@@ -21,7 +21,9 @@ Read a plan only for work assigned to it. An entry in
 an old wave or fresh-chat protocol because a document mentions it.
 
 Situational workflow rules live in `.claude/skills/`: `validate-change` (what to
-run and when) and `record-owner-decision` (where owner answers go). Skills never
+run and when), `record-owner-decision` (where owner answers go), `local-env`
+(seeded local app and production accounts), `run-agents` (this repo's agent
+runs) and `design-climb` (design rounds). Skills never
 restate repository policy owned by a document. Packaged Agent `SKILL.md` files
 are production inputs owned by the [Agent](docs/agents.md), not engineering
 skills.
