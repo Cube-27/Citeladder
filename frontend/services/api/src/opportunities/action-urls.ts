@@ -130,10 +130,11 @@ export type ActionUrlSource = Readonly<{
   cohort: Readonly<{ whole_site: boolean; pages: readonly { site_url_id: string }[] }> | null;
 }>;
 
-// Four columns a row, under PostgreSQL's 65,535 bind parameters.
-const INSERT_BATCH = 10_000;
-
-/** Replace the URL rows of every synced Action; caller owns the transaction. */
+/**
+ * Bring every synced Action's URL rows to its current set: delete only the
+ * pairs that are gone and add only the new ones, so a resync that changed
+ * nothing writes nothing. Caller owns the transaction.
+ */
 export async function writeActionUrls(trx: Database, scope: Scope, synced: ActionUrlSource[]) {
   if (!synced.length) return;
   const pageUrls = [...new Set(synced.flatMap((s) => (s.kind === 'page' && s.url ? [s.url] : [])))];
@@ -156,35 +157,26 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
     const id = s.kind === 'page' && s.url ? owned.get(s.url) : undefined;
     return id ? [id] : [];
   };
-  const rows = synced.flatMap((s) => {
-    return [...new Set(urlIds(s))].map((site_url_id) => ({
-      workspace_id: scope.workspaceId,
-      project_id: scope.projectId,
-      action_id: s.actionId,
-      site_url_id,
-    }));
-  });
-  await trx
-    .deleteFrom('action_urls')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where(
-      'action_id',
-      'in',
-      synced.map((s) => s.actionId),
-    )
-    .execute();
+  // The wanted pairs as two parallel arrays: two bind parameters at any size.
+  const actionIds: string[] = [];
+  const siteUrlIds: string[] = [];
+  for (const s of synced)
+    for (const id of new Set(urlIds(s))) {
+      actionIds.push(s.actionId);
+      siteUrlIds.push(id);
+    }
+  const wanted = sql`unnest(${actionIds}::uuid[], ${siteUrlIds}::uuid[]) as w(action_id, site_url_id)`;
+  await sql`delete from action_urls a
+    where a.workspace_id = ${scope.workspaceId}
+      and a.action_id = any(${synced.map((s) => s.actionId)}::uuid[])
+      and not exists (select 1 from ${wanted}
+        where w.action_id = a.action_id and w.site_url_id = a.site_url_id)`.execute(trx);
+  if (!actionIds.length) return;
   // Cohort pages come from evidence; only this project's existing URLs are kept.
-  for (let start = 0; start < rows.length; start += INSERT_BATCH) {
-    const batch = rows.slice(start, start + INSERT_BATCH);
-    await /* NOSONAR -- One transaction: batches run in order. */ sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
-      select v.workspace_id, v.project_id, v.action_id, v.site_url_id
-      from (values ${sql.join(
-        batch.map(
-          (row) =>
-            sql`(${row.workspace_id}::uuid, ${row.project_id}::uuid, ${row.action_id}::uuid, ${row.site_url_id}::uuid)`,
-        ),
-      )}) as v(workspace_id, project_id, action_id, site_url_id)
-      join site_urls u on u.workspace_id = v.workspace_id and u.project_id = v.project_id
-        and u.id = v.site_url_id`.execute(trx);
-  }
+  await sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
+    select u.workspace_id, u.project_id, w.action_id, u.id
+    from ${wanted}
+    join site_urls u on u.id = w.site_url_id
+      and u.workspace_id = ${scope.workspaceId} and u.project_id = ${scope.projectId}
+    on conflict (action_id, site_url_id) do nothing`.execute(trx);
 }

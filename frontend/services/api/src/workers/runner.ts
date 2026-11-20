@@ -358,12 +358,13 @@ async function untilAdmissionEnds<T>(
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = config.settings;
   const runtime = auditRuntime(env);
+  // Each lane's task slots leave one pooled connection free, so its cadence work
+  // (live score, catalog publication) never waits out the pool timeout behind
+  // them. Audit tasks hold no connection across provider calls.
+  const slots = Math.max(1, config.execution.poolSize - 1);
   // Provider calls hold no connection, so audits keep a pool-bounded set in
   // flight like Site Health below; per-transport capacity still caps each provider.
-  runtime.audits.worker_concurrency = Math.min(
-    runtime.audits.worker_concurrency,
-    config.execution.poolSize,
-  );
+  runtime.audits.worker_concurrency = Math.min(runtime.audits.worker_concurrency, slots);
   const projections = auditProjections(db);
   const analytics = new AnalyticsWorker(db, loadWorkerSettings(env));
   const discovery = new DiscoveryWorker(db, { env });
@@ -382,8 +383,8 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const scheduler = new AuditScheduler(db, runtime, schedulerSettings(env));
   const crawlScheduler = new CrawlScheduler(db, crawlSchedulerSettings(env));
   const dispatcher = new IntegrationDispatcher(db);
-  // Owners that fetch public websites take turns, as interactive crawls and
-  // competitor discovery do under the drain lock, to keep publisher pacing.
+  // Owners that fetch public websites take turns, as interactive competitor
+  // discovery does under the drain lock, to keep publisher pacing.
   const crawler = 'web-fetch';
   // Billing has no due-time probe, so it also runs periodically: the scheduled
   // tick starts a drain only when another lane reports work due.
@@ -425,11 +426,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
         name: 'site-health',
         group: crawler,
         run: (canAdmit, peersDue) =>
-          site.drain(
-            Math.min(site.settings.concurrency, config.execution.poolSize),
-            canAdmit,
-            peersDue,
-          ),
+          site.drain(Math.min(site.settings.concurrency, slots), canAdmit, peersDue),
         nextDue: () => site.nextDue(),
       },
       { name: 'billing', run: billing },

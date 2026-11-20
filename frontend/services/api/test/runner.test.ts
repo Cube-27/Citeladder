@@ -66,21 +66,25 @@ describe('bounded runner', () => {
       await db.destroy();
     }
   });
-  it.each([1, 8])(
-    'bounds Site Health batches by its policy and the pool (worker limit %i)',
-    async (concurrency) => {
-      const config = testConfig({ SITE_HEALTH_WORKER_CONCURRENCY: String(concurrency) });
+  // One pooled connection stays free for cadence work beside the task slots.
+  it.each([
+    { concurrency: 1, pool: 4, slots: 1 },
+    { concurrency: 8, pool: 4, slots: 3 },
+    { concurrency: 8, pool: 1, slots: 1 },
+  ])(
+    'bounds Site Health batches by its policy and the pool less one (worker limit $concurrency, pool $pool)',
+    async ({ concurrency, pool, slots }) => {
+      const config = testConfig({
+        SITE_HEALTH_WORKER_CONCURRENCY: String(concurrency),
+        RUNNER_DB_POOL_SIZE: String(pool),
+      });
       const db = createDatabase(config, { execution: true });
       const run = vi.spyOn(SiteHealthWorker.prototype, 'drain').mockResolvedValue(0);
       try {
         const owners = await runnerOwners(db, config);
         const peersDue = async () => false;
         await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true, peersDue);
-        expect(run).toHaveBeenCalledWith(
-          Math.min(concurrency, config.execution.poolSize),
-          expect.any(Function),
-          peersDue,
-        );
+        expect(run).toHaveBeenCalledWith(slots, expect.any(Function), peersDue);
       } finally {
         run.mockRestore();
         await db.destroy();

@@ -66,17 +66,25 @@ Docs Worker (static, no origin)                            │ starts runner aft
   serial port is disabled. It runs Shielded VM with Secure Boot, vTPM and
   integrity monitoring.
 - **Database flags.** The container arguments in `infra/gcp/postgres-vm.sh`
-  turn JIT off (short OLTP statements only paid its compile cost), preload
-  `pg_stat_statements` with planning time tracked, and turn on
-  `track_io_timing`, lock-wait logging, autovacuum logging and slow-statement
-  logging at 500 ms without bind values. The start script creates the extension
+  fit the planner and memory to a 1 GB, 0.25 vCPU VM whose database fits in
+  RAM: no parallel query workers (on a quarter vCPU they only add CPU
+  contention), `random_page_cost=1.5` with `effective_cache_size=512MB` (at the
+  default 4 the planner seq-scanned `site_urls` rather than probe its indexes)
+  and `work_mem=8MB` (4 MB spilled crawl-time sorts to temp files).
+  `max_connections` is 40: two API instances at `DB_POOL_SIZE` 6
+  (`infra/gcp/locals.tf`) plus each runner execution's `RUNNER_DB_POOL_SIZE` 4
+  and its drain-lock session. The arguments also turn JIT off (short OLTP
+  statements only paid its compile cost), preload `pg_stat_statements` with
+  planning time tracked, and turn on `track_io_timing`, lock-wait logging,
+  logging of autovacuum runs of 1 s or longer and slow-statement logging at
+  500 ms without bind values. The start script creates the extension
   in its own `monitoring` schema, since the migrate job refuses a first apply
   over a non-empty `public`; read it as `monitoring.pg_stat_statements` from
   the read-only `citeladder` session of the
   [daily operation](GCP_RUNBOOK.md#3-daily-operation) tunnel (a superuser, so
   it already sees every role's statements; no `pg_read_all_stats` grant
-  needed). Changing an argument recreates the container on the next VM
-  restart, about a minute of downtime: deploy it with no crawl running.
+  needed). GCP Deploy restarts the VM when the script changes, which recreates
+  the container: about a minute of downtime, so deploy it with no crawl running.
   Owner trials, not shipped: `wal_compression=lz4`, `checkpoint_timeout=15min`
   and `max_wal_size=2GB`. Add one at a time and keep it only if WAL bytes per
   page (K2 in the

@@ -89,14 +89,17 @@ run_args=(
   -c hba_file=/run/citeladder/pg_hba.conf
   -c ssl=on -c ssl_cert_file=/run/citeladder/server.crt -c ssl_key_file=/run/citeladder/server.key
   -c password_encryption=scram-sha-256
-  -c max_connections=40 -c shared_buffers=128MB -c effective_cache_size=384MB
-  -c work_mem=4MB -c maintenance_work_mem=64MB
+  # Planner and memory for a 1 GB, 0.25 vCPU VM whose database fits in RAM
+  # (docs/operations/GOOGLE_CLOUD.md).
+  -c max_connections=40 -c shared_buffers=128MB -c effective_cache_size=512MB
+  -c work_mem=8MB -c maintenance_work_mem=64MB
+  -c random_page_cost=1.5 -c max_parallel_workers_per_gather=0
   -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=6
   # Measurement (docs/operations/GOOGLE_CLOUD.md). Slow-statement lines never carry bind values.
   -c jit=off -c track_io_timing=on
   -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track_planning=on
   -c log_lock_waits=on -c log_min_duration_statement=500 -c log_parameter_max_length=0
-  -c log_autovacuum_min_duration=0
+  -c log_autovacuum_min_duration=1s
 )
 # Recreate the container whenever its image, arguments or access rules change;
 # the data directory persists. An unchanged specification only starts it.

@@ -184,7 +184,9 @@ matches. While that `discover` is open (or `site_setup`, for the root),
 `analysis_dependency_max_wait_seconds`, then fetches the page itself.
 
 **Execution.** The runner's `site-health` lane (`workers/runner.ts`) keeps
-`min(worker_concurrency, RUNNER_DB_POOL_SIZE)` tasks in flight. It refills each
+`min(worker_concurrency, RUNNER_DB_POOL_SIZE - 1)` tasks in flight, so one
+pooled connection stays free for cadence work (live score, catalog
+publication) instead of waiting out the pool timeout. It refills each
 slot as a task settles, until the runner stops admitting or
 `claim_window_seconds` ends. An idle drain waits for work that becomes due
 within its budget; when deferred work is due after the budget ends, the exiting
@@ -197,11 +199,10 @@ with `synchronous_commit = off` (`SET LOCAL`, owner decision CO-1 in the
 a database crash can lose their last fraction of a second, which lease recovery
 redoes. Every other lane, billing, ledger and webhook commit stays durable.
 
-After creation, the browser calls `POST /api/v1/site-crawls/{id}/run`. That
-request runs a crawl-scoped worker under the same lock, without waiting for it,
-within `siteHealth.interactive` bounds: 30 s admission, a 180 s deadline that
-includes robots and redirect probes, and concurrency 2. The background runner
-finishes anything left. Reads never start work.
+Creating a crawl commits its first tasks, and that commit starts a runner
+execution ([committed-work observation](backend-architecture.md)). No API
+request drains a crawl: an in-request drain held API connections for minutes
+and raced the runner for the crawl row. Reads never start work.
 
 **Leases and retries.**
 
@@ -287,8 +288,7 @@ task cancels itself and the cancelled crawl is published by its own `finalize`.
 timer beside the claim loop, never before a claim: recovery every
 `poll_interval_seconds` (at once again while a reclaim batch fills), the
 backstops every `backstop_interval_seconds`. Every pass awaits the job before
-it returns, so an empty drain still runs them. A `/run` request's scoped worker
-reconciles only its crawl, on the same interval and score cadence.
+it returns, so an empty drain still runs them.
 
 - **Stalled:** an active crawl with no open task and no write for
   `stalled_crawl_reconcile_seconds` is reconciled.

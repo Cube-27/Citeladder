@@ -52,9 +52,16 @@ function targetTable(node: unknown): boolean {
   return false;
 }
 
+// A raw `sql` statement is one RawNode; its leading text names the written table.
+const RAW_WRITE = /^\s*(?:insert\s+into|update)\s+(?:"?public"?\.)?"?([a-z_]+)"?/iu;
+
 function writesWork(node: OperationNode): boolean {
   const value = node as OperationNode & Record<string, unknown>;
   if (['ValueNode', 'PrimitiveValueListNode'].includes(value.kind)) return false;
+  if (value.kind === 'RawNode') {
+    const table = RAW_WRITE.exec((value.sqlFragments as string[])[0] ?? '')?.[1];
+    if (table && executionTables.has(table.toLowerCase())) return true;
+  }
   if (['InsertQueryNode', 'UpdateQueryNode'].includes(value.kind)) {
     if (targetTable(value.into ?? value.table)) return true;
   }

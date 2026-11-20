@@ -489,7 +489,7 @@ Claude route's `anthropic_thinking` (provider config) turns thinking off for
 answer capture instead of raising the budget. Provider costs and
 successful-answer billing are different projections.
 
-The audit runner lane keeps `min(worker_concurrency, RUNNER_DB_POOL_SIZE)`
+The audit runner lane keeps `min(worker_concurrency, RUNNER_DB_POOL_SIZE - 1)`
 tasks in flight, refilling each slot as a task settles until a claim finds
 nothing, the runner stops admitting or `claim_window_seconds` ends; it runs
 alongside Site Health rather than after its claim window. It wakes for the

@@ -11,13 +11,6 @@ import {
 } from '@citeladder/contracts/site-health';
 import { crawlScheduleUpdateRequestSchema } from '@citeladder/contracts/site-health-requests';
 import { budget, spendBudget } from '../abuse/usage.ts';
-import { policy } from '../config.ts';
-import { SiteHealthWorker } from '../workers/site-health-worker.ts';
-import { exclusiveDrain } from '../workers/runner.ts';
-import { siteWorkerSettings } from '../site-health/runtime.ts';
-import { SitePageFetcher, siteFetchSettings } from '../site-health/page-fetch.ts';
-import { fetchWebsite } from '../safe-fetch.ts';
-import { leaseSignal } from '../queue/heartbeat.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
@@ -42,52 +35,6 @@ const projectRoot = '/api/v1/projects/{project_id}/monitored-urls';
 const scheduleRoot = '/api/v1/projects/{project_id}/crawl-schedule';
 
 export const siteHealthCrawlRoutes = [
-  definePostRoute({
-    family,
-    path: '/api/v1/site-crawls/{crawl_id}/run',
-    params: { path: { crawl_id: uuid }, query: {} },
-    response: siteCrawlSchema,
-    capability: 'run',
-    async handle({ c, db, config }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
-      await loadCrawl(db, workspaceId, path.crawl_id);
-      const env = config.settings;
-      const interactive = policy.site_health.interactive;
-      const signal = AbortSignal.timeout(interactive.timeout_seconds * 1000);
-      const settings = siteWorkerSettings(env);
-      const worker = new SiteHealthWorker(db, {
-        taskScope: { workspaceId, crawlId: path.crawl_id },
-        settings: {
-          ...settings,
-          concurrency: Math.min(settings.concurrency, interactive.concurrency),
-        },
-        // Include robots.txt and redirect probes in the request's acquisition deadline.
-        fetcher: new SitePageFetcher(
-          db,
-          (url, options) =>
-            fetchWebsite(url, {
-              ...options,
-              signal: leaseSignal(signal, options?.signal),
-            }),
-          siteFetchSettings(env),
-        ),
-        signal,
-      });
-      // Observe committed successors: a runner may have drained before this request finishes.
-      // Keep publisher pacing under one crawler, including API requests and background jobs.
-      await exclusiveDrain(
-        config,
-        {
-          signal,
-          deadline: performance.now() + interactive.admission_seconds * 1000,
-        },
-        0,
-      )(() => worker.runUntilIdle(signal, interactive.admission_seconds));
-      return siteCrawlSchema.parse(
-        await crawlProjection(db, await loadProjectedCrawl(db, workspaceId, path.crawl_id)),
-      );
-    },
-  }),
   definePostRoute({
     family,
     path: '/api/v1/site-crawls',

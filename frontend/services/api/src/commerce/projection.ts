@@ -40,7 +40,9 @@ type Source = Awaited<ReturnType<typeof sourceOf>>;
 async function sourceOf(db: Database, scope: CommerceScope, id: string) {
   const source = await db
     .selectFrom('site_page_analyses as a')
-    .innerJoin('site_fetch_artifacts as f', 'f.id', 'a.artifact_id')
+    .innerJoin('site_fetch_artifacts as f', (join) =>
+      join.onRef('f.id', '=', 'a.artifact_id').onRef('f.crawl_id', '=', 'a.crawl_id'),
+    )
     .innerJoin('site_urls as u', 'u.id', 'a.site_url_id')
     .select([
       'a.id',
@@ -82,16 +84,16 @@ async function projectCategory(
   if (!name) return null;
   const key = categoryKey(name);
   // The category owning this name wins over one matched by URL, so the rename
-  // below can never collide with the (project_id, normalized_name) key.
-  const existing = await db
+  // below can never collide with the (project_id, normalized_name) key. Two
+  // lookups, not an OR, so each one is an index scan.
+  const scoped = db
     .selectFrom('commerce_categories')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where((eb) => eb.or([eb('normalized_name', '=', key), eb('canonical_url', '=', url)]))
-    .orderBy(sql`normalized_name = ${key}`, 'desc')
-    .orderBy('id')
-    .executeTakeFirst();
+    .where('project_id', '=', scope.projectId);
+  const existing =
+    (await scoped.where('normalized_name', '=', key).executeTakeFirst()) ??
+    (await scoped.where('canonical_url', '=', url).orderBy('id').limit(1).executeTakeFirst());
   const category = existing ?? (await categoryByName(db, scope, name));
   const provenance = {
     kind: 'site_health',
@@ -262,7 +264,9 @@ async function declaredIdentities(
   const rows = await db
     .selectFrom('site_urls as u')
     .innerJoin('site_crawl_tasks as t', 't.site_url_id', 'u.id')
-    .innerJoin('site_fetch_artifacts as f', 'f.task_id', 't.id')
+    .innerJoin('site_fetch_artifacts as f', (join) =>
+      join.onRef('f.task_id', '=', 't.id').onRef('f.crawl_id', '=', 't.crawl_id'),
+    )
     .select(['u.normalized_url', 'f.final_url', 'f.normalized_facts'])
     .where('u.workspace_id', '=', scope.workspaceId)
     .where('u.project_id', '=', scope.projectId)
@@ -308,7 +312,9 @@ async function linkShelves(db: Database, scope: CommerceScope, crawlId: string, 
   let shelfQuery = db
     .selectFrom('commerce_categories as c')
     .innerJoin('site_page_analyses as a', 'a.id', 'c.source_analysis_id')
-    .innerJoin('site_fetch_artifacts as f', 'f.id', 'a.artifact_id')
+    .innerJoin('site_fetch_artifacts as f', (join) =>
+      join.onRef('f.id', '=', 'a.artifact_id').onRef('f.crawl_id', '=', 'a.crawl_id'),
+    )
     .select(['c.id', 'f.normalized_facts', 'f.final_url', 'f.requested_url'])
     .where('c.workspace_id', '=', scope.workspaceId)
     .where('c.project_id', '=', scope.projectId)

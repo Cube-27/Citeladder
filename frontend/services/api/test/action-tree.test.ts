@@ -4,6 +4,7 @@
  * grouping with its URLs in `action_urls`; the tree, grouping-page and URL reads, each workspace-authorized.
  */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   actionsPageSchema,
@@ -16,6 +17,7 @@ import { buildManifest } from '../src/agent/context.ts';
 import { createApp } from '../src/app.ts';
 import type { Database } from '../src/db/database.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
+import { writeActionUrls } from '../src/opportunities/action-urls.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { actionRow } from './opportunity-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -262,6 +264,42 @@ describe('issue-group Actions', () => {
       ...Array.from({ length: 7 }, () => ['product', 1]),
     ]);
     expect((await request(foreign.seed, path)).status).toBe(404);
+  });
+
+  it('resyncs an Action by writing only the URL pairs that changed, never a foreign URL', async () => {
+    const [advisory] = await issueActions(own.seed);
+    const [p0, p1, , p3] = own.pages.map((page) => page.id);
+    const rolledBack = new Error('roll back');
+    let rows: { site_url_id: string; rewritten: boolean }[] = [];
+    await db
+      .transaction()
+      .execute(async (trx) => {
+        // Was /p00-/p02; /p02 leaves, /p03 joins, and another workspace's page is refused.
+        const pages = [p0!, p1!, p3!, foreign.pages[0]!.id].map((site_url_id) => ({ site_url_id }));
+        await writeActionUrls(trx, scopeOf(own.seed), [
+          {
+            actionId: advisory!.id,
+            kind: 'issue_family',
+            url: null,
+            cohort: { whole_site: false, pages },
+          },
+        ]);
+        rows = (
+          await sql<{ site_url_id: string; rewritten: boolean }>`
+            select site_url_id, xmin = pg_current_xact_id()::xid as rewritten
+            from action_urls where action_id = ${advisory!.id}`.execute(trx)
+        ).rows;
+        throw rolledBack;
+      })
+      .catch((error: unknown) => {
+        if (error !== rolledBack) throw error;
+      });
+    const sorted = [
+      { site_url_id: p0!, rewritten: false },
+      { site_url_id: p1!, rewritten: false },
+      { site_url_id: p3!, rewritten: true },
+    ].sort((a, b) => a.site_url_id.localeCompare(b.site_url_id));
+    expect(rows.sort((a, b) => a.site_url_id.localeCompare(b.site_url_id))).toEqual(sorted);
   });
 });
 

@@ -12,8 +12,7 @@
  * The frontend never invents a discovered total: count-bearing fields the
  * backend redacts for Free arrive `null`/absent and are validated as such.
  */
-import { API_BASE_URL, SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
-import { startInteractiveWork } from './interactive-work';
+import { API_BASE_URL } from '@/lib/config/operational';
 import { apiClient, type ApiRequestOptions } from './client';
 import type { queryKeys } from './query-keys';
 import {
@@ -132,14 +131,10 @@ export const siteHealthApi = {
     );
     return strictValidate(robotsHistoryPageSchema, res, 'siteHealth.getRobotsHistory');
   },
+  // The created crawl's committed tasks wake the background runner; nothing here drives it.
   createCrawl: async (input: StartCrawlInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
-    const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
-    startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
-      ...options,
-      timeoutMs: SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS,
-    });
-    return crawl;
+    return strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
   },
   listCrawls: async (params: CrawlListParams, options?: ApiRequestOptions) => {
     const path = withQuery('/site-crawls', definedQuery(params));

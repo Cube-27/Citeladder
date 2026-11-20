@@ -251,6 +251,37 @@ describe('catalog projection PostgreSQL boundary', () => {
       .where('workspace_id', '=', s.workspaceId)
       .execute();
   }, 20_000);
+  it('projects a shelf onto the category holding its URL when no category owns its name', async () => {
+    const s = await seed();
+    const held = randomUUID();
+    await db
+      .insertInto('commerce_categories')
+      .values({
+        id: held,
+        workspace_id: s.workspaceId,
+        project_id: s.projectId,
+        name: 'Old tools',
+        normalized_name: 'old tools',
+        role: 'unknown',
+        canonical_url: 'https://example.com/collections/tools',
+        field_sources: '{}',
+        source_analysis_id: null,
+        projector_version: '',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    for (const task of s.tasks) await execute(task);
+    expect(await storedCategory(s, held)).toEqual({
+      name: 'Tools',
+      canonical_url: 'https://example.com/collections/tools',
+    });
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('workspace_id', '=', s.workspaceId)
+      .execute();
+  }, 20_000);
   it('keeps edited fields and an edited category set over later crawl evidence', async () => {
     const s = await seed();
     const imported = await importCatalog(

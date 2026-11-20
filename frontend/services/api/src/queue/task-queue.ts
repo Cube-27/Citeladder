@@ -194,7 +194,9 @@ function scopeFilter(scope: ClaimScope): ClaimFilter {
  * Only the `claim_candidate_limit` oldest due rows and as many highest-priority
  * ones are ranked, so a claim's cost is bounded by that cap rather than by the
  * whole backlog, and a backlog of old low-priority rows never hides newer urgent
- * ones (a crawl's thousands of discovers ahead of its analyses). Within them,
+ * ones (a crawl's thousands of discovers ahead of its analyses). The cap is also
+ * the backlog one workspace can hold before a quieter one drops out of the
+ * window, so lowering it narrows fairness. Within them,
  * each workspace's rows are numbered and the least recently served workspace
  * goes first. Eligibility (`status`/`available_at`/readiness/scope) is applied
  * twice on purpose: in the candidate set, and on the locked relation itself.
