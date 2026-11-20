@@ -7,8 +7,7 @@ import { cn } from '@/lib/utils';
  *
  *   Frame — the one framed surface: a `rule` edge at radius 8 (`FRAME_FACE`),
  *           on the `panel` with its ink when it holds content (`SLIP_FACE`:
- *           a slip, a framed section, a table's or a chart's frame). A card
- *           that opens on click is an `IconCard` (icon-card.tsx).
+ *           a slip, a framed section, a table's or a chart's frame).
  *   Well  — quoted or raw material (an answer passage, code, a fact list in a
  *           drawer, a fieldset): `well`, the control radius, no edge.
  *   Sheet — anything that floats: a 1px `rule` edge, its radius and shadow

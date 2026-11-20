@@ -4,9 +4,14 @@ import { useId, type ReactNode } from 'react';
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
+import { SLIP_FACE } from '@/components/ui/slip';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
 import { websiteHref } from '@/lib/config/app-link';
+import { cn } from '@/lib/utils';
+
+/** The one card a page outside the shell draws on the ground: Flow, Setup and the full-page Notice. */
+export const FLOW_CARD = cn(SLIP_FACE, 'p-6');
 
 /**
  * The CiteLadder logo linking home. The public home lives on the website
@@ -26,13 +31,13 @@ export function FlowLogo() {
 }
 
 /**
- * Flow: a one-screen page with no shell. The workspace chooser, an invitation
- * and setup's blocked notices. A bar as tall as the masthead holds the logo
- * and a way out (`barEnd`, the account menu) with the theme switch. Under it,
- * on the ground, one 480px card (radius 12), starting a fifth of the way down
- * the window: the flow's `label` in `caption-strong`, then the display heading
- * and the content; its controls are 44 tall. `footer` is one caption line at
- * the foot. Multi-step setup uses SetupPage instead.
+ * Flow: a one-screen page with no shell. Sign-in, sign-up, the mailbox
+ * screens, the workspace chooser, an invitation and setup's blocked notices.
+ * A bar as tall as the page header holds the logo and a way out (`barEnd`, the
+ * account menu) with the theme switch. Under it, on the ground, one 480px
+ * panel (`rule` edge, radius 8, 24 padding) starting a fifth of the way down
+ * the window, with the app's controls. `footer` is one caption line at the
+ * foot. Multi-step setup uses SetupPage instead.
  */
 export function FlowPage({
   label,
@@ -63,9 +68,9 @@ export function FlowPage({
       <main
         id="main"
         aria-label={label}
-        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
+        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)]"
       >
-        <div className="bg-surface rounded-overlay shadow-card flex flex-col gap-4 p-[var(--page-top-gap)]">
+        <div className={cn(FLOW_CARD, 'flex flex-col gap-4')}>
           {kicker === null ? null : <p className={textRole('captionStrong')}>{kicker}</p>}
           <div className="flex flex-col">{children}</div>
         </div>
@@ -80,8 +85,10 @@ export function FlowPage({
 }
 
 /**
- * A flow's heading in the display face and the line under it; the page's one
- * `h1`. A heading in words also names the document ("Sign in · CiteLadder").
+ * A flow's heading (the `title` role, as the new-chat greeting) and the line
+ * under it; the page's one `h1`, which takes focus by script (tabIndex -1)
+ * when a flow moves to a new step. A heading in words also names the document
+ * ("Sign in · CiteLadder").
  */
 function FlowHead({
   id,
@@ -93,7 +100,7 @@ function FlowHead({
   return (
     <header className="flex flex-col gap-2">
       {icon ? <Icon icon={icon} className="text-ink-2" /> : null}
-      <h1 id={id} className={textRole('display', 'text-balance')}>
+      <h1 id={id} tabIndex={-1} className={textRole('title', 'text-balance')}>
         {title}
       </h1>
       {sub ? <p className={textRole('body', 'text-ink-2')}>{sub}</p> : null}
@@ -103,8 +110,8 @@ function FlowHead({
 
 /**
  * One flow screen's content: the heading and its line, then the body 24
- * below, then an optional line under it (`after`, the sign-in/sign-up
- * switch), inside the flow's card.
+ * below, then the closing lines 24 under it (`after`: the sign-in/sign-up
+ * switch and the agreement line), inside the flow's card.
  */
 export function FlowBlock({
   title,
@@ -130,7 +137,9 @@ export function FlowBlock({
         <FlowHead id={headingId} title={title} sub={sub} icon={icon} />
         {children}
       </section>
-      {after ? <p className={textRole('body', 'text-ink-2')}>{after}</p> : null}
+      {after ? (
+        <div className={textRole('body', 'flex flex-col gap-4 text-ink-2')}>{after}</div>
+      ) : null}
     </div>
   );
 }

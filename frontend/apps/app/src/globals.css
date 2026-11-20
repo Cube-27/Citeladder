@@ -2313,13 +2313,6 @@ label {
   rotate: 180deg;
 }
 
-/* A picture drawn once per theme (the sign-in showcase): only the current
-   theme's draws, from first paint, so the other is never fetched. */
-:root:not([data-theme='dark']) [data-theme-art='dark'],
-:root[data-theme='dark'] [data-theme-art='light'] {
-  display: none;
-}
-
 /* Checkbox: the ink fill grows from 70% under the check (checkbox.tsx draws
    the check). */
 .check-box::after {
