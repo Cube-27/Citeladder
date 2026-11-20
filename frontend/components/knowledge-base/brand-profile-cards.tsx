@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Absence } from '@/components/ui/absence';
 import { ChipInput } from '@/components/ui/chip-input';
 import { Icon } from '@/components/ui/icon';
-import { Input } from '@/components/ui/input';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
@@ -63,11 +62,18 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
       <SettingRows>
         <SettingField label="What you sell">
           {(field) => (
-            <Input
+            <Textarea
               {...field}
+              rows={2}
               disabled={saving}
               value={identity.category}
-              onChange={(event) => form.setIdentity({ ...identity, category: event.target.value })}
+              // One line of text that wraps; Enter adds no line break.
+              onChange={(event) =>
+                form.setIdentity({
+                  ...identity,
+                  category: event.target.value.replaceAll('\n', ' '),
+                })
+              }
             />
           )}
         </SettingField>
@@ -128,7 +134,7 @@ function FacetChoice<T extends string>({
   onPick: (value: T) => void;
 }>) {
   return (
-    <SettingField label={label}>
+    <SettingField compact label={label}>
       {(field) => (
         <Select<T | ''>
           id={field.id}

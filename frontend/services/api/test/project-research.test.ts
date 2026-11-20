@@ -392,6 +392,45 @@ it('extracts visible text and ranks offering navigation while dropping active su
   expect(rasterType(Buffer.from('<svg>script</svg>'))).toBeNull();
   expect(rasterType(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe('image/png');
 });
+it("ranks a retailer's departments above customer-service pages under services or store", () => {
+  const labels = (nav: string[][]) =>
+    offeringLinks([
+      extractPage(
+        Buffer.from(
+          `<html><body>${nav.map(([href, label]) => `<a href="${href}">${label}</a>`).join('')}</body></html>`,
+        ),
+        'https://shop.example/',
+      ),
+    ]).map((item) => item.label);
+  expect(
+    labels([
+      ['/services/gift-cards', 'Gift Cards'],
+      ['/services/buy-now-pay-later', 'Buy Now Pay Later'],
+      ['/store/finder', 'Store Finder'],
+      ['/services/click-collect', 'Click & Collect'],
+      ['/womens', 'Women'],
+      ['/kids', 'Kids'],
+      ['/baby', 'Baby'],
+      ['/gift-hampers', 'Gift hampers'],
+    ]),
+  ).toEqual([
+    'Women',
+    'Kids',
+    'Baby',
+    'Gift hampers',
+    'Gift Cards',
+    'Buy Now Pay Later',
+    'Store Finder',
+    'Click & Collect',
+  ]);
+  // A gift-card seller's own product pages still count as its offerings.
+  expect(
+    labels([
+      ['/products/gift-cards', 'Gift Cards'],
+      ['/products/employee-rewards', 'Employee rewards'],
+    ]),
+  ).toEqual(['Employee rewards', 'Gift Cards']);
+});
 it('retains supported field citations but refuses a field citing only unknown evidence', () => {
   const evidence = [{ evidence_ref: 'fp-1' }] as ResearchEvidence[];
   const identity = identityEnvelope.parse({

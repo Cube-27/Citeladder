@@ -138,6 +138,11 @@
      lightest point, hover lift included. */
   --color-button-from: oklch(100% 0 0);
   --color-button-to: oklch(94.9% 0.008 91.5);
+  /* Secondary buttons and filters are the page's own colour (owner,
+     2026-11-20), keeping a faint top-to-foot shade, their edge and shadow. */
+  --color-face-page: var(--color-ground);
+  --color-face-from: var(--color-face-page);
+  --color-face-to: color-mix(in oklch, var(--color-face-page), oklch(0% 0 0) 3%);
   /* The website secondary button's soft hairline (owner, 2026-11-20). */
   --color-button-edge: oklch(87.3% 0.01 87.5);
   --color-primary-from: oklch(54.5% 0.175 37.5);
@@ -479,6 +484,8 @@
   --color-on-ink: oklch(17.8% 0 0);
   --color-button-from: oklch(27.3% 0.004 84.6);
   --color-button-to: oklch(24.1% 0.004 48.6);
+  --color-face-from: color-mix(in oklch, var(--color-face-page), oklch(100% 0 0) 4%);
+  --color-face-to: var(--color-face-page);
   --color-button-edge: oklch(31.8% 0.0045 67.7);
   --color-primary-from: oklch(54.5% 0.173 39.3);
   --color-primary-to: oklch(48.5% 0.157 39.3);
@@ -641,8 +648,8 @@
    Danger stays flat (--face-to is its top): its crimson label fails 4.5:1 on
    the gradient's foot under the tints. Unlayered, over the overlay utilities. */
 .face {
-  --face-from: var(--color-button-from);
-  --face-to: var(--color-button-to);
+  --face-from: var(--color-face-from);
+  --face-to: var(--color-face-to);
   background:
     linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
     linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
@@ -657,7 +664,7 @@
   color: var(--color-on-primary);
 }
 .face-danger {
-  --face-to: var(--color-button-from);
+  --face-to: var(--color-face-from);
 }
 .face-filled {
   --face-from: oklch(100% 0 0 / 6%);
@@ -1011,6 +1018,7 @@
    effects are soft warm light drawn from the accent; small marks, rails and
    wells are zero-chroma grey (owner, 2026-11-19). */
 :root[data-marketing-surface] {
+  --color-face-page: var(--color-site-page);
   --color-site-mark: oklch(55.6% 0 0);
   --color-site-chip: oklch(94.6% 0 0);
   --color-site-chip-ink: oklch(26.9% 0 0);
@@ -1854,8 +1862,8 @@ a.focus-ring:active .type-caption {
   color: var(--color-on-primary);
 }
 [data-demoted] [data-button-variant] {
-  --face-from: var(--color-button-from);
-  --face-to: var(--color-button-to);
+  --face-from: var(--color-face-from);
+  --face-to: var(--color-face-to);
   --face-lit: initial;
   --face-hover: initial;
   --face-press: initial;

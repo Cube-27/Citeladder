@@ -89,6 +89,23 @@ function tokens(value: string) {
 function hasTerm(values: readonly string[], terms: readonly string[]) {
   return values.some((word) => terms.includes(word));
 }
+function hasPhrase(words: readonly string[], phrases: readonly string[]) {
+  const text = ` ${words.join(' ')} `;
+  return phrases.some((phrase) => text.includes(` ${phrase} `));
+}
+/**
+ * A link's rank among offerings: a customer-service phrase last (a gift-card
+ * seller's only product page still counts), an offering hub first.
+ */
+function offeringRank(link: { url: string; label: string }) {
+  const path = tokens(new URL(link.url).pathname);
+  if (
+    hasPhrase(path, cfg.utility_link_phrases) ||
+    hasPhrase(tokens(link.label), cfg.utility_link_phrases)
+  )
+    return -1;
+  return Number(hasTerm(path, cfg.offering_hub_terms));
+}
 function labelFamily(label: string) {
   const words = label.toLowerCase().split(/\s+/u);
   const index = words.findIndex(
@@ -128,11 +145,7 @@ export function offeringLinks(pages: readonly PageEvidence[]) {
       seen.add(link.url);
       return true;
     })
-    .sort(
-      (a, b) =>
-        Number(hasTerm(tokens(new URL(b.url).pathname), cfg.offering_hub_terms)) -
-        Number(hasTerm(tokens(new URL(a.url).pathname), cfg.offering_hub_terms)),
-    );
+    .sort((a, b) => offeringRank(b) - offeringRank(a));
   const prefixes = new Map<string, number>();
   const sourcePages = new Map<string, number>();
   const families = new Map<string, number>();
