@@ -11,6 +11,7 @@ import { searchPolicy } from '../src/search-surfaces/dataforseo.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { AuditWorker } from '../src/audits/worker.ts';
+import { AuditMaintenance } from '../src/audits/maintenance.ts';
 import { deriveExecution } from '../src/audits/derivation.ts';
 import { finalizeAudit } from '../src/audits/finalization.ts';
 import { createConnection } from '../src/providers/connections.ts';
@@ -549,6 +550,97 @@ describe('leased audit worker phases', () => {
         .where('task_id', '=', t.task.id)
         .execute(),
     ).toHaveLength(0);
+  });
+  it('keeps a paid submission whose receipt failed to save for lease-expiry reconciliation', async () => {
+    const t = await seed(true, [], 'google_ai_overview');
+    let failNextTransaction = false;
+    // The receipt save loses its database connection; every other write goes through.
+    const flaky = new Proxy(db, {
+      get(target, property) {
+        if (property === 'transaction' && failNextTransaction) {
+          failNextTransaction = false;
+          return () => ({
+            execute: async () => {
+              throw new Error('Connection terminated unexpectedly');
+            },
+          });
+        }
+        const value: unknown = Reflect.get(target, property);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    await new AuditWorker(
+      flaky,
+      runtime,
+      auditTestKey,
+      {
+        execution: deriveExecution,
+        finalize: (workspaceId, auditId) => finalizeAudit(db, workspaceId, auditId, async () => {}),
+      },
+      {
+        owner: 'worker',
+        taskScope: t,
+        env: {},
+        send: async () => {
+          failNextTransaction = true;
+          return Response.json({
+            status_code: 20000,
+            tasks: [{ id: 'aio-task', status_code: 20100, cost: 0.0012 }],
+          });
+        },
+      },
+    ).runOnce();
+    const leased = await stored(t.task.id);
+    expect([leased.status, leased.provider_task_id]).toEqual(['running', '']);
+    await db
+      .updateTable('audit_tasks')
+      .set({ lease_expires_at: new Date(0) })
+      .where('id', '=', t.task.id)
+      .execute();
+    await new AuditMaintenance(db, async () => {}).recoverLeases();
+    expect(await stored(t.task.id)).toMatchObject({
+      status: 'submission_uncertain',
+      provider_submission_ref: leased.provider_submission_ref,
+      attempt_count: 0,
+    });
+    expect(leased.provider_submission_ref).not.toBe('');
+  });
+  it('sends a rate-limited submission again without spending an attempt', async () => {
+    const t = await seed(true, [], 'google_ai_overview'),
+      posts: string[] = [];
+    let tick = Date.now();
+    const w = worker(
+      t,
+      async (input, options) => {
+        posts.push(JSON.parse(String(options?.body))[0].tag);
+        return Response.json(
+          posts.length === 1
+            ? { status_code: 40202, status_message: 'Rate limit per minute exceeded', tasks: null }
+            : { status_code: 20000, tasks: [{ id: 'aio-task', status_code: 20100, cost: 0.0012 }] },
+        );
+      },
+      runtime,
+      () => new Date(tick),
+    );
+    await w.runOnce();
+    expect(await stored(t.task.id)).toMatchObject({
+      status: 'retry_wait',
+      error_code: '',
+      provider_submission_ref: '',
+      provider_task_submitted_at: null,
+      attempt_count: 0,
+    });
+    // The rate limit blocked the account's pool for at most its cooldown.
+    tick += 61000;
+    await ready(t.task.id);
+    await w.runOnce();
+    expect(await stored(t.task.id)).toMatchObject({
+      status: 'awaiting_provider_result',
+      provider_task_id: 'aio-task',
+      attempt_count: 1,
+    });
+    expect(posts).toHaveLength(2);
+    expect(posts[1]).toBe(posts[0]);
   });
   it('observes a Google AI Overview with one paid submission and a free retrieval', async () => {
     const t = await seed(true, [], 'google_ai_overview'),

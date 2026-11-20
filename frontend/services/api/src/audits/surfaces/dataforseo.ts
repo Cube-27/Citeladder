@@ -1,7 +1,8 @@
 /**
  * The phases every DataForSEO-observed surface shares: commit the paid intent, submit
  * once, reconcile an uncertain submission by its exact tag, then poll the free retrieval.
- * Never resubmits: once an intent is committed only reconciliation and retrieval follow.
+ * Never resubmits: once an intent is committed only reconciliation and retrieval follow,
+ * unless the provider refused the submission (a rate limit), which created nothing.
  */
 import { z } from 'zod';
 import { record } from '../../db/json.ts';
@@ -26,7 +27,7 @@ import {
 } from '../execution-context.ts';
 import { readFrozenSearchRequest } from '../frozen-configuration.ts';
 import { commitSubmissionIntent } from '../submission-intent.ts';
-import { persistSurfaceExchange } from '../surface-persistence.ts';
+import { persistSurfaceExchange, releaseRefusedSubmission } from '../surface-persistence.ts';
 import type { PhaseDeps, SurfaceAdapter, TaskFailure } from './adapter.ts';
 
 const logger = getLogger('workers.audit');
@@ -221,9 +222,27 @@ async function submit(
     await reconcile(surface, deps, { ...context, task: intent.task }, client);
     return;
   }
-  const request = frozenSurfaceRequest(surface, context, intent.task.provider_submission_ref);
+  let request: SearchRequest;
   try {
-    const submission = await client.submit(engine, request);
+    request = frozenSurfaceRequest(surface, context, intent.task.provider_submission_ref);
+  } catch (error) {
+    // Nothing was sent; ending here keeps an unsendable request out of reconciliation.
+    const safe = error instanceof ProviderError ? error : new ProviderError('client_error');
+    await failObserved(surface, deps, intent.task, context, {
+      code: 'provider_error',
+      exchange: 'none',
+      error: safe,
+    });
+    return;
+  }
+  let submission: Awaited<ReturnType<DataforseoClient['submit']>>;
+  try {
+    submission = await client.submit(engine, request);
+  } catch (error) {
+    await submitFailed(surface, deps, { ...context, task: intent.task }, error);
+    return;
+  }
+  try {
     await persistSurfaceExchange(
       deps.db,
       intent.task,
@@ -238,30 +257,52 @@ async function submit(
       deps.now(),
     );
   } catch (error) {
-    if (error instanceof SubmissionUncertain)
-      await persistSurfaceExchange(
-        deps.db,
-        intent.task,
-        deps.owner,
-        {
-          error,
-          paid: true,
-          uncertain: true,
-          chargeMicrousd: error.submission?.chargeMicrousd,
-          delaySeconds: c.poll_interval_seconds,
-        },
-        deps.now(),
-      );
-    else {
-      const safe = error instanceof ProviderError ? error : new ProviderError('client_error');
-      await failObserved(surface, deps, intent.task, context, {
-        code: 'provider_error',
-        exchange: 'paid',
-        error: safe,
-      });
-      if (safe.code === 'rate_limit') throw safe;
-    }
+    // The paid task exists: lease expiry parks the row as submission_uncertain and
+    // reconciliation finds it by its tag, so the receipt is never written off.
+    logger.warning('surface_submission_unsaved', {
+      task_id: intent.task.id,
+      provider_task_id: submission.taskId,
+      ...failureFacts(error),
+    });
   }
+}
+
+/** A submission without a receipt: uncertain ones reconcile, a refused one may be sent again. */
+async function submitFailed(
+  surface: ObservedSurface,
+  deps: PhaseDeps,
+  context: ExecutionContext,
+  error: unknown,
+) {
+  const task = context.task,
+    c = searchPolicy.constants;
+  if (error instanceof SubmissionUncertain) {
+    await persistSurfaceExchange(
+      deps.db,
+      task,
+      deps.owner,
+      {
+        error,
+        paid: true,
+        uncertain: true,
+        chargeMicrousd: error.submission?.chargeMicrousd,
+        delaySeconds: c.poll_interval_seconds,
+      },
+      deps.now(),
+    );
+    return;
+  }
+  const safe = error instanceof ProviderError ? error : new ProviderError('client_error');
+  if (safe.code !== 'rate_limit') {
+    await failObserved(surface, deps, task, context, {
+      code: 'provider_error',
+      exchange: 'paid',
+      error: safe,
+    });
+    return;
+  }
+  await releaseRefusedSubmission(deps.db, task, deps.owner, safe, deps.runtime, deps.now());
+  throw safe;
 }
 
 async function reconcile(
@@ -345,7 +386,7 @@ async function reconcile(
 }
 
 /** The terminal code a worker-detected failure records on an observed surface. */
-function failureCode(failure: TaskFailure) {
+function failureCode(failure: Exclude<TaskFailure, { kind: 'internal' }>) {
   switch (failure.kind) {
     case 'context_unavailable':
       return failure.error.code === searchPolicy.constants.error_account_unavailable
@@ -354,7 +395,6 @@ function failureCode(failure: TaskFailure) {
     case 'run_deadline':
       return 'poll_ceiling_exceeded';
     case 'recovery_deadline':
-    case 'internal':
       return 'submission_unreconciled';
     default: {
       const exhaustive: never = failure;
@@ -381,10 +421,14 @@ export function observedAdapter(surface: ObservedSurface): SurfaceAdapter {
       else if (task.provider_submission_ref) await reconcile(surface, deps, context, client);
       else await submit(surface, deps, context, client);
     },
-    fail: (deps, task, context, failure) =>
-      failObserved(surface, deps, task, context, {
+    async fail(deps, task, context, failure) {
+      // An unexpected error (a failed save) may follow a paid submission this lease could not
+      // record. Lease expiry hands the row to recovery: reconcile or poll it, or retry it.
+      if (failure.kind === 'internal') return;
+      await failObserved(surface, deps, task, context, {
         code: failureCode(failure),
         exchange: 'none',
-      }),
+      });
+    },
   };
 }
