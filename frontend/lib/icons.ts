@@ -49,7 +49,6 @@ export {
   IconRobot as Bot,
   IconBraces as Braces,
   IconBuilding as Building2,
-  IconCalendar as Calendar,
   IconCalendarMonth as CalendarDays,
   IconCalendarPlus as CalendarPlus,
   IconCalendarX as CalendarX,
