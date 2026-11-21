@@ -67,6 +67,7 @@ import {
   Settings,
   type Env,
   type SettingSource,
+  settingSpecSchema,
   type SettingSpec,
   type SettingValue,
 } from './config/settings.ts';
@@ -167,15 +168,8 @@ const listenSpecs = {
   port: { env: ['PORT'], type: 'str', default: '' },
 } satisfies Record<string, SettingSpec>;
 
-function isSettingSpec(value: object): value is SettingSpec {
-  return (
-    'env' in value &&
-    Array.isArray(value.env) &&
-    'type' in value &&
-    typeof value.type === 'string' &&
-    'default' in value
-  );
-}
+const isSettingSpec = (value: unknown): value is SettingSpec =>
+  settingSpecSchema.safeParse(value).success;
 
 function settingCatalog(): [string, SettingSpec][] {
   const catalog: [string, SettingSpec][] = [];

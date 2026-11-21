@@ -33,7 +33,7 @@ type Result = Awaited<ReturnType<typeof researchBrand>>;
 type WorkerDependencies = Omit<ResearchDependencies, 'meter'> & {
   meter?: (workspaceId: string) => Meter;
 };
-function siteFailure(error: unknown): error is FetchError {
+function isSiteFailure(error: unknown): error is FetchError {
   return (
     error instanceof FetchError &&
     ['invalid_url', 'site_not_found', 'ssrf_blocked', 'out_of_scope'].includes(error.code)
@@ -41,10 +41,10 @@ function siteFailure(error: unknown): error is FetchError {
 }
 function retryable(error: unknown, attempt: number, maximum: number) {
   if (error instanceof ResearchFailure && !error.retryable) return false;
-  return error != null && !siteFailure(error) && attempt < maximum;
+  return error != null && !isSiteFailure(error) && attempt < maximum;
 }
 function failureCode(error: unknown) {
-  if (siteFailure(error)) return error.code;
+  if (isSiteFailure(error)) return error.code;
   return error instanceof ResearchFailure ? error.code : cfg.error_brand_discovery;
 }
 function terminalStatus(retry: boolean, error: unknown) {

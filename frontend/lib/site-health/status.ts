@@ -188,8 +188,13 @@ export function inventoryModeForPhase(
       return 'scored';
     case 'terminal':
       return crawl?.status === 'failed' ? 'scored' : 'none';
-    default:
+    case 'resolving':
+    case 'empty':
       return 'none';
+    default: {
+      const unhandled: never = phase;
+      return unhandled;
+    }
   }
 }
 
@@ -212,10 +217,15 @@ export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
     case 'blocked':
     case 'cancelled':
       return 'danger';
+    case 'not_selected':
     case 'not_measured':
+    case 'pending':
+    case 'running':
       return 'info';
-    default:
-      return 'info';
+    default: {
+      const unhandled: never = status;
+      return unhandled;
+    }
   }
 }
 

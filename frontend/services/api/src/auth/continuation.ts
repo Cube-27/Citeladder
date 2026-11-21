@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
 import { EncryptJWT, jwtDecrypt } from 'jose';
+import { z } from 'zod';
 import { safeAuthReturnPath } from '@citeladder/contracts/auth-continuation';
 import { policy, type ServiceConfig } from '../config.ts';
 
 const key = (config: ServiceConfig) =>
   createHash('sha256').update(`auth-continuation:${config.session.secretKey}`).digest();
-export type LinkProof = { userId: string; version: number };
+const linkProofSchema = z.object({ userId: z.string(), version: z.int() });
+export type LinkProof = z.infer<typeof linkProofSchema>;
 
 export function sealContinuation(
   config: ServiceConfig,
@@ -38,15 +40,12 @@ export async function openContinuation(
       requiredClaims: ['exp'],
     });
     if (payload.nonce !== nonce) return undefined;
-    const proof = payload.proof as LinkProof | undefined;
+    const proof = linkProofSchema.safeParse(payload.proof);
     return {
       returnTo: safeAuthReturnPath(
         typeof payload.return_to === 'string' ? payload.return_to : undefined,
       ),
-      proof:
-        proof && typeof proof.userId === 'string' && Number.isInteger(proof.version)
-          ? proof
-          : undefined,
+      proof: proof.success ? proof.data : undefined,
     };
   } catch {
     return undefined;

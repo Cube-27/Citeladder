@@ -11,7 +11,6 @@ type SseEventStreamOptions = {
   reconnectMaxMs: number;
   onFrame: (frame: RawSseFrame) => boolean;
   onInvalidate: () => void;
-  streamName: string;
 };
 
 const REFUSALS: ReadonlySet<number> = new Set([401, 403, 404]);
@@ -86,7 +85,6 @@ export function useSseEventStream({
   reconnectMaxMs,
   onFrame,
   onInvalidate,
-  streamName,
 }: SseEventStreamOptions): void {
   useEffect(() => {
     if (!enabled || !url) return;
@@ -129,13 +127,7 @@ export function useSseEventStream({
     };
 
     const run = async (attempt = 0) => {
-      let outcome: StreamOutcome = { kind: 'dropped' };
-      try {
-        outcome = await connect();
-      } catch (error) {
-        if (cancelled || controller.signal.aborted) return;
-        console.error(`[${streamName}] event stream failed`, { attempt, error });
-      }
+      const outcome = await connect().catch((): StreamOutcome => ({ kind: 'dropped' }));
       if (cancelled || controller.signal.aborted) return;
       if (outcome.kind === 'refused') return;
 
@@ -160,7 +152,6 @@ export function useSseEventStream({
     onInvalidate,
     reconnectBaseMs,
     reconnectMaxMs,
-    streamName,
     url,
     workspaceId,
   ]);

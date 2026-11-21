@@ -309,6 +309,29 @@ the fact.
 **Check:** `for … { await … }` over items that share no transaction, order
 or budget.
 
+## Type discipline
+
+### The code-taste type rules are checks, not memory
+
+**Rule:** The [CLAUDE.md](../CLAUDE.md#code-taste) type rules are enforced;
+when a check rejects a change, fix the code instead of growing an allow-list
+or a baseline. A `switch` on a discriminant ends with a `never` arm; a lookup
+keyed by an unparsed string is a `Map` with an explicit fallback, not a
+`switch` with a silent `default`. External shapes parse through a zod schema,
+and a type guard is a schema parse named `isX`. Shipped code never calls
+`console`: workers log through `lib/server/worker-request-log.ts`, and a
+dev-only console warning is not a check (write a lint or a test instead).
+**Why:** The #1136 audit found 12 discriminant switches whose `default` hid a
+new variant, about 10 shipped `console` calls (two of them dev warnings no
+one saw), 485 non-null assertions in `services/api/src` and hand-written
+property-by-property guards beside existing schemas, after 422 `as` casts
+had already needed their own sweep.
+**Check:** `check:policy` runs `frontend/scripts/type-discipline-checks.mjs`
+(`exhaustive-switch`, `index-non-null`, `keys-cast`, `value-change-cast`) and
+the per-file non-null ratchet against `frontend/scripts/non-null-baseline.json`,
+which may only fall (lower it with `--write-non-null-baseline`); `vp lint` enforces `no-console` and
+`consistent-type-assertions` with the allow-lists in `frontend/vp-shared-config.ts`.
+
 ## Replacement and debt
 
 ### A redesign deletes what it replaces, in the same PR

@@ -64,23 +64,19 @@ export function sourceRef(source: GrantSource): string {
   }
 }
 
+const GRANT_SOURCES = new Map<string, (id: string) => GrantSource>([
+  ['subscription', (subscriptionId) => ({ kind: 'subscription', subscriptionId })],
+  ['activation', (activationId) => ({ kind: 'activation', activationId })],
+  ['override', (actorId) => ({ kind: 'override', actorId })],
+  ['intro', (introId) => ({ kind: 'intro', introId })],
+]);
+
 export function grantSource(ref: string): GrantSource | null {
   if (ref === 'system:public-signup') return { kind: 'public_signup' };
   const separator = ref.indexOf(':');
   const [kind, id] = [ref.slice(0, separator), ref.slice(separator + 1)];
   if (separator < 1 || !id) return null;
-  switch (kind) {
-    case 'subscription':
-      return { kind, subscriptionId: id };
-    case 'activation':
-      return { kind, activationId: id };
-    case 'override':
-      return { kind, actorId: id };
-    case 'intro':
-      return { kind, introId: id };
-    default:
-      return null;
-  }
+  return GRANT_SOURCES.get(kind)?.(id) ?? null;
 }
 
 function bundleReason(source: GrantSource, raw: string | undefined) {

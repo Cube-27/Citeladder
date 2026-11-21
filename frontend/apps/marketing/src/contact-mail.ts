@@ -5,6 +5,7 @@ import {
   CONTACT_SEND_TIMEOUT_MS,
   type ContactSubmission,
 } from '@/lib/config/contact';
+import { logWorkerError } from '@/lib/server/worker-request-log';
 
 const HTML_ENTITIES: Readonly<Record<string, string>> = {
   '&': '&amp;',
@@ -60,7 +61,7 @@ export async function sendContactEmail(
     signal: AbortSignal.timeout(CONTACT_SEND_TIMEOUT_MS),
   });
   if (error || !data?.id) {
-    console.error('Contact email delivery failed.');
+    logWorkerError('contact_email_delivery_failed');
     return false;
   }
   return true;
