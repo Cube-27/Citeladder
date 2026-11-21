@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The four buttons (docs/design.md Buttons), flat in the app: `primary` the
- * one `ink`-filled action a view is for, `secondary` `raised` with a `rule`
+ * one `primary`-filled action a view is for, `secondary` `raised` with a `rule`
  * edge, `quiet` transparent with no edge (`ink-2`, `ink` on hover) for
  * toolbars, rows and navigation, `danger` a secondary face with a negative
  * label (filled only in a confirm dialog, `danger-confirm`). The website
@@ -52,7 +52,8 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary: 'face face-primary bg-ink border border-ink text-on-ink not-disabled:hover:bg-ink-hover',
+  primary:
+    'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
   secondary: cn(RAISED_FACE, 'text-ink'),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',

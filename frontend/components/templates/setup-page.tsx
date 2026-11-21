@@ -63,7 +63,7 @@ export function SetupPage({
         {steps ? (
           <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5">
             <span
-              className="bg-ink block h-full"
+              className="bg-primary block h-full"
               style={{ width: `${((index + 1) / steps.length) * 100}%` }}
             />
           </div>
@@ -114,7 +114,7 @@ function SetupStepper({
             {index > 0 ? (
               <span
                 aria-hidden
-                className={cn('h-px w-10', index <= current ? 'bg-ink' : 'bg-rule')}
+                className={cn('h-px w-10', index <= current ? 'bg-primary' : 'bg-rule')}
               />
             ) : null}
             <StepMark index={index} current={current} />
@@ -139,7 +139,7 @@ const MARK = 'grid size-6 shrink-0 place-items-center rounded-full';
 function StepMark({ index, current }: Readonly<{ index: number; current: number }>) {
   if (index < current) {
     return (
-      <span aria-hidden className={cn(MARK, 'bg-ink text-surface')}>
+      <span aria-hidden className={cn(MARK, 'bg-primary text-on-primary')}>
         <Check className="size-3.5" />
       </span>
     );

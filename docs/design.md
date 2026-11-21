@@ -24,7 +24,7 @@ held by review.
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
 | `ground`         | `#09090a`                | `#f2f2f4`          | window and sidebar                   |
 | `panel`          | `#121213`                | `#ffffff`          | the inset content panel              |
-| `raised`         | `#1a1a1b`                | `#f7f8f9`          | secondary buttons, table head, menus |
+| `raised`         | `#1a1a1b`                | `#ffffff`          | secondary buttons, menus             |
 | `raised-2`       | `#252526`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
@@ -33,9 +33,11 @@ held by review.
 | `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
 | `ink-2`          | `#929293`                | `#5f636a`          | secondary text, icons                |
 | `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
+| `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is `raised`, `control-edge` and
+`ground`, `surface` is `panel`, `well` is `#f7f8f9` in light (`raised` in
+dark), `control-edge` and
 `chart-grid` are `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
@@ -47,7 +49,8 @@ to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 Sans (Spline Sans) for words and numbers alike, numbers in its tabular
 figures (dates, counts, prices, URLs too). Mono (Geist Mono) only for literal
-code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only, in both themes; emphasis is 500, never
+code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark draws every weight 50 lighter
+(350 and 450: light text on dark reads heavier). Emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
 
 | Role            | Size / line | Weight                  |
@@ -140,7 +143,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Metric strip:** one `rule`-framed strip, radius 8, cells divided by
   hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
-- **Table:** `rule` frame, radius 8; head 32 on `raised`, 12px at 500; rows
+- **Table:** `rule` frame, radius 8; head 32 on `panel`, 12px at 500; rows
   40, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
@@ -192,8 +195,8 @@ One entry per family; wave 2 fills each from the layouts above.
   below) and one framed surface (`SLIP_FACE`: `rule` edge, radius 8,
   `panel`). A framed thing inside a container drops its own edge. Inside the
   panel every framed surface (tables, strips, setting rows, cards, charts)
-  is `panel` in both themes; only a table's head band, hover and selected
-  fills, insets for quoted or raw material, and overlays take another fill.
+  is `panel` in both themes, and so are the controls and table heads on it
+  in light; only hover and selected fills, insets for quoted or raw material, and overlays take another fill.
 - **Lists and rows.** A list row matches a table row: 40 high, hairlines
   between rows, `state-hover` when it opens something.
 - **Overlays** (dialogs, drawers, command palette). `panel` with a `rule`
@@ -209,15 +212,15 @@ One entry per family; wave 2 fills each from the layouts above.
 - **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
   radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
   with a `rule` edge, `raised-2` on hover, press or open. Quiet: transparent,
-  `state-hover` fill. Primary: `ink` fill, `panel`-coloured text, at most one
-  per view. Danger: secondary with negative text; filled only to confirm in a
+  `state-hover` fill. Primary: `primary` fill (the deep accent),
+  white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
 - **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `rule`
   edge on `panel`, `control-line` on hover; focused, an accent edge and its
   glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
-  take the same edge and an `ink` fill when on; the switch is an `ink` track
-  when on. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
+  take the same edge and a `primary` fill when on; the switch is a `primary`
+  track when on, as is a picked calendar day and the setup stepper. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
   tick per field, then the add field; Enter (and a comma in a grid cell) adds,
   Tab leaves. A grid cell drops the edge until focused. A share of a whole
