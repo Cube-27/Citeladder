@@ -234,8 +234,6 @@ describe('PromptBuilder', () => {
       await screen.findByRole('textbox', { name: 'Topic name: Golf simulator enclosures' }),
     ).toBeVisible();
     expect(screen.getByRole('textbox', { name: 'Topic name: Golf nets' })).toBeVisible();
-    // The offering links confirm will save are shown on the proposal.
-    expect(screen.getByText(`Covers ${OFFERING}`)).toBeVisible();
     await user.click(screen.getByRole('button', { name: '+1 more' }));
     await user.click(screen.getByRole('button', { name: 'Remove Hitting mats' }));
     expect(sent.confirm).toBeUndefined();

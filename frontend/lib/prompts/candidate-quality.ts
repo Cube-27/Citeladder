@@ -1,9 +1,10 @@
 import type { PromptCandidate } from '@citeladder/contracts';
 
-export function qualityStatusLabel(candidate: PromptCandidate): string {
+/** What a reviewer should know about a candidate's quality check; null when it passed clean. */
+export function qualityStatusLabel(candidate: PromptCandidate): string | null {
   switch (candidate.quality_status) {
     case 'judged':
-      return candidate.quality_flags.length ? 'Needs your review' : 'Quality checked';
+      return candidate.quality_flags.length ? 'Needs your review' : null;
     case 'off':
       return 'Quality checking was off for this batch';
     case 'unavailable':

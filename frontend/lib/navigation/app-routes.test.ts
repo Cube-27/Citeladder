@@ -50,7 +50,8 @@ describe('app route manifest', () => {
     expect(routeTrail('/site/crawls/c1/pages/p1')).toEqual([
       { label: 'Site health', href: '/site' },
     ]);
-    expect(routeTrail('/prompts/build')).toEqual([{ label: 'Prompts', href: '/prompts' }]);
+    expect(routeTrail('/prompts/abc')).toEqual([{ label: 'Prompts', href: '/prompts' }]);
+    expect(routeTrail('/prompts/build')).toEqual([]);
     expect(routeTrail('/runs')).toEqual([]);
     expect(routeTrail('/agent/chats/c1')).toEqual([]);
   });

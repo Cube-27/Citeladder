@@ -25,8 +25,8 @@ import { cn } from '@/lib/utils';
  * The Sidebar organism's parts, labelled and as the collapsed rail, 8 inside
  * the column's edges. Top to bottom: the header (the project switcher and the
  * Settings link in one row as tall as the page header), the mode switch, the
- * mode's list, then the foot (Integrations, the collapse toggle and the
- * account). Only the list scrolls. In the 56px rail every 40px button shares
+ * mode's list, then the foot (Integrations with the collapse toggle at its
+ * end, then the account). Only the list scrolls. In the 56px rail every 40px button shares
  * one centre axis, 4 between the parts, the toggle straight above the
  * account, so it keeps its place at the foot whichever way the sidebar shows
  * (AR-8); its twelve buttons fit a window 520 high (16 + 12 × 40 + 16).
@@ -61,8 +61,10 @@ export function SidebarFrame({
         {mode}
         {nav}
         <div className="labelled:gap-0.5 flex shrink-0 flex-col">
-          {foot}
-          <SidebarCollapseToggle />
+          <div className="labelled:flex-row labelled:items-center flex min-w-0 flex-col gap-0.5">
+            <div className="labelled:flex-1 min-w-0">{foot}</div>
+            <SidebarCollapseToggle />
+          </div>
           {account}
         </div>
       </div>
@@ -391,9 +393,10 @@ export function SidebarIdentButton({
 }
 
 /**
- * Collapse the sidebar to its rail, or open it again: in the sidebar's foot,
- * straight above the account, labelled or as the rail (AR-8). Below 900px and in the drawer, where the menu button opens the sidebar
- * instead, it is hidden.
+ * Collapse the sidebar to its rail, or open it again: at the end of the
+ * Integrations row when labelled, its own row above the account in the rail
+ * (AR-8). Below 900px and in the drawer, where the menu button opens the
+ * sidebar instead, it is hidden.
  */
 function SidebarCollapseToggle() {
   const collapsed = useSidebarCollapsed();
@@ -405,7 +408,7 @@ function SidebarCollapseToggle() {
       tooltipSide={collapsed ? 'right' : 'top'}
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       onClick={() => setSidebarCollapsed(!collapsed)}
-      className="rail:inline-flex not-labelled:size-[var(--rail-button)] labelled:self-start hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
+      className="rail:inline-flex not-labelled:size-[var(--rail-button)] hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
     />
   );
 }

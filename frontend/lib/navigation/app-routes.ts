@@ -382,7 +382,6 @@ export const APP_ROUTES = [
   page({
     path: '/prompts/build',
     title: 'Prompt builder',
-    collection: '/prompts',
     screen: screens.promptBuilder,
     // The step list beside the business step's fields.
     loading: cards([facts(6)]),

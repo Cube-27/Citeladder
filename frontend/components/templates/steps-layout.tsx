@@ -44,7 +44,10 @@ export function StepsLayout<T extends string>({
       {/* `relative` contains absolute descendants (`sr-only` text); without it they
           escape the clip, lengthen the panel and it scrolls the page header away. */}
       <div className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
-        <nav aria-label={label} className="flex w-56 shrink-0 flex-col">
+        <nav
+          aria-label={label}
+          className="desktop:sticky desktop:top-0 desktop:self-start flex w-56 shrink-0 flex-col"
+        >
           <ol className="flex min-w-0 flex-col gap-1">
             {steps.map((step, position) => (
               <li key={step.value}>

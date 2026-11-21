@@ -5,8 +5,10 @@ import { cn } from '@/lib/utils';
 
 export type SplitSegment = Readonly<{ key: string; label: string }>;
 
-// Cool series hues in order; never the accent, which means "you".
-const FILLS = ['bg-data-rival-2', 'bg-data-rival-3', 'bg-data-rival-4'] as const;
+// Cool series hues in order; never the accent, which means "you". The bar
+// takes light tints; the legend's dots keep the full hue.
+const FILLS = ['bg-data-rival-2/20', 'bg-data-rival-3/20', 'bg-data-rival-4/20'] as const;
+const DOTS = ['bg-data-rival-2', 'bg-data-rival-3', 'bg-data-rival-4'] as const;
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 const percent = (value: number | undefined) => `${value ?? 0}%`;
@@ -161,7 +163,7 @@ export function SplitBar({
               style={{ left: `${at}%` }}
               className="focus-ring rounded-control absolute inset-y-[-4px] grid w-3 -translate-x-1/2 cursor-ew-resize place-items-center pointer-coarse:w-11"
             >
-              <span className="bg-ink h-full w-0.5 rounded-full" />
+              <span className="bg-panel h-6 w-0.5" />
             </div>
           );
         })}
@@ -169,10 +171,7 @@ export function SplitBar({
       <ul className="flex flex-wrap gap-x-4 gap-y-1">
         {segments.map((segment, index) => (
           <li key={segment.key} className={textRole('caption', 'flex items-center gap-1.5')}>
-            <span
-              aria-hidden
-              className={cn('size-1.5 rounded-full', FILLS[index % FILLS.length])}
-            />
+            <span aria-hidden className={cn('size-1.5 rounded-full', DOTS[index % DOTS.length])} />
             {segment.label}
             <span className="text-ink tabular-nums">{percent(values[index])}</span>
           </li>

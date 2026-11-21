@@ -106,10 +106,17 @@ function FlowHead({
   title,
   sub,
   icon,
-}: Readonly<{ id: string; title: ReactNode; sub?: ReactNode; icon?: LucideIcon }>) {
+  centered,
+}: Readonly<{
+  id: string;
+  title: ReactNode;
+  sub?: ReactNode;
+  icon?: LucideIcon;
+  centered?: boolean;
+}>) {
   useDocumentTitle(typeof title === 'string' ? title : undefined);
   return (
-    <header className="flex flex-col gap-2">
+    <header className={cn('flex flex-col gap-2', centered && 'items-center text-center')}>
       {icon ? <Icon icon={icon} className="text-ink-2" /> : null}
       <h1 id={id} tabIndex={-1} className={textRole('title', 'text-balance')}>
         {title}
@@ -129,6 +136,7 @@ export function FlowBlock({
   titleId,
   sub,
   icon,
+  centered,
   after,
   children,
 }: Readonly<{
@@ -137,6 +145,8 @@ export function FlowBlock({
   titleId?: string;
   sub?: ReactNode;
   icon?: LucideIcon;
+  /** Account access: the heading and its line centred over the form. */
+  centered?: boolean;
   after?: ReactNode;
   children?: ReactNode;
 }>) {
@@ -145,7 +155,7 @@ export function FlowBlock({
   return (
     <div className="flex flex-col gap-[var(--page-top-gap)]">
       <section aria-labelledby={headingId} className="flex flex-col gap-[var(--page-top-gap)]">
-        <FlowHead id={headingId} title={title} sub={sub} icon={icon} />
+        <FlowHead id={headingId} title={title} sub={sub} icon={icon} centered={centered} />
         {children}
       </section>
       {after ? (

@@ -222,7 +222,7 @@ export function BuilderDistributionStep({
       },
     });
   return (
-    <Stack gap="section">
+    <Stack gap="section" className="max-w-[var(--container-prose)]">
       {notices}
       <SettingsGroup title="Size and share">
         <SettingRows>
