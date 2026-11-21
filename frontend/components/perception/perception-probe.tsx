@@ -62,7 +62,7 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
           title="Couldn't load Market"
           status={status.data}
           onRun={onRun}
-          render={(data) => <PerceptionMarket scope={scope} data={data} />}
+          render={(data) => <PerceptionMarket data={data} />}
         />
       ) : (
         <ProbeRead
