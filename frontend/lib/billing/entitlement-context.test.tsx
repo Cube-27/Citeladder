@@ -1,25 +1,20 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { queryKeys } from '@/lib/api/query-keys';
+import type { SelectionStatus } from '@/lib/project/selection';
 
 import { capabilityRemaining } from './entitlement-capability';
 import { EntitlementProvider, useEntitlement } from './entitlement-context';
 
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 
-let selection: { activeWorkspaceId: string | null; status: string } = {
-  activeWorkspaceId: null,
-  status: 'resolving',
-};
-
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => selection.activeWorkspaceId,
-  useProjectContext: () => selection,
-}));
+function scope(activeWorkspaceId: string | null, status: SelectionStatus) {
+  return { projectSelection: { activeWorkspaceId, status, activeWorkspace: null, workspaces: [] } };
+}
 
 function entitlement(capabilities: readonly unknown[]) {
   return {
@@ -53,7 +48,6 @@ afterAll(() => mswServer.close());
 
 describe('EntitlementProvider', () => {
   it('drops cached positive authority when a later workspace entitlement read fails', async () => {
-    selection = { activeWorkspaceId: WORKSPACE, status: 'ready' };
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
         HttpResponse.json({
@@ -74,6 +68,7 @@ describe('EntitlementProvider', () => {
       <EntitlementProvider>
         <Probe />
       </EntitlementProvider>,
+      scope(WORKSPACE, 'ready'),
     );
     expect(await screen.findByText('resolved:true')).toBeInTheDocument();
     expect(screen.getByTestId('project-slots')).toHaveTextContent('1');
@@ -93,7 +88,6 @@ describe('EntitlementProvider', () => {
   });
 
   it('reports unresolved while the workspace is still resolving', async () => {
-    selection = { activeWorkspaceId: null, status: 'resolving' };
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
         HttpResponse.json(entitlement([])),
@@ -104,13 +98,13 @@ describe('EntitlementProvider', () => {
       <EntitlementProvider>
         <Probe />
       </EntitlementProvider>,
+      scope(null, 'resolving'),
     );
 
     expect(screen.getByTestId('probe')).toHaveTextContent('unresolved:false');
   });
 
   it('settles once the workspace entitlement answers, with no project selected', async () => {
-    selection = { activeWorkspaceId: WORKSPACE, status: 'empty' };
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
         HttpResponse.json(
@@ -131,6 +125,7 @@ describe('EntitlementProvider', () => {
       <EntitlementProvider>
         <Probe />
       </EntitlementProvider>,
+      scope(WORKSPACE, 'empty'),
     );
 
     await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('resolved:true'));
