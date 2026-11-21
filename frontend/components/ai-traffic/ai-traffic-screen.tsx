@@ -126,7 +126,7 @@ function TrafficDataView({
           kind="error"
           {...readErrorProps(summary)}
           title="Couldn't load AI traffic"
-          fallback="Check your connection and try again."
+          fallback="The request failed or timed out."
         />
       </ReportPage>
     );

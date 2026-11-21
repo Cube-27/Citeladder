@@ -149,7 +149,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
         kind="error"
         {...readErrorProps(auditsQuery)}
         title="Couldn't load this project's runs"
-        fallback="Check your connection and try again."
+        fallback="The request failed or timed out."
       />
     );
   return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;

@@ -287,7 +287,7 @@ function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
       <StateBlock
         kind="error"
         {...readErrorProps(latest)}
-        fallback="Demand could not be loaded. Check your connection and try again."
+        fallback="Demand could not be loaded. The request failed or timed out."
         title="Demand could not be loaded"
       />
     );

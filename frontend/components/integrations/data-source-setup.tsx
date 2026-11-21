@@ -413,7 +413,7 @@ function SetupCard({
             kind="read"
             title="Couldn't load your data sources"
             error={sources.error}
-            fallback="Couldn't load your data sources. Check your connection and try again."
+            fallback="Couldn't load your data sources. The request failed or timed out."
             onRetry={sources.retry}
           />
         ) : (

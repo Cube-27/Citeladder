@@ -158,7 +158,7 @@ function libraryBodyFor({
         kind="error"
         error={read.error}
         title="Couldn't load the prompts"
-        fallback="Check your connection and try again."
+        fallback="The request failed or timed out."
         onRetry={read.retry}
         pending={read.retrying}
       />
