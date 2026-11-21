@@ -26,11 +26,6 @@ import {
 } from '@/test/page-suggestions-fixture';
 import { renderWithProviders, selectionAs, type TestRole } from '@/test/render';
 
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: () => true }),
-}));
-
 import { ChatScreen } from '../chat-screen';
 
 const BODY =
@@ -75,6 +70,7 @@ function renderChat(role: TestRole = 'owner') {
     </Routes>,
     {
       initialEntries: [`/agent/chats/${CHAT}`],
+      entitlement: { grants: ['agent'] },
       projectSelection: {
         ...selectionAs(role),
         activeProjectId: PROJECT,

@@ -8,6 +8,8 @@ import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
 import { policiesApi } from '@/lib/api/policies';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
+import { testProjectSelection } from '@/test/render';
 
 import { HeldContent } from '@/components/layout/first-frame';
 
@@ -20,10 +22,6 @@ vi.mock('@/lib/api/policies', async (importOriginal) => {
 });
 vi.mock('@/lib/api/auth', () => ({ authApi: { logout: vi.fn() } }));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
-const activeWorkspace = vi.hoisted(() => ({ id: 'workspace-a' }));
-vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ activeWorkspaceId: activeWorkspace.id, workspaces: [] }),
-}));
 
 const UNACCEPTED = {
   terms_revision: 'published-1',
@@ -33,7 +31,6 @@ const UNACCEPTED = {
 const ACCEPTED = { ...UNACCEPTED, accepted_at: '2026-09-26T00:00:00Z' };
 
 beforeEach(() => {
-  activeWorkspace.id = 'workspace-a';
   vi.mocked(policiesApi.status).mockReset();
   vi.mocked(policiesApi.accept).mockReset();
   vi.mocked(authApi.logout).mockReset();
@@ -99,13 +96,12 @@ it('rereads the workspace whose record met a republished revision, after a switc
       refuse = reject;
     }),
   );
-  const { rerender } = renderGate();
+  const { switchWorkspace } = renderGate();
   await waitFor(() =>
     expect(policiesApi.accept).toHaveBeenCalledWith('workspace-a', 'published-1'),
   );
 
-  activeWorkspace.id = 'workspace-b';
-  rerender();
+  switchWorkspace('workspace-b');
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   await act(async () =>
     refuse(
@@ -114,8 +110,7 @@ it('rereads the workspace whose record met a republished revision, after a switc
   );
 
   vi.mocked(policiesApi.status).mockResolvedValue({ ...UNACCEPTED, terms_revision: 'published-2' });
-  activeWorkspace.id = 'workspace-a';
-  rerender();
+  switchWorkspace('workspace-a');
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   expect(vi.mocked(policiesApi.accept).mock.calls).toEqual([
     ['workspace-a', 'published-1'],
@@ -157,7 +152,7 @@ it('steps aside on the workspace chooser, where a person may be leaving this wor
 
 it('keeps the tree above the content mounted while a switched-to workspace answers', async () => {
   vi.mocked(policiesApi.status).mockResolvedValue(ACCEPTED);
-  const { rerender } = renderGate();
+  const { switchWorkspace } = renderGate();
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Shell state'), { target: { value: 'kept' } });
 
@@ -167,8 +162,7 @@ it('keeps the tree above the content mounted while a switched-to workspace answe
       resolve = settle;
     }),
   );
-  activeWorkspace.id = 'workspace-b';
-  rerender();
+  switchWorkspace('workspace-b');
   expect(screen.getByText('Holding')).toBeInTheDocument();
   expect(screen.queryByText('Workspace content')).toBeNull();
   expect(screen.getByLabelText('Shell state')).toHaveValue('kept');
@@ -184,18 +178,22 @@ it('keeps the tree above the content mounted while a switched-to workspace answe
 
 function renderGate(path = '/projects') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const tree = () => (
+  const tree = (workspaceId: string) => (
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
-        <PolicyAcceptanceGate>
-          <input aria-label="Shell state" />
-          <HeldContent frame={<p>Holding</p>}>
-            <p>Workspace content</p>
-          </HeldContent>
-        </PolicyAcceptanceGate>
+        <ProjectSelectionProvider
+          value={testProjectSelection({ activeWorkspaceId: workspaceId, workspaces: [] })}
+        >
+          <PolicyAcceptanceGate>
+            <input aria-label="Shell state" />
+            <HeldContent frame={<p>Holding</p>}>
+              <p>Workspace content</p>
+            </HeldContent>
+          </PolicyAcceptanceGate>
+        </ProjectSelectionProvider>
       </QueryClientProvider>
     </MemoryRouter>
   );
-  const view = render(tree());
-  return { rerender: () => view.rerender(tree()) };
+  const view = render(tree('workspace-a'));
+  return { switchWorkspace: (workspaceId: string) => view.rerender(tree(workspaceId)) };
 }

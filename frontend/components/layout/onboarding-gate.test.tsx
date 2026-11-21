@@ -1,14 +1,20 @@
-import { renderWithProviders as render } from '@/test/render';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import type { Project } from '@citeladder/contracts';
+import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/project/project-scope';
 import { makeProject } from '@/test/fixtures/project';
 import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
+import {
+  renderWithProviders,
+  testProjectSelection,
+  testWorkspace,
+  type TestEntitlement,
+  type TestRole,
+} from '@/test/render';
 
 const replace = vi.fn();
 let pathname = '/projects';
@@ -23,60 +29,30 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 
-type Role = 'owner' | 'admin' | 'member' | 'viewer';
-
-let contextValue: {
-  status: SelectionStatus;
-  errorScope: FailureScope;
-  activeWorkspaceId: string | null;
-  activeWorkspace: { id: string; role: Role; capabilities: readonly string[] } | null;
-  activeProjectId: string | null;
-  activeProject: Project | null;
-  retry: () => void;
-};
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useProjectContext: () => contextValue,
-}));
-
-let entitlement: { isLoading: boolean; entitlement: unknown };
-vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useEntitlement: () => entitlement,
-}));
+let selection: Partial<ProjectContextValue>;
+let entitlement: TestEntitlement;
 
 import { OnboardingGate } from './onboarding-gate';
 
-function withSlots(remaining: number) {
-  return {
-    status: 'resolved',
-    occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1 - remaining, remaining }],
-  };
+function render(ui: ReactElement) {
+  return renderWithProviders(ui, { projectSelection: selection, entitlement });
 }
-
-const UNRESOLVED = { status: 'entitlement_unresolved', occupancy: [] };
-
-const CAPABILITIES: Record<Role, readonly string[]> = {
-  owner: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
-  admin: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
-  member: ['read', 'run', 'write'],
-  viewer: ['read'],
-};
 
 function setContext(
   status: SelectionStatus,
-  role: Role = 'owner',
+  role: TestRole = 'owner',
   errorScope: FailureScope = null,
 ) {
-  contextValue = {
+  const workspace = testWorkspace(role);
+  selection = {
     status,
     errorScope,
-    activeWorkspaceId: WORKSPACE,
-    activeWorkspace: { id: WORKSPACE, role, capabilities: CAPABILITIES[role] },
+    workspaces: [workspace],
+    activeWorkspaceId: workspace.id,
+    activeWorkspace: workspace,
     activeProjectId: status === 'ready' ? PROJECT : null,
     activeProject:
       status === 'ready' ? makeProject({ id: PROJECT, workspace_id: WORKSPACE }) : null,
-    retry: vi.fn(),
   };
 }
 
@@ -85,7 +61,7 @@ beforeEach(() => {
   pathname = '/projects';
   search = new URLSearchParams();
   setContext('ready');
-  entitlement = { isLoading: false, entitlement: withSlots(1) };
+  entitlement = { projectSlots: 1 };
 });
 
 describe('OnboardingGate', () => {
@@ -132,14 +108,13 @@ describe('OnboardingGate', () => {
   });
 
   it('sends someone who belongs to no workspace to set up their own', async () => {
-    contextValue = {
-      ...contextValue,
+    selection = {
+      ...selection,
       status: 'no_workspace',
       activeWorkspaceId: null,
       activeWorkspace: null,
       activeProjectId: null,
     };
-    entitlement = { isLoading: false, entitlement: null };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -181,7 +156,7 @@ describe('OnboardingGate', () => {
 
   it('shows a project read failure while entitlement is still loading', () => {
     setContext('error', 'owner', 'projects');
-    entitlement = { isLoading: true, entitlement: null };
+    entitlement = { status: 'pending' };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -207,7 +182,7 @@ describe('OnboardingGate', () => {
 
   it('names a missing project rather than substituting another one', () => {
     setContext('unavailable');
-    entitlement = { isLoading: true, entitlement: null };
+    entitlement = { status: 'pending' };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -247,21 +222,24 @@ describe('OnboardingGate', () => {
         </label>
       );
     }
-    const gate = () => (
-      <OnboardingGate>
-        <DraftScreen />
-      </OnboardingGate>
+    const gate = (value: Partial<ProjectContextValue>) => (
+      <ProjectSelectionProvider value={testProjectSelection(value)}>
+        <OnboardingGate>
+          <DraftScreen />
+        </OnboardingGate>
+      </ProjectSelectionProvider>
     );
-    const { rerender } = render(gate());
+    const { rerender } = render(gate(selection));
     await userEvent.type(screen.getByLabelText(`Draft for ${PROJECT}`), 'weekly');
     expect(screen.getByLabelText(`Draft for ${PROJECT}`)).toHaveValue('weekly');
 
-    contextValue = {
-      ...contextValue,
-      activeProjectId: OTHER,
-      activeProject: makeProject({ id: OTHER, workspace_id: WORKSPACE }),
-    };
-    rerender(gate());
+    rerender(
+      gate({
+        ...selection,
+        activeProjectId: OTHER,
+        activeProject: makeProject({ id: OTHER, workspace_id: WORKSPACE }),
+      }),
+    );
 
     expect(screen.getByLabelText(`Draft for ${OTHER}`)).toHaveValue('');
   });
@@ -307,7 +285,7 @@ describe('OnboardingGate', () => {
 
   it('does not loop through creation when the allowance is exhausted', () => {
     setContext('empty');
-    entitlement = { isLoading: false, entitlement: withSlots(0) };
+    entitlement = { projectSlots: 0 };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -322,7 +300,7 @@ describe('OnboardingGate', () => {
 
   it('retries rather than asserting a limit when the allowance is unresolved', () => {
     setContext('empty');
-    entitlement = { isLoading: false, entitlement: UNRESOLVED };
+    entitlement = { status: 'entitlement_unresolved' };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -336,7 +314,7 @@ describe('OnboardingGate', () => {
   });
 
   it('renders an authorized project while its entitlement is still loading', async () => {
-    entitlement = { isLoading: true, entitlement: null };
+    entitlement = { status: 'pending' };
     render(
       <OnboardingGate>
         <p>workspace</p>

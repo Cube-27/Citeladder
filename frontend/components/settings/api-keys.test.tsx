@@ -1,11 +1,10 @@
-import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, onTestFinished, vi } from 'vite-plus/test';
 
 import { apiKeysApi } from '@/lib/api/api-keys';
-import { createAppQueryClient } from '@/lib/api/query-client';
+import { makeProject } from '@/test/fixtures/project';
+import { renderWithProviders, selectionAs } from '@/test/render';
 import type {
   ApiKey,
   ApiKeyCreate,
@@ -25,15 +24,6 @@ const { list, create, revoke } = vi.hoisted(() => ({
   revoke: vi.fn<(workspaceId: string, keyId: string) => Promise<ApiKey>>(),
 }));
 Object.assign(apiKeysApi, { list, create, revoke });
-vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({
-    activeWorkspaceId: WORKSPACE,
-    projects: [
-      { id: ACME, name: 'Acme' },
-      { id: BETA, name: 'Beta' },
-    ],
-  }),
-}));
 
 import { ApiKeys } from './api-keys';
 
@@ -52,13 +42,12 @@ const ciKey: ApiKey = {
 };
 
 function renderTab() {
-  return render(
-    <MemoryRouter>
-      <QueryClientProvider client={createAppQueryClient()}>
-        <ApiKeys />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
+  return renderWithProviders(<ApiKeys />, {
+    projectSelection: {
+      ...selectionAs('owner'),
+      projects: [makeProject({ id: ACME, name: 'Acme' }), makeProject({ id: BETA, name: 'Beta' })],
+    },
+  });
 }
 
 beforeEach(() => {

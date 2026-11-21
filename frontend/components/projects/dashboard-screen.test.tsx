@@ -3,8 +3,8 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vite-plus/test';
-const { project, downloadOverviewReport, queryResult, promptsResult, layoutResult, role } =
-  vi.hoisted(() => ({
+const { project, downloadOverviewReport, queryResult, promptsResult, layoutResult } = vi.hoisted(
+  () => ({
     project: {
       id: '00000000-0000-4000-8000-000000000001',
       workspace_id: '00000000-0000-4000-8000-000000000002',
@@ -22,7 +22,6 @@ const { project, downloadOverviewReport, queryResult, promptsResult, layoutResul
       isFetching: false,
       refetch: () => undefined,
     },
-    role: { canWrite: true },
     queryResult: {
       data: undefined as unknown,
       error: null as unknown,
@@ -38,7 +37,8 @@ const { project, downloadOverviewReport, queryResult, promptsResult, layoutResul
       isFetching: false,
       refetch: vi.fn(),
     },
-  }));
+  }),
+);
 const commandCenter = {
   project,
   facts: {
@@ -118,15 +118,6 @@ const promptSetsResult = vi.hoisted(() => ({
   status: 'success',
   data: { prompt_sets: [{ prompts: [{ enabled: true, status: 'active' }] }] },
 }));
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({
-    entitlement: {
-      status: 'resolved',
-      occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1, remaining: 0 }],
-    },
-  }),
-  capabilityRemaining: () => 0,
-}));
 vi.mock('@/components/runs/launch-dialog', () => ({
   LaunchDialog: ({ open }: { open: boolean }) =>
     open ? <dialog open aria-label="Launch run" /> : null,
@@ -135,6 +126,9 @@ vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
   useQuery: (options: { queryKey: readonly unknown[] }) => {
     if (options.queryKey[0] === 'providers') return { data: providerCatalogFixture };
+    if (options.queryKey[1] === 'workspace-entitlement')
+      return { data: testEntitlement(project.workspace_id, { projectSlots: 0 }) };
+    if (options.queryKey[1] === 'account-usage') return { data: undefined };
     if (options.queryKey[0] === 'prompts') return promptSetsResult;
     if (options.queryKey[1] === 'overview-layout') return layoutResult;
     return options.queryKey[0] === 'visibility' ? promptsResult : queryResult;
@@ -142,22 +136,6 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock('@/lib/project/project-context', () => {
-  const context = () => ({
-    projects: [project],
-    activeProject: project,
-    activeProjectId: project.id,
-    setActiveProjectId: vi.fn(),
-    isLoading: false,
-  });
-  return {
-    useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    useWorkspaceCapability: () => role.canWrite,
-    useActiveProject: () => project,
-    useOptionalProjectContext: context,
-    useProjectContext: context,
-  };
-});
 vi.mock('@/lib/api/projects', () => ({
   projectsApi: { getCommandCenter: vi.fn(), downloadOverviewReport },
   projectQueries: {
@@ -175,6 +153,9 @@ vi.mock('@/lib/api/opportunities', () => ({
 }));
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
+import { EntitlementProvider } from '@/lib/billing/entitlement-context';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
+import { projectScope, testEntitlement, testProjectSelection, type TestRole } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 import { DashboardScreen } from './dashboard-screen';
@@ -187,15 +168,21 @@ const scopeProject = makeProject({
   website_url: project.website_url,
 });
 
-function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <MemoryRouter initialEntries={['/projects']}>
-      <ActiveProjectScopeProvider project={scopeProject}>{children}</ActiveProjectScopeProvider>
-    </MemoryRouter>
-  );
-}
-
-function renderDashboard(ui: ReactElement) {
+function renderDashboard(ui: ReactElement, role: TestRole = 'owner') {
+  const selection = testProjectSelection(projectScope(scopeProject, role));
+  function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+    return (
+      <MemoryRouter initialEntries={['/projects']}>
+        <ProjectSelectionProvider value={selection}>
+          <EntitlementProvider>
+            <ActiveProjectScopeProvider project={scopeProject}>
+              {children}
+            </ActiveProjectScopeProvider>
+          </EntitlementProvider>
+        </ProjectSelectionProvider>
+      </MemoryRouter>
+    );
+  }
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 
@@ -236,7 +223,6 @@ describe('DashboardScreen', () => {
     queryResult.refetch.mockReset();
     promptsResult.data = [];
     layoutResult.data = DEFAULT_LAYOUT;
-    role.canWrite = true;
   });
   it('renders state, comparable movement and actions', () => {
     renderDashboard(
@@ -323,11 +309,11 @@ describe('DashboardScreen', () => {
       },
       movements: [],
     };
-    role.canWrite = false;
     const viewer = renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
+      'viewer',
     );
     expect(
       within(screen.getByRole('region', { name: 'Movement' })).getByText(
@@ -336,7 +322,6 @@ describe('DashboardScreen', () => {
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
     viewer.unmount();
-    role.canWrite = true;
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
@@ -581,11 +566,11 @@ describe('DashboardScreen', () => {
     await user.keyboard('{Escape}');
     editor.unmount();
 
-    role.canWrite = false;
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
+      'viewer',
     );
     expect(
       within(await openPageActions(user))

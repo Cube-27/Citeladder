@@ -11,12 +11,6 @@ import { actionDetail, actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
-const entitlement = vi.hoisted(() => ({ agent: true }));
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: () => entitlement.agent }),
-}));
-
 import { NewChatScreen } from './new-chat-screen';
 import { ChatScreen } from './chat-screen';
 import { detail, revision, REV1 } from '@/test/agent-chat-fixture';
@@ -30,7 +24,7 @@ function ChatLanding() {
   return <p>Opened chat {useParams().chatId}</p>;
 }
 
-function renderNewChat(search: string) {
+function renderNewChat(search: string, grants: readonly string[] = ['agent']) {
   return renderWithProviders(
     <Routes>
       <Route path="/agent" element={<NewChatScreen />} />
@@ -38,6 +32,7 @@ function renderNewChat(search: string) {
     </Routes>,
     {
       initialEntries: [`/agent${search}`],
+      entitlement: { grants },
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),
@@ -48,10 +43,7 @@ function renderNewChat(search: string) {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-afterEach(() => {
-  mswServer.resetHandlers();
-  entitlement.agent = true;
-});
+afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 const ACCEPTED = {
@@ -146,6 +138,7 @@ describe('NewChatScreen', () => {
       </Routes>,
       {
         initialEntries: ['/agent'],
+        entitlement: { grants: ['agent'] },
         projectSelection: {
           activeProjectId: PROJECT,
           activeProject: makeProject({ id: PROJECT }),
@@ -314,9 +307,8 @@ describe('NewChatScreen', () => {
   });
 
   it('explains a plan without the agent instead of offering to send', async () => {
-    entitlement.agent = false;
     mswServer.use(...baseHandlers());
-    renderNewChat('');
+    renderNewChat('', []);
 
     expect(await screen.findByText(/plan does not include the agent/i)).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toBeDisabled();

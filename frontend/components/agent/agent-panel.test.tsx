@@ -3,16 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Profiler, useEffect, useState } from 'react';
 import { Route, Routes, useParams } from 'react-router-dom';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider, useAgentPanelSeed } from '@/lib/agent/panel-context';
@@ -23,11 +14,6 @@ import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 import { expectThreadFollowsLatest } from '@/test/chat-follow';
-
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
-}));
 
 import { AgentPanel } from './agent-panel';
 import { AgentPanelTrigger } from './agent-panel-host';
@@ -134,6 +120,7 @@ function renderShell(path: string) {
     </AgentPanelProvider>,
     {
       initialEntries: [path],
+      entitlement: { grants: ['agent'] },
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),

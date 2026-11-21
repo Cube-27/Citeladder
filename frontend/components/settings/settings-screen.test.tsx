@@ -6,11 +6,17 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 import type { SessionUser } from '@citeladder/contracts';
+import { EntitlementProvider } from '@/lib/billing/entitlement-context';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
 import { makeProject } from '@/test/fixtures/project';
+import {
+  projectScope,
+  seedEntitlement,
+  testProjectSelection,
+  type TestEntitlement,
+  type TestRole,
+} from '@/test/render';
 
-const { entitlementState } = vi.hoisted(() => ({
-  entitlementState: { canDeleteProject: false, roleMayDelete: true, managed: false },
-}));
 const { security, passwordLink } = vi.hoisted(() => ({
   security: vi.fn(),
   passwordLink: vi.fn(),
@@ -31,12 +37,6 @@ const user: SessionUser = {
 vi.mock('@/lib/auth/session-guard', () => ({
   useSessionUser: () => user,
 }));
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({
-    hasCapability: () => entitlementState.canDeleteProject,
-  }),
-  useManagedPlan: () => entitlementState.managed,
-}));
 
 const activeProject = makeProject({
   id: '00000000-0000-4000-8000-0000000000p1',
@@ -50,25 +50,6 @@ const nextProject = {
   name: 'Beta Storage',
 };
 const setActiveProjectId = vi.fn();
-vi.mock('@/lib/project/project-context', () => ({
-  useOptionalProjectContext: () => null,
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useWorkspaceCapability: (capability: string) =>
-    capability !== 'delete_projects' || entitlementState.roleMayDelete,
-  useProjectContext: () => ({
-    projects: [activeProject],
-    activeProject,
-    activeProjectId: activeProject.id,
-    setActiveProjectId,
-    activeWorkspace: {
-      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      name: 'Test Workspace',
-      role: 'owner',
-      capabilities: ['manage_billing', 'manage_members', 'read', 'run', 'write'],
-    },
-    isLoading: false,
-  }),
-}));
 
 const deleteProject = vi.fn().mockResolvedValue(undefined);
 const listProjects = vi.fn().mockResolvedValue([]);
@@ -91,11 +72,24 @@ vi.mock('@/components/settings/integration-settings', () => ({
 
 import { SettingsScreen } from './settings-screen';
 
-function renderScreen() {
+function renderScreen({
+  role = 'owner',
+  entitlement = {},
+}: { role?: TestRole; entitlement?: TestEntitlement } = {}) {
+  const queryClient = createAppQueryClient();
+  const selection = testProjectSelection({
+    ...projectScope(activeProject, role),
+    setActiveProjectId,
+  });
+  seedEntitlement(queryClient, selection.activeWorkspaceId, entitlement);
   return render(
     <BrowserRouter>
-      <QueryClientProvider client={createAppQueryClient()}>
-        <SettingsScreen />
+      <QueryClientProvider client={queryClient}>
+        <ProjectSelectionProvider value={selection}>
+          <EntitlementProvider>
+            <SettingsScreen />
+          </EntitlementProvider>
+        </ProjectSelectionProvider>
       </QueryClientProvider>
     </BrowserRouter>,
   );
@@ -110,9 +104,6 @@ describe('SettingsScreen', () => {
     listProjects.mockReset();
     listProjects.mockResolvedValue([]);
     setActiveProjectId.mockClear();
-    entitlementState.canDeleteProject = false;
-    entitlementState.managed = false;
-    entitlementState.roleMayDelete = true;
     window.history.replaceState(null, '', '/settings');
   });
 
@@ -154,9 +145,8 @@ describe('SettingsScreen', () => {
   });
 
   it('offers no provider settings on a managed plan, even from a deep link', () => {
-    entitlementState.managed = true;
     window.history.replaceState(null, '', '/settings?tab=providers');
-    renderScreen();
+    renderScreen({ entitlement: { managed: true } });
     expect(screen.queryByRole('tab', { name: 'Providers' })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
@@ -218,19 +208,16 @@ describe('SettingsScreen', () => {
   });
 
   it('hides project deletion from a role that may not delete, even on a plan that grants it', () => {
-    entitlementState.canDeleteProject = true;
-    entitlementState.roleMayDelete = false;
     window.history.replaceState(null, '', '/settings?tab=workspace');
-    renderScreen();
+    renderScreen({ role: 'member', entitlement: { grants: ['project_deletion'] } });
 
     expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
   });
 
   it('lets an explicitly entitled development account delete its active project', async () => {
-    entitlementState.canDeleteProject = true;
     const ue = userEvent.setup();
     window.history.replaceState(null, '', '/settings?tab=workspace');
-    renderScreen();
+    renderScreen({ entitlement: { grants: ['project_deletion'] } });
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
     const dialog = screen.getByRole('dialog', { name: 'Delete project' });
@@ -240,11 +227,10 @@ describe('SettingsScreen', () => {
   });
 
   it('selects a project from the refreshed list after deletion', async () => {
-    entitlementState.canDeleteProject = true;
     listProjects.mockResolvedValue([nextProject]);
     const ue = userEvent.setup();
     window.history.replaceState(null, '', '/settings?tab=workspace');
-    renderScreen();
+    renderScreen({ entitlement: { grants: ['project_deletion'] } });
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
     const dialog = screen.getByRole('dialog', { name: 'Delete project' });

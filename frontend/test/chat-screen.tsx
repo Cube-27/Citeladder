@@ -7,15 +7,16 @@ import { CHAT, PROJECT } from '@/test/agent-chat-fixture';
 import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, type TestEntitlement } from '@/test/render';
 
-export function renderChat() {
+export function renderChat(entitlement: TestEntitlement = { grants: ['agent'] }) {
   return renderWithProviders(
     <Routes>
       <Route path="/agent/chats/:chatId" element={<ChatScreen />} />
     </Routes>,
     {
       initialEntries: [`/agent/chats/${CHAT}`],
+      entitlement,
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),

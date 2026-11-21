@@ -1,25 +1,19 @@
-import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 import { mcpConnectionsApi } from '@/lib/api/mcp-connections';
-import { createAppQueryClient } from '@/lib/api/query-client';
+import { renderWithProviders, selectionAs, type TestRole } from '@/test/render';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const GRANT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
-const { list, revoke, mayManage } = vi.hoisted(() => ({
+const { list, revoke } = vi.hoisted(() => ({
   list: vi.fn<(workspaceId?: string) => Promise<McpConnection[]>>(),
   revoke: vi.fn<(id: string, workspaceId?: string) => Promise<void>>(),
-  mayManage: { value: false },
 }));
 Object.assign(mcpConnectionsApi, { list, revoke });
-vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ activeWorkspaceId: WORKSPACE }),
-  useWorkspaceCapability: () => mayManage.value,
-}));
 
 import { McpConnections } from './mcp-connections';
 
@@ -37,24 +31,18 @@ const claude: McpConnection = {
   requires_consent: false,
 };
 
-function renderTab() {
-  return render(
-    <QueryClientProvider client={createAppQueryClient()}>
-      <McpConnections />
-    </QueryClientProvider>,
-  );
+function renderTab(role: TestRole = 'member') {
+  return renderWithProviders(<McpConnections />, { projectSelection: selectionAs(role) });
 }
 
 beforeEach(() => {
-  mayManage.value = false;
   list.mockReset();
   revoke.mockReset().mockResolvedValue(undefined);
 });
 
 it('leads with the connect strip and shows only the lists that hold rows', async () => {
-  mayManage.value = true;
   list.mockResolvedValue([]);
-  renderTab();
+  renderTab('admin');
   expect(screen.getByRole('link', { name: 'Connect to Claude' })).toBeInTheDocument();
   expect(await screen.findByRole('heading', { name: 'No connections yet' })).toBeVisible();
   await waitFor(() => expect(list.mock.calls.map(([id]) => id)).toContain(WORKSPACE));
@@ -83,7 +71,6 @@ it('describes a connection by name and revokes it only after confirmation', asyn
 
 it("shows an Owner/Admin who connected and removes only this workspace's access", async () => {
   const user = userEvent.setup();
-  mayManage.value = true;
   list.mockImplementation(async (workspaceId) =>
     workspaceId
       ? [
@@ -97,7 +84,7 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
         ]
       : [],
   );
-  renderTab();
+  renderTab('owner');
   const heading = await screen.findByRole('heading', {
     name: 'Connections that can read this workspace',
   });

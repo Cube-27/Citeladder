@@ -28,17 +28,13 @@ vi.mock('@/lib/api/auth', () => ({
   authApi: { logout: logoutMock },
 }));
 
-vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({
-    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  }),
-}));
-
 import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 
 import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
+import { testProjectSelection } from '@/test/render';
 
 import { UserMenuController, UserMenuTrigger } from './user-menu';
 
@@ -47,9 +43,11 @@ function renderMenu(compact = false, path = '/visibility') {
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={createAppQueryClient()}>
         <TooltipProvider>
-          <UserMenuController>
-            <UserMenuTrigger presenter={compact ? 'compact' : 'sidebar'} />
-          </UserMenuController>
+          <ProjectSelectionProvider value={testProjectSelection()}>
+            <UserMenuController>
+              <UserMenuTrigger presenter={compact ? 'compact' : 'sidebar'} />
+            </UserMenuController>
+          </ProjectSelectionProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -61,12 +59,14 @@ function renderSplitMenu() {
     <MemoryRouter initialEntries={['/visibility']}>
       <QueryClientProvider client={createAppQueryClient()}>
         <TooltipProvider>
-          <UserMenuController>
-            <>
-              <UserMenuTrigger presenter="sidebar" />
-              <UserMenuTrigger presenter="compact" />
-            </>
-          </UserMenuController>
+          <ProjectSelectionProvider value={testProjectSelection()}>
+            <UserMenuController>
+              <>
+                <UserMenuTrigger presenter="sidebar" />
+                <UserMenuTrigger presenter="compact" />
+              </>
+            </UserMenuController>
+          </ProjectSelectionProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </MemoryRouter>,

@@ -6,14 +6,11 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { openComposerSubmenu } from '@/test/composer-menu';
 import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, testEntitlement, testWorkspace } from '@/test/render';
+import { queryKeys } from '@/lib/api/query-keys';
 
-const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
+const mocks = vi.hoisted(() => ({ saveBlob: vi.fn() }));
 vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: () => mocks.agentEnabled }),
-}));
 
 import { OutputHistory } from './output-history';
 import { refreshAgentChat } from '@/lib/api/agent';
@@ -32,7 +29,6 @@ import { renderChat, serveChatScreen } from '@/test/chat-screen';
 
 serveChatScreen(() => {
   mocks.saveBlob.mockReset();
-  mocks.agentEnabled = true;
 });
 
 describe('ChatScreen', () => {
@@ -386,12 +382,16 @@ describe('ChatScreen', () => {
         HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Body.'))),
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, () => {
-        mocks.agentEnabled = false;
+        const workspaceId = testWorkspace('owner').id;
+        queryClient.setQueryData(
+          queryKeys.billing.workspaceEntitlement(workspaceId),
+          testEntitlement(workspaceId),
+        );
         return HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 });
       }),
     );
     const user = userEvent.setup();
-    renderChat();
+    const { queryClient } = renderChat();
     await user.type(await screen.findByLabelText('Reply to the agent'), 'My question');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByRole('button', { name: 'Retry send' })).toBeDisabled();

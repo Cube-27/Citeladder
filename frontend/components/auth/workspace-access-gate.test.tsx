@@ -2,14 +2,18 @@ import { screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { ApiError } from '@/lib/api/errors';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { HeldContent } from '@/components/layout/first-frame';
-import { renderWithProviders } from '@/test/render';
+import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/project/project-scope';
+import {
+  renderWithProviders,
+  testProjectSelection,
+  testWorkspace,
+  type TestRole,
+} from '@/test/render';
 import { WorkspaceAccessGate } from './workspace-access-gate';
 
-const { access, project, security, capability, logout, navigate } = vi.hoisted(() => ({
+const { access, security, logout, navigate } = vi.hoisted(() => ({
   access: vi.fn(),
-  project: vi.fn(),
   security: vi.fn(),
-  capability: vi.fn(),
   logout: vi.fn(),
   navigate: vi.fn(),
 }));
@@ -23,11 +27,6 @@ vi.mock('@/lib/api/workspaces', async (importOriginal) => {
   Object.assign(actual.workspacesApi, { access });
   return actual;
 });
-vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: project,
-  useOptionalProjectContext: project,
-  useWorkspaceCapability: capability,
-}));
 vi.mock('@/lib/billing/use-workspace-catalog', () => ({
   useWorkspaceCatalog: () => ({
     isError: false,
@@ -68,58 +67,62 @@ beforeEach(() => {
   access.mockReset();
   logout.mockReset();
   navigate.mockReset();
-  capability.mockReturnValue(true);
   security.mockResolvedValue({
     email: 'owner@example.test',
     email_verified: true,
     methods: ['google'],
   });
-  project.mockReturnValue({
-    activeWorkspaceId: 'workspace-a',
-    isLoading: false,
-    retry: vi.fn(),
-    workspaces: [
-      { id: 'workspace-a', name: 'Personal' },
-      { id: 'workspace-b', name: 'Team' },
-    ],
-  });
 });
+
+function selection(role: TestRole = 'owner', overrides: Partial<ProjectContextValue> = {}) {
+  const workspaces = [
+    { ...testWorkspace(role), id: 'workspace-a', name: 'Personal' },
+    { ...testWorkspace(role), id: 'workspace-b', name: 'Team' },
+  ];
+  return testProjectSelection({
+    workspaces,
+    activeWorkspaceId: 'workspace-a',
+    activeWorkspace: workspaces[0],
+    ...overrides,
+  });
+}
 
 it.each([false, true])(
   'keeps recovery controls and product content hidden while bootstrap is pending (workspace discovery: %s)',
   async (discovering) => {
-    const resolvedProject = project();
-    if (discovering) {
-      project.mockReturnValue({ ...resolvedProject, activeWorkspaceId: null, isLoading: true });
-    }
     let answer!: (value: { status: string; expires_at: null }) => void;
     access.mockReturnValue(
       new Promise((resolve) => {
         answer = resolve;
       }),
     );
-    const { rerender } = renderWithProviders(gatedTree());
+    const { rerender } = renderWithProviders(
+      gatedTree(
+        discovering
+          ? selection('owner', { activeWorkspaceId: null, activeWorkspace: null, isLoading: true })
+          : selection(),
+      ),
+    );
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Account security' })).not.toBeInTheDocument();
     expect(screen.queryByText('Private report')).not.toBeInTheDocument();
     expect(screen.getByText('Holding')).toBeInTheDocument();
 
-    if (discovering) {
-      project.mockReturnValue(resolvedProject);
-      rerender(gatedTree());
-    }
+    if (discovering) rerender(gatedTree());
     await act(async () => answer({ status: 'active', expires_at: null }));
     expect(await screen.findByText('Private report')).toBeInTheDocument();
   },
 );
 
-function gatedTree() {
+function gatedTree(value: ProjectContextValue = selection()) {
   return (
-    <WorkspaceAccessGate>
-      <input aria-label="Shell state" />
-      <HeldContent frame={<p>Holding</p>}>Private report</HeldContent>
-    </WorkspaceAccessGate>
+    <ProjectSelectionProvider value={value}>
+      <WorkspaceAccessGate>
+        <input aria-label="Shell state" />
+        <HeldContent frame={<p>Holding</p>}>Private report</HeldContent>
+      </WorkspaceAccessGate>
+    </ProjectSelectionProvider>
   );
 }
 
@@ -135,8 +138,14 @@ it('keeps the tree above the content mounted while a switched-to workspace answe
       answer = resolve;
     }),
   );
-  project.mockReturnValue({ ...project(), activeWorkspaceId: 'workspace-b' });
-  rerender(gatedTree());
+  rerender(
+    gatedTree(
+      selection('owner', {
+        activeWorkspaceId: 'workspace-b',
+        activeWorkspace: { ...testWorkspace('owner'), id: 'workspace-b', name: 'Team' },
+      }),
+    ),
+  );
   expect(screen.getByText('Holding')).toBeInTheDocument();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Shell state')).toHaveValue('kept');
@@ -150,6 +159,7 @@ it('keeps the tree above the content mounted while a switched-to workspace answe
 it('leaves invitation acceptance available without waiting for workspace access', () => {
   renderWithProviders(<WorkspaceAccessGate>Invitation acceptance</WorkspaceAccessGate>, {
     initialEntries: ['/invitations/accept'],
+    projectSelection: selection(),
   });
   expect(screen.getByText('Invitation acceptance')).toBeInTheDocument();
   expect(access).not.toHaveBeenCalled();
@@ -188,6 +198,7 @@ it('reuses a fresh access answer when the gate remounts', async () => {
   access.mockResolvedValue({ status: 'active', expires_at: null });
   const { rerender } = renderWithProviders(
     <WorkspaceAccessGate key="first">Private report</WorkspaceAccessGate>,
+    { projectSelection: selection() },
   );
   expect(await screen.findByText('Private report')).toBeInTheDocument();
   access.mockResolvedValue({ status: 'trial_expired', expires_at: null });
@@ -220,14 +231,17 @@ it('rechecks current authority instead of copying another workspace denial', asy
 
 it('offers retry when workspace discovery has failed without an active workspace', async () => {
   const retry = vi.fn();
-  project.mockReturnValue({
-    activeWorkspaceId: null,
-    workspaces: [],
-    isLoading: false,
-    isError: true,
-    retry,
-  });
-  renderWithProviders(gatedTree());
+  renderWithProviders(
+    gatedTree(
+      selection('owner', {
+        activeWorkspaceId: null,
+        activeWorkspace: null,
+        workspaces: [],
+        isError: true,
+        retry,
+      }),
+    ),
+  );
   expect(screen.getByText("Couldn't load workspace access")).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Workspace access' })).not.toBeInTheDocument();
   await act(async () => screen.getByRole('button', { name: 'Retry' }).click());
@@ -309,8 +323,7 @@ it('offers an ended trial a plan to continue, and tells a member who may buy it'
   expect(screen.getByText('$49 / month')).toBeInTheDocument();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
   unmount();
-  capability.mockReturnValue(false);
-  renderWithProviders(gatedTree());
+  renderWithProviders(gatedTree(selection('member')));
   expect(await screen.findByText('Owner or Admin only.')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();
 });
