@@ -24,8 +24,8 @@ import { StateBlock } from '@/components/ui/state-block';
  * Always-mounted status row of the canonical Site Health screen.
  *
  * ONE compact row (badge + narration + inline counters) that narrates the
- * whole lifecycle in place below the score cards — discovery counts while
- * discovering, audit progress while analyzing, and the run-outcome notice
+ * whole lifecycle in place above the score cards (whose figures already hold
+ * the page counts) — the hidden total while discovering, failures while analyzing, and the run-outcome notice
  * (`dashboardRunNotice`) for a run that did not complete cleanly. The row
  * changes CONTENT, never the screen: no phase mounts or unmounts the region,
  * and progress is never a separate panel that pushes the results around.
@@ -243,13 +243,8 @@ function DiscoveryStrip({
     narration = discoveryProgressLabel(crawl);
   }
 
-  const counts: Array<{ label: string; value: number | null }> = [
-    {
-      label: sampleMode ? 'Sample pages discovered' : 'Pages discovered',
-      value: crawl.visible_url_count,
-    },
-    { label: 'Pages analyzed', value: crawl.counters.analyzed },
-  ];
+  // Pages discovered and analyzed lead the figure strip above; the row adds only what it lacks.
+  const counts: ProgressCount[] = [];
   if (showTotal && crawl.total_url_count !== null) {
     counts.push({ label: 'Total discovered', value: crawl.total_url_count });
   }
@@ -299,10 +294,7 @@ function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
 
 function analysisCounts(crawl: SiteCrawl): ProgressCount[] {
   const { counters } = crawl;
-  const fixed: ProgressCount[] = [
-    { label: 'Pages discovered', value: crawl.visible_url_count },
-    { label: 'Pages analyzed', value: counters.analyzed },
-  ];
+  const fixed: ProgressCount[] = [];
   const robots = counters.failure_breakdown.robots_denied;
   if (robots > 0) {
     fixed.push({ label: 'Blocked by robots.txt', value: robots });

@@ -143,8 +143,8 @@ describe('StatusStrip — analysis activity', () => {
 
 describe('StatusStrip — lifecycle content', () => {
   it('renders discovery mode from the persisted crawl rather than the current entitlement', () => {
-    renderStrip({
-      phase: 'discovering',
+    const discovering = (sample_mode: boolean) => ({
+      phase: 'discovering' as const,
       entitlement: { ...entitlement, count_disclosure: false },
       crawl: crawl({
         status: 'running',
@@ -152,14 +152,19 @@ describe('StatusStrip — lifecycle content', () => {
         analysis_status: 'pending',
         inventory_complete: false,
         partial_reason: '',
-        sample_mode: false,
+        sample_mode,
         score_summary: null,
       }),
     });
 
-    expect(screen.getByText('Pages discovered')).toBeInTheDocument();
-    expect(screen.queryByText('Sample pages discovered')).not.toBeInTheDocument();
+    const { unmount } = renderStrip(discovering(false));
     expect(screen.queryByText(/-page sample/)).not.toBeInTheDocument();
+    // The figure strip owns the page counts; the row never repeats them.
+    expect(screen.queryByText('Pages discovered')).not.toBeInTheDocument();
+    unmount();
+
+    renderStrip(discovering(true));
+    expect(screen.getByText(/-page sample/)).toBeInTheDocument();
   });
 
   it('narrates discovery with provisional Starter copy while scanning', () => {
