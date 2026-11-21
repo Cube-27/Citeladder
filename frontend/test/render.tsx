@@ -101,7 +101,7 @@ export function ResolvedProjectRoute({ children }: Readonly<{ children: ReactNod
   );
 }
 
-export function testQueryClient() {
+function testQueryClient() {
   const queryClient = createAppQueryClient();
   queryClient.setQueryData(queryKeys.providers.catalog(), providerCatalogFixture);
   return queryClient;
