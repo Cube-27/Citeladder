@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { parseOverview, overviewAnswer } from '../src/search-surfaces/parsing.ts';
 import {
   parseAds,
-  parseOverview,
   parseScraper,
   parseShoppingResults,
-  overviewAnswer,
-} from '../src/search-surfaces/parsing.ts';
+} from '../src/search-surfaces/scraper-parsing.ts';
 import adsEnvelope from './fixtures/chatgpt-ads/envelope.json' with { type: 'json' };
 import fullCards from './fixtures/chatgpt-products/full-cards.json' with { type: 'json' };
 import titleTagCards from './fixtures/chatgpt-products/title-tag-cards.json' with { type: 'json' };
@@ -46,6 +45,26 @@ describe('observed surface parsing', () => {
       outcome: 'parser_error',
       aio_present: null,
     });
+  });
+  it('keeps malformed overview payloads as parser errors, not absence', () => {
+    const numbered = task(20000, []);
+    expect(
+      parseOverview({ ...numbered, tasks: [{ ...numbered.tasks[0], id: 7 }] }, '7'),
+    ).toMatchObject({ outcome: 'no_ai_overview', aio_present: false });
+    expect(parseOverview(null, 'ours')).toMatchObject({
+      outcome: 'parser_error',
+      raw_payload: { payload: {} },
+    });
+    expect(parseOverview(task(Number.NaN, []), 'ours')).toMatchObject({
+      outcome: 'parser_error',
+      provider_status_code: null,
+    });
+    for (const items of [{}, ['loose text'], [{ type: 'ai_overview_element', items: 'x' }, 4]])
+      expect(parseOverview(task(20000, [{ type: 'ai_overview', items }]), 'ours')).toMatchObject({
+        outcome: 'parser_error',
+        provider_status_code: 20000,
+        aio_present: null,
+      });
   });
   it('reads every documented element type, expanded components and per-element references', () => {
     const result = parseOverview(mixedOverview, 'ours');
@@ -160,6 +179,30 @@ describe('observed surface parsing', () => {
     const unexposed = parseScraper(payload(), 'ours', 'gemini_consumer');
     if (typeof unexposed === 'string') throw new Error('Expected terminal answer');
     expect(unexposed.retrieved_sources).toBeNull();
+    expect(unexposed.provider_metadata.search_results).toEqual([]);
+  });
+  it('reads malformed scraper sources leniently but matches the task identity exactly', () => {
+    const envelope = (id: unknown, page: Record<string, unknown>) => ({
+      status_code: 20000,
+      tasks: [{ id, status_code: 20000, result: [page] }],
+    });
+    const page = { markdown: 'Answer', sources: ['not a source'], search_results: [3] };
+    const read = parseScraper(envelope('ours', page), 'ours', 'chatgpt_search');
+    if (typeof read === 'string') throw new Error('Expected terminal answer');
+    expect([read.search_used, read.citations, read.retrieved_sources]).toEqual([true, [], []]);
+    expect(read.provider_metadata.search_results).toEqual([]);
+    const extra = { ...envelope('ours', page), version: '0.1', tasks_count: 1 };
+    const kept = parseScraper(extra, 'ours', 'chatgpt_search');
+    if (typeof kept === 'string') throw new Error('Expected terminal answer');
+    expect(JSON.stringify(kept.provider_metadata.raw_response)).toBe(JSON.stringify(extra));
+    const overview = { ...task(20000, []), version: '0.1' };
+    const absent = parseOverview(overview, 'ours');
+    if (typeof absent === 'string') throw new Error('Expected terminal result');
+    expect(JSON.stringify(absent.raw_payload)).toBe(JSON.stringify(overview.tasks[0]));
+    expect(() => parseScraper(envelope(7, page), '7', 'chatgpt_search')).toThrow('parse_error');
+    expect(() =>
+      parseScraper(envelope('ours', { markdown: ' ', items: 'x' }), 'ours', 'chatgpt_search'),
+    ).toThrow('parse_error');
   });
   it('reads ChatGPT ads as their own items and never into the answer text or citations', () => {
     const parsed = parseScraper(adsEnvelope, 'ours', 'chatgpt_search');
@@ -323,7 +366,13 @@ describe('ChatGPT shopping carousel parsing', () => {
                   items: [
                     { type: 'chat_gpt_ad', title: 'Sponsored card', url: 'https://ad.example/q' },
                     card(''),
-                    card('Organic Runner', { price: '12', merchants: ['Shop'], rating: 4.8 }),
+                    'not a card',
+                    card('Organic Runner', {
+                      price: '12',
+                      merchants: ['Shop'],
+                      rating: 4.8,
+                      images: [5, 'ftp://img.example/a.png', 'https://img.example/b.png'],
+                    }),
                   ],
                 },
               ],
@@ -343,7 +392,7 @@ describe('ChatGPT shopping carousel parsing', () => {
         url: '',
         domain: '',
         external_product_id: null,
-        image_url: null,
+        image_url: 'https://img.example/b.png',
       },
     ]);
     expect(parseShoppingResults({ status_code: 20000, tasks: [] })).toEqual([]);
