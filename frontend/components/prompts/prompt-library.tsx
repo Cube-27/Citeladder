@@ -446,7 +446,7 @@ export function PromptLibrary() {
           ) : null}
           {hasPrompts ? <FiguresFailure measurements={measurements} /> : null}
           <ToggleFailure toggle={toggle.mutation} />
-          <PendingReviewNotice count={statusFilter === 'active' ? review.count : 0} />
+          <PendingReviewNotice count={review.count} shown={statusFilter === 'active'} />
 
           <TopicDialogs
             dialog={topicDialog}

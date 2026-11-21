@@ -8,6 +8,7 @@ import {
 } from '@/lib/ai-traffic/use-crawl-connections';
 import type { crawlSourceSchema } from '@citeladder/contracts/ai-traffic';
 import type { z } from 'zod';
+import { Absence } from '@/components/ui/absence';
 import { ActionButton } from '@/components/ui/actions';
 import { Button, IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -322,7 +323,9 @@ function SourceDiagnostics({
               </span>
             </div>
           </TableCell>
-          <TableCell>{diagnosticsText(s)}</TableCell>
+          <TableCell>
+            {s.last_accepted_batch ? diagnosticsText(s) : <Absence state="not_measured" />}
+          </TableCell>
           <TableActionsCell>
             {canManage && s.status === 'active' ? (
               <Menu>
