@@ -24,7 +24,7 @@ export function encodeKeysetCursor(
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
 
-const cursorPayload = z.object({ fp: z.unknown(), k: z.array(z.string()) });
+const cursorPayload = z.object({ fp: z.unknown().optional(), k: z.array(z.string()) });
 
 export function decodeKeysetCursor(
   cursor: string,
