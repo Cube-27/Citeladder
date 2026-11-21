@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders } from '@/test/render';
+import { projectScope, renderWithProviders } from '@/test/render';
 import type { PerformanceDashboard } from '@/lib/api/performance';
 import { useRangeProjection } from './use-range-projection';
 
@@ -29,12 +29,6 @@ vi.mock('@/components/integrations/data-source-setup', () => ({
   DataSourceSetup: ({ title, whenReady }: { title: string; whenReady?: ReactNode }) => (
     <section aria-label={title}>{whenReady}</section>
   ),
-}));
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => WORKSPACE,
-  useProjectContext: () => ({ activeProject, isLoading: false }),
-  useWorkspaceCapability: (capability: string) =>
-    (['read', 'run', 'write'] as const).some((granted) => granted === capability),
 }));
 vi.mock('./use-performance-sync', () => ({
   usePerformanceSync: () => ({
@@ -51,7 +45,9 @@ vi.mock('./use-performance-sync', () => ({
 import { PerformanceScreen } from './performance-screen';
 
 function renderPerformance() {
-  return renderWithProviders(<PerformanceScreen />, { projectSelection: { activeProject } });
+  return renderWithProviders(<PerformanceScreen />, {
+    projectSelection: projectScope(activeProject, 'member'),
+  });
 }
 
 const emptyTotals: PerformanceDashboard['selected']['totals'] = {
