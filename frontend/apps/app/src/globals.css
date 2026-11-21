@@ -1946,7 +1946,7 @@ label {
   outline-offset: calc(-1 * var(--focus-width, 2px));
 }
 
-/* Lifted surface experiment: top-level cards, slips, tables and figure strips only. */
+/* Lifted surface experiment: top-level cards, framed lists, tables and figure strips only. */
 :root:not([data-public-surface]):not([data-theme='dark']) {
   --lift-radius: 12px;
   --lift-border: rgb(0 0 0 / 7%);
@@ -1956,11 +1956,12 @@ label {
   :is(
     .surface-card,
     .surface-slip,
+    .surface-lift,
     [data-data-table-frame],
     .table-frame:not([data-data-table] *),
     [data-figure-strip]
   ):not(
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
   border: 1px solid var(--lift-border);
   border-radius: var(--lift-radius);

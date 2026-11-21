@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export const FRAME_FACE = 'border border-rule rounded-card';
+export const FRAME_FACE = 'surface-lift border border-rule rounded-card';
 
 export const SLIP_FACE = cn('bg-surface text-ink', FRAME_FACE);
 
