@@ -88,6 +88,7 @@ function gutters(columns: readonly DataTableColumn[]): boolean[] {
 }
 
 const GUTTER_PX = 12;
+const HUG_CAP = '40ch';
 
 export function columnRules({
   scope,
@@ -123,6 +124,11 @@ export function columnRules({
         ? `width:${share};max-width:0;min-width:var(--data-table-identity-min);`
         : `width:1px;white-space:nowrap;min-width:${steps(role.steps)};`;
     rules.push(`${cell}{text-align:${kind.align};${size}${pad}}`);
+    // A clipped box has no minimum width, so beside a 100% column a hugging one fell to its floor.
+    if (role.kind === 'steps')
+      rules.push(
+        `${cell} > :is(.truncate, :has(.truncate)){width:max-content;max-width:${HUG_CAP}}`,
+      );
     if (kind.tabular)
       rules.push(
         `${at(index + offset, 'tbody > tr:not([data-table-state])')}{font-variant-numeric:tabular-nums}`,
