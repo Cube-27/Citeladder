@@ -1,15 +1,8 @@
-// Submits marketing URLs to IndexNow after a deploy.
-//
-//   node scripts/ping-indexnow.mjs <built sitemap> [<previously live sitemap>]
-//
-// With a previous sitemap, only URLs that were added, removed or given a new
-// <lastmod> are submitted; without one, every URL in the built sitemap is.
 import { readFile } from 'node:fs/promises';
 import { INDEXNOW_KEY } from '../lib/seo/indexnow.ts';
 
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
 
-/** Each sitemap <loc> mapped to its <lastmod>, or '' when it has none. */
 export function sitemapEntries(xml) {
   const entries = new Map();
   for (const [, block] of xml.matchAll(/<url>([\s\S]*?)<\/url>/g)) {
@@ -23,7 +16,6 @@ export function sitemapEntries(xml) {
   return entries;
 }
 
-/** URLs added, removed or re-dated between two sitemaps. */
 export function changedUrls(current, previous) {
   const changed = [...current].filter(([url, lastmod]) => previous.get(url) !== lastmod);
   const removed = [...previous.keys()].filter((url) => !current.has(url));

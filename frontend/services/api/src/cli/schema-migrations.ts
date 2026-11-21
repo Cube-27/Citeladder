@@ -1,12 +1,3 @@
-/**
- * The schema migrations (docs/invariants.md 17): `migrations/0001_baseline.sql`
- * followed by numbered forward migrations (`0002_<name>.sql`, …). Pending files
- * apply in order, in one transaction, under an advisory lock and bounded lock
- * and statement timeouts, and each is
- * recorded with its SHA-256 in `schema_migrations`. An applied file never
- * changes; a later change is a new numbered file, so a populated database is
- * migrated in place and never needs a reset.
- */
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -26,7 +17,6 @@ const LOCK_KEY = createHash('sha256')
   .readBigInt64BE(0);
 const RESET = 'Redeploy with reset_database to replace this disposable database.';
 
-/** The migration files in order; their numbers run 0001, 0002, … without gaps. */
 export function readMigrations(): Migration[] {
   const names = readdirSync(DIRECTORY)
     .filter((name) => name.endsWith('.sql'))
@@ -51,7 +41,6 @@ async function exists(client: pg.ClientBase, relation: string): Promise<boolean>
   return result.rows.length > 0;
 }
 
-/** The migrations this database still needs, after proving the recorded ones unchanged. */
 async function pending(client: pg.ClientBase, migrations: Migration[]): Promise<Migration[]> {
   if (await exists(client, 'public.schema_migrations')) {
     const ledger = await client.query<{ version: string; checksum: string }>(
@@ -89,14 +78,6 @@ async function pending(client: pg.ClientBase, migrations: Migration[]): Promise<
   return migrations;
 }
 
-/**
- * A schema client with the configured TLS and the migration bounds as its
- * session timeouts: a statement that waits on a lock held by the serving
- * revision fails after the lock bound instead of queueing that revision's
- * queries behind it, and a statement that runs past the statement bound fails
- * the job. Either rolls the whole apply back. The client-side query bound is off
- * because the server enforces both.
- */
 export function migrationClient(
   databaseUrl: string,
   env: Record<string, string | undefined> = process.env,
@@ -110,7 +91,6 @@ export function migrationClient(
   });
 }
 
-/** Apply every pending migration in order; returns the versions applied (none when current). */
 export async function applyMigrations(
   client: pg.ClientBase,
   migrations: Migration[] = readMigrations(),
@@ -124,8 +104,6 @@ export async function applyMigrations(
     const bounds = 'reset statement_timeout; reset lock_timeout';
     await client.query(bounds);
     const todo = await pending(client, migrations);
-    // A file that needs longer raises its own bound with `SET LOCAL`; the next
-    // file starts under the configured bounds again.
     for (const migration of todo) await client.query(`${migration.sql}\n;${bounds}`); // NOSONAR -- files apply in order in one transaction.
     if (todo.length)
       await client.query(
@@ -173,7 +151,6 @@ function scramVerifier(password: string): string {
   return `SCRAM-SHA-256$${iterations}:${b64(salt)}$${b64(storedKey)}:${b64(serverKey)}`;
 }
 
-/** The application role's password from the services' `DATABASE_URL`, which must name that role. */
 export function appRolePassword(appDatabaseUrl: string): string {
   let url: URL;
   try {
@@ -189,17 +166,11 @@ export function appRolePassword(appDatabaseUrl: string): string {
   return password;
 }
 
-/**
- * Let the application role log in with `password`. Runs as the schema owner
- * after the migrations that created the role; rerunning it with the same
- * password is harmless, and a new one takes effect for new connections.
- */
 export async function convergeAppRole(client: pg.ClientBase, password: string) {
   const verifier = client.escapeLiteral(scramVerifier(password));
   await client.query(`alter role ${APP_DATABASE_ROLE} with login password ${verifier}`);
 }
 
-/** One line for the operator: what was applied, or that the schema is current. */
 export function migrationSummary(applied: readonly string[]) {
   return applied.length ? `Schema migrations applied: ${applied.join(', ')}.` : 'Schema current.';
 }

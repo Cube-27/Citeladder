@@ -1,12 +1,4 @@
 ---
-/**
- * A policy page (the WebLegal template): a compact PageSection holding
- * DocLayout, the policies on its rail, the ArticleHeader with the
- * last-updated date, the numbered clauses in Prose and a numbered On this
- * page. Each clause heading is "n. Title" and each of its paragraphs starts
- * with a strong "n.m", so a clause can be cited by number. No CTA.
- * Every string comes verbatim from the legal content modules.
- */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import DocLayout from '@/components/content/DocLayout.astro';
 import Prose from '@/components/content/Prose.astro';
@@ -58,8 +50,6 @@ const clauses = document.sections.map((section, index) => ({
           clauses.map((clause) => (
             <>
               <h2 id={clause.id}>{clause.heading}</h2>
-              {/* Policy text names sibling policies by path; Linkify keeps
-                  those references navigable. */}
               {clause.paragraphs?.map((paragraph, index) => (
                 <p>
                   <strong>{`${clause.number}.${index + 1}`}</strong> <Linkify text={paragraph} />
@@ -108,7 +98,6 @@ const clauses = document.sections.map((section, index) => ({
 </MarketingLayout>
 
 <style>
-  /* A clause's note: a sunken panel under its text. */
   .cl-legal-note {
     padding: 16px 20px;
     border-radius: var(--site-radius-inner);

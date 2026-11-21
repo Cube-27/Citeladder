@@ -16,7 +16,6 @@ export type ActionSeed = OpportunitySeed & {
   members: Record<string, string>;
 };
 
-/** A page finding's evidence as the refresh stores it: the one defect it folds. */
 const pageIssues = (issueId: string, ruleId: string, severity: string) => ({
   issues: [{ issue_id: issueId, rule_id: ruleId, severity, category: 'content', evidence: {} }],
 });
@@ -29,7 +28,6 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
       audit_id: scn.audit_id,
       site_crawl_id: scn.crawl_id,
       total_count: 4,
-      // Before any go-live a declaration accepts, so it is every declaration's baseline.
       created_at: new Date(Date.now() - 31 * 86_400_000),
       source_analysis_ids: JSON.stringify([scn.analysis0_id]),
       source_issue_ids: JSON.stringify(
@@ -196,7 +194,6 @@ function revision(db: Database, workspace: string, project: string, action: stri
         created_at: now,
       })
       .execute();
-    // As the output writer does in the transaction that links the output.
     await refreshActionStatus(trx, workspace, action);
     return revisionId;
   });
@@ -302,7 +299,6 @@ async function standaloneAction(
   return action.id;
 }
 
-/** Native persisted fixtures; one disposable database pool per invocation. */
 export async function actionFixture<T>(phase: string, ...args: string[]): Promise<T> {
   const db = testDatabase();
   try {

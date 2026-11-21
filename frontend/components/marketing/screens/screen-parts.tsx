@@ -21,17 +21,6 @@ import { cn } from '@/lib/utils';
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 import './screen-parts.css';
 
-/**
- * The parts the full app screens share (`ScreenAppInsights`,
- * `ScreenVisibility`): app views at a fixed natural size built from the
- * app's own components. A screen is a still, so its controls are drawn,
- * never wired.
- */
-
-/**
- * The app's Button, drawn: its face on a span, so a screen inside a linked
- * card never nests a control in a link.
- */
 export function ScreenButton({
   variant = 'secondary',
   icon,
@@ -48,11 +37,6 @@ export function ScreenButton({
   );
 }
 
-/**
- * The app's tab track, drawn: the first item named in `selected` lifts onto
- * surface, and a count follows its label in brackets. The track sits on
- * surface inside a hairline, so unselected labels read at body contrast.
- */
 export function ScreenTabs({
   items,
   selected,
@@ -69,7 +53,6 @@ export function ScreenTabs({
   );
 }
 
-/** Every engine's mark in one row: the engines that named the brand in ink, the rest muted. */
 export function ScreenEngineMarks({ on }: Readonly<{ on: readonly EngineKey[] }>) {
   return (
     <span className="cl-screen-marks">
@@ -86,7 +69,6 @@ export function ScreenEngineMarks({ on }: Readonly<{ on: readonly EngineKey[] }>
   );
 }
 
-/** A brand or domain with its mark. The demo brands are fictional, so the mark is their letter. */
 export function ScreenSite({ label, mono = false }: Readonly<{ label: string; mono?: boolean }>) {
   return (
     <span className="cl-screen-site">
@@ -100,7 +82,6 @@ function ScreenNote({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-note">{children}</p>;
 }
 
-/** A main column beside a narrower aside, the one column template the app screens use. */
 export function ScreenCols({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="cl-screen-cols">{children}</div>;
 }
@@ -121,7 +102,6 @@ export function ScreenDelta({ change, period }: Readonly<{ change: Change; perio
   );
 }
 
-/** A figure: its eyebrow label, the value with an optional unit, and its change. */
 export function ScreenStat({
   label,
   value,
@@ -141,16 +121,10 @@ export function ScreenStat({
   );
 }
 
-/**
- * A drawn card's title. The app's CardTitle is an h3, but a picture of the
- * app holds no headings of the page around it, so the screens draw the
- * title as a paragraph.
- */
 function ScreenCardTitle({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-card-title">{children}</p>;
 }
 
-/** An app chart card, drawn: title and controls, the chart, then its source line. */
 export function ScreenChartCard({
   title,
   controls,
@@ -182,7 +156,6 @@ export function ScreenCard({
   eyebrow?: string;
   title?: string;
   action?: ReactNode;
-  /** A line under the title saying what the card holds. */
   meta?: string;
   children: ReactNode;
 }>) {
@@ -200,7 +173,6 @@ export function ScreenCard({
   );
 }
 
-/** Column widths a screen table uses, so a table's columns never follow its rows. */
 type ColumnWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export type ScreenColumn<Row> = Readonly<{
@@ -222,9 +194,7 @@ export function ScreenTable<Row>({
   rows: readonly Row[];
   rowKey: (row: Row) => string;
   columns: readonly ScreenColumn<Row>[];
-  /** The tracked brand's own row, tinted. */
   own?: (row: Row) => boolean;
-  /** The row whose detail the screen shows. */
   selected?: (row: Row) => boolean;
 }>) {
   return (
@@ -265,7 +235,6 @@ export function ScreenTable<Row>({
   );
 }
 
-/** A table in a card: its title row and a line saying what it counts. */
 export function ScreenTableCard({
   eyebrow,
   title,

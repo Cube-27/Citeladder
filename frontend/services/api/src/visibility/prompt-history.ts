@@ -1,13 +1,3 @@
-/**
- * One tracked prompt over time: its mention and owned-citation rates per run,
- * oldest first, with the Actions whose declared work this prompt measures.
- *
- * The spine is the persisted `prompt_metric_snapshots` of the market's
- * dashboard-ready brand runs; rates count that run's persisted answers for the
- * prompt, never a rescore. A run with no successful answer reads unavailable,
- * never zero. Implementation markers are when a user said the work went live;
- * nothing here claims the work moved a rate.
- */
 import type {
   promptHistoryImplementationSchema,
   promptHistoryPointSchema,
@@ -41,7 +31,6 @@ type Implementation = z.input<typeof promptHistoryImplementationSchema>;
 export type PromptHistoryQuery = {
   promptId: string;
   logicalEngine: string | null;
-  /** Omitted reads the prompt's own cohort. */
   cohort: PromptHistory['cohort'] | null;
 };
 
@@ -55,7 +44,6 @@ export async function getPromptHistory(
   validateEngineAndRange({ logicalEngine: request.logicalEngine, fromAt: null, toAt: null });
   const prompt = await scopedPrompt(db, scope.workspaceId, request.promptId);
   if (prompt.project_id !== scope.projectId) throw notFound('Prompt');
-  // A prompt is measured in its own cohort, brand questions included.
   const query: ResolvedQuery = {
     ...request,
     cohort: request.cohort ?? promptCohortSchema.parse(prompt.cohort),
@@ -90,7 +78,6 @@ export async function getPromptHistory(
   };
 }
 
-/** The newest `trend_max_points` runs that scored the prompt, oldest first. */
 async function historyPoints(
   db: Database,
   scope: RunScope,
@@ -183,11 +170,9 @@ async function historyPoints(
   });
 }
 
-/** `(audit_id, prompt_index)` row values for a tuple `in` list. */
 const pairList = (pairs: readonly { audit: string; index: number }[]) =>
   sql.join(pairs.map(({ audit, index }) => sql`(${audit}::uuid, ${index}::int)`));
 
-/** Declarations whose frozen checks measure this prompt, oldest go-live first. */
 async function implementationMarkers(
   db: Database,
   scope: RunScope,
@@ -209,7 +194,6 @@ async function implementationMarkers(
     .where('actions.workspace_id', '=', scope.workspaceId)
     .where('actions.project_id', '=', scope.projectId)
     .where(sql<boolean>`ie.expected_checks @> ${checks}::jsonb`)
-    // The newest markers survive the cap; the response lists them oldest first.
     .orderBy('ie.declared_implemented_at', 'desc')
     .orderBy('ie.id', 'desc')
     .limit(visibility.trend_max_points)

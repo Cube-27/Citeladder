@@ -27,14 +27,6 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type PaneTab = 'output' | 'sources' | 'history';
 
-/**
- * The one document view (DraftSheet): one of the chat's
- * documents, on a dashed edge while the Agent's revision is current and solid
- * once a person saved theirs, shown inline in the thread after the reply that
- * wrote it. Edits and restores are refused by
- * the server while a turn is queued or running, so the pane disables them
- * then rather than offering a control that will fail.
- */
 export function OutputPane({
   workspaceId,
   chatId,
@@ -50,13 +42,11 @@ export function OutputPane({
   runActive: boolean;
   canEdit: boolean;
   canSend: boolean;
-  /** Sends a follow-up turn asking the agent to revise part of the output. */
   onRevise: (message: string) => void;
 }>) {
   const { kindLabel } = useAgentCatalog();
   const revision = output.latest_revision;
   const [tab, setTab] = useState<PaneTab>('output');
-  // Held here, not in the editor, so switching tabs cannot discard it.
   const [draft, setDraft] = useState<OutputDraft | null>(null);
   const editing = draft !== null;
   const unsaved =
@@ -180,12 +170,7 @@ export function OutputPane({
   );
 }
 
-/**
- * A prompt plan is applied in the Prompt Builder, where a person confirms
- * topics and starts the run; the Agent writes no prompts itself.
- */
 function PromptBuilderHandoff({ kind }: Readonly<{ kind: AgentOutput['kind'] }>) {
-  // The Prompt Builder writes prompts, so a role that may not is not sent there.
   const canWrite = useWorkspaceCapability('write');
   if (kind !== 'prompt_plan' || !canWrite) return null;
   return (
@@ -202,7 +187,6 @@ function OutputActions({
 }: Readonly<{
   revision: AgentRevision;
   locked: boolean;
-  /** Opens the editor; omitted for a role that may not edit outputs. */
   onEdit?: () => void;
 }>) {
   return (

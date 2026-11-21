@@ -29,7 +29,6 @@ function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientW
   // jsdom lays nothing out and has no scrolling API on elements.
   track.scrollTo = () => {};
   track.scrollBy = () => {};
-  // Each card is one 400px step (jsdom lays out nothing).
   for (const item of track.children) {
     Object.defineProperty(item, 'offsetWidth', { configurable: true, value: 400 });
   }
@@ -78,8 +77,6 @@ describe('mountCardRail', () => {
   });
 
   it('opens one card in place at a time and closes it again', () => {
-    // A closed card keeps its paragraph and button out of the accessibility
-    // tree (the stylesheet fades them; jsdom has none).
     renderRail({ scrollWidth: 1200, clientWidth: 400 });
     expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
 
@@ -89,7 +86,6 @@ describe('mountCardRail', () => {
       '/platform/site-health',
     );
 
-    // Opening the next card closes the first.
     fireEvent.click(screen.getByRole('button', { name: 'More about Keyword Research' }));
     expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Explore Keyword Research' })).toHaveAttribute(

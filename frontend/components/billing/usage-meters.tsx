@@ -7,11 +7,6 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Preferred display order. Rows the backend sends that are not listed here
- * still render, after these — the list is an ordering hint, not a filter, so a
- * new backend counter appears without a frontend change.
- */
 const PREFERRED_ORDER = [
   'prompt_slots',
   'project_slots',
@@ -33,14 +28,6 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
 
 type UsageRead = ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
 
-/**
- * Account usage, extracted from `BillingScreen` so plan orchestration and
- * meter rendering have separate owners.
- *
- * Fails closed on an unresolved entitlement: an account whose fold did not
- * resolve has no verified allowance, and showing meters against unverified
- * numbers would be worse than showing none.
- */
 export function UsageMeters() {
   const workspaceId = useActiveWorkspaceId();
   const usageQuery = useQuery(billingQueries.usage(workspaceId));

@@ -7,14 +7,8 @@ import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 
-/** Where a widget's head link goes; every widget words and draws it alike. */
 export type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
 
-/**
- * How the body fills the card's height when a taller neighbour stretches it:
- * a `figure` sits under the head with its link at the card's foot, a `chart`
- * stretches its plot into the height, and a `list` starts at the head.
- */
 type WidgetFill = 'figure' | 'chart' | 'list';
 
 type WidgetHeadProps = Readonly<{
@@ -26,13 +20,6 @@ type WidgetHeadProps = Readonly<{
   figure: boolean;
 }>;
 
-/**
- * One Overview widget, unboxed on the surface (owner, 2026-11-19: the page's
- * section rules separate widgets): one head (its title in `heading` at the
- * left, its status or link at the right), then a figure, a chart or a short
- * list. A `figure` widget keeps its description in a hint after the title, so
- * it is the head and one figure. Widgets in a row share a height.
- */
 export function WidgetFrame({
   id,
   title,
@@ -42,11 +29,9 @@ export function WidgetFrame({
   fill = 'list',
   children,
 }: Readonly<{
-  /** The heading's id, which names the region. */
   id: string;
   title: ReactNode;
   description?: ReactNode;
-  /** A StatusMark at the head's end. */
   status?: ReactNode;
   link?: WidgetLink | null;
   fill?: WidgetFill;
@@ -75,7 +60,6 @@ export function WidgetFrame({
         link={figure ? null : linkElement}
         figure={figure}
       />
-      {/* A chart's grid body stretches its one child; a figure or list starts at the head. */}
       <Stack
         gap="item"
         className={fill === 'chart' ? 'min-w-0 flex-1' : 'flex min-w-0 flex-1 flex-col'}

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * One-time project bootstrap: APIs, state bucket, deployer identity, workload
- * identity federation and the database VM's log-writer grant.
- *
- *   node infra/gcp/bootstrap.mjs --project-id <id> --billing-account <id> --state-bucket <name>
- */
 import { spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
@@ -22,11 +16,8 @@ const APIS = [
   'compute.googleapis.com',
   'iam.googleapis.com',
   'iamcredentials.googleapis.com',
-  // The owner's break-glass database shell and tunnel; the deployer never uses it.
   'iap.googleapis.com',
-  // The uptime check, alert policies and their email channel (monitoring.tf).
   'monitoring.googleapis.com',
-  // The crawl-log reader pulls customers' subscriptions with this project's identity.
   'pubsub.googleapis.com',
   'run.googleapis.com',
   'secretmanager.googleapis.com',
@@ -35,9 +26,6 @@ const APIS = [
   'sts.googleapis.com',
 ];
 
-// Secret containers and their IAM only: no payload reads and no version
-// writes. Terraform grants the deployer accessor and version-manager roles on
-// each CiteLadder secret it declares (identity.tf).
 const SECRET_ROLE = 'citeladderSecretContainers';
 const SECRET_PERMISSIONS = [
   'resourcemanager.projects.get',
@@ -53,30 +41,19 @@ const SECRET_PERMISSIONS = [
 const PROJECT_ROLES = [
   'roles/artifactregistry.admin',
   'roles/cloudscheduler.admin',
-  // The database VM and its boot disk.
   'roles/compute.instanceAdmin.v1',
-  // The VPC, subnet and the database's internal address.
   'roles/compute.networkAdmin',
-  // The PostgreSQL and IAP-SSH firewall rules.
   'roles/compute.securityAdmin',
   'roles/iam.serviceAccountAdmin',
   'roles/iam.serviceAccountUser',
-  // Terraform manages the API request-log exclusion and the log-based metrics.
   'roles/logging.configWriter',
-  // The uptime check, alert policies and email channel (monitoring.tf).
   'roles/monitoring.alertPolicyEditor',
   'roles/monitoring.notificationChannelEditor',
   'roles/monitoring.uptimeCheckConfigEditor',
-  // Reads the metric descriptors those policies name.
   'roles/monitoring.viewer',
-  // Deploys services/jobs and executes migration and smoke executions.
   'roles/run.admin',
 ];
 
-// The project is reused across rebuilds and never deleted by automation; the
-// VM deployer's SSH/IAP and project-deletion grants are retired. The deployer
-// never edits project IAM, and its project-wide compute, secret and storage
-// administration is replaced by the narrower grants above.
 const RETIRED_ROLES = [
   'roles/compute.admin',
   'roles/compute.osAdminLogin',
@@ -90,7 +67,6 @@ const RETIRED_ROLES = [
 
 export class BootstrapError extends Error {}
 
-/** The real gcloud: `exists` reports success, `read` returns stdout, `quiet` hides output, `run` shows it. */
 export function gcloud(args, mode) {
   const stdio = {
     exists: 'ignore',
@@ -140,7 +116,6 @@ async function setProjectLabels({ id, run, fetch, wait }) {
   }
 }
 
-/** Converges the project to the bootstrap state; returns the GitHub environment values. */
 export async function bootstrap(
   options,
   { run = gcloud, fetch = globalThis.fetch, wait = sleep } = {},
@@ -259,7 +234,6 @@ export async function bootstrap(
       'quiet',
     );
   }
-  // Terraform state only: the deployer holds no project-wide storage role.
   run(
     [
       'storage',
@@ -347,8 +321,6 @@ export async function bootstrap(
       'run',
     );
   }
-  // Only the deploy workflow, from main, in the protected environment, of this
-  // exact repository: no other workflow in the repository can obtain credentials.
   const deployWorkflow = `${repository}/.github/workflows/gcp-deploy.yml@refs/heads/main`;
   const condition = [
     `assertion.repository_id=='${repositoryId}'`,
@@ -388,7 +360,6 @@ export async function bootstrap(
       'exists',
     )
   ) {
-    // Re-running the bootstrap converges an existing provider to this trust.
     run([...providers, 'update-oidc', ...providerArgs], 'run');
   } else {
     run(

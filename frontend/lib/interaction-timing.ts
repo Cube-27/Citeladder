@@ -1,11 +1,3 @@
-/**
- * Field attribution for Interaction to Next Paint. A sampled page load watches
- * its interactions (Event Timing) and, where the browser has them, its long
- * animation frames; when the page is hidden it reports its slowest interaction
- * once, if that was slow, through the client error reporter. A report names
- * the event, the element's tag, the phase timings and the longest scripts in
- * the frames it spanned, never text, attributes or query strings.
- */
 import {
   CLIENT_ERROR_FIELD_LIMITS,
   SLOW_INTERACTION_SCRIPT_LIMIT,
@@ -17,7 +9,6 @@ import { z } from 'zod';
 import { releaseId, reportRoute, sendClientReport } from '@/lib/client-errors';
 import { INTERACTION_REPORT_SAMPLE_RATE, SLOW_INTERACTION_MS } from '@/lib/config/operational';
 
-/** An Event Timing entry, as far as a report reads it. */
 const interactionSchema = z.object({
   name: z.string(),
   startTime: z.number(),
@@ -29,7 +20,6 @@ const interactionSchema = z.object({
 });
 export type Interaction = z.infer<typeof interactionSchema>;
 
-/** A long animation frame's `toJSON()`, as far as a report reads it. */
 const frameSchema = z.object({
   startTime: z.number(),
   duration: z.number(),
@@ -37,7 +27,6 @@ const frameSchema = z.object({
 });
 export type AnimationFrame = z.infer<typeof frameSchema>;
 
-/** Long frames kept for attribution; the slowest interaction is usually recent. */
 const FRAMES_KEPT = 50;
 const limits = CLIENT_ERROR_FIELD_LIMITS;
 
@@ -48,7 +37,6 @@ function tagName(target: unknown): string | null {
   return /^[a-z][a-z0-9-]{0,63}$/u.test(target.localName) ? target.localName : null;
 }
 
-/** The report for an interaction, or null when it was not slow. */
 export function slowInteractionReport({
   interaction,
   frames,
@@ -90,7 +78,6 @@ export function slowInteractionReport({
   };
 }
 
-/** Installed once at application start; most page loads are not sampled and do nothing. */
 export function installInteractionTiming(): void {
   const supported = PerformanceObserver.supportedEntryTypes;
   if (Math.random() >= INTERACTION_REPORT_SAMPLE_RATE || !supported.includes('event')) return;

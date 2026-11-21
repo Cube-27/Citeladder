@@ -30,15 +30,8 @@ import {
   sentimentTrend,
 } from '@/lib/visibility/perception';
 
-/** Themes the "Themes in answers" list shows at most. */
 const THEME_LIST_LIMIT = 8;
 
-/**
- * The Perception page's Brand tab: how answers portray the brand. Every figure
- * travels with the coverage it was computed over, and a missing classification
- * is a named state, never a zero. `factFigure` is the pilot's contradicted
- * claims, linking to the Fact-checking tab.
- */
 export function PerceptionView({
   data,
   factFigure,
@@ -172,7 +165,6 @@ function SentimentRing({ data }: Readonly<{ data: PerceptionResponse }>) {
   );
 }
 
-/** The donut from the classified minimum; below it a too-few line, never shares of a handful. */
 function SentimentParts({
   score,
 }: Readonly<{ score: PerceptionResponse['entities'][number]['score'] | undefined }>) {

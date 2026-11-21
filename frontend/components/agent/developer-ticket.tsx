@@ -12,11 +12,6 @@ import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 
-/**
- * "Prepare developer ticket": the Action as copyable Markdown for a developer
- * (the issue, the affected pages, the evidence, the minimal patch and how it
- * will be verified). Built from the Action's read; nothing is sent anywhere.
- */
 export function DeveloperTicketButton({ action }: Readonly<{ action: ActionDetail }>) {
   const [open, setOpen] = useState(false);
   const timeZone = useDisplayTimeZone();

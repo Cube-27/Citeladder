@@ -37,28 +37,16 @@ type PromptBuilderProps = {
   workspaceId: string;
   topics: Topic[];
   hasCompetitors: boolean;
-  /** Runs one generate request; null when it failed (the error arrives as `generateError`). */
   generate: (input: PromptGenerateRequest) => Promise<PromptGenerateResponse | null>;
   isGenerating: boolean;
   generateError?: unknown;
-  /** The pending candidates; accepting tracks them. */
   review: ReturnType<typeof usePromptCandidates>;
-  /** The prompt-set read the candidates hang off. */
   sets: { loading: boolean; error: boolean; retry: () => void };
-  /** The request bounds the API enforces, from the prompt-set list. */
   limits: PromptFormLimits;
 };
 
-/** What this visit generated: its request and every run it made. */
 type Session = { request: PromptGenerateRequest; results: PromptGenerateResponse[] };
 
-/**
- * The Prompt builder's body: the steps down the left, the current step's
- * content beside them, and a fixed footer. It steers generation end to end —
- * business facts, topics, distribution and search seeds — then lands in
- * candidate review. Every step is prefilled from saved data, so a returning
- * user can go straight to Generate. Drafts and settings never outlive the page.
- */
 export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
   const { projectId, workspaceId, topics, hasCompetitors, isGenerating, generateError, limits } =
     props;
@@ -128,7 +116,6 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
               <>
                 {runNotices}
                 <UnsavedNotice business={business} topics={topicStep} />
-                {/* Until search data loads, its own loading or error state says why Generate waits. */}
                 {seedsQuery.data ? <RunProblem built={built} /> : null}
               </>
             }
@@ -204,7 +191,6 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
   );
 }
 
-/** The seed-query read before it has data: loading, or failed with a retry. */
 function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }>) {
   return read.isError ? (
     <StateBlock
@@ -218,12 +204,10 @@ function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }
   );
 }
 
-/** Why the distribution settings cannot make a run, if they cannot. */
 function RunProblem({ built }: Readonly<{ built: ReturnType<typeof runRequest> }>) {
   return built.ok ? null : <Notice tone="warning">{built.problem}</Notice>;
 }
 
-/** Edits from earlier steps that this run will not see until they are saved. */
 function UnsavedNotice({
   business,
   topics,

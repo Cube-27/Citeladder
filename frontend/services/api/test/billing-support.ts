@@ -9,11 +9,9 @@ import type { Database } from '../src/db/database.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 import { asOwner, Fixtures, testConfig } from './support.ts';
 
-// Deterministic launch catalog input.
 export function billingConfig() {
   return testConfig({
     BILLING_CHECKOUT_ENABLED: 'true',
-    // Lifecycle tests buy as any workspace; the allow-list has its own tests.
     BILLING_CHECKOUT_AUDIENCE: 'everyone',
     BILLING_QUOTE_SIGNING_SECRET: 'fixture-independent-quote-secret',
     BILLING_RAZORPAY_MODE: 'test',
@@ -45,7 +43,6 @@ export const buyer = {
   export_eligibility_attested: true,
 };
 
-/** The authored launch catalog with every price bound and every item on sale. */
 function sellableCatalog() {
   const payload = catalogSchema.parse(
     launchCatalog({ mode: 'test', settings: billingConfig().billing }),
@@ -63,7 +60,6 @@ function sellableCatalog() {
 export class BillingFixtures extends Fixtures {
   readonly database: Database;
   private readonly revisions: string[] = [];
-  // Non-fixture revisions this fixture retired; cleanup republishes them.
   private readonly retired: string[] = [];
   readonly accounts: string[] = [];
   readonly operatorCodes: string[] = [];
@@ -92,7 +88,6 @@ export class BillingFixtures extends Fixtures {
     modify?: (payload: ReturnType<typeof catalogSchema.parse>) => void,
     published = true,
   ) {
-    // The authored launch catalog, so tests exercise the bundles customers buy.
     const payload = sellableCatalog();
     modify?.(payload);
     const revision = `fixture-${randomUUID()}`;
@@ -118,7 +113,6 @@ export class BillingFixtures extends Fixtures {
     this.revisions.push(revision);
     return { revision, payload };
   }
-  /** Retires the published catalog, remembering a non-fixture one so cleanup restores it. */
   private async retirePublished() {
     const retired = await this.database
       .updateTable('billing_catalog_revisions')

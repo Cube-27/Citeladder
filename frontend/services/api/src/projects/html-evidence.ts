@@ -50,9 +50,7 @@ function collectLink(node: Element, result: PageEvidence) {
         .some((rel) => rel === 'icon' || rel.endsWith('-icon'))
     )
       result.icons.push(target.href);
-  } catch {
-    /* Invalid navigation is not evidence. */
-  }
+  } catch {}
 }
 function collectElement(node: Element, result: PageEvidence) {
   if (node.tagName === 'title') result.title = compact(textOf(node));
@@ -93,10 +91,6 @@ function hasPhrase(words: readonly string[], phrases: readonly string[]) {
   const text = ` ${words.join(' ')} `;
   return phrases.some((phrase) => text.includes(` ${phrase} `));
 }
-/**
- * A link's rank among offerings: a customer-service phrase last (a gift-card
- * seller's only product page still counts), an offering hub first.
- */
 function offeringRank(link: { url: string; label: string }) {
   const path = tokens(new URL(link.url).pathname);
   if (

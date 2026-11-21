@@ -21,7 +21,6 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <MemoryRouter initialEntries={['/search-intelligence']}>{children}</MemoryRouter>;
 }
 
-/** The signal table's body rows, in display order. */
 function signalTable() {
   return screen.getByRole('table');
 }
@@ -30,7 +29,6 @@ function signalRows() {
   return within(signalTable()).getAllByRole('row').slice(1);
 }
 
-/** The pager's announced position, e.g. "1–10 of 28 signals". */
 function pagerSummary() {
   return screen.getByText(
     (_, node) =>
@@ -38,12 +36,10 @@ function pagerSummary() {
   ).textContent;
 }
 
-/** The signal row naming `target`: the row itself is the Inspect target. */
 async function findSignalRow(target: string) {
   return (await screen.findByText(target)).closest('tr')!;
 }
 
-/** A row's priority: its rank in the whole snapshot, the cell before the row's open chevron. */
 function rankOf(row: HTMLElement) {
   return within(row).getAllByRole('cell').at(-2)!.textContent;
 }
@@ -53,12 +49,10 @@ function rankOf(row: HTMLElement) {
 const project = vi.hoisted(() => ({
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  /** What the reader's role may do in the workspace. */
   capabilities: ['read', 'run', 'write'] as readonly string[],
 }));
 
 vi.mock('@/components/integrations/data-source-setup', () => ({
-  // Stands in for a connected source, so the screen's ready content renders too.
   DataSourceSetup: ({ title, whenReady }: { title: string; whenReady?: ReactNode }) => (
     <section aria-label={title}>{whenReady}</section>
   ),
@@ -77,7 +71,6 @@ vi.mock('@/lib/project/project-context', () => {
   };
 });
 
-/** The Demand tab's parts in the page's Report frame. */
 function DemandTab() {
   const demand = useDemand();
   return (
@@ -87,7 +80,6 @@ function DemandTab() {
   );
 }
 
-/** The Demand tab as the project route's gate hands it the currently selected project. */
 function DemandRoute() {
   return (
     <ActiveProjectScopeProvider
@@ -184,7 +176,6 @@ const snapshot = {
       action_id: null,
     },
   ],
-  // Not the shipped thresholds: each rule must state what the server sent.
   detector_policy: {
     striking_distance: { min_impressions: 50, min_position: 4, max_position: 15 },
     cannibalization: { min_page_impressions: 20, min_page_share: 0.1 },
@@ -202,32 +193,25 @@ const snapshot = {
 
 import { demandApi } from '@/lib/api/demand';
 
-// The transport stands in for the API; the screen's reads and writes go
-// through the real query and mutation descriptors that call it.
 beforeEach(() => {
   vi.spyOn(demandApi, 'getLatest').mockResolvedValue(snapshot);
-  // Recompute is a queued job: 202 + `queued`, never a finished snapshot.
   vi.spyOn(demandApi, 'recompute').mockResolvedValue({
     task_id: '55555555-5555-4555-8555-555555555555',
     status: 'queued',
   });
 });
 
-/** The summary line's count, whose figure is its own element inside the line. */
 const findSignalCount = (text: string) =>
   screen.findByText((_, element) => element?.tagName === 'SPAN' && element.textContent === text);
 
 describe('Demand tab', () => {
   beforeEach(() => {
-    // The filter and selection live in the address, which outlives a render.
     window.history.replaceState(null, '', '/search-intelligence');
     project.id = '11111111-1111-4111-8111-111111111111';
     project.capabilities = roles.member;
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
 
-  // Mirrors the route: `app/(authed)/(app)/demand/page.tsx` owns the TooltipProvider,
-  // as every other tooltip-using page in the app does.
   let client: QueryClient;
 
   function renderProjection() {
@@ -245,14 +229,10 @@ describe('Demand tab', () => {
   it('renders the top-strip filters carrying counts, detector status on the summary line and a flat table', async () => {
     renderProjection();
 
-    // One summary line; latent demand is the only figure the filters lack.
     const summary = await findSignalCount('2 signals observed');
-    expect(summary.parentElement).toHaveTextContent('350 impressions on non-branded signals'); // 250 + 100
-    // No section heading: the page title already names the page.
+    expect(summary.parentElement).toHaveTextContent('350 impressions on non-branded signals');
     expect(screen.queryByRole('heading', { name: 'Signals' })).not.toBeInTheDocument();
 
-    // Each filter carries its count once; the detectors that did not run in
-    // full are named by status on the summary line.
     const filters = within(screen.getByRole('radiogroup', { name: 'Signal type' }))
       .getAllByRole('radio')
       .map((chip) => chip.textContent);
@@ -267,16 +247,13 @@ describe('Demand tab', () => {
       screen.getByText('Unavailable: Cannibalization, CTR gap · Needs more history: Trends'),
     ).toBeVisible();
     expect(screen.getByRole('button', { name: 'How each detector works' })).toBeVisible();
-    // Caveats shared by the signals sit behind one hint, not a row.
     const caveats = screen.getByRole('button', { name: 'Data caveats' });
     expect(caveats).toBeVisible();
     expect(caveats).toHaveAccessibleDescription('Privacy-filtered queries may be omitted.');
     expect(screen.getByText('Privacy-filtered queries may be omitted.')).not.toBeVisible();
-    // No separate summary cards, detector line or Act on this list repeat them.
     expect(screen.queryByText('Latent demand')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Detectors' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Act on this' })).not.toBeInTheDocument();
-    // The search and filters sit in the page's top strip, before the table.
     const search = screen.getByLabelText('Filter queries or pages');
     expect(
       search.compareDocumentPosition(signalTable()) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -290,13 +267,9 @@ describe('Demand tab', () => {
     expect(within(table).queryByText('https://example.com/ai-tools')).not.toBeInTheDocument();
     expect(screen.queryByText('Within reach of the top results')).not.toBeInTheDocument();
 
-    // Tabular metrics
     expect(within(table).getByText('4.8%')).toBeInTheDocument();
     expect(within(table).getByText('7.2')).toBeInTheDocument();
 
-    // The internal priority score is never rendered. Asserted against the
-    // table's cells specifically — a bare `queryByText('85')` would pass or
-    // fail on any unrelated number that happens to format the same way.
     const cells = within(table)
       .getAllByRole('cell')
       .map((node) => node.textContent?.trim());
@@ -314,15 +287,12 @@ describe('Demand tab', () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('radio', { name: /^Striking distance/i }));
     focusByKeyboard(screen.getByRole('button', { name: 'Signal types' }));
-    // Both of the snapshot's types, though the filter now shows only one.
     expect((await screen.findByRole('tooltip')).textContent).toMatch(
       /Striking distance: .*Low CTR: Earns many impressions but few clicks/,
     );
   });
 
   it('keeps the reading and query relevance in the evidence drawer, quoting no unobserved benchmark', async () => {
-    // `school fees` carries ctr but no `cohort_median_ctr` — the reading must
-    // describe the gap without inventing a benchmark to compare against.
     renderProjection();
 
     fireEvent.click(await findSignalRow('school fees'));
@@ -367,7 +337,6 @@ describe('Demand tab', () => {
     const user = userEvent.setup();
     renderProjection();
 
-    // The promoted signal's evidence opens its Action.
     await user.click(await findSignalRow('ai marketing tools'));
     const drawer = await screen.findByRole('dialog', { name: 'ai marketing tools' });
     expect(
@@ -377,7 +346,6 @@ describe('Demand tab', () => {
     ).toBe(`/actions/66666666-6666-4666-8666-666666666666?project=${project.id}`);
     await user.keyboard('{Escape}');
 
-    // An unpromoted signal offers no Action, only the hand-off to the agent.
     await user.click(await findSignalRow('school fees'));
     const other = await screen.findByRole('dialog', { name: 'school fees' });
     expect(within(other).getByRole('link', { name: /Ask agent/ })).toBeVisible();
@@ -419,8 +387,6 @@ describe('Demand tab', () => {
     expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
     expect(signalRows().map(rankOf)).toEqual(['1', '2']);
 
-    // `school fees` is the second-priority signal; filtering to CTR gaps must
-    // not relabel it as the top-priority one.
     fireEvent.click(screen.getByRole('radio', { name: /^CTR gaps/i }));
 
     expect(signalRows().map((row) => [rankOf(row), row.textContent])).toEqual([
@@ -461,7 +427,6 @@ describe('Demand tab', () => {
       '20',
     ]);
 
-    // A larger page size shows more rows and starts again from the top.
     await user.click(screen.getByRole('combobox', { name: 'Rows per page for signals' }));
     await user.click(await screen.findByRole('option', { name: '25' }));
     expect(pagerSummary()).toBe('1–25 of 28 signals');
@@ -470,14 +435,12 @@ describe('Demand tab', () => {
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(pagerSummary()).toBe('26–28 of 28 signals');
     expect(signalRows().map(rankOf)).toEqual(['26', '27', '28']);
-    // The short last page draws no blank rows after its own (owner, 2026-11-18).
     expect(
       within(signalTable())
         .getAllByRole('row', { hidden: true })
         .filter((row) => row.getAttribute('aria-hidden') === 'true'),
     ).toHaveLength(0);
 
-    // A different filter is a different list: it opens on its first page.
     await user.click(screen.getByRole('radio', { name: /^Striking distance/i }));
     expect(pagerSummary()).toBe('1–25 of 27 signals');
     expect(rankOf(signalRows()[0]!)).toBe('1');
@@ -501,8 +464,6 @@ describe('Demand tab', () => {
 
     await user.click(await screen.findByRole('button', { name: 'How each detector works' }));
 
-    // The rule, in the server's thresholds, then the snapshot's own reason the
-    // detector is held back.
     expect((await screen.findByRole('tooltip')).textContent).toContain(
       'Trends: Queries whose impressions grew 1.5× or more, or fell to 0.67× or less, between the last two 21-day windows. Needs 42 days of continuous Search Console coverage. At least 42 days of coverage are required.',
     );
@@ -547,12 +508,10 @@ describe('Demand tab', () => {
     expect(screen.getByText('ai marketing tools')).toBeInTheDocument();
     expect(screen.queryByText('school fees')).not.toBeInTheDocument();
 
-    // Click All Signals chip
     const allChip = screen.getByRole('radio', { name: /^All Signals/i });
     fireEvent.click(allChip);
     expect(screen.getByText('school fees')).toBeInTheDocument();
 
-    // Search query
     const searchInput = screen.getByRole('searchbox', { name: 'Filter queries or pages' });
     fireEvent.change(searchInput, { target: { value: 'fees' } });
 
@@ -561,12 +520,7 @@ describe('Demand tab', () => {
   });
 
   it('announces the initial load', async () => {
-    vi.mocked(demandApi.getLatest).mockImplementation(
-      () =>
-        new Promise(() => {
-          // Intentionally pending so the loading state stays rendered.
-        }),
-    );
+    vi.mocked(demandApi.getLatest).mockImplementation(() => new Promise(() => {}));
     renderProjection();
 
     expect(await screen.findByRole('status')).toHaveAccessibleName('Loading search demand…');
@@ -642,7 +596,6 @@ describe('Demand tab', () => {
       signals: [
         {
           ...snapshot.signals[0]!,
-          // Rows recorded; source imports never were, which is not zero.
           evidence: {
             ...snapshot.signals[0]!.evidence,
             source_metric_row_ids: ['row-1', 'row-2', 'row-3'],
@@ -655,7 +608,6 @@ describe('Demand tab', () => {
     fireEvent.click(await findSignalRow('ai marketing tools'));
 
     const drawer = await screen.findByRole('dialog', { name: 'ai marketing tools' });
-    // The row already shows the figures; the drawer does not repeat them.
     expect(within(drawer).queryByText('Search Console performance')).not.toBeInTheDocument();
     expect(within(drawer).queryByText('Avg. position')).not.toBeInTheDocument();
     const provenance = within(drawer).getByRole('region', { name: 'Provenance' });
@@ -686,8 +638,6 @@ describe('Demand tab', () => {
       );
     });
 
-    // The worker has not run yet, so the UI must say the job is queued and
-    // must NOT silently refetch the identical snapshot as if it had rebuilt.
     expect(await screen.findByText(/Recompute queued/i)).toBeInTheDocument();
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(fetchesBeforeRecompute);
   });
@@ -701,18 +651,10 @@ describe('Demand tab', () => {
   });
 
   it('shows no snapshot from the project that was just switched away from', async () => {
-    // With `keepPreviousData` the previous project's snapshot renders as a
-    // success (placeholder data is not `isLoading`), so the view would show one
-    // project's demand signals while recomputing against another project's id.
     const { rerender } = renderProjection();
     expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
 
-    vi.mocked(demandApi.getLatest).mockImplementation(
-      () =>
-        new Promise(() => {
-          // The second project's read stays in flight.
-        }),
-    );
+    vi.mocked(demandApi.getLatest).mockImplementation(() => new Promise(() => {}));
     project.id = '99999999-9999-4999-8999-999999999999';
     rerender(
       <QueryClientProvider client={client}>

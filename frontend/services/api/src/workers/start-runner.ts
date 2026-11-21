@@ -13,7 +13,6 @@ const handoverBody = JSON.stringify({
   overrides: { containerOverrides: [{ env: [{ name: 'RUNNER_HANDOVER', value: 'true' }] }] },
 });
 
-/** A refused Google call: its own code and the HTTP status, never the body. */
 class RunnerStartError extends Error {
   readonly code: string;
   readonly status: number;
@@ -24,15 +23,6 @@ class RunnerStartError extends Error {
   }
 }
 
-/**
- * Start an execution, never wait for its work. A missed start is recovered by tick.
- * Single-flight: while one attempt is in flight (its timeout may outlast the
- * interval), every caller shares it instead of starting a duplicate execution.
- * The returned promise never rejects; it resolves whether Cloud Run accepted a
- * run. A `handover` start comes from the draining runner itself, so it skips
- * the drain probe (which would find that runner's lock) and flags the
- * successor to wait out the in-flight tail.
- */
 export function runnerStarter(
   config: ServiceConfig,
   db: Database,
@@ -45,7 +35,6 @@ export function runnerStarter(
     const signal = AbortSignal.timeout(config.execution.wakeTimeoutMs);
     try {
       if (mode === 'wake' && (await drainActive(db, signal))) {
-        // Only undo this probe's reservation; a newer probe may already own it.
         if (lastAttempt === time) lastAttempt = Number.NEGATIVE_INFINITY;
         return false;
       }
@@ -70,7 +59,6 @@ export function runnerStarter(
           signal,
         },
       );
-      // Consume the small operation response before returning the API response.
       await response.body?.cancel();
       if (!response.ok) throw new RunnerStartError('runner_start_rejected', response.status);
       return true;
@@ -90,7 +78,6 @@ export function runnerStarter(
     if (inFlight) return inFlight;
     const time = now();
     if (time - lastAttempt < config.execution.wakeMinIntervalMs) return Promise.resolve(false);
-    // Reserve before awaiting: concurrent requests share the same interval.
     lastAttempt = time;
     const current = attempt(time, mode).finally(() => {
       inFlight = null;
@@ -112,7 +99,6 @@ async function drainActive(db: Database, signal: AbortSignal): Promise<boolean> 
     return active.rows[0]?.held ?? false;
   } catch (error) {
     if (signal.aborted) throw error;
-    // The probe is an optimization. The runner itself enforces drain exclusivity.
     getLogger('workers.runner').warning('runner_lock_check_failed');
     return false;
   }

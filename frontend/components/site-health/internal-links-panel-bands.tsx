@@ -26,7 +26,6 @@ type ParamChange = (key: string, value: string, history?: UrlHistory) => void;
 export const isRunning = (state: InternalLinkAnalysis['state']) =>
   INTERNAL_LINK_STATES[state].active;
 
-/** The Internal links tab's address: the saved analysis, the search and the status filter. */
 export function useLinkParams() {
   const [params, setParams] = useSearchParams();
   const update: ParamChange = (key, value, history = 'push') =>
@@ -36,7 +35,6 @@ export function useLinkParams() {
         if (value) next.set(key, value);
         else next.delete(key);
         if (key === 'analysis') next.delete('link');
-        // A new search or status lists other links: their first page.
         if (key === 'links_q' || key === 'links_status') next.delete('links_page');
         return next;
       },
@@ -45,11 +43,6 @@ export function useLinkParams() {
   return { params, update };
 }
 
-/**
- * The tab's read and its run/cancel mutations. The screen owns it, because
- * the page header (Export, Analyze again) and the control band (search,
- * status, saved analysis) act on the same analysis the panel draws.
- */
 function useInternalLinks(scope: Scope, enabled: boolean) {
   const { params, update } = useLinkParams();
   const analysisId = params.get('analysis') || undefined;
@@ -63,7 +56,6 @@ function useInternalLinks(scope: Scope, enabled: boolean) {
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const analyze = useMutation(internalLinksMutations.analyze(scope));
   const cancel = useMutation(internalLinksMutations.cancel(scope, analysisId));
-  // Both actions are offered only once the read names their crawl or analysis.
   const startAnalysis = () => {
     const crawlId = data?.crawl_id;
     if (!crawlId) return;
@@ -96,12 +88,6 @@ export function filterLinks(links: InternalLink[], search: string, status: strin
   );
 }
 
-/**
- * Internal links' share of the page bands: the read the panel draws, the
- * header's one primary (Analyze again) and the control row: search, All
- * filters (status, saved analysis), the summary, then Export. `enabled` is false on every
- * other tab, so nothing is read there.
- */
 export function useInternalLinksBands({
   scope,
   enabled,
@@ -109,7 +95,6 @@ export function useInternalLinksBands({
 }: Readonly<{
   scope: Scope;
   enabled: boolean;
-  /** False while the screen withholds mutations: the export stays, the run does not. */
   canAnalyze?: boolean;
 }>): Readonly<{
   read: LinksRead;
@@ -145,7 +130,6 @@ function linksControls({
   links: InternalLink[];
   timeZone: string;
 }>): FilterBarProps | undefined {
-  // The first read holds the band, so the table starts on the same line once it lands.
   if (read.query.isPending) return RESERVED_CONTROLS;
   const data = read.data;
   const analysis = data?.analysis;
@@ -177,14 +161,11 @@ function linksControls({
       }),
       ...savedAnalysisFilter(data.history, analysis.id, update, timeZone),
     ],
-    // The summary is the row's flexible part: it truncates before Export moves,
-    // and its whole text stays in the title.
     status: (
       <span className="truncate" title={analysisSummary(analysis)}>
         {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
       </span>
     ),
-    // Held while the filters match nothing, so the row never reflows.
     actions: (
       <Button
         variant="secondary"
@@ -198,7 +179,6 @@ function linksControls({
   };
 }
 
-/** Which saved analysis the tab reads; offered once there are two to choose from. */
 function savedAnalysisFilter(
   history: NonNullable<LinksRead['data']>['history'],
   analysisId: string,
@@ -225,7 +205,6 @@ function savedAnalysisFilter(
   ];
 }
 
-/** What was analyzed and when, closing the control row. */
 function analysisSummary(analysis: InternalLinkAnalysis): string {
   const parts = [
     `${formatCount(analysis.recommendations.length)} suggestions`,
@@ -241,7 +220,6 @@ function analysisSummary(analysis: InternalLinkAnalysis): string {
   return parts.join(' · ');
 }
 
-/** The tab's header action: run the analysis again, or cancel the running one. */
 function LinksRun({
   read,
   analysis,

@@ -4,18 +4,6 @@ import { buttonClasses } from '@/components/ui/button';
 import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
 import './cookie-banner.css';
 
-/**
- * The cookie consent banner (the system's CookieBanner): a slim bar docked
- * along the bottom, with Reject and Accept as the same outlined button.
- * Server-rendered hidden; `cookie-banner.ts` reveals it only for an undecided
- * visitor or a reopened preference (which Escape closes). A landmark section
- * named "Cookie consent", not a
- * dialog: it does not trap focus or block the page, and its title line is
- * text, not a heading of the page.
- *
- * There are no category toggles: nothing non-essential is installed beyond
- * the optional analytics tag this gates.
- */
 const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBUTE]: decision });
 ---
 
@@ -26,7 +14,6 @@ const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBU
     non-essential cookies help us understand site usage. Read our{' '}
     <a href="/cookies" class="focus-ring">Cookie Policy.</a>
   </p>
-  {/* Reject first in the DOM so it is the first tab stop; both the same button. */}
   <div class="cl-cookie-actions">
     <button
       type="button"

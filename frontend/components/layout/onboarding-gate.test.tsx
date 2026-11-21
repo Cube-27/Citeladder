@@ -47,14 +47,6 @@ vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
 
 import { OnboardingGate } from './onboarding-gate';
 
-/**
- * A resolved workspace entitlement leaving `remaining` further project slots.
- *
- * The allowance now comes from the MEMBER-SAFE occupancy hints on the
- * workspace projection, not from the owner-private usage report — so a Member
- * reaches the same state an Owner does without reading the workspace's
- * finances.
- */
 function withSlots(remaining: number) {
   return {
     status: 'resolved',
@@ -62,10 +54,8 @@ function withSlots(remaining: number) {
   };
 }
 
-/** An entitlement that never resolved: the allowance is not answerable. */
 const UNRESOLVED = { status: 'entitlement_unresolved', occupancy: [] };
 
-/** The effective capabilities each role publishes on the workspace row. */
 const CAPABILITIES: Record<Role, readonly string[]> = {
   owner: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
   admin: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
@@ -135,8 +125,6 @@ describe('OnboardingGate', () => {
       </OnboardingGate>,
     );
 
-    // The workspace travels with the redirect: refreshing the creation route
-    // must not silently change which workspace the project is created in.
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith(`/onboarding?workspace=${WORKSPACE}`, { replace: true }),
     );
@@ -165,8 +153,6 @@ describe('OnboardingGate', () => {
   });
 
   it('does not redirect while the context is still resolving', () => {
-    // An unsettled read is indistinguishable from "no projects" on length
-    // alone. Redirecting here bounced existing users to onboarding for a frame.
     setContext('resolving');
     render(
       <OnboardingGate>
@@ -186,9 +172,6 @@ describe('OnboardingGate', () => {
       </OnboardingGate>,
     );
 
-    // An empty error result is never evidence that the account needs
-    // onboarding — sending them there is what let a transient network failure
-    // present as a brand new account.
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(
@@ -210,9 +193,6 @@ describe('OnboardingGate', () => {
   });
 
   it('names the projects read when that is what failed', () => {
-    // The workspace resolved; only the project list did not. Reporting a
-    // workspace failure sends the reader after an access problem that is not
-    // there.
     setContext('error', 'owner', 'projects');
     render(
       <OnboardingGate>
@@ -285,9 +265,6 @@ describe('OnboardingGate', () => {
   });
 
   it('keeps an empty workspace on its workspace-management routes', () => {
-    // A workspace with no projects is still a workspace: its owner may need
-    // billing, members and settings, and redirecting those to project creation
-    // made an empty workspace unmanageable.
     pathname = '/settings';
     setContext('empty');
     render(
@@ -342,10 +319,6 @@ describe('OnboardingGate', () => {
   });
 
   it('retries rather than asserting a limit when the allowance is unresolved', () => {
-    // Redirecting into creation on the strength of a number the server never
-    // confirmed is how a transient failure becomes a rejected second attempt —
-    // and telling the reader their access excludes another project would be a
-    // claim about an allowance nobody could read.
     setContext('empty');
     entitlement = { isLoading: false, entitlement: UNRESOLVED };
     render(
@@ -369,8 +342,6 @@ describe('OnboardingGate', () => {
     );
 
     expect(screen.getByText('workspace')).toBeInTheDocument();
-    // A loading indicator announces itself only after its reveal delay, so wait
-    // that out before checking none was drawn.
     await act(
       () =>
         new Promise<void>((resolve) => {

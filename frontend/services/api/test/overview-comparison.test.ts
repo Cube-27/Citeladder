@@ -10,7 +10,6 @@ import type { Database } from '../src/db/database.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
-/** One frozen ChatGPT-only brand run identity: runs carrying it compare. */
 const comparedConfiguration = {
   brand_name: 'Acme Corp',
   brand_aliases: [],
@@ -24,7 +23,6 @@ const comparedConfiguration = {
   measurement_policy: { retrieval_enabled: true, max_output_tokens: 1000, answer_instruction: '' },
 };
 
-/** A two-answer run's aggregate where `count` answers mention the brand. */
 function mentionAggregate(count: number) {
   const metrics = {
     total_completed: 2,
@@ -40,7 +38,6 @@ function mentionAggregate(count: number) {
   return { ...metrics, per_engine: { chatgpt: metrics } };
 }
 
-/** A run's metric snapshot written directly: no baseline is persisted by it. */
 async function rawSnapshot(database: Database, t: Tenant, auditId: string, count: number) {
   await database
     .insertInto('metric_snapshots')
@@ -115,7 +112,6 @@ describe('overview comparison with the persisted baseline', () => {
       ...configuration,
       panel_hash: 'different-panel',
     });
-    // A partially completed run is read like a completed one, as on the Visibility page.
     const current = await measured(
       '2026-03-03T00:00:00Z',
       2,
@@ -131,7 +127,6 @@ describe('overview comparison with the persisted baseline', () => {
         analyzer_version: 'test',
         scoring_rule_version: 'test',
       },
-      // Visibility is the mention rate (2 of 2 answers), not the weighted score (40).
       state: { visibility: { value: 100, delta: 100 } },
       track: { citation_share: { value: 0, delta: 0 } },
       report_available: true,
@@ -169,7 +164,6 @@ describe('overview comparison with the persisted baseline', () => {
       await measurements.metricSnapshot(t, id, { metrics: mentionAggregate(count) });
       return id;
     };
-    /** A snapshot no finalization wrote: nothing persisted its baseline. */
     const raw = async (at: string, count: number) => {
       const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
       await rawSnapshot(db, t, id, count);
@@ -196,7 +190,6 @@ describe('overview comparison with the persisted baseline', () => {
       .where('logical_engine', 'is', null)
       .executeTakeFirstOrThrow();
     expect(stored).toEqual({ status: 'comparable', baseline_audit_id: baseline });
-    // A compatible run between them that no finalization saw changes neither read.
     await raw('2026-04-02T00:00:00Z', 1);
     const overview = await commandCenter(db, t, null);
     const dashboard = await visibilityOf(null);
@@ -211,8 +204,6 @@ describe('overview comparison with the persisted baseline', () => {
     });
     expect(overview.state.visibility).toEqual({ value: 100, delta: 100 });
     expect(overview.track.limitations).toEqual([]);
-    // A finalized run whose baseline is not persisted yet is pending, not baseline-less,
-    // and the Overview says so in the words Visibility uses.
     const pending = await raw('2026-04-04T00:00:00Z', 2);
     const pendingView = await commandCenter(db, t, null);
     expect(pendingView.measurement).toMatchObject({
@@ -224,14 +215,12 @@ describe('overview comparison with the persisted baseline', () => {
       'The comparison with an earlier run is still being prepared.',
     ]);
     expect((await visibilityOf(pending)).comparison).toMatchObject({ status: 'baseline_pending' });
-    // The first run has nothing before it.
     const first = await commandCenter(db, t, baseline);
     expect(first.measurement).toMatchObject({
       comparable_audit_id: null,
       comparison_status: 'no_baseline',
     });
     expect(first.track.limitations).toEqual(['No earlier run to compare with yet.']);
-    // Another workspace reads none of it.
     const outsider = await measurements.tenant();
     await expect(
       commandCenter(db, { workspaceId: outsider.workspaceId, projectId: t.projectId }, current),
@@ -272,7 +261,6 @@ describe('overview comparison with the persisted baseline', () => {
       return id;
     };
     await run('2026-05-01T00:00:00Z', [false, false], 2);
-    // Prompt 2 failed in the earlier run's place, so only prompts 0 and 1 match.
     await run('2026-05-03T00:00:00Z', [true, true, false], 4);
 
     const view = await commandCenter(db, t, null);
@@ -282,7 +270,6 @@ describe('overview comparison with the persisted baseline', () => {
       comparable_audit_id: null,
       comparison_answers: { matched: 2, total: 3 },
     });
-    // The whole run's value, the shared answers' change: 0 of 2 named before, 2 of 2 now.
     expect(view.state.visibility).toEqual({ value: 66.67, delta: 100 });
     expect(view.track.limitations).toEqual(['2 of 3 answers comparable']);
   });
@@ -300,7 +287,6 @@ describe('overview comparison with the persisted baseline', () => {
       const unsettled = { completedAt: null, status: 'analyzing', configuration };
       const earlier = await measurements.audit(t, unsettled);
       const later = await measurements.audit(t, unsettled);
-      // One finalization's measured run and baselines, uncommitted until its transaction ends.
       const finalize = async (
         trx: Database,
         { auditId, at, count }: { auditId: string; at: string; count: number },
@@ -338,7 +324,6 @@ describe('overview comparison with the persisted baseline', () => {
         waiter = rows[0]!.pid;
         await finalize(trx, closing);
       });
-      // The second finalization waits on the first's baseline lock, not past it.
       await vi.waitFor(
         async () => {
           const { rows } = await sql<{ waiting: number }>`

@@ -1,9 +1,3 @@
-/**
- * Append-only Site Health evidence for one analyzed page: the fetch artifact,
- * one attempt row per real network call, the page analysis, its rule
- * evaluations and the issues they raise. Only the issues' derived currency flag
- * changes later (`issue-currency.ts`). Callers own the transaction.
- */
 import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
@@ -29,7 +23,6 @@ const attemptOutcome = {
   error: policy.site_health.reads.fetch_attempt_error_outcome,
 };
 
-/** The acquisition provenance this stack records on artifacts and attempts. */
 function provenance(policyVersion: string) {
   return {
     acquisition_transport: pa.acquisition.provenance.transport_node,
@@ -54,7 +47,6 @@ export async function writeArtifact(
     policyVersion: string;
     latencyMs: number;
     purpose: 'analyze' | 'discover';
-    /** Fetched despite a robots.txt exclusion, because the crawl ignores robots.txt. */
     robotsExcluded: boolean;
   },
 ) {
@@ -114,12 +106,6 @@ export type AttemptOutcome = {
   calls: FetchCall[];
 };
 
-/**
- * One attempt row per real network call, sharing the queue attempt number. A
- * call fails when it errored, answered 4xx/5xx, or ended an unsuccessful fetch;
- * only the successful final call links the artifact. A fetch that made no call
- * (a robots short-circuit) keeps one diagnostic row.
- */
 export async function writeAttempts(
   db: Database,
   crawl: Crawl,
@@ -175,7 +161,6 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** The page's sitemap entry in the crawl, with the observation supporting it. */
 async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
   const row = await db
     .selectFrom('site_sitemap_entries as e')
@@ -194,7 +179,6 @@ async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string)
   return row ?? null;
 }
 
-/** Site-level facts belong to the crawl root's analysis only. */
 function rootSiteFacts(crawl: Crawl, task: SiteTask): Facts | null {
   if (!crawl.site_facts) return null;
   try {
@@ -206,7 +190,6 @@ function rootSiteFacts(crawl: Crawl, task: SiteTask): Facts | null {
   }
 }
 
-/** Refresh the URL's lightweight state and fill a sparse admission observation from this fetch. */
 async function refreshUrlState(
   db: Database,
   crawl: Crawl,
@@ -243,7 +226,6 @@ async function refreshUrlState(
     .execute();
 }
 
-/** One analysis's new evaluations, with the page and artifact they judge. */
 export type EvaluationGroup = {
   analysisId: string;
   siteUrlId: string;
@@ -258,7 +240,6 @@ const chunksOf = <T>(rows: T[]) =>
     rows.slice(index * INSERT_CHUNK, (index + 1) * INSERT_CHUNK),
   );
 
-/** Every group's evaluations in one multi-row statement, then their issues in another. */
 export async function insertEvaluations(db: Database, crawl: Crawl, groups: EvaluationGroup[]) {
   const now = new Date();
   const pairs = groups.flatMap((group) =>
@@ -322,7 +303,6 @@ export async function insertEvaluations(db: Database, crawl: Crawl, groups: Eval
   for (const chunk of chunksOf(issues)) await db.insertInto('site_issues').values(chunk).execute(); // NOSONAR -- In order, in the caller's transaction.
 }
 
-/** The provisional context to load before CPU-bound interpretation and recheck at commit. */
 export async function pageAnalysisContext(
   db: Database,
   crawl: Crawl,
@@ -334,13 +314,10 @@ export async function pageAnalysisContext(
   const siteFacts = rootSiteFacts(crawl, task);
   return {
     sitemapMember: observationId !== null,
-    // The URL as the sitemap lists it: a redirect makes it differ from the final URL.
     sitemapUrl: observation?.listed_url ?? null,
     sitemapLastmod: observation?.lastmod ?? null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
-    // The crawl owns setup facts and audit time; the observation owns membership.
-    // Evaluation rows also retain extractor/analyzer/rule processing versions.
     sources: {
       sitemap_crawl_id: crawl.id,
       sitemap_observation_id: observationId,
@@ -350,7 +327,6 @@ export async function pageAnalysisContext(
   };
 }
 
-/** Append the precomputed provisional result; finalization adds cross-page checks later. */
 export async function writePageAnalysis(
   db: Database,
   crawl: Crawl,
@@ -408,9 +384,6 @@ export async function writePageAnalysis(
     })
     .execute();
   await insertEvaluations(db, crawl, [{ analysisId: id, siteUrlId, artifactId, evaluations }]);
-  // A provisional analysis's issues are current at once (CO-7), and those of
-  // the analysis it replaced are not; superseding a finalized analysis also
-  // republishes the crawl's issue set.
   await syncIssueCurrency(db, crawl, [
     id,
     ...superseded.map((row) => row.supersedes_analysis_id ?? row.id),

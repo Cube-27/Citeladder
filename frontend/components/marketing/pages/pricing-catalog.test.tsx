@@ -133,7 +133,6 @@ describe('public pricing handoff', () => {
         enabled === 'true' ? 'https://app.citeladder.com/register' : '/contact',
       );
       if (enabled === 'true') {
-        // The trial's limits come from the numbers passed in.
         expect(screen.getByText('7 days')).toBeInTheDocument();
         expect(screen.getByText(/Includes 500 AI credits\./)).toBeInTheDocument();
       }

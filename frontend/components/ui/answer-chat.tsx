@@ -5,14 +5,6 @@ import { textRole } from '@/components/ui/typography';
 import { ArrowUpRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * The answer view's organism: an answer drawn as the chat it was. A thread of
- * messages (the prompt on the right as your message, the engine's reply on
- * the left), inline chips for what the reply names and cites, and the rail
- * beside it. Feature code composes these and sets no geometry of its own.
- */
-
-/** The thread beside its rail; the rail drops under the thread below `desktop:`. */
 export function AnswerLayout({
   main,
   rail,
@@ -39,7 +31,6 @@ export function ChatThread({ label, children }: Readonly<{ label: string; childr
   );
 }
 
-/** A round 32px avatar: `ink` for you, `well` for an engine. Decorative. */
 export function ChatAvatar({
   tone,
   children,
@@ -57,7 +48,6 @@ export function ChatAvatar({
   );
 }
 
-/** Your message: a `well` bubble on the right, its avatar after it. */
 export function UserMessage({
   avatar,
   children,
@@ -72,7 +62,6 @@ export function UserMessage({
   );
 }
 
-/** The engine's reply: avatar, its name, then the reply at full width. */
 export function AssistantMessage({
   avatar,
   name,
@@ -89,7 +78,6 @@ export function AssistantMessage({
   );
 }
 
-/** The word on your own brand and your own site, small enough to sit inside a chip. */
 export function YouMark() {
   return (
     <span className="bg-accent-wash text-accent-text rounded-mark text-eyebrow px-1 font-medium">
@@ -101,11 +89,6 @@ export function YouMark() {
 const CHIP =
   'type-caption inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
 
-/**
- * A name the reply mentions, where it mentions it: its first-mention position,
- * a mark, the words, a dashed accent edge. Plain text, never cut: the answer is
- * shown whole.
- */
 export function MentionChip({
   position,
   mark,
@@ -132,7 +115,6 @@ export function MentionChip({
   );
 }
 
-/** A source the reply cites, where it cites it: favicon, the link's words (never cut), the new-tab arrow. */
 export function CitationChip({
   href,
   mark,
@@ -161,7 +143,6 @@ export function CitationChip({
   );
 }
 
-/** One rail section: a heading with an optional count, then its body. */
 export function RailSection({
   title,
   trailing,
@@ -178,7 +159,6 @@ export function RailSection({
   );
 }
 
-/** A rail's ordered list; `dense` for one-line rows, else room for a stacked row. */
 export function RailList({
   label,
   dense = false,
@@ -191,27 +171,22 @@ export function RailList({
   );
 }
 
-/** One line of a rail row: its parts in a row, the last pushed to the end when `trailing`. */
 export function RailLine({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="flex min-w-0 items-center gap-2">{children}</span>;
 }
 
-/** A rail row: lines stacked tight. */
 export function RailItem({ children }: Readonly<{ children: ReactNode }>) {
   return <li className="flex min-w-0 flex-col gap-1">{children}</li>;
 }
 
-/** A rail row's leading figure (a rank), in a fixed column so the names align. */
 export function RailRank({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="type-caption text-ink-2 w-6 shrink-0 tabular-nums">{children}</span>;
 }
 
-/** A rail row's trailing note, at the end of its line. */
 export function RailNote({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="type-caption text-ink-2 ms-auto shrink-0 tabular-nums">{children}</span>;
 }
 
-/** One search the engine ran, as its words on the well. */
 export function QueryItem({ children }: Readonly<{ children: ReactNode }>) {
   return <li className="type-body bg-well rounded-mark px-2 py-1">{children}</li>;
 }

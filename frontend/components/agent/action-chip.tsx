@@ -5,10 +5,6 @@ import { readableUrl } from '@/lib/format';
 
 type ChatAction = AgentChatDetail['actions'][number];
 
-/**
- * An Action named in a chat: its title and current status, linking to its
- * page. A page Action's title is its URL, shown readable with its tail kept.
- */
 export function ActionChip({
   action,
   prefix = '',

@@ -1,6 +1,5 @@
 import { type PlatformPage } from './platform-page-types';
 
-/** Diagnosis capabilities: site, first-party search and external research. */
 export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/site-health',

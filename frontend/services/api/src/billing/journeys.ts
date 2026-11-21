@@ -22,7 +22,6 @@ function campaignId(key: string) {
   return uuidV5('5f0ae2be-21f3-4c0b-a312-b1d946f32921', key);
 }
 
-/** The offer as read, with the refusal a claim of it meets now (null when available). */
 async function offerDecision(db: Database, workspaceId: string, now: Date) {
   const account = await workspaceAccount(db, workspaceId);
   const published = await catalog(db);
@@ -70,7 +69,6 @@ export async function offerRead(db: Database, workspaceId: string, now: Date) {
 
 const codeHash = (code: string) => createHash('sha256').update(code).digest('hex');
 
-/** A repeated claim replays only with the same key, campaign and operator code. */
 async function replayClaim(
   db: Database,
   prior: Selectable<IntroductoryClaims>,

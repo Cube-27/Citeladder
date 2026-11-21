@@ -22,7 +22,6 @@ function hostOf(origin: string): string {
   }
 }
 
-/** The apex, app and API hosts the Workers may name as a request's public host. */
 function publicHosts(config: ServiceConfig): Set<string> {
   return new Set(
     [config.auth.frontendUrl, config.auth.publicWebsiteUrl, config.auth.publicApiUrl]
@@ -31,18 +30,15 @@ function publicHosts(config: ServiceConfig): Set<string> {
   );
 }
 
-/** Machine routes live under `policy.api.machine_prefix`. */
 export function isMachinePath(path: string): boolean {
   const prefix = policy.api.machine_prefix;
   return path === prefix || path.startsWith(prefix + '/');
 }
 
-/** Only the API host serves machine routes and the MCP protocol, and only those. */
 function isApiHostPath(path: string): boolean {
   return isMachinePath(path) || MCP_API_HOST_PATHS.has(path);
 }
 
-/** Whether a supplied hex signature equals one made with any current origin key. */
 async function signedByOrigin(keys: readonly string[], facts: OriginSignedFacts, supplied: string) {
   const given = Buffer.from(supplied, 'utf8');
   for (const key of keys) {
@@ -52,16 +48,6 @@ async function signedByOrigin(keys: readonly string[], facts: OriginSignedFacts,
   return false;
 }
 
-/**
- * Cloud Run admission: only the Workers hold the origin key, and they never
- * send it. Each request carries an HMAC over its time, method, public host,
- * path and visitor address; a request without a fresh, valid signature from
- * the current or previous key is refused before any route runs. The signed
- * public host must be allowlisted, and the signed visitor address is the only
- * client address the API trusts. Two routes are registered ahead of it: the
- * scheduled tick (`workers/scheduled-tick.ts`), admitted by Google ID token,
- * and the constant `GET /health` liveness answer (`app.ts`).
- */
 export function originToken(config: ServiceConfig): MiddlewareHandler<AppEnv> {
   const keys = config.execution.protectOrigin
     ? [config.execution.originToken, config.execution.previousOriginToken].filter(Boolean)

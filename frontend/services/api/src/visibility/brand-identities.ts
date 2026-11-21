@@ -1,12 +1,3 @@
-/**
- * The marks and websites behind recorded brand names.
- *
- * A mention is persisted as a NAME, resolved against this
- * project's brand and competitor records (every competitor alias included);
- * the tracked brand wins a name collision, and a name that resolves to
- * nothing has no mark rather than a borrowed one. The one resolver for every
- * read that names a brand, so a stored domain always reaches the mark.
- */
 import type { FirstNamed } from '@citeladder/contracts/audits';
 import type { NamedBrand } from '@citeladder/contracts/visibility';
 import { sql } from 'kysely';
@@ -21,17 +12,10 @@ import { selectedCohorts } from './selection.ts';
 
 export type BrandIdentity = { logo_url: string | null; website: string | null };
 
-/** How many named brands a table row shows before its overflow count. */
 const LEADING_BRANDS = 3;
 
-/** One name recorded in a set of answers, and how many of them named it. */
 export type BrandCount = Pick<NamedBrand, 'kind' | 'name' | 'responses'>;
 
-/**
- * A row's named brands: the distinct count, and the leading few with their
- * marks — most answers first, then the tracked brand before competitors, then
- * by name.
- */
 export function leadingBrands(
   counts: readonly BrandCount[],
   identities: ReadonlyMap<string, BrandIdentity>,
@@ -66,26 +50,22 @@ export function identityKey(name: unknown): string {
   return scalarText(name).trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
-/** A stored site or bare domain as `https://host`, or null when none parses. */
 function siteOf(value: string | null | undefined): string | null {
   const domain = normalizeDomain(value);
   return domain ? `https://${domain}` : null;
 }
 
-/** The mark fields for one recorded name; both null for a name with no record. */
 export function markOf(identities: ReadonlyMap<string, BrandIdentity>, name: string) {
   const identity = identities.get(identityKey(name));
   return { logo_url: identity?.logo_url ?? null, website_url: identity?.website ?? null };
 }
 
-/** The stored first-named business with its mark; none stays as it is. */
 export function markFirstNamed(first: FirstNamed, identities: ReadonlyMap<string, BrandIdentity>) {
   return first.kind === 'brand' || first.kind === 'competitor'
     ? { ...first, ...markOf(identities, first.name) }
     : first;
 }
 
-/** Set each named row's logo and website from `identities`, in place. */
 export function applyIdentities(
   rows: readonly { name: string; logo_url?: string | null; website_url?: string | null }[],
   identities: ReadonlyMap<string, BrandIdentity>,
@@ -93,7 +73,6 @@ export function applyIdentities(
   for (const row of rows) Object.assign(row, markOf(identities, row.name));
 }
 
-/** The scope's project marks keyed by `identityKey`. */
 export async function brandIdentities(
   db: Database,
   { workspaceId, projectId }: ProjectScope,
@@ -149,10 +128,6 @@ export async function brandIdentities(
   return found;
 }
 
-/**
- * The brands each prompt's answers named, over the same answers its rates
- * count: the tracked brand and every competitor, by distinct answers.
- */
 export async function namedBrands(
   db: Database,
   scope: { workspaceId: string },

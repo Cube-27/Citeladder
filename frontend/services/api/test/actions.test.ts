@@ -1,4 +1,3 @@
-/** Action cutover: real routes, authorization, concurrency and frozen evidence. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
@@ -57,7 +56,6 @@ describe('Action routes', () => {
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {
     const s = await seed();
     const list = `/api/v1/projects/${s.project_id}/actions`;
-    // Action sync persists the handoff in the diagnosis; the routes only read it.
     await db
       .updateTable('actions')
       .set({
@@ -72,7 +70,6 @@ describe('Action routes', () => {
       Object.fromEntries(items.map((item) => [item.target_label, item.handoff.message])),
     ).toEqual({
       'https://acme.test/a': 'Fix page a.',
-      // No persisted diagnosis: the chat opens about the Action's label.
       'https://acme.test/b': 'Work on https://acme.test/b.',
       'best crm for small teams': 'Work on best crm for small teams.',
     });
@@ -115,7 +112,6 @@ describe('Action routes', () => {
       [actionId(s, otherRule), 'low'],
     ]);
 
-    // A cursor continues only the filters it was made under.
     const medium = await read('?priority=medium&limit=1');
     expect(rows(medium)).toEqual([[product.id, 'medium']]);
     const next = await read(`?priority=medium&limit=1&cursor=${medium.next_cursor}`);
@@ -132,7 +128,6 @@ describe('Action routes', () => {
     for (const query of ['grouping=mine', 'priority=urgent', 'approach=rewrite', 'family=email'])
       expect((await request(s, `${list}?${query}`)).status).toBe(422);
 
-    // Another workspace reads none of these rows.
     expect((await request(foreign, `${list}?family=commerce`)).status).toBe(404);
     const theirs = async (query: string) =>
       (
@@ -154,14 +149,11 @@ describe('Action routes', () => {
           .where('id', '=', actionId(s))
           .executeTakeFirstOrThrow()
       ).effective_status;
-    // A chat output on a New Action leaves it New: only a decision moves it.
     await actionFixture<string>('revision', s.workspace_id, s.project_id, actionId(s));
     expect(await stored()).toBe('open');
     expect((await detailBody(await request(s, actionPath(s)))).status).toBe('open');
-    // A declaration persists implemented in its own transaction.
     const declared = await declarationBody(await declare(s, 'persisted'));
     expect(await stored()).toBe('implemented');
-    // A verification row no writer recorded leaves every read as persisted.
     await db
       .insertInto('opportunity_verification_events')
       .values({
@@ -183,7 +175,6 @@ describe('Action routes', () => {
         idempotency_key: randomUUID(),
       })
       .execute();
-    // Done, still measuring: the unrecorded verification is not read.
     const page = await pageBody(await request(s, `${list}?status=done`));
     expect(page.items.map((row) => [row.id, row.status, row.measurement])).toEqual([
       [actionId(s), 'done', 'measuring'],
@@ -259,7 +250,6 @@ describe('Action routes', () => {
       .executeTakeFirstOrThrow();
     expect(body.target_site_url_ids).toEqual([page.id]);
     expect(body.legs[0]!.state).toBe('not_scheduled');
-    // A stored serialization hash is not the request's meaning.
     await db
       .updateTable('opportunity_implementation_events')
       .set({ request_fingerprint: 'a'.repeat(64) })
@@ -412,7 +402,6 @@ describe('Action routes', () => {
       baseline_metric_snapshot_id: s.metric_snapshot_id,
       target_prompt_id: s.prompt0_id,
     });
-    // The check reads as the prompt's text and links to its history by id.
     expect(result.checks).toMatchObject([
       { kind: 'visibility_metric', subject: 'best crm for small teams', prompt_id: s.prompt0_id },
     ]);
@@ -465,7 +454,6 @@ describe('Action routes', () => {
       target_resolution: { state: 'no_covering_page', candidates: [] },
       provider: 'dataforseo',
       statement: 'Competitors rank for crm for startups.',
-      // Content gaps: one angle of a content-angle run.
       run_id: randomUUID(),
       lineage_id: randomUUID(),
       angle_label: 'CRM pricing',
@@ -520,7 +508,6 @@ describe('Action routes', () => {
         [row],
         { auditId: s.audit_id, declaredAt: boundary, outputRevisionId: null },
       );
-    // Contextual links freeze only selected suggestions; internal-links-routes declares one.
     const enabled = Object.values(policy.opportunity.opportunities.OPPORTUNITY_RULES_BY_ID).filter(
       (rule) => rule.enabled && rule.check_kind !== 'contextual_link',
     );
@@ -541,21 +528,17 @@ describe('Action routes', () => {
       'next_search_console_window',
       'next_visibility_run',
     ]);
-    // A member nothing can isolate promises no reading and freezes none.
     const unscoped = member('brand_absent_high_value_prompt', {
       target_prompt_id: null,
       evidence: {},
     });
     expect([memberMeasurementLeg(unscoped), await freeze(unscoped)]).toEqual([null, []]);
-    // A site change is no rule a crawl evaluates, so nothing can verify it (BE-801).
     const change = member('site_change_critical_regression');
     expect([memberMeasurementLeg(change), await freeze(change)]).toEqual([null, []]);
-    // A page finding naming no Site Health rule freezes no check.
     const ruleless = member('site_link_near_orphan', {
       evidence: { site_url_id: evidence.site_url_id },
     });
     expect([memberMeasurementLeg(ruleless), await freeze(ruleless)]).toEqual([null, []]);
-    // A page finding folding two rules verifies each of them (BE-802, SH-B2).
     const folded = member('site_link_weak_authority', {
       evidence: {
         ...evidence,
@@ -582,7 +565,6 @@ describe('Action routes', () => {
         target_site_url_id: evidence.site_url_id,
       },
     ]);
-    // The baseline comes from this project's audit, never another workspace's.
     await db
       .updateTable('metric_snapshots')
       .set({ metrics: JSON.stringify({ per_prompt: [{ prompt_index: 0, composite_score: 12 }] }) })
@@ -637,10 +619,8 @@ describe('Action routes', () => {
       },
     ]);
     expect(body.legs).toMatchObject([{ leg: 'next_visibility_run' }]);
-    // A prompt this project no longer tracks names nothing, never a bare id.
     expect(body.checks).toMatchObject([{ subject: null, prompt_id: null }]);
     expect((await declare(s, 'earned', 'earned')).status).toBe(200);
-    // The existing schema prevents a declaration claiming both target kinds.
     await expect(
       db
         .updateTable('opportunity_implementation_events')
@@ -676,7 +656,6 @@ describe('Action routes', () => {
           idempotency_key: randomUUID(),
         })
         .execute();
-      // The verifier refreshes the Action in the transaction that appends its observation.
       await refreshActionStatus(db, s.workspace_id, actionId(s));
       const detail = await detailBody(await request(s, actionPath(s)));
       expect([detail.status, detail.measurement]).toEqual([
@@ -695,7 +674,6 @@ describe('Action routes', () => {
 });
 
 describe('Declaration ordering', () => {
-  /** An Opportunity snapshot of the seed's project committed at `at`. */
   async function snapshotAt(s: ActionSeed, at: Date, values = {}) {
     const row = snapshotRow(
       { workspace_id: s.workspace_id, project_id: s.project_id },
@@ -704,7 +682,6 @@ describe('Declaration ordering', () => {
     await db.insertInto('opportunity_snapshots').values(row).execute();
     return row.id;
   }
-  /** A refresh that found none of the project's findings: Action sync clears every Action. */
   async function resolveAll(s: ActionSeed, at: Date) {
     const snapshot = await snapshotAt(s, at);
     await db.transaction().execute(async (trx) => {
@@ -747,7 +724,6 @@ describe('Declaration ordering', () => {
   it('baselines on the newest snapshot at or before go-live, and on none when none existed', async () => {
     const s = await seed();
     const before = await snapshotAt(s, new Date(Date.parse(boundary) - 3_600_000));
-    // A refresh after go-live is not what the change was declared against.
     await snapshotAt(s, new Date());
     const body = await declarationBody(await declare(s, 'ordered'));
     expect(body.opportunity_snapshot_id).toBe(before);
@@ -763,7 +739,6 @@ describe('Declaration ordering', () => {
     expect(created.status).toBe(201);
     const unavailable = await declarationBody(created);
     expect(unavailable.opportunity_snapshot_id).toBeNull();
-    // With no baseline audit the prompt check keeps no baseline reading.
     expect(unavailable.expected_checks[0]).toMatchObject({ kind: 'visibility_metric' });
     expect(unavailable.expected_checks[0]).not.toHaveProperty('baseline_metric_snapshot_id');
     expect((await detailBody(await request(late, actionPath(late, promptRule)))).status).toBe(
@@ -785,7 +760,6 @@ describe('Declaration ordering', () => {
     expect(body.expected_checks).toEqual([
       { kind: 'site_rule', rule_id: 'aeo.structured_data_present', expected_outcome: 'pass' },
     ]);
-    // The crawl and audit after go-live are read for this declaration at once.
     expect(await verifications(s)).toBe(2);
   });
 
@@ -852,7 +826,6 @@ describe('Declaration ordering', () => {
         )
       ).status,
     ).toBe(404);
-    // A last member set naming another workspace's finding declares nothing.
     await db
       .updateTable('actions')
       .set({ last_member_opportunity_ids: JSON.stringify([foreign.members[pageRule]]) })
@@ -871,7 +844,6 @@ it('waits for a Search Console window that starts after the declaration day', ()
   expect(searchConsoleState(at, before, at).state).toBe('waiting');
   const due = searchConsoleState(at, null, at).due_at;
   expect(searchConsoleState(at, before, due).state).toBe('sync_needed');
-  // The go-live day itself is partly before the change.
   expect(searchConsoleState(at, { start: '2026-09-01', end: '2026-09-04' }, at).state).toBe(
     'waiting',
   );

@@ -18,12 +18,6 @@ import { ownsWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
-/**
- * Where a signed-in person goes next: their own workspace (or setting one up
- * when they own none) and every workspace they were invited to. Someone with
- * exactly one destination never sees this: the route loader's
- * `chooserShortcut` sends them on before anything paints, the one shortcut.
- */
 export function WorkspaceChooser() {
   const { workspaces, status, retry } = useProjectContext();
   const selectWorkspace = useSelectWorkspace();
@@ -88,7 +82,6 @@ function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
   );
 }
 
-/** Whether entering this workspace will open it, as its access says now. */
 function AccessBadge({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const { data } = useQuery(workspaceQueries.access(workspaceId));
   if (!data) return null;

@@ -23,7 +23,6 @@ import {
 import { Notice } from '@/components/ui/notice';
 
 export type PlanChangeControls = {
-  /** Prepares the prorated upgrade quote for review; nothing is charged yet. */
   upgrade: (key: SelfServePlanKey) => void;
   downgrade: (key: SelfServePlanKey) => void;
   pending: boolean;
@@ -41,14 +40,6 @@ export function changeOptions(catalog: BillingCatalog, current: CatalogPlan): Op
   });
 }
 
-/**
- * Moving an existing subscription between self-serve plans.
- *
- * An upgrade starts immediately once its prorated charge is paid, so it goes
- * through the same quote review as any purchase. A downgrade costs nothing
- * and waits for the next renewal, so it is confirmed in place. One scheduled
- * change at a time: while one is pending, the others are held.
- */
 export function PlanChanges({
   catalog,
   currentPlan,
@@ -78,7 +69,6 @@ export function PlanChanges({
     const price = funded ? plan.funded_total_price : plan.base_price;
     return price ? `${formatMoney(price, catalog.currency_minor_units)} / month before tax` : null;
   };
-  // The workspace's own plan stands in its catalogue place among the ones it can move to.
   const cards = catalog.plans.flatMap((plan): { plan: CatalogPlan; option: Option | null }[] => {
     if (plan.key === currentPlan.key) return [{ plan, option: null }];
     const option = options.find((candidate) => candidate.key === plan.key);

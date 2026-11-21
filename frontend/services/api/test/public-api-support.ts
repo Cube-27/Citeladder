@@ -1,4 +1,3 @@
-/** An app, database and fixtures for public API tests, with key and request helpers. */
 import { expect } from 'vitest';
 
 import { createApp } from '../src/app.ts';
@@ -12,7 +11,6 @@ export function publicApiHarness() {
   const app = createApp(config, db);
   const fixtures = new VisibilityFixtures(db);
 
-  /** The shared project fixture's benchmark mode predates the project contract's enum. */
   async function validProjects(workspaceId: string) {
     await db
       .updateTable('projects')
@@ -21,7 +19,6 @@ export function publicApiHarness() {
       .execute();
   }
 
-  /** A paid workspace: API access and ten keys, as every paid plan grants. */
   async function withApiAccess<T extends Tenant>(tenant: T): Promise<T> {
     const account = await billingAccount(db, tenant.workspaceId);
     await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });

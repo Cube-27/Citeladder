@@ -28,7 +28,6 @@ describe('inSection', () => {
   });
 });
 
-/** The navbar as SiteNav.astro renders it, reduced to the sheet. */
 function renderNav(): HTMLElement {
   document.body.innerHTML = `
     <header data-site-nav>

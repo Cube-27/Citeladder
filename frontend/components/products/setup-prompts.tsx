@@ -30,7 +30,6 @@ import {
   SectionTitle,
 } from '@/components/ui/section';
 
-// Per hero product; the API defaults the count, and a category generates its matrix.
 const HERO_COUNT = 3;
 
 function forTarget(
@@ -40,12 +39,6 @@ function forTarget(
   return rows.filter((row) => sameTarget(row.target, target));
 }
 
-/**
- * The buyer prompts that measure one catalog product (hero-product prompts)
- * or category (its shopping-prompt matrix), on its page's Setup: generate,
- * approve, add manually, and review and launch an audit. `level` 3 when it
- * sits inside the product's Setup section.
- */
 export function SetupPrompts({
   projectId,
   target,
@@ -65,7 +58,6 @@ export function SetupPrompts({
   const [launchedAuditId, setLaunchedAuditId] = useState<string | null>(null);
   const [shortfall, setShortfall] = useState<number | null>(null);
   const [matrixOpen, setMatrixOpen] = useState(false);
-  // The audit stream refreshes the product metrics and Actions when the run finishes.
   useRunEvents(launchedAuditId, projectId, Boolean(launchedAuditId));
   const scope = { workspaceId, projectId };
   const { generate: generateFor, mutation: generate } = useGenerateBuyerPrompts(scope);
@@ -81,8 +73,6 @@ export function SetupPrompts({
     if (row.enabled) ids.push(row.id);
     return ids;
   }, []);
-  // Generating and launching are runs; approving and adding are writes. A role
-  // without either reads the prompts and their state only.
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
   const busy = [generate.isPending, manual.isPending, decide.isPending].some(Boolean);
@@ -158,8 +148,6 @@ export function SetupPrompts({
             pending={busy}
             onToggle={canWrite ? (id, approved) => decide.mutate({ id, approved }) : undefined}
           />
-          {/* Manual entry is the fallback for an unconfigured model, so it is
-            folded away rather than given equal billing beside Generate. */}
           {canWrite ? (
             <ManualPrompt text={text} onText={setText} busy={busy} onAdd={addPrompt} />
           ) : null}
@@ -169,11 +157,6 @@ export function SetupPrompts({
   );
 }
 
-/**
- * The card's actions: a category's matrix (open to every role, since it reads),
- * or a hero product's Generate; then Review and launch. Generating and
- * launching are runs, offered only to a role that may run.
- */
 function SetupPromptActions({
   kind,
   busy,
@@ -187,17 +170,14 @@ function SetupPromptActions({
 }: Readonly<{
   kind: CommerceTarget['kind'];
   busy: boolean;
-  /** Whether the prompts have loaded; the matrix reads loaded prompts only. */
   loaded: boolean;
   generating: boolean;
-  /** How many prompts are approved; launching needs one. */
   approved: number;
   canRun: boolean;
   onMatrix: () => void;
   onGenerate: () => void;
   onLaunch: () => void;
 }>) {
-  // The list below owns the loading and error states.
   const matrix = (
     <Button variant="secondary" disabled={busy || !loaded} onClick={onMatrix}>
       Shopping prompts matrix
@@ -252,7 +232,6 @@ function PromptRows({
   query: CommerceQueries['buyerPrompts'];
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>;
   pending: boolean;
-  /** Approves or disables a prompt; omitted for a role that may not, which reads the state. */
   onToggle?: (id: string, approved: boolean) => void;
 }>) {
   if (query.isError)

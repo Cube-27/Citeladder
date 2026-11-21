@@ -17,7 +17,6 @@ const CY = 150;
 const RADIUS = 105;
 const LABEL_RADIUS = 1.22;
 const RINGS = [25, 50, 75, 100];
-/** Competitors drawn at once beside the brand: one chart tone each. */
 const RIVAL_TONES = [2, 3, 4] as const satisfies readonly ChartTone[];
 const BRAND_TONE: ChartTone = 1;
 
@@ -30,16 +29,11 @@ function point(index: number, count: number, value: number) {
   return [CX + Math.cos(angle) * reach, CY + Math.sin(angle) * reach] as const;
 }
 
-/** Names the businesses a radar draws: key the radar by it so a new roster resets its picks. */
 export const rosterKey = (themes: Themes) => (themes[0]?.entities ?? []).map(keyOf).join('|');
 
 const polygon = (values: readonly number[]) =>
   values.map((value, index) => point(index, values.length, value).join(',')).join(' ');
 
-/**
- * Brand shape: each tracked brand's position score per theme on one radar,
- * the brand and up to three competitors toggled under it.
- */
 export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
   const roster = themes[0]?.entities ?? [];
   const rivals = roster.filter((entity) => entity.kind === 'competitor');

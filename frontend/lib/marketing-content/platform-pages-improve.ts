@@ -1,7 +1,6 @@
 import { MCP_SERVER_URL } from '@/lib/config/mcp-clients';
 import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 
-/** Action and connection capabilities: content, the Agent, MCP and integrations. */
 export const IMPROVE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/content-optimization',

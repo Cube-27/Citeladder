@@ -7,15 +7,9 @@ import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 
-/**
- * A website page in a new tab. The origin may be unset in development (a
- * relative path), so the anchor is ours; the external recipe adds the glyph and
- * the new-tab note.
- */
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
     <TextLink asChild variant="external" text="inherit">
-      {/* Short labels: the new-tab glyph stays with the last word. */}
       <a href={websiteHref(path)} target="_blank" rel="noreferrer" className="whitespace-nowrap">
         {children}
       </a>
@@ -23,13 +17,6 @@ function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children:
   );
 }
 
-/**
- * What the buyer agrees to, shown beside every confirm-and-pay control.
- *
- * A recurring plan authorises a monthly charge until cancelled; a one-time
- * purchase (add-on, top-up, upgrade proration) authorises exactly one charge.
- * Both are bound by the same three policies.
- */
 export function CheckoutConsent({ recurring }: Readonly<{ recurring: boolean }>) {
   return (
     <p className={textRole('caption')}>
@@ -43,11 +30,6 @@ export function CheckoutConsent({ recurring }: Readonly<{ recurring: boolean }>)
   );
 }
 
-/**
- * Billing support. The catalog's own contact wins; the operator's published
- * contact is the fallback when the catalog carries none. An empty phone is
- * hidden rather than shown as a blank line.
- */
 export function BillingSupport({
   contact,
 }: Readonly<{ contact: BillingCatalog['support_contact'] }>) {

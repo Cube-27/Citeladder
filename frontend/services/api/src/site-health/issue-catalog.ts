@@ -1,26 +1,3 @@
-/**
- * The Issues catalog a crawl's unfiltered read serves, persisted on
- * `site_issue_catalogs` per finding class and once for both classes together
- * (`catalogClassKey`).
- *
- * It is written wherever the crawl's current issue set changes, in that
- * writer's transaction: every issue-currency refresh (the terminal
- * publication, an analysis appended over a finalized one, a duplicate alias
- * retiring analyses), the site-level architecture findings, and a page rerun
- * landing in the site crawl that shows it (`issue-currency.ts`). Each write
- * replaces the crawl's rows with the groups and summary computed from the
- * issues the crawl shows (each page's latest audit, `viewIssuesSql`), so the
- * read never recomputes them. The issues stay as
- * written; each row names the crawl and versions it was computed from. Every
- * part is a SQL aggregate bounded by the rule groups, never by the crawl's
- * issues, so it is rewritten on each batched publication while a crawl runs
- * (CO-7).
- *
- * `reference_snippets` keeps at most one redacted HTML reference snippet per
- * issue family: from the first affected page in URL order whose fetched facts
- * carry one. Pages keep theirs only in their bounded fetch facts; the Agent's
- * Site Health tool reads the catalog's (`mcp/evidence-site.ts`).
- */
 import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -37,7 +14,6 @@ import { viewIssuesSql } from './reads/crawl.ts';
 import { issueGroupId } from './reads/rules.ts';
 import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
-/** Where in a page's fetched facts each issue family's reference snippet is captured. */
 const SNIPPET_FACTS: Readonly<Record<string, readonly string[]>> = {
   'web.accessibility_form_names': ['accessibility', 'controls_missing_accessible_name_snippet'],
 };
@@ -56,7 +32,6 @@ export const referenceSnippetSchema = z.object({
 });
 type IssueReferenceSnippet = z.infer<typeof referenceSnippetSchema>;
 
-/** The family's first affected page, by URL then issue id, whose facts carry a snippet at `path`. */
 async function firstSnippetRow(
   db: Database,
   crawl: Crawl,
@@ -92,7 +67,6 @@ async function firstSnippetRow(
   return rows[0];
 }
 
-/** Each issue family's one snippet: its first affected page, by URL then issue id, that has one. */
 async function referenceSnippets(
   db: Database,
   crawl: Crawl,
@@ -116,15 +90,12 @@ async function referenceSnippets(
   return snippets;
 }
 
-/** Each class's catalog, and the combined one, from the issues the crawl shows. */
 async function computeIssueCatalog(db: Database, crawl: Crawl) {
   const classes = [];
   for (const findingClass of [...ISSUE_FINDING_CLASSES, null]) {
     const filters = unfilteredIssues(findingClass);
-    // One connection: the class's reads in order.
     const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on one connection.
     const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on one connection.
-    // The combined row repeats the class rows' groups; their snippets stay on those rows.
     const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR -- In order on one connection.
     classes.push({ findingClass, items, summary, snippets });
   }
@@ -171,12 +142,6 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
   await writeIssueCatalog(db, crawl, await computeIssueCatalog(db, crawl));
 }
 
-/**
- * A running crawl's batched Issues publication (CO-7), on the issues cadence:
- * the catalog is computed outside the crawl lock every task commit takes, and
- * the lock is held only for the write, which a crawl that ended meanwhile
- * skips, so the terminal publication's catalog is never overwritten.
- */
 export async function publishRunningIssues(
   db: Database,
   task: { workspace_id: string; crawl_id: string },

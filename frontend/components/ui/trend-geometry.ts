@@ -1,19 +1,11 @@
 import { chartTicks } from '@/components/ui/chart';
 
-/** The fixed insets around the plot: 24 right, 12 above, 32 under it for the dates. */
 const PAD_RIGHT = 24;
 const PAD_TOP = 12;
 const PAD_BOTTOM = 32;
 
-/** Spacing sits on the 4px grid, at the nearest step. */
 export const onGrid = (value: number) => Math.round(value / 4) * 4;
-/** The least room between two date labels on the x axis. */
 const LABEL_SPACING = 64;
-/**
- * The first and last points sit this far inside the plot's edges, so their
- * dates centre under them without reaching the card's edge, and the line
- * ends clear of the axis ticks and the right edge.
- */
 const X_INSET = 32;
 
 export type TrendScale = Readonly<{
@@ -24,14 +16,11 @@ export type TrendScale = Readonly<{
   right: number;
   ticks: readonly number[];
   x: (index: number) => number;
-  /** A position along the time axis, 0 at the first point and 1 at the last. */
   xAt: (fraction: number) => number;
   y: (value: number) => number;
-  /** The index whose point is nearest a horizontal position. */
   nearest: (offsetX: number) => number;
 }>;
 
-/** The y domain: zero (or the lowest value) to the ceiling, unless the caller fixes either end. */
 function domainOf(
   lines: readonly (readonly (number | null)[])[],
   yMin: number | undefined,
@@ -45,18 +34,12 @@ function domainOf(
   const low = yMin ?? Math.min(0, ...values);
   const high = yMax ?? Math.max(1, ...values);
   let ticks = chartTicks(low, high, tickCount);
-  // Fewer, wider steps until the gridlines fit the cap.
   for (let count = tickCount - 1; ticks.length > maxTicks && count >= 1; count -= 1)
     ticks = chartTicks(low, high, count);
   const top = yMax ?? ticks.at(-1) ?? high;
   return { ticks: ticks.filter((tick) => tick <= top + 1e-9), bottom: ticks[0] ?? low, top };
 }
 
-/**
- * Real time on the x axis when every point carries a timestamp and they span
- * time: falling back to even spacing would draw a run three months late as
- * though it followed the previous one immediately.
- */
 function timeFractions(timestamps: readonly (number | undefined)[]): number[] | null {
   const stamps = timestamps.filter(
     (stamp): stamp is number => stamp !== undefined && Number.isFinite(stamp),
@@ -90,13 +73,9 @@ export function trendScale({
   timestamps: readonly (number | undefined)[];
   yMin?: number;
   yMax?: number;
-  /** The widest tick label, in characters, which sizes the left gutter. */
   tickWidth: (ticks: readonly number[]) => number;
-  /** Room right of the plot, for end labels. */
   padRight?: number;
-  /** About how many gridlines the y axis takes. */
   tickCount?: number;
-  /** The most gridlines the y axis may draw, its floor included. */
   maxTicks?: number;
 }>): TrendScale {
   const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount, maxTicks);
@@ -104,7 +83,6 @@ export function trendScale({
   const plotWidth = Math.max(1, width - padLeft - padRight);
   const plotHeight = Math.max(1, height - PAD_TOP - PAD_BOTTOM);
   const fractions = timeFractions(timestamps) ?? evenFractions(timestamps.length);
-  // A plot too narrow for both insets keeps the full width.
   const inset = plotWidth > 4 * X_INSET ? X_INSET : 0;
   const xAt = (fraction: number) => padLeft + inset + fraction * (plotWidth - 2 * inset);
   const xs = fractions.map(xAt);
@@ -134,10 +112,6 @@ function nearestIndex(xs: readonly number[], offsetX: number): number {
   return best;
 }
 
-/**
- * The points that get a date under the axis: counted back from the latest,
- * each at least 64px from the one after it, so the newest date always shows.
- */
 export function labelledIndexes(scale: TrendScale, count: number): number[] {
   const shown: number[] = [];
   let nextX = Number.POSITIVE_INFINITY;
@@ -151,11 +125,6 @@ export function labelledIndexes(scale: TrendScale, count: number): number[] {
   return shown.reverse();
 }
 
-/**
- * One line's points in plot coordinates. A gap is a point with no value or
- * one measured under different conditions (`breaks`): joining across either
- * would draw a change that was never observed.
- */
 export function linePoints(
   values: readonly (number | null)[],
   breaks: readonly boolean[],
@@ -167,12 +136,6 @@ export function linePoints(
   });
 }
 
-/**
- * The segments across each break (`breaks`) between two measured points: the
- * point before the break and the point at it. They are drawn faint and
- * dashed, so a series split by a method change still reads as one line while
- * the solid line never crosses the break. A missing value is not bridged.
- */
 export function breakConnectors(
   values: readonly (number | null)[],
   breaks: readonly boolean[],
@@ -191,7 +154,6 @@ export function breakConnectors(
   });
 }
 
-/** Points with no neighbour in their run: a line of one draws nothing, so these get a dot. */
 export function isolatedPoints(points: readonly ([number, number] | null)[]): [number, number][] {
   return points.flatMap((point, index) =>
     point && !points[index - 1] && !points[index + 1] ? [point] : [],

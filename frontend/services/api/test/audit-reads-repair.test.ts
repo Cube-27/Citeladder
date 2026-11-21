@@ -74,8 +74,6 @@ describe('persisted audit reads and immutable repair', () => {
       .where('id', '=', task.id)
       .execute();
     const executions = await listExecutions(db, t.workspaceId, t.auditId);
-    // The list carries the table's columns only: the answer, snapshots and
-    // provider metadata stay on the single-execution read.
     expect(executions[0]).toEqual({
       id: task.id,
       prompt_index: task.prompt_index,
@@ -222,7 +220,6 @@ describe('persisted audit reads and immutable repair', () => {
         runtime,
       ),
     ).rejects.toMatchObject({ status: 409 });
-    // The default selection (every failed BYOK task) overlaps the live child's task.
     await expect(
       createRepairAudit(db, t.workspaceId, t.auditId, repairInput.parse({}), runtime),
     ).rejects.toMatchObject({
@@ -257,7 +254,6 @@ describe('persisted audit reads and immutable repair', () => {
       .set({ status: 'failed', error_code: 'timeout' })
       .where('audit_id', '=', t.auditId)
       .execute();
-    // One other launch is active, which is the whole allowance.
     await createAudits(
       db,
       t.workspaceId,

@@ -7,7 +7,6 @@ type OpenActions =
   | { kind: 'unknown' }
   | { kind: 'counted'; count: number; label: string };
 
-/** Open plus in-progress Actions; the label says it counts Actions, never issues (OL-41). */
 function useOpenActions(): OpenActions {
   const { counts, pending } = useActionStatusCounts();
   if (!counts) return { kind: pending ? 'pending' : 'unknown' };
@@ -15,10 +14,6 @@ function useOpenActions(): OpenActions {
   return { kind: 'counted', count, label: pluralCount(count, 'open Action') };
 }
 
-/**
- * The Actions row's count slot: the number, named and explained as "178 open
- * Actions"; a block holds its place while the read is out.
- */
 export function OpenActionCount() {
   const open = useOpenActions();
   switch (open.kind) {
@@ -42,7 +37,6 @@ export function OpenActionCount() {
   }
 }
 
-/** The count in words alone, for the rail's Actions button. */
 export function OpenActionCountLabel() {
   const open = useOpenActions();
   return open.kind === 'counted' ? <>, {open.label}</> : null;

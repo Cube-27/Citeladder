@@ -16,13 +16,10 @@ const SIGN_IN_AGREEMENT =
 const SIGN_UP_AGREEMENT =
   'By creating an account, you agree to the Terms of Service and acknowledge the Privacy Policy.';
 
-/** The email submit is held with `aria-disabled` (it keeps focus), never `disabled`. */
 const held = (button: HTMLElement) => button.getAttribute('aria-disabled') === 'true';
 const follows = (a: Node, b: Node) =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-// Cloudflare's widget cannot run here: a stand-in renders nothing and hands
-// the form a token when the test "solves" it.
 let solveChallenge: (token: string) => void = () => {};
 let widgetHost: HTMLElement | null = null;
 let widgetSize = '';
@@ -132,7 +129,6 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
     await user.click(email);
 
-    // An unchallenged sign-in shows no widget, and the request carries no token.
     expect(screen.queryByRole('group', { name: 'Verification' })).not.toBeInTheDocument();
     await waitFor(() =>
       expect(login).toHaveBeenCalledWith({
@@ -156,7 +152,6 @@ describe('account entry', () => {
 
     const pending = await screen.findByRole('button', { name: 'Signing in…' });
     expect(pending).toBe(signIn);
-    // Still in the tab order and focused, held rather than disabled.
     expect(pending).toBeEnabled();
     expect(pending).toHaveFocus();
     expect(held(pending)).toBe(true);
@@ -182,7 +177,6 @@ describe('account entry', () => {
     const alert = await screen.findByRole('alert');
     expect(password).toHaveAttribute('aria-invalid', 'true');
     expect(password).toHaveAccessibleDescription(alert.textContent ?? '');
-    // Adjacent to its field: after the password, before the submit, said once.
     expect([follows(password, alert), follows(alert, signIn)]).toEqual([true, true]);
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
@@ -211,7 +205,6 @@ describe('account entry', () => {
     expect(screen.getByRole('group', { name: 'Verification' })).toBeInTheDocument();
     await waitFor(() => expect(widgetHost).not.toBeNull());
     expect(held(screen.getByRole('button', { name: 'Continue' }))).toBe(true);
-    // A held submit swallows the attempt.
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(login).toHaveBeenCalledTimes(1);
 
@@ -247,7 +240,6 @@ describe('account entry', () => {
     await user.click(signIn);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('The Terms changed.');
-    // A form-level alert sits directly above the first field; the Google way in follows the form.
     expect([
       follows(alert, screen.getByLabelText(/^Email address/)),
       follows(signIn, screen.getByRole('button', { name: 'Continue with Google' })),
@@ -296,7 +288,6 @@ describe('account entry', () => {
     for (const way of [create, google]) {
       expect(way).toHaveAccessibleDescription(SIGN_UP_AGREEMENT);
     }
-    // The widget has not handed over a token yet.
     await waitFor(() => expect(widgetHost).not.toBeNull());
     expect(held(create)).toBe(true);
     expect(google).toBeDisabled();
@@ -331,7 +322,6 @@ describe('account entry', () => {
     expect(slot).toContainElement(widgetHost);
     const rows = [...slot.parentElement!.children];
     solveChallenge('solved-token');
-    // The same reserved element holds the completed widget; nothing appeared around it.
     expect(screen.getByRole('group', { name: 'Verification' })).toBe(slot);
     expect([...slot.parentElement!.children]).toEqual(rows);
   });
@@ -341,7 +331,6 @@ describe('account entry', () => {
     [288, 'compact'],
     [300, 'flexible'],
   ])('asks for the widget size a %ipx slot fits: %s', async (width, size) => {
-    // jsdom lays nothing out, so the slot reports the width a browser would.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width,
       height: 0,
@@ -388,7 +377,6 @@ describe('account entry', () => {
         expect.stringContaining('Disposable addresses cannot sign up.'),
       ),
     );
-    // Said once, under the field: the form's alert does not repeat it.
     expect(
       screen.getAllByText('Use a permanent email address. Disposable addresses cannot sign up.'),
     ).toHaveLength(1);

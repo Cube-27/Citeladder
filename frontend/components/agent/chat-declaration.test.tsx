@@ -48,10 +48,6 @@ afterAll(() => mswServer.close());
 
 const ACTION = '88888888-8888-4888-8888-888888888888';
 
-/**
- * The Action's detail and declaration API; its stored state turns declared once
- * a declaration posts. The detail is answered once `loaded` settles.
- */
 function actionApi(loaded: Promise<void> = Promise.resolve()) {
   const posted: unknown[] = [];
   const declaration = {
@@ -146,7 +142,6 @@ describe('ChatScreen implementation declaration', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
 
     expect(await within(pane).findByText(/Measured on your next crawl/)).toBeVisible();
-    // The dialog's trigger is gone; focus lands on what replaced it.
     expect(within(pane).getByRole('heading', { name: 'Measurement' })).toHaveFocus();
     expect(
       within(pane).queryByRole('button', { name: 'Mark implemented' }),
@@ -188,7 +183,6 @@ describe('ChatScreen implementation declaration', () => {
     const user = userEvent.setup();
     renderChat();
 
-    // The card renders whole from the chat before the Action loads, so the thread never grows.
     const card = await screen.findByRole('region', {
       name: 'Mark https://acme.test/pricing implemented?',
     });
@@ -197,7 +191,6 @@ describe('ChatScreen implementation declaration', () => {
     load();
     await user.click(await within(card).findByRole('button', { name: 'Mark implemented' }));
     const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
-    // The dialog opens with what the person told the Agent; they still confirm it.
     expect(within(dialog).getByRole('textbox', { name: 'What shipped it?' })).toHaveValue('PR 12');
     await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
 

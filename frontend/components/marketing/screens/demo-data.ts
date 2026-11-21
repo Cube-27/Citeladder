@@ -1,14 +1,7 @@
-/**
- * The website's one demo dataset: Acme Analytics (acme.com) against
- * Northwind, Lumen and Fathom Labs, week of 27 Oct – 2 Nov 2026. Every
- * product screen reads its figures from here, so two screens never disagree
- * about the same number. Long tables are written as rows and named once.
- */
 import type { BadgeTone } from '@/components/ui/badge';
 import type { DeltaPolicy } from '@/components/ui/delta';
 import type { EngineKey } from '@/components/ui/engine-mark';
 
-/** A change as the Delta draws it: signed, with its unit and which way is good. */
 export type Change = Readonly<{
   value: number;
   unit?: string;
@@ -29,8 +22,6 @@ export const ENGINE_KEYS: readonly EngineKey[] = ['chatgpt', 'claude', 'gemini',
 export const WEEKS = ['8 Sep', '15 Sep', '22 Sep', '29 Sep', '6 Oct', '13 Oct', '20 Oct', '27 Oct'];
 export const CHECKED = 'Checked today, 06:00 UTC';
 
-/* ---------- Brands and visibility ---------- */
-
 export const TREND = {
   acme: [27.9, 29.6, 30.2, 31.8, 32.5, 33.1, 34.2, 38.3],
   northwind: [46.0, 45.2, 45.8, 44.6, 44.1, 43.5, 42.9, 41.7],
@@ -38,7 +29,6 @@ export const TREND = {
   fathom: [18.1, 17.6, 17.9, 17.2, 17.4, 17.0, 17.1, 17.0],
 } as const;
 
-/** Net sentiment, or too few classified mentions to show one (under 20; never zero). */
 export type BrandSentiment = Readonly<
   { kind: 'value'; net: number; classified: number } | { kind: 'too_few'; classified: number }
 >;
@@ -49,23 +39,15 @@ export type Brand = Readonly<{
   visibility: number;
   change: Change;
   shareOfVoice: number;
-  /**
-   * The average place answers name the brand among the four tracked brands:
-   * its `wins` at 1, its other mentions between 2 and 4.
-   */
   position: number;
-  /** Answers naming the brand first, of the WIN_ANSWERS naming any tracked brand. */
   wins: number;
-  /** Answers naming the brand: `visibility` is mentions / 412, to one decimal place. */
   mentions: number;
   sentiment: BrandSentiment;
   own?: boolean;
 }>;
 
-/** This week's answers that name at least one tracked brand: win rate's denominator. */
 export const WIN_ANSWERS = 296;
 
-/** Ranked by visibility, leader first. Shares of voice and wins each sum to the whole. */
 export const BRANDS: readonly Brand[] = [
   {
     name: 'Northwind',
@@ -114,7 +96,6 @@ export const BRANDS: readonly Brand[] = [
   },
 ];
 
-/** What changed under the trend, by week index, as the app marks it. */
 export const TREND_EVENTS = [
   { week: 2, kind: 'panel', label: 'Prompt panel: 12 prompts added' },
   { week: 5, kind: 'model', label: 'Gemini model changed: 2.5 Pro → 3 Pro' },
@@ -177,8 +158,6 @@ export const ENGINE_ROWS: readonly EngineRow[] = (
   answers,
 }));
 
-/* ---------- One answer and the sources behind answers ---------- */
-
 export type Source = Readonly<{ index: number; domain: string; title: string; own?: boolean }>;
 
 export const ANSWER_SOURCES: readonly Source[] = [
@@ -205,7 +184,6 @@ export const CITED_DOMAINS: readonly Readonly<{
   { label: 'Other', value: 156, other: true },
 ];
 
-/** One cited page (acme.com/pricing): how often each engine fetched and cited it. */
 export const PAGE_RETRIEVALS: readonly Readonly<{
   engine: EngineKey;
   retrievals: number;
@@ -217,8 +195,6 @@ export const PAGE_RETRIEVALS: readonly Readonly<{
   { engine: 'google', retrievals: 17, citations: 12 },
 ];
 
-/* ---------- Prompts ---------- */
-
 export type PromptRow = Readonly<{
   prompt: string;
   topic: string;
@@ -226,7 +202,6 @@ export type PromptRow = Readonly<{
   visibility: number;
   owned: number;
   position: string;
-  /** Visibility points against last week. */
   change: number;
 }>;
 
@@ -287,8 +262,6 @@ export const PROMPTS: readonly PromptRow[] = (
   change,
 }));
 
-/* ---------- Site Health and crawlers ---------- */
-
 export type Severity = 'High' | 'Medium' | 'Low';
 
 export const FAILED_CHECKS: readonly Readonly<{
@@ -326,8 +299,6 @@ export const BOTS: readonly Readonly<{
   { bot: 'Google-Extended', operator: 'Google', purpose: 'AI training', policy: 'Restricted' },
   { bot: 'PerplexityBot', operator: 'Perplexity', purpose: 'AI search', policy: 'All allowed' },
 ];
-
-/* ---------- Search ---------- */
 
 export const KEYWORDS = (
   [
@@ -369,14 +340,6 @@ export const KEYWORDS = (
   intent,
 }));
 
-/* ---------- Search Demand ---------- */
-
-/**
- * Search Demand signals, one of each kind the page names: a query in
- * striking distance (4 to 15), a CTR gap against the position's median, two
- * pages splitting one query and an emerging query (last 14 days on the 14
- * before).
- */
 export const DEMAND_SIGNALS: readonly Readonly<{
   query: string;
   detail: string;
@@ -409,12 +372,7 @@ export const DEMAND_SIGNALS: readonly Readonly<{
   },
 ];
 
-/* ---------- AI referrals ---------- */
-
-/** Weekly sessions from AI assistants: the last four weeks are the 1,846 of the last 28 days, 41% over the four before. */
 export const WEEKLY_REFERRALS = [300, 320, 335, 354, 410, 440, 480, 516];
-
-/* ---------- Perception ---------- */
 
 export const THEMES = (
   [
@@ -425,8 +383,6 @@ export const THEMES = (
     ['Reputation and trust', 11, 0, 'Positive', 'Well reviewed by seed-stage founders'],
   ] as const
 ).map(([theme, positive, negative, tone, quote]) => ({ theme, positive, negative, tone, quote }));
-
-/* ---------- Actions ---------- */
 
 export type ActionStatus = 'Open' | 'In progress' | 'Measuring' | 'Done' | 'Dismissed';
 export const ACTION_STATUS_TONE: Readonly<Record<ActionStatus, BadgeTone>> = {
@@ -465,14 +421,6 @@ export const ACTIONS: readonly Readonly<{
   approach,
 }));
 
-/* ---------- Content optimization ---------- */
-
-/**
- * Content Actions in priority order: an owned content page that matched an
- * angle but is not cited for its prompts, or a planned page (named by its
- * angle) when no content page matched. Counts are the lead angle's: its
- * prompts, and the sites and competitors cited for it. Never a score.
- */
 export const CONTENT_WORK: readonly Readonly<{
   page: string;
   planned: boolean;
@@ -497,9 +445,6 @@ export const CONTENT_WORK: readonly Readonly<{
   competitors,
 }));
 
-/* ---------- MCP and integrations ---------- */
-
-/** Read-only tool calls an assistant made this week, each with what it returned. */
 export const MCP_CALLS: readonly Readonly<{ tool: string; result: string; time: string }>[] = [
   { tool: 'read_visibility_overview', result: 'Visibility 38.3%, up 4.1 pp', time: '0.4s' },
   { tool: 'read_visibility_sources', result: '212 citations to acme.com', time: '0.3s' },
@@ -507,7 +452,6 @@ export const MCP_CALLS: readonly Readonly<{ tool: string; result: string; time: 
   { tool: 'read_actions', result: '7 open actions, 2 High', time: '0.2s' },
 ];
 
-/** The data sources CiteLadder reads for acme.com. */
 export const INTEGRATIONS: readonly Readonly<{
   name: string;
   detail: string;
@@ -519,8 +463,6 @@ export const INTEGRATIONS: readonly Readonly<{
   { name: 'Cloudflare Logpush', detail: 'AI crawler requests', connected: true },
   { name: 'Bing Webmaster Tools', detail: 'Bing clicks and impressions', connected: false },
 ];
-
-/* ---------- Commerce ---------- */
 
 export const SHELF: readonly Readonly<{
   product: string;

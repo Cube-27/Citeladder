@@ -13,10 +13,6 @@ function adsMessage(ads: ExecutionAds): string | null {
   return null;
 }
 
-/**
- * The paid ads shown with this answer, apart from its sources. An engine
- * without ads renders nothing; an answer not read for ads says so.
- */
 export function EvidenceAds({ ads }: Readonly<{ ads: ExecutionAds }>) {
   if (ads.applicability === 'not_applicable') return null;
   const message = adsMessage(ads);

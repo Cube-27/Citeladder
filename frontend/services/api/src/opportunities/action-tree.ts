@@ -1,10 +1,3 @@
-/**
- * The Actions page as persisted reads (plan v3): the tree (status counts, the
- * goal strip's open counts, and per group and grouping its count and first rows by impact) and
- * every Action touching one URL. Each is a fixed number of SQL statements over
- * the Actions' persisted goal, grouping and `action_urls`; nothing is derived
- * from evidence, and no read triggers work.
- */
 import {
   actionGoalSchema,
   actionGroupingSchema,
@@ -39,7 +32,6 @@ type TreeFilters = Omit<Parameters<typeof parseFilters>[0], 'grouping'> & {
   group_by: ActionTreeGroupBy;
 };
 
-/** The list filter a group of `groupBy` adds to its groupings' "Show more" read. */
 function groupFilter(groupBy: ActionTreeGroupBy, key: string) {
   switch (groupBy) {
     case 'goal':
@@ -59,7 +51,6 @@ function groupFilter(groupBy: ActionTreeGroupBy, key: string) {
   }
 }
 
-/** Groups in page order: goals and bands in their fixed order, anything else by size then name. */
 function groupRank(groupBy: ActionTreeGroupBy): (key: string) => number {
   const fixed: Partial<Record<ActionTreeGroupBy, readonly string[]>> = {
     goal: actionGoalSchema.options,
@@ -89,7 +80,6 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
       // By position: each expression binds its values afresh in each clause.
       .groupBy([sql`1`, sql`2`])
       .execute(),
-    // The goal strip counts open work (New and In progress, owner 2026-11-16) whatever the status filter.
     matchingActions(db, scope, { ...rest, grouping: null, status: null })
       .select([goalSql.as('goal'), sql<number>`count(*)::int`.as('count')])
       .groupBy(sql`1`)
@@ -182,7 +172,6 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
   };
 }
 
-/** Every listed Action touching one of the project's URLs, by impact. */
 export async function urlActions(db: Database, scope: Scope, siteUrlId: string) {
   const url = await db
     .selectFrom('site_urls')

@@ -1,9 +1,3 @@
-/**
- * The Actions page's tree as data: what one grouping's rows are read under,
- * and the optimistic move of ticked Actions out of a status before the server
- * answers. The tree read (`GET /actions/tree`) is the only source; nothing
- * here derives a grouping or a count the server did not send.
- */
 import type {
   ActionGroupingParams,
   ActionStatus,
@@ -16,7 +10,6 @@ import type { ActionUserStatus } from '@citeladder/contracts/actions';
 export type TreeGroup = ActionTree['groups'][number];
 export type TreeGrouping = TreeGroup['groupings'][number];
 
-/** One grouping of one status section, as the bulk bar and "Show more" name it. */
 export type GroupingRef = Readonly<{
   status: ActionStatus;
   groupKey: string;
@@ -25,7 +18,6 @@ export type GroupingRef = Readonly<{
 
 export const groupingKey = (ref: GroupingRef) => `${ref.status}|${ref.groupKey}|${ref.grouping}`;
 
-/** The filter a group of `groupBy` adds to its groupings' reads, as the server's cursor expects. */
 function groupFilter(groupBy: ActionTreeGroupBy, key: string) {
   switch (groupBy) {
     case 'goal':
@@ -45,7 +37,6 @@ function groupFilter(groupBy: ActionTreeGroupBy, key: string) {
   }
 }
 
-/** The list read one grouping's rows come from: the tree's filters, its group's and the grouping. */
 export function groupingParams({
   ref,
   groupBy,
@@ -65,12 +56,6 @@ export function groupingParams({
 
 const OPEN: ReadonlySet<ActionStatus> = new Set(['open', 'in_progress']);
 
-/**
- * `tree` (the `from` status's) with the ticked Actions and whole ticked
- * groupings moved to `to`: their rows and counts leave their groupings, the
- * status counts move, and the goal strip's open counts follow when the move
- * crosses open (New and In progress) and closed.
- */
 export function moveOut({
   tree,
   from,

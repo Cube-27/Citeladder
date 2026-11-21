@@ -45,7 +45,6 @@ import { receiveWebhook } from '../billing/webhooks.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 
 const family = 'billing';
-/** At most one pending order per add-on key and one pending upgrade per account. */
 const ONE_PENDING_ORDER = [
   'uq_pending_activation_one_pending_addon',
   'uq_pending_activation_one_pending_upgrade',
@@ -79,7 +78,6 @@ export const billingRoutes = [
     handle: ({ db, config }, { query }) =>
       publicCatalog(db, config, query.country?.trim().toUpperCase() ?? null),
   }),
-  // Any member reads what the workspace may buy; only billing managers buy it.
   defineRoute({
     family,
     capability: 'read',

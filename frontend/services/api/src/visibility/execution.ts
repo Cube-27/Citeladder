@@ -1,10 +1,3 @@
-/**
- * One execution's persisted analysis and citation evidence.
- *
- * Shared API/MCP reader. Keyed on the execution (`AuditTask`) id clients
- * receive from the executions list; provenance comes from the frozen task
- * and audit snapshots, never from live configuration.
- */
 import { sql } from 'kysely';
 
 import { brandPosition, competitorPosition } from '../analysis/position.ts';
@@ -37,7 +30,6 @@ function scoreObject(score: unknown): Record<string, unknown> | null {
   throw new TypeError('stored score is not an object');
 }
 
-/** Stored competitor mentions are names, not arbitrary iterable values. */
 function competitorsMentioned(score: Record<string, unknown> | null): string[] {
   const names = score?.competitors_mentioned;
   if (names === null || names === undefined) return [];
@@ -50,10 +42,6 @@ type Named = ExecutionEvidenceResponse['named'][number];
 
 const offsetOf = (value: unknown) => (typeof value === 'number' ? value : null);
 
-/**
- * The tracked businesses the answer named, ranked by the analysis's own rule
- * (`position.ts`), named first first; one without an offset comes last.
- */
 function namedBusinesses(
   score: Record<string, unknown> | null,
   brand: { mentioned: boolean; name: string; offset: number | null },
@@ -116,8 +104,6 @@ export async function getExecutionEvidence(
     .where('workspace_id', '=', input.workspaceId)
     .orderBy('ordinal', 'asc')
     .execute();
-  // Frozen provenance and the stored answer from the task and audit parents
-  // (invariants 4 and 7).
   const task = await db
     .selectFrom('audit_tasks')
     .select(['request_snapshot', 'provider_route_snapshot', 'answer_text', 'provider_metadata'])

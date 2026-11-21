@@ -16,13 +16,8 @@ import { themeAssociation, type ThemeCell } from '@/lib/visibility/theme-associa
 
 const TITLE = 'How AI describes competitors';
 
-/** Themes past these may hide, the last first, when the table has no room for them. */
 const SHOWN_THEMES = 4;
 
-/**
- * Brand → Perception: each tracked brand's share of mentions raising each
- * theme (AV-6). Counts only: competitor quotes are never shown.
- */
 export function CompetitorThemes({
   entities,
 }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
@@ -102,7 +97,6 @@ export function CompetitorThemes({
   );
 }
 
-/** A share over a tint as deep as the share; too few is a named absence, never a zero. */
 function HeatCell({ cell }: Readonly<{ cell: ThemeCell }>) {
   if (cell.kind === 'too_few')
     return (

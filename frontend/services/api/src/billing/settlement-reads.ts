@@ -1,7 +1,3 @@
-/**
- * Read helpers settlement uses to decide what a payment paid for and whether it
- * was refunded. Nothing here writes; settlement.ts owns every settlement write.
- */
 import { sql } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
@@ -10,16 +6,11 @@ import { catalog } from './catalog.ts';
 import type { Subscription } from './contracts.ts';
 import type { Payment } from './receipts.ts';
 
-/** A payment whose refunds total its amount no longer pays for its period (B52). */
 const refundedInFull = sql<boolean>`coalesce((
   select sum(r.amount_minor) from billing_payments r
   where r.parent_payment_id = billing_payments.id and r.receipt_kind = 'refund'
 ), 0) >= billing_payments.amount_minor`;
 
-/**
- * Whether a payment for this subscription period was refunded in full: the
- * period's own payment (B52) or an upgrade bought in the period (B70).
- */
 export async function periodRefunded(
   db: Database,
   sub: Pick<Subscription, 'id' | 'billing_account_id'>,
@@ -61,13 +52,11 @@ export async function periodRefunded(
   return Boolean(row);
 }
 
-/** The frozen revision's display name for a plan, as receipts print it. */
 export async function planName(db: Database, revision: string, key: string) {
   const frozen = await catalog(db, revision);
   return frozen.payload.plans.find((row) => row.key === key)?.name ?? key;
 }
 
-/** Whether a period plan grant came from this subscription or an activation (an upgrade). */
 export function paidByPeriod(ref: string, subscriptionId: string) {
   const source = grantSource(ref);
   return (
@@ -76,11 +65,6 @@ export function paidByPeriod(ref: string, subscriptionId: string) {
   );
 }
 
-/**
- * The base subscription period a payment paid for: a period payment's own, or
- * for an upgrade the current period of the subscription it upgraded, when it
- * was bought in that period (B70). Null for anything else.
- */
 export async function paidPeriod(db: Database, payment: Payment) {
   const { subscription_id: subscriptionId, period_start: start, period_end: end } = payment;
   if (subscriptionId && start && end) return { subscriptionId, start, end };

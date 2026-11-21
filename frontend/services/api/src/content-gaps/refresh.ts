@@ -1,19 +1,3 @@
-/**
- * The `content_angle_refresh` analytics task (content optimization section 1).
- *
- * Reads commit before any model call and no transaction spans one. The run is
- * keyed on three input keys; when the latest succeeded run has the same keys
- * nothing is written (a failed run never blocks a retry). Otherwise the
- * clustering of an earlier succeeded run is reused while its key is unchanged
- * (and its owned match while that key is too), and the rest is computed. The
- * run, its lineages, angles, members and owned matches persist in the worker's
- * fenced terminal transaction under a per-project lock that re-checks the
- * inputs and keys, so concurrent tasks over the same inputs write one run and
- * a task whose audit or crawl was superseded meanwhile writes none. A
- * succeeded run announces itself to the Opportunity refresh, joining one
- * already queued; a model failure, a rejected output or a refused call
- * persists a `failed` run and enqueues nothing.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { z } from 'zod';
@@ -68,11 +52,8 @@ type Trigger = { kind: string; id: string };
 type Keys = { cluster: string; match: string; aggregate: string };
 type TopicGroup = { topicId: string | null; urls: CitedUrl[] };
 
-/** An angle with its members, before its owned match. */
 type Clustered = { topicId: string | null; label: string; members: CitedUrl[] };
-/** The owned content page an angle matched; its URL is null once the page is gone. */
 type OwnedPage = { siteUrlId: string; canonicalUrl: string | null };
-/** An angle with its owned match, before aggregation. */
 type Matched = Clustered & { page: OwnedPage | null };
 
 type Prepared = {
@@ -91,11 +72,6 @@ type StepCall = { step: 'cluster' | 'match'; topicId: string | null; call: Model
 
 const topicOrder = (a: string | null, b: string | null) => compareText(a ?? '', b ?? '');
 
-/**
- * The topics worth clustering, each with its most-cited URLs. A topic below
- * the citation or domain minimum can never raise a gap, so it is recorded as a
- * limitation instead of sent to the model.
- */
 function topicGroups(external: readonly CitedUrl[]) {
   const limitations: Limitation[] = [];
   const groups: TopicGroup[] = [];
@@ -125,7 +101,6 @@ function topicGroups(external: readonly CitedUrl[]) {
   return { groups, limitations };
 }
 
-/** The inputs, the groups the model would see and the three keys, or null without an audit. */
 async function prepare(db: Database, scope: Scope, model: string | null): Promise<Prepared | null> {
   const anchor = await resolveAnchor(db, scope);
   if (anchor === null) return null;
@@ -169,7 +144,6 @@ const sameKeys = (run: SucceededRun | undefined, keys: Keys) =>
   run.match_key === keys.match &&
   run.aggregate_key === keys.aggregate;
 
-/** One angle of an earlier succeeded run, as reuse and lineage assignment read it. */
 type PreviousAngle = {
   lineageId: string;
   topicId: string | null;
@@ -178,7 +152,6 @@ type PreviousAngle = {
   memberUrls: string[];
 };
 
-/** A run's angles with their members and owned match. */
 async function runAngles(db: Database, scope: Scope, runId: string): Promise<PreviousAngle[]> {
   const angles = await db
     .selectFrom('content_angles as angle')
@@ -254,7 +227,6 @@ function angleReader(scope: Scope) {
 
 type AngleReader = ReturnType<typeof angleReader>;
 
-/** The earlier clustering mapped onto the current URLs, or null when any member is gone. */
 function reusedClustering(previous: readonly PreviousAngle[], groups: readonly TopicGroup[]) {
   const current = new Map(
     groups.flatMap((group) =>
@@ -281,7 +253,6 @@ type Step<T> =
   | { ok: true; value: T; call: ModelCall }
   | { ok: false; reason: string; call: ModelCall | null };
 
-/** One structured call, its output validated; a refused call is a failure, not a retry. */
 async function modelStep<Value, T>(
   gateway: ModelGateway,
   request: { system: string; user: string; inputHash: string },
@@ -304,7 +275,6 @@ async function modelStep<Value, T>(
     if (!outcome.ok) return { ok: false, reason: `rejected:${outcome.reason}`, call };
     return { ok: true, value: outcome.value, call };
   } catch (error) {
-    // B66/B73: the daily spend breaker refuses the call before any network I/O.
     if (error instanceof ApiError && error.code === 'platform_spend_paused')
       return { ok: false, reason: 'platform_spend_paused', call: null };
     throw error;
@@ -356,7 +326,6 @@ async function match(
   calls: StepCall[],
 ): Promise<Validated<Matched[]>> {
   const { scope, inputs } = prepared;
-  // Content pages are read only when there is an angle to match.
   const pages = tokenizePages(
     angles.length && inputs.crawlId !== null ? await contentPages(db, scope, inputs.crawlId) : [],
   );
@@ -365,7 +334,6 @@ async function match(
     const candidates = topicAngles.map((angle) =>
       ownedCandidates(angleTerms(angle), pages, p.owned_candidates_per_angle),
     );
-    // No content page covers any term: nothing to pick, so no call.
     if (candidates.every((list) => !list.length)) {
       matched.push(...topicAngles.map((angle) => ({ ...angle, page: null })));
       continue;
@@ -407,7 +375,6 @@ async function match(
   return { ok: true, value: matched };
 }
 
-/** The run's angles, reusing what the latest succeeded run computed over the same keys. */
 async function compute(
   db: Database,
   prepared: Prepared,
@@ -419,7 +386,6 @@ async function compute(
   const gateway = raw && meterFor(db, prepared.scope.workspaceId).gateway(raw, 'content_angles');
   const fail = (reason: string): Outcome => ({ outcome: 'failed', reason, calls });
   const { run } = previous;
-  // The earlier run's angles are read only when its clustering can be reused.
   const reused =
     run?.cluster_key === prepared.keys.cluster
       ? reusedClustering(await previous.angles(db, run.id), prepared.groups)
@@ -453,7 +419,6 @@ const usageOf = (calls: readonly StepCall[]) =>
       )
     : null;
 
-/** Whether the anchor audit or the latest crawl differs from the ones `prepared` read. */
 async function inputsMoved(trx: Database, prepared: Prepared) {
   const { scope, inputs } = prepared;
   // One transaction connection runs one statement at a time.
@@ -464,7 +429,6 @@ async function inputsMoved(trx: Database, prepared: Prepared) {
   );
 }
 
-/** Persist one run under the per-project lock; nothing when the latest succeeded run has its keys. */
 function persist(
   prepared: Prepared,
   trigger: Trigger,
@@ -633,7 +597,6 @@ function taskTrigger(task: QueueTask): Trigger {
   return { kind, id };
 }
 
-/** The task body: settle a run for the project's current inputs, or nothing when they are unchanged. */
 async function refreshContentAngles(
   db: Database,
   scope: Scope,
@@ -658,7 +621,6 @@ async function refreshContentAngles(
   return { error: null, persist: persist(prepared, trigger, model, outcome, angles) };
 }
 
-/** The `content_angle_refresh` executor over the deployment's gateway (tests pass a fake). */
 export function contentAngleRefresh(
   gatewayFactory: () => ModelGateway | null = configuredGateway,
 ): Executor {
@@ -668,7 +630,6 @@ export function contentAngleRefresh(
   };
 }
 
-/** A task that exhausted its attempts still leaves a failed run explaining it. */
 export async function compensateContentAngles(db: Database, task: QueueTask) {
   const scope = { workspaceId: task.workspace_id, projectId: await taskProject(db, task) };
   const raw = configuredGateway();

@@ -1,9 +1,3 @@
-/**
- * Starts each due scheduled crawl through ordinary crawl admission
- * (`createCrawl`), so the plan's grants, the fetch budget hold and the
- * one-active-crawl rule apply exactly as to Run new crawl. Planning only writes
- * rows; the site-health lane fetches after the admission commits.
- */
 import { randomBytes } from 'node:crypto';
 import { sql } from 'kysely';
 import { crawlScheduleCadenceSchema } from '@citeladder/contracts/site-health';
@@ -25,7 +19,6 @@ export function crawlSchedulerSettings(env: SettingSource = process.env) {
   ) as Record<keyof typeof policy.crawl_schedules.settings, number>;
 }
 
-/** Refusals that skip one occurrence: the next one may well be admitted. */
 const SKIPPED = new Set(['crawl_already_active', 'site_health_fetches_exhausted']);
 
 type ScheduleClaim = Awaited<ReturnType<typeof claimDueCrawlSchedules>>[number];
@@ -56,7 +49,6 @@ export class CrawlScheduler {
     });
   }
 
-  /** Plans one leased occurrence; true when it started a crawl. */
   planClaim(claim: ScheduleClaim, at = this.now()) {
     return this.db.transaction().execute(async (trx) => {
       const schedule = await trx
@@ -74,7 +66,6 @@ export class CrawlScheduler {
         .updateTable('crawl_schedules')
         .where('id', '=', schedule.id)
         .where('workspace_id', '=', claim.workspaceId);
-      // Turned off or replanned since the claim: this occurrence is gone.
       if (!schedule.enabled || schedule.next_run_at?.getTime() !== claim.scheduledFor.getTime()) {
         await scoped.set(release).execute();
         return false;
@@ -115,7 +106,6 @@ export class CrawlScheduler {
           logger.info('scheduled_crawl_skipped', { schedule_id: schedule.id, reason: code });
           return false;
         }
-        // The admission reason (invalid root, plan change) is what the owner can act on.
         const reason = code ?? 'crawl_planning_failed';
         const failures = schedule.failure_count + 1;
         const retrying = failures < this.settings.max_consecutive_failures;
@@ -138,7 +128,6 @@ export class CrawlScheduler {
     });
   }
 
-  /** Claims one occurrence at a time while the shared periodic budget admits more. */
   async runOnce(at = this.now(), canAdmit: () => boolean = () => true) {
     let created = 0;
     for (let count = 0; count < this.settings.claim_batch_size && canAdmit(); count++) {

@@ -1,10 +1,3 @@
-/**
- * The terminal publication of a crawl, in the finalize task's one final
- * transaction after its batches appended the final revisions: issue currency,
- * catalog and states, the snapshot and score summary, then the terminal status,
- * counters, fetch settlement and successors. Also the `finalize` task's slots
- * and the failure that ends a crawl whose finalization exhausted its attempts.
- */
 import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
@@ -33,7 +26,6 @@ const hashOf = (key: string) => createHash('sha256').update(key).digest('hex');
 export const finalizeHash = (crawl: Pick<Crawl, 'id'>, mode: 'drained' | 'cancelled') =>
   hashOf(mode === 'drained' ? `finalize:${crawl.id}` : `finalize:${crawl.id}:cancelled`);
 
-/** Enqueue the crawl's finalize task once (CO-2: `max_attempts` 3). */
 export async function enqueueFinalize(db: Database, crawl: Crawl, mode: 'drained' | 'cancelled') {
   await enqueueCrawlTasks(
     db,
@@ -51,7 +43,6 @@ export async function enqueueFinalize(db: Database, crawl: Crawl, mode: 'drained
   );
 }
 
-/** The drained crawl's finalize task, if one was enqueued. */
 export function drainedFinalizeTask(db: Database, crawl: Crawl) {
   return db
     .selectFrom('site_crawl_tasks')
@@ -63,14 +54,12 @@ export function drainedFinalizeTask(db: Database, crawl: Crawl) {
     .executeTakeFirst();
 }
 
-/** Name what fell short, so a crawl that met one dead link is not reported as unanalyzed. */
 function partialReason(discoveryPartial: boolean, analysisPartial: boolean) {
   if (discoveryPartial && analysisPartial) return policy.site_health.reads.partial_reasons.both;
   if (discoveryPartial) return policy.site_health.reads.partial_reasons.discovery;
   return analysisPartial ? policy.site_health.reads.partial_reasons.analysis : '';
 }
 
-/** Change analysis and link metrics follow every crawl whose evidence a snapshot published. */
 async function enqueueSuccessors(db: Database, crawl: Crawl) {
   const linkVersion = `${crawl.extractor_version}:${policy.site_health.link_metrics.formula_version}`;
   const successors = [
@@ -92,7 +81,6 @@ async function enqueueSuccessors(db: Database, crawl: Crawl) {
   );
 }
 
-/** Classify the drained crawl, settle its fetch allowance, and queue what follows it. */
 async function terminalize(db: Database, crawl: Crawl, assessment: Assessment) {
   const { summary, fullyFailed, discoveryPartial } = assessment;
   crawl.completed_at = new Date();
@@ -121,10 +109,6 @@ async function terminalize(db: Database, crawl: Crawl, assessment: Assessment) {
   else await enqueueTerminalAnalyticsRefresh(db, crawl, null);
 }
 
-/**
- * Publish the issue set the finalize batches kept current (CO-7); a crawl with
- * no final revision still lands its issue states.
- */
 async function publishIssues(db: Database, crawl: Crawl) {
   const finalized = await db
     .selectFrom('site_page_analyses')
@@ -140,18 +124,12 @@ async function publishIssues(db: Database, crawl: Crawl) {
   else await landIssueStates(db, crawl);
 }
 
-/** Publish a drained crawl the caller holds locked, and make it terminal. */
 export async function publishDrainedCrawl(db: Database, crawl: Crawl, assessment: Assessment) {
   await publishIssues(db, crawl);
   await persistCrawlSnapshot(db, crawl, true);
   await terminalize(db, crawl, assessment);
 }
 
-/**
- * A cancelled crawl's measurement evidence. Cancellation committed only the
- * stop, so Stop stays responsive under a busy crawl. A page rerun writes no
- * snapshot, so its `change_intel` successor marks it published instead.
- */
 export async function publishCancelledCrawl(db: Database, crawl: Crawl) {
   await publishIssues(db, crawl);
   await persistTerminalCounters(db, crawl);
@@ -159,11 +137,6 @@ export async function publishCancelledCrawl(db: Database, crawl: Crawl) {
     await enqueueSuccessors(db, crawl);
 }
 
-/**
- * The drained crawl's finalize task failed for good (owner decision CO-2): the
- * crawl ends failed with the recorded reason and its fetch hold settled. Pages
- * finalized before the failure keep their final revisions; no snapshot.
- */
 export async function failFinalization(db: Database, crawl: Crawl, task: { error_code: string }) {
   crawl.completed_at = new Date();
   crawl.status = 'failed';

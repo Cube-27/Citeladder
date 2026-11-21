@@ -54,7 +54,6 @@ describe('perception derivations', () => {
     expect(negativeHeadline(score(15, 5, 0))).toBe(
       'AI says nothing negative about you in classified mentions',
     );
-    // 4 classified is below the minimum: no headline, never "nothing negative".
     expect(negativeHeadline(score(3, 1, 0))).toBeNull();
     expect(negativeHeadline(score(0, 0, 0))).toBeNull();
   });
@@ -94,7 +93,6 @@ describe('perception derivations', () => {
       needed: 20,
     });
     expect(breakdownRow(row(score(0, 0, 0), 4), 0).kind).toBe('too_few');
-    // A theme's share reads from its praised and criticised mentions, under the same minimum.
     expect(themeNegativeShare(theme('price', 15, 5), 20)).toBe(0.25);
     expect(themeNegativeShare(theme('price', 1, 0), 20)).toBeNull();
     expect(themeNegativeShare(theme('price', 0, 0), 0)).toBeNull();
@@ -119,7 +117,6 @@ describe('perception derivations', () => {
       { kind: 'no_mentions' },
       { kind: 'not_measured' },
     ]);
-    // A figure keeps "not named" apart from too few and from a read that carried none.
     expect(
       [{ ...net(0, 0, 0), mentions: 0 }, net(19, 10, 1), null, net(20, 15, 5)].map((value) =>
         sentimentFigureValue(value),

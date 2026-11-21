@@ -73,7 +73,6 @@ const COUNTRY_FLAGS = {
   ZA,
 } as const;
 
-/** Country/language adapter for the shared searchable combobox. */
 export function MarketSelect({
   options,
   showCountryFlags = false,
@@ -109,8 +108,6 @@ export function MarketSelect({
 function CountryFlag({ code }: Readonly<{ code: string }>) {
   if (code === 'GLOBAL') {
     return (
-      // The flags' 20px slot, holding the product's own outline globe rather
-      // than an emoji that renders differently on every platform.
       <span
         data-country-flag="GLOBAL"
         className="text-ink-2 flex size-5 shrink-0 items-center justify-center"

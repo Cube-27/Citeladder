@@ -16,7 +16,6 @@ function preferReducedMotion(reduce: boolean) {
   }));
 }
 
-/** The one slide assistive technology can reach: hidden slides are aria-hidden. */
 function shownSlide() {
   return screen.getByRole('region', { name: /of 3:/ });
 }

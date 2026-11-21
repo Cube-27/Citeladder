@@ -28,7 +28,6 @@ const unavailableCredential = () =>
     code: 'execution_credentials_unavailable',
   });
 
-/** The workspace enqueue lock every audit launch and repair takes before admission. */
 export function lockAuditEnqueue(db: Database, workspaceId: string) {
   return subjectXactLock(db, `audit-enqueue:${workspaceId}`);
 }
@@ -42,7 +41,6 @@ export async function reserveAuditCapacity(
   runtime: AuditRuntime,
   at: Date,
 ) {
-  // A launch's per-market audits count as one active run, and never against themselves.
   let launches = db
     .selectFrom('audits')
     .select(sql<string>`count(distinct coalesce(launch_id, id))`.as('count'))
@@ -60,16 +58,11 @@ export async function reserveAuditCapacity(
 const MANUAL_RUN_WINDOW_SECONDS =
   policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
 
-/**
- * Manual launches in the account's rolling window, other than `launchId`, and
- * when the window frees its oldest one: what `manual_runs_per_day` counts.
- */
 export async function manualRunUsage(
   db: Database,
   accountId: string,
   { at, launchId }: { at: Date; launchId: string | null },
 ) {
-  // One launch is one manual run, whatever its market count.
   let launches = db
     .selectFrom('audits as a')
     .innerJoin('billing_accounts as b', 'b.workspace_id', 'a.workspace_id')
@@ -103,18 +96,12 @@ async function assertManualRunAllowance(
       details: { allowance, used, remaining: 0, reset_at: resetsAt?.toISOString() ?? null },
     });
 }
-/**
- * Admits a launch: the manual-run rate for every account, and for a managed
- * workspace the monthly platform budget, which counts the cost actually
- * recorded this month rather than any estimate (B20). Prompt runs bound volume.
- */
 export async function admitAudit(
   db: Database,
   workspaceId: string,
   funded: boolean,
   trigger: string,
   runtime: AuditRuntime,
-  /** When admission happens, and the launch the audit belongs to. */
   { at, launchId }: { at: Date; launchId: string | null },
 ) {
   if (!funded && trigger !== 'manual') return null;
@@ -186,7 +173,6 @@ export async function admitAudit(
 }
 export type FundedAdmission = NonNullable<Awaited<ReturnType<typeof admitAudit>>>;
 
-/** Platform selection is possible only after the task's persisted run hold proves admission. */
 export async function platformRoute(
   db: Database,
   route: FrozenRoute,
@@ -242,9 +228,7 @@ export async function platformRoute(
         connection_id: candidate.id,
         base_url: approvedEndpoint(route.transport_provider, candidate.base_url, runtime.providers),
       };
-    } catch {
-      /* Skip an operator endpoint that no longer belongs to the approved route. */
-    }
+    } catch {}
   }
   throw unavailableCredential();
 }

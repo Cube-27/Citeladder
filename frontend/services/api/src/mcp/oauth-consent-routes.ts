@@ -26,7 +26,6 @@ const restart = {
     'Approval links last a few minutes and work once. Go back to your assistant and connect CiteLadder again.',
 };
 const invalidTransaction = (value: string) => !value || value.length > 256;
-/** What an approving person chose on the consent form. */
 function consentSelection(form: URLSearchParams) {
   return {
     selected: form.getAll('workspace_id'),
@@ -35,7 +34,6 @@ function consentSelection(form: URLSearchParams) {
     allowChanges: form.get('allow_changes') === 'yes',
   };
 }
-/** The signed-in approval page an authorization request sends the person to. */
 export function registerConsentRoutes(
   app: Hono<AppEnv>,
   { config, db, mcp }: { config: ServiceConfig; db: Database; mcp: McpConfig },
@@ -56,7 +54,6 @@ export function registerConsentRoutes(
     c.header('cache-control', 'no-store');
     await next();
   });
-  /** Render the approval form for a live transaction, or explain why it is gone. */
   async function renderConsent(c: Context<AppEnv>, transaction: string, error: string | null) {
     const row = await db
       .selectFrom('mcp_authorization_requests as r')
@@ -94,7 +91,6 @@ export function registerConsentRoutes(
       error ? 400 : 200,
     );
   }
-  /** Answer a consent that could not complete: re-ask on a bad selection, else explain. */
   function consentFailure(c: Context<AppEnv>, failed: { transaction: string; error: unknown }) {
     const { transaction, error } = failed;
     if (error instanceof ConsentSelectionError) return renderConsent(c, transaction, error.message);

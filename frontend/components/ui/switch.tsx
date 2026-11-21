@@ -1,16 +1,5 @@
 import { cn } from '@/lib/utils';
 
-/**
- * Switch — an on/off control for a setting that takes effect at once: a
- * 40×20 round track, `control-line` off and `ink` on, with a flat 22×16
- * pill thumb that slides over 300ms on HeroUI v3's fluid ease; hover moves
- * the track a step toward the ground, and a held press scales it (`.press`).
- * Its tap area is at least 24 tall (44 for touch, `hit-area`). Focus is the
- * 2px ring around the track.
- *
- * A native `<button role="switch">`: the browser gives Space and Enter,
- * focus and disabled semantics; `aria-checked` carries the state.
- */
 export function Switch({
   id,
   checked,
@@ -20,11 +9,9 @@ export function Switch({
   disabled = false,
   className,
 }: Readonly<{
-  /** Lets a visible `<label htmlFor>` toggle the switch. */
   id?: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-  /** The accessible name. Rendered by the caller if it should also be visible. */
   label: string;
   describedBy?: string;
   disabled?: boolean;

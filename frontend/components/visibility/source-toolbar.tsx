@@ -32,15 +32,6 @@ const URL_HEADERS = [
   'Last seen',
 ] as const;
 
-/**
- * The table's toolbar, above whichever table is showing: search, then Export
- * at the end. Its filters (type, standing, domain) are in the page's Filters.
- *
- * Export writes the rows AS SHOWN — after the filters, the search and the sort.
- * Widening it to the unfiltered set would hand back a different answer from the
- * one on screen, and a reader who had narrowed to one type would have no way to
- * tell until they opened the file.
- */
 export function sourceTableToolbar({
   dimension,
   search,

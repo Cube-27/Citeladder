@@ -13,8 +13,6 @@ import { HeldContent } from '@/components/layout/first-frame';
 
 import { PolicyAcceptanceGate } from './policy-acceptance';
 
-// The transport is replaced on the module's own client object, so the real
-// query and mutation descriptors (and the status the acceptance writes) run.
 vi.mock('@/lib/api/policies', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api/policies')>();
   Object.assign(actual.policiesApi, { status: vi.fn(), accept: vi.fn() });

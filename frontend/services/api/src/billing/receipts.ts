@@ -274,11 +274,6 @@ export function creditAmounts(
   };
 }
 
-/**
- * Records a processed refund's receipt and credit note. Returns the refunded
- * payment and whether this refund completed it, or nothing for a replay or an
- * unprocessed refund; `settleRefund` applies the consequences.
- */
 export async function recordRefund(
   db: Database,
   workspaceId: string,

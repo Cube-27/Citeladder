@@ -1,55 +1,28 @@
-/**
- * The brand faces' CSS, written once from `lib/config/brand-fonts.json` for
- * every runtime that loads them (the app's index.html through its Vite build,
- * the website and docs through `PublicFonts.astro`).
- *
- * Three roles, the design system's families: `display` (the website's and
- * docs' headings alone: the app sets none, so it never preloads it, and a
- * declared face nothing uses is never fetched), `sans` and `mono`. Changing a
- * face is an edit to that JSON (`family` and `file`) followed by
- * `pnpm fonts:pull`, which copies the files from the private font repository
- * and recomputes the weight range and fallback metrics stored beside them.
- * Nothing else names a face: code, comments and docs say the role.
- */
 // The attribute is required where Node loads this module itself (Playwright).
 import config from '../config/brand-fonts.json' with { type: 'json' };
 
 type FontRole = keyof typeof config.faces;
-// The docs are the website's faces plus mono, which their code samples set.
 type FontSurface = 'app' | 'public' | 'docs';
 type Face = (typeof config.faces)[FontRole];
 
 const ROLES: readonly FontRole[] = ['display', 'sans', 'mono'];
 
-/** The local face each role's fallback scales: a monospace face for `mono`. */
 const FALLBACK_LOCAL: Record<FontRole, string> = {
   display: 'Arial',
   sans: 'Arial',
   mono: 'Courier New',
 };
 
-/** The hosted face's family name for a role, as `document.fonts` reports it. */
 export function brandFontName(role: FontRole): string {
   return `CiteLadder ${config.faces[role].family}`;
 }
 
-/** The hosted files a surface preloads, so the faces are found at first paint. */
 function brandFontPreloads(surface: FontSurface): string[] {
   return ROLES.filter((role) => config.faces[role].preload.includes(surface)).map(
     (role) => `/fonts/${config.faces[role].file}`,
   );
 }
 
-/*
- * `font-display: fallback`: a ~100ms block period, then a ~3s window in which
- * the face may still swap in, then a permanent commit to the fallback. Not
- * `optional`, which commits after the block period alone (a hard reload then
- * never shows the face), and not `swap`, whose unbounded swap re-lays out the
- * page whenever a slow face lands.
- *
- * Each face declares only the weights it has, and `font-synthesis-weight:
- * none` stops a faux bold on top of a single-weight face.
- */
 function hostedFace(role: FontRole, face: Face): string {
   return `@font-face {
   font-family: '${brandFontName(role)}';
@@ -60,7 +33,6 @@ function hostedFace(role: FontRole, face: Face): string {
 }`;
 }
 
-/** A local face scaled to the hosted face's x-height (mono: its advance) and line metrics. */
 function fallbackFace(role: FontRole, face: Face): string {
   const metrics = face.fallback;
   return `@font-face {
@@ -74,7 +46,6 @@ function fallbackFace(role: FontRole, face: Face): string {
 }`;
 }
 
-/** Every face, its fallback, and the `--font-face-*` roles globals.css reads. */
 function brandFontCss(): string {
   const faces = ROLES.flatMap((role) => [
     hostedFace(role, config.faces[role]),
@@ -90,7 +61,6 @@ ${roles.join('\n')}
 }`;
 }
 
-/** The `<link rel="preload">` tags and `<style>` block a surface's `<head>` carries. */
 export function brandFontHead(surface: FontSurface): string {
   const preloads = brandFontPreloads(surface).map(
     (href) =>

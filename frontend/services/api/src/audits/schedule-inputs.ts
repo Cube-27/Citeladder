@@ -9,7 +9,6 @@ const timezones = new Map(
   policy.audit_schedules.timezones.map((name) => [name.toLowerCase(), name]),
 );
 
-/** A pinned IANA name supported by this runtime's scheduler, or null. */
 export function canonicalTimezone(value: string): string | null {
   const name = timezones.get(value.toLowerCase());
   if (!name) return null;
@@ -56,7 +55,6 @@ const fields = {
     .nullable(),
 };
 
-/** Validate after merging a patch with the locked current schedule. */
 export function scheduleIntervalIssue(
   input: { cadence: string; interval_minutes: number | null },
   env: SettingSource = process.env,
@@ -89,9 +87,7 @@ const intervalCheck = (
   const message = scheduleIntervalIssue(input);
   if (message) context.addIssue({ code: 'custom', path: ['interval_minutes'], message });
 };
-/** A request's schedule: never the probe scope, which only its owner writes. */
 export const scheduleCreate = scheduleObject.superRefine(intervalCheck);
-/** The probe schedule owner's schedule. */
 export const probeScheduleCreate = scheduleObject
   .extend({ audit_scope: z.literal('probe') })
   .superRefine(intervalCheck);

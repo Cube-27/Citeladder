@@ -8,17 +8,6 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { Bot, CalendarDays, ChevronDown, Folder, Globe, Tag, X, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * FilterTrigger — a filter's chip: sized to its content, it prints the value
- * only ("Last 30 days"); the filter's name is in its tooltip and accessible
- * name ("Period: Last 30 days") and heads its menu. A chip with a `lead` (an
- * icon filter) at its default prints only that icon and the chevron.
- * Its width follows its value (owner, 2026-11-18): the row is left-aligned
- * and ends in its status text, so nothing else moves.
- *
- * Use it as `<MenuTrigger asChild><FilterTrigger …/></MenuTrigger>`; it
- * forwards the ref and the trigger's props to the button.
- */
 export function FilterTrigger({
   label,
   value,
@@ -30,14 +19,10 @@ export function FilterTrigger({
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
-    /** The filter's name ("Status"): tooltip and accessible name, never printed. */
     label: string;
     value?: string;
-    /** The icon before the value (an icon filter's glyph or engine marks). */
     lead?: ReactNode;
-    /** Print only the lead: an icon filter at its default. */
     iconOnly?: boolean;
-    /** A choice moved off its default (`data-active`). */
     active?: boolean;
     ref?: Ref<HTMLButtonElement>;
   }
@@ -56,7 +41,6 @@ export function FilterTrigger({
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'press',
           'disabled:cursor-not-allowed disabled:opacity-45',
-          // Icon only, it is an icon control: no padding, its glyphs inset like IconButton's.
           iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',
           className,
         )}
@@ -72,7 +56,6 @@ export function FilterTrigger({
             {value}
           </span>
         )}
-        {/* It turns while the list is open (globals.css, every dropdown's chevron). */}
         <ChevronDown className="text-ink-2 size-3.5 shrink-0" aria-hidden />
       </button>
     </Tooltip>
@@ -87,7 +70,6 @@ const GLYPHS: Record<FilterIcon, IconGlyph> = {
   topic: Folder,
 };
 
-/** The engine marks a chip shows: the chosen one, or the first three while every engine counts. */
 function engineStack(filter: FilterDefinition): ReactNode {
   if (filter.kind !== 'choice') return null;
   const options = filter.groups.flatMap((group) => group.options);
@@ -106,7 +88,6 @@ function engineStack(filter: FilterDefinition): ReactNode {
   );
 }
 
-/** An icon filter's lead: its glyph, or for engines their marks. */
 function filterLead(filter: FilterDefinition): ReactNode {
   if (!filter.icon) return null;
   const marks = filter.icon === 'engines' ? engineStack(filter) : null;
@@ -115,7 +96,6 @@ function filterLead(filter: FilterDefinition): ReactNode {
   return <Glyph className="size-3.5" aria-hidden />;
 }
 
-/** One filter as its own chip in the row, opening its options. */
 export function FilterChip({
   filter,
   align = 'start',
@@ -140,10 +120,6 @@ export function FilterChip({
   );
 }
 
-/**
- * A filter set inside Filters, after the button: its value and a × that puts
- * it back to its default; the filter's name is in the tooltip.
- */
 export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
   return (
     <Tooltip content={filter.label}>

@@ -1,17 +1,3 @@
-/**
- * Sanitised Markdown renderer for AI-generated content (Content vertical).
- *
- * The model output is UNTRUSTED. Defences, all local to this module:
- *   - raw HTML is never parsed (no `rehype-raw`; react-markdown escapes it),
- *   - URLs pass `safeUrlTransform` (./safe-url) — only http/https/mailto survive
- *     (`javascript:`/`data:`/etc. are neutralised to an empty href),
- *   - links open in a new tab with `rel="noopener noreferrer"`; given
- *     `knownHosts`, a link to any other host first asks the person to confirm
- *     the full address (a prompt-injected page can make the model put project
- *     data in a link),
- *   - a restricted component map (no images, no iframes) with token-only
- *     classes so the output inherits the app theme.
- */
 import {
   createContext,
   memo,
@@ -42,13 +28,10 @@ type LeaveGuard = Readonly<{
   confirmLeave: (href: string) => void;
 }>;
 
-/** Set only by a `ContentMarkdown` given `knownHosts`; links read it to decide. */
 const LeaveGuardContext = createContext<LeaveGuard | null>(null);
 
-/** Draws a link the caller recognises (a cited source) as its own node; null keeps the plain link. */
 export type LinkChip = (href: string, children: ReactNode) => ReactNode | null;
 
-/** Set only by a `ContentMarkdown` given `linkChip`. */
 const LinkChipContext = createContext<LinkChip | null>(null);
 
 function MarkdownLink({
@@ -82,10 +65,8 @@ function MarkdownLink({
   );
 }
 
-/** A phrase in the text and what replaces it where it appears whole, such as a record's chip. */
 export type PhraseChip = Readonly<{ text: string; node: ReactNode }>;
 
-/** Set only by a `ContentMarkdown` given `chips`; chip slots read it by index. */
 const ChipsContext = createContext<readonly PhraseChip[]>([]);
 
 function MarkdownSpan({
@@ -111,7 +92,6 @@ function hastHeads(node: HastNode): string[] {
   return (node.children ?? []).flatMap(hastHeads);
 }
 
-/** A reply table's name: "Table: " and its first three column heads. */
 function tableName(node: HastNode | undefined): string {
   const heads = node ? hastHeads(node).filter(Boolean) : [];
   if (heads.length === 0) return 'Table';
@@ -119,10 +99,7 @@ function tableName(node: HastNode | undefined): string {
   return `Table: ${shown}${heads.length > 3 ? ', …' : ''}`;
 }
 
-/** Restricted component map (no props closed over, so it is stable across renders). */
 const MARKDOWN_COMPONENTS: Components = {
-  // Generated headings begin below the route-owned page title. The raw
-  // Markdown remains untouched for copy and export.
   h1: ({ node: _node, children, ...props }) => <h2 {...props}>{children}</h2>,
   h2: ({ node: _node, children, ...props }) => <h3 {...props}>{children}</h3>,
   h3: ({ node: _node, children, ...props }) => <h4 {...props}>{children}</h4>,
@@ -131,10 +108,7 @@ const MARKDOWN_COMPONENTS: Components = {
   h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
   // Untrusted output: never render images (remote-fetch beacon risk).
   img: () => null,
-  // A wide table scrolls inside its frame by its scrollbar, the fade saying
-  // so; the frame and the table are named by the table's column heads.
   table: ({ node, ...props }) => <MarkdownTable name={tableName(node)} {...props} />,
-  // GFM makes a head cell only in the head row, so each one heads its column.
   th: ({ node: _node, ...props }) => <th {...props} scope="col" />,
   // Forward the remaining DOM props (id, aria-describedby,
   // data-footnote-*) so GFM footnote back-links keep working; `node`
@@ -175,8 +149,6 @@ function sameItems<T>(a: readonly T[], b: readonly T[], same: (x: T, y: T) => bo
   );
 }
 
-// Callers pass fresh chip and highlight arrays each render; compare them by value
-// so a composer keystroke never re-parses every message.
 function sameBody(a: MarkdownBodyProps, b: MarkdownBodyProps) {
   return (
     a.content === b.content &&
@@ -193,9 +165,6 @@ const MarkdownBody = memo(function MarkdownBody({
   highlights,
 }: MarkdownBodyProps) {
   return (
-    // Generated Markdown can contain unbreakable URLs, code, and wide tables.
-    // Text wraps to the column; a table that still cannot fit scrolls inside
-    // its own frame, never as one scrollbar at the bottom of a long result.
     <div
       className={cn(
         'prose-content min-w-0 w-full max-w-full [overflow-wrap:anywhere]',
@@ -217,7 +186,6 @@ const MarkdownBody = memo(function MarkdownBody({
   );
 }, sameBody);
 
-/** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({
   markdown,
   density = 'default',
@@ -228,17 +196,9 @@ export function ContentMarkdown({
 }: Readonly<{
   markdown: string;
   density?: 'default' | 'compact';
-  /** Exact phrases to mark where they appear whole inside one text run. */
   highlights?: readonly Highlight[];
-  /** Exact phrases to replace with a node where they stand alone outside links and code. */
   chips?: readonly PhraseChip[];
-  /**
-   * Hosts a link may open directly (each also covers its subdomains); a link
-   * anywhere else opens only after a "You're leaving CiteLadder" confirm that
-   * shows its full address. Omitted, every link opens directly.
-   */
   knownHosts?: readonly string[];
-  /** Replaces a link it recognises; links it returns null for render as plain links. */
   linkChip?: LinkChip;
 }>) {
   const content = markdown ?? '';
@@ -301,7 +261,6 @@ export function ContentMarkdown({
 
 const asParagraph: Components['p'] = ({ children }) => <p>{children}</p>;
 const asCell: Components['td'] = ({ children }) => <>{children} </>;
-/** Kept blocks only; everything else (links, emphasis, images, task boxes) is unwrapped to its words. */
 const TEXT_ELEMENTS = [
   'p',
   'ul',
@@ -333,10 +292,6 @@ const TEXT_COMPONENTS: Components = {
   td: asCell,
 };
 
-/**
- * Markdown as its words in paragraphs and lists, for a live region: no link,
- * heading, table or image, so it adds nothing to focus or navigate.
- */
 export const MarkdownText = memo(function MarkdownText({
   markdown,
 }: Readonly<{ markdown: string }>) {

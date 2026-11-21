@@ -12,7 +12,6 @@ afterAll(async () => {
 });
 
 describe('Pages path formatting', () => {
-  // A read formats only its page unless a folder or resource filter needs every row.
   it('derives the same path, folder and resource class on a page as under a filter', async () => {
     const seed = await fixtures.crawl();
     for (const path of ['/known', '/docs/Guides/Deep/News.RSS', '/robots.txt'])

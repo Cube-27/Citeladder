@@ -1,8 +1,3 @@
-/**
- * The one DataForSEO envelope client: every DataForSEO product (audit search
- * surfaces and Keyword Research) sends through `call`, so a refused account,
- * an unauthorized login and a malformed body mean the same thing everywhere.
- */
 import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { z } from 'zod';
 import { policy } from '../config.ts';
@@ -19,7 +14,6 @@ const envelopeSchema = z.looseObject({
   status_code: z.number().int(),
   tasks: z.array(taskSchema).nullable().optional(),
 });
-/** An accepted envelope; everything beyond the status codes is the provider's, kept as sent. */
 type Envelope = z.infer<typeof envelopeSchema>;
 
 type DataforseoTransport = {
@@ -30,7 +24,6 @@ type DataforseoTransport = {
   signal?: AbortSignal;
 };
 
-/** What a refused envelope or task status means: one mapping for every product. */
 export function envelopeStatusError(status: number): ProviderError {
   if (status === constants.status_unauthorized) return new ProviderError('auth_failure');
   // A paused, unfunded or unsubscribed account refuses every request until it is restored.
@@ -42,11 +35,9 @@ export function envelopeStatusError(status: number): ProviderError {
   return new ProviderError('client_error');
 }
 
-/** Whether a status code is one DataForSEO accepts (done or queued). */
 export const acceptedStatus = (status: number) =>
   constants.accepted_submission_status_codes.includes(status);
 
-/** A reported USD cost as a finite non-negative number; null when absent or unreadable. */
 export function reportedCost(value: unknown): number | null {
   if (typeof value === 'string' && !value.trim()) return null;
   if (typeof value !== 'number' && typeof value !== 'string') return null;
@@ -54,7 +45,6 @@ export function reportedCost(value: unknown): number | null {
   return Number.isFinite(cost) && cost >= 0 ? cost : null;
 }
 
-/** A reported USD cost in whole micro-USD; null when absent, unreadable or out of range. */
 export function costMicrousd(value: unknown): number | null {
   const cost = reportedCost(value);
   if (cost === null) return null;
@@ -62,12 +52,6 @@ export function costMicrousd(value: unknown): number | null {
   return Number.isSafeInteger(result) ? result : null;
 }
 
-/**
- * A client for one DataForSEO login pair (JSON `{login, password}`) at an
- * approved base URL. Every local check runs here, before anything is sent: an
- * unreadable credential is an auth failure, an unapproved endpoint a client
- * error. No internal retries.
- */
 export function dataforseoClient(
   credential: { secret: string; baseUrl: string },
   transport: DataforseoTransport,
@@ -88,7 +72,6 @@ export function dataforseoClient(
   }
   const authorization = basicAuthorization(pair);
   const send = transport.send ?? globalThis.fetch;
-  /** One request: a GET without payload, a POST with one. Refused envelopes throw. */
   async function call(
     path: string,
     payload?: unknown,

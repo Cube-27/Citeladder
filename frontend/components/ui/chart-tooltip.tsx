@@ -7,15 +7,8 @@ import { textRole } from '@/components/ui/typography';
 import type { Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/**
- * The app's Recharts look, after HeroUI's charts (owner, 2026-11-19): no axis
- * or tick lines, muted caption ticks, a faint dashed horizontal grid, a dashed
- * cursor, gradient fills and a tooltip card. Colours are the series roles, so
- * you stay the accent and a rival keeps its page-wide hue.
- */
 export const seriesColor = (tone: SeriesTone) => `var(--color-data-${tone})`;
 
-/** Axis props every cartesian chart shares: no lines, muted caption ticks. */
 export const AXIS_PROPS = {
   axisLine: false,
   tickLine: false,
@@ -23,23 +16,16 @@ export const AXIS_PROPS = {
   tick: { fill: 'var(--color-ink-2)', fontSize: 12 },
 } as const;
 
-/** The grid: horizontal only, dashed, in the rule role. */
 export const GRID_PROPS = {
   vertical: false,
   strokeDasharray: '3 3',
   stroke: 'var(--color-rule)',
 } as const;
 
-/** The hover cursor: a dashed vertical line on a line or area chart. */
 export const LINE_CURSOR = { stroke: 'var(--color-control-line)', strokeDasharray: '4 4' };
 
-/** The hover cursor on a bar chart: a soft band behind the bar. */
 export const BAR_CURSOR = { fill: 'var(--color-state-hover)' };
 
-/**
- * The colour role a `fill-*` or `stroke-*` class names (`fill-positive`), as its
- * CSS variable; a `fill-current` takes its `text-*` role.
- */
 export function roleColor(classes: string, prefix: 'fill' | 'stroke'): string {
   const named = (kind: string) =>
     classes.split(/\s+/).find((name) => name.startsWith(`${kind}-`) && name !== `${kind}-current`);
@@ -47,7 +33,6 @@ export function roleColor(classes: string, prefix: 'fill' | 'stroke'): string {
   return role ? `var(--color-${role})` : 'var(--color-well)';
 }
 
-/** A series' mark: a dot, or its marker shape when a key tells lines apart by shape. */
 function SeriesIndicator({ color, shape }: Readonly<{ color: string; shape?: MarkerShape }>) {
   return (
     <svg aria-hidden viewBox="-5 -5 10 10" className="size-2 shrink-0 overflow-visible">
@@ -56,7 +41,6 @@ function SeriesIndicator({ color, shape }: Readonly<{ color: string; shape?: Mar
   );
 }
 
-/** A marker of `shape` centred on (x, y), filled in `color` with a surface outline. */
 export function ShapeMark({
   x,
   y,
@@ -95,17 +79,12 @@ export function ShapeMark({
 
 export type TooltipRow = Readonly<{
   name: string;
-  /** Its indicator's colour, a CSS colour (`seriesColor(tone)`). */
   color: string;
   value: Formatted;
   shape?: MarkerShape;
   mark?: ReactNode;
 }>;
 
-/**
- * The tooltip card: a muted header (the point), then one row per series of
- * its indicator, its name in `ink-2` and its value at the end in `ink`.
- */
 export function ChartTooltipCard({
   title,
   note,

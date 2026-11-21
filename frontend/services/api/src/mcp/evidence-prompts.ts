@@ -1,4 +1,3 @@
-/** Per-prompt and fanout reads compose the visibility owners; they own no metrics. */
 import { policy } from '../config.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
@@ -20,7 +19,6 @@ type PromptMetricsArgs = Selection &
 
 const resultUri = (taskId: string) => `citeladder://visibility_result/${taskId}`;
 
-/** Where a list page starts: the cursor names its run, so a run finishing between pages cannot shift them. */
 function listStart(args: PromptMetricsArgs): { auditId: string | null; offset: number } {
   if (!args.cursor) return { auditId: args.audit_id ?? null, offset: 0 };
   const [run, at] = decodeCursor(args.cursor, 2);
@@ -32,7 +30,6 @@ function listStart(args: PromptMetricsArgs): { auditId: string | null; offset: n
   return { auditId: run ?? null, offset };
 }
 
-/** One run's prompt scores, paged here: the owner returns the run's whole list. */
 async function promptList(read: ProjectRead, args: PromptMetricsArgs): Promise<Evidence> {
   const scope = { ...read.scope, marketId: args.market_id ?? null };
   const { auditId, offset } = listStart(args);
@@ -50,7 +47,6 @@ async function promptList(read: ProjectRead, args: PromptMetricsArgs): Promise<E
     return notYetMeasured(error, Boolean(auditId || args.baseline_id));
   }
   const runId = auditId ?? items[0]?.audit_id ?? (await latestBrandRunId(read.db, scope));
-  // The owner reads no run yet as an empty list; here it is not a run without prompts.
   if (runId === null) return unavailable('no_completed_run');
   return listPage({ runId, items, offset, limit: args.limit ?? mcpPolicy.default_list_limit });
 }
@@ -81,10 +77,6 @@ function listPage(input: {
   };
 }
 
-/**
- * Prompt metrics: one run's prompts with their scores (`list`), one prompt's
- * score per run (`history`), or that prompt's answers across runs (`answers`).
- */
 export async function promptMetricsRead(
   read: ProjectRead,
   args: PromptMetricsArgs,
@@ -132,10 +124,6 @@ export async function promptMetricsRead(
   };
 }
 
-/**
- * The searches engines ran while answering, as the Query fanouts table counts
- * them: each query with its share, change against the previous run and brands.
- */
 export async function queryFanoutsRead(
   read: ProjectRead,
   args: Selection &

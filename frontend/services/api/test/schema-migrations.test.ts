@@ -1,4 +1,3 @@
-/** The migrate CLI's admission against real PostgreSQL: numbered forward migrations, each applied once. */
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -18,7 +17,6 @@ const admin = new pg.Client({
 const created: string[] = [];
 const migrations = readMigrations();
 const [baseline] = migrations;
-/** A forward migration after the baseline. */
 const probe = {
   version: '0002_probe',
   sql: 'ALTER TABLE public.workspaces ADD COLUMN probe integer;',
@@ -49,13 +47,11 @@ async function columns(client: pg.Client, table: string) {
   return result.rows.map((row) => row.column_name);
 }
 
-/** The services' URL for a fresh database: the application role the suite already connects as. */
 const appUrl = (ownerUrl: string) =>
   Object.assign(new URL(process.env.API_TEST_DATABASE_URL!), {
     pathname: new URL(ownerUrl).pathname,
   }).href;
 
-/** The deployed migrate job: the schema owner's URL plus the services' URL. */
 const migrateCli = (ownerUrl: string, servicesUrl: string) =>
   promisify(execFile)(
     process.execPath,
@@ -78,7 +74,6 @@ const ledger = async (client: pg.Client) =>
     )
   ).rows.map((row) => row.version);
 
-/** The migration files as the repository holds them, so adding one needs no edit here. */
 const directory = readdirSync(fileURLToPath(new URL('../migrations/', import.meta.url)))
   .filter((name) => name.endsWith('.sql'))
   .sort()
@@ -97,7 +92,6 @@ describe('a fresh database', () => {
     const { client } = await freshDatabase();
     clients.push(client);
 
-    // Numbered 0001, 0002, … with no gap or duplicate.
     expect(directory.map((version) => Number(version.slice(0, 4)))).toEqual(
       directory.map((_, index) => index + 1),
     );
@@ -118,7 +112,6 @@ describe('a fresh database', () => {
       /Migration 0001_baseline changed after this database applied it.*new numbered migration/u,
     );
     expect(await publicTables(client)).not.toContain('extra');
-    // A release without a version the database recorded is refused, not rolled back.
     expect(await applyMigrations(client, [...migrations, probe])).toEqual(['0002_probe']);
     await expect(applyMigrations(client, migrations)).rejects.toThrow(
       'This database recorded migration 0002_probe, which this release does not contain.',
@@ -130,7 +123,6 @@ describe('an existing database', () => {
   it('refuses a database migrated by a chain this baseline replaced, before applying anything', async () => {
     const { client } = await freshDatabase();
     clients.push(client);
-    // The ledger an older chain left: its own baseline, then later files.
     const older = [
       {
         version: '0001_baseline',
@@ -163,7 +155,6 @@ describe('a migration the serving revision would wait behind', () => {
     clients.push(migrate);
     expect(await applyMigrations(migrate, [baseline!])).toEqual(['0001_baseline']);
 
-    // The serving revision reads the table inside an open transaction.
     await serving.query('begin');
     await serving.query('select * from public.workspaces');
     await expect(applyMigrations(migrate, [baseline!, probe])).rejects.toThrow(
@@ -172,7 +163,6 @@ describe('a migration the serving revision would wait behind', () => {
     await serving.query('rollback');
     expect(await columns(serving, 'workspaces')).not.toContain('probe');
 
-    // A file that needs longer raises its own bound; the next file is bounded again.
     const raised = {
       version: '0003_raised',
       sql: "SET LOCAL statement_timeout = '10s';\nSELECT pg_sleep(1.5)",
@@ -184,7 +174,6 @@ describe('a migration the serving revision would wait behind', () => {
     expect(await ledger(serving)).toEqual(['0001_baseline']);
     expect(await columns(serving, 'workspaces')).not.toContain('probe');
 
-    // With the lock free, the same migrations apply.
     expect(await applyMigrations(migrate, [baseline!, probe, raised])).toEqual([
       '0002_probe',
       '0003_raised',
@@ -205,7 +194,6 @@ describe('a database the migrations must not touch', () => {
     expect(await publicTables(client)).toEqual(['users']);
     await client.query('DROP TABLE public.users');
 
-    // Admission reads only emptiness, so a short failing script proves the rollback.
     const broken = {
       version: '0001_broken',
       sql: 'CREATE TABLE public.partial (id integer);\nSELECT 1 / 0;\n',
@@ -216,7 +204,6 @@ describe('a database the migrations must not touch', () => {
 
   it('fails the migrate job with the reason', async () => {
     const { client, url } = await freshDatabase();
-    // Any schema the ledger did not record, such as a database from before the ledger existed.
     await client.query('CREATE TABLE public.unrecorded_table (id integer PRIMARY KEY)');
     await client.end();
     await expect(migrateCli(url, appUrl(url))).rejects.toMatchObject({

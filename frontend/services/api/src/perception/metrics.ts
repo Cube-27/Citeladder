@@ -1,9 +1,3 @@
-/**
- * Perception metrics over persisted answers: pure and deterministic. A missing
- * classification is a counted state (pending, unavailable by reason, not
- * assessable, low confidence), never a zero, and every score travels with
- * the coverage it was computed over.
- */
 import type {
   PerceptionCoverage,
   PerceptionQuote,
@@ -29,14 +23,12 @@ export type MentionStatus =
   | { kind: 'pending' }
   | { kind: 'unavailable'; reason: UnavailableReason };
 
-/** A verified aspect with its theme's current name, or the fallback's. */
 export type NamedAspect = Omit<VerifiedAspect, 'theme_id'> & { theme: string };
 
 export type Mention = {
   entity: string;
   isBrand: boolean;
   status: MentionStatus;
-  /** Verified aspects; only a classified mention's count toward themes. */
   aspects: NamedAspect[];
 };
 
@@ -47,18 +39,13 @@ export type PerceptionAnswer = {
   logicalEngine: string;
   prompt: string;
   topic: string;
-  /** The audit's frozen versions and perception model: together its comparison key. */
   versions: { extractor: string; template: string; metrics: string; model: string };
-  /** The run's frozen measurement comparison key; null when it can't be compared. */
   comparisonKey: string | null;
-  /** One per named tracked business. */
   mentions: Mention[];
-  /** The brand's deterministic first-mention state, null when not assessed. */
   brandRecommendation: string | null;
   citations: { domain: string; url: string }[];
 };
 
-/** An `answer_perceptions` row's outcome, parsed at the read boundary. */
 export const persistedOutcomeSchema = z.discriminatedUnion('outcome', [
   z.object({ outcome: z.literal('classified') }),
   z.object({ outcome: z.literal('no_mentions') }),
@@ -81,7 +68,6 @@ type PersistedEntity = {
   model_omitted: boolean;
 };
 
-/** One mention's status from its answer's perception row and its entity row. */
 export function mentionStatus(
   perception: PersistedOutcome | undefined,
   entity: PersistedEntity | undefined,
@@ -90,7 +76,6 @@ export function mentionStatus(
   switch (perception.outcome) {
     case 'classified':
       if (!entity) return { kind: 'unavailable', reason: 'entity_limit' };
-      // Left out by the model is no judgement: it never joins the judged `not_assessable`.
       if (entity.model_omitted) return { kind: 'unavailable', reason: 'model_omitted' };
       if (entity.label === 'not_assessable') return { kind: 'not_assessable' };
       if (entity.low_confidence) return { kind: 'low_confidence' };
@@ -123,13 +108,11 @@ export function score(mentions: readonly Mention[]): PerceptionScore {
   };
 }
 
-/** The mentions' net sentiment with the counts it was computed over. */
 export function netSentiment(mentions: readonly Mention[]): NetSentiment {
   const { positive, negative, classified } = score(mentions);
   return pooledSentiment([{ mentions: mentions.length, classified, positive, negative }]);
 }
 
-/** Summed counts, and the net sentiment of the sum (never a mean of means). */
 export function pooledSentiment(
   parts: readonly Omit<NetSentiment, 'net_sentiment'>[],
 ): NetSentiment {
@@ -168,7 +151,6 @@ export function coverage(mentions: readonly Mention[]): PerceptionCoverage {
   };
 }
 
-/** The read state: a value once anything is confidently classified. */
 export function readState(cover: PerceptionCoverage): Pick<PerceptionResponse, 'state' | 'reason'> {
   if (cover.mentions === 0) return { state: 'no_mentions', reason: null };
   if (cover.classified > 0) return { state: 'value', reason: null };
@@ -199,10 +181,8 @@ function breakdown(
     .sort((a, b) => b.score.classified - a.score.classified || compareText(a.key, b.key));
 }
 
-/** A quote with its aspect's ordinal in the mention, the last key of its total order. */
 export type PositionedQuote = PerceptionQuote & { ordinal: number };
 
-/** Newest answer first, then execution, entity and aspect: a total order (keys are unique). */
 export function quoteOrder(
   a: Pick<PositionedQuote, 'observed_at' | 'execution_id' | 'entity' | 'ordinal'>,
   b: Pick<PositionedQuote, 'observed_at' | 'execution_id' | 'entity' | 'ordinal'>,
@@ -215,7 +195,6 @@ export function quoteOrder(
   );
 }
 
-/** The verified aspects of confidently classified mentions `keep` accepts, in quote order. */
 export function classifiedQuotes(
   answers: readonly PerceptionAnswer[],
   keep: (mention: Mention) => boolean,
@@ -270,7 +249,6 @@ function themes(quotes: readonly PerceptionQuote[], perTheme: number) {
     );
 }
 
-/** Domains cited in the answers `flagged` accepts, by answer count: co-occurrence only. */
 export function citedDomains<A extends { citations: readonly { domain: string; url: string }[] }>(
   answers: readonly A[],
   flagged: (answer: A) => boolean,
@@ -294,7 +272,6 @@ export function citedDomains<A extends { citations: readonly { domain: string; u
     .slice(0, limit);
 }
 
-/** Domains cited in answers where the brand drew a negative aspect. */
 function drivers(answers: readonly PerceptionAnswer[], limit: number) {
   return citedDomains(
     answers,
@@ -326,10 +303,6 @@ function recommended(answers: readonly PerceptionAnswer[]) {
   };
 }
 
-/**
- * Answers grouped into runs, oldest completion first; a run whose identity
- * differs from the previous run's is not comparable with it.
- */
 export function runPoints<A extends { auditId: string; observedAt: string }>(
   answers: readonly A[],
   identity: (first: A) => string,
@@ -356,10 +329,6 @@ export function runPoints<A extends { auditId: string; observedAt: string }>(
     });
 }
 
-/**
- * One point per run; a change of measurement configuration, versions or
- * model from the previous point breaks comparability.
- */
 export function perceptionTrend(answers: readonly PerceptionAnswer[]) {
   return runPoints(answers, ({ auditId, versions, comparisonKey }) =>
     JSON.stringify([
@@ -385,7 +354,6 @@ export function perceptionTrend(answers: readonly PerceptionAnswer[]) {
   });
 }
 
-/** Per theme, the classified mentions raising it at least once: most raised first. */
 function themeMentions(mentions: readonly Mention[]) {
   const counts = new Map<string, number>();
   for (const mention of mentions) {
@@ -398,17 +366,14 @@ function themeMentions(mentions: readonly Mention[]) {
     .sort((a, b) => b.mentions - a.mentions || compareText(a.theme, b.theme));
 }
 
-// The read resolves marks against the project records (`brand-identities.ts`).
 const UNMARKED: { logo_url: string | null; website_url: string | null } = {
   logo_url: null,
   website_url: null,
 };
 
-/** Every named business's score and coverage: the brand first, then most mentioned. */
 export function entityScores(answers: readonly PerceptionAnswer[]) {
   const byEntity = new Map<string, { name: string; isBrand: boolean; mentions: Mention[] }>();
   for (const mention of answers.flatMap((answer) => answer.mentions)) {
-    // Keyed by role too: a competitor sharing the brand's name never merges into it.
     const key = `${mention.isBrand}:${mention.entity}`;
     const entity = byEntity.get(key);
     if (entity) entity.mentions.push(mention);

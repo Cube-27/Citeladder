@@ -22,7 +22,6 @@ import {
 
 const count = (value: number) => value.toLocaleString('en-US');
 
-/** Keyword Research: keywords the domain ranks for, with position, volume and intent. */
 export function ScreenKeywords() {
   return (
     <Vignette
@@ -44,7 +43,6 @@ export function ScreenKeywords() {
   );
 }
 
-/** Search Demand: the signals it raised, each with its query, page and figure. */
 export function ScreenDemand() {
   return (
     <Vignette
@@ -66,7 +64,6 @@ export function ScreenDemand() {
   );
 }
 
-/** AI referrals: GA4 sessions that AI assistants sent, and the weekly trend. */
 export function ScreenReferrals() {
   return (
     <Vignette
@@ -92,7 +89,6 @@ export function ScreenReferrals() {
   );
 }
 
-/** Perception: how engines describe the brand, theme by theme. */
 export function ScreenPerception() {
   return (
     <Vignette
@@ -125,7 +121,6 @@ export function ScreenPerception() {
   );
 }
 
-/** Engines: the brand's visibility on each engine and its change this week. */
 export function ScreenEngines() {
   return (
     <Vignette

@@ -8,7 +8,6 @@ import { scoreExecution, scoringConfig } from '../src/analysis/scoring.ts';
 import { entityPassages } from '../src/perception/passages.ts';
 import recordedFinishes from './fixtures/answer-engines/finish-reasons.json' with { type: 'json' };
 
-/** Provider responses in their recorded shapes, one per finish reason, with the outcome each must produce. */
 const finishFixtures = z
   .array(
     z.strictObject({

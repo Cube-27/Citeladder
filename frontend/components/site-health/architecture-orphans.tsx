@@ -1,12 +1,3 @@
-/**
- * Orphan evidence for the Architecture tab: the count, and the pages behind it.
- *
- * Split from `architecture-panel.tsx` so neither file carries a second
- * concern. The count is the summary the card shows; the drawer is where the
- * URLs live, because a list of twenty inside a three-metric summary pushed
- * Structure depth off the fold to say what the number already said.
- */
-
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
@@ -15,12 +6,8 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { type FigureSegment } from '@/components/ui/figure-strip';
 
-// Scope, in the metric's own words. The count is a fact about the pages this
-// crawl fetched; it is not the stronger claim that nothing anywhere links to
-// them, which stays behind the coverage-gated rule.
 const ORPHAN_SCOPE_NOTE = 'within this crawl';
 
-/** The orphan count as a `StatRow` segment of the Internal linking row. */
 export function orphanSegment({
   pages,
   total,
@@ -32,12 +19,6 @@ export function orphanSegment({
 }>): FigureSegment {
   const base = { key: 'orphans', label: 'Orphaned pages' };
   if (total === null) return { ...base, value: null };
-  // The count opens the evidence rather than listing it in place. A list of
-  // twenty URLs inside a three-metric summary card pushed Structure depth off
-  // the fold to say something the number already said; the drawer is where
-  // every other Site Health surface puts its supporting rows. The visible
-  // label is the bare number, which as an accessible name says only "1", so
-  // the target is named by the action instead.
   if (pages.length === 0) return { ...base, value: total, sub: ORPHAN_SCOPE_NOTE };
   return {
     ...base,
@@ -73,8 +54,6 @@ export function OrphanPageDrawer({
         <Stack as="ul">
           {pages.map((page) => (
             <Stack as="li" gap="tight" key={page.site_url_id} className="min-w-0">
-              {/* Openable, like every other page reference in this tab. A count
-                nobody can act on is the failure this whole change is undoing. */}
               {crawlId ? (
                 <TextLink
                   text="body"

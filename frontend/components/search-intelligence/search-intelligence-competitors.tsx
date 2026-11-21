@@ -17,7 +17,6 @@ const COMPARISON_KINDS = searchDatasetKindsWith('comparison');
 import { datasetCount } from './search-intelligence-format';
 import { SearchValue } from './search-intelligence-value';
 
-// A reviewed canonical host may be www while saved competitor identities use apex domains.
 export function matchesCompetitor(origin: string, domain: string): boolean {
   if (!origin) return false;
   try {
@@ -56,7 +55,6 @@ export function SearchIntelligenceCompetitors({
     const fetched = Boolean(footprint) || [...comparisons.values()].some(Boolean);
     return { competitor, footprint, comparisons, fetched };
   });
-  // Nothing fetched for any competitor: the table says so once, not in every cell.
   const noneFetched = rows.length > 0 && !rows.some((row) => row.fetched);
   return (
     <DataTable
@@ -117,7 +115,6 @@ export function SearchIntelligenceCompetitors({
                     <TextLink asChild text="body">
                       <Pressable
                         className="min-h-6 w-auto min-w-6 text-center"
-                        // The visible count leads the name, so a speech user can say it.
                         aria-label={`${datasetCount(dataset)} ${SEARCH_DATASET_LABELS[kind]}: ${competitor.label}`}
                         onClick={() => onOpen(dataset)}
                       >
@@ -147,7 +144,6 @@ const COMPETITOR_COLUMNS: readonly DataTableColumn[] = [
 
 const FIGURE_KEYS = COMPETITOR_COLUMNS.slice(1).map((column) => column.key);
 
-/** One note across the figure columns the table shows. */
 function NotFetchedCell() {
   return (
     <TableCell colSpan={useShownSpan(FIGURE_KEYS)}>

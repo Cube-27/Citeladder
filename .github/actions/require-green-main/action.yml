@@ -21,8 +21,6 @@ runs:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        # One bounded wait across both workflows, so a deploy started right
-        # after merge still proceeds.
         deadline=$((SECONDS + 1800))
         for workflow in ci.yml compose-smoke.yml; do
           while :; do

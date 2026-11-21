@@ -89,14 +89,12 @@ it.each([
 
     const heading = await screen.findByRole('heading', { name: 'No runs yet' });
     const empty = within(heading.closest<HTMLElement>('[data-state-block="empty"]')!);
-    // Launch run shows held while the prompt sets load; wait for the settled step.
     await waitFor(() =>
       expect(empty.getByRole(next.role, { name: next.name })).not.toHaveAttribute('aria-disabled'),
     );
     expect(screen.queryAllByRole('button', { name: 'Launch run' })).toHaveLength(
       next.name === 'Launch run' ? 1 : 0,
     );
-    // A schedule needs an active prompt; until one exists the card is not offered.
     if (schedules) await screen.findByRole('heading', { name: 'Scheduled audits' });
     else expect(screen.queryByRole('heading', { name: 'Scheduled audits' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /Completed/ })).toBeNull();

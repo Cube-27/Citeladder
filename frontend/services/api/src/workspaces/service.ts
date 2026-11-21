@@ -24,7 +24,6 @@ import { revokeCreatorKeys } from '../api-keys/revocation.ts';
 export type User = Selectable<Users>;
 type Role = keyof typeof policy.workspaces.roles;
 const isRole = (key: string): key is Role => Object.hasOwn(policy.workspaces.roles, key);
-// Workspace policy names the roles used by the wire enum.
 const [firstRole, ...otherRoles] = Object.keys(policy.workspaces.roles).filter(isRole);
 if (!firstRole) throw new Error('Workspace policy names no roles.');
 const roleSchema = z.enum([firstRole, ...otherRoles]);
@@ -79,7 +78,6 @@ async function insertWorkspace(
   return workspace;
 }
 
-/** Operator and development provisioning: the identity's owned workspace and its access. */
 export async function provisionAccount(
   db: Database,
   user: User,
@@ -101,11 +99,6 @@ export async function provisionAccount(
   return createdId;
 }
 
-/**
- * Create the caller's owned workspace with its billing account and access, in
- * the caller's transaction. This is where a self-serve trial starts, so a
- * public identity spends the shared daily trial budget here.
- */
 export async function createWorkspace(trx: Database, userId: string, name: string) {
   await subjectXactLock(trx, `workspace.create:${userId}`);
   if ((await ownedWorkspaces(trx, userId)).length >= OWNED_WORKSPACE_LIMIT)
@@ -189,8 +182,6 @@ export function mutateMember(
     .execute((trx) => mutateMemberInTransaction(trx, workspaceId, actorId, target));
 }
 
-/** Lock a customer (non-system) workspace row; operator CLIs authorize the actor
- * themselves and print the reviewed slug. */
 export async function lockWorkspace(trx: Database, workspaceId: string) {
   const workspace = await trx
     .selectFrom('workspaces')
@@ -217,7 +208,6 @@ export async function mutateMemberInTransaction(
   return applyMemberMutation(trx, workspaceId, actorId, target);
 }
 
-/** A member who can no longer invite loses the pending invitations they issued. */
 async function revokeIssuedInvitations(trx: Database, workspaceId: string, userId: string) {
   const now = new Date();
   await trx
@@ -230,7 +220,6 @@ async function revokeIssuedInvitations(trx: Database, workspaceId: string, userI
     .execute();
 }
 
-/** The member change itself, for a caller that already authorized and locked the workspace. */
 export async function applyMemberMutation(
   trx: Database,
   workspaceId: string,

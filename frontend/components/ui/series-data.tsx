@@ -6,41 +6,25 @@ import { textRole } from '@/components/ui/typography';
 import { Value } from '@/components/ui/value';
 import { absent, type Formatted, formattedText } from '@/lib/format';
 
-/* What a time-series chart says without drawing: its data types, its lines,
-   the sentence and table a reader who cannot see it gets, and one period's rows.
-   The app's AreaChart and the website's StepChart share them. */
-
 export type TrendPoint = {
-  /** The point in full ("10 Sep 2026 · run 4"): the tooltip's title and the table's column. */
   label: string;
-  /** The short form under the axis, when `label` is too long to sit there. */
   axisLabel?: string;
-  /** Null is a missing period: a `well` band with its word, never a drop to zero. */
   value: number | null;
-  /** Measured under a changed method: marked across the plot, with its note. */
   versionChange?: { note: string } | null;
-  /** When the point was measured; with every point stamped the x axis is real time. */
   timestamp?: number;
-  /** Not comparable with the point before it: every line breaks here. */
   breakBefore?: boolean;
 };
 
-/** A further line read against the first: a rival, a second rate, "Other". */
 export type TrendSeries = {
   label: string;
   values: readonly (number | null)[];
-  /** The merged remainder, in `data-other`, so it never reads as a brand. */
   other?: boolean;
-  /** Who the line is (a rival's domain), for its page-wide colour; defaults to `label`. */
   identity?: string;
-  /** The brand's logo beside its name in the key and tooltip. */
   mark?: ReactNode;
 };
 
-/** Something that happened at a moment: an ink tick on the time axis with its flag. */
 export type TrendEvent = { key: string; timestamp: number; label: string; kind?: EventKind };
 
-/** The first line from `data`, then up to three further lines, each with the identity its colour follows. */
 export function plottedLines({
   data,
   name,
@@ -64,7 +48,6 @@ export function plottedLines({
   ];
 }
 
-/** A value as the chart prints it, or its absence. */
 export function shownWith(format: (value: number) => string) {
   return (value: number | null | undefined): Formatted =>
     value === null || value === undefined ? absent() : format(value);
@@ -105,7 +88,6 @@ export function SeriesTable({
   );
 }
 
-/** Each line from its first measured point to its latest, in one sentence. */
 export function summarise(
   label: string,
   data: readonly TrendPoint[],
@@ -124,11 +106,6 @@ export function summarise(
   return `${label}. ${parts.join('; ')}.`;
 }
 
-/**
- * One period draws no line: each line is a compact row (name left, value
- * right) under one date for the set, and the frame drops its plot height
- * (`ChartFrame`). Over several periods the chart stays.
- */
 export function SingleMeasurements({
   label,
   point,
@@ -163,7 +140,6 @@ export function SingleMeasurements({
   );
 }
 
-/** The index of the latest measured value, or -1. */
 export function lastMeasured(values: readonly (number | null)[]) {
   for (let index = values.length - 1; index >= 0; index -= 1)
     if (values[index] !== null) return index;

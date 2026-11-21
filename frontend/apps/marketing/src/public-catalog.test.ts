@@ -23,7 +23,6 @@ const catalog = (revision: string) => ({
   support_contact: null,
 });
 
-/** An edge cache that honours each entry's max-age, and the work deferred past the response. */
 function edge() {
   const entries = new Map<string, { response: Response; expires: number }>();
   const deferred: Promise<unknown>[] = [];

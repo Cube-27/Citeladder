@@ -7,15 +7,12 @@ import {
 import { ICONS, type IconGlyph } from '@/lib/icons';
 import type { NavDestination } from '@/lib/navigation/route-types';
 
-/** A manifest nav entry with its glyph resolved, ready to render as a link. */
 export type NavItem = Omit<NavDestination, 'icon'> & { icon: IconGlyph };
 
 type DashboardGroup = (typeof DASHBOARD_SIDEBAR_GROUPS)[number];
 
-/** A Dashboard group: its label and its rail glyph. */
 export type NavGroup = Readonly<
   DashboardGroup & {
-    /** The collapsed rail's one button for the group. */
     icon: IconGlyph;
     items: readonly NavItem[];
   }
@@ -34,7 +31,6 @@ const GROUP_ICONS = {
   commerce: ICONS.products,
 } satisfies Record<DashboardGroup['group'], IconGlyph>;
 
-/** Dashboard mode: Home, Brand, Tracking, Website, Search and Commerce. */
 export const DASHBOARD_GROUPS: readonly NavGroup[] = DASHBOARD_SIDEBAR_GROUPS.map((entry) => ({
   ...entry,
   icon: GROUP_ICONS[entry.group],
@@ -43,21 +39,16 @@ export const DASHBOARD_GROUPS: readonly NavGroup[] = DASHBOARD_SIDEBAR_GROUPS.ma
 
 const agentEntries = navItems('sidebar:agent');
 
-/** Agent mode's "New chat" button: the Agent's own home. */
 export const NEW_CHAT_ITEM: NavItem = agentEntries.find(
   (item) => item.href === MODE_HOMES.agent,
 ) ?? { label: 'New chat', icon: ICONS.newChat, href: MODE_HOMES.agent, scope: 'project' };
 
-/** Agent mode's destinations under "New chat": Skills, Context. */
 export const AGENT_NAV_ITEMS = agentEntries.filter((item) => item !== NEW_CHAT_ITEM);
 
-/** The foot's destinations, above the account button. */
 export const FOOT_NAV_ITEMS = navItems('sidebar:foot');
 
-/** The account menu's workspace and account links. */
 export const ACCOUNT_MENU_ITEMS = navItems('account');
 
-/** Every sidebar row in either mode, for marking the current one. */
 const SIDEBAR_ITEMS: readonly NavItem[] = [
   ...DASHBOARD_GROUPS.flatMap((entry) => entry.items),
   NEW_CHAT_ITEM,
@@ -71,13 +62,6 @@ const SIDEBAR_PATHS = SIDEBAR_ITEMS.map(
 
 const AGENT_HREFS = new Set([NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS].map((item) => item.href));
 
-/**
- * Every shell destination, grouped for the command palette with the
- * sidebar's labels: Overview, Analyze, Commerce, Track, Agent, then Settings
- * (Integrations and the account's pages). An Agent destination the Dashboard
- * list repeats is listed once, under Agent. A managed plan has no
- * provider settings (B32).
- */
 export function resolveCommandGroups({ managed = false }: { managed?: boolean } = {}): readonly {
   title: string;
   items: readonly NavItem[];
@@ -101,31 +85,16 @@ export function resolveCommandGroups({ managed = false }: { managed?: boolean } 
 const atOrBelow = (pathname: string, base: string) =>
   pathname === base || pathname.startsWith(`${base}/`);
 
-/** The pages behind the account button: its menu's pages, and Pricing, reached from Billing. */
 const ACCOUNT_PATHS = [
   ...ACCOUNT_MENU_ITEMS.map((item) => new URL(item.href, 'https://citeladder.local').pathname),
   '/pricing',
 ];
 
-/**
- * The current page lives behind the account button (Settings, Billing,
- * Pricing), so the button carries the location mark; a settings tab that has
- * its own sidebar row (Integrations) marks that row instead.
- */
 export function isAccountCurrent(pathname: string, searchParams: URLSearchParams): boolean {
   if (SIDEBAR_ITEMS.some((item) => isNavItemActive(pathname, searchParams, item))) return false;
   return ACCOUNT_PATHS.some((base) => atOrBelow(pathname, base));
 }
 
-/**
- * A destination is current when the path is it or below it, unless another
- * destination sits deeper on that path: Shopping (`/products/overview`) is
- * not also Products, and Skills (`/agent/skills`) is not also New chat. New
- * chat is current on its own page only: a chat (`/agent/chats/…`) is marked
- * in the chat list instead. A destination that names query parameters (a
- * settings tab) also needs each of them to match, so Integrations is not
- * current on another settings tab. Every tab of Website is still Website.
- */
 export function isNavItemActive(
   pathname: string,
   searchParams: URLSearchParams,
@@ -141,11 +110,6 @@ export function isNavItemActive(
   return [...target.searchParams].every(([key, value]) => searchParams.get(key) === value);
 }
 
-/**
- * The section the page header names before the title: the Dashboard group
- * whose row is current, the Agent on its pages, else the workspace's own
- * pages (Integrations, Settings, Billing).
- */
 export function pageSection(
   pathname: string,
   searchParams: URLSearchParams,

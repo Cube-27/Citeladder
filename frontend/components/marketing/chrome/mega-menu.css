@@ -1,8 +1,3 @@
-/* ---------- MegaMenu (the shared popup draws its frame) ---------- */
-/* Each column is as wide as its longest row, so every subtitle sits on one
-   line; the menu sizes to that content (the popup follows it) and is held
-   inside the bar's content row (100cqw), where the columns share the width. */
-
 .cl-mega {
   width: max-content;
   max-width: calc(100cqw - 2px);
@@ -55,8 +50,6 @@
   }
 }
 
-/* A duotone tile: the orange glyph on a grey square. */
-
 .cl-mega-icon {
   display: inline-flex;
   align-items: center;
@@ -73,8 +66,6 @@
   flex-direction: column;
   min-width: 0;
 }
-
-/* An external row's arrow stays inline after the label, centred on its line. */
 
 .cl-mega-title {
   display: inline-flex;

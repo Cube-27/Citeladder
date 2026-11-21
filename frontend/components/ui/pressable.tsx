@@ -6,7 +6,6 @@ export type PressableProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   ref?: Ref<HTMLButtonElement>;
 };
 
-/** Accessible behavior for rows and cards that must not look like buttons. */
 export function Pressable({ className, type = 'button', ref, ...props }: Readonly<PressableProps>) {
   return (
     <button

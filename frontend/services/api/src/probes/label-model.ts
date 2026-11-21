@@ -1,10 +1,3 @@
-/**
- * The probe labelling requests and the deterministic mapping of their output.
- * The model only reads: it maps known-for points onto the project's themes,
- * puts objections into groups and lists the brands a theme answer names.
- * Code matches theme and group names, matches brands through the alias
- * matcher and caps every list, so a stray label never invents a theme.
- */
 import { z } from 'zod';
 
 import { namesEntity } from '../analysis/aliases.ts';
@@ -36,10 +29,6 @@ export const themeOutput = z.object({
   answers: z.array(z.object({ answer: number, brands: z.array(z.string()) })),
 });
 
-/**
- * `schema`, refusing a reply that skips any of the `count` answers it was sent:
- * a skipped answer is unlabelled, not one that raised nothing.
- */
 export function covering<Value extends { answers: readonly { answer: number }[] }>(
   schema: z.ZodType<Value>,
   count: number,
@@ -106,7 +95,6 @@ export function themeRequest(
   });
 }
 
-/** Each listed answer's entries, by the task they belong to; unknown or repeated numbers drop. */
 function byAnswer<Entry>(
   answers: readonly LabelAnswer[],
   output: readonly { answer: number; entries: readonly Entry[] }[],
@@ -123,7 +111,6 @@ function byAnswer<Entry>(
 
 const clip = (text: string) => Array.from(text.trim()).slice(0, QUOTE_MAX).join('');
 
-/** Known-for points onto the project's themes; a name no theme has is Other (null). */
 export function mapKnownFor(
   output: z.infer<typeof knownForOutput>,
   answers: readonly LabelAnswer[],
@@ -146,13 +133,6 @@ export function mapKnownFor(
 
 export type GroupRef = { kind: 'existing'; id: string } | { kind: 'new'; name: string };
 
-/**
- * Reasons onto the project's objection groups (AV-28). A name an existing
- * group has maps onto it; any other becomes a new group, at most
- * `maxNewGroups` per probe, and reasons past that cap are dropped. `named`
- * holds the new groups this probe's earlier calls created; `newGroups` returns
- * them with this call's.
- */
 export function mapObjections(
   output: z.infer<typeof objectionOutput>,
   answers: readonly LabelAnswer[],
@@ -195,10 +175,6 @@ export type TrackedName = ({ kind: 'brand'; id: null } | { kind: 'competitor'; i
   aliases: readonly string[];
 };
 
-/**
- * The tracked businesses each theme answer names, at the place the answer
- * first listed them (untracked names still take their places).
- */
 export function mapThemeBrands(
   output: z.infer<typeof themeOutput>,
   answers: readonly LabelAnswer[],

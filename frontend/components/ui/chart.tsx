@@ -3,15 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { SERIES_FILL, SERIES_STROKE, type SeriesTone } from '@/components/ui/step-chart-parts';
 import { percentText } from '@/lib/format';
 
-/**
- * The chart kit every product chart draws with: plain SVG and the chart
- * tokens, no chart library.
- *
- * `TrendChart` and the sparkline (the website's product screens) take a
- * series' colour from its position: 1 your brand, 2 the leader, 3 the next,
- * 4 an item flagged `other` (dashed), 5 a further series (dotted). The app's
- * `AreaChart` colours rivals by identity (`SeriesTonesContext`).
- */
 export type ChartTone = 1 | 2 | 3 | 4 | 5;
 
 export function chartTone(item: Readonly<{ other?: boolean }>, index: number): ChartTone {
@@ -19,7 +10,6 @@ export function chartTone(item: Readonly<{ other?: boolean }>, index: number): C
   return index >= 3 ? 5 : ((index + 1) as ChartTone);
 }
 
-/** The series role each position plots in; the colours are the series' own (`SERIES_STROKE`). */
 const CHART_SERIES = {
   1: 'you',
   2: 'rival-1',
@@ -32,13 +22,10 @@ export const chartStroke = (tone: ChartTone) => SERIES_STROKE[CHART_SERIES[tone]
 
 export const chartFill = (tone: ChartTone) => SERIES_FILL[CHART_SERIES[tone]];
 
-/** Axis text inside a chart's SVG: 12px tabular figures in `ink-2`. */
 export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption tabular-nums';
 
-/** The plot's focusable box, read with the arrow keys; the focus ring follows its corners. */
 export const CHART_PLOT_FRAME = 'focus-ring relative w-full rounded-control';
 
-/** A line's dash: Other is dashed, a fifth series dotted, the rest solid. */
 export const CHART_DASH: Record<ChartTone, string | undefined> = {
   1: undefined,
   2: undefined,
@@ -47,16 +34,11 @@ export const CHART_DASH: Record<ChartTone, string | undefined> = {
   5: '0.01 4.5',
 };
 
-/** One share of a whole, to one decimal: `12.5%`. A zero total is `0%`. */
 export function chartPercent(value: number, total: number): string {
   if (!total) return '0%';
   return percentText(value / total);
 }
 
-/**
- * Round tick values covering `min`–`max` in about `count` steps of 1, 2, 2.5
- * or 5 times a power of ten, so an axis reads 0, 25, 50 rather than 0, 23, 46.
- */
 export function chartTicks(min: number, max: number, count = 5): number[] {
   const span = max - min || 1;
   const raw = span / count;
@@ -75,7 +57,6 @@ function niceStep(normalised: number): number {
   return [1, 2, 2.5, 5].find((step) => normalised <= step) ?? 10;
 }
 
-/** An SVG path through the points; a `null` lifts the pen, so a gap stays a gap. */
 export function chartPath(points: readonly (readonly [number, number] | null)[]): string {
   let path = '';
   let pen = false;
@@ -90,11 +71,6 @@ export function chartPath(points: readonly (readonly [number, number] | null)[])
   return path;
 }
 
-/**
- * The plot's width in CSS pixels, measured, so the viewBox is the box: lines
- * stretch and axis text stays 12px at every width. `fallback` holds until the
- * first measurement (and in environments that cannot measure).
- */
 export function useChartWidth<T extends HTMLElement>(fallback = 640) {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(fallback);
@@ -114,11 +90,6 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
   return [ref, width] as const;
 }
 
-/**
- * The plot heights a chart may take, as roles: `sm` 160 (a compact chart
- * beside other content), `md` 240 (the default), `lg` 320 (a page's primary
- * chart).
- */
 export type ChartHeight = 'sm' | 'md' | 'lg';
 
 /**

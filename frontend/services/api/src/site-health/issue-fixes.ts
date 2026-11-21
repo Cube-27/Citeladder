@@ -1,15 +1,3 @@
-/**
- * Mark fixed and Re-run all (SH-B12): acting on one issue across the pages a
- * crawl found it on, and how far its fix has come ("N of M pages fixed").
- *
- * An issue is a crawl's issue group (one rule and finding class). Its pages are
- * those the issues the crawl shows name: each page's latest audit
- * (`viewIssuesSql`, SH-B9), as the Issues list reads them. Each page's state
- * for the rule is its `site_issue_states` row (`issue-states.ts`), so marks and
- * every later audit, a single-page or Re-run-all re-audit included, move the
- * progress. Fixed counts pages marked fixed or resolved; only an audit resolves
- * one.
- */
 import type { IssueFixes, IssueFixProgress } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
@@ -23,16 +11,8 @@ import { rerunTrackedPages } from './selection.ts';
 
 const FIXED_STATES = ['marked_fixed', 'resolved'];
 
-/**
- * An issue's pages in the crawl, each with its state for the rule and whether
- * it is tracked: the pages the issues the crawl shows name, and the pages an
- * audit since the crawl began verified fixed. A verified page leaves the view
- * (its latest audit passed), but it stays one of the M its fix is counted
- * against; a group no page still shows is not listed.
- */
 const issuePagesFrom = (crawl: Crawl) => {
   const began = new Date(crawl.started_at ?? crawl.created_at);
-  // The view in one CTE: the statement reads it five times.
   const view = sql`latest_audits`;
   return sql`
   from (
@@ -54,15 +34,9 @@ const issuePagesFrom = (crawl: Crawl) => {
     and m.project_id = ${crawl.project_id} and m.site_url_id = i.site_url_id and m.active`;
 };
 
-/**
- * A page Re-run all re-audits: tracked, not yet resolved, and judged by a page
- * audit. A site-level finding (architecture, sitewide links) only a site crawl
- * evaluates.
- */
 const rerunnable = sql`m.id is not null and s.state is distinct from 'resolved'
   and not ${siteLevelRule}`;
 
-/** Every issue group's fix progress in the crawl. */
 export async function issueFixes(
   db: Database,
   workspaceId: string,
@@ -101,8 +75,6 @@ export async function issueFixes(
     items: rows.rows.map((row) => {
       const groupId = issueGroupId(crawl.id, row.rule_id, row.finding_class);
       const scope = scopes.get(groupId);
-      // A site-level finding is one row on the homepage naming its pages: its
-      // one state covers every page it names, as the Issues list counts them.
       const pages = (homepage: number) => (scope ? Math.sign(homepage) * scope.affected : homepage);
       return {
         group_id: groupId,
@@ -117,7 +89,6 @@ export async function issueFixes(
 
 type IssuePage = { site_url_id: string; state: string | null; rerunnable: boolean };
 
-/** The group a crawl's group id names, with each of its pages; 404 when the crawl has none. */
 async function issueGroup(db: Database, crawl: Crawl, groupId: string) {
   const groups = await sql<{ rule_id: string; finding_class: string }>`
     select distinct i.rule_id, i.finding_class ${issuePagesFrom(crawl)}`.execute(db);
@@ -134,10 +105,6 @@ async function issueGroup(db: Database, crawl: Crawl, groupId: string) {
   return { ruleId: group.rule_id, pages: pages.rows };
 }
 
-/**
- * Mark the issue fixed on every page it is open or regressed on. Returns the
- * issue's progress after the mark. The caller owns the transaction.
- */
 export async function markIssueGroupFixed(
   db: Database,
   workspaceId: string,
@@ -159,11 +126,6 @@ export async function markIssueGroupFixed(
   return progress;
 }
 
-/**
- * Re-run all: re-audit every tracked page the issue is still unresolved on as
- * one crawl, holding one page fetch per page. A running crawl refuses it
- * (SH-B4), as does an issue with no such page. The caller owns the transaction.
- */
 export async function rerunIssueGroup(
   db: Database,
   workspaceId: string,

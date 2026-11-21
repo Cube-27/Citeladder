@@ -1,4 +1,3 @@
-/** The terminal snapshot and matching crawl summary publish in one transaction. */
 import { randomUUID } from 'node:crypto';
 import { isActiveCrawl, USABLE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
@@ -39,11 +38,6 @@ function direction(delta: number | null) {
   return delta < 0 ? 'decreased' : 'unchanged';
 }
 
-/**
- * The change since the newest earlier snapshot of a usable, non-empty site crawl
- * under the same versions and scope. A failed or empty crawl, or a page rerun,
- * is never compared; with none left it reports no comparable snapshot.
- */
 async function changeSummary(db: Database, crawl: Crawl, projection: MeasurementProjection) {
   const candidates = await db
     .selectFrom('site_health_snapshots as s')
@@ -103,13 +97,6 @@ async function changeSummary(db: Database, crawl: Crawl, projection: Measurement
   };
 }
 
-/**
- * Every snapshot column the pages' latest audits decide: scores,
- * classification, eligibility, issue rollups, the change summary and the
- * artifacts they read. The analysis set is stored as rows
- * (`site_health_snapshot_analyses`); evaluations are reached through it.
- * Coverage and discovery stay the crawl's own.
- */
 async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementProjection) {
   const issues = await snapshotIssues(db, crawl, projection.analysisIds);
   const eligibility = projection.eligibility;
@@ -148,7 +135,6 @@ async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementPr
 /** Rows per statement, far under PostgreSQL's 65535 bind parameters. */
 const ANALYSIS_ROW_CHUNK = 5000;
 
-/** Store the snapshot's analysis set, replacing any earlier one. */
 async function writeAnalysisSet(
   db: Database,
   snapshot: { id: string; workspace_id: string },
@@ -171,7 +157,6 @@ async function writeAnalysisSet(
       .execute();
 }
 
-/** The crawl summary a snapshot publishes beside itself. */
 async function publishScoreSummary(
   db: Database,
   crawl: Crawl,
@@ -191,11 +176,6 @@ async function publishScoreSummary(
     .execute();
 }
 
-/**
- * A page rerun re-reads one page: it writes no project snapshot and keeps no
- * site score summary, so it never becomes a compared snapshot or a one-page score.
- * A site crawl's snapshot reads each tracked page's latest audit (SH-B9).
- */
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
   if (isPageRerun(crawl)) return false;
   await lockProfile(db, crawl);
@@ -236,14 +216,6 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
   return true;
 }
 
-/**
- * A page rerun landed in this site crawl (SH-B9): its snapshot's page columns
- * and its score summary are recomputed in place, in the rerun's landing
- * transaction, from each tracked page's latest audit. Coverage and discovery
- * stay the crawl's own; the snapshot keeps its id and time, so the change
- * summary's current values move with the latest audits. A crawl without a
- * snapshot has nothing to refresh.
- */
 export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   if (isPageRerun(crawl)) return false;
   const snapshot = await db
@@ -272,7 +244,6 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   return true;
 }
 
-/** The snapshot's issue columns, with their JSON rollups serialized. */
 function issueColumns(issues: Awaited<ReturnType<typeof snapshotIssues>>) {
   return {
     ...issues,
@@ -282,14 +253,6 @@ function issueColumns(issues: Awaited<ReturnType<typeof snapshotIssues>>) {
   };
 }
 
-/**
- * Graph-scope architecture rules run as a successor of the snapshot (they read
- * its coverage), so their issues join its rollups afterwards: the issue
- * rollups and the crawl summary's count then cover every persisted issue.
- * Replay-safe: the rollups are recomputed from the snapshot's analysis set and
- * the crawl's architecture evaluations, and a replay that changes no count
- * leaves them as they are.
- */
 export async function addArchitectureIssues(db: Database, crawl: Crawl) {
   const snapshot = await db
     .selectFrom('site_health_snapshots')
@@ -335,7 +298,6 @@ export async function addArchitectureIssues(db: Database, crawl: Crawl) {
   return true;
 }
 
-/** A provisional summary scores the crawl's own analyzed pages (invariant 6); a page rerun keeps none. */
 export async function provisionalSummary(db: Database, crawl: Crawl) {
   return isPageRerun(crawl) ? null : liveScoreSummary(db, crawl);
 }
@@ -355,12 +317,6 @@ export async function refreshLiveScoreSummary(db: Database, crawl: Crawl) {
   if (payload) await writeScoreSummary(db, crawl, payload);
 }
 
-/**
- * The cadence refresh while a crawl runs. The live card is read outside the
- * crawl lock every task commit takes, and the lock is held only for the write,
- * which a crawl that settled meanwhile skips. Two overlapping refreshes may
- * land out of order; the next one or the terminal summary replaces either.
- */
 export async function refreshRunningScoreSummary(
   db: Database,
   task: { workspace_id: string; crawl_id: string },

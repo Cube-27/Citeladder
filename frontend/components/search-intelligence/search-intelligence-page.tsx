@@ -50,7 +50,6 @@ import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type PageTab = (typeof SEARCH_INTELLIGENCE_TABS)[number]['value'];
-/** The tabs read from saved Keyword Research datasets; Demand reads Search Console. */
 type Tab = Exclude<PageTab, 'demand'>;
 const RESEARCH_TABS = SEARCH_INTELLIGENCE_TABS.flatMap(({ value }) =>
   value === 'demand' ? [] : [value],
@@ -59,13 +58,7 @@ const TAB_CODEC = stringUrlCodec(
   SEARCH_INTELLIGENCE_TABS.map(({ value }) => value),
   'demand' as PageTab,
 );
-/** Demand's own address keys, dropped when the reader leaves its tab. */
 const DEMAND_KEYS = ['view', 'signal', 'page', 'page_size'];
-/**
- * The research scopes and markets the saved datasets offer, the chosen ones
- * (or the first offered), and the datasets they select. The server already
- * answers only the newest dataset of each acquisition identity.
- */
 function selectDatasets(
   readiness: SearchIntelligenceReadiness | undefined,
   scope: string,
@@ -103,12 +96,6 @@ function selectDatasets(
   return { scopes, activeScope, markets, activeMarket, datasets };
 }
 
-/**
- * The Keyword research page: Search demand on its first tab, then the saved
- * datasets. A Report with one masthead and one tab row for all five tabs, so
- * a tab change swaps only the panel and keeps focus in the tab row. Each tab
- * reads its own owner, so neither gates the other.
- */
 export function SearchIntelligencePage() {
   const [tab, setTab] = useUrlState('tab', TAB_CODEC, { clearKeys: DEMAND_KEYS });
   const demand = useDemand();
@@ -136,7 +123,6 @@ export function SearchIntelligencePage() {
   );
 }
 
-/** One panel per research tab, each holding the same page state. */
 function statePanels(render: (tab: Tab) => ReactNode) {
   return RESEARCH_TABS.map((value) => (
     <TabPanel key={value} value={value} className="min-w-0">
@@ -145,11 +131,6 @@ function statePanels(render: (tab: Tab) => ReactNode) {
   ));
 }
 
-/**
- * Keyword Research's part of the page: it reads saved datasets (figures, then
- * the competitive footprint and each dataset's table), with no editor to work
- * in. Its masthead actions, control strip, panels and drawers.
- */
 function useKeywordResearch({
   tab,
   setTab,
@@ -237,8 +218,6 @@ function useKeywordResearch({
       ) : null}
     </>
   );
-  // Before the first analysis every tab is empty and its state holds the
-  // first-analysis action, so the masthead does not repeat it.
   const empty = !data?.datasets.length;
   const pageActions = {
     hasDatasets: !empty && Boolean(data?.owned_targets.length),
@@ -281,7 +260,6 @@ function useKeywordResearch({
   };
 }
 
-/** Keyword Research's control strip and panels for the state its read is in. */
 function researchView({
   readiness,
   tab,
@@ -305,14 +283,11 @@ function researchView({
   onOpen: (dataset: SearchIntelligenceDataset) => void;
   onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>): Readonly<{ filters?: ReactNode; body: ReactNode }> {
-  // The first load draws the control band and the shape of the tab's first
-  // card, so the work starts on the same line before and after.
   if (readiness.isPending)
     return {
       filters: <FilterBar {...RESERVED_CONTROLS} />,
       body: statePanels((value) => <ResearchLoading tab={value} />),
     };
-  // A failed read keeps the tab row, so the page does not lose its place.
   if (readiness.isError)
     return {
       body: statePanels(() => (
@@ -354,7 +329,6 @@ function researchView({
             data: loaded,
             tab,
             datasets,
-            // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
             collection: empty ? null : collection,
             onSeed: actions.onSeed,
             onMatch: actions.onMatch,
@@ -388,10 +362,6 @@ function researchView({
   };
 }
 
-/**
- * The page's actions, each only for a role that may take it: reviews and
- * cancels spend or stop credits (run); saving citation matches is a write.
- */
 function useRoleActions({
   openReview,
   cancel,
@@ -403,7 +373,6 @@ function useRoleActions({
 }>): Readonly<
   CollectionActions & {
     review?: (action: SearchReviewAction) => void;
-    /** Opens the analysis review: the first run, or the recovery for a stopped one. */
     analysis?: () => void;
     cancel?: (runId: string) => void;
   }
@@ -422,7 +391,6 @@ function useRoleActions({
   };
 }
 
-/** The first load's shape of the tab's first card: Overview's figures, or a table. */
 function ResearchLoading({ tab }: Readonly<{ tab: Tab }>) {
   if (tab === 'overview') return <Skeleton variant="stat" count={5} label="Loading keywords…" />;
   return (
@@ -432,7 +400,6 @@ function ResearchLoading({ tab }: Readonly<{ tab: Tab }>) {
   );
 }
 
-/** Every tab's panel once an analysis is saved: Overview, then each tab's collection. */
 function ResearchPanels({
   data,
   datasets,
@@ -472,10 +439,6 @@ function ResearchPanels({
   );
 }
 
-/**
- * The masthead, the same on every tab: cost details, Demand's recompute, then
- * the research refresh and new analysis once an analysis is saved.
- */
 function PageActions({
   hasDatasets,
   onReview,
@@ -483,10 +446,8 @@ function PageActions({
   children,
 }: Readonly<{
   hasDatasets: boolean;
-  /** Opens a credit-spending review; omitted for a role that may not run one. */
   onReview?: (action: SearchReviewAction) => void;
   onCost: () => void;
-  /** Demand's own secondary action. */
   children: ReactNode;
 }>) {
   return (
@@ -496,7 +457,6 @@ function PageActions({
         Cost details
       </Button>
       {children}
-      {/* Before the first analysis each tab's empty state holds the action. */}
       {onReview && hasDatasets ? (
         <>
           <Button variant="secondary" onClick={() => onReview('refresh')}>
@@ -514,10 +474,6 @@ function PageActions({
   );
 }
 
-/**
- * The page's one control strip for the open tab. The caption names the saved
- * result on screen, else the newest one the tab can show.
- */
 function pageControls({
   data,
   tab,
@@ -549,20 +505,12 @@ function pageControls({
   });
 }
 
-/** A tab's next steps; each is omitted for a role that may not take it. */
 type CollectionActions = {
-  /** Reviews a keyword to research, a run. */
   onSeed?: () => void;
-  /** Saves citation matches, a write. */
   onMatch?: (targetOrigin: string | undefined) => void;
-  /** Reviews a deeper collection, a run. */
   onExpand?: () => void;
 };
 
-/**
- * The tab's own next step, at the end of the control strip: its research
- * action, then a deeper review of the saved result on screen.
- */
 function CollectionAction({
   collection,
   datasets,
@@ -575,8 +523,6 @@ function CollectionAction({
     datasets: SearchIntelligenceDataset[];
   } & CollectionActions
 >) {
-  // Only the website on screen: matching another website's list would save
-  // matches for a site the reader is not looking at.
   const matchable =
     collection.tab === 'backlinks' &&
     referringLists(datasets).some((dataset) => dataset.target_origin === collection.target);

@@ -28,7 +28,6 @@ export type NewSubscription = {
   subscribe: (key: SelfServePlanKey, details: BillingCustomerDetails, mode: CredentialMode) => void;
 };
 
-/** Starts the quote for a new subscription in the chosen mode. */
 export function subscribeWith(
   checkout: ReturnType<typeof useSubscriptionCheckout>,
   country: string,
@@ -59,11 +58,6 @@ const MODE_NOTE: Record<CredentialMode, string | null> = {
   funded: null,
 };
 
-/**
- * A new subscription: the plans the workspace may buy, in either mode. While
- * self-serve checkout is closed the app says so instead of listing prices, as
- * the public pricing page does.
- */
 export function ChoosePlan({
   catalog,
   canManage,
@@ -78,7 +72,6 @@ export function ChoosePlan({
 >): ReactNode {
   const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   const [mode, setMode] = useState<CredentialMode>('byok');
-  // Contact is the page's one real next step while checkout is closed.
   if (newPlanCheckoutClosed(catalog))
     return (
       <SettingsGroup id="choose-plan" title="Choose a plan" region={false}>

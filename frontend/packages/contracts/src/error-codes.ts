@@ -1,4 +1,3 @@
-/** The API machine-code vocabulary shared by native routes and browser clients. */
 const API_ERROR_CODES = [
   'access_revoked',
   'access_unresolved',
@@ -242,7 +241,6 @@ export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 
 const KNOWN_CODES: ReadonlySet<string> = new Set(API_ERROR_CODES);
 
-/** Narrow a code read from an untyped source to the native API vocabulary. */
 export function asApiErrorCode(value: string): ApiErrorCode {
   if (!KNOWN_CODES.has(value)) {
     throw new Error(`'${value}' is not a declared API error code`);

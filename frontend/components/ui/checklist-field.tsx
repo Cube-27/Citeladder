@@ -7,12 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Pencil, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * FieldGroup — a question made of several controls: a `fieldset` named by
- * its label (14/20 medium `ink`), with an optional tabular count
- * at its right, a help line under it, the controls, and a note after them
- * (why the step cannot continue yet).
- */
 export function FieldGroup({
   label,
   help,
@@ -22,9 +16,7 @@ export function FieldGroup({
 }: Readonly<{
   label: string;
   help?: ReactNode;
-  /** "2 of 5": what is selected, in tabular `ink-2`. */
   count?: string;
-  /** Why the step cannot continue, in `warning`. */
   note?: ReactNode;
   children: ReactNode;
 }>) {
@@ -52,16 +44,11 @@ export type ChecklistItem = Readonly<{
   id: string;
   label: string;
   description?: string;
-  /** A short fact at the row's end (a domain beside a name). */
   meta?: string;
-  /** A 20px mark before the label: a BrandMark, an EngineMark in `ink`. */
   leading?: ReactNode;
   checked: boolean;
-  /** Checking is unavailable (a limit is reached); unchecking stays available. */
   disabled?: boolean;
-  /** Offers the pencil, when the field has an editor. */
   editable?: boolean;
-  /** Content kept beside the row for assistive tech (a visually hidden link). */
   extra?: ReactNode;
 }>;
 
@@ -71,21 +58,12 @@ export type ChecklistEditor<K extends string> = Readonly<{
     label: (item: ChecklistItem) => string;
     placeholder: string;
   }>[];
-  /** Each field's starting value for this row. */
   values: (item: ChecklistItem) => Readonly<Record<K, string>>;
-  /** Save is offered once every field has a value; values arrive trimmed. */
   onSave: (id: string, values: Readonly<Record<K, string>>) => void;
   onCancel?: (id: string) => void;
-  /** The pencil's accessible name. */
   editLabel: (item: ChecklistItem) => string;
 }>;
 
-/**
- * ChecklistField — a bordered list of checkable rows (52px; 68px with
- * descriptions) under a FieldGroup head, one row editable in place. The
- * editing row swaps the row for its fields with Save (ink) and Cancel (ghost)
- * at the same height. Rows never reorder on check; labels end in an ellipsis.
- */
 export function ChecklistField<K extends string>({
   label,
   help,
@@ -108,9 +86,7 @@ export function ChecklistField<K extends string>({
   editor?: ChecklistEditor<K>;
   editingId?: string | null;
   onEditingChange?: (id: string | null) => void;
-  /** Said in place of the list when there are no rows. */
   empty: ReactNode;
-  /** Actions under the list (Add). */
   footer?: ReactNode;
 }>) {
   const tall = items.some((item) => item.description);

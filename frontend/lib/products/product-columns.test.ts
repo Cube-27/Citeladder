@@ -101,12 +101,10 @@ describe('productCell mentioned price', () => {
       kind: 'value',
       text: '€0.00',
     });
-    // With no answer in scope there was nothing to mention a price in.
     expect(productCell(priced({ median: null, quoted: 0 }, 0), 'mentioned_price')).toEqual({
       kind: 'missing',
       state: 'unavailable',
     });
-    // Quoted only in other currencies: mentioned, counted in the note, not converted.
     const abroad = { ...priced({ median: null, quoted: 0 }) };
     abroad.mentioned_price = { ...abroad.mentioned_price, other_currency: 2 };
     expect(productCell(abroad, 'mentioned_price')).toEqual({

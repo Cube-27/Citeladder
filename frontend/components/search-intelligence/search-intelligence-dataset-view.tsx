@@ -36,11 +36,6 @@ import {
 } from './search-intelligence-rows-table';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * One saved dataset's rows. The table's own toolbar keeps only the search,
- * Export and Ask agent; the keyword filters (minimum volume, intent) ride the
- * page's control strip with the other pickers and arrive here as values.
- */
 export function SearchIntelligenceDatasetView({
   dataset,
   title = 'Ranking keywords',
@@ -49,7 +44,6 @@ export function SearchIntelligenceDatasetView({
 }: Readonly<{
   dataset: SearchIntelligenceDataset;
   title?: string;
-  /** The caption under the title, e.g. which competitor the rows compare with. */
   description?: string;
   keywordFilters?: KeywordFilterValues;
 }>) {
@@ -69,10 +63,6 @@ export function SearchIntelligenceDatasetView({
     min_volume: minVolume === '' ? undefined : Number(minVolume),
   };
   const hasRows = dataset.unique_rows_saved > 0;
-  // A sort or filter edit restarts from the first page: the server binds the
-  // cursor to them. A page turn or a filter edit keeps the rows and the pager
-  // on screen until the next rows land; the first load, a failed read and an
-  // empty view draw inside the table at its full height.
   const { query, page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: dataset.id,
@@ -91,7 +81,6 @@ export function SearchIntelligenceDatasetView({
       heading: 'No saved rows match this view',
       headingLevel: 3,
     }),
-    // A dataset that saved nothing has no rows to read.
     enabled: hasRows,
     total: (current) => (current ? filteredSavedCount(current.dataset) : undefined),
   });
@@ -112,7 +101,6 @@ export function SearchIntelligenceDatasetView({
               placeholder="Filter saved results"
             />
           ),
-          // The pager states the row count; the live note only reports a read.
           status: query.isFetching ? 'Updating saved rows…' : null,
           actions: (
             <>
@@ -146,7 +134,6 @@ export function SearchIntelligenceDatasetView({
   );
 }
 
-/** The agent panel starts from the open row, or else the rows on this page. */
 function useRowsPanelSeed(
   datasetId: string,
   selected: SearchIntelligenceRow | null,
@@ -231,7 +218,6 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
   );
 }
 
-/** A saved dataset with no rows: what the provider answered, as the region's one state. */
 function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
   return (
     <StateBlock
@@ -243,13 +229,6 @@ function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset
   );
 }
 
-/**
- * What a dataset that saved no rows means, by the coverage acquisition
- * recorded: `empty` (the provider answered with no rows) is a measured
- * "no data"; `complete` is "no data" only when no raw rows arrived either,
- * otherwise rows arrived and none were saved; `unknown` is unavailable
- * evidence; `partial` is incomplete evidence, never "no data".
- */
 function emptyDatasetHeading({
   coverage,
   raw_rows_received,
@@ -270,12 +249,6 @@ function filteredSavedCount(dataset: SearchIntelligenceDataset) {
     : dataset.unique_rows_saved;
 }
 
-/**
- * What the saved dataset covers, under its table, or null when there is
- * nothing to add. The pager already counts the rows and the page's caption
- * names the website, so this says only what neither does: how many results
- * the provider had, and whether the save was cut short.
- */
 function datasetSummary(dataset: SearchIntelligenceDataset) {
   const coverage = [
     dataset.provider_total === null

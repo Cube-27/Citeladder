@@ -36,11 +36,6 @@ import { cn } from '@/lib/utils';
 
 import './conversation.css';
 
-/**
- * Messages and the chat's documents in conversational order (each document
- * after the reply that last wrote it), followed by current activity and
- * recovery. Follow-ups never jump ahead of earlier work.
- */
 export function Conversation({
   workspaceId,
   detail,
@@ -54,16 +49,12 @@ export function Conversation({
 }: Readonly<{
   workspaceId: string;
   detail: AgentChatDetail;
-  /** How one document is shown in the thread; omitted, documents are not shown. */
   renderOutput?: (output: AgentOutput) => ReactNode;
   onRefine: (instruction: string) => void;
-  /** Puts a request back in the composer to edit. */
   onRecover: (message: AgentMessage) => void;
-  /** Sends a request again as a new turn. */
   onRetry: (message: AgentMessage) => void;
   hasDraft?: boolean;
   canSend: boolean;
-  /** A message whose send is in flight, shown before the server accepts it. */
   pendingMessage?: string | null;
 }>) {
   const { skills } = useAgentCatalog();
@@ -71,13 +62,11 @@ export function Conversation({
   const { byMessage, unplaced } = outputPlacements(detail);
   const items = threadItems(detail, new Set(byMessage.keys()));
   const deferred = useDeferredAtOpen(detail.chat.id, items.map(itemKey));
-  // Never a turn holding a document the Documents list scrolls to.
   const older = (key: string, holdsDocument = false) =>
     deferred.has(key) && !holdsDocument ? 'render-when-visible' : undefined;
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (
-          // The rendered document draws its own face (the DraftSheet).
           <div key={placed.id} id={documentAnchor(placed.id)} className="min-w-0">
             {renderOutput(placed)}
           </div>
@@ -162,12 +151,6 @@ type ThreadItem = ReturnType<typeof threadItems>[number];
 const itemKey = (item: ThreadItem) =>
   item.kind === 'message' ? item.message.id : (item.request?.id ?? item.failures[0].id);
 
-/**
- * The turns that render only when scrolled near: those before the latest two
- * exchanges when the chat opened, which open off screen. Fixed for the
- * visit: a turn that started deferring later would have no remembered size
- * and jump to the 320px estimate, moving the thread under the reader.
- */
 function useDeferredAtOpen(chatId: string, keys: readonly string[]): ReadonlySet<string> {
   const atOpen = () => ({ chatId, keys: new Set(keys.slice(0, -4)) });
   const [opened, setOpened] = useState(atOpen);
@@ -177,12 +160,6 @@ function useDeferredAtOpen(chatId: string, keys: readonly string[]): ReadonlySet
   return next.keys;
 }
 
-/**
- * Each reply saved while the chat is open, read once by screen readers: one
- * polite region, busy and empty while a turn runs, so streamed text is never
- * read. Focus stays put, and replies already there on opening are not read.
- * Once read it empties, so the reply is not met twice when reading the page.
- */
 function ReplyAnnouncement({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   const reply = [...detail.messages].reverse().find((message) => message.role === 'agent');
   const [openedWith] = useState(reply?.id);
@@ -204,7 +181,6 @@ function ReplyAnnouncement({ detail }: Readonly<{ detail: AgentChatDetail }>) {
 }
 const REPLY_ANNOUNCEMENT_MS = 5000;
 
-/** The latest reply wrote this document and the turn finished. */
 function hasFreshDeliverable(detail: AgentChatDetail, output: AgentOutput): boolean {
   const revision = output.latest_revision;
   const reply = detail.messages.at(-1);
@@ -218,7 +194,6 @@ function hasFreshDeliverable(detail: AgentChatDetail, output: AgentOutput): bool
   );
 }
 
-/** With more than one document, a list that jumps to each in the thread. */
 function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>) {
   if (outputs.length < 2) return null;
   return (
@@ -244,11 +219,6 @@ function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>
   );
 }
 
-/**
- * What the reader can do with the latest turn: try a failed or stopped request
- * again or edit it first, or regenerate a finished reply. Each sends a new
- * turn; nothing earlier in the chat is rewritten.
- */
 function TurnActions({
   detail,
   canSend,
@@ -303,7 +273,6 @@ function MessageBubble({
   message: AgentMessage;
   skill: string | null;
   actions: AgentChatDetail['actions'];
-  /** What the reply proposed and wrote: drawn last, after its sources. */
   after?: ReactNode;
 }>) {
   const knownHosts = useAgentLinkHosts(message.web_sources);
@@ -332,7 +301,6 @@ function MessageBubble({
                       {action ? (
                         <ActionChip action={action} prefix="@" />
                       ) : (
-                        // No longer readable here: the label it was sent with, without a link.
                         <span className={textRole('caption', 'block truncate')}>
                           @{mention.label}
                         </span>
@@ -346,7 +314,6 @@ function MessageBubble({
         }
       />
     );
-  // A reply names an Action by its exact title; each cited one becomes its chip.
   const chips = citedActions(message.evidence_refs, actions).map((action) => ({
     text: action.target_label,
     node: <ActionChip action={action} />,
@@ -359,7 +326,6 @@ function MessageBubble({
       {turnParts(message).map((part) => {
         switch (part.kind) {
           case 'steps':
-            // Where the live status line sat: the text stays put when this replaces it.
             return <ActivityChain key="steps" rows={activityRows(part.steps)} />;
           case 'text':
             return (
@@ -438,11 +404,6 @@ function promptItems(prompt: NonNullable<AgentChatDetail['context']['prompt']>, 
   const value = prompt[key];
   return Array.isArray(value) ? value : [];
 }
-/**
- * After a deliverable: refinements revise it in this chat; next steps start a
- * new chat with the workflow that takes the work forward, carrying the exact
- * revision as its brief. Both come from the server catalog for the kind.
- */
 function FollowUps({
   kind,
   title,

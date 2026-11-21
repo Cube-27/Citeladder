@@ -1,10 +1,4 @@
 ---
-/**
- * ApiEndpoint — one operation's page body: the endpoint bar (its method and
- * path), its description, the scope it needs, its parameters and request
- * body, then the response fields with the success status. The page passes
- * ApiExamples to ApiPage's `aside`, the column beside it.
- */
 import type { ApiOperation } from '../lib/api-reference';
 import ApiMethod from './ApiMethod.astro';
 import ParamTable from './ParamTable.astro';
@@ -77,7 +71,6 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
     min-width: 0;
     max-width: var(--container-prose);
   }
-  /* The endpoint bar: the method and path in a `line` field, like an input. */
   .cl-docs-endpoint-line {
     display: flex;
     flex-wrap: wrap;

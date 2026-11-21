@@ -1,4 +1,3 @@
-/** The API's route families; the route gate checks every operation declares exactly one. */
 export const ROUTE_FAMILIES = [
   'actions',
   'agent',
@@ -41,10 +40,8 @@ export const ROUTE_FAMILIES = [
 
 export type RouteFamily = (typeof ROUTE_FAMILIES)[number];
 
-/** MCP's browser consent, served on the app origin only. */
 export const MCP_CONSENT_PATH = '/mcp/oauth/consent';
 
-/** Credential-free OAuth endpoints; browser-hosted clients call them from any origin. */
 export const MCP_PUBLIC_OAUTH_PATHS: ReadonlySet<string> = new Set([
   '/mcp/register',
   '/authorize',
@@ -54,41 +51,24 @@ export const MCP_PUBLIC_OAUTH_PATHS: ReadonlySet<string> = new Set([
   '/.well-known/oauth-protected-resource/mcp',
 ]);
 
-/**
- * MCP's protocol surface on the API host: the transport plus its OAuth
- * endpoints. The API host Worker forwards exactly these and the API serves
- * them on that host alone.
- */
 export const MCP_API_HOST_PATHS: ReadonlySet<string> = new Set([
   '/mcp',
   '/mcp/',
   ...MCP_PUBLIC_OAUTH_PATHS,
 ]);
 
-/**
- * Same-origin paths the development proxy forwards, as the app Worker does:
- * the browser API and MCP consent. MCP itself is served on the API host.
- * `/x/*` forwards everything below `/x/`; any other entry matches only itself.
- */
 export const TYPESCRIPT_INGRESS_PATHS = ['/api', '/api/*', MCP_CONSENT_PATH] as const;
 
-/** Whether a path is one of `TYPESCRIPT_INGRESS_PATHS`. */
 export function isIngressPath(path: string): boolean {
   return TYPESCRIPT_INGRESS_PATHS.some((entry) =>
     entry.endsWith('/*') ? path.startsWith(entry.slice(0, -1)) : path === entry,
   );
 }
 
-/**
- * App pages whose link carries a single-use bearer credential (an email
- * confirmation, a password reset, a workspace invitation). The app host
- * serves them uncached and without a referrer.
- */
 export const CREDENTIAL_LINK_PATHS: ReadonlySet<string> = new Set([
   '/verify-email',
   '/reset-password',
   '/invitations/accept',
 ]);
 
-/** Where the product's policies send Reporting API violation reports; the app Worker names it. */
 export const CSP_REPORTS_PATH = '/api/v1/client-errors/csp-reports';

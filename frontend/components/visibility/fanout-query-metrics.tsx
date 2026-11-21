@@ -14,7 +14,6 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { percentText } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
-/** The run, engine, topic, cohort and answer filters the fanout reads take. */
 export type FanoutScope = Readonly<{
   audit_id?: string;
   audit_ids?: string[];
@@ -35,12 +34,9 @@ export const FANOUT_VIEWS = [
 ] as const;
 export type FanoutView = (typeof FANOUT_VIEWS)[number]['value'];
 
-/** Where a query's figures stand; a loaded lookup may still not hold the query. */
 export type LookupState = 'loading' | 'failed' | 'loaded';
 
-/** The endpoint's largest page: the most searched queries a Top lookup covers. */
 const LOOKUP_LIMIT = 500;
-/** Rising and Falling each list this many queries, one page. */
 const MOVED_LIMIT = 10;
 
 export const METRIC_COLUMNS: readonly DataTableColumn[] = [
@@ -55,10 +51,6 @@ export const METRIC_COLUMNS: readonly DataTableColumn[] = [
   { key: 'brands', label: 'Brands matched', width: 'name' },
 ];
 
-/**
- * Each query's share, change and brands for the tab's scope (AV-8). Top is
- * looked up by query for the evidence rows; Rising and Falling are the rows.
- */
 export function useFanoutQueries(scope: FanoutScope, enabled: boolean, view: FanoutView) {
   const { workspaceId, projectId } = useProjectScope();
   const params = useMemo(
@@ -88,7 +80,6 @@ function lookupState(read: Readonly<{ data: unknown; isError: boolean }>): Looku
   return read.isError ? 'failed' : 'loading';
 }
 
-/** A query's Share, Change and Brands matched cells. */
 export function QueryMetricCells({
   row,
   lookup,
@@ -132,7 +123,6 @@ export function QueryMetricCells({
 function missingMark(lookup: LookupState) {
   switch (lookup) {
     case 'loading':
-      // Loading leaves the cells blank under the table's busy note.
       return null;
     case 'failed':
       return <Absence state="unavailable" reason="Couldn't load this query's share and brands." />;
@@ -157,7 +147,6 @@ const empty = (heading: string): DataTableState => ({
   heading,
 });
 
-/** Rising and Falling's own empty states; undefined when the list has rows. */
 export function movedState(
   view: Exclude<FanoutView, 'top'>,
   queries: ReturnType<typeof useFanoutQueries>,

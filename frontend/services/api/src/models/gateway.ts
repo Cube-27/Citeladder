@@ -55,7 +55,6 @@ const completionChoice = z.object({
 });
 const completion = z.object({
   model: z.string().optional(),
-  // At least one choice: the first is the answer.
   choices: z.tuple([completionChoice], completionChoice),
   usage: z.record(z.string(), z.unknown()).optional(),
 });
@@ -73,10 +72,6 @@ const streamChunk = z.object({
 });
 type Completion = z.infer<typeof completion>;
 
-/**
- * An OpenAI-compatible event stream folded into the buffered completion shape,
- * so settlement and parsing never depend on how the text arrived.
- */
 async function streamedCompletion(
   response: Response,
   onText: (content: string) => void,
@@ -122,7 +117,6 @@ async function streamedCompletion(
 
 const logger = getLogger('app.connectors.agent.client');
 
-/** The provider's answer, folded from its stream when a listener asked for one. */
 async function readCompletion(
   response: Response,
   onText?: (content: string) => void,
@@ -133,7 +127,6 @@ async function readCompletion(
       return await streamedCompletion(response, onText);
     } catch (error) {
       if (error instanceof ModelError) throw error;
-      // A dropped stream is a connection failure, which the caller may retry.
       throw new ModelError('connection');
     }
   }
@@ -143,7 +136,6 @@ async function readCompletion(
 }
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-/** The start of a rejection's body, read without buffering an oversized one. */
 async function errorExcerpt(response: Response, limit = 8192) {
   const reader = response.clone().body?.getReader();
   if (!reader) return '';
@@ -158,12 +150,10 @@ async function errorExcerpt(response: Response, limit = 8192) {
   return text.slice(0, limit);
 }
 
-/** The prompt-only form of a schema, for destinations without strict structured outputs. */
 function withSchema(user: string, schema: unknown) {
   return `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`;
 }
 
-/** Model text without a leading ``` / ```json fence or a trailing ``` fence. */
 function unfenced(content: string) {
   let text = content.trim();
   if (text.startsWith('```')) {
@@ -182,14 +172,12 @@ export function createModelGateway(
     throw new ModelError('not_configured');
   }
   const endpoint = parseEndpoint(settings.baseUrl);
-  // Plain HTTP would expose the key and business context; allow it only locally.
   const secure =
     endpoint.protocol === 'https:' ||
     (endpoint.protocol === 'http:' && LOOPBACK_HOSTS.has(endpoint.hostname));
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
-  // The platform's base URL alone chooses the API, so switching provider is configuration.
   const anthropic = isAnthropicEndpoint(endpoint);
   const send = anthropic
     ? anthropicCompletion(settings, transport, endpoint)
@@ -197,12 +185,10 @@ export function createModelGateway(
   const talk = anthropic
     ? anthropicConversation(settings, transport, endpoint)
     : openAIConversation(settings, transport, endpoint);
-  // Every platform model call runs inside a metering scope (B18).
   const complete: Complete = async (...args) => {
     assertMetered('model_gateway');
     return send(...args);
   };
-  /** Native tool calling for the Agent; a sibling of `complete`, never a widening of it. */
   const converse: Converse = async (...args) => {
     assertMetered('model_gateway');
     return talk(...args);
@@ -217,7 +203,6 @@ export function createModelGateway(
   };
 }
 
-/** The structured-call surface over one `complete`, metered or raw. */
 export function gatewayCalls(complete: Complete) {
   return {
     complete,
@@ -240,7 +225,6 @@ export function gatewayCalls(complete: Complete) {
           result,
         };
       } catch {
-        // The provider was paid for an answer the caller cannot use; its usage still settles.
         throw new ModelError('parse', undefined, undefined, result.usage);
       }
     },
@@ -248,13 +232,11 @@ export function gatewayCalls(complete: Complete) {
 }
 export type ModelGateway = ReturnType<typeof createModelGateway>;
 
-/** OpenAI-compatible chat completions, learning per destination what it refuses. */
 function openAICompletion(
   settings: GatewaySettings,
   transport: Transport,
   endpoint: URL,
 ): Complete {
-  // Learned per destination: an older output-cap name, and no strict structured outputs.
   let legacyCap = false;
   let promptSchema = false;
   const retry = {
@@ -264,10 +246,8 @@ function openAICompletion(
   };
   const url = chatCompletionsUrl(endpoint);
   return async (system, user, signal, onText, schema, maxOutputTokens) => {
-    // A listener asks for a stream; the caller gives one only to transports that pass it through.
     const stream = Boolean(onText);
     const started = performance.now();
-    // Retries share one call's timeout, the envelope of a single provider call.
     const deadline = callDeadline(settings.timeoutSeconds, signal);
     const send = (legacy: boolean, strict: boolean) =>
       postModel(

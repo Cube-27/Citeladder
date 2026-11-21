@@ -1,9 +1,4 @@
 ---
-/**
- * A free tool (the WebTool template): the hero with the privacy note, the
- * tool in a ToolPanel (the only island), the notes in a centred
- * ContentArticle, then the other tools.
- */
 import type { GetStaticPaths } from 'astro';
 import Prose from '@/components/content/Prose.astro';
 import '@/components/marketing/content/reading.css';
@@ -27,7 +22,6 @@ export const getStaticPaths = (() =>
 
 const { tool } = Astro.props;
 const guide = TOOL_GUIDES[tool.slug];
-// Project only the public catalog fields; no server configuration enters the browser.
 const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose, tokens: bot.robots_tokens }));
 ---
 
@@ -67,7 +61,6 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
 </MarketingLayout>
 
 <style is:global>
-  /* A tool's input and result columns: fields, then the actions on one row. */
   .cl-tool-run {
     display: flex;
     flex-direction: column;
@@ -78,15 +71,12 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
     flex-wrap: wrap;
     gap: 12px;
   }
-  /* The notes start on the page gutter, level with the tool above, not centred. */
   .cl-tool-notes .cl-cpage-article-grid {
     justify-content: start;
   }
-  /* The notes have no article header, so its 48px foot would double the section gap. */
   .cl-tool-notes .cl-cpage-article-head {
     display: none;
   }
-  /* The robots generator's test of its own rules, under the tool. */
   .cl-tool-extra {
     display: grid;
     gap: 12px;

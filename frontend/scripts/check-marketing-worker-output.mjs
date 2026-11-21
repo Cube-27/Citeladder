@@ -8,8 +8,6 @@ import {
   STABLE_ASSET_CACHE_CONTROL,
 } from '../lib/config/security-headers.ts';
 
-// The build output to check: production's apps/marketing/dist by default, or
-// the directory passed by scripts/dev-marketing-worker.mjs.
 const root = process.argv[2]
   ? pathToFileURL(`${resolve(process.argv[2])}${sep}`)
   : new URL('../apps/marketing/dist/', import.meta.url);
@@ -17,7 +15,6 @@ const files = await readdir(new URL('client/', root), { recursive: true });
 // A Turnstile secret in the build environment or any local .env file Astro
 // loads, under either name, must never reach the browser.
 const localEnvs = await Promise.all(
-  // Every file Astro's production build loads.
   ['.env', '.env.local', '.env.production', '.env.production.local'].map((name) =>
     readFile(new URL(`../${name}`, import.meta.url), 'utf8').then(
       (text) => parseEnv(text),
@@ -71,8 +68,6 @@ for (const file of files) {
 const server = await readFile(new URL('server/entry.mjs', root), 'utf8');
 if (!server) throw new Error('Marketing Worker entry is empty.');
 const headers = await readFile(new URL('client/_headers', root), 'utf8');
-// Research datasets and the web manifest are machine files that search
-// results should never list; the articles that link them stay indexable.
 const unindexed = [
   ...files
     .filter((file) => file.startsWith('research/') && file.endsWith('.json'))

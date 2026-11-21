@@ -1,7 +1,6 @@
 import { docsHref } from '@/lib/config/docs';
 import { siteOrigin } from '@/lib/seo/site';
 
-/** Where a reader (human or agent) can recover from a missing public page. */
 export const NOT_FOUND_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Platform overview', href: '/platform' },
@@ -23,7 +22,6 @@ function quality(accept: string, type: string): number | null {
   return null;
 }
 
-/** True when the client explicitly asks for Markdown ahead of HTML. */
 function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return false;
   const markdown = quality(accept, 'text/markdown');
@@ -59,10 +57,6 @@ function markdownNotFound(request: Request): Response {
   });
 }
 
-/**
- * A 404 answers `Accept: text/markdown` with a Markdown body for agents and
- * otherwise keeps the HTML page; either way it varies on Accept.
- */
 export function negotiateNotFound(request: Request, response: Response): Response {
   if (response.status !== 404) return response;
   const markdown =

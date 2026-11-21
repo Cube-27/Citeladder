@@ -11,7 +11,6 @@ const PROMPTS = Array.from({ length: 12 }, (_, index) => ({
   label: `Prompt number ${index + 1}`,
 }));
 
-/** A page with two filters it owns, as a route holds its URL state. */
 function Page() {
   const [surface, setSurface] = useState<'all' | 'chatgpt' | 'gemini'>('all');
   const [prompt, setPrompt] = useState('every');
@@ -67,7 +66,6 @@ describe('FiltersMenu', () => {
 
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     expect(screen.getByRole('menuitemradio', { name: 'All surfaces' })).toBeChecked();
-    // jsdom has no layout for the pointer's path into the submenu; choose by key.
     await user.keyboard('{ArrowRight}{ArrowDown}{ArrowDown}{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('gemini every');
@@ -99,7 +97,6 @@ describe('FiltersMenu', () => {
     ]);
     await user.keyboard('1{ArrowDown}');
     expect(screen.getByRole('menuitemradio', { name: 'Prompt number 11' })).toHaveFocus();
-    // Up from the first result returns to the search, to refine it.
     await user.keyboard('{ArrowUp}');
     expect(search).toHaveFocus();
     await user.keyboard('{ArrowDown}{Enter}');

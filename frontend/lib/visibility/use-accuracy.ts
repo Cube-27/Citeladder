@@ -16,14 +16,9 @@ import {
 type AccuracyInput = Readonly<{
   filters: Pick<SourceFilters, 'engine' | 'cohort'>;
   queries: SourceQueries;
-  /** Outside the fact-checking pilot nothing is read. */
   pilot: boolean;
 }>;
 
-/**
- * The Fact-checking tab's read: the same selection as Perception. It rechecks while
- * claims are still being checked, on the perception cadence.
- */
 export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
   const params = periodSelectionParams(filters, queries);
   const enabled = pilot && selectionEnabled(queries);
@@ -42,12 +37,6 @@ export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
   return query;
 }
 
-/**
- * The By fact and All claims views, verdict changes and the claims export for
- * the same selection, on the Fact-checking tab only. The views are read once
- * this selection's accuracy has settled, the only state that draws them, so
- * they never keep mid-check counts.
- */
 export function useFactViews({
   filters,
   queries,

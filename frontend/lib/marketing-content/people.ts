@@ -1,8 +1,3 @@
-/**
- * Public people and parent-company facts for E-E-A-T chrome, bylines, and
- * Organization JSON-LD. Values are owner-supplied. Do not invent credentials.
- */
-
 export type PublicPerson = {
   name: string;
   role: string;

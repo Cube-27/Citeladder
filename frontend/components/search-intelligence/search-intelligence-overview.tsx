@@ -14,11 +14,6 @@ import { SearchValue } from './search-intelligence-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
-/**
- * A metric is read from one dataset's summary; no dataset means it was never
- * fetched. `asOf` prints the dataset's capture date under the figure, for a
- * figure that reads from a different capture than its neighbours or its chart.
- */
 export type SearchMetric = readonly [
   label: string,
   dataset: SearchIntelligenceDataset | undefined,
@@ -77,7 +72,6 @@ export function SearchIntelligenceOverview({
   const share = footprint?.summary.top_10_percentage;
   return (
     <Stack gap="workspace" className="min-w-0">
-      {/* The page's question first: how much of organic search this website holds. */}
       <SearchMetrics
         label="Your search footprint"
         metrics={[
@@ -112,7 +106,6 @@ export function SearchIntelligenceOverview({
   );
 }
 
-/** How the figures are defined and when each dataset was collected, in its own card. */
 export function SearchSummaryEvidence({
   datasets,
 }: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {

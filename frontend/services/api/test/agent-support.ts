@@ -51,7 +51,6 @@ export const emptyPackage = {
   summary: { omissions: [{ reason: 'no_persisted_evidence', count: 1 }] },
   sections: {},
 };
-/** One scripted model response: the content blocks a provider would return. */
 export type Response = ConversationBlock[];
 export const text = (value: string): ConversationBlock => ({
   type: 'text',
@@ -76,7 +75,6 @@ export const edit = (
   edits: { old_string: string; new_string: string }[],
   extra: Record<string, Json> = {},
 ): Response => [toolUse('edit_document', { edits, ...extra })];
-/** A request for a dispatch that never reaches a model. */
 export const request: ModelRequest = {
   system: 'test',
   tools: [],
@@ -107,7 +105,6 @@ export function result(blocks: Response, overrides: Partial<ModelResult> = {}): 
     ...overrides,
   };
 }
-/** A model that returns `responses` in order, then plain replies; it streams as a provider does. */
 export function scripted(
   responses: (Response | ModelResult)[],
   onCall?: (request: ModelRequest, ordinal: number) => Promise<void>,

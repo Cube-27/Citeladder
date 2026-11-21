@@ -17,15 +17,6 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
-/**
- * The three tables and lists below a URL's overview.
- *
- * Split out of the detail page so that one file holds the page's shape and
- * this one holds its contents. Together they exceeded the complexity ceiling,
- * and the states were the half that made the content hard to find.
- */
-
-/** A card whose body is a table once there is one, and a sentence before then. */
 function SectionCard({
   title,
   loading,
@@ -35,7 +26,6 @@ function SectionCard({
 }: Readonly<{
   title: string;
   loading: boolean;
-  /** A read that FAILED has no data, so its empty sentence would be a lie. */
   errored?: boolean;
   empty: string;
   children: ReactNode | null;
@@ -51,13 +41,6 @@ function SectionCard({
   );
 }
 
-/**
- * The card's body, once its states are separated from its frame.
- *
- * The error branch comes first and renders NOTHING: "no engine used this page"
- * and "we could not find out" are different answers, and a failed request can
- * only honestly give the second. The page's own alert already reports it.
- */
 function SectionBody({
   loading,
   errored,
@@ -84,10 +67,6 @@ export function EnginesCard({
   loading: boolean;
   errored?: boolean;
 }>) {
-  // A failed read shows no state of its own: "no engine used this page" and
-  // "we could not find out" are different answers, and the page's own alert
-  // already reports the failure, so rows kept from an earlier read are not
-  // shown as current either. Only a returned, empty list is "no engine".
   const catalog = useEngineCatalog();
   const rows = errored ? [] : (engines ?? []);
   let state: DataTableState | undefined;
@@ -124,10 +103,6 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'retrievals', label: 'Retrievals', width: 'figure', kind: 'number' },
 ];
 
-/**
- * The brands named in the answers that cited this page: co-occurrence in an
- * answer, which the title names, not the page's own inspected presence.
- */
 export function BrandsCard({
   brands,
   loading,

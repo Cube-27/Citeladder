@@ -24,24 +24,15 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type TrafficTab = (typeof TRAFFIC_TABS)[number]['value'];
-/** Absent or unknown means "not chosen", so the default can follow crawl availability. */
 const tabCodec: UrlCodec<TrafficTab | null> = {
   parse: (raw) => TRAFFIC_TABS.find((t) => t.value === raw)?.value ?? null,
   serialize: (value) => value,
 };
-/**
- * Without crawl log collection the screen leads with Referrals and drops the
- * crawl-only views instead of offering a setup the workspace cannot complete.
- */
 function resolveTab(requested: TrafficTab | null, crawlAvailable: boolean | null) {
   if (crawlAvailable === false)
     return requested && !CRAWL_ONLY_TABS.has(requested) ? requested : 'referrals';
   return requested ?? (crawlAvailable === null ? null : 'overview');
 }
-/**
- * Whether Overview is, or will be, the tab on screen. It is the default while
- * availability is still being read, so its reads need not wait for that answer.
- */
 function leadsWithOverview(requested: TrafficTab | null, crawlAvailable: boolean | null) {
   return (requested === null || requested === 'overview') && crawlAvailable !== false;
 }
@@ -61,9 +52,6 @@ export function AiTrafficScreen() {
     ariaLabel: 'AI traffic views',
     items: crawlAvailable === false ? TRAFFIC_TABS.filter((t) => !t.crawlOnly) : TRAFFIC_TABS,
   };
-  // The default view waits for crawl availability. The wait still draws the
-  // tab row (nothing selected yet), so the loaded view's filters, which join
-  // that row, do not push its work down when they arrive.
   if (tab === null)
     return (
       <TabsRoot<TrafficTab | ''>
@@ -107,9 +95,6 @@ function TrafficDataView({
   const ga4 = useSourceStep(workspaceId, projectId, 'ga4');
   const sources = useCrawlSources(projectId, workspaceId);
   const idle = trafficIdle({ tab, ga4, sources: sources.data, overview: summary.data });
-  // Every narrowing in the filter row after the tabs; Export, on the tabs that
-  // list rows, ends that tab's filter bar, so the masthead is the same on every
-  // tab. A view that has never had anything to show offers neither.
   const frame = {
     tabs: <TabRow {...tabs} />,
     filters: idle ? undefined : (
@@ -125,9 +110,6 @@ function TrafficDataView({
         <TrafficSetupState ga4Missing={ga4?.kind === 'connect'} crawlAvailable={crawlAvailable} />
       </ReportPage>
     );
-  // First load keeps the identity, tab and control bands; only the work waits.
-  // The table tabs draw their own loading, error and empty states inside the
-  // table, in the footprint of a page of rows.
   if (tab === 'overview' && summary.isLoading)
     return (
       <ReportPage {...frame}>
@@ -137,8 +119,6 @@ function TrafficDataView({
         </Stack>
       </ReportPage>
     );
-  // A failed read with nothing to show is the region's state, in the same
-  // footprint its loading state took.
   if (tab === 'overview' && summary.isError)
     return (
       <ReportPage {...frame}>
@@ -157,12 +137,6 @@ function TrafficDataView({
   );
 }
 
-/**
- * Whether the view has never had anything to show, so it is its setup state
- * alone: the Overview while nothing is connected or measured, a crawl-log
- * view while the project has no crawl log source. Pages also lists crawled
- * and cited paths, so it keeps its table.
- */
 function trafficIdle({
   tab,
   ga4,

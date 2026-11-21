@@ -1,4 +1,3 @@
-/** The declaration and bounded observation history, with persisted measurement legs. */
 import { sql, type Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { OpportunityImplementationEvents } from '../generated/db-schema.ts';
@@ -16,16 +15,11 @@ import type { CheckKind, CheckModule } from './checks/kind.ts';
 const observationKind = z.enum(['observed', 'verified', 'contradicted']);
 const o = policy.opportunity.opportunities;
 
-/**
- * What a check names, for a reader: its rule, prompt text, page or query, link
- * or search. A prompt deleted since names nothing.
- */
 function subject(check: ExpectedCheck, prompts: ReadonlyMap<string, string>) {
   const module: CheckModule<CheckKind> = CHECKS[check.kind];
   return module.subject(check, prompts);
 }
 
-/** The project's tracked prompts that visibility checks measure, by id. */
 async function checkPrompts(
   db: Database,
   row: Selectable<OpportunityImplementationEvents>,
@@ -51,7 +45,6 @@ async function checkPrompts(
   return new Map(prompts.map((prompt) => [prompt.id, prompt.text]));
 }
 
-/** Each expected check with the state the latest observation folded for it. */
 function checkStates(
   checks: ExpectedCheck[],
   result: unknown,
@@ -98,7 +91,6 @@ export async function declarationView(
       .where('workspace_id', '=', row.workspace_id)
       .where('id', '=', row.id)
       .executeTakeFirstOrThrow(),
-    // Who recorded the deployment, while they are still a member of this workspace.
     db
       .selectFrom('workspace_members as member')
       .innerJoin('users', 'users.id', 'member.user_id')

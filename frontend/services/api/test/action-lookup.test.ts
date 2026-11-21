@@ -1,4 +1,3 @@
-/** Finding an Action by name in every status, and the chat read's Action projection. */
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { actionsPageSchema } from '@citeladder/contracts/actions';
@@ -57,18 +56,15 @@ describe('Finding Actions by name', () => {
       .set({ effective_status: 'measuring' })
       .where('id', '=', actionId(s, promptRule))
       .execute();
-    // The measuring Action is out of the default work queue, but a search with any finds it.
     expect(await ids('q=CRM')).toEqual([]);
     expect(await ids('q=CRM&status=any')).toEqual([actionId(s, promptRule)]);
     expect(await ids('q=acme.test/&status=any')).toEqual([
       actionId(s, pageRule),
       actionId(s, otherRule),
     ]);
-    // LIKE wildcards in the text are literal.
     expect(await ids('q=%25&status=any')).toEqual([]);
     expect((await request(s, `${list}?status=every`)).status).toBe(422);
     expect((await request(s, `${list}?q=${'x'.repeat(201)}`)).status).toBe(422);
-    // Another workspace can neither search this project nor find these Actions in its own.
     expect((await request(foreign, `${list}?q=CRM&status=any`)).status).toBe(404);
     const theirs = actionsPageSchema.parse(
       await (
@@ -98,12 +94,10 @@ describe('Finding Actions by name', () => {
     const tools = agentTools(db);
     const read = async (name: string, args: Parameters<typeof tools.execute>[3]) =>
       JSON.parse((await tools.execute(db, scope, name, args, AbortSignal.timeout(5000))).text);
-    // Without status any a title search keeps the work queue.
     expect((await read('read_actions', { query: 'SHOPS' })).items).toEqual([]);
     expect((await read('read_actions', { query: 'shops', status: 'any' })).items).toMatchObject([
       { id: measuring.id, status: 'done', measurement: 'measuring' },
     ]);
-    // Search covers every status, the work queue first, and says each status.
     expect((await read('search', { query: 'school uniform' })).results).toMatchObject([
       { id: `citeladder://action/${open.id}`, text: 'Status: open.' },
       { id: `citeladder://action/${measuring.id}`, text: 'Status: done.' },
@@ -130,7 +124,6 @@ describe('Finding Actions by name', () => {
       .set({ effective_status: 'measuring' })
       .where('id', '=', mentioned.id)
       .execute();
-    // A stored reference to another workspace's Action is never projected.
     await db
       .updateTable('agent_messages')
       .set({

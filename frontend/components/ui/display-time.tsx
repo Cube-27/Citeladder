@@ -3,11 +3,6 @@ import type { ReactNode } from 'react';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, formatDisplayTimestamp } from '@/lib/format';
 
-/**
- * A persisted instant in the display timezone, with its zone. Inside a
- * sentence it keeps the sentence's face; a date that stands alone as a value
- * (a fact, a cell, a range) passes `standalone` for tabular numerals.
- */
 export function DisplayTime({
   value,
   dateOnly = false,

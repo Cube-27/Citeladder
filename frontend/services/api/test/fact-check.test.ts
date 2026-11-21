@@ -1,10 +1,3 @@
-/**
- * Fact-checking against real PostgreSQL: the pilot-gated brand facts API and
- * its revisions, the fact set an audit freezes, claim extraction riding the
- * perception call, the verification executor's persisted outcomes, the
- * accuracy and evidence reads, and workspace isolation. The model gateway is
- * a fake transport.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
@@ -61,7 +54,6 @@ describe('brand facts', () => {
       409,
       'fact_checking_not_in_plan',
     ]);
-    // The claims export refuses too, never an empty file that reads as "no claims".
     const exported = await call(tenant, 'GET', '/visibility/accuracy/claims/export');
     expect([exported.status, (exported.body.error as { code: string }).code]).toEqual([
       409,
@@ -228,7 +220,6 @@ describe('claim extraction and verification', () => {
     const verifyRequest = JSON.parse(String(verify.fetch.mock.calls[0]?.[1]?.body)) as {
       messages: { content: string }[];
     };
-    // Only the pricing claim has a fact on its topic; the integration claim is never sent.
     expect(verifyRequest.messages[1]?.content).toContain('Pro costs $59 per month.');
     expect(verifyRequest.messages[1]?.content).not.toContain('Slack');
 
@@ -251,7 +242,6 @@ describe('claim extraction and verification', () => {
       ],
     });
 
-    // Editing the fact afterwards never rewrites this audit's verdict.
     const [fact] = (await call(tenant, 'GET', '/brand-facts')).body.facts as { id: string }[];
     await call(tenant, 'PATCH', `/brand-facts/${fact!.id}`, {
       expected_revision: 2,
@@ -273,7 +263,6 @@ describe('claim extraction and verification', () => {
       ],
     );
 
-    // By fact groups on the revision the run froze; the unclaimed fact is not raised.
     const observedAt = (summary.body.contradicted as { observed_at: string }[])[0]!.observed_at;
     const byFact = await call(tenant, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);
     expect(byFact.body).toMatchObject({
@@ -296,7 +285,6 @@ describe('claim extraction and verification', () => {
       ],
     });
 
-    // The export names the market the run froze, not the project's current default.
     await db
       .updateTable('projects')
       .set({ country_code: 'GB' })
@@ -321,7 +309,6 @@ describe('claim extraction and verification', () => {
         `Acme integrates with Slack.,,not_covered,not_covered,ChatGPT API,${market},${observedAt},best tools?\r\n`,
     );
 
-    // Another workspace, inside the pilot, cannot read this run's facts or claims.
     const attacker = await fixtures.tenant();
     await enroll(attacker);
     const forged = await call(attacker, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);
@@ -453,7 +440,6 @@ describe('claim extraction and verification', () => {
       factVerification(() => null),
     );
     const unconfigured = await call(second, 'GET', `/visibility/accuracy?audit_id=${secondAudit}`);
-    // The integration claim has no fact on its topic, so it is not covered without a call.
     expect(unconfigured.body).toMatchObject({
       state: 'value',
       score: {
@@ -565,7 +551,6 @@ describe('accuracy reads', () => {
     );
 
     expect(status).toBe(200);
-    // The headline stays on the pool; the trend covers the period.
     expect(body.source_audit_ids).toEqual([pooled]);
     expect(
       (body.trend as { audit_id: string; comparable: boolean }[]).map((point) => [

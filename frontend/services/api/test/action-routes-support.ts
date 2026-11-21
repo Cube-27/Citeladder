@@ -1,4 +1,3 @@
-/** The Action route tests' harness: the real app and database, seeded projects and request helpers. */
 import { sql } from 'kysely';
 import { afterAll } from 'vitest';
 import {
@@ -10,7 +9,6 @@ import { createApp } from '../src/app.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
-// Inside the declaration window, which is relative to now.
 export const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
 export const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 export const boundary = `${day}T15:00:00.123456Z`;
@@ -28,7 +26,6 @@ export const actionId = (s: ActionSeed, rule = pageRule) => s.actions[rule]!;
 export const actionPath = (s: ActionSeed, rule = pageRule) =>
   `/api/v1/actions/${actionId(s, rule)}`;
 
-/** One app per test file; the workspaces it seeds are deleted after the file. */
 export function actionRoutes() {
   const config = testConfig();
   const db = testDatabase(config);

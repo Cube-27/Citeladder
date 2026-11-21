@@ -1,9 +1,3 @@
-/**
- * The one place an Agent or Action token becomes something a reader reads.
- *
- * An unmapped token renders as nothing (or a neutral fallback where a label is
- * structurally required), never as the raw backend identifier.
- */
 import type { ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
 import { formatCount } from '@/lib/format';
 import type {
@@ -15,7 +9,6 @@ import type {
 } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
-/** The Actions page's goals (plan v3, owner 2026-11-16). */
 export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {
   read_site: 'Let AI read your site',
   own_pages: 'Improve your own pages',
@@ -23,7 +16,6 @@ export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {
   wrong_claims: 'Fix wrong claims AI makes about your brand',
 };
 
-/** What a goal strip cell counts, singular and plural ("17 fixes open"). */
 const GOAL_COUNT_PHRASE: Record<ActionGoal, readonly [string, string]> = {
   read_site: ['fix open', 'fixes open'],
   own_pages: ['action on your pages', 'actions on your pages'],
@@ -35,13 +27,11 @@ export function goalCountPhrase(goal: ActionGoal, count: number): string {
   return `${formatCount(count)} ${goalCountWords(goal, count)}`;
 }
 
-/** The words after a goal's count ("fixes open"). */
 export function goalCountWords(goal: ActionGoal, count: number): string {
   const [one, many] = GOAL_COUNT_PHRASE[goal];
   return count === 1 ? one : many;
 }
 
-/** What each goal's info mark explains. */
 export const ACTION_GOAL_HINT: Record<ActionGoal, string> = {
   read_site: 'Site Health defects and advisories that stop AI reading or trusting your pages.',
   own_pages: 'Prompts you miss, pages to create or improve, search queries and internal links.',
@@ -66,7 +56,6 @@ export const ACTION_GROUPING_LABEL: Record<ActionGrouping, string> = {
   other_sources: 'Other',
 };
 
-/** The Actions page's Impact label for a priority band ("Low / Moderate / High"). */
 export const IMPACT_LABEL: Record<ActionPriorityBand, string> = {
   high: 'High',
   medium: 'Moderate',
@@ -75,7 +64,6 @@ export const IMPACT_LABEL: Record<ActionPriorityBand, string> = {
 
 const OWNERSHIP_LABEL: Record<string, string> = { owned: 'Owned', earned: 'Earned' };
 
-/** A tree group's heading under what the page groups by first. */
 export function treeGroupLabel(groupBy: ActionTreeGroupBy, key: string): string {
   switch (groupBy) {
     case 'goal':
@@ -105,7 +93,6 @@ export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
   dismissed: 'Declined',
 };
 
-/** Badge tone per status; meaning is always carried by the label too. */
 export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'success'> = {
   open: 'neutral',
   in_progress: 'info',
@@ -113,7 +100,6 @@ export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'succ
   dismissed: 'neutral',
 };
 
-/** A Done Action's measurement underneath its status. */
 export const ACTION_MEASUREMENT_LABEL: Record<ActionMeasurement, string> = {
   measuring: 'Measuring',
   verified: 'Verified',
@@ -151,7 +137,6 @@ const FAMILY_LABEL: Record<string, string> = {
   content_optimization: 'Content optimization',
 };
 
-/** Every Action Source (evidence family) a reader can filter by. */
 export const ACTION_FAMILIES = Object.keys(FAMILY_LABEL);
 
 export function familyLabel(family: string): string | null {
@@ -181,7 +166,6 @@ export function measurementLegLabel(leg: string): string | null {
   return MEASUREMENT_LEG_LABEL[leg] ?? null;
 }
 
-/** What one expected check asks, before its subject. */
 const CHECK_KIND_LABEL: Record<string, string> = {
   site_rule: 'Website check passes',
   contextual_link: 'Internal link is on the page',
@@ -196,7 +180,6 @@ export function checkKindLabel(kind: string): string {
   return CHECK_KIND_LABEL[kind] ?? 'Check';
 }
 
-/** What a check names when the server names nothing: a new page has no URL until it is cited. */
 const CHECK_SUBJECT_FALLBACK: Record<string, string> = {
   owned_url_cited: 'A new page of yours, not one already cited for these prompts',
 };
@@ -205,7 +188,6 @@ export function checkSubject(check: { kind: string; subject: string | null }): s
   return check.subject ?? CHECK_SUBJECT_FALLBACK[check.kind] ?? null;
 }
 
-/** What a check's reading cannot show, said beside it. */
 const CHECK_KIND_NOTE: Record<string, string> = {
   owned_url_cited:
     'A citation shows the page was cited, not which version of it the AI engine read.',
@@ -215,10 +197,6 @@ export function checkKindNote(kind: string): string | null {
   return CHECK_KIND_NOTE[kind] ?? null;
 }
 
-/**
- * What declaring a content-gap finding will check, before the user commits:
- * the improved page's address, or a new page of theirs.
- */
 export function contentGapCheckPreview(evidence: ContentGapEvidence): string {
   const page =
     'planned_page_key' in evidence
@@ -234,7 +212,6 @@ const CHECK_STATE_LABEL: Record<'waiting' | 'met' | 'unmet' | 'unavailable', str
   unavailable: 'Not measurable yet',
 };
 
-/** Why a reading could not answer a check, and what changes that. */
 const CHECK_REASON: Record<string, string> = {
   page_not_analyzed: 'The page was not read in that crawl. Run a crawl that includes it.',
   rule_not_evaluated: 'The check does not apply to the page as it was read.',
@@ -270,14 +247,12 @@ export function checkReasonLabel(reason: string | null): string | null {
   return reason ? (CHECK_REASON[reason] ?? null) : null;
 }
 
-/** A check's state as a reader is told it. */
 export function checkStateLabel(check: {
   state: 'waiting' | 'met' | 'unmet' | 'unavailable';
 }): string {
   return CHECK_STATE_LABEL[check.state];
 }
 
-/** The declaration's overall reading, never the raw observation kind. */
 export const IMPLEMENTATION_STATE_LABEL: Record<
   'declared' | 'observed' | 'verified' | 'contradicted',
   string
@@ -322,10 +297,6 @@ export function skillGroupLabel(group: string): string {
   return SKILL_GROUP_LABEL[group] ?? 'Other';
 }
 
-/**
- * Terminal run failures, in the reader's terms. Each names what happened and
- * what the reader can do; none claims an output was saved.
- */
 const RUN_ERROR_COPY: Record<string, string> = {
   stopped_at_limit:
     'The agent stopped at its step limit before finishing. Nothing was saved; ask again with a narrower request.',
@@ -353,7 +324,6 @@ const RUN_ERROR_COPY: Record<string, string> = {
     'The selected context is too large for this turn. Remove a context reference or use a smaller upstream brief and send again.',
 };
 
-/** The page workspace's suggestion categories (the content rules engine's). */
 const SUGGESTION_CATEGORY_LABEL: Record<string, string> = {
   correctness: 'Correctness',
   clarity: 'Clarity',
@@ -368,11 +338,6 @@ export function suggestionCategoryLabel(category: string): string {
   return SUGGESTION_CATEGORY_LABEL[category] ?? 'Suggestion';
 }
 
-/**
- * How a suggestion's rule strength reads on its card. A requirement restates a
- * search engine policy; recommendations and heuristics are options, and a
- * heuristic is labelled as one. No strength is a score.
- */
 const SUGGESTION_STRENGTH_COPY = {
   requirement: { badge: 'Search policy', lead: 'Required by' },
   recommendation: { badge: null, lead: 'Optional. Recommended in' },
@@ -389,7 +354,6 @@ export function suggestionStrengthCopy(strength: keyof typeof SUGGESTION_STRENGT
   return SUGGESTION_STRENGTH_COPY[strength];
 }
 
-/** Why a suggestion no longer fits the page, as Apply reports it. */
 const SUGGESTION_STALE_COPY: Record<string, string> = {
   span_changed: 'The text it would change was edited since it was suggested.',
   field_changed: 'That SEO field was edited since it was suggested.',
@@ -402,11 +366,9 @@ export function suggestionStaleCopy(reason: string | null): string {
   return `This suggestion no longer fits the page. ${why ?? 'The page changed since it was suggested.'}`;
 }
 
-/** A suggestion change the server refused without saying why (`agent_suggestion_conflict`). */
 export const SUGGESTION_CONFLICT_COPY =
   'This suggestion can’t be changed now. Reload the page and try again.';
 
-/** A suggestion change or save made against a page that has since changed (`agent_output_conflict`). */
 export const PAGE_CHANGED_COPY =
   'The page changed since you opened it. The latest version is shown now; check it and try again.';
 

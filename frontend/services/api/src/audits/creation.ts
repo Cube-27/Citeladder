@@ -29,10 +29,6 @@ export type AuditLaunch = {
 };
 type AuditScope = { workspaceId: string; projectId: string };
 
-/**
- * One launch: an audit per selected market, committed together with one
- * shared `launch_id`, or none at all. Returns the audit ids in market order.
- */
 export function createAudits(
   db: Database,
   workspaceId: string,
@@ -46,7 +42,6 @@ export function createAudits(
   );
 }
 
-/** The scheduler holds its scoped occurrence row; planner and cadence advancement share that transaction. */
 export async function createAuditsInTransaction(
   trx: Database,
   workspaceId: string,
@@ -81,7 +76,6 @@ export async function createAuditsInTransaction(
   return ids;
 }
 
-/** A shell that commits only the complete frozen plan, queue and funding proof. */
 async function createMarketAudit(
   trx: Database,
   workspaceId: string,
@@ -238,7 +232,6 @@ async function persistSnapshots(
     prompt_index: index,
     text: prompt.text,
     theme: prompt.theme,
-    // Frozen only with its name, so a run's topic always has one to show.
     topic_id: prompt.topic_name === null ? null : prompt.topic_id,
     topic_name: prompt.topic_name,
     intent: prompt.intent,
@@ -393,7 +386,6 @@ async function persistTasks(
       reservation_id: binding.reservation_id,
     };
     taskReservations[taskId] = binding.reservation_id;
-    // The frozen route also carries its credential source for execution.
     const boundRoute = {
       ...route,
       ...auditPolicy.route_policies[slot.engine],

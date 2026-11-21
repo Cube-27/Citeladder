@@ -47,14 +47,11 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const setPath = { prompt_set_id: uuid } as const;
 const setRoot = `${api}/prompt-sets/{prompt_set_id}`;
 const noQuery = {} as const;
-/** Public API paths nest the library under its project. */
 const publicProject = `${policy.api.machine_prefix}/projects/{project_id}`;
 const publicSet = `${publicProject}/prompt-sets/{prompt_set_id}`;
 const write = { permission: commands.PROMPTS_WRITE } as const;
 const publicWrite = { exposure: 'both', ...write } as const;
-/** A route under the project path resolves the project in the session read (or the key's path guard). */
 const inProject = { authorize: 'active-project' } as const;
-/** A retried request with the same key replays the staged run without provider I/O. */
 const generationHeaders = z.object({
   'Idempotency-Key': z.string().max(policy.prompts.generation.idempotency_key_max_chars).nullish(),
 });

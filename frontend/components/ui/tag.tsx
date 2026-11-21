@@ -5,38 +5,20 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { ArrowRight, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * The one tag face: 20px tall, radius 4, a `rule` edge, 12/16 `ink-2`, never
- * wider than its container. The website keeps its 24px `surface` face in
- * `ink`. A link tag takes the hover overlay and ends in a 12px arrow.
- */
 const TAG_FACE =
   'type-caption border border-rule text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-[var(--tag-height)] [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:text-ink';
 
-/**
- * What a tag is for. A status is a `StatusMark`, never
- * a Tag; tags are never coloured.
- *   - `category` (default): a topic, engine or kind, on the well.
- *   - `draft`: model-written and not yet accepted (law 1), dashed.
- *   - `removable`: an active filter or context chip, with a remove button
- *     named "Remove …".
- *   - `record`: one CiteLadder record named inside text (an Action in a
- *     reply), a link to its screen in this project, an optional status after
- *     its label.
- */
 type TagKind =
   | { kind?: 'category' | 'draft' }
   | {
       kind: 'removable';
       onRemove: () => void;
-      /** What the remove button removes, when the children are not plain text. */
       removeLabel?: string;
     };
 
 type SpanProps = Omit<ComponentPropsWithoutRef<'span'>, 'children'> & { children?: ReactNode };
 type TagProps = Readonly<SpanProps & TagKind>;
 
-/** The face and its one-line label, with an optional control at its end. */
 function TagShell({
   kind,
   className,
@@ -52,7 +34,6 @@ function TagShell({
       data-tag-kind={kind}
       className={cn(
         TAG_FACE,
-        // A removable tag's operable part is its remove button, which takes the hover.
         kind === 'removable' && 'pe-0.5',
         kind === 'draft' && 'border-control-line border-dashed',
         className,
@@ -64,11 +45,6 @@ function TagShell({
   );
 }
 
-/**
- * Tag — a short label. A text label is one line, cut with an ellipsis, its
- * full text in the tooltip; a tag whose children are not plain text cuts its
- * own label span (`min-w-0 truncate`).
- */
 export function Tag(props: TagProps) {
   if (props.kind === 'removable') {
     const { kind, onRemove, removeLabel, ...span } = props;
@@ -94,12 +70,6 @@ export function Tag(props: TagProps) {
   return <TagShell {...span} kind={kind} />;
 }
 
-/**
- * RecordTag — the `record` tag: one record named inside text, linking to its
- * screen in this project, its label cutting before the optional status after
- * it (a `StatusMark`). A `url` label cuts its middle and keeps its tail; the
- * link's name is the whole label either way.
- */
 export function RecordTag({
   href,
   label,
@@ -119,7 +89,7 @@ export function RecordTag({
       ) : (
         <span className="min-w-0 truncate">{label}</span>
       )}
-      {/* Read as two words; flex layout drops the space visually. */} {status}
+      {status}
       <ArrowRight className="size-3 shrink-0" aria-hidden />
     </ProjectLink>
   );

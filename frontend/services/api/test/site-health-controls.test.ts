@@ -63,7 +63,6 @@ async function allow(tenant: Tenant, limit: number, fetches?: number) {
   return account;
 }
 const otherProject = (seed: SiteSeed) => fixtures.otherProject(seed);
-/** Sitemap candidates for these URLs, as site setup would build them. */
 const sitemapCandidates = (urls: string[]) =>
   urls.map((url, index) => {
     const admission = classifyUrlAdmission(url);
@@ -122,7 +121,6 @@ describe('crawl control admission', () => {
       .selectAll()
       .where('crawl_id', '=', crawl.id)
       .execute();
-    // A full crawl fetches no page to discover: site setup reads the sitemap first.
     expect(tasks.map((task) => [task.task_kind, task.requested_url]).sort()).toEqual([
       ['analyze', 'https://example.test/'],
       ['site_setup', 'https://example.test/'],
@@ -201,7 +199,6 @@ describe('crawl control admission', () => {
     const operatorAccount = await allow(seed, 4, 0);
     await allow(outsiderSeed, 4, 0);
     await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
-    // The development login no longer confers anything (BL9).
     vi.stubEnv('DEV_LOGIN_EMAIL', `dev-${seed.userId}@example.test`);
     vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
     await db
@@ -277,21 +274,17 @@ describe('crawl control admission', () => {
         row.deselected_at !== null,
       ]);
 
-    // Room for two beside the root: the product tier before about, about before the blog.
     expect(await fill(['/blog/x', '/about', '/products/a'])).toEqual([
       'https://example.test/products/a',
       'https://example.test/about',
     ]);
-    // A downgrade to two keeps the first two in fill order; the rest leave, never resolved.
     await fit(2);
     expect(await tracked()).toEqual([
       ['/', 0, true, false],
       ['/products/a', 1, true, false],
       ['/about', 2, false, true],
     ]);
-    // A free slot fills with a page never tracked before, never the page that left.
     expect(await fill(['/about', '/blog/x'])).toEqual(['https://example.test/blog/x']);
-    // An upgrade restores the set in fill order first.
     await fit(3);
     expect(await tracked()).toEqual([
       ['/', 0, true, false],
@@ -324,7 +317,6 @@ describe('crawl control admission', () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 50);
     const crawl = await create(tenant);
-    // 50 tracked pages, unmetered; the walk may discover at least that many.
     expect(record(crawl.configuration).requested_page_limit).toBe(50);
     expect(crawl.discovery_requested_count).toBe(50);
   });
@@ -413,7 +405,6 @@ describe('crawl control admission', () => {
 
   it('analyzes a monitored set that exactly fills the page limit, the root counted once', async () => {
     const seed = await fixtures.crawl();
-    // Three page fetches left this period make the page limit three.
     await allow(seed, 3, 3);
     const root = await fixtures.page(seed, '/', {});
     const a = await fixtures.page(seed, '/a', {});
@@ -427,7 +418,6 @@ describe('crawl control admission', () => {
       .where('crawl_id', '=', crawl.id)
       .where('task_kind', '=', 'analyze')
       .execute();
-    // Site setup is no page, so the last tracked page keeps its slot.
     expect(analyzed.map((task) => task.site_url_id).sort()).toEqual([root.id, a.id, z.id].sort());
   });
 
@@ -524,7 +514,6 @@ describe('crawl-control HTTP contracts', () => {
       (await request(reader, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
     ).toBe(403);
     expect((await request(reader, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(403);
-    // Settings resolve once at startup, so the lower limit is a separately started app.
     const limited = createApp(testConfig({ ABUSE_CRAWL_CREATE_LIMIT: '1' }), db);
     const create = (projectId: string) =>
       request(seed, '/site-crawls', 'POST', { project_id: projectId }, limited);
@@ -566,7 +555,6 @@ describe('crawl-control HTTP contracts', () => {
     await allow(seed, 1, 2);
     const page = await fixtures.page(seed, '/a', {}, { observed: true });
     await fixtures.monitor(seed, [page.id]);
-    // The frozen profile, rather than a later invalid website setting, owns a rerun.
     await db
       .updateTable('projects')
       .set({ website_url: '' })
@@ -649,14 +637,12 @@ describe('crawl-control HTTP contracts', () => {
           .where('id', '=', seed.crawlId)
           .executeTakeFirstOrThrow()
       ).terminal_counters;
-    // While the crawl runs nothing is persisted and its tasks are counted live.
     expect(await stored()).toBeNull();
     await fixtures.page(seed, '/b', {});
     expect(record((await counters()).body)).toMatchObject({
       analyzed: 2,
       by_page_kind: { product: 2 },
     });
-    // The stop persists the counters itself, past a task a claim or heartbeat holds.
     const { taskId } = await fixtures.analyzable(seed, '/held');
     await db.transaction().execute(async (trx) => {
       await sql`select id from site_crawl_tasks where id = ${taskId} for update`.execute(trx);
@@ -667,11 +653,9 @@ describe('crawl-control HTTP contracts', () => {
       queued: 1,
       activity: { state: 'terminal' },
     });
-    // Its worker cancels it on the stopped crawl, and the settlement recounts.
     await sql`update site_crawl_tasks set status = 'cancelled' where id = ${taskId}`.execute(db);
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     expect(record(await stored())).toMatchObject({ analyzed: 2, queued: 0 });
-    // A task row no terminal owner counted changes nothing the dashboard reads.
     await fixtures.page(seed, '/late', {});
     expect(record((await counters()).body)).toMatchObject({
       analyzed: 2,
@@ -691,14 +675,12 @@ describe('crawl-control HTTP contracts', () => {
       return record(record(items.find((item) => record(item).id === seed.crawlId)).counters);
     };
     expect(await listed()).toMatchObject({ analyzed: 2, by_page_kind: { product: 2 } });
-    // A terminal crawl with no persisted counters is counted, never reported as zero.
     await db
       .updateTable('site_crawls')
       .set({ status: 'completed', completed_at: new Date() })
       .where('id', '=', seed.crawlId)
       .execute();
     expect(await listed()).toMatchObject({ analyzed: 2, by_page_kind: { product: 2 } });
-    // Once persisted, the stored counters win over later task rows.
     await db
       .updateTable('site_crawls')
       .set({
@@ -793,7 +775,6 @@ describe('crawl-control HTTP contracts', () => {
     const pages = [`${seed.root}`, `${seed.root}a`, `${seed.root}b`];
     expect(await audited(source.id)).toEqual(pages);
     expect(await audited(next.id)).toEqual(pages);
-    // The retired per-crawl recrawl route is gone.
     expect((await request(seed, `/site-crawls/${next.id}/recrawl`, 'POST')).status).toBe(404);
   });
 
@@ -804,7 +785,6 @@ describe('crawl-control HTTP contracts', () => {
       .select('email')
       .where('id', '=', tenant.userId)
       .executeTakeFirstOrThrow();
-    // The person is the signed-in caller; a body cannot name someone else.
     const forged = await request(tenant, '/site-crawls', 'POST', {
       project_id: tenant.projectId,
       robots: 'ignore',
@@ -843,7 +823,6 @@ describe('crawl-control HTTP contracts', () => {
       (await frozen(source.id)).robots_decision,
     );
 
-    // Choosing to respect robots.txt again replaces the kept choice.
     await db
       .updateTable('site_crawls')
       .set({ status: 'completed' })

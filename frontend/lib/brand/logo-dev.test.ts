@@ -47,7 +47,6 @@ describe('logoDevUrl', () => {
     expect(url.pathname).toBe('/www.acme.com');
     expect(url.searchParams.get('token')).toBe('pk_test');
     expect(url.searchParams.get('size')).toBe('48');
-    // A monogram at 200 OK would mask the failure and beat our own initials.
     expect(url.searchParams.get('fallback')).toBe('404');
   });
 
@@ -57,7 +56,6 @@ describe('logoDevUrl', () => {
     const { brandMarkSources } = await import('./mark-sources');
     const cdn = (sources: string[]) => sources.map((src) => new URL(src, 'https://app').host);
 
-    // A bare stored domain resolves like a site URL; the cached logo goes first.
     expect(
       cdn(brandMarkSources({ logoUrl: null, websiteUrl: 'wise.example', pixels: 20 })),
     ).toEqual(['img.logo.dev']);

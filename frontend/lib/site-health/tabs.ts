@@ -1,4 +1,3 @@
-/** Site health's analysis tabs in row order. Data only: the route manifest loads it in Node. */
 export const SITE_HEALTH_TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'pages', label: 'Pages' },

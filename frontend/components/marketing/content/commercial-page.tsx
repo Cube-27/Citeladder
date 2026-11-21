@@ -12,18 +12,12 @@ import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import './reading.css';
 
-/** The product module a commercial page leads to, in the page's own words. */
 type CommercialProduct = Readonly<{
   heading: string;
   body: string;
   href: '/platform/ai-visibility';
 }>;
 
-/**
- * A commercial entry page (the WebCommercial template): the product hero,
- * the definitions as a Bento with a worked example, the method as Steps,
- * the product split, related reading, the FAQ and the closing band.
- */
 export function CommercialEntryPage({
   page,
   product,
@@ -100,7 +94,6 @@ export function CommercialEntryPage({
   );
 }
 
-/** A static teaching example, deliberately separate from product previews and live metrics. */
 function WorkedExample() {
   return (
     <figure className="cl-prose cl-sov-example">

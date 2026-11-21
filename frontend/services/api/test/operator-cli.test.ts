@@ -62,7 +62,6 @@ it('reports actionable reviewed failures while withholding arbitrary error messa
       throw new Error('fixture-sensitive-value');
     });
     expect(stderr).toHaveBeenLastCalledWith('Error');
-    // A database failure names its SQLSTATE, never the server's message.
     await operatorMain(async () => {
       throw Object.assign(new Error('password authentication failed for user "fixture"'), {
         code: '28P01',
@@ -124,7 +123,6 @@ it('native local configuration preserves dotenv precedence and disable admission
         DATABASE_URL: 'postgresql://isolated-fixture/four',
       }),
     ).toBe('postgresql://isolated-fixture/four');
-    // POSTGRES_* name the local owner; the services connect as the application role.
     await writeFile(
       join(cli, 'roles.ts'),
       "import { localEnvironment } from './local-environment.ts'; const env = localEnvironment(); console.log(`${env.DATABASE_URL} ${env.MIGRATION_DATABASE_URL}`);",
@@ -157,7 +155,6 @@ const freePort = () =>
     });
   });
 
-// Stub gcloud and node record each call; the gcloud tunnel listens on the forwarded port.
 const GCLOUD_STUB = `
 const { appendFileSync } = require('node:fs');
 const args = process.argv.slice(2);
@@ -254,7 +251,6 @@ it.each([
       expect(ssh).toEqual(tunnel ? ['--command=true', '--command=sleep 86400'] : []);
       if (refusal) {
         expect(result).toMatchObject({ code: 1, stderr: refusal });
-        // A flag-shaped value is refused before gcloud runs; a foreign host after it reads the secret.
         expect(gcloud).toHaveLength(extra.length ? 0 : 2);
         await expect(readFile(child, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
         return;
@@ -271,7 +267,6 @@ it.each([
         expect(result.stderr).toBe(
           'Account management failed; no further operations were attempted.\n',
         );
-      // The tunnel the wrapper opened is gone once it returns.
       await new Promise<void>((resolve, reject) => {
         const server = createServer().once('error', reject);
         server.listen(port, '127.0.0.1', () => server.close(() => resolve()));

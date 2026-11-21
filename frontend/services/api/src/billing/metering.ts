@@ -1,18 +1,3 @@
-/**
- * The one platform-AI metering owner (B11-B15, B18, B31). Every platform
- * provider call outside the Agent's own dispatch runs through `metered`:
- *
- * - a charged feature commits its credit hold (the call's maximum at the
- *   serving model's price) before any network I/O, then settles once to the
- *   reported tokens; unreadable usage settles at a fixed fallback no larger
- *   than the hold, and a failed call that reports no usage is not charged;
- * - an included or uncharged feature is recorded with its tokens after the call;
- * - a provider priced in money (DataForSEO for managed Search Intelligence,
- *   B40) holds its estimate in the caller's transaction and settles to the
- *   cost converted to credits.
- *
- * Customers see only the credits; prices and the markup stay internal (B23).
- */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -48,7 +33,6 @@ type Provider = 'model_gateway' | 'jev' | 'tavily' | 'keenable' | 'dataforseo';
 type CallSpec = {
   provider: Provider;
   model: string;
-  /** Upper bound of the request’s input, in UTF-8 bytes; charged calls only. */
   inputBytes?: number;
   maxOutputTokens?: number;
 };
@@ -75,7 +59,6 @@ const unresolved = () =>
     code: 'entitlement_unresolved',
   });
 
-/** A `platform_calls` row for `context` and `spec`, before its outcome fields. */
 function callRow(context: MeterContext, spec: CallSpec, at: Date) {
   return {
     id: randomUUID(),
@@ -100,11 +83,6 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
   };
 }
 
-/**
- * The internal cost of an uncharged call: a per-request provider's fee once it
- * answered (a failed request costs nothing), else its tokens at the model's
- * rate; `null` when unknown.
- */
 function uncharged(spec: CallSpec, usage: TokenUsage | null, error: unknown) {
   const fee = requestFeeMicrousd(spec.provider);
   if (fee !== null) return error ? 0 : fee;
@@ -112,12 +90,6 @@ function uncharged(spec: CallSpec, usage: TokenUsage | null, error: unknown) {
   return price && usage ? costMicrousd(price, usage) : null;
 }
 
-/**
- * Records an included or uncharged call after it ran, on the caller's
- * connection: in the caller's transaction when it runs in one, so the cost
- * row commits with the work, and a row that cannot be written fails the call
- * rather than leave its spend unrecorded.
- */
 async function record(
   db: Database,
   context: MeterContext,
@@ -139,7 +111,6 @@ async function record(
     .execute();
 }
 
-/** Records the call and holds `reserved` credits for it in `trx`. */
 async function openHold(
   trx: Database,
   context: MeterContext,
@@ -209,7 +180,6 @@ function lockHeld(trx: Database, callId: string) {
     .executeTakeFirst();
 }
 
-/** Debits `credits` from a held call, releases the rest and closes its record. */
 async function closeHold(
   trx: Database,
   call: NonNullable<Awaited<ReturnType<typeof lockHeld>>>,
@@ -246,10 +216,6 @@ async function closeHold(
     .execute();
 }
 
-/**
- * Holds `credits` for a provider priced in money, in the caller's transaction
- * so the hold commits with the work it pays for (B40, B41).
- */
 export function holdProviderCredits(
   trx: Database,
   context: MeterContext,
@@ -259,7 +225,6 @@ export function holdProviderCredits(
   return openHold(trx, context, spec, credits, true);
 }
 
-/** Charges a money-priced hold its cost in credits, never above the hold; null once settled. */
 export async function settleProviderCredits(trx: Database, callId: string, costMicrousd: number) {
   const call = await lockHeld(trx, callId);
   if (!call) return null;
@@ -274,11 +239,6 @@ export async function settleProviderCredits(trx: Database, callId: string, costM
   return credits;
 }
 
-/**
- * Settles a reserved call once. A call that succeeded with unreadable usage
- * (or was lost to a crash) charges the fallback; a failure with no usage
- * charges nothing.
- */
 async function settleCall(
   db: Database,
   callId: string,
@@ -300,10 +260,6 @@ async function settleCall(
   });
 }
 
-/**
- * The internal cost of every included and uncharged platform call since the
- * start of `at`'s UTC day, across all workspaces.
- */
 async function unchargedDailySpend(db: Database, at = new Date()) {
   const day = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
   const row = await db
@@ -316,13 +272,6 @@ async function unchargedDailySpend(db: Database, at = new Date()) {
   return BigInt(row.spent);
 }
 
-/**
- * The platform-wide daily breaker: credit-funded calls are paid for by their
- * holds, but included and uncharged calls are bounded only per workspace, so
- * once their day's cost reaches the configured ceiling they are refused before
- * any network I/O until the next UTC day. Concurrent calls may each pass the
- * check, so the ceiling can be exceeded by the calls already in flight.
- */
 async function assertSpendOpen(db: Database, context: MeterContext): Promise<null> {
   const ceiling = BigInt(policy.costs.platform.daily_uncharged_ceiling_microusd);
   const spent = await unchargedDailySpend(db);
@@ -338,7 +287,6 @@ async function assertSpendOpen(db: Database, context: MeterContext): Promise<nul
   });
 }
 
-/** Runs one platform provider call under its metering context. */
 async function metered<T>(
   db: Database,
   context: MeterContext,
@@ -380,11 +328,6 @@ async function metered<T>(
   return outcome.value;
 }
 
-/**
- * The output cap `feature` declared for gateway calls. Every feature that
- * reaches the gateway declares one, so a call's hold is sized to the output it
- * needs, not the gateway's configured maximum.
- */
 function featureOutputCap(feature: MeteredFeature) {
   const caps: Record<string, number> = policy.models.feature_output_tokens;
   if (!Object.hasOwn(caps, feature))
@@ -392,10 +335,6 @@ function featureOutputCap(feature: MeteredFeature) {
   return caps[feature]!;
 }
 
-/**
- * The gateway with every call metered for `context`; the raw gateway refuses
- * unmetered calls. Each call is sent, and held, at the feature's output cap.
- */
 function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
   const cap = callOutputCap(gateway.maxOutputTokens, featureOutputCap(context.feature));
   const complete: Complete = (system, user, signal, onText, schema, maxOutputTokens) => {
@@ -418,7 +357,6 @@ function meteredGateway(db: Database, gateway: ModelGateway, context: MeterConte
   return { ...gateway, maxOutputTokens: cap, ...gatewayCalls(complete) };
 }
 
-/** Charges the fallback for holds a crash left unsettled past the configured age. */
 export async function settleAbandonedCalls(db: Database, now = new Date(), limit = 100) {
   const cutoff = new Date(now.getTime() - policy.billing.ai_credits.unsettled_after_seconds * 1000);
   const stale = await db
@@ -434,10 +372,6 @@ export async function settleAbandonedCalls(db: Database, now = new Date(), limit
   return stale.length;
 }
 
-/**
- * A workspace's metering handle, passed to each feature that reaches a paid
- * provider. Tests that exercise feature logic pass a recording double instead.
- */
 export function meterFor(db: Database, workspaceId: string) {
   return {
     gateway: (gateway: ModelGateway, feature: MeteredFeature): ModelGateway =>

@@ -13,7 +13,6 @@ describe('EnginesCard', () => {
     expect(screen.getByRole('cell', { name: '7' })).toBeInTheDocument();
   });
 
-  // The card title is one heading; a "no engine" empty state adds a second.
   it('shows neither rows nor "no engine" after a failed read', () => {
     render(<EnginesCard engines={engines} loading={false} errored />);
     expect(screen.queryByRole('cell', { name: '7' })).not.toBeInTheDocument();

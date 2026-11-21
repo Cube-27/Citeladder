@@ -34,8 +34,6 @@ const architectureInternalLinkingSchema = responseObject({
   content_link_count: z.number().int(),
   pages_with_incoming_count: z.number().int(),
   pages_with_incoming_percentage: z.number().nullable(),
-  // Null only on crawls persisted before orphan counts stopped being withheld
-  // under partial coverage; a re-crawl re-derives them.
   orphan_page_count: z.number().int().nullable(),
   orphan_pages: z.array(architectureOrphanPageSchema).default([]),
 });

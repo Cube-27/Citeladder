@@ -26,12 +26,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { WidgetFrame } from './widget-frame';
 
-/**
- * One line over the Overview: the site, and the run it was last tracked in
- * with its engines. The sidebar's project switcher already names the project,
- * so the line does not repeat the name or the logo.
- */
-/** The site as a link target: an http(s) URL, or null when it is anything else. */
 function websiteHref(website: string): string | null {
   const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(website) ? website : `https://${website}`;
   if (!URL.canParse(candidate)) return null;
@@ -77,7 +71,6 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="company-facts"
       title="Company facts"
-      // The industry is the project's own data ("General" included), shown as written.
       description={facts.industry.trim() || <Absence state="not_set" label="Industry not set" />}
       link={{ href: '/agent/context', label: 'Edit in Agent context' }}
     >
@@ -117,21 +110,16 @@ export function DashboardActions({
   onEditProject?: (project: Project) => void;
   downloading: boolean;
   onDownload: () => void;
-  /** The layout menu, for members who can edit the Overview. */
   layoutMenu?: ReactNode;
-  /** False while the Overview's start card holds Launch run, so it shows once. */
   launch?: boolean;
 }>) {
   return (
-    // A fragment: the identity band owns the gap between route actions.
     <>
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
-      {/* Six controls crowd the bar: More holds Layout and Export PDF at every width (masthead-actions.tsx). */}
       <div data-in-more="" hidden>
         {layoutMenu}
         <PdfButton downloading={downloading} onDownload={onDownload} />
       </div>
-      {/* The one primary: the run the Overview's figures come from. */}
       {launch ? (
         <MastheadPrimary>
           <LaunchAuditButton />
@@ -141,13 +129,9 @@ export function DashboardActions({
   );
 }
 
-/** A free-text fact on one line, with the whole text behind a tooltip. */
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="not_set" />;
-  return (
-    // A value, so the primary ink under its grey label, not grey on grey.
-    <ClampText className={textRole('body')}>{value}</ClampText>
-  );
+  return <ClampText className={textRole('body')}>{value}</ClampText>;
 }
 
 function PdfButton({
@@ -169,21 +153,11 @@ function PdfButton({
 
 type StateMetric = Readonly<{ value: number | null; delta: number | null }>;
 
-/**
- * How each kind of Project state figure prints and changes. A rate is a whole
- * percent that moves in percent points; a rank is a place ("#3") that moves
- * in whole places and is better when it falls.
- */
 const STATE_FIGURE = {
   rate: { format: percentFigure, unit: ' pp', precision: 1, policy: 'higher-is-better' },
   rank: { format: formatRank, unit: '', precision: 0, policy: 'lower-is-better' },
 } as const;
 
-/**
- * One Project state figure. A missing value or a missing comparison has no
- * change to report; the Movement card states why once, rather than a dash
- * under every figure.
- */
 function stateSegment({
   key,
   label,
@@ -213,7 +187,6 @@ function stateSegment({
   };
 }
 
-/** The metric names AI Visibility uses, so one run reads the same on both screens. */
 export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   const basis = data.measurement
     ? comparisonBasis({
@@ -221,7 +194,6 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
         answers: data.measurement.comparison_answers,
       })
     : null;
-  // A partial change names the answers it uses, once, in the first figure's hint.
   const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
     <WidgetFrame id="project-state" title="Project state" fill="figure">
@@ -255,13 +227,6 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
-/**
- * The brand's owned citation rate, Project state's fourth figure (owner,
- * 2026-11-19): the share of answers that link to a page the brand owns. The
- * projection's `track.citation_share` is the brand row's `citation_rate`,
- * which the API reads from the run's `owned_citation_rate`, so it carries AI
- * Visibility's name for that metric. Its label links to Insights.
- */
 function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSegment {
   const observed = Boolean(track.observed_at);
   return {
@@ -271,24 +236,14 @@ function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSe
     caption: observed ? pluralCount(track.engine_coverage, 'engine') : undefined,
     value: track.citation_share.value === null ? null : percentFigure(track.citation_share.value),
     missingState: observed ? 'unavailable' : 'not_run',
-    // No comparable run means no change; the Movement card says so once.
     delta:
       observed && track.citation_share.delta !== null ? (
         <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
       ) : undefined,
-    // Why no change is shown, or which answers a partial change uses.
     sub: track.limitations[0],
   };
 }
 
-/**
- * Each engine's change since the comparable run. With nothing comparable yet
- * the card holds one compact note rather than a tall empty block beside its
- * sibling. The note names the masthead's Launch run, whose dialog is where
- * the person confirms the run and its credits (owner, 2026-11-06). A
- * comparable run that produced no movement rows is a different answer: there
- * is nothing to launch, only no change to show.
- */
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <WidgetFrame id="movement" title="Movement" fill={data.movements.length ? 'chart' : 'list'}>
@@ -306,7 +261,6 @@ function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['meas
   const note = (message: string) => (
     <StateBlock kind="empty" inline icon={TrendingUp} message={message} />
   );
-  // Nothing to compare yet: the masthead's Launch run, when offered, measures the next one.
   const declined = (message: string) =>
     note(canRun ? `${message} Launch run to measure movement.` : message);
   if (!measurement) return declined('No measured run yet.');
@@ -328,7 +282,6 @@ function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['meas
   }
 }
 
-/** The shared, reorderable action list. */
 export function RankedActionsCard({
   actions,
   pending,

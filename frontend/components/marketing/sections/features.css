@@ -1,9 +1,3 @@
-/* ---------- FeatureCard ---------- */
-/* No borders, no shadows, no lift. Two editorial forms:
-   - with a product image, or linked: a flat neutral panel holding the white
-     product image and the copy;
-   - static, text only: a column under a hairline rule. */
-
 .cl-fcard {
   --cl-tint: var(--tint-neutral);
 
@@ -74,8 +68,6 @@
   margin-top: 4px;
 }
 
-/* The display face is the section's heading alone, so a card title is the sans face at 500. */
-
 .cl-fcard-title {
   margin: 0;
   color: var(--color-ink);
@@ -98,17 +90,9 @@
   padding-top: 12px;
 }
 
-/* A card alone in its row keeps one column: its points sit under the copy,
-   so no side column leaves empty space beneath it. */
-
-/* Copy to its check list: 20px, the same as a FeatureSplit's 20px gap. */
-
 .cl-fcard-body > .cl-checks {
   margin-top: 16px;
 }
-
-/* From 1024px its title and copy hold the prose measure on the left and the
-   points run beneath as three columns across the whole row. */
 
 @media (min-width: 1024px) {
   .cl-fcard--wide .cl-fcard-body > :is(.cl-fcard-title, .cl-fcard-text) {
@@ -122,7 +106,6 @@
     align-self: stretch;
   }
 
-  /* Two columns where three would leave a short last row (2, 4, 5 or 8 points). */
   .cl-fcard--wide
     .cl-fcard-body
     > .cl-checks:is(
@@ -134,10 +117,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-/* ---------- A row of text cards on shared rows ----------
-   Each card's title and body sit on rows its neighbours share (subgrid), so
-   a title that wraps moves every body in the row, not only its own. */
 
 .cl-tiles.cl-tiles--rows:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: grid;
@@ -155,8 +134,6 @@
   row-gap: 4px;
   align-content: start;
 }
-
-/* ---------- The blog's featured post: two columns from 768px ---------- */
 
 @media (min-width: 768px) {
   .cl-featured-post .cl-fcard-body {
@@ -192,11 +169,6 @@
   }
 }
 
-/* ---------- Audience list: the home page's "Who uses" cards ----------
-   From 1280px one row of equal columns, every card the row's height; below,
-   hairline rows (title beside its description, the arrow link at the right
-   edge), the website's link-row spec. */
-
 @media (min-width: 1280px) {
   .cl-audience {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -221,8 +193,6 @@
     box-shadow: none;
   }
 
-  /* The title track is a fixed share, so every description starts on one edge
-     whatever its row's link width. */
   .cl-audience .cl-fcard-body {
     display: grid;
     grid-template-columns: 30% minmax(0, 1fr) auto;
@@ -257,7 +227,6 @@
   }
 }
 
-/* ---------- Bento: authored spans hold to 900px, halves to 768, one column below ---------- */
 .cl-bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -302,9 +271,6 @@
   grid-column: span 12;
 }
 
-/* A product image beside a taller tile fills its cell; its well grows
-   and centres the screen (screens/product-frame.css) instead of leaving a strip under it. */
-
 .cl-bento-cell > * {
   flex: 1;
 }
@@ -339,7 +305,6 @@
   }
 }
 
-/* ---------- FeatureSplit: 5/12 copy beside a 7/12 frame ---------- */
 .cl-split {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -365,8 +330,6 @@
   align-items: flex-start;
   gap: 20px;
 }
-
-/* A split's title is its section's heading, so it matches the section header. */
 
 .cl-split-title {
   margin: 0;
@@ -416,12 +379,6 @@
   }
 }
 
-/* On a phone a split's product image is the desktop drawing scaled down
-   whole, as the hero's app is, never re-flowed to the phone's width: it lays
-   out 440px wide (its rows still on one line, its text still readable) and
-   zooms to the well (never up). Zoom scales layout too,
-   so the well's height follows with no script or shift. */
-
 @media (max-width: 767px) {
   .cl-split-media .cl-frame--fluid .cl-frame-screen {
     container-type: inline-size;
@@ -433,7 +390,6 @@
   }
 }
 
-/* ---------- A FeatureCard: its tint panel holds the white image ---------- */
 .cl-fcard > .cl-frame .cl-frame-well {
   padding: var(--frame-pad);
   border: 0;

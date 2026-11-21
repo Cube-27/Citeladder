@@ -95,7 +95,6 @@ describe('the business step draft', () => {
       products_services: [NET],
       jobs_to_be_done: ['practise at home'],
     });
-    // Removing an offering alone leaves the map as it is.
     expect(mapChanges(edited, saved)).toBeNull();
   });
 
@@ -169,10 +168,8 @@ describe('the business step draft', () => {
       },
       map,
     );
-    // An inferred list is a suggestion; an empty one (jobs) is not.
     expect(saved.suggested).toEqual(['buyerRoles']);
     expect(suggestionCount(saved)).toBe(2);
-    // Service areas show only for a local or regional business, so a hidden one is never a draft.
     const hidden = {
       buyer_roles: 'reviewed',
       category_terms: 'reviewed',
@@ -202,7 +199,6 @@ describe('the business step draft', () => {
     expect(mapChanges(accepted, saved)?.offerings?.[0]?.situations).toEqual([
       { value: 'small garden', review_state: 'confirmed' },
     ]);
-    // Editing an inferred list makes it the person's own.
     const edited = withField(saved, 'buyerRoles', ['Club coach', 'Parent']);
     expect(edited.suggested).toEqual([]);
     expect(profileChanges(edited, saved)).toEqual({ buyer_roles: ['Club coach', 'Parent'] });

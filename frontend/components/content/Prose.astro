@@ -1,30 +1,10 @@
 ---
-/**
- * Prose — the system's long-form reading wrapper, shared by the website and
- * the docs. It styles raw HTML from Markdown (and the website's typed post
- * blocks) in `ink-secondary`, `container-prose` wide.
- *
- * - `article` (guides, blog, legal, AI reference): `body` (16/26), 20px
- *   between blocks; h2 `display-md` 56px above, h3 `heading-lg` 36px above,
- *   h4 `body-lg` medium (500); 12px after a heading.
- * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
- *   blocks; h2 `title` 48px above, h3 `title-sm` 32px above, h4 `heading`.
- *
- * Both: headings are the sans face at 500 (the display face sets only 32px and up). Links
- * `ink` with a 1px `line-control` underline; inline code mono on `surface-sunken`;
- * tables in a scroll frame with sans header rows over a hairline; quotes in the
- * sans face at `title` with a mono attribution and no rule (a docs quote is a
- * note beside a hairline rule); `hr` a `line` hairline;
- * InlineCitation markers (`sup.cl-icite`). Fenced code is a CodeBlock, which
- * this component renders once per page.
- */
 import CodeBlock from './CodeBlock.astro';
 import './prose.css';
 
 interface Props {
   variant?: 'article' | 'docs';
   as?: 'div' | 'article' | 'section';
-  /** The landmark's name, for `article` or `section`. */
   label?: string;
 }
 const { variant = 'article', as: Tag = 'div', label } = Astro.props;

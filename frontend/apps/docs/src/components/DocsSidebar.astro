@@ -1,10 +1,4 @@
 ---
-/**
- * DocsSidebar — the docs rail: every guide under its group title. A group
- * collapses from its eyebrow head (a native disclosure, so it works before
- * any script and never moves the groups above it); the current page sits on
- * `surface-sunken` in `ink`, the rest in `ink-secondary`, on 36px rows.
- */
 import { ChevronDown } from '@/lib/icons';
 import { API_GROUPS } from '../lib/api-reference';
 import { API_GROUP, articles, groups } from '../lib/content';
@@ -20,7 +14,6 @@ type Section = { label: string; links: Link[]; open: boolean; eyebrow: boolean }
 
 const articleLinks = (group: string): Link[] =>
   articles.filter((article) => article.group === group);
-// The guides, or the API's own rail: its overview, then each resource's endpoints.
 const sections: Section[] = inApi
   ? [
       { label: 'Overview', links: articleLinks(API_GROUP), open: true, eyebrow: true },
@@ -86,7 +79,6 @@ const sections: Section[] = inApi
     gap: 20px;
     width: 100%;
   }
-  /* A details box is block: the list's top margin is the group's 4px gap. */
   .cl-docs-side-group > .cl-doc-list {
     margin-top: 4px;
   }
@@ -114,7 +106,6 @@ const sections: Section[] = inApi
   .cl-docs-side-group:not([open]) .cl-docs-side-caret {
     transform: rotate(-90deg);
   }
-  /* A resource's head is a label, not an eyebrow: its rows are endpoints. */
   .cl-docs-side-label {
     color: var(--color-ink-secondary);
     font-size: var(--text-label);
@@ -139,7 +130,6 @@ const sections: Section[] = inApi
     align-items: center;
     gap: 8px;
   }
-  /* The rows ride on DocLayout's `cl-doc-list` and `cl-doc-link`. */
   .cl-docs-side-text {
     flex: 1;
     min-width: 0;

@@ -35,7 +35,6 @@ it('checksums sorted compact JSON with supplementary Unicode as surrogate escape
     );
   };
   const validated = validateCatalog(payload);
-  // U+1F600 as its UTF-16 surrogate pair, written as ASCII escape text.
   const escaped = ['d83d', 'de00'].map((unit) => `\\u${unit}`).join('');
   const canonical = JSON.stringify(sorted(validated)).replace('😀', escaped);
   expect(canonical).toContain(`"description":"Unicode ${escaped}"`);
@@ -87,7 +86,6 @@ it('authors checkout regions only for named modes and approved India tax', () =>
   ).toBe(true);
   const unapproved = launchCatalog({ mode: 'test', settings: billingSettings({}) });
   expect(Object.keys(unapproved.plans[0]!.regional_prices.byok)).toEqual(['international']);
-  // An item never offers India where no plan can be quoted there.
   expect(Object.keys(unapproved.addons[0]!.modes.byok!.regional_prices)).toEqual(['international']);
   const approved = launchCatalog({
     mode: 'test',

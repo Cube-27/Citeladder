@@ -1,10 +1,3 @@
-/**
- * The crawl's Issues groups one refresh's issue-group detector reads: every
- * defect and advisory rule (IA1), never a diagnostic. A per-page rule's pages
- * are the pages its issues are filed on; a site-level rule (architecture,
- * sitewide links) is filed once and names its pages in its evidence.
- * Projections of existing rows only; nothing here detects, scores or writes.
- */
 import { siteLevelFinding, type SiteLevelFinding } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
@@ -21,7 +14,6 @@ const family = policy.opportunity.opportunities.SITE_ISSUE_FAMILY;
 type Family = SiteEvidence['families'][number];
 type Page = Family['pages'][number];
 
-/** Each per-page rule's affected owned pages: the exact count and the first `COHORT_PAGES_MAX` in URL order. */
 async function perPageFamilies(db: Database, crawl: ViewCrawl): Promise<Family[]> {
   const { rows } = await sql<{
     rule_id: string;
@@ -77,7 +69,6 @@ async function perPageFamilies(db: Database, crawl: ViewCrawl): Promise<Family[]
   return [...families.values()];
 }
 
-/** The pages a site-level finding's evidence names, however its rule records them. */
 export function evidencePages(finding: SiteLevelFinding): Page[] {
   switch (finding.rule_id) {
     case 'architecture.duplicate_titles':
@@ -89,7 +80,6 @@ export function evidencePages(finding: SiteLevelFinding): Page[] {
     case 'technical.sitewide_link_redirect':
       return finding.evidence.targets.flatMap((target) => pick(target.pages));
     default:
-      // A new rule fails to type-check here until it is listed above or below.
       return pageListPages(finding);
   }
 }
@@ -110,7 +100,6 @@ type PageListFinding = Extract<
   }
 >;
 
-/** The rules whose evidence is one page list. */
 function pageListPages(finding: PageListFinding): Page[] {
   switch (finding.rule_id) {
     case 'architecture.excessive_depth':
@@ -138,11 +127,6 @@ type SiteLevelRow = {
   evidence: unknown;
 };
 
-/**
- * `row`'s group: the owned pages it names merged into those of the group an
- * earlier finding of its rule started, in URL order. Naming none, it is the
- * whole site, kept on the page it is filed on.
- */
 function siteLevelFamily(found: Family | undefined, row: SiteLevelRow, named: Page[]): Family {
   const earlier = found && !found.whole_site ? found.pages : [];
   const merged = new Map([...earlier, ...named].map((page) => [page.site_url_id, page] as const));
@@ -167,10 +151,6 @@ function siteLevelFamily(found: Family | undefined, row: SiteLevelRow, named: Pa
   };
 }
 
-/**
- * Each site-level rule's group: the owned pages its evidence names, deduplicated
- * in URL order, and the count it records over every page.
- */
 async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family[]> {
   const { rows } = await sql<SiteLevelRow>`
     select i.id, i.rule_id, i.finding_class, i.severity, i.category, i.site_url_id,
@@ -181,8 +161,6 @@ async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family
     where ${viewIssuesSql(crawl)} and ${siteLevelRule}
       and i.finding_class = any(${[...family.FINDING_CLASSES]}::text[])
     order by i.rule_id collate "C", i.finding_class, i.id`.execute(db);
-  // An `architecture.%` rule the site-level contract does not know names no pages
-  // this can read; it is skipped, never shown as the whole site.
   const named = rows.flatMap((row) => {
     const finding = siteLevelFinding(row.rule_id, row.evidence);
     return finding ? [{ row, pages: evidencePages(finding) }] : [];

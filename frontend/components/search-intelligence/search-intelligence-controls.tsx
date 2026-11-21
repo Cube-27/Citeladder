@@ -8,10 +8,6 @@ import { Inline } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type { SearchCollection } from './search-intelligence-collection-state';
 
-/**
- * The collection's view switcher, leading the page's control row; on a
- * competitor comparison, the way back to every competitor comes first.
- */
 export function CollectionViewControl({ collection }: Readonly<{ collection: SearchCollection }>) {
   if (collection.listingCompetitors) return null;
   const views = (
@@ -34,11 +30,6 @@ export function CollectionViewControl({ collection }: Readonly<{ collection: Sea
   );
 }
 
-/**
- * The collection's pickers and keyword filters, for the control row's All
- * filters: the website, the saved result (or competitor) when there is more
- * than one, then minimum volume and intent for keyword datasets.
- */
 export function collectionFilters(collection: SearchCollection): FilterDefinition[] {
   if (collection.listingCompetitors) return [];
   const competitors = collection.tab === 'competitors';
@@ -93,7 +84,6 @@ const INTENT_OPTIONS = [
   { value: 'transactional', label: 'Transactional' },
 ] as const;
 
-/** Minimum search volume (a nonnegative whole number) and search intent. */
 export function keywordFilters({
   minVolume,
   setMinVolume,

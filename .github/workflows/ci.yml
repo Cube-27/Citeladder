@@ -13,7 +13,6 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Deny by default; every job grants what it needs.
 permissions: {}
 
 jobs:
@@ -39,12 +38,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # The classifier decides every other job's scope, so prove it here rather
-      # than on a second runner that checks out the same tree to do nothing else.
       - name: CI classifier tests
         run: node --test scripts/*.test.mjs
-      # The pre-commit token-size hook, rerun on the changed files so a
-      # `--no-verify` commit cannot bypass it.
       - name: Source token size
         env:
           TOKEN_SIZE_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
@@ -61,7 +56,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
 
-  # Vitest runs in the frontend-tests shards below.
   frontend:
     name: Frontend (quality, docs)
     needs: changes
@@ -79,8 +73,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
-      # The bundle budget measures the app as deployed: the same baked
-      # public values as workers-app-deploy.yml, all public variables.
       - uses: ./.github/actions/app-build-config
         with:
           logo-dev-publishable: ${{ vars.LOGO_DEV_PUBLISHABLE }}
@@ -94,8 +86,6 @@ jobs:
         run: pnpm quality:check -- --scope frontend
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
-      # No `--with-deps` and `--only-shell`: see the E2E job's install step.
-      # The docs checks also run headless, so full Chrome (191 MB) is unused.
       - name: Install docs test browser
         run: pnpm exec playwright install --only-shell chromium
       - name: Documentation browser checks
@@ -109,10 +99,6 @@ jobs:
             exit "$status"
           fi
 
-  # The whole Vitest suite, split by file across parallel runners. Every shard
-  # runs the full config; together they run every file exactly once. A public
-  # repository's runner has 4 vCPUs, so each shard runs one worker per core
-  # (the config's local default is 2).
   frontend-tests:
     name: Frontend tests (${{ matrix.shard }}/3)
     needs: changes
@@ -210,7 +196,6 @@ jobs:
     env:
       APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
-      # Migrations run as the schema owner and set the application role's password.
       MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
       DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
@@ -233,10 +218,6 @@ jobs:
         working-directory: frontend/services/api
         run: pnpm db:types:check
 
-  # The API suite runs its files one at a time against one database, so it is
-  # split by file across parallel runners, each with its own PostgreSQL. Every
-  # shard applies the same baseline; together they run every file exactly once.
-  # It is the longest owner, so it gets the most shards.
   api-tests:
     name: API service tests (${{ matrix.shard }}/6)
     needs: changes
@@ -266,9 +247,6 @@ jobs:
     env:
       APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
-      # The migrations author the schema; the migrate CLI applies them once as
-      # the owner. The suite runs as the application role, as the services do,
-      # and its fixtures use the owner only for append-only rows and DDL.
       MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
       DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
@@ -296,9 +274,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # One generated Site Health crawl of 5,000 pages through setup, analysis,
-  # batched publication and finalize (docs/site-health.md, CO-7). It asserts
-  # the batch boundary and prints peak heap and read times.
   site-health-scale:
     name: Site Health scale fixture
     needs: changes
@@ -411,10 +386,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Production CSP and analytics consent, enforced by the built app and
-  # marketing Workers under local Workerd (playwright.workers.config.ts).
-  # Built with the accepted public origins, as deployed, plus the disposable
-  # analytics ID the consent check asserts.
   workers:
     name: Worker CSP and consent (playwright)
     needs: changes
@@ -446,7 +417,6 @@ jobs:
             tail -n 120 "$log"
             exit "$status"
           fi
-      # See the E2E job's install step for why there is no `--with-deps`.
       - name: Install Playwright browser
         run: ./node_modules/.bin/playwright install --only-shell chromium
       - name: Playwright (built Workers)

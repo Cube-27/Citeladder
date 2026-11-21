@@ -5,9 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 
-// The halves meet square, and the trigger's edge lies on the action's as the
-// one divider. Inline, so the joint adds nothing to the eager stylesheet.
-/** The action half's `style`: its end corners square where the trigger joins. */
 export const SPLIT_ACTION_JOIN: CSSProperties = { borderStartEndRadius: 0, borderEndEndRadius: 0 };
 const TRIGGER_JOIN: CSSProperties = {
   marginInlineStart: -1,
@@ -15,14 +12,6 @@ const TRIGGER_JOIN: CSSProperties = {
   borderEndStartRadius: 0,
 };
 
-/**
- * SplitButton — one secondary control: the action and a menu of its
- * variants, joined into a single bordered button. The two halves share one
- * edge as the divider, one height and the outer radius; each takes its own
- * hover and focus. `action` is the action button (an `ActionButton`,
- * possibly in a tooltip) styled with `SPLIT_ACTION_JOIN`; `children` are the
- * menu's `MenuItem`s.
- */
 export function SplitButton({
   action,
   menuLabel,
@@ -30,7 +19,6 @@ export function SplitButton({
   children,
 }: Readonly<{
   action: ReactNode;
-  /** The trigger's accessible name ("More crawl options"). */
   menuLabel: string;
   disabled?: boolean;
   children: ReactNode;

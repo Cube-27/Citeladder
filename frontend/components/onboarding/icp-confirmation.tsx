@@ -8,33 +8,13 @@ import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
 import { sentenceCaseStatus } from '@/lib/utils';
 
-/**
- * Everything the user actually decides at onboarding.
- *
- * Three questions, all answered by clicking. Positioning, description, target
- * audience and the product list used to live here as textareas; they are brand
- * knowledge, they belong on the brand screen inside the app, and nobody writes
- * prose about their own company at signup. The model fills them, they stay in
- * the payload, and they are editable later where that work belongs.
- *
- * "What you sell" is not one of three equal questions. Competitors, prompts and
- * every later score are derived from it, so a wrong category poisons the whole
- * project — and it is exactly the field the research model gets wrong on
- * businesses it half-recognises, most often by reading a firm that BUILDS
- * something as a firm that SELLS it. It therefore leads, carries the heavier
- * label, and states what it controls.
- */
-
 export function hasConfirmedIcp(profile: DiscoveryProfile | null): profile is DiscoveryProfile {
-  // Only the fields on this screen can gate it. Requiring invisible prose would
-  // block the user on something they were never shown.
   return Boolean(profile?.category.trim());
 }
 
 const MAX_CATEGORY_CHOICES = 3;
 const OTHER_CATEGORY = '__other__';
 
-/** Suggestions come only from model-supplied fields, never the live value. */
 function categoryChoices(profile: DiscoveryProfile): string[] {
   const seen = new Set<string>();
   const choices: string[] = [];
@@ -44,9 +24,6 @@ function categoryChoices(profile: DiscoveryProfile): string[] {
     ...profile.category_aliases,
   ]) {
     const item = candidate.trim();
-    // Keyed on what the chip will SAY, not on what it stores: two tokens that
-    // differ only by an underscore render the same word and would otherwise
-    // produce two identical chips.
     const key = sentenceCaseStatus(item).toLowerCase();
     if (!item || seen.has(key)) continue;
     seen.add(key);
@@ -61,22 +38,10 @@ type IcpPart = Readonly<{
   onChange: (profile: DiscoveryProfile) => void;
 }>;
 
-/**
- * What you sell — the field every other answer on this screen is derived from,
- * so it leads the step at full width rather than sharing a column with the two
- * questions it governs. Its options are sentences, not words, which is also the
- * reason they are a ruled list: as chips, the long one became a two-line box
- * beside a set of small ones and the set stopped reading as a set.
- */
-export function IcpCategory({
-  profile,
-  onChange,
-  note,
-}: IcpPart & Readonly<{ /** Why Create project waits on this answer. */ note?: string }>) {
+export function IcpCategory({ profile, onChange, note }: IcpPart & Readonly<{ note?: string }>) {
   const update = <K extends keyof DiscoveryProfile>(key: K, value: DiscoveryProfile[K]) =>
     onChange({ ...profile, [key]: value });
 
-  // Captured once so the list cannot shift under the user as they edit.
   const [choices] = useState(() => categoryChoices(profile));
   const [isOther, setIsOther] = useState(() => !choices.includes(profile.category));
 
@@ -87,9 +52,6 @@ export function IcpCategory({
           ariaLabel="What you sell"
           value={isOther ? OTHER_CATEGORY : profile.category}
           options={[
-            // The value stays exactly as discovery supplied it — this is only
-            // the label. `brand_audit_services` was the first thing a new
-            // customer read on this screen.
             ...choices.map((option) => ({
               value: option,
               label: sentenceCaseStatus(option),
@@ -124,7 +86,6 @@ export function IcpCategory({
   );
 }
 
-/** Who the buyer is and where they are — the two short questions. */
 export function IcpAudience({ profile, onChange }: IcpPart) {
   const update = <K extends keyof DiscoveryProfile>(key: K, value: DiscoveryProfile[K]) =>
     onChange({ ...profile, [key]: value });
@@ -144,7 +105,6 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
         />
       </FieldGroup>
 
-      {/* Four answers: two by two, never three and one. */}
       <FieldGroup label="Where they buy it">
         <RadioGroup
           variant="cards"

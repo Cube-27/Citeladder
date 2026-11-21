@@ -1,9 +1,3 @@
-/**
- * A workflow is a defined job that runs one skill, optionally in one content
- * format. Action handoffs, the page workflow and a finished deliverable's next
- * steps start chats with one pinned; `kinds` owns what each deliverable offers
- * next. Adding a deliverable type is a format and/or skill plus entries here.
- */
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { ContentFormat } from '../config/skill-inputs.ts';
@@ -53,7 +47,6 @@ function checkWorkflow(
     throw new TypeError(`Workflow ${workflow.id} names an unusable format`);
 }
 
-/** Every reference resolves, so a workflow can never select a missing skill or format. */
 export function parseWorkflows(
   raw: string,
   skills: ReadonlyMap<string, Skill>,

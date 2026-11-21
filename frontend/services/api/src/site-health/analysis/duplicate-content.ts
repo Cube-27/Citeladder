@@ -1,9 +1,3 @@
-/**
- * Exact and near-duplicate main content across one crawl's analyzed pages.
- * Lexical only: a SHA-256 of the normalized word sequence for exact copies and
- * a 64-bit SimHash over word shingles for near copies, compared within shared
- * SimHash bands.
- */
 import { createHash } from 'node:crypto';
 import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
@@ -14,7 +8,6 @@ const limits = policy.site_health.page_analysis.facts.limits;
 
 export type Fingerprint = { exact: string; words: number; low: number; high: number };
 
-/** FNV-1a over the shingle's characters, then a murmur3 finalizer seeded per half. */
 function shingleHash(value: string, seed: number) {
   let hash = 0x81_1c_9d_c5;
   for (let index = 0; index < value.length; index++) {
@@ -38,7 +31,6 @@ function popcount(value: number) {
 const hammingDistance = (left: Fingerprint, right: Fingerprint) =>
   popcount(left.low ^ right.low) + popcount(left.high ^ right.high);
 
-/** The page's main-content fingerprint, or null when it has too few words to compare. */
 export function contentFingerprint(text: string): Fingerprint | null {
   const tokens = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
   if (tokens.length < settings.min_words) return null;
@@ -68,14 +60,9 @@ export function contentFingerprint(text: string): Fingerprint | null {
 
 export type DuplicateMatch = { url: string; match: 'exact' | 'near'; distance: number };
 
-/** Pages sharing one SimHash, and within it each exact copy set, in URL order. */
 type Group = { print: Fingerprint; exact: Map<string, string[]>; near: Map<Group, number> };
 const printKey = (print: Fingerprint) => `${print.low}:${print.high}`;
 
-/**
- * The 64 bits cut into `max_hamming_distance + 1` bands, none empty: prints
- * within the distance share one (pigeonhole).
- */
 function bands(print: Fingerprint) {
   const count = settings.max_hamming_distance + 1;
   const keys = Array.from({ length: count }, (_, band) => `${band}:`);
@@ -105,7 +92,6 @@ function groupByPrint(pages: ReadonlyMap<string, Fingerprint>) {
   return groups;
 }
 
-/** Link every two groups within the distance, comparing only those that share a band. */
 function linkNearGroups(groups: Iterable<Group>) {
   const buckets = new Map<string, Group[]>();
   for (const group of groups)
@@ -123,11 +109,6 @@ function linkNearGroups(groups: Iterable<Group>) {
     }
 }
 
-/**
- * Each URL's closest duplicates among the others (at most the evidence URLs),
- * exact copies first. Only SimHashes sharing a band are compared, so the cost
- * follows the duplicates, not every pair of a tens-of-thousands-page crawl.
- */
 export function duplicateMatches(pages: ReadonlyMap<string, Fingerprint>) {
   const groups = groupByPrint(pages);
   linkNearGroups(groups.values());
@@ -156,7 +137,6 @@ export type DuplicateComparison =
   | { kind: 'excluded'; reason: string }
   | { kind: 'compared'; words: number; compared: number; matches: DuplicateMatch[] };
 
-/** One page's duplicate-content evaluation; an excluded page names why it was not compared. */
 export function duplicateContent(input: DuplicateComparison) {
   const rule = 'technical.duplicate_content';
   if (input.kind === 'excluded')

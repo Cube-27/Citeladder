@@ -1,4 +1,3 @@
-/** Atomic crawl-control family: all writes commit before workers can claim. */
 import {
   crawlScheduleSchema,
   issueFixesSchema,
@@ -27,7 +26,6 @@ import { issueFixes, markIssueGroupFixed, rerunIssueGroup } from '../site-health
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
 
 const family = 'site-health-crawls';
-/** Project routes act on the path project inside the active workspace (else 404). */
 const projectFamily = { family, authorize: 'active-project' } as const;
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid };
@@ -47,8 +45,6 @@ export const siteHealthCrawlRoutes = [
       const request = await readBody(c, createCrawlRequest);
       const workspaceId = c.get('workspace').workspaceId;
       const user = c.get('user');
-      // Ignoring robots.txt is the signed-in person's confirmation, recorded on the crawl;
-      // a request naming no choice keeps the newest site crawl's (SH-B7: one crawl action).
       let choice: Parameters<typeof crawlRequest>[3] = null;
       if (request.robots === 'respect') choice = { robots: 'respect' };
       if (request.robots === 'ignore')

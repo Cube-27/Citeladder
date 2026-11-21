@@ -1,10 +1,3 @@
-/**
- * The selection reads moved in PR 9b over HTTP: the dashboard, trends, query
- * fanout, the Sources table and per-answer evidence. Per-prompt reads are in
- * visibility-prompt-reads.test.ts.
- *
- * Runs against the real PostgreSQL schema, with workspace isolation on every route.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -18,7 +11,6 @@ import { frozen, route, visibilityReads, type Row } from './visibility-read-supp
 
 const { db, fixtures, get, measuredRun, newMarket } = visibilityReads();
 
-/** One run's stored aggregate: `brand` and `globex` answers out of `completed`. */
 function aggregate(input: {
   completed: number;
   brand: number;
@@ -41,7 +33,6 @@ function aggregate(input: {
   };
 }
 
-/** A complete baseline run and a later one, each citing one URL, in a new non-default market. */
 async function runsInOwnMarket(tenant: Tenant, cited: { baseline: string; current: string }) {
   const marketId = await newMarket(tenant);
   const complete = aggregate({ completed: 1, brand: 0 });
@@ -82,7 +73,6 @@ it('measures the baseline walk over 100 runs with alternating frozen routes (B21
       configuration: configuration(index),
       finalize,
     });
-  // Only the newest run is compared, so only it is finalized, over the 99 runs before it.
   const ids = await Promise.all(Array.from({ length: 99 }, (_, index) => run(index, false)));
   ids.push(await run(99, true));
   const currentConfiguration = configuration(99);
@@ -161,7 +151,6 @@ describe('GET /visibility', () => {
       },
       { visibilityScore: 70 },
     );
-    // One answer in the latest run named Globex and not the brand: a gap.
     await fixtures.execution(tenant, {
       auditId: latest,
       analysis: { brandMentioned: false, competitorMentions: ['Globex'] },
@@ -177,7 +166,6 @@ describe('GET /visibility', () => {
       selection_mode: 'latest',
       visibility_rate: 0.75,
       owned_citation_rate: 0.5,
-      // The stored composite and the prompt composite stay separate measures.
       visibility_score: 70,
       prompt_performance_score: 50,
       counts: { responses: 4, brand_responses: 3, expected: 4 },
@@ -236,7 +224,6 @@ describe('GET /visibility', () => {
     await measuredRun(tenant, '2026-03-02T09:00:00Z', withMentions(1, 1));
     await measuredRun(tenant, '2026-03-09T09:00:00Z', withMentions(3, 1));
     const { body } = await get(tenant, route(tenant));
-    // Response-level rates are identical in both runs; only the mention share moved.
     expect(body.comparison).toMatchObject({ status: 'comparable', deltas: { sov: 25 } });
   });
 
@@ -247,7 +234,6 @@ describe('GET /visibility', () => {
     };
     const empty = await fixtures.tenant();
     expect(await answer(empty, route(empty))).toEqual([404, 'visibility_not_measured']);
-    // A sibling read of the latest run folds the same case into the same code.
     expect(await answer(empty, route(empty, '/perception'))).toEqual([
       404,
       'visibility_not_measured',
@@ -275,7 +261,6 @@ describe('GET /visibility', () => {
       404,
       'not_found',
     ]);
-    // Another workspace's unwritten run is not found, never "being prepared".
     expect(await answer(empty, route(empty), { audit_id: unwritten })).toEqual([404, 'not_found']);
     expect(await answer(empty, route(pending))).toEqual([404, 'not_found']);
   });
@@ -292,7 +277,6 @@ describe('GET /visibility', () => {
     const before = await wholeSet('2026-03-28T00:00:00Z', 1);
     const first = await wholeSet('2026-04-02T00:00:00Z', 2);
     const second = await wholeSet('2026-04-05T00:00:00Z', 4);
-    // The newest run measured selected prompts: the whole set stays the default pool.
     await measuredRun(pooled, '2026-04-06T00:00:00Z', aggregate({ completed: 1, brand: 0 }), {
       configuration: frozen({ panel_hash: 'panel-subset', prompt_selection: 'selected' }),
     });
@@ -313,7 +297,6 @@ describe('GET /visibility', () => {
       visibility_score: null,
       coverage: { requested: 8, completed: 8, rate: 1 },
     });
-    // Citation totals describe one run, so a pooled period omits them.
     expect(body).not.toHaveProperty('citation_totals');
     expect(body.comparison).toMatchObject({
       status: 'comparable',
@@ -353,7 +336,6 @@ describe('GET /visibility/trends', () => {
     });
     expect(weekly.body[0]!.visibility_rate).toBeCloseTo(4 / 6);
 
-    // Neither run measured this engine, so neither emits a point.
     expect((await get(tenant, route(tenant, '/trends'), { engine: 'claude' })).body).toEqual([]);
     const invalid = await get(tenant, route(tenant, '/trends'), { granularity: 'hour' });
     expect([invalid.status, record(invalid.body.error).message]).toEqual([
@@ -364,7 +346,7 @@ describe('GET /visibility/trends', () => {
 
   it('caps points after bucketing, so every week survives a run-heavy period', async () => {
     const tenant = await fixtures.tenant();
-    const runs = 105; // above trend_max_points, all in one UTC week
+    const runs = 105;
     for (let index = 0; index < runs; index++)
       await measuredRun(
         tenant,
@@ -381,7 +363,6 @@ describe('GET /visibility/trends', () => {
     expect(weekly.body[0]!.source_audit_ids).toEqual([early]);
     expect(weekly.body[1]!.sov).not.toHaveProperty('response');
     expect(weekly.body[1]!.sov).toHaveProperty('mention');
-    // A point folding more runs than one selection reads no sentiment, never a partial one.
     expect(
       weekly.body.map((point) => (point.rankings as { sentiment: unknown }[])[0]?.sentiment),
     ).toEqual([null, null]);
@@ -398,7 +379,6 @@ describe('GET /visibility/trends', () => {
     try {
       const raw = await get(tenant, route(tenant, '/trends'));
       expect(raw.body.map((point) => point.audit_id)).toEqual(ids.slice(2));
-      // The run past the bound (03-10) cuts its week, so 03-11 leaves with it.
       const weekly = await get(tenant, route(tenant, '/trends'), { granularity: 'week' });
       expect(weekly.body.map((point) => [point.completed_at, point.source_audit_ids])).toEqual([
         ['2026-03-16T00:00:00Z', ids.slice(3)],
@@ -423,7 +403,6 @@ describe('GET /visibility/trends', () => {
       off.push(
         await measuredRun(tenant, `${day}T09:00:00Z`, metrics, { configuration: retrievalOff }),
       );
-    // More default runs than the bound, all newer than the slice's runs.
     for (const day of ['2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05'])
       await measuredRun(tenant, `${day}T09:00:00Z`, metrics);
     const bound = policy.visibility.trend_max_runs;
@@ -493,7 +472,6 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
         analysis: { brandMentioned: true, createdAt: at(1), brandMentions: ['Acme Corp'] },
       })
     ).taskId;
-    // The immutable artifact's events win over the task's copy.
     artifactTask = (
       await fixtures.execution(tenant, {
         auditId,
@@ -636,7 +614,6 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
       mentions: [{ kind: 'competitor', name: 'Globex' }],
       citations: [{ url: 'https://globex.example/x', matched_competitor: 'Globex' }],
     });
-    // The malformed `{}` entry is not an event.
     expect(chatgpt).toMatchObject({ event_source: 'audit_task', state: 'queries_available' });
     expect(chatgpt!.search_events as Row[]).toHaveLength(2);
 
@@ -910,7 +887,6 @@ describe('GET /visibility/sources', () => {
         ).body.items as Row[]
       ).map((row) => [row.key, row.response_delta]);
 
-    // Unfiltered, the domain was cited in both runs; as news, only now.
     expect(await delta({})).toEqual([['other.com', 0]]);
     expect(await delta({ source_type: 'news' })).toEqual([['other.com', 100]]);
   });

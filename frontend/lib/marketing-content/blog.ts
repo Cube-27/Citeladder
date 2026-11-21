@@ -6,23 +6,6 @@ import { POST_CONTENT_OPTIMIZATION } from './blog-posts/content-optimization';
 import { POST_INTERNAL_LINKS } from './blog-posts/internal-links';
 import { POST_PLAYBOOK } from './blog-posts/playbook';
 
-/**
- * Editorial content for `/blog` and `/blog/[slug]`.
- *
- * Posts render straight from this module. Every claim must be grounded in this
- * repository or in a source the post names: no unattributable benchmark
- * figures, no invented percentages. Owner-supplied byline fields (`date`,
- * `readTime`, `author`) are optional — while absent the byline is omitted
- * rather than showing a placeholder — and the author identity comes from
- * `./people` so a byline, the Organization JSON-LD, and llms.txt cannot drift
- * apart.
- */
-
-/**
- * A diagram's payload is named per variant, never a `Record<string, unknown>`,
- * so a misspelt field is a compile error instead of a blank figure. The posts
- * draw one variant: a numbered flow of steps.
- */
 type DiagramFlowStep = { step: string; title: string; desc: string };
 
 type BlogDiagram = { variant: 'flow'; data: { steps: readonly DiagramFlowStep[] } };
@@ -88,15 +71,6 @@ export type BlogPost = {
   body: readonly BlogBlock[];
 };
 
-/**
- * Publication order, and the order the previous/next rail walks.
- *
- * Block posts cover owned evidence, website readiness, citation actions and
- * product workflows. The consolidated Markdown research guides own the general
- * measurement and citation-tracking intents and are listed alongside these posts.
- * The index sorts by date, so
- * this array only decides the walk and the tie-break between same-day posts.
- */
 export const POSTS: readonly BlogPost[] = [
   POST_CONNECT,
   POST_AUDIT,

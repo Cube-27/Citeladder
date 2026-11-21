@@ -66,11 +66,6 @@ type RecomputeMutation = UseMutationResult<
   DemandRecomputeRequest
 >;
 
-/**
- * The header's one recompute button, which becomes the next step in place:
- * once queued it checks for the new snapshot; after a transient failure it
- * retries. The button keeps its slot, so the page never moves.
- */
 function RecomputeAction({
   mutation,
   onRecompute,
@@ -97,7 +92,6 @@ function RecomputeAction({
   );
 }
 
-/** Recompute's outcome as an info notice; the header button checks for the new snapshot. */
 function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
   if (mutation.isSuccess)
     return (
@@ -110,10 +104,6 @@ function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>
   return null;
 }
 
-/**
- * The card a Search Demand region's state sits in, its headline the card's
- * h2. Keyword Research lays out its tab states the same way.
- */
 function DemandEmpty({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <Section>
@@ -122,7 +112,6 @@ function DemandEmpty({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** A failed recompute as the shared notice; the header button is its retry. */
 function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
   if (!mutation.isError) return null;
   return (
@@ -135,10 +124,6 @@ function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }
   );
 }
 
-/**
- * The Keyword research page's Demand state, held by the page so its frame,
- * masthead and tab row stay mounted while the tabs change.
- */
 export function useDemand() {
   const { workspaceId, projectId } = useProjectScope();
   const queryClient = useQueryClient();
@@ -154,14 +139,10 @@ export function useDemand() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSignalId, setSelectedSignalId] = useUrlState('signal', optionalStringUrlCodec);
-  // Recompute is queued: the screen reports that the work was queued and lets
-  // the reader check for the new snapshot once it lands.
   const recompute = useMutation(demandMutations.recompute({ workspaceId, projectId }));
   const canRun = useWorkspaceCapability('run');
   const snapshot = latest.data?.coverage.search === 'observed' ? latest.data : null;
   const signals = snapshot?.signals;
-  // Counts for every tab in one pass, recomputed only when the snapshot does —
-  // not on every keystroke in the search box.
   const tabCounts = useMemo(
     () => new Map(FILTER_TABS.map(({ tab }) => [tab, countByTab(signals ?? [], tab)] as const)),
     [signals],
@@ -199,7 +180,6 @@ export function useDemand() {
 
 type Demand = ReturnType<typeof useDemand>;
 
-/** Demand's masthead action; recomputing is a run, so a role without it reads the snapshot as is. */
 export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
   const { snapshot, recompute, canRun } = demand;
   if (!canRun || !snapshot) return null;
@@ -217,14 +197,12 @@ export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
   );
 }
 
-/** Demand's control strip; the first load holds it, so the table starts where it lands. */
 export function demandControls(demand: Demand): ReactNode {
   const { snapshot, filter } = demand;
   if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
   const windowLabel = `${formatStripDay(snapshot.window_start)} – ${formatStripDay(snapshot.window_end)}`;
   return (
     <FilterBar
-      // Which signals the table lists is the tab's view, leading its control strip.
       view={
         <DemandSignalFilters
           activeTab={filter.activeTab}
@@ -240,9 +218,7 @@ export function demandControls(demand: Demand): ReactNode {
           aria-label="Filter queries or pages"
         />
       }
-      // What the table holds, and over which window, closes the row.
       status={
-        // Below 900 each piece wraps to its own line, never overprinting; from 900 the strip's meta is one line.
         <Inline
           as="span"
           gap="status"
@@ -263,13 +239,9 @@ export function demandControls(demand: Demand): ReactNode {
   );
 }
 
-/** The Demand tab's panel content in every state. */
 export function DemandPanel({ demand }: Readonly<{ demand: Demand }>) {
   const { latest, snapshot } = demand;
   if (!snapshot) return demandFallback(latest);
-  // A refresh that fails over evidence we already hold keeps the evidence and
-  // says so. Returning the error instead would blank a working screen; saying
-  // nothing would present a stale snapshot as current.
   return (
     <>
       {latest.error ? (
@@ -295,8 +267,6 @@ function SignalsFeed({
 }: Readonly<{ demand: Demand; snapshot: DemandSnapshot }>) {
   const selectedSignal =
     snapshot.signals.find((signal) => signal.id === selection.selectedSignalId) ?? null;
-  // What the figures mean, and how far each detector ran: the table's caption,
-  // and the reason an empty snapshot is empty.
   const caption = (
     <Inline as="span" gap="meta">
       <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
@@ -304,8 +274,6 @@ function SignalsFeed({
       <DemandDetectorCoverage snapshot={snapshot} />
     </Inline>
   );
-  // An empty feed has two different causes, and they need different words:
-  // nothing was detected at all, or the filter hid everything that was.
   return (
     <>
       {snapshot.signals.length === 0 ? (
@@ -342,7 +310,6 @@ function SignalsFeed({
   );
 }
 
-/** Every non-loaded state of the Demand tab, in the order it is decided. */
 function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
   if (latest.isLoading)
     return (
@@ -364,7 +331,6 @@ function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
   return <SearchConsoleSetup />;
 }
 
-/** No usable Search Console evidence yet: connect it, or wait for its import. */
 function SearchConsoleSetup() {
   return (
     <DataSourceSetup

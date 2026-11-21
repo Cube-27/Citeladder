@@ -1,12 +1,3 @@
-/**
- * Site-level findings: architecture rules and sitewide links.
- *
- * Site-level findings are judged over the whole crawl and persisted ONCE,
- * against the homepage, with the pages (or duplicate sets, or link targets) they
- * found in the evidence (`siteLevelFindingSchema`). Shown as an occurrence
- * they read as "the homepage is buried too deeply"; the pages in the evidence
- * are the affected pages. Pure.
- */
 import {
   siteLevelFinding,
   siteLevelRuleSchema,
@@ -19,7 +10,6 @@ type PageListFinding = Extract<SiteLevelFinding, { evidence: { pages: unknown } 
 type LinkTargetFinding = Extract<SiteLevelFinding, { evidence: { targets: unknown } }>;
 type EvidenceTarget = LinkTargetFinding['evidence']['targets'][number];
 
-/** The rules whose evidence lists affected pages. */
 export const pageListRules: readonly SiteLevelRule[] = siteLevelRuleSchema.extract([
   'architecture.excessive_depth',
   'architecture.breadcrumb_hierarchy_conflict',
@@ -28,7 +18,6 @@ export const pageListRules: readonly SiteLevelRule[] = siteLevelRuleSchema.extra
   'architecture.unreachable_from_home',
   'architecture.dead_end_pages',
 ]).options;
-/** Every rule whose finding is persisted once for the site. */
 export const siteLevelRules: readonly SiteLevelRule[] = siteLevelRuleSchema.options;
 
 type EvidencePage = Readonly<{
@@ -36,14 +25,11 @@ type EvidencePage = Readonly<{
   url: string;
   title: string | null;
   pageKind: string | null;
-  /** Shortest click path from the homepage, only where depth is the finding. */
   clicksFromHome: number | null;
 }>;
 
-/** A group of affected pages under one path prefix, largest first. */
 type EvidenceSection = Readonly<{ pathPrefix: string; pageCount: number }>;
 
-/** Where a sitewide link goes wrong, spelled as the link's outcome. */
 type LinkOutcome =
   | Readonly<{ kind: 'status'; statusCode: number | null }>
   | Readonly<{ kind: 'redirect'; finalUrl: string; hops: number }>
@@ -56,7 +42,6 @@ type LinkTarget = Readonly<{
   pages: readonly EvidencePage[];
 }>;
 
-/** Pages sharing one exact title or meta description: how many, and a bounded sample. */
 type DuplicateSet = Readonly<{
   text: string;
   pageCount: number;
@@ -72,13 +57,11 @@ export type SiteLevelEvidence =
     }>
   | Readonly<{
       kind: 'duplicate_sets';
-      /** Pages repeating another page's metadata, over every set. */
       total: number;
       sets: readonly DuplicateSet[];
     }>
   | Readonly<{
       kind: 'link_targets';
-      /** Distinct pages carrying a failing link. */
       total: number;
       targets: readonly LinkTarget[];
     }>;
@@ -130,11 +113,9 @@ function linkTargets(finding: LinkTargetFinding): LinkTarget[] {
   }));
 }
 
-/** Affected pages over every page kind, not the sample. */
 const countedPages = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((sum, count) => sum + count, 0);
 
-/** The pages, duplicate sets or link targets a site-level finding names; `null` for a per-page rule. */
 export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelEvidence | null {
   const finding = siteLevelFinding(ruleId, evidence);
   if (finding === null) return null;
@@ -172,11 +153,9 @@ export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelE
   }
 }
 
-/** A page count in words: `1 page`, `158 pages`. */
 export const pageCountLabel = (count: number) =>
   `${String(count)} ${count === 1 ? 'page' : 'pages'}`;
 
-/** Where a sitewide link lands, as the reader would fix it: `404`, `/new`, `redirect loop`. */
 export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): string {
   switch (outcome.kind) {
     case 'status':
@@ -194,17 +173,6 @@ export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): s
   }
 }
 
-/**
- * A site-level finding's facts, one per thing it names:
- *
- * - a page list: its sections when it groups pages by path
- *   (`/blogs/testimonials (158 pages)`), otherwise each page's path, with its
- *   depth where depth is the finding;
- * - duplicate metadata: each shared title and on how many pages;
- * - sitewide links: each link, where it lands, and on how many pages.
- *
- * Empty for a per-page rule.
- */
 export function siteLevelFacts(ruleId: string, evidence: unknown): string[] {
   const listed = siteLevelEvidence(ruleId, evidence);
   switch (listed?.kind) {

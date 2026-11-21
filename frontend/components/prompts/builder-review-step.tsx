@@ -55,11 +55,6 @@ function CoverageValue({
   );
 }
 
-/**
- * Coverage of the builder's run against what it asked for: drafted
- * suggestions per topic and per segment, each on target, short or empty,
- * with "Generate more" for that one topic or segment.
- */
 export function RunCoverage({
   request,
   topics,
@@ -69,7 +64,6 @@ export function RunCoverage({
 }: Readonly<{
   request: PromptGenerateRequest;
   topics: readonly Topic[];
-  /** Every suggestion this builder session drafted, reviewed or not. */
   drafted: readonly PromptCandidate[];
   disabled: boolean;
   onGenerate: (request: PromptGenerateRequest) => void;
@@ -99,7 +93,6 @@ export function RunCoverage({
   );
 }
 
-/** Step 4: the run's outcome, its coverage when the builder made it, then the review list. */
 export function BuilderReviewStep({
   notices,
   coverage,

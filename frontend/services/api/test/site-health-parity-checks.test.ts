@@ -42,14 +42,12 @@ describe('invalid JSON-LD', () => {
       'not_applicable',
       'structured_data_invalid',
     ]);
-    // A valid block beside the broken one still counts as present.
     expect(judged('aeo.structured_data_valid', 'article', MAIN, VALID + BROKEN)[0]).toBe('missing');
     expect(judged('aeo.structured_data_present', 'article', MAIN, VALID + BROKEN)[0]).toBe(
       'satisfied',
     );
     expect(judged('aeo.structured_data_valid', 'article', MAIN, VALID)[0]).toBe('satisfied');
     expect(judged('aeo.structured_data_present', 'article', MAIN, '')[0]).toBe('missing');
-    // Facts a crawl recorded before the count existed say nothing either way.
     expect(
       judged('aeo.structured_data_valid', 'article', MAIN, '', {
         structured_data: { count: 0, declared_types: [] },
@@ -151,7 +149,6 @@ describe('headings and length advisories', () => {
     expect(extract(body).primary_paragraph_word_counts).toEqual([160, 20]);
     expect(judged('aeo.long_paragraphs', 'article', body)).toEqual(['missing', '']);
     expect(judged('aeo.long_paragraphs', 'article', MAIN)[0]).toBe('satisfied');
-    // A full bounded list without a long paragraph says nothing about the paragraphs after it.
     const kept = Array.from({ length: 200 }, () => 20);
     expect(
       judged('aeo.long_paragraphs', 'article', MAIN, '', { primary_paragraph_word_counts: kept }),
@@ -187,7 +184,6 @@ describe('HTTP origin and TLS certificate failures', () => {
   const probe = 'http://example.test/';
 
   it('maps what the http:// probe observed to the rule outcome', () => {
-    // A root configured as http:// is probed too: its redirect to HTTPS is what passes.
     expect(httpOriginUrl('https://example.test')).toBe(probe);
     expect(httpOriginUrl('http://example.test')).toBe(probe);
     expect(httpOriginUrl('https://example.test:8443')).toBeNull();
@@ -203,7 +199,6 @@ describe('HTTP origin and TLS certificate failures', () => {
       'missing',
       'http_served_without_redirect',
     ]);
-    // A hop to another plain-HTTP host that then serves still leaves HTTP reachable.
     expect(
       root(
         httpOriginFacts(
@@ -213,7 +208,6 @@ describe('HTTP origin and TLS certificate failures', () => {
       )[0],
     ).toBe('missing');
     expect(root(httpOriginFacts(probe, failed(failure('ECONNREFUSED'))))[0]).toBe('satisfied');
-    // A timeout or a reset may be transient, so neither proves HTTP is closed.
     for (const code of ['ETIMEDOUT', 'ECONNRESET'])
       expect(root(httpOriginFacts(probe, failed(failure(code))))).toEqual([
         'unknown',
@@ -224,7 +218,6 @@ describe('HTTP origin and TLS certificate failures', () => {
       'no_http_origin',
     ]);
     expect(root(null)).toEqual(['unknown', 'insufficient_evidence']);
-    // A root that itself lands on plain HTTP is the HTTPS rule's finding, not this one.
     expect(root(httpOriginFacts(probe, page(200, probe)), probe)).toEqual([
       'not_applicable',
       'root_not_https',

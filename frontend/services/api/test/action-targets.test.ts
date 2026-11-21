@@ -1,9 +1,3 @@
-/**
- * Action targets against real PostgreSQL: what a target the Agent names
- * resolves to, what it is refused for, and which pages a declaration covers
- * for each kind. Grouping findings into Actions is covered with the refresh
- * (`search-gap-actions.test.ts`).
- */
 import { randomUUID } from 'node:crypto';
 import type { ActionTargetKind } from '@citeladder/contracts/actions';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

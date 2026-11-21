@@ -1,8 +1,3 @@
-/**
- * A labelled probe's answers and what each raised: the persisted projection
- * the Market and Objections reads score. Only recorded answers count; an
- * answer that raised nothing still counts in every average it belongs to.
- */
 import { scoringConfig } from '../analysis/scoring.ts';
 import type { Database } from '../db/database.ts';
 import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
@@ -27,7 +22,6 @@ export type ProbeAnswer = {
 
 const engineOf = (value: string) => logicalEngines.find((engine) => engine === value);
 
-/** A probe's recorded, non-empty answers; callers add their columns and order. */
 export function answeredProbeTasks(db: Database, scope: Scope, auditIds: readonly string[]) {
   return db
     .selectFrom('audit_tasks as t')
@@ -42,7 +36,6 @@ export function answeredProbeTasks(db: Database, scope: Scope, auditIds: readonl
     .where('t.answer_text', '<>', '');
 }
 
-/** The rows whose snapshot froze a probe question, with that question. */
 export function withQuestion<Row extends { generation_evidence: unknown }>(rows: readonly Row[]) {
   return rows.flatMap((row) => {
     const question = frozenQuestion(row.generation_evidence);
@@ -83,7 +76,6 @@ export async function probeAnswers(
   });
 }
 
-/** The brand a frozen configuration names, and its tracked businesses: the brand, then competitors with ids. */
 export function probeRoster(configuration: unknown): { brand: string; tracked: TrackedName[] } {
   const config = scoringConfig(configuration);
   return {

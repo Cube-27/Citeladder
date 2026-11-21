@@ -1,21 +1,3 @@
-/**
- * Site Health lifecycle / status presentation helpers (Task 2) — PURE.
- *
- * Maps the crawl overall/discovery/analysis sub-states, per-page analysis
- * states, and the neutral count-disclosure rules onto display view-models the
- * screens render without embedding business logic. No transport, no React.
- *
- * These helpers branch on CAPABILITIES (`access_mode`, `count_disclosure`),
- * never on a plan name — there is no commercial vocabulary in Site Health.
- *
- * Key product rules encoded here:
- *   - discovery counts are PROVISIONAL until discovery terminalizes ("N pages
- *     discovered so far" vs "N pages discovered");
- *   - sample mode never renders a total placeholder or count-dependent copy —
- *     `total_url_count` is null and there is no "discovered so far";
- *   - error / blocked rows are explicit states, never a fabricated zero score;
- *   - missing / not-yet-analysed scores render an explicit not-measured label.
- */
 import type {
   CrawlDiscoveryStatus,
   CrawlOverallStatus,
@@ -41,11 +23,6 @@ const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
   invalid_placement: 'missing or invalid placement answer',
 };
 
-/**
- * Every internal-link analysis state. Each reads as itself: waiting is not
- * running, and unavailable is not a failure. Only a queued or running
- * analysis changes on its own, so only those poll.
- */
 export const INTERNAL_LINK_STATES = {
   queued: { label: 'Queued', badge: 'queued', active: true },
   running: { label: 'Running', badge: 'running', active: true },
@@ -56,7 +33,6 @@ export const INTERNAL_LINK_STATES = {
   failed: { label: 'Failed', badge: 'failed', active: false },
 } as const satisfies JobStates<InternalLinkAnalysis['state'], RunStatusValue>;
 
-/** The analysis poll cadence: while the open analysis is still checking page pairs. */
 export const pollInternalLinks = (state: InternalLinkAnalysis['state'] | undefined) =>
   pollWhileActive(INTERNAL_LINK_STATES, RERUN_POLL_INTERVAL_MS, state);
 
@@ -78,18 +54,8 @@ export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
   return null;
 }
 
-/**
- * The page browser's default ordering, which is also the pages endpoint's
- * default. Every first-page request names it, so the progress strip's preview
- * and the browser share one cache entry instead of fetching the same rows.
- */
 export const DEFAULT_PAGES_SORT: PagesSort = 'status';
 
-/**
- * Every overall crawl status: its label, its run-status badge, and whether the
- * crawl still runs (so the screen keeps polling and the crawl can still be
- * cancelled). Mirrors the contract's `ACTIVE_CRAWL_STATUSES`.
- */
 export const CRAWL_STATES = {
   queued: { label: 'Queued', badge: 'queued', active: true },
   running: { label: 'Running', badge: 'running', active: true },
@@ -99,7 +65,6 @@ export const CRAWL_STATES = {
   cancelled: { label: 'Cancelled', badge: 'cancelled', active: false },
 } as const satisfies JobStates<CrawlOverallStatus, RunStatusValue>;
 
-/** Discovery sub-states that are terminal. */
 const TERMINAL_DISCOVERY: ReadonlySet<CrawlDiscoveryStatus> = new Set<CrawlDiscoveryStatus>([
   'completed',
   'sample_completed',
@@ -107,25 +72,12 @@ const TERMINAL_DISCOVERY: ReadonlySet<CrawlDiscoveryStatus> = new Set<CrawlDisco
   'cancelled',
 ]);
 
-/**
- * Poll cadence for an active crawl, backed off by how long it has been running.
- *
- * A flat 4s for a crawl's entire lifetime is right for the first minute and
- * wasteful for the twentieth: large crawls are the ones that both take longest
- * and cost the most per poll. SSE (`useCrawlEvents`) is what keeps a long crawl
- * feeling live, so the slower tick is only the safety net's cadence.
- *
- * Returns `false` once the crawl is terminal — the value React Query's
- * `refetchInterval` expects for "stop".
- */
 export function crawlPollInterval(
   crawl: Pick<SiteCrawl, 'status' | 'started_at' | 'created_at' | 'updated_at'>,
   now: number = Date.now(),
 ): number | false {
   const base = pollWhileActive(CRAWL_STATES, CRAWL_POLL_MS, crawl.status);
   if (base === false) return false;
-  // Back off on how long the crawl has run. The backend activity projection
-  // owns waiting/stalled semantics from leases and durable queue evidence.
   const startedAt = crawl.started_at ?? crawl.created_at;
   const running = _sinceMs(startedAt, now);
   if (running === null) return base;
@@ -134,17 +86,12 @@ export function crawlPollInterval(
   return base;
 }
 
-/** Elapsed ms since an ISO timestamp; null when unusable (skew, unparseable). */
 function _sinceMs(iso: string | null | undefined, now: number): number | null {
   if (!iso) return null;
   const elapsed = now - new Date(iso).getTime();
   return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : null;
 }
 
-/**
- * True only when the backend reports expired-lease evidence for an active
- * crawl. Elapsed client time is deliberately not an input.
- */
 export function isCrawlStalled(crawl: Pick<SiteCrawl, 'status' | 'counters'> | null): boolean {
   if (!crawl || !CRAWL_STATES[crawl.status].active) return false;
   return crawl.counters.activity.state === 'stalled';
@@ -154,12 +101,6 @@ export function isDiscoveryTerminal(status: CrawlDiscoveryStatus): boolean {
   return TERMINAL_DISCOVERY.has(status);
 }
 
-/**
- * True while discovery counts are provisional (still running). A `sample_mode`
- * crawl is NEVER provisional — it never implies continued full-site scanning,
- * so it must never be checked into shared background-scanning copy without
- * this shared helper enforcing the rule itself (not left to each caller).
- */
 export function isDiscoveryProvisional(
   crawl: Pick<SiteCrawl, 'sample_mode' | 'discovery_status' | 'inventory_complete'>,
 ): boolean {
@@ -167,12 +108,6 @@ export function isDiscoveryProvisional(
   return !crawl.inventory_complete && !TERMINAL_DISCOVERY.has(crawl.discovery_status);
 }
 
-/**
- * Discovery-progress copy. Sample mode NEVER renders a total or "so far"
- * language (no count side channel); full mode uses provisional
- * "discovered so far" until discovery terminalizes, then the settled
- * "discovered".
- */
 export function discoveryProgressLabel(
   crawl: Pick<
     SiteCrawl,
@@ -189,11 +124,6 @@ export function discoveryProgressLabel(
   return `${n} ${pluralize(n, 'page')} discovered`;
 }
 
-/**
- * Whether a discovered/total count may be shown at all. `count_disclosure` is
- * the neutral capability that governs it — an account without it sees no total
- * at all: the value is null on the wire and no placeholder is rendered.
- */
 export function canShowDiscoveredTotal(
   entitlement: Pick<SiteHealthEntitlement, 'count_disclosure'>,
   crawl: Pick<SiteCrawl, 'sample_mode' | 'total_url_count'>,
@@ -201,13 +131,6 @@ export function canShowDiscoveredTotal(
   return entitlement.count_disclosure && !crawl.sample_mode && crawl.total_url_count !== null;
 }
 
-/**
- * Which phase of the Site Health flow to render.
- *
- * RESOLVED SERVER-SIDE by the native Site Health phase owner and read off
- * the dashboard projection. `'resolving'` is the one value the server never
- * sends: it means the dashboard request itself has not landed yet.
- */
 export type SiteHealthPhase =
   | 'resolving'
   | 'empty'
@@ -218,11 +141,6 @@ export type SiteHealthPhase =
 
 export type SeenProgress = { version: string; status: SiteCrawl['status']; refreshedAt: number };
 
-/**
- * Whether changed crawl progress refreshes the crawl's lists now. While the
- * crawl stays active they refresh at most once per `CRAWL_VIEW_REFRESH_MS`;
- * a status change (its terminal transition) always refreshes.
- */
 export function crawlViewsDue(
   seen: SeenProgress,
   next: Omit<SeenProgress, 'refreshedAt'>,
@@ -232,18 +150,6 @@ export function crawlViewsDue(
   if (seen.status !== next.status || !CRAWL_STATES[next.status].active) return true;
   return now - seen.refreshedAt >= CRAWL_VIEW_REFRESH_MS;
 }
-
-/**
- * Fingerprint of everything on a crawl that means "progress happened".
- *
- * The screen polls ONE query (the dashboard). Every other crawl-derived list —
- * pages, inventory, issues — refreshes when this value changes rather than
- * owning a timer of its own: five independent 4s timers over the same crawl
- * resolve out of order, so panels rendered state from different moments (counts
- * ticking backwards, a score appearing then vanishing). `updated_at` alone
- * would nearly always suffice; the counters and sub-states are included so a
- * missed timestamp write cannot freeze the whole screen.
- */
 
 export function crawlProgressVersion(
   crawl: Pick<
@@ -268,16 +174,6 @@ export function crawlProgressVersion(
   ].join('|');
 }
 
-/**
- * Which content the always-mounted inventory section renders for a phase. The
- * canonical Site Health screen never swaps whole panels — the layout (scores +
- * status row + inventory) stays mounted and only this mode changes:
- *   - 'discovering': read-only inventory rows streaming in;
- *   - 'scored':      the tabbed (monitored/all/errors) page browser — used
- *                    DURING analysis and after: the same table, rows advance
- *                    queued → running → completed and scores fill in place;
- *   - 'none':        empty/terminal — nothing to list yet.
- */
 export type InventoryMode = 'none' | 'discovering' | 'scored';
 
 export function inventoryModeForPhase(
@@ -289,9 +185,6 @@ export function inventoryModeForPhase(
       return 'discovering';
     case 'analyzing':
     case 'dashboard':
-      // ONE table for the whole audit lifecycle: the analyzing phase renders
-      // the same tabbed browser as the finished dashboard, so finishing a run
-      // changes NOTHING structurally — statuses and scores update in place.
       return 'scored';
     case 'terminal':
       // B3: a FAILED crawl's terminal view keeps the tabbed page browser so
@@ -300,17 +193,10 @@ export function inventoryModeForPhase(
       // terminal shape (cancelled-with-nothing) lists nothing.
       return crawl?.status === 'failed' ? 'scored' : 'none';
     default:
-      // 'resolving' | 'empty'
       return 'none';
   }
 }
 
-/**
- * The status a reader sees. A crawl that is partial only because some
- * discovered links were dead, blocked or not web pages analyzed everything it
- * reached — that is a normal crawl, so it reads as completed rather than as an
- * unexplained "partial".
- */
 export function crawlDisplayStatus(
   crawl: Readonly<{ status: CrawlOverallStatus; partial_reason?: string | null }>,
 ): CrawlOverallStatus {
@@ -319,7 +205,6 @@ export function crawlDisplayStatus(
     : crawl.status;
 }
 
-/** Map a per-page analysis status onto a status-badge value. */
 export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
   switch (status) {
     case 'completed':
@@ -334,45 +219,20 @@ export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
     case 'not_measured':
       return 'info';
     default:
-      // not_selected / pending / running
       return 'info';
   }
 }
 
-/** True when the URL itself could not be fetched or analyzed, so its linking pages need the fix. */
 export function isFetchFailure(status: PageAnalysisStatus): boolean {
   return status === 'error' || status === 'blocked';
 }
 
-/** Human-readable label for any snake_case lifecycle token. */
 export function statusLabel(status: string): string {
   return sentenceCaseStatus(status);
 }
 
-/**
- * Format a 0–100 score for display. Null (not yet analysed) and NaN render the
- * not-measured placeholder (an Absence dash) — an error/blocked row is NEVER shown as 0.
- *
- * WHOLE NUMBERS. A score is the share of checks a page passed, and the decimal
- * is an artefact of the division, not a measurement: 88.9 and 89 say the same
- * thing about a site, and the tenth changes with one check on one page. Every
- * score surface goes through here, so a raw `{score}` in JSX is a bug — that
- * is how a readiness table came to print `27.210884353741495`.
- */
 export { formatScore } from '@/lib/format';
 
-/**
- * The one thing worth saying about how complete a measurement was — or null.
- *
- * Every score surface used to carry "100% complete · Complete checklist" under
- * it: two phrasings of the same fact, attached to the ordinary case, telling
- * the reader nothing they could act on. Worse, printing a completeness note
- * under EVERY number is exactly how the one that matters — the partial audit —
- * stopped standing out. So the complete case says nothing at all, and this
- * returns a line only when the measurement is qualified.
- *
- * Coverage retains the caller's denominator: checks, weighted pillars or pages.
- */
 export function measurementCaveat(
   state: string | undefined,
   coverage?: number | null,
@@ -389,16 +249,6 @@ export function measurementCaveat(
   return availabilityLabel('not_measured');
 }
 
-/**
- * The label for a page row: its `<title>`, or the URL's last path segment.
- *
- * Repeating the whole URL as the title (the previous fallback) gave the row two
- * identical lines and let one long query string dominate the table. The last
- * segment is the part that actually distinguishes one page from its siblings,
- * so an untitled page reads as `/boys-shorts-aged-8-16` above its full URL.
- * The site root — and any URL we cannot parse — keeps the display URL, which is
- * the only meaningful thing left to say about it.
- */
 export function pageDisplayTitle(title: string | null, displayUrl: string): string {
   const trimmed = title?.trim();
   if (trimmed) return trimmed;
@@ -408,14 +258,11 @@ export function pageDisplayTitle(title: string | null, displayUrl: string): stri
   } catch {
     return displayUrl;
   }
-  // Query strings and fragments are already excluded by `pathname`; a trailing
-  // slash would otherwise yield an empty final segment.
   const segments = pathname.split('/').filter(Boolean);
   const last = segments.at(-1);
   return last ? `/${last}` : displayUrl;
 }
 
-/** Format a nullable issue count; null (unanalysed) is not measured. */
 export function formatIssueCount(count: number | null): Formatted {
   if (count === null) return absent();
   return `${count}`;

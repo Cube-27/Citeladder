@@ -1,10 +1,3 @@
-/**
- * A user's status decisions on Actions: Accept (`in_progress`), Decline
- * (`dismissed`) and Restore (`open`), one at a time or in bulk, each appending
- * an `action_status_events` row in the caller's transaction (`recordStatus`).
- * Work with Agent on a New Action accepts it. Done is only declared
- * (`declarations.ts`).
- */
 import type { ActionBulkStatusRequest, ActionUserStatus } from '@citeladder/contracts/actions';
 import { sql } from 'kysely';
 
@@ -20,10 +13,8 @@ import type { Scope } from './sources.ts';
 const a = policy.opportunity.actions;
 const TRANSITIONS = new Map<string, readonly string[]>(Object.entries(a.ACTION_TRANSITIONS));
 
-/** Whether a user decision may move an Action stored as `from` to `to`. */
 const allowed = (from: string, to: string) => TRANSITIONS.get(from)?.includes(to) ?? false;
 
-/** One decision; repeating the current status is a no-op, an illegal move a 422. */
 export async function updateActionStatus(
   db: Database,
   scope: RecordScope,
@@ -43,13 +34,6 @@ export async function updateActionStatus(
   return actionItem(await requireAction(db, scope, actionId));
 }
 
-/**
- * One decision on the named Actions or on the first `ACTION_BULK_MAX` the
- * filter matches, highest priority first, in one transaction. The project lock
- * comes first, as in the refresh that locks every Action row in no set order,
- * so the two cannot deadlock; an Action outside the project's workspace is
- * never read, so it is only ever counted skipped.
- */
 export async function bulkUpdateActionStatus(
   db: Database,
   scope: Scope,
@@ -75,8 +59,6 @@ export async function bulkUpdateActionStatus(
       throw new ApiError(422, 'Name either ids or a filter');
     }
     if (!candidates.length) return { updated: 0, skipped: 0, truncated };
-    // A filtered change locks through its filter again, so an Action a single
-    // decision moved out of it since the read above is skipped, not changed.
     const reach = input.filter
       ? matchingActions(trx, scope, input.filter)
       : trx

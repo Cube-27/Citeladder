@@ -22,7 +22,6 @@ class FakeObserver {
   }
 }
 
-/** A Toc page; `barBottom` adds a top bar whose bottom edge sits that far down the viewport. */
 function page({ barBottom }: { barBottom?: number } = {}) {
   document.body.innerHTML = `
     ${barBottom === undefined ? '' : '<header data-site-nav></header>'}
@@ -47,7 +46,6 @@ function page({ barBottom }: { barBottom?: number } = {}) {
         isIntersecting: ids.includes(id),
       })),
     );
-  // Reports each heading as a browser would: crossing when its top is above the band's bottom.
   const land = (tops: Record<string, number>) => {
     const below = Number(/-(\d+)px 0px$/.exec(headings!.rootMargin ?? '')?.[1]);
     headings!.report(
@@ -89,10 +87,7 @@ describe('Toc scrollspy', () => {
   });
 
   it.each([
-    // A tall viewport: the line is a third down, so a heading at 200px has passed it.
     [768, { intro: -400, setup: 200, faq: 300 }, 'Setup'],
-    // A short one: the line is where a jump lands a heading (its 96px
-    // scroll-margin-top, which already clears the 64px bar), not 160px.
     [240, { intro: -400, setup: 96, faq: 130 }, 'Setup'],
     [240, { intro: -400, setup: -40, faq: 90 }, 'FAQ'],
   ])('with a %ipx viewport, marks the heading at %o: %s', (height, tops, marked) => {
@@ -108,7 +103,6 @@ describe('Toc scrollspy', () => {
   it('keeps a followed Toc link marked until the reader scrolls', () => {
     const { current, reach, follow, end } = page();
     follow('Setup');
-    // The jump carried the short Setup section's successor over the line too.
     reach('intro', 'setup', 'faq');
     window.scrollY = 900;
     end.report([{ target: end.targets[0], isIntersecting: true }]);
@@ -134,13 +128,11 @@ describe('Toc scrollspy', () => {
     report(900, { isIntersecting: false, boundingClientRect: { bottom: 600 } as DOMRectReadOnly });
     expect(current()).toEqual(['FAQ']);
 
-    // Content still below the band, or an unscrolled page, has not ended.
     report(900, { isIntersecting: false, boundingClientRect: { bottom: 2000 } as DOMRectReadOnly });
     expect(current()).toEqual(['Intro']);
     report(0, { isIntersecting: false, boundingClientRect: { bottom: 600 } as DOMRectReadOnly });
     expect(current()).toEqual(['Intro']);
 
-    // Back at the top with no crossing reported, the ended content no longer counts.
     report(900, { isIntersecting: false, boundingClientRect: { bottom: 600 } as DOMRectReadOnly });
     expect(current()).toEqual(['FAQ']);
     window.scrollY = 0;
@@ -183,7 +175,6 @@ describe('Toc scrollspy', () => {
         .find((observer) => observer.targets.length === 2)!
         .report([{ target: document.getElementById('setup')!, isIntersecting: true }]);
 
-    // Hidden below the rail's breakpoint, nothing scrolls.
     reachSetup();
     expect(setup.getAttribute('aria-current')).toBe('location');
     expect(list.scrollTop).toBe(0);

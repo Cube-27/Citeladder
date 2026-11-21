@@ -1,9 +1,3 @@
-/**
- * Discovery-time canonical aliases: a fetched, system-selected page whose
- * declared canonical names another active, already fetched page of this crawl
- * is excluded rather than analyzed twice. The whole-crawl alias graph (cycles,
- * representatives, targets fetched later) is resolved again at finalization.
- */
 import { sql } from 'kysely';
 import { getDomain } from 'tldts';
 
@@ -41,14 +35,6 @@ function targetHash(crawl: Crawl, hash: string, declared: string, base: string) 
   return target.hash;
 }
 
-/**
- * The hash this page aliases when its target is an active member this crawl
- * already fetched. The page is a sample's selected member, or any page a full
- * crawl's HTML walk fetched: a walked page joins the tracked set only after
- * this check, so an alias never does. A target not fetched yet may still fail
- * and be released, so the alias waits for finalization, which aliases only
- * toward a target that ended active (`duplicateAliases`).
- */
 export async function duplicateOf(
   trx: Database,
   crawl: Crawl,
@@ -99,11 +85,6 @@ export async function duplicateOf(
   return fetched ? target : '';
 }
 
-/**
- * Exclude fetched aliases, release their sample memberships and retire their
- * current analyses. A tracked alias stays tracked (only a downgrade removes a
- * tracked page); its analysis is retired each crawl like any alias's.
- */
 export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string[]) {
   if (!hashes.length) return;
   const urls = await trx
@@ -131,7 +112,6 @@ export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string
     .where('is_current', '=', true)
     .returning(['id', 'supersedes_analysis_id'])
     .execute();
-  // The finalize publication then republishes the crawl's issue set.
   await syncIssueCurrency(
     trx,
     crawl,
@@ -139,11 +119,6 @@ export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string
   );
 }
 
-/**
- * The aliases to exclude, resolved over whole-crawl chains and cycles before
- * any representative is removed. Reads only; the finalize task marks them
- * (`markDuplicates`) in its first commit.
- */
 export async function duplicateAliases(db: Database, crawl: Crawl) {
   const rows = await db
     .selectFrom('site_urls as u')
@@ -167,7 +142,6 @@ export async function duplicateAliases(db: Database, crawl: Crawl) {
     .execute();
   const admitted = new Set(rows.map((row) => row.url_hash));
   const active = new Set(rows.filter((row) => row.active).map((row) => row.url_hash));
-  // The crawl root carries the site-wide checks every page scores.
   const protectedHashes = new Set([rootHash(crawl)]);
   const artifacts = await db
     .selectFrom('site_crawl_tasks as t')
@@ -205,16 +179,12 @@ export async function duplicateAliases(db: Database, crawl: Crawl) {
 }
 
 export type AliasGraph = {
-  /** Fetched page hash → the admitted hash its declared canonical names. */
   edges: Map<string, string>;
-  /** Admitted hashes this crawl fetched. */
   known: Set<string>;
   active: Set<string>;
-  /** Pages never excluded (the crawl root); a chain stops at one. */
   protectedHashes: Set<string>;
 };
 
-/** Where one alias chain ends: a protected page, a fetched sink, or a cycle's deterministic member. */
 function representative(graph: AliasGraph, source: string) {
   const path: string[] = [];
   let current = source;
@@ -222,8 +192,6 @@ function representative(graph: AliasGraph, source: string) {
     if (current !== source && graph.protectedHashes.has(current)) return current;
     const cycleStart = path.indexOf(current);
     if (cycleStart >= 0) {
-      // Protected beats merely active and the lowest hash breaks the tie, so a
-      // cycle resolves the same way whichever member the walk entered it from.
       const cycle = path.slice(cycleStart).sort(compareText);
       return (
         cycle.find((hash) => graph.protectedHashes.has(hash)) ??
@@ -239,11 +207,6 @@ function representative(graph: AliasGraph, source: string) {
   }
 }
 
-/**
- * The system-selected pages to exclude as duplicates, resolved over whole
- * chains and cycles before any representative is removed: a page whose own
- * representative is itself being excluded is kept this pass.
- */
 export function resolveDuplicateAliases(graph: AliasGraph) {
   const resolved = new Map<string, string>();
   for (const source of [...graph.active].sort(compareText)) {

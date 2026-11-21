@@ -28,16 +28,13 @@ describe('marketing Worker edge', () => {
   });
 
   it.each([
-    // A retired research URL.
     ['/check-ai-visibility/', 'https://citeladder.com/blog/verify-improve-ai-search-visibility'],
-    // Renamed platform pages, each straight to its current path.
     ['/platform/citation-intelligence', 'https://citeladder.com/platform/cited-sources'],
     ['/platform/commerce-intelligence/', 'https://citeladder.com/platform/product-visibility'],
     ['/platform/demand-intelligence', 'https://citeladder.com/platform/search-demand'],
     ['/platform/search-intelligence', 'https://citeladder.com/platform/keyword-research'],
     ['/platform/content-intelligence', 'https://citeladder.com/platform/content-optimization'],
     ['/platform/content-briefs', 'https://citeladder.com/platform/content-optimization'],
-    // Former apex MCP addresses, now off the site.
     ['/mcp', 'https://api.citeladder.com/mcp'],
     ['/docs/mcp', 'https://docs.citeladder.com/mcp/'],
     ['/docs/mcp/connect/', 'https://docs.citeladder.com/mcp/'],

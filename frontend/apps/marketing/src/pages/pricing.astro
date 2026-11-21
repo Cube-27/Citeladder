@@ -30,7 +30,6 @@ const description = checkoutClosed
   : page.description;
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
-// Without any catalog the page is a temporary outage, not content to index.
 if (!catalog) Astro.response.status = 503;
 ---
 

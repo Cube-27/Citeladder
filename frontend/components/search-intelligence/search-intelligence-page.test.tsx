@@ -77,8 +77,6 @@ const readiness: SearchIntelligenceReadiness = {
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-// The page opens on Demand; these cases read Keyword Research from its Overview.
-// Demand's read is held in flight: these cases read only Keyword Research.
 beforeEach(() => {
   window.history.replaceState(null, '', '/search-intelligence?tab=overview');
   mswServer.use(
@@ -118,7 +116,6 @@ it('offers the first analysis from the empty overview', async () => {
   expect(await screen.findByRole('dialog', { name: 'Review analysis cost' })).toBeInTheDocument();
 });
 
-/** A published dataset for one of the project's websites. */
 function dataset(
   hostname: string,
   overrides: Partial<SearchIntelligenceDataset>,
@@ -188,7 +185,6 @@ it('never sends a managed workspace to provider settings it does not have', asyn
 });
 
 it('offers citation matching only for the website whose list is on screen', async () => {
-  // Reads behind the tab's views are not under test; an empty error keeps them quiet.
   mswServer.use(http.get(`${root}/*`, () => HttpResponse.json({}, { status: 404 })));
   renderPage({
     ...readiness,
@@ -205,7 +201,6 @@ it('offers citation matching only for the website whose list is on screen', asyn
   await screen.findByRole('radiogroup', { name: 'backlinks view' });
   expect(await openFilterRow(userEvent.setup(), 'Website', 'www.example.com')).toBeVisible();
   await userEvent.keyboard('{Escape}');
-  // The website and market read as one caption in the strip, not a filter.
   expect(
     screen.getByText(
       (_, node) =>
@@ -251,7 +246,6 @@ it('moves between Demand and the research tabs on one tab row, keeping focus and
 it('keeps the tab row when Keyword Research cannot be read', async () => {
   mswServer.use(
     http.get(root, () =>
-      // A 4xx is not retried, so the failure shows without waiting out a backoff.
       HttpResponse.json({ error: { code: 'invalid', message: 'Read failed' } }, { status: 422 }),
     ),
   );
@@ -281,7 +275,6 @@ it('offers a stopped analysis its recovery: review and run it again', async () =
     ...readiness,
     latest_run: { ...run, status: 'failed', error_code: 'acquisition_queue_terminal' },
   });
-  // A standing line under the controls, not an alert that outranks the figures.
   expect(
     await screen.findByText(/The analysis stopped before every request finished\./),
   ).toBeVisible();

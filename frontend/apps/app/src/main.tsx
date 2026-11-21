@@ -20,8 +20,6 @@ function mountApp(): void {
   installInteractionTiming();
   const queryClient = getAppQueryClient();
   const router = createBrowserRouter(appRoutes);
-  // URL-owned filter state writes through the router rather than around it, so
-  // `useLocation`/`useSearchParams` cannot go stale behind a filter change.
   setUrlStateRouter(router);
   const rootElement = document.getElementById('root');
 
@@ -38,6 +36,4 @@ function mountApp(): void {
   );
 }
 
-// `/browser-support.js` has already shown "Update your browser" in #root on a
-// browser below the support matrix; the app would break part way there.
 if (document.documentElement.dataset.browserSupport !== 'unsupported') mountApp();

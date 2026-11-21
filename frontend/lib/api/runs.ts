@@ -1,9 +1,3 @@
-/**
- * Runs (audits) + executions domain endpoints (F2): launch, list, poll detail,
- * cancel, executions list + single-execution evidence, and export URLs. Run
- * progress is polling-first (`getAudit`). Every JSON response passes through
- * `strictValidate`.
- */
 import { z } from 'zod';
 import { mutationOptions, queryOptions, skipToken, type QueryClient } from '@tanstack/react-query';
 
@@ -40,7 +34,6 @@ import {
   type PromptAnswerPage,
 } from '@citeladder/contracts/visibility-prompt-answers';
 
-/** The prompt page's Past answers filters; omitted reads unfiltered. */
 export type PromptAnswerParams = Readonly<{
   market?: string;
   engine?: string;
@@ -61,7 +54,6 @@ export const runsApi = {
     const res = await apiClient.post('/audits/estimate', input, options);
     return strictValidate(auditEstimateSchema, res, 'runs.estimateAudit');
   },
-  /** One launch: a queued run per selected market, each driven to its first results. */
   launchAudit: async (input: AuditLaunchRequest, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Audit[]>('/audits', input, options);
     const audits = strictValidate(auditListSchema, res, 'runs.launchAudit');
@@ -131,7 +123,6 @@ export const runsApi = {
     const res = await apiClient.get<ExecutionEvidence>(`/executions/${executionId}`, options);
     return strictValidate(executionEvidenceSchema, res, 'runs.getExecution');
   },
-  /** Every successful answer one prompt got across runs, newest first, a page at a time. */
   listPromptExecutions: async (
     scope: ProjectScope,
     promptId: string,
@@ -145,26 +136,14 @@ export const runsApi = {
     const res = await apiClient.get<PromptAnswerPage>(path, options);
     return strictValidate(promptAnswerPageSchema, res, 'runs.listPromptExecutions');
   },
-  /** Fetch an export through the authenticated client so workspace scope is explicit. */
   downloadExport: (auditId: string, format: 'csv' | 'md', options: ApiRequestOptions) =>
     apiClient.getBlob(`/audits/${auditId}/export.${format}`, options),
-  /**
-   * Same-origin SSE endpoint (optional; polling is the baseline). The backend
-   * `/events` endpoint returns JSON by default and an SSE `text/event-stream`
-   * only with `?stream=true`, so the streaming helper must request it.
-   */
   eventsUrl: (auditId: string) => `${API_BASE_URL}/audits/${auditId}/events?stream=true`,
 };
 
 const scoped = (scope: ProjectScope) => ({ workspaceId: scope.workspaceId });
 
-/** Run reads: navigation intent, the app provider and run screens share these keys. */
 export const runsQueries = {
-  /**
-   * The credit estimate for a launch the dialog would send. Keyed by the
-   * workspace that pays and the exact payload; with either missing there is
-   * nothing to estimate yet, so the query skips.
-   */
   estimate: (workspaceId: string | null, input: AuditEstimateRequest | null) =>
     queryOptions({
       queryKey: queryKeys.runs.estimate(workspaceId, input),
@@ -194,7 +173,6 @@ export const runsQueries = {
       queryKey: queryKeys.runs.executions(workspaceId, auditId),
       queryFn: ({ signal }) => runsApi.listExecutions(auditId, { signal, workspaceId }),
     }),
-  /** One execution's persisted evidence; skips until an execution is chosen. */
   execution: (workspaceId: string | null, executionId: string | null) =>
     queryOptions({
       queryKey: queryKeys.runs.execution(workspaceId, executionId ?? ''),
@@ -210,11 +188,6 @@ export const runsQueries = {
     }),
 };
 
-/**
- * Reads derived from finished audits: Visibility, and Commerce's product
- * metrics and Actions. A completed or cancelled run refreshes each of them; this is
- * the one place that says which.
- */
 export function refreshAuditResults(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: queryKeys.visibility.all }),
@@ -222,15 +195,12 @@ export function refreshAuditResults(client: QueryClient) {
   ]);
 }
 
-/** A run's own row and executions, after its stream or its progress moved. */
 export const refreshAuditDetail = (client: QueryClient, auditId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.runs.auditDetail(auditId) });
 export const refreshAuditExecutions = (client: QueryClient, auditId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.runs.auditExecutions(auditId) });
 
-/** Run writes; each success refreshes every read it changes. */
 export const runsMutations = {
-  /** One launch: a queued run per selected market, each written into the cache at once. */
   launch: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (input: AuditLaunchRequest) => {
@@ -243,7 +213,6 @@ export const runsMutations = {
         await client.invalidateQueries({ queryKey: queryKeys.runs.all });
       },
     }),
-  /** A cancelled run finalizes what it measured: every audit-derived read refreshes. */
   cancel: (workspaceId: string | null, auditId: string) =>
     mutationOptions({
       mutationFn: () => runsApi.cancelAudit(auditId, { workspaceId }),
@@ -255,7 +224,6 @@ export const runsMutations = {
         ]);
       },
     }),
-  /** A repair run for the failed executions; the run list gains it. */
   rerunFailures: (workspaceId: string | null, auditId: string) =>
     mutationOptions({
       mutationFn: () => runsApi.rerunFailures(auditId, {}, { workspaceId }),
@@ -269,7 +237,6 @@ export const runsMutations = {
       onSuccess: (_schedule, _input, _result, { client }) =>
         client.invalidateQueries({ queryKey: queryKeys.runs.schedules(scope) }),
     }),
-  /** Resume a paused schedule. */
   resumeSchedule: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (scheduleId: string) =>

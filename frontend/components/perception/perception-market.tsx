@@ -19,10 +19,6 @@ import { marketSummary } from '@/lib/perception/probe';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
-/**
- * The Market tab (AV-36): what AI associates the brand with, and where it
- * stands against competitors on each theme, from the newest labelled probe.
- */
 export function PerceptionMarket({
   scope,
   data,
@@ -212,7 +208,6 @@ function EngineTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
   );
 }
 
-/** The brand's rank on an engine's top theme, or which of three reasons there is none. */
 function RankInTopTheme({
   rank,
 }: Readonly<{ rank: ProbeMarketValue['engines'][number]['rank_in_top_theme'] }>) {

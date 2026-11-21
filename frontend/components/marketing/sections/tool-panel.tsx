@@ -6,16 +6,8 @@ import { Icon } from '@/components/ui/icon';
 
 import './tool-panel.css';
 
-/** How long the "Copied" status shows. */
 const COPIED_MS = 1600;
 
-/**
- * ToolPanel: a free tool's shell, the form on 5/12 beside a paper result
- * well on 7/12 (stacked under 1024px). The well holds a 420px floor whether
- * it shows the empty line or a result, and Copy keeps its label while a
- * status beside it reads "Copied" briefly (or "Couldn’t copy"), so running
- * the tool moves nothing around it.
- */
 export function ToolPanel({
   title,
   description,
@@ -35,7 +27,6 @@ export function ToolPanel({
   status?: ReactNode;
   result?: ReactNode;
   empty?: ReactNode;
-  /** The text Copy writes to the clipboard; Copy and Download are disabled without it. */
   copyText?: string;
   onDownload?: () => void;
   downloadLabel?: string;
@@ -50,7 +41,6 @@ export function ToolPanel({
     try {
       await navigator.clipboard.writeText(copyText);
     } catch {
-      // A refused write or a missing clipboard API stays visible until the next press.
       setCopy('failed');
       return;
     }

@@ -1,8 +1,3 @@
-/**
- * The measurement selection every visibility route reads: its query
- * parameters, the `RunSelection` they decode to, and the translation of the
- * readers' selection errors into responses.
- */
 import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
@@ -23,7 +18,6 @@ export const COHORT = {
   default: 'core',
   description: COHORT_TEXT,
 } as const;
-/** The cohort filter with no default, for reads where omitted means something else. */
 export const cohortFilter = (omitted: string) =>
   ({ scalar: COHORT.scalar, description: `${COHORT_TEXT} ${omitted}` }) as const;
 export const ENGINE = {
@@ -89,10 +83,7 @@ export const BASELINE_RUNS = {
   description:
     'Runs to compare the selection against; repeat the parameter. Omitted: no comparison, or the previous comparable run where the read picks one.',
 } as const;
-// `citations.url` is unbounded text, so this cap decides which pages have a
-// detail view at all: the practical ceiling a query string survives.
 export const MAX_URL_LENGTH = 8192;
-/** The answer filters the evidence table and the Query fanouts table both apply. */
 export const EVIDENCE_FILTERS = {
   outcome: {
     scalar: { kind: 'literal', values: ['brand_absent', 'uncited', 'competitor_gap'] },
@@ -114,24 +105,13 @@ export const EVIDENCE_FILTERS = {
   prompt_id: { scalar: { kind: 'uuid' }, description: 'Only answers to this prompt.' },
 } as const satisfies ParamSpecs;
 
-/** Every route here reads the path project inside the active workspace. */
 export const family = { family: 'visibility', authorize: 'active-project' } as const;
 
-/**
- * A selection with nothing measured yet and one whose metrics are still being
- * written are their own answers, each with its own code, so a client never
- * shows one as the other or as something that does not exist.
- */
 const UNMEASURED_CODES = {
   not_measured: 'visibility_not_measured',
   metrics_pending: 'visibility_metrics_pending',
 } as const;
 
-/**
- * Translate the readers' selection errors: an unservable selection is a 404
- * (`Audit not found` unless the route names what is missing, or a code saying
- * it is not measured yet) and a malformed one a 422 carrying the reader's message.
- */
 export async function selectionErrors<T>(
   read: () => Promise<T>,
   missing: () => ApiError = () => notFound('Audit'),
@@ -160,7 +140,6 @@ type SelectionQuery = {
   topic?: string | null;
 };
 
-/** A project's runs in the requested market (omitted: the default) and topic. */
 export const marketScope = (
   workspaceId: string,
   projectId: string,

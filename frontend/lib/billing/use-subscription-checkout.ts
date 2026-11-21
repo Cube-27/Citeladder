@@ -9,19 +9,12 @@ import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
 import { startCheckoutFlow } from './checkout-flow';
 import { billingErrorMessage } from './reason-copy';
 
-/** Copy for a checkout that ended without a provider callback. */
 const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
   redirected: null,
   unsupported: 'Checkout is unavailable for this payment provider.',
   dismissed: 'Checkout closed. Retry to reopen the same payment.',
 };
 
-/**
- * What one checkout pays for. Every kind creates a server intent whose quote
- * the reader reviews before the same provider checkout opens: a base plan
- * (recurring), an add-on or top-up (one-time order), or an upgrade's
- * prorated charge (one-time order). The browser never names an amount.
- */
 export type CheckoutPurchase =
   | { readonly kind: 'base'; readonly input: SubscriptionCheckoutRequest }
   | { readonly kind: 'addon'; readonly catalog_key: string; readonly quantity: number }
@@ -41,22 +34,6 @@ async function createIntent(purchase: CheckoutPurchase, key: string, options: Wo
   return change.activation;
 }
 
-/**
- * The workspace a purchase belongs to.
- *
- * Two hosts start checkouts and they differ in kind, not in degree. The
- * authenticated shell HAS a selection, so the purchase must name it and every
- * call in the flow carries it — a switch mid-flow then cannot re-point the
- * purchase at another workspace's account. The public pricing page has no
- * such selection to read: no `ProjectProvider` renders above it, and asking
- * for one would throw during the prerender of a page anonymous visitors are
- * served. It explicitly asks the server for the buyer's default workspace.
- *
- * `unscoped` therefore means "no selection exists here", never "the
- * selection has not arrived yet": a shell still resolving reports `pending`
- * and refuses to buy, rather than quietly charging the default workspace
- * while the reader is looking at another one.
- */
 type CheckoutScope =
   | { readonly kind: 'scoped'; readonly workspaceId: string }
   | { readonly kind: 'unscoped' }
@@ -69,15 +46,6 @@ function useCheckoutScope(): CheckoutScope {
   return workspaceId ? { kind: 'scoped', workspaceId } : { kind: 'pending' };
 }
 
-/**
- * The workspace this purchase is FOR, resolved ONCE when it starts.
- *
- * Every call in the flow then names this value explicitly, so nothing that
- * changes mid-flow — including a workspace switch in the shell — can re-point
- * the purchase at another account. `null` is the explicit "send no workspace
- * header" choice for the public pricing surface, which the server answers
- * with the buyer's default workspace.
- */
 function purchaseWorkspace(scope: CheckoutScope): string | null {
   if (scope.kind === 'pending') throw new Error('Select a workspace before starting checkout.');
   return scope.kind === 'scoped' ? scope.workspaceId : null;
@@ -123,13 +91,6 @@ export function useSubscriptionCheckout() {
     return state;
   };
 
-  /**
-   * Reuse this purchase's idempotency key, or mint one for a new purchase.
-   *
-   * The identity is (user, WORKSPACE, submitted input): the same person
-   * buying the same plan for two workspaces is two purchases, and sharing a
-   * key across them would replay the first activation into the second.
-   */
   const beginAttempt = (
     userId: string,
     workspaceId: string | null,
@@ -205,8 +166,6 @@ export function useSubscriptionCheckout() {
     setTestMode(checkout.provider_mode === 'test');
     const outcome = await startCheckoutFlow(checkout, user.email, setNotice);
     if (outcome.kind !== 'callback') {
-      // A redirect hands the browser to the provider and this tab is done;
-      // the other two are settled non-outcomes the reader is told about.
       const message = INCOMPLETE_CHECKOUT[outcome.kind];
       if (message) setNotice(message);
       return current;

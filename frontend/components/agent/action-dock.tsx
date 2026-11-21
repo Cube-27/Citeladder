@@ -23,11 +23,6 @@ const ACCEPT: Decision = { label: 'Accept', icon: Check, to: 'in_progress' };
 const DECLINE: Decision = { label: 'Decline', icon: X, to: 'dismissed' };
 const RESTORE: Decision = { label: 'Restore', icon: RotateCcw, to: 'open' };
 
-/**
- * Each status's two decision slots (owner 2026-11-16): New → Decline · Accept;
- * In progress → Decline · Mark implemented; Declined → Restore · Accept;
- * Done → none. `declare` marks the slot Mark implemented takes.
- */
 const DOCK_SLOTS: Record<
   ActionDetail['status'],
   readonly [Decision | null, Decision | 'declare' | null]
@@ -47,11 +42,6 @@ const ANNOUNCED: Record<ActionUserStatus, string> = {
 const FIRST = DOCK_SLOT.decision;
 const SECOND = DOCK_SLOT.wide;
 
-/**
- * The Action page's dock: two decision slots that follow its status, then
- * the Agent hand-off. A decision moves the page at once and the server's
- * answer settles it; a refused one puts the status back and says so.
- */
 export function ActionDock({
   action,
   workspaceId,
@@ -108,7 +98,6 @@ export function ActionDock({
   );
 }
 
-/** One status decision on the page's detail read: moved at once, settled by the server, put back on failure. */
 function useDecision(action: ActionDetail, workspaceId: string) {
   const client = useQueryClient();
   const toast = useToast();
@@ -135,7 +124,6 @@ function useDecision(action: ActionDetail, workspaceId: string) {
           ? { ...current, status: updated.status, measurement: updated.measurement }
           : current,
       );
-      // The list, its counts and the URL reads all show this status.
       void client.invalidateQueries({ queryKey: queryKeys.actions.all });
     },
   });

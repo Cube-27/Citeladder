@@ -4,10 +4,8 @@ import { TrendChart } from '@/components/ui/trend-chart';
 import { BRANDS, TREND, WEEKS } from './demo-data';
 import { ScreenDelta, ScreenSite, ScreenTable, type ScreenColumn } from './screen-parts';
 
-/** A visibility share as the app prints it, one decimal place. */
 export const percent = (value: number) => `${value.toFixed(1)}%`;
 
-/** The demo brand's weekly visibility against two competitors, as the app's TrendChart draws it. */
 export function VisibilityTrend({ height }: Readonly<{ height?: ChartHeight }>) {
   return (
     <TrendChart
@@ -38,7 +36,6 @@ const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
   },
 ];
 
-/** This week's visibility by brand, the demo brand's row marked as its own. */
 export function BrandTable() {
   return (
     <ScreenTable

@@ -1,4 +1,3 @@
-/* ---------- PricingCard and PagePlans ---------- */
 .cl-plan {
   display: flex;
   flex-direction: column;
@@ -39,7 +38,6 @@
   line-height: var(--text-title-sm--line-height);
 }
 
-/* Two lines held, so the plans' prices line up. */
 .cl-plan-desc {
   min-height: calc(2 * var(--text-body--line-height));
   margin: 0;
@@ -125,14 +123,11 @@
   }
 }
 
-/* The provider-keys note under the plans reads at body size. */
-
 #your-keys .cl-shead-lead {
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
-/* ---------- Website tables: PricingTable ---------- */
 .cl-wtable {
   position: relative;
   overflow-x: auto;
@@ -142,10 +137,6 @@
   box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
 }
 
-/* On a phone the table fades at the edge it can scroll towards, as the app's
-   tables do. The scroll position drives the fade (no script on the page); a
-   table that fits, or a browser without scroll timelines, draws no fade. A
-   mask clips the focus ring, so a focused table drops it. */
 @property --cl-wtable-fade-start {
   syntax: '<length>';
   inherits: false;

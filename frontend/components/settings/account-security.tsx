@@ -64,11 +64,6 @@ function SignInMethods({
   );
 }
 
-/**
- * Validated in the form, not by the browser's bubble: each failing field says
- * why under itself and takes focus. A rejected change (a wrong current
- * password) is said under Current password.
- */
 function PasswordFields({ form }: Readonly<{ form: ReturnType<typeof usePasswordForm> }>) {
   const {
     register,
@@ -164,7 +159,6 @@ function ConnectGoogle({
   );
 }
 
-/** One danger alert per failed request, keyed by the request's name. */
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
@@ -177,10 +171,6 @@ function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Erro
   );
 }
 
-/**
- * The account's sign-in, password and session controls, as two settings
- * groups.
- */
 export default function AccountSecurity() {
   const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
   const client = useQueryClient();
@@ -188,7 +178,6 @@ export default function AccountSecurity() {
   const passwordForm = usePasswordForm();
   const current = useWatch({ control: passwordForm.fields.control, name: 'current' });
   const mutation = useMutation({
-    // Both end every session, this device's included (a sign-out is always everywhere).
     mutationFn: (operation: 'sign-out' | 'disconnect') =>
       operation === 'sign-out' ? authApi.logout() : authApi.logoutAndDisconnect(),
     onSuccess: () => restartAt(client, '/login'),
@@ -205,7 +194,6 @@ export default function AccountSecurity() {
   const dirty = passwordForm.fields.formState.isDirty;
   return (
     <>
-      {/* One group for how you sign in: the methods, the password and Google. */}
       <SettingsGroup title="Sign-in">
         {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
         <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />

@@ -1,8 +1,3 @@
-/**
- * Competitor-candidate identity: one AI-observed product keeps one canonical
- * page across every target that sees it, so reads can merge its per-target
- * records into one product.
- */
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 
@@ -15,11 +10,6 @@ import { boundedText, matchRecommendation } from './shelf-parsing.ts';
 
 export type Candidate = Selectable<CommerceCompetitorCandidates>;
 
-/**
- * The product a new candidate stands for when the project already knows it
- * under any target: the same page, else a known product's name in the title (a
- * marketplace listing of it). Brands alone never match: one brand sells many.
- */
 async function knownProduct(
   db: Database,
   { workspaceId, projectId }: CommerceScope,
@@ -44,10 +34,6 @@ async function knownProduct(
   return known.find((row) => row.id === named?.id) ?? null;
 }
 
-/**
- * The candidate an AI-observed product stands for under `target`: the target's
- * own record of it, else a new pending one.
- */
 export async function findOrCreateCandidate(
   db: Database,
   scope: CommerceScope,
@@ -71,8 +57,6 @@ export async function findOrCreateCandidate(
   // Concurrent audit completions serialize new pending candidates on the
   // owning project, identity lookup included, so two first sightings agree.
   await lockCatalog(db, { workspaceId, projectId });
-  // A product known under another target keeps its identity here, so the
-  // Products read merges this target's record with it (one row per product).
   const known = await knownProduct(db, scope, observed.title, observedUrl);
   const url = known?.canonical_url ?? observedUrl;
   const raced = await find(url);

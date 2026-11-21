@@ -78,15 +78,11 @@ export type ConsentView = Readonly<{
   csrf: string;
   workspaces: readonly ConsentWorkspace[];
   error: string | null;
-  /** The Terms revision shown; a POST accepting an older one is refused. */
   termsRevision: string;
-  /** The app origin, for project setup and billing links. */
   appOrigin: string;
-  /** The client asked for `citeladder:write`; Allow changes is offered only then. */
   offerChanges: boolean;
 }>;
 
-/** What a write grant can do; the assistant asks first, and larger changes need a confirmed preview. */
 const CHANGES = [
   'Add, edit and archive prompts',
   'Add, rename and delete topics',
@@ -161,7 +157,6 @@ function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, presele
   </label>`;
 }
 
-/** The approval form: who is asking, for which account, and which workspaces. */
 export function consentPage(view: ConsentView) {
   const shareable = view.workspaces.filter(
     (workspace) => workspace.state === 'ready' || workspace.state === 'terms',
@@ -276,7 +271,6 @@ export function consentReturn(destination: string) {
   );
 }
 
-/** A dead end explained, with the one way out that exists. */
 export function consentMessage(input: {
   title: string;
   message: string;

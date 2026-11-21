@@ -1,15 +1,3 @@
-/**
- * Live fact-check calibration: each hand-labelled answer through the
- * perception call with the claims addendum, the claim validator, the
- * verification call and the verdict validator, the way a pilot audit runs
- * them (same parse retry, same frozen topic scope). Scored for
- * false-contradiction rate (the pilot gate), verdict agreement, quote validity
- * and tokens per answer against the configured thresholds; topic agreement is
- * reported beside them. A reply that stays unusable after the retry fails its
- * fixture (its expected claims count as failed) instead of aborting the run.
- * Operator-run only (it calls the provider and spends platform budget); never
- * part of CI. Records append to one log in the worktree's Git directory.
- */
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -77,14 +65,12 @@ type Answer = (typeof fixtures.answers)[number];
 type Brand = (typeof fixtures.brands)[number];
 type Actual = { quote: string; topic: string; verdict: string };
 
-// Some adapters report only input and output tokens; count those rather than zero.
 const tokensOf = (call: { usage: Record<string, unknown> | null }) =>
   Number(
     call.usage?.total_tokens ??
       Number(call.usage?.input_tokens ?? 0) + Number(call.usage?.output_tokens ?? 0),
   );
 
-/** The brand's facts frozen the way admission freezes them, so scope and coverage match a pilot audit. */
 function frozen(brand: Brand): FrozenFactCheck {
   return {
     claims_version: facts.claims_version,
@@ -99,7 +85,6 @@ function frozen(brand: Brand): FrozenFactCheck {
   };
 }
 
-/** Extraction then verification; the failed step instead when a reply stays unusable. */
 async function pipeline(fixture: Answer, brand: Brand) {
   const pkg: PerceptionPackage = {
     extractor_version: settings.extractor_version,
@@ -115,7 +100,6 @@ async function pipeline(fixture: Answer, brand: Brand) {
         competitors: brand.competitors.map((name) => ({ name, domains: [] })),
       }),
       policy: settings,
-      // The fact-check fixtures carry no cohort: they read as unbranded prompts.
       promptNamesBrand: false,
     }),
   };
@@ -218,7 +202,6 @@ async function evaluate(fixture: Answer) {
       invented: 0,
     };
   const { actual } = result;
-  // Quote first: the verdict is scored on the claim that quotes the expected words.
   const matched = fixture.expected.map((expected) => {
     const claim = actual.find((row) => row.quote.includes(expected.quote_contains));
     return {

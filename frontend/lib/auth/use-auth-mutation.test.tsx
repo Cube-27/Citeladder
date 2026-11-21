@@ -37,7 +37,6 @@ function setup(mutationFn: () => Promise<typeof sessionUser> = () => Promise.res
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  // The auth call itself is stubbed to resolve immediately.
   const hook = renderHook(() => useAuthMutation(mutationFn), { wrapper });
   return { queryClient, ...hook };
 }
@@ -53,10 +52,6 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('useAuthMutation', () => {
-  // Login no longer reads the project list to pick a destination. It could
-  // only have read it UNSCOPED — no workspace is resolved at this point — so
-  // the answer came from whichever workspace the backend defaulted to. The
-  // shell's gate makes that decision from the resolved workspace instead.
   it('routes to the workspace chooser and stays signing in until the page changes', async () => {
     const { result } = setup();
 
@@ -133,8 +128,6 @@ describe('useAuthMutation', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  // A pricing selection captured before signing in was the visitor's last
-  // deliberate action; landing them on /projects would silently discard it.
   it('resumes a captured pricing intent instead of the normal destination', async () => {
     globalThis.sessionStorage.setItem(
       'citeladder.pendingPricingIntent.v1',
@@ -158,8 +151,6 @@ describe('useAuthMutation', () => {
     });
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/pricing?resumeActivation=1'));
-    // No intent field may leak into the auth URL — the record stays in
-    // storage and is revalidated against the live catalog before any purchase.
     expect(navigate).not.toHaveBeenCalledWith(expect.stringContaining('tier_2'));
     globalThis.sessionStorage.clear();
   });

@@ -5,23 +5,10 @@ import { cn } from '@/lib/utils';
 import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
 import './features.css';
 
-/**
- * A linked card names where it goes ("Explore AI Visibility"), never a bare
- * "Learn more", so a link always brings its label.
- */
 type FeatureCardLink =
   | Readonly<{ href: string; linkLabel: string }>
   | Readonly<{ href?: undefined; linkLabel?: undefined }>;
 
-/**
- * FeatureCard (no border, shadow or lift): a soft tint panel when it
- * links or holds a product image, otherwise a column under a hairline rule;
- * an optional product image on top, then an optional eyebrow (only where it
- * adds what the title lacks, such as a unit), a title (20/24 at every size),
- * body, an optional check list and, as a link, an arrow line naming the
- * destination. With an `href` the whole card is the link. A `wide` card
- * (alone in its row) keeps its points under the copy in one column.
- */
 export function FeatureCard({
   href,
   linkLabel,
@@ -39,16 +26,11 @@ export function FeatureCard({
     eyebrow?: ReactNode;
     title: ReactNode;
     body?: ReactNode;
-    /** What the card covers, as a small check list under the body. */
     points?: readonly string[];
     size?: 'md' | 'lg';
-    /** The card fills a full row; its points stay under the copy. */
     wide?: boolean;
-    /** `lead` sets the full-size check list, as a FeatureSplit does. */
     text?: 'body' | 'lead';
-    /** `h2` when the card heads its own part of the page (no section title above it). */
     as?: 'h2' | 'h3';
-    /** The card's product image (a ProductFrame; its well sits straight in the card), above the copy. */
     media?: ReactNode;
   }>) {
   const className = cn(
@@ -78,19 +60,13 @@ export function FeatureCard({
   );
 }
 
-/** A Bento column span: the authored widths the system's grids use. */
 export type BentoSpan = 3 | 4 | 5 | 6 | 7 | 8 | 9 | 12;
 
-/** Under 900px a span keeps its band: small to a third, medium to a half, large to full. */
 function spanBand(span: BentoSpan): 'small' | 'medium' | 'large' {
   if (span <= 3) return 'small';
   return span <= 8 ? 'medium' : 'large';
 }
 
-/**
- * Bento: a 12-column grid of cards. Each cell's span holds to 900px, falls to
- * its band (third, half or full) to 768px, and stacks below.
- */
 export function Bento({
   cells,
 }: Readonly<{ cells: readonly Readonly<{ key: string; span: BentoSpan; content: ReactNode }>[] }>) {
@@ -109,10 +85,6 @@ export function Bento({
   );
 }
 
-/**
- * FeatureSplit: copy (no eyebrow) on 5/12 beside a product image on 7/12, reversible;
- * stacked under 1024px with the copy first. Consecutive splits sit 128 apart.
- */
 export function FeatureSplit({
   title,
   body,
@@ -123,10 +95,8 @@ export function FeatureSplit({
   media,
 }: Readonly<{
   title: ReactNode;
-  /** One paragraph, or several in reading order. */
   body?: string | readonly string[];
   points?: readonly string[];
-  /** Arrow links under the copy, one per page the split leads to; `demo` marks the demo funnel. */
   links?: readonly Readonly<{ href: string; label: ReactNode; demo?: boolean }>[];
   reverse?: boolean;
   as?: 'h2' | 'h3';

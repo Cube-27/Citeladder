@@ -10,14 +10,8 @@ import {
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
-/** A narrowing changes the rows, so the table's paging starts over. */
 const PAGING = { clearKeys: ['source_cursor', 'source_offset', 'source_as_of'] };
 
-/**
- * Which filtered source table the tab shows, if any: the inventory, or a
- * domain's URLs. A URL's own page and a domain's Prompts view list no table,
- * and the Read, not cited list reads neither type nor publisher.
- */
 function useSourceTableScope(view: VisibilityView) {
   const [url] = useUrlState('source_url', optionalStringUrlCodec);
   const [domain] = useUrlState('source_domain', optionalStringUrlCodec);
@@ -29,11 +23,6 @@ function useSourceTableScope(view: VisibilityView) {
   return { dimension: view === 'domains' ? ('domain' as const) : ('url' as const), domain: null };
 }
 
-/**
- * The filters of the table a Visibility tab shows (a Sources table's type,
- * standing and publisher; the Query fanouts grouping), for the page's one All
- * filters menu. They write the same URL state the table reads.
- */
 export function useTableFilters({
   view,
   filters,
@@ -49,7 +38,6 @@ export function useTableFilters({
   const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, PAGING);
   const [picked, setPicked] = useUrlState('source_pick', optionalStringUrlCodec, PAGING);
   const dimension = scope?.dimension ?? 'domain';
-  // Only the URL inventory offers the publisher filter.
   const domainOptions = useSourceDomains(filters, queries, dimension === 'url' && !scope?.domain);
   const activeDomain = scope?.domain ?? (dimension === 'url' ? picked : null);
   const types = useSourceTypes(filters, queries, {

@@ -1,11 +1,5 @@
-/**
- * A turn's activity in the reader's words: what the Agent read, searched and
- * wrote. Saved replies and live turns build their rows here, so both say the
- * same thing; tool names, ids and budgets never reach the text.
- */
 import type { AgentStep } from '@citeladder/contracts/agent';
 
-/** What an active run's model call is doing, while no read is running. */
 export function modelStepLabel(status: string): string {
   if (status === 'working') return 'Deciding the next step…';
   if (status === 'processing') return 'Processing the next step…';
@@ -26,14 +20,12 @@ const VERB = {
   suggest: { running: 'Suggesting', done: 'Suggested', failed: 'Couldn’t suggest' },
 } as const satisfies Record<string, Verb>;
 
-/** Each tool the Agent calls as a verb and the reader's noun; never its name. */
 const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
   load_skill: { verb: VERB.load, noun: 'the method' },
   save_document: { verb: VERB.save, noun: 'a document' },
   edit_document: { verb: VERB.edit, noun: 'a document' },
   suggest_edits: { verb: VERB.suggest, noun: 'changes' },
   propose_declaration: { verb: VERB.suggest, noun: 'marking an Action implemented' },
-  // Provider-hosted; its results are outside pages, not CiteLadder data.
   web_search: { verb: VERB.search, noun: 'the web' },
   search: { verb: VERB.search, noun: 'CiteLadder' },
   fetch: { verb: VERB.read, noun: 'a record' },
@@ -74,7 +66,6 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
 const OTHER_READ = { verb: VERB.read, noun: 'CiteLadder data' };
 
 type ActivityState = 'running' | 'done' | 'unavailable' | 'failed' | 'unknown';
-/** One visible line of a turn's activity: "Read page", muted "…/returns". */
 export type ActivityRow = {
   key: string;
   verb: string;
@@ -83,14 +74,12 @@ export type ActivityRow = {
   state: ActivityState;
 };
 
-/** A call's state as the reader sees it; a refused call is hidden. */
 function callState(status: string): ActivityState | null {
   switch (status) {
     case 'started':
       return 'running';
     case 'completed':
       return 'done';
-    // The read ran and found nothing yet: not a completed read with data.
     case 'unavailable':
       return 'unavailable';
     case 'failed':
@@ -123,7 +112,6 @@ function callRow(
   ];
 }
 
-/** A live tool event or a run's progress row as a step; a row without a tool is a model call. */
 export function callStep(call: {
   ordinal: number;
   tool: string | null;
@@ -136,18 +124,12 @@ export function callStep(call: {
   return { kind: 'tool', ordinal, tool, status, call_id: call.call_id ?? '', target };
 }
 
-/** A row as one phrase: "Read page". */
 export function activityLabel(row: Pick<ActivityRow, 'verb' | 'noun'>) {
   return `${row.verb} ${row.noun}`;
 }
 
 const DOCUMENT_VERB = { created: VERB.save, replaced: VERB.replace, edited: VERB.edit } as const;
 
-/**
- * The visible activity of a turn, saved or live, in order. Model calls are not
- * activity; refused calls are hidden. Live calls arrive as `tool` steps,
- * built-ins and web searches included, until the saved reply replaces them.
- */
 export function activityRows(steps: readonly AgentStep[]): ActivityRow[] {
   return steps.flatMap((step, index): ActivityRow[] => {
     const key = `${step.kind}:${index}`;
@@ -191,7 +173,6 @@ function joined(nouns: readonly string[]) {
   return shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : shown[0];
 }
 
-/** The rows grouped by verb, in first-seen order: "Read Actions and AI visibility · searched the web". */
 export function activitySummary(rows: readonly ActivityRow[]): string {
   const groups = new Map<string, string[]>();
   for (const { verb, noun } of rows) {

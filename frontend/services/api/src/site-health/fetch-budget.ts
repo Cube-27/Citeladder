@@ -1,9 +1,3 @@
-/**
- * A crawl's page fetches are a consumable hold: admission sizes the crawl to
- * what the plan has left and holds it; a terminal crawl settles the hold, so
- * the pages it analyzed are debited and the rest released. An unmetered crawl
- * has no hold; a settled one has nothing outstanding, so a replay writes nothing.
- */
 import { sql } from 'kysely';
 import { ApiError } from '../errors.ts';
 import type { Database } from '../db/database.ts';
@@ -72,7 +66,6 @@ export async function settleCrawlFetches(db: Database, crawl: Crawl) {
   const subject = { kind: 'site_crawl', id: crawl.id, workspaceId: crawl.workspace_id } as const;
   const [reservationId] = await holdsOf(db, subject, capability);
   if (!reservationId) return;
-  // The succeeded analyze tasks are the authority; the crawl's counter may lag.
   const analyzed = await db
     .selectFrom('site_crawl_tasks')
     .select(sql<number>`count(*)::int`.as('count'))

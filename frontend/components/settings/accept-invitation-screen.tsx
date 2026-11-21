@@ -14,7 +14,6 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
 
-/** `/invitations/accept`: the acceptance as a Flow page, before the shell opens. */
 export function AcceptInvitationPage() {
   return (
     <FlowPage label="Invitation" barEnd={<UserMenuTrigger presenter="compact" />}>
@@ -23,25 +22,11 @@ export function AcceptInvitationPage() {
   );
 }
 
-/**
- * Accept an invitation into somebody else's workspace.
- *
- * Acceptance is bound to the signed-in identity: the server refuses a token
- * addressed to a different email, an expired one, a revoked one, and one that
- * never existed, all with the same refusal — so this screen cannot tell the
- * reader which it was, and does not try to.
- *
- * On success the new workspace becomes the selection through the shared
- * navigation owner, so the context, the stored selection and the URL agree
- * about where the reader now is.
- */
 export function AcceptInvitationScreen() {
   const router = useNavigate();
   const searchParams = useSearchParams()[0];
   const selectWorkspace = useSelectWorkspace();
   const token = searchParams?.get('token') ?? '';
-  // One attempt per token. A re-render must not re-post it, and the server's
-  // repeated-acceptance path is inert anyway.
   const attempted = useRef<string | null>(null);
 
   const accept = useMutation(workspaceMutations.acceptInvitation());
@@ -65,7 +50,6 @@ export function AcceptInvitationScreen() {
     );
   }
 
-  // The outcome replaces "Checking" in place, so a live region announces it.
   return (
     <div aria-live="polite">
       {accept.isError ? (
@@ -85,11 +69,6 @@ function InvitationProgress({ joined }: Readonly<{ joined: boolean }>) {
   );
 }
 
-/**
- * A refusal never says which of its causes it was (expired, used, revoked or
- * another address), so the heading does not guess. Its code is reference
- * text under the way on, never the headline.
- */
 function RefusedInvitation({ error, onLeave }: Readonly<{ error: unknown; onLeave: () => void }>) {
   const notice = mutationNoticeForError(error, { action: 'accept this invitation' });
   const reference = [notice.code, notice.requestId].filter(Boolean).join(' · ');
@@ -109,11 +88,6 @@ function RefusedInvitation({ error, onLeave }: Readonly<{ error: unknown; onLeav
   );
 }
 
-/**
- * Every invitation dead end has one look: the page's state block, one
- * sentence and one way on. The route is workspace-scoped, so the reader is
- * always signed in and the way on is their workspace.
- */
 function InvitationDeadEnd({
   heading,
   description,
@@ -122,7 +96,6 @@ function InvitationDeadEnd({
 }: Readonly<{ heading: string; description: string; reference?: string; onLeave: () => void }>) {
   useDocumentTitle(heading);
   return (
-    // The flow page's card is the frame, so the state draws none of its own.
     <Stack gap="item" data-section="framed" className="min-w-0 justify-items-center">
       <StateBlock
         kind="empty"

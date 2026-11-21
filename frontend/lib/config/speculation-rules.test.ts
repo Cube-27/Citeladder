@@ -14,7 +14,6 @@ type Predicate =
 
 const PAGE = 'https://citeladder.com/platform';
 
-/** Whether a document rule matches a plain link, as the browser evaluates it. */
 function matches(predicate: Predicate, link: HTMLAnchorElement): boolean {
   if ('and' in predicate) return predicate.and.every((part) => matches(part, link));
   if ('not' in predicate) return !matches(predicate.not, link);

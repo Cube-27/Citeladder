@@ -35,7 +35,6 @@ const TAB_CODEC = stringUrlCodec<PerceptionTab>(
 type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
-/** How AI portrays the brand, and for the fact-checking pilot what it claims. */
 export function PerceptionScreen() {
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, 'perception');
@@ -44,14 +43,12 @@ export function PerceptionScreen() {
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
-  // A previous selection's count is not this one's: load instead.
   const accuracyData = accuracy.isPlaceholderData ? undefined : accuracy.data;
   const brandFact = pilot ? factFigure(accuracyData, () => setTab('fact-checking')) : undefined;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
         tabs={<TabRow items={items} ariaLabel="Perception views" />}
-        // Market and Objections read the newest probe, not the run selection.
         filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {probe ? null : <RunBanner queries={queries} />}
@@ -77,7 +74,6 @@ export function PerceptionScreen() {
   );
 }
 
-/** The shown tab: Fact-checking exists only inside the pilot. */
 function usePerceptionTab() {
   const pilot = useBrandFacts().data?.enabled ?? false;
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
@@ -91,7 +87,6 @@ function usePerceptionTab() {
   };
 }
 
-/** Brand and Fact-checking: views of the selected runs, behind the selection gate. */
 function SelectionTab({
   ready,
   queries,
@@ -132,7 +127,6 @@ const ACCURACY_MISSING: Record<Exclude<AccuracyResponse['state'], 'value'>, stri
   unavailable: availabilityLabel('unavailable'),
 };
 
-/** The pilot's contradicted claims on the Brand tab, opening the Fact-checking tab. */
 function factFigure(data: AccuracyResponse | undefined, onSelect: () => void): FigureSegment {
   return {
     key: 'contradicted',

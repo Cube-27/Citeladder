@@ -3,9 +3,6 @@ data "google_compute_image" "cos" {
   project = "cos-cloud"
 }
 
-# Free-tier e2-micro with a 30 GB standard boot disk. PostgreSQL is the only
-# process; its data lives on the boot disk, so replacing this instance is the
-# explicit database reset (no backups are kept by design).
 resource "google_compute_instance" "db" {
   name                      = "${local.name}-db"
   zone                      = var.zone
@@ -27,7 +24,6 @@ resource "google_compute_instance" "db" {
   network_interface {
     subnetwork = google_compute_subnetwork.main.id
     network_ip = google_compute_address.db.address
-    # No access_config: the database never has a public address.
   }
 
   service_account {
@@ -55,13 +51,10 @@ resource "google_compute_instance" "db" {
     enable_integrity_monitoring = true
   }
 
-  # A newer COS image must not replace the stateful database during a deploy.
   lifecycle {
     ignore_changes = [boot_disk[0].initialize_params[0].image]
   }
 
-  # The startup script reads its secret and pulls its image on first boot. Its
-  # log-writer grant comes from bootstrap.mjs, before any deploy.
   depends_on = [
     google_secret_manager_secret_iam_member.db_password,
     google_artifact_registry_repository_iam_member.db_reader,

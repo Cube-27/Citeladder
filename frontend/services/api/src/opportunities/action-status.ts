@@ -1,19 +1,3 @@
-/**
- * The Action status a reader sees, persisted on `actions.effective_status`.
- *
- * A user decision stores `open`, `in_progress` or `dismissed` and a
- * declaration stores `implemented`, which reads as measuring once the
- * verifier observed it and as done (verified) while the latest observation,
- * which folds every check's own latest reading, verified every check. A chat
- * output never changes it. `ACTION_STATUS_VIEW` maps each persisted value to
- * the status a user sees (New, In progress, Done, Declined) and its
- * measurement badge.
- *
- * Each writer that changes one of those inputs (a status decision or
- * declaration, a verification observation) calls `refreshActionStatus` in its
- * own transaction, so every read, filter and count selects one indexed column
- * instead of re-deriving it.
- */
 import { randomUUID } from 'node:crypto';
 import { actionStatusSchema, type ActionStatus } from '@citeladder/contracts/actions';
 import { sql, type RawBuilder, type Selectable, type SqlBool } from 'kysely';
@@ -28,14 +12,12 @@ const a = policy.opportunity.actions;
 type StatusView = (typeof a.ACTION_STATUS_VIEW)[keyof typeof a.ACTION_STATUS_VIEW];
 const VIEWS = new Map<string, StatusView>(Object.entries(a.ACTION_STATUS_VIEW));
 
-/** The status and measurement badge a persisted effective status reads as. */
 export function statusView(effective: string): StatusView {
   const view = VIEWS.get(effective);
   if (!view) throw new Error(`Unknown persisted action status: ${effective}`);
   return view;
 }
 
-/** The persisted effective statuses that read as one of `statuses`, sorted. */
 export function persistedStatuses(statuses: readonly ActionStatus[]): string[] {
   return Object.entries(a.ACTION_STATUS_VIEW)
     .filter(([, view]) => statuses.includes(view.status))
@@ -43,9 +25,7 @@ export function persistedStatuses(statuses: readonly ActionStatus[]): string[] {
     .sort(compareText);
 }
 
-/** The effective status of the `actions` row being updated, from its inputs. */
 function derivedStatus(): RawBuilder<string> {
-  // One lookup of the latest observation, read only for a declared Action.
   const measured = sql`(
     select case when ve.observation_kind = 'verified'
       then ${a.ACTION_STATUS_DONE}::varchar else ${a.ACTION_STATUS_MEASURING}::varchar end
@@ -66,15 +46,6 @@ function derivedStatus(): RawBuilder<string> {
   end`;
 }
 
-/**
- * Recompute the Actions' persisted effective status inside the caller's
- * transaction. The rows are locked first so the recompute, a separate
- * statement, reads every input committed before it, including a concurrent
- * writer's that held the lock. `FOR NO KEY UPDATE` serializes refreshers
- * without conflicting with the key-share lock a writer's own foreign key to
- * the Action already holds (an output or event linked to it), so upgrading
- * from that lock cannot deadlock behind a queued status update.
- */
 export async function refreshActionStatus(
   db: Database,
   workspaceId: string,
@@ -100,10 +71,6 @@ export async function refreshActionStatus(
 
 type StatusRow = Pick<Selectable<Actions>, 'id' | 'workspace_id' | 'project_id' | 'status'>;
 
-/**
- * Store `status` on one workspace's Actions with an event each and refresh
- * their effective status; the caller holds the row locks.
- */
 export async function recordStatus(
   db: Database,
   actions: readonly StatusRow[],
@@ -139,10 +106,6 @@ export async function recordStatus(
   await refreshActionStatus(db, first.workspace_id, ...ids);
 }
 
-/**
- * Opportunities whose Action has `status`; by default the work queue. A row
- * recomputed before Actions existed has no Action and stays in the queue.
- */
 export function opportunityStatusClause(status: ActionStatus | null): RawBuilder<SqlBool> {
   if (status) {
     return sql<SqlBool>`opportunities.action_id in (
@@ -161,7 +124,6 @@ export function opportunityStatusClause(status: ActionStatus | null): RawBuilder
   ))`;
 }
 
-/** `status` as a user status; an unknown one is a 422, never an empty list. */
 export function validateStatus(status: string): ActionStatus {
   const parsed = actionStatusSchema.safeParse(status);
   if (!parsed.success) throw new ApiError(422, `unknown action status: ${status}`);

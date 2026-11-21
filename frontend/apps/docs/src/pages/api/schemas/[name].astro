@@ -9,7 +9,6 @@ export function getStaticPaths() {
 }
 
 const { schema } = Astro.props;
-// The endpoints whose request or response names this schema.
 const users = API_OPERATIONS.filter((operation) =>
   [operation.request, operation.response.body].some((body) =>
     [...(body?.type ?? []), ...(body?.rows.flatMap((row) => row.type) ?? [])].some(

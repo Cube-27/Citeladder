@@ -49,26 +49,6 @@ function loadTurnstile(): Promise<TurnstileApi> {
   return loading;
 }
 
-/**
- * Renders the Turnstile widget into the element given `container` as its ref,
- * for as long as that element is mounted, and keeps the latest token.
- * `solved` re-renders the form when a token arrives or lapses; `failed` when
- * no widget can render at all (no site key, or the script would not load).
- * Tokens are single-use: call `reset` after every submission.
- *
- * `size` is the widget size the element's width allows, measured when the
- * element mounts and before the first paint, so a slot sized from it is
- * already the widget's height when the widget arrives. A rendered widget keeps
- * its size; so does the slot.
- *
- * The widget wears the page's resolved theme, not the operating system's
- * (Turnstile's `auto`); switching the theme renders a fresh widget, so the
- * visitor solves the check again.
- *
- * The site key is public and baked in at build (`PUBLIC_TURNSTILE_SITE_KEY`
- * for each of the marketing and product builds). Without one no widget
- * renders, no token arrives, and a form that requires one stays held.
- */
 export function useTurnstile(action: string) {
   const widget = useRef<{ api: TurnstileApi; id: string } | null>(null);
   const token = useRef('');
@@ -90,7 +70,6 @@ export function useTurnstile(action: string) {
         setFailed(true);
         return;
       }
-      // Aborted when the element unmounts, so a late script load renders nothing.
       const unmounted = new AbortController();
       const settle = (value: string) => {
         token.current = value;
@@ -112,7 +91,6 @@ export function useTurnstile(action: string) {
           });
           widget.current = { api, id };
         })
-        // Without the widget the server refuses the request; the form says so.
         .catch(() => {
           if (!unmounted.signal.aborted) setFailed(true);
         });

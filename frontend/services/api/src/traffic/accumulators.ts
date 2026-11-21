@@ -14,7 +14,6 @@ export type MetricRow = {
   importer_version?: string;
 };
 
-/** Invalid provider numbers do not become observations (invariant 18). */
 export function numberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

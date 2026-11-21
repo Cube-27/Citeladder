@@ -14,7 +14,6 @@ import { PromptLibrary } from './prompt-library';
 
 const prompt = makePrompt({ text: 'Best running shoes for flat feet?' });
 const set = makeSet([prompt]);
-// The prompts arrive embedded in the project, before any read of their figures.
 const project = makeProject({ prompt_sets: [set] });
 
 function metric(visibilityRate: number) {
@@ -48,10 +47,6 @@ function metric(visibilityRate: number) {
   };
 }
 
-/**
- * The library's reads, with each prompt's own latest figures answered by
- * `figures`. Only the latest run alone would hide prompts an earlier run measured.
- */
 function libraryReads(figures: () => Promise<Response>) {
   mswServer.use(
     http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([set]))),
@@ -92,8 +87,6 @@ describe('PromptLibrary first load', () => {
 
     renderLibrary();
 
-    // The prompts are already known, but whether a run exists decides the
-    // columns, so no row is drawn while the figures are being read.
     const answer = await vi.waitFor(() => {
       if (!figures.answer) throw new Error('The figures were not requested yet.');
       return figures.answer;
@@ -156,10 +149,8 @@ describe('PromptLibrary first load', () => {
     const user = userEvent.setup();
     renderLibrary();
 
-    // The question opens the answer; it no longer leaves the library.
     await user.click(await screen.findByRole('link', { name: prompt.text }));
 
-    // The dialog is titled by the prompt it answers.
     expect(await screen.findByRole('dialog', { name: prompt.text })).toBeVisible();
     await waitFor(() => expect(read).toContain(ANSWER));
     expect(new Set(read)).toEqual(new Set([ANSWER]));
@@ -421,7 +412,6 @@ describe('PromptLibrary bulk actions', () => {
     await user.type(screen.getByRole('searchbox'), 'boots');
     expect(screen.queryByRole('toolbar', { name: 'Selected prompts' })).not.toBeInTheDocument();
 
-    // Back and forward change the status in the address, not through the control.
     await user.click(box('Best hiking boots?'));
     const travel = (status: string) =>
       act(() => {
@@ -436,7 +426,6 @@ describe('PromptLibrary bulk actions', () => {
 });
 
 describe('PromptLibrary Enable/Disable', () => {
-  /** Holds the PATCH open until the test answers it; the sets read reports what was saved. */
   function holdToggle() {
     const held: { answer?: (response: Response) => void; setsReads: number; saves: number } = {
       setsReads: 0,
@@ -461,7 +450,6 @@ describe('PromptLibrary Enable/Disable', () => {
     return held;
   }
 
-  /** Picks the row menu's Enable or Disable; returns the prompt cell, whose caption says Disabled. */
   async function press(user: ReturnType<typeof userEvent.setup>, item: 'Enable' | 'Disable') {
     const table = await screen.findByRole('table', { name: 'Prompts' });
     await user.click(within(table).getByRole('button', { name: 'Prompt actions' }));
@@ -474,7 +462,6 @@ describe('PromptLibrary Enable/Disable', () => {
     renderLibrary();
     const status = await press(userEvent.setup(), 'Disable');
 
-    // The save is still held open: the row shows the new state before it resolves.
     await waitFor(() => expect(status()).toHaveTextContent('Disabled'));
     const answer = await vi.waitFor(() => {
       if (!held.answer) throw new Error('The save was not requested yet.');
@@ -493,7 +480,6 @@ describe('PromptLibrary Enable/Disable', () => {
     const status = await press(user, 'Disable');
     const readsBefore = held.setsReads;
 
-    // The save is still held open: the row shows the new state before it resolves.
     await waitFor(() => expect(status()).toHaveTextContent('Disabled'));
     const answer = await vi.waitFor(() => {
       if (!held.answer) throw new Error('The save was not requested yet.');

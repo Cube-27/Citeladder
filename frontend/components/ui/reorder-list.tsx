@@ -8,10 +8,8 @@ import { textRole } from '@/components/ui/typography';
 import { Ellipsis, GripVertical } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/** The drag type a row's position travels under; no other source sets it. */
 const ROW_DRAG_TYPE = 'application/x-citeladder-reorder-row';
 
-/** Alt plus these keys moves the focused row. */
 const KEY_STEP = new Map([
   ['ArrowUp', -1],
   ['ArrowDown', 1],
@@ -19,25 +17,16 @@ const KEY_STEP = new Map([
 
 export type ReorderItem = Readonly<{
   key: string;
-  /** Names the item in its move controls, after its rank ("Move 2, <name>, up"). */
   name: string;
-  /** One line: the row is 40 high. */
   content: ReactNode;
 }>;
 
-/**
- * A shared, ranked list the reader can reorder, framed like a table: 40px
- * rows of rank, content and a "…" menu holding Move up and Move down. Alt+↑
- * and Alt+↓ move the focused row; dragging a row onto another (its handle
- * shows on hover) is a progressive enhancement.
- */
 export function ReorderList({
   items,
   pending,
   onMove,
 }: Readonly<{
   items: readonly ReorderItem[];
-  /** A move is being saved: dragging and the controls wait for it. */
   pending: boolean;
   onMove: (from: number, to: number) => void;
 }>) {

@@ -78,7 +78,6 @@ export function InternalLinkReview({
           </Stack>
           <PageSummary heading="Add a link to" page={link.target} />
           <Stack as="section">
-            {/* A captured passage already highlights the anchor; say it again only without one. */}
             {link.placement ? null : (
               <>
                 <EditorialSectionHeader title="Suggested anchor text" />
@@ -91,7 +90,6 @@ export function InternalLinkReview({
                 : `${formatCount(link.target.contextual_inbound)} contextual inbound links`}
             </p>
           </Stack>
-          {/* One primary: the ready-to-paste link. Its parts are secondary. */}
           <Inline className="flex-wrap">
             <CopyButton
               variant="primary"

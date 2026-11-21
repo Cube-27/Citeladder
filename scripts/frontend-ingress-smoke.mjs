@@ -33,10 +33,8 @@ async function assetLoads(asset) {
 }
 
 async function appServes(path) {
-  // Browsers navigate with Accept: text/html; only that receives the SPA shell.
   const response = await get(app, path, 'text/html');
   assert.equal(response.status, 200, `${path} serves the application`);
-  // Revalidated on every use, so the back-forward cache may keep the shell.
   assert.equal(response.headers.get('cache-control'), 'no-cache', `${path} is revalidated`);
   const html = await response.text();
   assert.match(html, /id="root"/, `${path} has the application root`);
@@ -62,11 +60,9 @@ await Promise.all(
     apexRejects,
   ),
 );
-// The former apex MCP address only points at the API host; it is never proxied.
 const formerMcp = await get(marketing, '/mcp');
 assert.equal(formerMcp.status, 301, 'The apex redirects /mcp');
 assert.equal(formerMcp.headers.get('location'), 'https://api.citeladder.com/mcp');
-// Machine routes belong to the API host alone.
 assert.equal((await get(app, MACHINE_PATH)).status, 404, 'The app host refuses /v1 machine paths');
 async function apiHostRejects(path) {
   const refused = await get(api, path);
@@ -80,7 +76,6 @@ if (api) {
   const root = await get(api, '/');
   assert.equal(root.status, 301, 'The API host root redirects to its docs');
   assert.equal(root.headers.get('location'), 'https://docs.citeladder.com/api/');
-  // MCP lives on the API host: its issuer is that origin.
   const metadata = await get(api, MCP_METADATA);
   assert.equal(metadata.status, 200, 'The API host serves MCP metadata');
   assert.equal(
@@ -102,7 +97,6 @@ await Promise.all(
 const missing = await get(app, '/app-assets/missing-chunk.js');
 assert.equal(missing.status, 404, 'A missing chunk must not become a successful SPA document');
 
-// The app Worker is the only browser path to the API.
 const catalog = await get(app, '/api/v1/brand-discovery-catalog');
 assert.equal(catalog.status, 200, 'The app Worker proxies the API');
 assert.match(catalog.headers.get('cache-control') ?? '', /no-store/);

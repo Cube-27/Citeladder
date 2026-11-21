@@ -23,7 +23,6 @@ const MAILBOX_TITLES: Record<MailboxOperation, string> = {
   'forgot-password': 'Reset your password',
 };
 
-/** Back to sign-in, or, for a link missing its token, to requesting a new one. */
 function mailboxFooter(operation: MailboxOperation, incomplete: boolean, returnTo?: string) {
   if (!incomplete)
     return {
@@ -59,7 +58,6 @@ export default function MailboxScreen() {
   }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Asking for an email link is challenged; confirming one (its token proves the mailbox) is not.
   const verification = useTurnstile(operation);
   const mutation = useMutation({
     mutationFn: () =>
@@ -78,8 +76,6 @@ export default function MailboxScreen() {
     },
   });
   const title = MAILBOX_TITLES[operation];
-  // A link opened without its token (cut short by a mail client, say) cannot
-  // confirm anything; asking for a password would only fail.
   const incomplete = confirmation && !secrets.token;
   const description = mutation.isSuccess
     ? mutation.data.message

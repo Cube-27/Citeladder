@@ -17,7 +17,6 @@ export type PasswordFieldProps = Readonly<{
   placeholder: string;
 }>;
 
-/** A password input with a reveal control at its end, for a field that labels it. */
 export function PasswordInput({
   label,
   inputProps,
@@ -45,7 +44,6 @@ export function PasswordInput({
   );
 }
 
-/** A labelled password field with a reveal control at its end. */
 export function PasswordField({ error, ...props }: PasswordFieldProps) {
   return (
     <Field label={props.label} required error={error}>

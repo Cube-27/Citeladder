@@ -23,13 +23,6 @@ import {
 } from '@/lib/prompts/csv';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * CSV import dialog (F7). The file is parsed + validated in the browser and the
- * parsed rows are previewed (with per-row errors) BEFORE anything is persisted.
- * On confirm, only the importable rows are handed to `onImport`, which posts
- * them to the B3 `/prompt-sets/{id}/import` endpoint. The sample file is built
- * from the same column contract the parser reads.
- */
 function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
   if (errors.length > 0) return <StatusMark tone="negative">{errors.join(' ')}</StatusMark>;
   return <StatusMark tone="positive">Ready</StatusMark>;
@@ -59,7 +52,6 @@ export function CsvImportDialog({
   onImport: (rows: PromptImportRowRequest[]) => Promise<void> | void;
   isImporting?: boolean;
   error?: MutationNoticeData;
-  /** The import bounds the API enforces, from the prompt-set list. */
   limits: PromptCsvLimits;
 }>) {
   const { fileName, inputRef, parsed, readError, reading, reset, selectFile } =
@@ -73,7 +65,6 @@ export function CsvImportDialog({
     onOpenChange(next);
   };
 
-  // A second click before the first import settles is ignored, not sent again.
   const submitting = useRef(false);
   const [submitted, setSubmitted] = useState(false);
   const confirm = async () => {
@@ -137,7 +128,6 @@ export function CsvImportDialog({
   );
 }
 
-/** The parsed rows with each row's problems, before anything is imported. */
 function ParsedRows({
   parsed,
   fileName,

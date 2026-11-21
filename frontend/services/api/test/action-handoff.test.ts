@@ -1,8 +1,3 @@
-/**
- * The message an Action's Agent chat opens with (AS3): each approach branch's
- * template, filled from the Action's own evidence, with a plainer sentence
- * when a fact is missing. Pure: grouping runs on members, nothing is stored.
- */
 import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
@@ -42,7 +37,6 @@ function member(
   };
 }
 
-/** The one Action the members group into, as its handoff. */
 function handoffOf(...members: ActionMember[]) {
   const [group, ...rest] = groupMembers(members);
   if (!group || rest.length) throw new Error('Expected the members to form one Action');
@@ -168,7 +162,6 @@ describe('Action handoff message', () => {
     ).toBe(
       'Fix "A signal regressed" on https://acme.test/Categories/Women/Women\'s-Clothing/Womens-Maxi-Dress.',
     );
-    // An Action read without a persisted handoff opens about its label the same way.
     expect(
       readHandoff(null, 'https://www.bestandless.com.au/Categories/Women/Women%2527s-Clothing'),
     ).toEqual({

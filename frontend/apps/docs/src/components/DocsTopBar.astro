@@ -1,15 +1,4 @@
 ---
-/**
- * DocsTopBar — the docs header, sticky on the page colour. Row one (64px):
- * the logo, the search field that opens DocsSearchDialog centred, then the
- * website link, the ThemeSwitch and Open app, the one filled control. Row two,
- * under a `line` hairline: the section tabs with their icons, the current one
- * in `ink` on the accent underline. Every tab keeps one weight, so selecting
- * one never moves the others. Below 1280px the field narrows and the website
- * link leaves; below 900px the tabs row, field and Open app move into a menu
- * sheet that overlays the page, and a search and a menu IconButton take their
- * place; below 640px only the logo mark shows.
- */
 import { buttonClasses } from '@/components/ui/button';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
@@ -107,8 +96,6 @@ const sections = [
     top: 0;
     z-index: var(--z-index-overlay);
     background: var(--color-site-page);
-    /* Hairlines drawn inside the rows, so the bar is exactly `docs-bar-height`
-       and the columns held under it never shift. */
     box-shadow: inset 0 -1px 0 var(--color-line);
   }
   .cl-docs-bar-inner,
@@ -174,7 +161,6 @@ const sections = [
   .cl-docs-bar-tabs {
     box-shadow: inset 0 1px 0 var(--color-line);
   }
-  /* Inset by a tab's padding, so the first label lines up with the logo. */
   .cl-docs-bar-tab-list {
     display: flex;
     gap: 4px;
@@ -185,8 +171,6 @@ const sections = [
   .cl-docs-bar-tab-list li {
     display: flex;
   }
-  /* The page tabs' face (ui/tabs): a control-high hover tile, and the
-     current tab's accent underline on the bar's hairline. */
   .cl-docs-bar-tab {
     position: relative;
     isolation: isolate;
@@ -237,7 +221,6 @@ const sections = [
   .cl-docs-bar-menu[aria-expanded='true'] :global(.cl-docs-bar-menu-close) {
     display: block;
   }
-  /* The phone menu overlays the page, so opening it moves nothing. */
   .cl-docs-bar-sheet {
     position: absolute;
     top: 100%;
@@ -313,8 +296,6 @@ const sections = [
 </style>
 
 <script>
-  // The phone menu: the button opens and closes the sheet; Esc, a link in it
-  // or a click outside closes it and returns focus to the button.
   const button = document.querySelector<HTMLButtonElement>('[data-docs-menu]');
   const sheet = document.getElementById('docs-menu');
   if (button && sheet) {

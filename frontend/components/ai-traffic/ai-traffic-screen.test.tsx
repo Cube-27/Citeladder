@@ -45,7 +45,6 @@ const referrals = {
   analyzer_version: '1',
   formula_version: '1',
 };
-/** A source-list response: the GCP connector configured and sources without pull details. */
 const sourceBody = (availability: string, items: Record<string, unknown>[] = []) => ({
   availability,
   gcp_pull: {
@@ -56,7 +55,6 @@ const sourceBody = (availability: string, items: Record<string, unknown>[] = [])
   },
   items: items.map((item) => ({ pull: null, ...item })),
 });
-/** Opens setup from the empty Crawl logs card, which takes the action once the read settles. */
 async function openEmptySetup() {
   const user = userEvent.setup();
   renderWithProviders(<CrawlLogConnections />);
@@ -135,7 +133,6 @@ describe('AI Traffic state and navigation', () => {
     renderWithProviders(<CrawlLogConnections />);
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     const dialog = screen.getByRole('dialog');
-    // The production query policy exhausts its automatic 5xx retries first.
     const retry = await within(dialog).findByRole('button', { name: /retry/i }, { timeout: 5000 });
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
     mswServer.use(
@@ -227,7 +224,6 @@ describe('AI Traffic state and navigation', () => {
       renderWithProviders(
         <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="30d" />,
       );
-      // The card holds its slot either way, so the Overview below never jumps up.
       expect(await screen.findByText(shown)).toBeVisible();
       expect(screen.getByText('Observed patterns')).toBeVisible();
     },
@@ -622,8 +618,6 @@ describe('AI Traffic state and navigation', () => {
       ),
       http.get(root + '/ai-traffic/pages/' + page.url_hash, () =>
         HttpResponse.json({
-          // A flagged count keeps its state beside the value; key events carry
-          // the qualifiers of the GA4 rows they share with referral sessions.
           page: {
             ...page,
             crawl: { state: 'flagged', value: 3, coverage: 'partial', reason: null },
@@ -651,19 +645,16 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
-    // No retained rows from a connected source: an observation, not a setup step.
     const activityTable = await screen.findByRole('region', {
       name: 'Retained automated request activity',
     });
     expect(
       await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    // The window is the row's calendar chip; the rest share Filters.
     expect(screen.getByRole('button', { name: /^Period:/ })).toBeVisible();
     await openFilterOptions(user, 'Status code');
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
     const statusRow = () => screen.getByRole('menuitem', { name: /^Status code:/ });
-    // A partly typed code narrows nothing, so the filter does not report it.
     fireEvent.change(statusField, { target: { value: '40' } });
     expect(statusRow()).toHaveAccessibleName('Status code: Any status');
     fireEvent.change(statusField, { target: { value: '404' } });
@@ -674,7 +665,6 @@ describe('AI Traffic state and navigation', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
-    // The narrowing emptied the table: none match, and Clear filters undoes it.
     await user.click(await within(activityTable).findByRole('button', { name: 'Clear filters' }));
     await waitFor(() =>
       expect(new URLSearchParams(window.location.search).get('status')).toBeNull(),
@@ -696,8 +686,6 @@ describe('AI Traffic state and navigation', () => {
     expect(await screen.findByRole('button', { name: 'Filters (2)' })).toHaveAttribute(
       'data-active',
     );
-    // Pages sort from their column headers, like every other table.
-    // A column no row measures (referrals here) is left out, so sort by requests.
     await user.click(screen.getByRole('button', { name: /^Requests/ }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));
@@ -713,7 +701,6 @@ describe('AI Traffic state and navigation', () => {
         window.location.origin,
       ).searchParams.get('project'),
     ).toBe(project.id);
-    // Opened from its row, which already shows each count: the drawer names only their sources.
     const record = (name: string) =>
       within(panel).queryByText(name, { selector: 'dt' })?.nextElementSibling?.textContent;
     expect(within(panel).getByText(/^Sources:/)).toHaveTextContent(
@@ -766,7 +753,6 @@ describe('AI Traffic state and navigation', () => {
         }),
       ),
     );
-    // A shared link to a crawl-only view still lands somewhere useful, keeping its range.
     window.history.replaceState(null, '', '/ai-traffic?tab=activity&range=90d');
     renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
     expect(await screen.findByText(/covers last 90 days/)).toBeVisible();

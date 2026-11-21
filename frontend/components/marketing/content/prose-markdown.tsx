@@ -9,13 +9,8 @@ import { endAlignedColumn, fitColumns, isNumericCell } from './post-blocks';
 import { isSourceHeader, wholeRuns } from './table-dates';
 import './reading.css';
 
-/**
- * The guide's h2 headings, as Toc items whose ids match the rendered headings;
- * h3s are counted too, since a repeat of either takes the next number.
- */
 export function researchHeadings(markdown: string) {
   const id = headingIds();
-  // Both groups always take part in a match.
   return Array.from(markdown.matchAll(/^(#{2,3}) (.+)$/gm), ([, hashes = '', text = '']) => ({
     id: id(text),
     label: text,
@@ -25,7 +20,6 @@ export function researchHeadings(markdown: string) {
 
 const CITATION_HREF = /^#source-\d+$/;
 
-/** The hast tree react-markdown hands a rehype plugin, as far as these plugins read it. */
 type TreeNode = {
   type: string;
   tagName?: string;
@@ -48,10 +42,6 @@ const isCitationRun = (node: TreeNode | undefined): node is CitationRun =>
 
 const WORD_JOINER = '\u2060';
 
-/**
- * Adjacent citation links share one unbreakable run, so a cluster never wraps
- * inside, and a run joins the word before it so it never starts a line alone.
- */
 function groupCitations(node: TreeNode) {
   if (!node.children) return;
   const grouped: TreeNode[] = [];
@@ -81,10 +71,6 @@ const rehypeCitationRuns = () => groupCitations;
 const isBlank = (node: TreeNode) =>
   node.type === 'text' && !(node.value ?? '').replaceAll(WORD_JOINER, '').trim();
 
-/**
- * A paragraph that is one bold run (an answer under a heading) reads at the
- * normal weight; bold stays for inline labels such as "Disclosure:".
- */
 function unboldWholeParagraphs(node: TreeNode) {
   for (const child of node.children ?? []) unboldWholeParagraphs(child);
   if (node.tagName !== 'p' || !node.children) return;
@@ -103,7 +89,6 @@ const rehypeWholeParagraphWeight = () => unboldWholeParagraphs;
 const isWholeRun = (node: TreeNode) =>
   node.tagName === 'span' && node.properties?.className === 'cl-whole';
 
-/** Each date, hyphenated name or versioned name in text becomes one unbreakable `span.cl-whole`. */
 function keepRunsWhole(node: TreeNode) {
   if (!node.children || node.tagName === 'code' || node.tagName === 'pre' || isWholeRun(node)) {
     return;
@@ -126,10 +111,8 @@ function keepRunsWhole(node: TreeNode) {
   });
 }
 
-/** Longest inline code kept on one line; a longer one may still wrap. */
 const WHOLE_CODE_LENGTH = 32;
 
-/** Whole runs in running text and headings stay on one line, and so does a short inline code token. */
 function keepTokensWhole(node: TreeNode) {
   if (node.tagName === 'pre') return;
   if (node.tagName === 'code') {
@@ -154,12 +137,6 @@ const without = (row: TreeNode, cell: TreeNode | undefined) => {
   row.children = (row.children ?? []).filter((child) => child !== cell);
 };
 
-/**
- * A source column is not a column: each row's source moves under its first
- * cell as a secondary line (links and citations kept), or, when it is only
- * citations, runs on after the cell's text like a citation in a sentence; the
- * column and its header are dropped.
- */
 function foldSourceColumn(head: readonly TreeNode[], body: readonly TreeNode[]) {
   const headers = head.map((row) => elements(row, 'th'));
   const column = headers[0]?.findIndex((header) => isSourceHeader(nodeText(header))) ?? -1;
@@ -197,13 +174,6 @@ function foldSourceColumn(head: readonly TreeNode[], body: readonly TreeNode[]) 
   }
 }
 
-/**
- * A figure cell is `data-numeric` (one line, tabular figures); a column of
- * mostly figures is `data-align="end"`, its header included, so the figures
- * and their header share a right edge. A short column is `data-fit` (its
- * content's width). A header row with no text is dropped, a source column
- * folds under the first cell, and every whole run in a body cell stays whole.
- */
 function markNumericColumns(node: TreeNode) {
   if (node.tagName !== 'table') {
     for (const child of node.children ?? []) markNumericColumns(child);
@@ -240,7 +210,6 @@ const mark = (nodes: readonly TreeNode[], properties: Record<string, string>) =>
   for (const node of nodes) node.properties = { ...node.properties, ...properties };
 };
 
-/** One body column's marks: figures, fit widths and, for a figure column, end alignment. */
 function markColumn({
   column,
   cells,
@@ -263,11 +232,6 @@ function markColumn({
 
 const rehypeNumericColumns = () => markNumericColumns;
 
-/**
- * Each h2 and h3 gets the anchor id the Toc links to (`researchHeadings`
- * numbers repeats the same way), and each table the id of the heading above
- * it, which names its region.
- */
 function assignHeadingIds(tree: TreeNode) {
   const id = headingIds();
   let heading: string | undefined;
@@ -285,10 +249,6 @@ function assignHeadingIds(tree: TreeNode) {
 
 const rehypeHeadingIds = () => assignHeadingIds;
 
-/**
- * Elements carry no classes, so Prose styles them; header cells are column
- * headers, and a `[\[n\]](#source-n)` link becomes an InlineCitation.
- */
 const components: Components = {
   a: ({ href, children }) =>
     href && CITATION_HREF.test(href) ? (
@@ -302,16 +262,11 @@ const components: Components = {
     ),
 };
 
-/** A single line keeps its inline content without a wrapping paragraph. */
 const inlineComponents: Components = {
   ...components,
   p: ({ children }) => <>{children}</>,
 };
 
-/**
- * Each table is a region named by the heading above it, so a screen reader
- * says what it compares.
- */
 const markdownComponents: Components = {
   ...components,
   table: ({ children, node }) => {
@@ -328,11 +283,6 @@ const markdownComponents: Components = {
   },
 };
 
-/**
- * Research Markdown as Prose children, with no hydration: copy, links,
- * citations, fences (CodeBlocks) and tables arrive in the HTML. Raw HTML in
- * the Markdown is skipped.
- */
 export function ProseMarkdown({ markdown }: Readonly<{ markdown: string }>) {
   return (
     <Markdown
@@ -353,7 +303,6 @@ export function ProseMarkdown({ markdown }: Readonly<{ markdown: string }>) {
   );
 }
 
-/** A guide's FAQ section as a FaqList, each answer rendered from its Markdown. */
 export function MarkdownFaq({
   items,
 }: Readonly<{ items: readonly Readonly<{ question: string; answer: string }>[] }>) {
@@ -368,7 +317,6 @@ export function MarkdownFaq({
   );
 }
 
-/** One line of Markdown (a source), without a wrapping paragraph. */
 export function InlineMarkdown({ markdown }: Readonly<{ markdown: string }>) {
   return (
     <Markdown remarkPlugins={[remarkGfm]} components={inlineComponents} skipHtml>

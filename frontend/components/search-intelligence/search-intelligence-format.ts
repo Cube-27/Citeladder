@@ -18,13 +18,11 @@ function providerNumber(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
-/** A provider price in the row's own currency ("$3.20"), or null when it reported none. */
 export function searchAmount(value: unknown, currency: string | null): string | null {
   const number = providerNumber(value);
   return number === null ? null : formatAmount(number, currency);
 }
 
-/** A provider figure, or null when the provider did not report one. */
 export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
   const number = providerNumber(value);
   if (number === null) return null;
@@ -45,10 +43,6 @@ type RunCost = {
   charged_credits: number | null;
 };
 
-/**
- * The analysis's estimate as the workspace pays it: AI credits on a managed
- * plan, the DataForSEO price on its own account.
- */
 export function runEstimate(run: RunCost): Formatted {
   if (run.credential_mode === 'funded')
     return run.estimated_credits === null
@@ -57,7 +51,6 @@ export function runEstimate(run: RunCost): Formatted {
   return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
 }
 
-/** What the analysis was charged; unconfirmed work never was, and an open charge is pending. */
 export function reportedCost(run: RunCost): string {
   if (!run.confirmed_at) return 'Not charged';
   if (run.credential_mode === 'funded')
@@ -66,7 +59,6 @@ export function reportedCost(run: RunCost): string {
   return '$' + (searchNumber(run.provider_reported_cost_usd, 6) ?? run.provider_reported_cost_usd);
 }
 
-/** An estimate, rounded up to a hundredth of a cent so it never understates the ceiling. */
 export function estimateUsd(value: string): string {
   if (!/^\d+(\.\d+)?$/u.test(value)) {
     const number = Number(value);
@@ -78,7 +70,6 @@ export function estimateUsd(value: string): string {
   return `${rounded / 10000n}.${String(rounded % 10000n).padStart(4, '0')}`;
 }
 
-/** How many results a comparison found; an absent dataset was never fetched. */
 export function datasetCount(
   dataset: { provider_total: number | null; unique_rows_saved: number } | undefined,
 ): string {
@@ -90,7 +81,6 @@ export function datasetCount(
     : 'No results';
 }
 
-/** The referring-domain lists citations can be matched against: one per researched website. */
 export const referringLists = <T extends { dataset_kind: string; unique_rows_saved: number }>(
   datasets: readonly T[],
 ) =>
@@ -98,7 +88,6 @@ export const referringLists = <T extends { dataset_kind: string; unique_rows_sav
     (dataset) => dataset.dataset_kind === 'referring_domains' && dataset.unique_rows_saved > 0,
   );
 
-/** Internal identities and nested provider metadata never reach the evidence list. */
 const HIDDEN_FIELDS = new Set([
   'id',
   'dataset_id',
@@ -117,7 +106,6 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 export type EvidenceField = { key: string; label: string; value: string | null };
 
-/** A saved row as readable label/value pairs; null is a value the provider did not report. */
 export function evidenceFields(
   row: Readonly<Record<string, unknown>>,
   labels: Readonly<Record<string, string>>,
@@ -131,7 +119,6 @@ export function evidenceFields(
   });
 }
 
-/** A list of plain values joined; a list holding objects is not shown as text. */
 const listText = (value: unknown[]) =>
   value.length && value.every((item) => typeof item !== 'object') ? value.join(', ') : null;
 
@@ -139,7 +126,6 @@ function evidenceValue(value: unknown, timeZone: string): string | null {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') return searchNumber(value, 4);
   if (Array.isArray(value)) return listText(value);
-  // Nested provider objects are summarised elsewhere, never printed as text.
   if (typeof value !== 'string' || !value) return null;
   if (!DATE_TIME.test(value) || Number.isNaN(Date.parse(value))) return value;
   // A calendar date is a day, not an instant: zoning it would show the day

@@ -1,10 +1,3 @@
-/**
- * Trial data retention: once a trial-only workspace's trial has been over for
- * the retention period, its projects and incomplete brand discoveries are
- * deleted, a bounded batch of workspaces per pass. A workspace that ever held a non-trial grant (a plan,
- * add-on, top-up or operator override) is never purged; billing and usage
- * records survive the deletion with their source IDs.
- */
 import { policy } from '../config.ts';
 import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
@@ -19,10 +12,6 @@ const logger = getLogger('app.projects');
 const setting = (key: 'trial_data_retention_days' | 'trial_purge_workspace_batch') =>
   Number(resolveSettingSpec(policy.billing.settings[key], process.env));
 
-/**
- * Delete the projects and incomplete discoveries of up to a batch of
- * long-expired trials; returns how many projects and discoveries went.
- */
 export async function purgeExpiredTrialProjects(
   db: Database,
   now: Date,
@@ -68,85 +57,69 @@ export async function purgeExpiredTrialProjects(
   return purged;
 }
 
-/**
- * Workspaces whose trial ended before `cutoff` and that never held anything
- * else, in workspace ID order. Narrowing only: the locked access read in
- * each purge transaction is the authority.
- */
 export function purgeCandidates(db: Database, cutoff: Date) {
-  return (
-    db
-      .selectFrom('billing_accounts as account')
-      .select('account.workspace_id')
-      .where('account.registration_origin', '=', 'public')
-      .where(({ exists, or, selectFrom }) =>
-        or([
-          exists(
-            selectFrom('projects')
-              .select('projects.id')
-              .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
-          ),
-          exists(
-            selectFrom('brand_discoveries')
-              .select('brand_discoveries.id')
-              .whereRef('brand_discoveries.workspace_id', '=', 'account.workspace_id')
-              .where('brand_discoveries.project_id', 'is', null),
-          ),
-        ]),
-      )
-      .where(({ exists, not, selectFrom }) =>
-        not(
-          exists(
-            selectFrom('account_grants')
-              .select('account_grants.id')
-              .whereRef('account_grants.billing_account_id', '=', 'account.id')
-              .where('account_grants.source_kind', '!=', 'trial'),
-          ),
+  return db
+    .selectFrom('billing_accounts as account')
+    .select('account.workspace_id')
+    .where('account.registration_origin', '=', 'public')
+    .where(({ exists, or, selectFrom }) =>
+      or([
+        exists(
+          selectFrom('projects')
+            .select('projects.id')
+            .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
         ),
-      )
-      .where(({ exists, selectFrom }) =>
+        exists(
+          selectFrom('brand_discoveries')
+            .select('brand_discoveries.id')
+            .whereRef('brand_discoveries.workspace_id', '=', 'account.workspace_id')
+            .where('brand_discoveries.project_id', 'is', null),
+        ),
+      ]),
+    )
+    .where(({ exists, not, selectFrom }) =>
+      not(
         exists(
           selectFrom('account_grants')
             .select('account_grants.id')
             .whereRef('account_grants.billing_account_id', '=', 'account.id')
-            .where('account_grants.source_kind', '=', 'trial')
-            .where('account_grants.valid_until', '<=', cutoff),
+            .where('account_grants.source_kind', '!=', 'trial'),
         ),
-      )
-      // A workspace still holding reserved units waits, without starving the batch.
-      .where(({ exists, not, selectFrom }) =>
-        not(
-          exists(
-            selectFrom('consumable_ledger')
-              .select('consumable_ledger.reservation_id')
-              .whereRef('consumable_ledger.workspace_id', '=', 'account.workspace_id')
-              .groupBy('consumable_ledger.reservation_id')
-              .having(openReservedUnits, '>', 0),
-          ),
+      ),
+    )
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom('account_grants')
+          .select('account_grants.id')
+          .whereRef('account_grants.billing_account_id', '=', 'account.id')
+          .where('account_grants.source_kind', '=', 'trial')
+          .where('account_grants.valid_until', '<=', cutoff),
+      ),
+    )
+    .where(({ exists, not, selectFrom }) =>
+      not(
+        exists(
+          selectFrom('consumable_ledger')
+            .select('consumable_ledger.reservation_id')
+            .whereRef('consumable_ledger.workspace_id', '=', 'account.workspace_id')
+            .groupBy('consumable_ledger.reservation_id')
+            .having(openReservedUnits, '>', 0),
         ),
-      )
-      // A checkout still awaiting settlement may be the customer's paid plan.
-      .where(({ exists, not, selectFrom }) =>
-        not(
-          exists(
-            selectFrom('pending_activations')
-              .select('pending_activations.id')
-              .whereRef('pending_activations.billing_account_id', '=', 'account.id')
-              .where('pending_activations.status', '=', 'pending'),
-          ),
+      ),
+    )
+    .where(({ exists, not, selectFrom }) =>
+      not(
+        exists(
+          selectFrom('pending_activations')
+            .select('pending_activations.id')
+            .whereRef('pending_activations.billing_account_id', '=', 'account.id')
+            .where('pending_activations.status', '=', 'pending'),
         ),
-      )
-      .orderBy('account.workspace_id')
-  );
+      ),
+    )
+    .orderBy('account.workspace_id');
 }
 
-/**
- * Lock the workspace's capacity and recheck its access. The capacity lock
- * serializes with grant issuance and reservations, so an upgrade or new work
- * committed before it is seen here. A workspace that ever held a non-trial
- * grant, even an expired one, is never purged. A checkout still pending
- * settlement keeps the workspace: its payment may already have been captured.
- */
 async function stillPurgeable(trx: Database, workspaceId: string, now: Date, cutoff: Date) {
   const accountId = await lockWorkspaceCapacity(trx, workspaceId);
   const access = await workspaceAccess(trx, workspaceId, now);
@@ -168,15 +141,8 @@ async function stillPurgeable(trx: Database, workspaceId: string, now: Date, cut
   return !checkout;
 }
 
-/** Thrown to roll back a deletion the locked recheck no longer allows. */
 class Retained extends Error {}
 
-/**
- * Runs `remove` and then rechecks the workspace under its capacity lock, in
- * one transaction. The lock DAG puts domain rows before the capacity lock, so
- * the deletion takes its row locks first and is rolled back when the recheck
- * refuses it. Returns what `remove` returned, or false when rolled back.
- */
 async function retainedOnRecheck<T>(
   db: Database,
   remove: (trx: Database) => Promise<T>,
@@ -196,10 +162,6 @@ async function retainedOnRecheck<T>(
   }
 }
 
-/**
- * A discovery that never produced a project has no project to cascade from;
- * remove it and its tasks with the workspace's projects. Returns how many went.
- */
 async function purgeIncompleteDiscoveries(
   db: Database,
   workspaceId: string,

@@ -1,8 +1,3 @@
-/**
- * The project's Overview layout: which widgets show, in what order and at what
- * width. One row per project, shared by every member; a save names the version
- * it edited, so two editors never silently overwrite each other.
- */
 import { randomUUID } from 'node:crypto';
 
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -26,7 +21,6 @@ function defaultOverviewLayout(): OverviewWidget[] {
   return policy.projects.overview_default_layout.map((widget) => ({ ...widget }));
 }
 
-/** The saved layout or the default; the caller has authorized the project. */
 export async function readOverviewLayout(
   db: Database,
   scope: ProjectScope,
@@ -46,7 +40,6 @@ export async function readOverviewLayout(
   };
 }
 
-/** `widgets: null` resets to the default layout; it still advances the version. */
 export async function updateOverviewLayout(
   db: Database,
   scope: ProjectScope,

@@ -1,4 +1,3 @@
-/** Keyword research's tabs in row order. Data only: the route manifest loads it in Node. */
 export const SEARCH_INTELLIGENCE_TABS = [
   { value: 'demand', label: 'Demand' },
   { value: 'overview', label: 'Overview' },

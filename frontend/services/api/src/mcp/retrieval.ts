@@ -278,9 +278,7 @@ const records = {
     'created_at',
   ]),
 } as const satisfies Record<Exclude<RecordKindName, OwnedKind>, Descriptor>;
-/** Kinds resolved by their owners rather than the column allowlist. */
 type OwnedKind = 'project' | 'prompt' | 'action';
-/** Every allowlisted kind is a contracts record kind. */
 type Kind = RecordKindName;
 
 const NOT_A_RECORD =
@@ -399,7 +397,6 @@ async function resolvePrompt(
   };
 }
 
-/** Only a published dataset, or a row of one, is evidence. */
 function publishedFilter(kind: Kind) {
   if (kind === 'search_dataset') return sql`and r.status = 'published'`;
   if (kind === 'search_row')
@@ -450,7 +447,6 @@ async function attachActionStatus(
         .where('project_id', '=', projectId)
         .executeTakeFirst()
     : undefined;
-  // No Action row is an unknown status, never an open one.
   row.status = status ? statusView(status.status).status : null;
   row.provenance = {
     analyzer_version: row.analyzer_version,
@@ -459,7 +455,6 @@ async function attachActionStatus(
   };
 }
 
-/** Columns each lifecycle record reports as its progress counts. */
 const countColumns: Partial<Record<Kind, Record<string, string>>> = {
   site_crawl: {
     admitted: 'admitted_url_count',
@@ -477,7 +472,6 @@ const countColumns: Partial<Record<Kind, Record<string, string>>> = {
   },
 };
 
-/** Synchronous per-kind reshaping of the persisted row. */
 const rowShapers: Partial<Record<Kind, (row: Evidence) => void>> = {
   site_snapshot: (row) => {
     row.scores = {
@@ -518,7 +512,6 @@ function attachCounts(kind: Kind, row: Evidence) {
   for (const column of Object.values(fields)) delete row[column];
 }
 
-/** Attaches the page's artifact, rule evaluations and current issues; returns its title. */
 async function attachSitePage(
   db: Database,
   row: Evidence,
@@ -637,13 +630,10 @@ async function resolveSpecRecord(
   attachCounts(kind, row);
   rowShapers[kind]?.(row);
   if (kind === 'site_page') title = await attachSitePage(db, row, recordScope, title);
-  // Site records' page and link URLs, the title included (a page may be titled
-  // by its URL), leave without query or fragment, as the Site tools return them.
   if (kind.startsWith('site_')) {
     title = textWithoutUrlQuery(title);
     for (const [key, value] of Object.entries(row)) row[key] = withoutQueryDeep(value);
   }
-  // Put the diagnosis ahead of bulky crawl facts in continuation documents.
   const record =
     kind === 'site_page' ? { issues: row.issues, evaluations: row.evaluations, ...row } : row;
   return { record, title, projectId, observedAt };
@@ -664,7 +654,6 @@ async function resolveRecord(
   return resolveSpecRecord(db, principal, workspaces, kind, id);
 }
 
-/** Split by Unicode code points, measuring the entire encoded document in UTF-8. */
 export function retrievalDocument({
   kind,
   id,
@@ -691,7 +680,6 @@ export function retrievalDocument({
   const uri = `citeladder://${kind}/${id}`;
   const url = appLink(origin, recordPath(kind, { id, ...normalized }), projectId);
   const limit = Math.min(maxBytes, mcpPolicy.max_document_bytes);
-  // The record travels once, as the document text.
   const document = (textPart: string, partUris: string[] = []) => ({
     id: partUris.length ? `${uri}?part=${part}` : uri,
     title,
@@ -721,8 +709,6 @@ export function retrievalDocument({
   ) {
     const count = Math.ceil(characters.length / chunkSize);
     const uris = Array.from({ length: count }, (_, index) => `${uri}?part=${index}`);
-    // Bound metadata first: decreasing chunk size cannot rescue a URI manifest
-    // that already exceeds the document budget.
     if (bytes(document('', uris)) > limit)
       throw new Error('Retrieval metadata exceeds the document size limit');
     const parts = Array.from({ length: count }, (_, index) =>

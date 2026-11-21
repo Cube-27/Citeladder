@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { brandPalette } from '../src/documents/pdf-brand.ts';
 
-/** A palette hex as its 8-bit sRGB channels (hex literals belong to globals.css alone). */
 const channels = (hex: string) =>
   [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
 

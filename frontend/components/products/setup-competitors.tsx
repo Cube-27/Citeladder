@@ -22,7 +22,6 @@ import { Section, SectionContent, SectionHeader, SectionTitle } from '@/componen
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
-/** Only the candidates found for the target on screen. */
 function forTarget(
   rows: NonNullable<CommerceQueries['competitors']['data']>,
   target: CommerceTarget,
@@ -30,11 +29,6 @@ function forTarget(
   return rows.filter((row) => sameTarget({ kind: row.target_kind, id: row.target_id }, target));
 }
 
-/**
- * Competitor discovery and review for one catalog product or category, on its
- * page's Setup: Find competitors, then approve or reject each candidate.
- * `level` 3 when it sits inside the product's Setup section.
- */
 export function SetupCompetitors({
   projectId,
   target,
@@ -50,13 +44,8 @@ export function SetupCompetitors({
 }>) {
   const { workspaceId } = useProjectScope();
   const decide = useMutation(commerceMutations.decideCompetitor({ workspaceId, projectId }));
-  // Finding competitors is a run; approving one is a write. A role without
-  // either reads the candidates and their state only.
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
-  // The tracker follows every run in the project, so a bulk discovery across
-  // three categories otherwise showed all three banners on each one, and made
-  // every target read as "Finding…" while any of them was running.
   const tasks = discovery.tasks.filter((task) => sameTarget(task.target, target));
   const running = tasks.some((task) => !task.terminal);
   const rows = query.data ? forTarget(query.data, target) : [];
@@ -147,7 +136,6 @@ function CompetitorRows({
   rows: NonNullable<CommerceQueries['competitors']['data']>;
   running: boolean;
   pending: boolean;
-  /** Approves or rejects a candidate; omitted for a role that may not. */
   onDecide?: (id: string, decision: 'approved' | 'rejected') => void;
 }>) {
   if (query.isError)

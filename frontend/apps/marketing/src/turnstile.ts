@@ -12,11 +12,9 @@ export type TurnstileCheck = {
   token: string;
   ip: string;
   action: string;
-  /** Frontend hostnames the widget may be solved on. */
   hostnames: readonly string[];
 };
 
-/** Hostnames from a comma-separated Worker variable. */
 export function turnstileHostnames(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
@@ -24,10 +22,6 @@ export function turnstileHostnames(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/**
- * True only when Cloudflare confirms the token was solved for this action on
- * an allowed hostname. Tokens are single-use, so a replay fails here.
- */
 export async function verifyTurnstile(check: TurnstileCheck): Promise<boolean> {
   if (!check.token) return false;
   try {

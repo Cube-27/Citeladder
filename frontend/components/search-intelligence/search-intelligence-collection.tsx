@@ -13,11 +13,6 @@ import { SearchValue } from './search-intelligence-value';
 import type { SearchCollection } from './search-intelligence-collection-state';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * A tab's saved collection: the result the page's control strip chose (the
- * view, website, saved result and filters all ride that strip), or on the
- * Competitors tab with no comparison open, every competitor.
- */
 export function SearchIntelligenceCollection({
   collection,
   datasets,
@@ -47,10 +42,6 @@ export function SearchIntelligenceCollection({
   );
 }
 
-/**
- * The backlink summary's figures, each dated: the summary is the latest
- * reading, while the chart under it is the monthly history, a different capture.
- */
 function BacklinkMetrics({
   datasets,
   targetOrigin,

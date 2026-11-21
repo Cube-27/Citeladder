@@ -5,10 +5,6 @@ import { cn } from '@/lib/utils';
 
 import './steps-faq-cta.css';
 
-/**
- * Steps: an ordered process, side by side (two up under 1024, stacked on
- * phones) or as a vertical list.
- */
 export function Steps({
   items,
   direction = 'horizontal',
@@ -33,10 +29,6 @@ export function Steps({
 
 export type FaqItem = Readonly<{ id?: string; question: string; answer: ReactNode }>;
 
-/**
- * FaqList: native details rows. Opening one only adds its answer below its
- * own row; with `exclusive` the browser keeps one open at a time.
- */
 export function FaqList({
   items,
   exclusive = false,
@@ -64,10 +56,6 @@ export function FaqList({
   );
 }
 
-/**
- * CtaBand: the closing call to action, a stage inside the container (never
- * full-bleed), the title at the section size over the lead and actions.
- */
 export function CtaBand({
   title,
   lead,
@@ -82,7 +70,6 @@ export function CtaBand({
   as?: 'h2' | 'h3';
 }>) {
   return (
-    // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
     <div className="cl-cta" data-cta-placement="closing">
       <div className="cl-cta-copy">
         <Heading className="cl-cta-title">{title}</Heading>

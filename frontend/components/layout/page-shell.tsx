@@ -16,20 +16,8 @@ import { routeLoading } from '@/lib/navigation/app-routes';
 import type { HeldTabs, RouteLoading } from '@/lib/navigation/route-types';
 import { cn } from '@/lib/utils';
 
-/**
- * The control band, held while the route's filters wait on their first read.
- * A loading frame passes it as `controls` when the loaded page will have a
- * control band, so the work below starts on the same line in both frames.
- */
 export const RESERVED_CONTROLS: FilterBarProps = {};
 
-/**
- * RouteLoadingScreen — the frame a route shows before its own page can draw,
- * from its manifest entry (`routeLoading`): the masthead titled from the path,
- * the route's real tabs with the URL's current, its held filter row, then its
- * first screen's shapes; the Overview's widget grid, the Issues summary, a
- * chat and a new chat in their own templates. The page arrives without moving them.
- */
 export function RouteLoadingScreen() {
   const location = useLocation();
   const loading = routeLoading(location.pathname);
@@ -95,7 +83,6 @@ export function RouteLoadingScreen() {
   }
 }
 
-/** The page's section rail with the section its URL names current, beside its content. */
 function RouteRail({
   rail,
   search,
@@ -117,7 +104,6 @@ function RouteRail({
   );
 }
 
-/** The page's tab row with the tab its URL names current. */
 function RouteTabs({ tabs, search }: Readonly<{ tabs: HeldTabs; search: string }>) {
   const value = new URLSearchParams(search).get(tabs.param);
   return (
@@ -128,7 +114,6 @@ function RouteTabs({ tabs, search }: Readonly<{ tabs: HeldTabs; search: string }
   );
 }
 
-/** A shape as the page draws it: a table or a chart in its light frame, the rest on the surface. */
 function ShapeBox({ shape }: Readonly<{ shape: LoadingShape }>) {
   const blocks = <ShapeBlocks shape={shape} />;
   switch (shape.kind) {

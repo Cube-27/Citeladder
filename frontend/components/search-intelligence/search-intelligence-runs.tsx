@@ -13,7 +13,6 @@ import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-/** Why an acquisition stopped, in the reader's terms. */
 const STOP_REASONS: Readonly<Record<string, string>> = {
   cost_ceiling_reached:
     'The next request could have cost more than the estimate you confirmed, so it was not sent.',
@@ -40,9 +39,7 @@ export function RunNotice({
   cancelling,
 }: Readonly<{
   run: SearchIntelligenceRun | null;
-  /** Cancel and Review again are offered only to a role that may run analyses. */
   onCancel?: (runId: string) => void;
-  /** Opens the analysis review: the recovery for a stopped run. */
   onReview?: () => void;
   cancelling: boolean;
 }>) {
@@ -67,8 +64,6 @@ export function RunNotice({
     STOP_REASONS[run.error_code] ||
     run.error_detail ||
     `${run.completed_calls} of ${run.planned_calls} requests completed.`;
-  // A stopped analysis is recovered by reviewing and running it again. The
-  // saved results below still stand, so it is a standing warning, not an alert.
   return (
     <Notice
       tone="warning"
@@ -98,14 +93,12 @@ export function CostDetails({
   onOpenChange: (open: boolean) => void;
   runs: SearchIntelligenceRun[] | undefined;
   pending: boolean;
-  /** The failed read, or null when the history loaded. */
   error: unknown;
   onRetry: () => void;
 }>) {
   let content = <StateBlock kind="empty" inline message="No analysis has been run yet." />;
   if (runs?.length) {
     content = (
-      // Each run is its title over its one framed strip, never a box around a box.
       <Stack as="ul" gap="section">
         {runs.map((run) => (
           <Stack as="li" gap="compact" key={run.id}>

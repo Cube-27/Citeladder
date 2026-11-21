@@ -36,17 +36,11 @@ const SOURCE_LABELS: Record<SeedChoice, string> = {
   none: 'None',
 };
 
-/** A typed percentage as a whole number within 0 to 100; anything else reads 0. */
 const share = (text: string) => {
   const value = Math.round(Number(text));
   return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
 };
 
-/**
- * Unbranded, branded and competitor-alternative prompts as one split of the
- * run, so the two shares can never pass 100%. Without a tracked competitor
- * the split has no competitor part and sends none.
- */
 function ShareMix({
   settings,
   onChange,
@@ -78,7 +72,6 @@ function ShareMix({
   );
 }
 
-/** The person's personas to balance across; at most the API's limit may be chosen. */
 function PersonaChoices({
   choices,
   selected,
@@ -122,7 +115,6 @@ function PersonaChoices({
   );
 }
 
-/** The chosen source's queries by topic, each untickable; seeds steer wording only. */
 function SeedList({
   seeds,
   settings,
@@ -181,12 +173,6 @@ function SeedList({
   );
 }
 
-/**
- * Step 3: how the run divides. Every control starts at a default that suits
- * most businesses: 80% unbranded, intents 25/50/25, seeds from the first
- * connected search source. Shares and the intent mix are split bars that
- * move in 5% steps and always total 100.
- */
 export function BuilderDistributionStep({
   settings,
   onChange,
@@ -197,16 +183,13 @@ export function BuilderDistributionStep({
   notices,
   limits,
 }: Readonly<{
-  /** The run bounds the API enforces, from the prompt-set list. */
   limits: Pick<PromptFormLimits, 'generation_count_max' | 'distribution_personas_max'>;
   settings: RunSettings;
   onChange: (settings: RunSettings) => void;
   hasCompetitors: boolean;
   personaChoices: readonly string[];
-  /** The seed-query read: loading, failed or loaded. */
   seeds: { data?: SeedQueries; status: ReactNode };
   topics: readonly Topic[];
-  /** Run state and unsaved-step warnings, above the controls. */
   notices: ReactNode;
 }>) {
   const sources: SeedChoice[] = [...(seeds.data?.sources.map((item) => item.source) ?? []), 'none'];

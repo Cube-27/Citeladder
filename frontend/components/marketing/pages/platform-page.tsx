@@ -20,10 +20,6 @@ import { CheckList, SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { CatalogFrame, SCREEN_CATALOG } from '../screens/screen-catalog';
 
-/**
- * The page's actions: the site's one pair (SiteActions), except on the MCP
- * page, whose primary is its setup guide.
- */
 export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
   if (cta !== 'mcp') return <SiteActions />;
   return (
@@ -34,7 +30,6 @@ export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
   );
 }
 
-/** Every published capability, one card per navigation group. */
 function CapabilityGrid() {
   return (
     <ul className={cn('cl-tiles', `cl-cols-${columnsFor(PLATFORM_GROUPS.length)}`)}>
@@ -77,30 +72,22 @@ function CapabilityGrid() {
 type Feature = PlatformPage['features'][number];
 type ScreenedFeature = Readonly<{ feature: Feature; screen: PlatformScreen }>;
 
-/** Features in page order, consecutive splits and consecutive cards kept together. */
 type FeatureGroup =
   | { kind: 'splits'; items: ScreenedFeature[] }
   | { kind: 'cards'; features: Feature[] }
   | { kind: 'full'; item: ScreenedFeature };
 
-/**
- * How a feature's screen is laid out: a full app screen keeps the full width;
- * a vignette asked to go full width sits beside its copy as a split, so a
- * card image is never stretched across the page.
- */
 function featureLayout(media: Feature['media']): Feature['media']['kind'] {
   if (media.kind === 'full' && SCREEN_CATALOG[media.screen].fit === 'fluid') return 'split';
   return media.kind;
 }
 
-/** Adds a split to the run of splits it follows, or starts one. */
 function pushSplit(groups: FeatureGroup[], item: ScreenedFeature) {
   const last = groups.at(-1);
   if (last?.kind === 'splits') last.items.push(item);
   else groups.push({ kind: 'splits', items: [item] });
 }
 
-/** Adds a card to the row of cards it follows, or starts one. */
 function pushCard(groups: FeatureGroup[], feature: Feature) {
   const last = groups.at(-1);
   if (last?.kind === 'cards') last.features.push(feature);
@@ -131,7 +118,6 @@ function groupFeatures(features: readonly Feature[]): FeatureGroup[] {
   return groups;
 }
 
-/** A row of cards keeps the system's bento rhythm: 12, halves, thirds, 7 + 5 / 5 + 7. */
 function cardSpans(count: number): readonly BentoSpan[] {
   if (count === 1) return [12];
   if (count === 2) return [6, 6];
@@ -142,7 +128,6 @@ function cardSpans(count: number): readonly BentoSpan[] {
 
 function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) {
   const spans = cardSpans(features.length);
-  // A card alone in its row spreads its copy and points across the width.
   const wide = features.length === 1;
   return (
     <Bento
@@ -164,14 +149,8 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
   );
 }
 
-/**
- * The features, in order: splits alternate sides across the whole page, a
- * full-width screen heads its own section, and cards share a bento row.
- */
 function Features({ page }: Readonly<{ page: PlatformPage }>) {
-  // A card row's visually hidden h2 names the product, never a card's own title.
   const cardsHeading = `${platformLabel(page.path) ?? 'Platform'} features`;
-  // Splits alternate across the whole page, not per section.
   const splitSide = new Map(
     page.features
       .filter((feature) => featureLayout(feature.media) === 'split')
@@ -183,7 +162,6 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
         switch (group.kind) {
           case 'full': {
             const { feature, screen } = group.item;
-            // Title, copy and points stack together over the screen.
             return (
               <PageSection
                 key={feature.title}
@@ -253,11 +231,6 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
   );
 }
 
-/**
- * One template for /platform and every capability page: the hero and its
- * screen, the engines, the highlights, the features, how it works, the
- * questions it answers, FAQ, related pages and the closing band.
- */
 export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) {
   const overview = page.path === PLATFORM_OVERVIEW.href;
   const label = platformLabel(page.path) ?? 'Platform';
@@ -276,11 +249,9 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         }
         title={page.heading}
         lead={page.lead}
-        // Connecting an assistant is the MCP hero's whole action; its closing band keeps the guide and a demo.
         actions={page.cta === 'mcp' ? <ConnectStrip /> : <PlatformActions cta={page.cta} />}
         meta={page.note}
       >
-        {/* The page's one product image: a full app screen fills the width, a vignette centres. */}
         <CatalogFrame screen={page.screen} />
       </PageHero>
 

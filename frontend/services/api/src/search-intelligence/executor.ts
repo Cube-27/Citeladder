@@ -23,7 +23,6 @@ type StepContext = {
   options: AcquisitionOptions;
 };
 
-/** The paid target, or the refusal that stops the run before any send. */
 function resolveTarget(
   prepared: Dispatchable,
   encryptionKey: string,
@@ -44,10 +43,6 @@ function resolveTarget(
   }
 }
 
-/**
- * One paid send under leased capacity: `'stop'` when the dispatch was not
- * recorded, the provider's error once sent, else undefined.
- */
 async function sendPaid(
   c: StepContext,
   prepared: Dispatchable,
@@ -74,7 +69,6 @@ async function sendPaid(
   return error;
 }
 
-/** A failed send either parks the task for a rate-limit wait or ends the run. */
 async function settleFailure(
   state: AcquisitionState,
   prepared: Dispatchable,
@@ -88,7 +82,6 @@ async function settleFailure(
   return result.stop ? 'stop' : 'next';
 }
 
-/** One plan step: `'stop'` ends this execution, `'next'` continues with the following plan. */
 async function runStep(
   c: StepContext,
   plan: ResearchPlan,
@@ -128,7 +121,6 @@ async function runStep(
   return (await state.settle(plan, prepared.call.id, later)) ? 'stop' : 'next';
 }
 
-/** Runs the frozen plan until it ends or parks. */
 async function acquire(
   state: AcquisitionState,
   task: Parameters<Executor>[0],

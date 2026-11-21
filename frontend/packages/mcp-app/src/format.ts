@@ -21,13 +21,11 @@ function parsed(value: unknown): Date | null {
   return Number.isNaN(instant.getTime()) ? null : instant;
 }
 
-/** "3 Oct 2026"; persisted timestamps are shown as dates, never as raw strings. */
 export const day = (value: unknown, fallback = 'Unknown date') => {
   const instant = parsed(value);
   return instant ? dayFormat.format(instant) : fallback;
 };
 
-/** "3 Oct 2026, 14:05" in the viewer's time zone. */
 export const moment = (value: unknown, fallback = 'Unknown time') => {
   const instant = parsed(value);
   return instant ? timeFormat.format(instant) : fallback;

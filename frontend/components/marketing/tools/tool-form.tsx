@@ -111,7 +111,6 @@ export function ToolForm({
     <ToolPanel
       title="Your input"
       resultTitle="Your result"
-      // Until there is output, the status is a line in the result well, not a bar label.
       status={output ? status : undefined}
       empty={status}
       form={

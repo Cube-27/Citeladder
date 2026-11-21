@@ -143,19 +143,13 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 }
 
-/** Why coverage fell short, when the crawl said why. */
 function pageKindDescription(coverage: CoverageState, reasons: readonly string[]): string | null {
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
-  // A complete crawl carries a completion reason, not a limit.
   if (coverage === 'complete' || named.length === 0) return null;
   const why = named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ');
   return `Limited: ${why}`;
 }
 
-/**
- * One row per page kind, its pages behind a disclosure. The table is the
- * summary: a stat row over it used to repeat its own totals.
- */
 function PageKindTable({
   pageKinds,
   grouped,
@@ -289,7 +283,6 @@ function PageKindPages({
   );
 }
 
-/** What the depth distribution shows, for a reader who cannot see the bars. */
 function depthSummary(data: SiteArchitecture): string {
   const parts = data.structure_depth.buckets.map(
     (bucket) =>
@@ -302,7 +295,6 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linking = data.internal_linking;
   const [orphansOpen, setOrphansOpen] = useState(false);
   const linkedShare = linking.pages_with_incoming_percentage;
-  // Two thirds for the three linking figures, so they hold one row (160px a cell).
   return (
     <AppGrid layout="main-aside">
       <Section>

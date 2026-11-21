@@ -25,27 +25,12 @@ import { count, hostOf, sinceLabel } from '@/lib/visibility/sources';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
 import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
-/** A counted nought in a column of chips, kept apart from an absent one. */
 function ObservedNone() {
   return <span className={textRole('caption', 'tabular-nums')}>0</span>;
 }
 
-/** Chips a cell carries before it stops being a cell; the rest become "+N". */
 const MAX_CHIPS = 3;
 
-/**
- * The tracked answers that used this source, one row each.
- *
- * A TABLE, not an evidence feed. A reader on a domain's page is scanning for
- * which prompts reached it and how heavily — a question answered by rows they
- * can compare down a column. The full answer text, its mentions and its
- * citation list belong to the answer itself, which is one click away on Query
- * fanouts; reproducing them here made every row tall enough that comparing two
- * meant scrolling between them.
- *
- * Reads `/visibility/evidence` narrowed by domain or URL rather than adding a
- * third place that assembles an answer list.
- */
 export function SourcePrompts({
   filters,
   queries,
@@ -74,10 +59,6 @@ export function SourcePrompts({
     enabled: Boolean(queries.activeRunId && (domain || url)),
   });
 
-  // The answer opens over this screen rather than routing to the run that
-  // produced it. A reader here is comparing which prompts reached this source;
-  // being dropped on Query fanouts with the source selection gone meant the
-  // only way back to the comparison was the browser's back button.
   const [opened, setOpened] = useState<EvidenceSubject | null>(null);
 
   return (
@@ -88,8 +69,6 @@ export function SourcePrompts({
           columns={COLUMNS}
           state={promptsState(query)}
           busy={{ active: query.isFetching, label: 'Updating prompts' }}
-          // The endpoint returns a bounded newest-first window. Without this a
-          // source cited by more answers than fit simply looked like it had fewer.
           footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
         >
           {(query.data?.items ?? []).map((item) => (
@@ -128,8 +107,6 @@ function promptsState(
       fallback: 'The request failed or timed out.',
     };
   }
-  // The selection has settled on a measured run (`SelectionGate`), so no data
-  // yet is this read on its way, never an empty finding.
   if (!query.data) return { kind: 'loading', label: 'Loading prompts…' };
   if (query.data.items.length) return undefined;
   return {
@@ -140,13 +117,6 @@ function promptsState(
   };
 }
 
-/**
- * One answer as a row: which engine produced it, what it said, what it cited.
- *
- * The engine's mark leads the row rather than sitting in a column of its own —
- * it is an identity, and a reader scanning for "what did Gemini say" finds a
- * logo faster than a word.
- */
 function PromptRow({
   item,
   onOpenAnswer,
@@ -180,16 +150,10 @@ function PromptRow({
         {sinceLabel(item.completed_at) ?? <Absence />}
       </TableCell>
       <TableCell>
-        {/* The row summarises the answer; this reaches the answer itself. It
-            is the one thing the old evidence feed carried that a compact row
-            cannot replace with a number. */}
         <Button
           variant="quiet"
           onClick={() =>
             onOpenAnswer({
-              // The visibility row names the execution as `task_id`; the dialog
-              // reads the answer and its evidence from that one execution — a
-              // source row summarises an answer without carrying one.
               id: item.task_id,
               prompt_text: item.prompt_text,
               prompt_index: item.prompt_index,
@@ -205,13 +169,6 @@ function PromptRow({
   );
 }
 
-/**
- * The brands this answer named, as marks.
- *
- * An empty list is an OBSERVED zero, not an absent measurement: the answer was
- * read and it named nobody. `Absence` would report that as "not measured",
- * which is the opposite finding -- so the cell says nought and means it.
- */
 function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   const named = [...new Map(item.mentions.map((one) => [one.name, one])).values()];
   if (!named.length) return <ObservedNone />;
@@ -233,7 +190,6 @@ function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
   );
 }
 
-/** The sites this answer drew on, as their favicons. An empty list is zero. */
 function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   const hosts = [
     ...new Set(item.citations.map((citation) => hostOf(citation.url)).filter(Boolean)),

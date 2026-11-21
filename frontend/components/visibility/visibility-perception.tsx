@@ -19,7 +19,6 @@ import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 
-/** A read with no value to show: pending, unavailable with its reason, or no mentions. */
 export function PerceptionState({
   state,
   reason,
@@ -47,7 +46,6 @@ export function EntityTable({ entities }: Readonly<{ entities: PerceptionRespons
     <TitledSection title="You and competitors">
       <DataTable label="You and competitors" columns={ENTITY_COLUMNS}>
         {entities.map((entity) => (
-          // Your own row is highlighted, as in the Trends brand table.
           <TableRow key={entity.name} highlight={entity.is_brand}>
             <TableCell>
               <Inline as="span">
@@ -84,7 +82,6 @@ const ENTITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'classified', label: 'Classified', width: 'figure', kind: 'number', priority: 'low' },
   { key: 'positive', label: 'Positive', width: 'figure', kind: 'number' },
   { key: 'negative', label: 'Negative', width: 'figure', kind: 'number' },
-  // Derived from the two counts beside it, so it hides first and they never part.
   { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number', priority: 'low' },
 ];
 

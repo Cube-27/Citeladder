@@ -12,12 +12,10 @@ import { billingConfig, buyer } from './billing-support.ts';
 import { createHmac } from 'node:crypto';
 import { billingSettings } from '../src/billing/config.ts';
 
-/** A provider response as Razorpay serves it, with its `Date` header. */
 function served(body: unknown, date: string | null = 'Thu, 12 Nov 2026 10:00:00 GMT') {
   return Response.json(body, { headers: date === null ? {} : { date } });
 }
 
-/** Provider responses for an active subscription whose one invoice was paid by `payment`. */
 function paidRenewal(payment: Record<string, unknown>): Record<string, unknown> {
   return {
     '/subscriptions/sub_fixture': {
@@ -94,7 +92,6 @@ describe('billing input and provider boundaries', () => {
       quote.sgst.amount_minor,
       quote.total_price.amount_minor,
     ]).toEqual([9, 9, 119]);
-    // The rate frozen with the catalog price is the only one a quote uses.
     expect(() => quoteIntent(config.billing, { ...input, taxRate: '' })).toThrow();
     expect(() =>
       quoteIntent(config.billing, {
@@ -252,7 +249,6 @@ describe('billing input and provider boundaries', () => {
     expect(await read('Thu, 12 Nov 2026 10:00:00 GMT')).toBe(1_794_477_600);
     expect(await read('Thu, 12 Nov 2026 10:00:01 GMT')).toBe(1_794_477_601);
     await expect(read(null)).rejects.toThrow('provider_invalid_response');
-    // A cancellation's response is evidence too, versioned the same way.
     const cancel = new RazorpayProvider(
       config.billing,
       config.razorpay,

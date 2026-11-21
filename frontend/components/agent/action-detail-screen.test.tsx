@@ -55,7 +55,6 @@ const action: Action = {
   updated_at: NOW,
 };
 
-/** An issue group across 12 URLs: the detail carries the first ten. */
 const group: Action = {
   ...action,
   target_kind: 'issue_family',
@@ -103,7 +102,6 @@ function finding(target: Pick<Action, 'id' | 'target_url' | 'target_label'>, ext
   };
 }
 
-/** Serves one Action's detail (and its URLs past the first ten); records every status change. */
 function serve(current: Action, detail: Record<string, unknown> = {}) {
   const patches: unknown[] = [];
   const cursors: (string | null)[] = [];
@@ -159,7 +157,6 @@ function renderDetail() {
   );
 }
 
-/** The New chat a link opens: its path and its query (repeated keys as lists). */
 function chatOf(link: HTMLElement) {
   const target = new URL(link.getAttribute('href')!, 'https://app.test');
   const query: Record<string, string | string[]> = {};
@@ -283,7 +280,6 @@ describe('A missing Action', () => {
 
 describe('A Done Action’s status', () => {
   it.each([
-    // The status fact is the word, then the measurement Tag when there is one.
     ['Done', 'with no check', []],
     ['DoneVerified', 'with a passing check', [metCheck]],
   ] as const)('reads %j %s', async (status, _, checks) => {
@@ -351,7 +347,6 @@ const angleEvidence = {
   run_id: '77777777-7777-4777-8777-777777777777',
   lineage_id: '88888888-8888-4888-8888-888888888888',
   topic_id: null,
-  // As recorded at the refresh: one prompt with its text, one the library no longer had.
   prompts: [
     { id: PROMPT, text: 'Which CRM is cheapest?' },
     { id: '67676767-6767-4767-8767-676767676767', text: null },

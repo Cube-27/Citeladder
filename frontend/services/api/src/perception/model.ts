@@ -1,4 +1,3 @@
-/** The perception model request: rendered templates and the structured output it must return. */
 import { z } from 'zod';
 import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
@@ -47,16 +46,11 @@ export const claimsOutputSchema = perceptionOutputSchema.extend({
 type ClaimsOutput = z.infer<typeof claimsOutputSchema>;
 export type ExtractedClaim = ClaimsOutput['claims'][number];
 
-/** The claims addendum a fact-checked audit appends to the perception templates. */
 type ClaimsRequest = Pick<
   FactCheckPolicy,
   'topics' | 'max_claims_per_answer' | 'claims_system_addendum' | 'claims_user_addendum'
 >;
 
-/**
- * The system and user messages for one package; with `claims`, the configured
- * templates followed by the claims addendum, whatever template is in force.
- */
 export function perceptionPrompt(
   pkg: PerceptionPackage,
   policy: Pick<

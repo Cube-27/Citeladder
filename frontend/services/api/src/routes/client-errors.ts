@@ -1,8 +1,3 @@
-/**
- * The browser's report sinks: one structured log line per report, which Cloud
- * Logging collects. Nothing is stored and nothing leaves the service. Who
- * reported comes from the session when there is one, never from the body.
- */
 import { CSP_REPORTS_PATH } from '@citeladder/contracts/route-ownership';
 import {
   clientReportSchema,
@@ -26,14 +21,6 @@ import { readBody } from '../http/body.ts';
 import { getLogger } from '../logging.ts';
 import { definePostRoute } from './define.ts';
 
-/**
- * The reporting user and, when the request names one in `X-Workspace-Id`,
- * that workspace once the session's membership resolution accepts it. A
- * request naming none records none: it never falls back to the user's
- * earliest workspace. A signed-out or stale session, or a workspace the user
- * is not a member of, reports with whatever was proved: the user alone, or
- * nobody.
- */
 async function reporter(c: Context<AppEnv>, config: ServiceConfig, db: Database) {
   const seen: { workspaceId: string | null } = { workspaceId: null };
   const named = c.req.header('x-workspace-id') !== undefined;
@@ -50,7 +37,6 @@ async function reporter(c: Context<AppEnv>, config: ServiceConfig, db: Database)
   } catch (error) {
     if (!(error instanceof ApiError) || error.status >= 500) throw error;
   }
-  // Set only when the session proved a user, whether or not membership followed.
   const user: SessionUser | undefined = c.get('user');
   return { user_id: user?.id ?? null, workspace_id: seen.workspaceId };
 }
@@ -65,7 +51,6 @@ async function admit(
   await spendBudget(db, budget(budgetName, config.settings), trustedClientNetwork(c, config));
 }
 
-/** The log line one report becomes: a missing chunk is the expected cost of a deploy. */
 function logLine(report: ClientReport) {
   switch (report.kind) {
     case 'slow_interaction':
@@ -104,7 +89,6 @@ function logLine(report: ClientReport) {
   }
 }
 
-/** A URL as logged: its query string and fragment removed. */
 function logged(url: string | null | undefined): string | null {
   return url ? withoutQueryStrings(url) : null;
 }

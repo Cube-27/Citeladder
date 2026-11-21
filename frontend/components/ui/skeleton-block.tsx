@@ -5,15 +5,6 @@ import { figureRowCells, useStripWidth } from '@/components/ui/figure-rows';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
-/**
- * The parts every loading shape is made of, kept apart from `Skeleton`'s
- * variants so the shell's loading state does not carry them on boot.
- */
-
-/**
- * One placeholder: a `well` block, radius 4, at least 12 high. Inside a
- * shape one sweep crosses every block (`skeleton-sweep`, ui-motion.css).
- */
 export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
   return (
     <span
@@ -24,17 +15,8 @@ export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
   );
 }
 
-/** Unequal widths, so a text block does not read as a ruled form. */
 export const TEXT_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
 
-/**
- * The shapes a read's loading state takes: the shape of the page part it
- * stands for, never a stack of text lines. A table's `desktopOnly` columns
- * (its last ones) leave below the `desktop` width, as the loaded table's do;
- * `tagRows` are the fact rows that show a tag; a `keyed` chart draws its key
- * above the plot and its event key and caption under it, as a line chart over
- * time does.
- */
 export type LoadingShape =
   | Readonly<{ kind: 'table'; columns?: number; desktopOnly?: number }>
   | Readonly<{ kind: 'figures'; count?: number }>
@@ -49,7 +31,6 @@ const CHART_HEIGHT: Record<ChartHeight, string> = {
   lg: 'h-[var(--chart-height-lg)]',
 };
 
-/** A loading shape's blocks under one sweep, without a frame of its own. */
 export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
     <div className="skeleton-sweep grid min-w-0">
@@ -83,7 +64,6 @@ function ShapeBody({ shape }: Readonly<{ shape: LoadingShape }>) {
 
 const range = (count: number) => Array.from({ length: count }, (_, index) => index);
 
-/** One caption line: the caption's line height, a block inside. */
 function CaptionLine({ width }: Readonly<{ width: string }>) {
   return (
     <span className="type-caption flex h-lh items-center">
@@ -92,7 +72,6 @@ function CaptionLine({ width }: Readonly<{ width: string }>) {
   );
 }
 
-/** A line chart over time: its key, the plot, its event key, then the caption under it. */
 function KeyedChartBlocks({ plot }: Readonly<{ plot: ReactNode }>) {
   return (
     <div className="grid gap-[var(--compact-gap)]">
@@ -106,12 +85,10 @@ function KeyedChartBlocks({ plot }: Readonly<{ plot: ReactNode }>) {
   );
 }
 
-/** A card's title: one 16×160 block. */
 function TitleBlock() {
   return <SkeletonBlock className="h-4 w-40 max-w-full" />;
 }
 
-/** An Overview widget as it loads, unboxed: its title's line over its body's shape. */
 export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
     <div className="skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]">
@@ -123,7 +100,6 @@ export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   );
 }
 
-/** A report as it loads: its meta line's block (16×240) over its cards. */
 export function ReportSkeletonFrame({
   label,
   variant,
@@ -143,10 +119,6 @@ export function ReportSkeletonFrame({
   );
 }
 
-/**
- * A record's identity card: 40px rows of a 16px label block (30%) beside a
- * value block that fills the value's 20px line (45%) or a 24px tag.
- */
 function FactBlocks({
   rows = 3,
   tagRows = [],
@@ -167,7 +139,6 @@ function FactBlocks({
   );
 }
 
-/** A list: 48px rows of a 32 tile beside a title block (16, 50%) over a caption block (12, 30%). */
 function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
   return (
     <span className="grid">
@@ -184,7 +155,6 @@ function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
   );
 }
 
-/** Cell block widths for a four-column table; more columns share the rest. */
 const CELL_WIDTHS = ['w-2/5', 'w-1/5', 'w-[15%]', 'w-[15%]'] as const;
 
 function cellWidth(columns: number, cell: number): string {
@@ -192,11 +162,6 @@ function cellWidth(columns: number, cell: number): string {
   return cell === 0 ? 'w-2/5' : 'flex-1';
 }
 
-/**
- * A table: the loaded head's height as one `well` band, then 40px rows of
- * 28px cell blocks (6 clear above and below), one per visible column; the
- * last `desktopOnly` cells show from the `desktop` width.
- */
 export function TableBlocks({
   columns = 4,
   desktopOnly = 0,
@@ -219,11 +184,6 @@ export function TableBlocks({
   );
 }
 
-/**
- * FigureStrip's frame, rows (`figureRows`) and cells, with its dividers
- * (globals.css): a 12px label block on the label's 16px line over a 20×80
- * value block on the value's 28px line.
- */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   const { ref, width } = useStripWidth<HTMLSpanElement>();
   const cells = figureRowCells({ count, width });
@@ -243,10 +203,6 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   );
 }
 
-/**
- * A chat, inset like AgentThread: the person's turn on the right (40 high,
- * 45%, radius 8), then the reply's two paragraph blocks on the left, no card.
- */
 function ThreadBlocks() {
   return (
     <span className="grid gap-[var(--card-padding)] px-4">
@@ -259,11 +215,6 @@ function ThreadBlocks() {
   );
 }
 
-/**
- * The composer's card (ComposerFrame): `surface` at radius 8 on `shadow-pop`,
- * an 8 inset, the one-line field's 30, then the 32 control row with the
- * round Send block at its end. No text.
- */
 export function ComposerBlocks() {
   return (
     <span className="bg-surface border-rule rounded-card shadow-pop grid gap-1 border p-2">
@@ -275,7 +226,6 @@ export function ComposerBlocks() {
   );
 }
 
-/** A loading shape's frame: busy, with only its verb announced, after a beat. */
 export function SkeletonFrame({
   label,
   variant,
@@ -290,17 +240,8 @@ export function SkeletonFrame({
   );
 }
 
-/**
- * Loaders on screen that have already been revealed. A cold load passes
- * through several owners in turn (shell, route chunk, first read); a loader
- * that mounts while another is showing is the same wait, so it starts revealed.
- */
 let revealedLoaders = 0;
 
-/**
- * What is loading ("Loading runs"), announced after a beat
- * (`LOADING_INDICATOR_DELAY_MS`) and never drawn: the blocks show that it loads.
- */
 export function LiveVerb({ label }: Readonly<{ label: string }>) {
   const [revealed, setRevealed] = useState(() => revealedLoaders > 0);
   useEffect(() => {

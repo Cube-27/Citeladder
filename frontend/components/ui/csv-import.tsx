@@ -3,11 +3,6 @@ import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { StatusMark } from '@/components/ui/status-mark';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
-/**
- * Shared file-selection lifecycle; parsing remains owned by the importing
- * feature. A file that cannot be read, or is not UTF-8, leaves nothing parsed
- * and sets `readError`; only the latest selection lands.
- */
 export function useCsvImportFile<T>(parse: (text: string) => T) {
   const [parsed, setParsed] = useState<T | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -49,11 +44,6 @@ export function useCsvImportFile<T>(parse: (text: string) => T) {
   return { fileName, inputRef, parsed, readError, reading, reset, selectFile };
 }
 
-/**
- * The consistent file picker (a CSV by default; `label` and `accept` name
- * another kind, such as a product feed); feature-owned parsers receive the
- * selected File.
- */
 export function CsvImportFileInput({
   inputRef,
   onSelect,
@@ -84,7 +74,6 @@ export function CsvImportFileInput({
   );
 }
 
-/** Parsed-row summary and scrolling frame around a feature-owned table preview. */
 export function CsvImportPreview({
   children,
   errorCount,

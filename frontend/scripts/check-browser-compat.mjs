@@ -9,27 +9,6 @@ import { lineIndex, parseSource, walk } from './source-ast.mjs';
 export { supportMatrix };
 export { cssCompatViolations, stylesheetFailures } from './check-css-compat.mjs';
 
-/**
- * Browser-compatibility gate: fails when browser source uses a web or
- * JavaScript API that a browser in the support matrix lacks, and runs the
- * stylesheet gate (`check-css-compat.mjs`) against the same matrix.
- *
- * The matrix is the `browserslist` in package.json, the one statement of
- * supported browsers; `apps/app/vite.config.ts` builds for it and
- * `public/browser-support.js` warns the browsers below it. Support data is
- * MDN's browser-compat-data.
- *
- * What it can see without types: global constructors and functions
- * (`new IntersectionObserver`, `structuredClone(...)`), static members
- * (`AbortSignal.any`, `URL.canParse`, `Promise.try`) and members of the
- * well-known global instances (`navigator.clipboard`, `document.startViewTransition`).
- * Instance methods on arbitrary values (`list.toSorted()`) are left to
- * TypeScript, whose `lib` in tsconfig.json stops at the matrix's ECMAScript
- * year. An API read only through optional chaining (`window.trustedTypes?.x`)
- * is feature-detected: the code handles its absence, so it passes.
- */
-
-// Globals that are instances, mapped to the interface BCD files them under.
 const GLOBAL_INSTANCES = {
   crypto: 'Crypto',
   document: 'Document',
@@ -43,10 +22,6 @@ const GLOBAL_INSTANCES = {
 };
 const GLOBAL_SCOPES = new Set(['globalThis', 'self', 'window']);
 
-// Browser source: the product app, the website's islands and the code they
-// share. Worker code (`apps/*/src` server modules, `lib/server`) runs on
-// Cloudflare, not in a reader's browser. Inline `<script>` in `.astro` files
-// is not read.
 const BROWSER_ROOTS = [
   'apps/app/src',
   'components',
@@ -99,8 +74,6 @@ function bindingNames(pattern, names) {
   }
 }
 
-// Every name the file declares anywhere. A local `URL` or `history` is not the
-// browser's, so the gate leaves it alone rather than guess at scopes.
 function declaredNames(program) {
   const names = new Set();
   walk(program, (node) => {
@@ -131,7 +104,6 @@ function declaredNames(program) {
   return names;
 }
 
-// Expressions only ever used through `?.`: `x?.y` and `x?.()` handle a missing `x`.
 function optionallyUsed(program) {
   const guarded = new Set();
   walk(program, (node) => {
@@ -141,7 +113,6 @@ function optionallyUsed(program) {
   return guarded;
 }
 
-/** Each API in `source` that a matrix browser lacks, once per API. */
 export function compatViolations(source, label, matrix) {
   const program = parseSource(source, label);
   const declared = declaredNames(program);
@@ -188,7 +159,6 @@ function sourceFiles(root, directory) {
   });
 }
 
-/** Violations across the browser source under `root`, as printable lines. */
 export function checkBrowserSource(root, matrix) {
   const failures = [];
   const files = [

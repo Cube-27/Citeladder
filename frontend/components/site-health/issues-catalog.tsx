@@ -49,11 +49,6 @@ import {
 import { issueTitle } from '@/lib/site-health/issues';
 import { formatCount } from '@/lib/format';
 
-/**
- * The Issues screen's reads, none waiting on another: the listed page, the
- * crawl's unfiltered summary with its worst issues, and — while one is open —
- * the open issue's occurrences.
- */
 function useIssuesCatalogQueries({
   workspaceId,
   crawlId,
@@ -75,7 +70,6 @@ function useIssuesCatalogQueries({
     siteHealthQueries.issues(workspaceId, crawlId, ISSUE_PRIORITY_PARAMS),
   );
   const detailQuery = useQuery({
-    // The dialog lists the pages its row counted, so it takes the row's page-kind filter.
     ...siteHealthQueries.issue(workspaceId, crawlId, selectedGroupId ?? '', {
       cursor: occurrenceCursor,
       limit: ISSUE_OCCURRENCE_LIMIT,
@@ -84,9 +78,6 @@ function useIssuesCatalogQueries({
     enabled: selectedGroupId !== null,
   });
   const rows = issuesQuery.data?.items ?? [];
-  // The open issue as its list row says it, or — named by the address but on
-  // another page or tab — as its own detail says it. Never another issue's
-  // detail retained while this one loads.
   const detail = detailQuery.data?.group_id === selectedGroupId ? detailQuery.data : undefined;
   const open: IssueHead | null =
     rows.find((issue) => issue.group_id === selectedGroupId) ??
@@ -105,7 +96,6 @@ export function IssuesCatalog({
   workspaceId: string;
   projectId: string;
   crawlId: string;
-  /** A refresh failure to report above the catalog it could not refresh. */
   notice?: ReactNode;
 }>) {
   const catalog = useIssueFilters();
@@ -118,10 +108,8 @@ export function IssuesCatalog({
     selectedGroupId,
     occurrenceCursor: catalog.occurrenceCursor,
   });
-  // Fix progress is a side read: while it loads or fails, the summary shows no fix lines.
   const fixesQuery = useQuery(siteHealthQueries.issueFixes(workspaceId, crawlId));
   const summary = issuesQuery.data?.summary ?? null;
-  // The crawl's unfiltered counts bound every filtered one, so they hold the counts' widths.
   const crawlSummary = priorityQuery.data?.summary;
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
@@ -191,7 +179,6 @@ export function IssuesCatalog({
   );
 }
 
-/** The list's read as the table states it: loading and failure before rows, then "none match". */
 function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQuery']) {
   if (query.isError && !query.data)
     return {
@@ -210,10 +197,6 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
   return undefined;
 }
 
-/**
- * The issue, its severity, the pages it affects, then its category; severity
- * and pages order the list. The category is the column that may scroll.
- */
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
   return [
     { key: 'issue', label: 'Issue', kind: 'identity' },
@@ -235,7 +218,6 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
   ];
 }
 
-/** One issue: the whole row opens its detail; the title link is the keyboard's way in. */
 function IssueRow({
   issue,
   onOpen,
@@ -258,8 +240,6 @@ function IssueRow({
             </Pressable>
           </TextLink>
           {issue.description ? (
-            // The rule's description states the passing check, so it is
-            // offered beside the title it explains, never under it.
             <InfoHint label={`What “${title}” checks`}>{issue.description}</InfoHint>
           ) : null}
         </Inline>
@@ -277,7 +257,6 @@ function IssueRow({
   );
 }
 
-/** Technical | Content | AEO, each with its issue count under the other filters. */
 function SectionControl({
   value,
   summary,
@@ -304,10 +283,6 @@ function SectionControl({
   );
 }
 
-/**
- * The list's narrowing: severity (whose advisory level lists the advisories),
- * the page type, and a deep link's one-issue filter while it holds.
- */
 function catalogFilters(
   filters: IssueFilters,
   rows: readonly SiteIssue[],
@@ -328,7 +303,6 @@ function catalogFilters(
       value: filters.page_kind,
       onChange: (page_kind) => updateFilters({ page_kind }),
     }),
-    // A deep link's one-issue filter, counted on the button and cleared in its menu.
     ...(filters.rule_id
       ? [
           choiceFilter({
@@ -351,7 +325,6 @@ function catalogFilters(
   ];
 }
 
-/** The deep-linked issue's title, from the rows it filtered to; never its rule id. */
 function ruleFilterTitle(rows: readonly SiteIssue[], ruleId: string): string {
   const row = rows.find((issue) => issue.rule_id === ruleId);
   return row ? issueTitle(row) : 'one issue';
@@ -368,7 +341,6 @@ function useCatalogPager(
   onGo: (cursor: string | null) => void,
 ): DataTablePager {
   const [trail, setTrail] = useState<(string | null)[]>([]);
-  // A filter change drops the cursor, which starts a new trail.
   const followed = cursor ? trail : [];
   return {
     canPrev: Boolean(cursor),

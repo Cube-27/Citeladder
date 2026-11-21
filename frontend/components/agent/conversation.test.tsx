@@ -91,7 +91,6 @@ describe('A finished reply’s activity', () => {
         .getAllByRole('listitem', { hidden: true })
         .map((item) => item.textContent),
     ).toEqual(['Loaded the method, Done', 'Read connected data, Done']);
-    // Above the reply, where the running turn's status line was, so the text does not move.
     expect(
       summary.compareDocumentPosition(screen.getByText('Here are the edits.')) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -200,11 +199,9 @@ describe('Actions in a chat', () => {
     );
 
     const chips = await screen.findAllByRole('link', { name: 'School uniforms Done' });
-    // Once in the reply: not inside a longer word or code.
     expect(chips).toHaveLength(1);
     expect(chips[0]?.getAttribute('href')).toMatch(new RegExp(`^/actions/${cited}`, 'u'));
     expect(screen.getByText('School uniforms', { selector: 'code' })).toBeInTheDocument();
-    // An Action this reply did not cite stays text.
     expect(screen.queryByRole('link', { name: /Returns policy/u })).not.toBeInTheDocument();
     const mentions = screen.getByRole('list', { name: 'Mentioned Actions' });
     expect(within(mentions).getByRole('link')).toHaveAccessibleName('@School uniforms Done');
@@ -255,11 +252,6 @@ describe('Links in a reply', () => {
 const PROVIDER_ERROR =
   'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.';
 
-/**
- * A chat whose latest run ended with `run`, holding `messages` built from the
- * fixture's request and reply. An unanswered turn's reply, as the server
- * writes it, records no model call, evidence or document.
- */
 function chatWith(
   run: { status: string; error_code?: string },
   messages: (
@@ -325,7 +317,6 @@ describe('An unanswered turn', () => {
     expect(screen.queryByRole('button', { name: 'Copy reply' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Edit last request' })).toBeEnabled();
-    // The error is a notice, not a heading, so the thread's levels under the page's h1 never skip.
     expect(screen.queryAllByRole('heading').map((heading) => heading.tagName)).toEqual([]);
   });
 
@@ -394,7 +385,6 @@ describe('An unanswered turn', () => {
 
     expect(await screen.findByText('Shorten the title.')).toBeVisible();
     expect(screen.getByText('Improve our pricing page snippet.')).toBeVisible();
-    // Only the latest run's outcome is known: the earlier turn is a quiet note.
     expect(screen.getByRole('alert')).toHaveTextContent('Error: Failed at');
     expect(screen.getByRole('status')).toHaveTextContent('Note: Did not finish at');
   });
@@ -430,7 +420,6 @@ describe('A reply’s time', () => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
   });
 
-  // One date-time format everywhere (DAT-04): the year and zone show even today.
   it('reads in full today', async () => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
     vi.useFakeTimers({ toFake: ['Date'] });

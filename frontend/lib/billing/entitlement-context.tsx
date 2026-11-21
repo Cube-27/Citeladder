@@ -11,17 +11,8 @@ type EntitlementContextValue = {
   isLoading: boolean;
   usageIsLoading: boolean;
   usageIsError: boolean;
-  /**
-   * Whether one capability is granted. Derived from the resolved capability
-   * fold — NEVER from a tier name. A tier is a purchase, a capability is what
-   * that purchase actually granted, and only the latter may gate UI.
-   */
   hasCapability: (key: string) => boolean;
   canStartPaidWork: boolean;
-  /**
-   * A managed plan: the platform supplies engine and DataForSEO keys, so the
-   * workspace neither sees nor needs provider settings (B32).
-   */
   managed: boolean;
 };
 
@@ -37,24 +28,8 @@ const FAIL_CLOSED: Omit<EntitlementContextValue, 'isLoading'> = {
 
 const EntitlementContext = createContext<EntitlementContextValue | null>(null);
 
-/**
- * Account entitlement resolver. UI hints never replace backend enforcement.
- *
- * Fails closed in every non-resolved state — loading, strict-parse error, and
- * `entitlement_unresolved` all yield a null entitlement and no capabilities.
- * An unresolved entitlement is an explicit backend state, not a transport
- * failure, and it must not read as "allowed".
- */
 export function EntitlementProvider({ children }: Readonly<{ children: ReactNode }>) {
-  // The WORKSPACE, not the active project. Deriving it from a project made
-  // entitlements unanswerable in exactly the workspace that needs them most:
-  // one with no project yet, where the reader is about to be told whether
-  // they may create one.
   const { activeWorkspaceId: workspaceId, activeWorkspace, status } = useProjectContext();
-  // Private finance reads are Owner/Admin only on the server. Asking for them
-  // as a Member or Viewer would be a guaranteed 403, so the query is simply
-  // not issued — the member-safe allowance hints on the workspace entitlement
-  // cover what the shell actually needs.
   const canReadBilling = activeWorkspace?.capabilities.includes('manage_billing') ?? false;
   const entitlementQuery = useQuery({
     ...billingQueries.workspaceEntitlement(workspaceId ?? ''),
@@ -65,15 +40,6 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     enabled: canReadBilling,
   });
 
-  /**
-   * Not yet answerable, which is not the same as answered "no".
-   *
-   * Until the workspace resolves, the entitlement query has nothing to ask
-   * about and sits DISABLED — and a disabled query is not `isLoading`.
-   * Reading that alone reported a settled "no capabilities" during the
-   * busiest moment of a cold start, and the shell drew itself without the
-   * controls it was about to gain.
-   */
   const unresolved = workspaceId === null || status === 'resolving' || entitlementQuery.isLoading;
 
   const value = useMemo<EntitlementContextValue>(() => {
@@ -85,9 +51,6 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     if (data?.status !== 'resolved') {
       return {
         ...FAIL_CLOSED,
-        // Account usage is independently authoritative: the allowance a new
-        // workspace spends against is answerable before it owns any project,
-        // which is what the first-project flow asks about.
         usage,
         isLoading: unresolved,
         usageIsLoading: usageQuery.isLoading,
@@ -116,8 +79,6 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       usageIsLoading: usageQuery.isLoading,
       usageIsError: usageQuery.isError,
       hasCapability,
-      // Product controls follow effective capability authority, not a plan name
-      // or historical grant kind. Backend admission remains authoritative.
       canStartPaidWork: hasCapability(AGENT_CAPABILITY),
       managed: data.credential_mode === 'funded',
     };
@@ -140,10 +101,6 @@ export function useEntitlement() {
   return context;
 }
 
-/**
- * Whether the workspace is on a managed plan (B32). Fails closed like every
- * entitlement hint: outside a resolved entitlement it reads as BYOK.
- */
 export function useManagedPlan(): boolean {
   return useContext(EntitlementContext)?.managed ?? false;
 }

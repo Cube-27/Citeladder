@@ -1,9 +1,3 @@
-/**
- * Probe launches: one per Run probe or scheduled occurrence, an audit per
- * market sharing a `launch_id`, labelled together once every market ended.
- * Reads group them, newest first, and derive the launch's state from its runs
- * and its labelling outcome.
- */
 import type { ProbeRun } from '@citeladder/contracts/probes';
 import { sql } from 'kysely';
 
@@ -71,7 +65,6 @@ function launchState(audits: readonly LaunchRow[]): ProbeRun['state'] {
   return outcome === 'labelled' ? 'ready' : 'unavailable';
 }
 
-/** The engines, markets and answers of `audits`, as their configurations froze them. */
 function basis(audits: readonly LaunchRow[]) {
   const configs = audits.map((audit) => readFrozenConfiguration(audit.configuration));
   const engines = new Set(configs.flatMap((config) => config.engines ?? []));
@@ -86,11 +79,6 @@ function basis(audits: readonly LaunchRow[]) {
   };
 }
 
-/**
- * A launch's run for the probe bar and, once labelled, what the reads score:
- * the answered audits and only their markets and engines, so a market that
- * failed is never claimed (rows arrive newest first).
- */
 function launch(launchId: string, audits: readonly LaunchRow[]) {
   const createdAt = new Date(
     Math.min(...audits.map((audit) => audit.created_at.getTime())),
@@ -104,7 +92,6 @@ function launch(launchId: string, audits: readonly LaunchRow[]) {
   const answered = audits.filter((audit) => ANSWERED_STATUSES.includes(audit.status));
   const oldest = answered.at(-1);
   if (run.state !== 'ready' || !oldest) return { run, labelled: null };
-  // The tracked businesses the launch's first run froze, the brand first.
   const { brand, tracked } = probeRoster(oldest.configuration);
   return {
     run,
@@ -117,10 +104,6 @@ function launch(launchId: string, audits: readonly LaunchRow[]) {
   };
 }
 
-/**
- * The newest `limit` probe launches, newest first; `labelled` keeps only
- * those labelled, the ones Market and Objections read.
- */
 export async function probeLaunches(
   db: Database,
   scope: Scope,
@@ -132,7 +115,6 @@ export async function probeLaunches(
   );
 }
 
-/** The newest `limit` labelled launches, newest first. */
 export async function labelledLaunches(db: Database, scope: Scope, limit: number) {
   const launches = await probeLaunches(db, scope, { limit, labelled: true });
   return launches.flatMap((row) => (row.labelled ? [row.labelled] : []));

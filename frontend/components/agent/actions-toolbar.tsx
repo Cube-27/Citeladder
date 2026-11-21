@@ -35,11 +35,6 @@ const CREATE_PROMPT = 'Create an action for';
 const WORK_PROMPT =
   'Help me work through my open actions, starting with what blocks AI from reading my site.';
 
-/**
- * The Actions page's one control row: which statuses show and what the tree
- * groups by, then Filters (impact, source) on the left; Create action and
- * Accept all on the right.
- */
 export function ActionsToolbar({
   scope,
   view,
@@ -95,7 +90,6 @@ function GroupByMenu({ view }: Readonly<{ view: ActionsView }>) {
   );
 }
 
-/** Create action: ask the Agent to file one, Analyze a page (CO6), or start on the list with the Agent. */
 function CreateMenu() {
   const [analyzing, setAnalyzing] = useState(false);
   const navigate = useNavigate();
@@ -122,7 +116,6 @@ function CreateMenu() {
   );
 }
 
-/** Accept every New Action the current filters match, in one bounded server change. */
 function AcceptAll({
   scope,
   view,

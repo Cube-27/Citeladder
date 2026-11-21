@@ -7,12 +7,6 @@ type Table =
   | 'mcp_confirmations'
   | 'mcp_oauth_grants';
 
-/**
- * Bound protocol storage. Expired unconsumed requests, codes and change
- * confirmations go at once;
- * consumed ones and ended grants are kept for the retention period as audit
- * evidence, then go too.
- */
 export async function cleanupMcpProtocol(db: Database, now = new Date(), canAdmit = () => true) {
   const retained = new Date(now.getTime() - mcpPolicy.protocol_retention_seconds * 1000);
   let deleted = 0;

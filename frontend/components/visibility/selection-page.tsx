@@ -15,19 +15,11 @@ import type {
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
-/**
- * The frame every screen over the visibility selection shares (the Sources
- * tabs, Insights, Competitors): the runs' state, and the page's filters.
- */
 type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export type SelectionPageState = 'loading' | 'error' | 'empty' | null;
 
-/**
- * The page's filter strip. It stands while the runs load too, so its row is
- * already there when they answer and nothing under it moves.
- */
 export function selectionPageFilterBar(
   state: SelectionPageState,
   filters: readonly FilterDefinition[],
@@ -38,7 +30,6 @@ export function selectionPageFilterBar(
 
 export function selectionPageState(queries: Queries): SelectionPageState {
   if (queries.auditsQuery.isLoading) return 'loading';
-  // A failed poll over cached runs keeps the data on screen; the next poll retries.
   if (queries.hasRuns) return null;
   return queries.auditsQuery.isError ? 'error' : 'empty';
 }
@@ -48,7 +39,6 @@ export function SelectionPageStateBlock({
   queries,
 }: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries }>) {
   if (state === 'empty') return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
-  // Loading takes the overview's shape: its figures, then its chart, then its table.
   if (state === 'loading')
     return (
       <SectionStack aria-busy>
@@ -67,11 +57,6 @@ export function SelectionPageStateBlock({
   );
 }
 
-/**
- * The page's filters: the ones every view shares (market, measurement,
- * prompts, surface, period). Sources and Query fanouts add their table's
- * own (`useTableFilters`) to the same strip.
- */
 export function useSelectionPageFilters({
   view,
   filters,

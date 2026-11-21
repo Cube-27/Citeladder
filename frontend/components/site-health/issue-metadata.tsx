@@ -5,10 +5,6 @@ import { dimensionLabel, severityLabel } from '@/lib/site-health/issues';
 
 type IssueFacts = Pick<SiteIssue, 'finding_class' | 'severity' | 'dimension'>;
 
-/**
- * How severe an issue is: the app's severity mark (High negative, Medium
- * warning, Low neutral). An advisory has no severity, so it is a static tag.
- */
 export function IssueSeverityMark({
   issue,
 }: Readonly<{ issue: Pick<IssueFacts, 'finding_class' | 'severity'> }>) {
@@ -21,7 +17,6 @@ export function IssueSeverityMark({
   );
 }
 
-/** Which dimension the issue counts against, as a category tag. */
 export function IssueCategoryTag({ issue }: Readonly<{ issue: Pick<IssueFacts, 'dimension'> }>) {
   return <Tag>{dimensionLabel(issue.dimension)}</Tag>;
 }

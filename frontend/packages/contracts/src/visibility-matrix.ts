@@ -4,12 +4,6 @@ import { brandMarkFields } from './brand-mark.ts';
 
 import { netSentimentSchema } from './visibility.ts';
 
-// The Insights performance matrix and top rankings (W6): your brand, or each
-// tracked brand, across two of engine, topic, market and brand, read from the
-// persisted metric blocks of each market's latest run in the selection. Topics
-// are the topic each run froze (AV-5); position and win rate count only the
-// tracked roster (AV-7).
-
 const matrixDimensionSchema = z.enum(['engine', 'topic', 'market', 'brand']);
 export type MatrixDimension = z.infer<typeof matrixDimensionSchema>;
 
@@ -17,7 +11,6 @@ const answers = z.number().int();
 
 const axesSchema = z.object({
   engine: z.array(z.object({ logical_engine: z.string(), answers })),
-  // `renamed_from`: the name the run froze, when the topic has been renamed since.
   topic: z.array(
     z.object({
       topic_id: z.uuid(),
@@ -26,7 +19,6 @@ const axesSchema = z.object({
       answers,
     }),
   ),
-  // `market_id` null is the project default market.
   market: z.array(z.object({ market_id: z.uuid().nullable(), label: z.string(), answers })),
   brand: z.array(
     z.object({
@@ -38,9 +30,6 @@ const axesSchema = z.object({
   ),
 });
 
-// A segment pair with no answers is `not_run`, never zero. A measured value is
-// null when it does not apply: position when the brand was never named, win
-// rate when no tracked business was, sentiment when the run was not perceived.
 const unmeasured = [z.object({ kind: z.literal('not_run') })] as const;
 const matrixCellSchema = z.discriminatedUnion('kind', [
   ...unmeasured,
@@ -56,7 +45,6 @@ const matrixCellSchema = z.discriminatedUnion('kind', [
 ]);
 export type MatrixCell = z.infer<typeof matrixCellSchema>;
 
-// grid[i][j]: item i of the pair's first axis against item j of its second.
 const grid = z.array(z.array(matrixCellSchema));
 
 const leaderSchema = z.object({
@@ -65,8 +53,6 @@ const leaderSchema = z.object({
   ...brandMarkFields,
   mention_rate: z.number(),
 });
-// One row per axis item: at most five brands by mention rate, in the same
-// states as a cell.
 const leaders = z.array(
   z.discriminatedUnion('kind', [
     ...unmeasured,

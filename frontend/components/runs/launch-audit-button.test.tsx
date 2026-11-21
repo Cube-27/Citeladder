@@ -37,7 +37,6 @@ describe('LaunchAuditButton', () => {
       name: 'Launch run',
       description: 'Add an active prompt to launch a run.',
     });
-    // Held with aria-disabled, so it keeps focus and its tooltip can open.
     expect(button).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(button);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

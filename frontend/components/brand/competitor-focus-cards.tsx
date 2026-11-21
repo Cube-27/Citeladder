@@ -10,7 +10,6 @@ import { textRole } from '@/components/ui/typography';
 import { endSentence, formatCount } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
 
-/** "10 of 32" when the read capped the list, else nothing. */
 function cappedCount(shown: number, total: number): string | undefined {
   return total > shown ? `${formatCount(shown)} of ${formatCount(total)}` : undefined;
 }
@@ -21,7 +20,6 @@ const SOURCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'you', label: 'You', width: 'category' },
 ];
 
-/** Domains cited in answers naming the competitor, and whether they appear beside you too. */
 export function CompetitorSources({ focus }: Readonly<{ focus: CompetitorFocus }>) {
   const name = focus.competitor.name;
   return (
@@ -69,7 +67,6 @@ const PROMPT_COLUMNS: readonly DataTableColumn[] = [
   { key: 'engines', label: 'Engines', kind: 'number', width: 'figure' },
 ];
 
-/** Prompts where an answer names the competitor and not you; rows open the prompt. */
 export function NamedInsteadOfYou({ focus }: Readonly<{ focus: CompetitorFocus }>) {
   return (
     <DataTable

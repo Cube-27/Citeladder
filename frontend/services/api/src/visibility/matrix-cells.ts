@@ -1,8 +1,3 @@
-/**
- * The performance matrix and top rankings (W6) over loaded runs. Pure: every
- * value comes from a run's persisted metric block (the whole run or one frozen
- * topic, AV-5) and its persisted perceptions; nothing is reclassified.
- */
 import type {
   MatrixAxes,
   MatrixCell,
@@ -29,19 +24,15 @@ const NO_MENTIONS = { mentions: 0, classified: 0, positive: 0, negative: 0, net_
 
 export type MatrixRun = {
   market: { id: string | null; label: string };
-  /** Null when the market has no run in the selection. */
   run: {
     auditId: string;
     metrics: unknown;
-    /** The run's per-topic blocks, keyed by the topic it froze, with that name. */
     topics: ReadonlyMap<string, { name: string; metrics: unknown }>;
-    /** Its answers with their frozen topic; null when the run was not perceived. */
     answers: readonly (PerceptionAnswer & { topicId: string | null })[] | null;
   } | null;
 };
 
 export type MatrixInput = {
-  /** Every project market; `strip` is the one the reader's selection reads. */
   runs: readonly MatrixRun[];
   strip: number;
   topicNames: ReadonlyMap<string, string>;
@@ -59,7 +50,6 @@ const byAnswers = <T extends { answers: number }>(items: T[], name: (item: T) =>
     .toSorted((a, b) => b.answers - a.answers || compareText(name(a), name(b)))
     .slice(0, policy.visibility.matrix_axis_limit);
 
-/** Computes each segment once: every brand on an axis reads the same segment. */
 function perSegment<T>(compute: (segment: Segment) => T) {
   const seen = new Map<string, { value: T }>();
   return (segment: Segment) => {

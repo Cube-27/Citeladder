@@ -1,17 +1,3 @@
-/*
- * The authenticated app's stylesheet.
- *
- * `source(none)` turns off Tailwind's automatic content detection, which walks
- * up to the nearest package boundary — here the whole frontend, so the app was
- * generating utilities for the marketing site, for every `*.test.tsx`, and for
- * the Playwright specs. Nothing in this app can render a marketing section, so
- * none of those classes could ever match; they were simply carried.
- *
- * The list below is what the app can actually reach. Adding a directory the app
- * imports from and forgetting it here fails SILENTLY — the class is just absent
- * — so `appSourceViolations` in scripts/design-system-source-checks.mjs fails
- * the design-system check when an imported directory is missing.
- */
 /* Both imports come first: CSS drops an `@import` that follows another
    at-rule, and putting the `@source` list above this one silently shipped a
    stylesheet with no design system in it at all. */

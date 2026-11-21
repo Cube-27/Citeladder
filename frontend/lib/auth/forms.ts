@@ -1,17 +1,8 @@
-/**
- * Client-side auth form schemas (F4).
- *
- * These validate the login/register forms in the browser (react-hook-form +
- * zod) BEFORE a request is made. They are intentionally separate from the API
- * contract schemas in `@citeladder/contracts` (which validate backend responses):
- * these describe form *input*, the API schemas describe server *output*.
- */
 import { z } from 'zod';
 import { humanizeApiError } from '@/lib/api/errors';
 import { TERMS_CHANGED_CODE } from '@/lib/auth/account-transition';
 import { authFormPolicy } from '@/lib/config/auth';
 
-/** Shared email + password rules reused by both forms. */
 const email = z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.');
 const password = z
   .string()
@@ -59,33 +50,18 @@ export function authErrorMessage(error: unknown): string {
   return humanizeApiError(error).message;
 }
 
-/** Sign-up refusals the API attaches to the email field (`details.field`), not the form. */
 const EMAIL_FIELD_CODES: ReadonlySet<string> = new Set([
   'email_domain_reserved',
   'disposable_email_domain',
 ]);
 
-/** The server's email-field refusal for a sign-up, shown under the field. */
 export function signupEmailFieldError(error: unknown): string | undefined {
   const { code, message } = humanizeApiError(error);
   return code && EMAIL_FIELD_CODES.has(code) ? message : undefined;
 }
 
-/**
- * Messages for the coded `?error=` the Google sign-in callback redirects with.
- *
- * The callback is a full-page navigation, so it cannot return a JSON error
- * body — it carries a machine-readable code on the login URL instead. Codes
- * are owned by the native auth OAuth service. An unrecognized code still
- * gets a message rather than a silent, unexplained bounce back to /login.
- */
 const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Please try again.';
 
-// A Map, not an object literal: the code comes straight off the query string,
-// and a plain-object lookup of `__proto__` or `constructor` returns an
-// INHERITED value rather than undefined. `?? fallback` does not catch that, so
-// the non-string escapes into the alert and React throws on rendering it —
-// `/login?error=__proto__` would blank the login page.
 const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   [
     'oauth_signin_state_invalid',
@@ -107,7 +83,6 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
-  // Not Google's: the app ended a session that predates the published Terms.
   [TERMS_CHANGED_CODE, 'Our Terms of Service changed. Sign in again to agree to them.'],
 ]);
 

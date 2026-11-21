@@ -1,9 +1,3 @@
-/**
- * Fact-check metrics over persisted claims and verdicts: pure and
- * deterministic. A claim without a verdict is a counted state (pending,
- * unavailable by reason, low confidence), never a zero, and accuracy always
- * travels with the coverage it was computed over.
- */
 import {
   claimUnavailableReasonSchema,
   type AccuracyClaim,
@@ -29,7 +23,6 @@ export type ClaimStatus =
   | { kind: 'unavailable'; reason: UnavailableReason };
 
 type FactRef = AccuracyClaim['facts'][number];
-/** A frozen fact revision: what a verdict cites and what By fact groups on. */
 export type FactRevision = FactRef & { revision_id: string; fact_id: string; revision: number };
 
 export type ClaimRow = {
@@ -41,13 +34,10 @@ export type ClaimRow = {
   end: number;
   status: ClaimStatus;
   facts: FactRevision[];
-  /** The claim's verdict row, the target of an override; null when it was never verified. */
   verdictId: string | null;
-  /** The newest override when it differs from the model; `status` then carries the person's verdict. */
   edited: AccuracyClaim['edited'];
 };
 
-/** Claim extraction for one answer that names the brand. */
 export type Extraction =
   | { kind: 'done' }
   | { kind: 'pending' }
@@ -59,14 +49,12 @@ export type FactAnswer = {
   observedAt: string;
   logicalEngine: string;
   prompt: string;
-  /** Configuration, templates, metrics version and fact set; a change breaks comparability. */
   identity: string;
   extraction: Extraction;
   claims: ClaimRow[];
   citations: { domain: string; url: string }[];
 };
 
-/** A persisted perception or verification outcome as an unavailable reason, or null when it ran. */
 export function unavailableReason(row: {
   outcome: string;
   outcome_reason: string | null;
@@ -77,12 +65,6 @@ export function unavailableReason(row: {
   return reason.success ? reason.data : 'task_failed';
 }
 
-/**
- * One claim's status: a low-confidence claim is never verified; a topic with
- * no frozen fact is not covered without a model call; otherwise the
- * verification outcome and verdict row decide, and a person's newest
- * override of that row decides over the model (AV-12).
- */
 export function claimStatus(input: {
   lowConfidenceClaim: boolean;
   topicHasFact: boolean;
@@ -102,7 +84,6 @@ export function claimStatus(input: {
   const reason = unavailableReason(input.verification);
   if (reason) return { kind: 'unavailable', reason };
   if (!input.verdict) return { kind: 'verdict', verdict: 'not_covered' };
-  // A claim the model left out has no verdict; it never counts as "no fact covers it".
   if (input.verdict.model_omitted) return { kind: 'unavailable', reason: 'model_omitted' };
   if (input.verdict.override) return { kind: 'verdict', verdict: input.verdict.override };
   if (input.verdict.low_confidence) return { kind: 'low_confidence' };
@@ -125,7 +106,6 @@ function emptyCoverage(): AccuracyCoverage {
   };
 }
 
-/** Accuracy and coverage over claims, plus the answers whose extraction is not done. */
 function scoreClaims(
   claims: readonly Pick<ClaimRow, 'status' | 'edited'>[],
   extractions: readonly Extraction[] = [],
@@ -158,7 +138,6 @@ export function score(answers: readonly FactAnswer[]): AccuracyScore {
   );
 }
 
-/** The read state: a value once any claim has a verdict. */
 function readState(
   answers: readonly FactAnswer[],
   factChecked: boolean,
@@ -195,7 +174,6 @@ function breakdown(
     .sort((a, b) => b.score.coverage.claims - a.score.coverage.claims || compareText(a.key, b.key));
 }
 
-/** A claim with its answer context, ordered newest answer first. */
 export type PositionedClaim = AccuracyClaim & { ordinal: number };
 
 export function claimOrder(
@@ -226,11 +204,6 @@ export function claimView(claim: ClaimRow) {
   };
 }
 
-/**
- * Each frozen fact revision with the supported, contradicted and inconclusive
- * verdicts citing it. A revision no such verdict cites is `pending` while any
- * answer or claim is still being checked, then `not_raised`.
- */
 export function factBreakdown(
   answers: readonly FactAnswer[],
   frozen: readonly FactRevision[],
@@ -292,7 +265,6 @@ function raisedClaims(fact: AccuracyFact) {
   return fact.counts.kind === 'raised' ? fact.counts.claims : -1;
 }
 
-/** The claims `keep` accepts, with their answer context, in claim order. */
 export function positionedClaims(
   answers: readonly FactAnswer[],
   keep: (claim: ClaimRow) => boolean = () => true,
@@ -318,7 +290,6 @@ function isContradicted(claim: { status: ClaimStatus }) {
   return claim.status.kind === 'verdict' && claim.status.verdict === 'contradicted';
 }
 
-/** One point per run; a change of identity from the previous run breaks comparability. */
 export function accuracyTrend(answers: readonly FactAnswer[]) {
   return runPoints(answers, (first) => first.identity).map(
     ({ auditId, rows, completedAt, comparable }) => ({
@@ -330,11 +301,6 @@ export function accuracyTrend(answers: readonly FactAnswer[]) {
   );
 }
 
-/**
- * The selection's summary. `factChecked` says whether any selected run froze
- * a fact check, so a checked run whose answers never named the brand reads as
- * no claims rather than no facts.
- */
 export function accuracySummary(
   answers: readonly FactAnswer[],
   factChecked: boolean,
@@ -349,7 +315,6 @@ export function accuracySummary(
     contradicted: positionedClaims(answers, isContradicted)
       .slice(0, limits.max_contradicted_claims)
       .map(({ ordinal: _ordinal, ...claim }) => claim),
-    // Domains cited in answers that carry a contradicted claim: co-occurrence only.
     cited_alongside: citedDomains(
       answers,
       (answer) => answer.claims.some(isContradicted),

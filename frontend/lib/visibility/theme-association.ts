@@ -1,8 +1,3 @@
-/**
- * The brand-by-theme map (AV-6): for each named business, the share of its
- * classified mentions that raise each theme. A business below the minimum
- * classified count reads "too few" in every cell, never a zero or a share.
- */
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { PERCEPTION_MIN_CLASSIFIED, THEME_MAP_COLUMNS } from '@/lib/config/visibility';
@@ -18,15 +13,12 @@ type ThemeMapRow = { name: string; isBrand: boolean; cells: ThemeCell[] };
 export type ThemeMap = {
   themes: string[];
   rows: ThemeMapRow[];
-  /** Your highest share, or null when your row is too few or raises no theme. */
   top: { theme: string; share: number } | null;
-  /** The theme where a competitor leads you by the most, or null when none does. */
   gap: { theme: string; leader: string; points: number } | null;
 };
 
 const shareOf = (cell: ThemeCell | undefined) => (cell?.kind === 'share' ? cell.share : null);
 
-/** The map's columns: the themes raised most across every business, at most `columns`. */
 function columnsOf(entities: readonly Entity[], columns: number) {
   const totals = new Map<string, number>();
   for (const entity of entities)

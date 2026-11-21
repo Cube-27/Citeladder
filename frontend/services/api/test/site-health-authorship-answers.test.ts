@@ -47,7 +47,6 @@ describe('question answers', () => {
     expect(accordion('false')).toMatchObject([
       { answer: 'It splits text where the topic changes.', answer_state: 'available' },
     ]);
-    // An open toggle whose panel is still hidden is not a collapsed accordion.
     expect(accordion('true')).toMatchObject([
       { answer: '', answer_state: 'unavailable', reason: 'answer_panel_unavailable' },
     ]);

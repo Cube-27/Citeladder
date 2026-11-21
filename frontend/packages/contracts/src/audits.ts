@@ -10,11 +10,6 @@ import { executionPerceptionSchema } from './visibility-perception.ts';
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-// ---------------------------------------------------------------------------
-// Audits (runs) + executions + evidence
-// ---------------------------------------------------------------------------
-
-/** What a run measures: brand visibility, the Commerce shelf, or a market probe (AV-29). */
 export const auditScopeSchema = z.enum(['brand', 'commerce', 'probe']);
 
 export const auditStatusSchema = z.enum([
@@ -30,17 +25,12 @@ export const auditStatusSchema = z.enum([
   'cancelled',
 ]);
 
-// The engine provenance a run froze at launch (B5 `AuditEngineSnapshotResponse`).
 const auditEngineSnapshotSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
 });
 
-/**
- * One measured route on an AGGREGATE surface. Aggregates carry a LIST of these
- * in stable catalog order and must never be collapsed into a single model.
- */
 export const modelProvenanceSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
@@ -48,16 +38,12 @@ export const modelProvenanceSchema = responseObject({
   retrieval_enabled: z.boolean(),
 });
 
-// A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
-// STRING (64-bit seed), `error_message` a non-null string ('' when unset), and
-// the engine provenance is carried but the provider key never is (invariant 6).
 export const auditSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
   parent_audit_id: uuid().nullable().default(null),
   status: auditStatusSchema,
-  /** Whether a cooperative cancel is still accepted at this status. */
   cancelable: z.boolean(),
   benchmark_mode: z.string(),
   audit_scope: auditScopeSchema.default('brand'),
@@ -69,10 +55,8 @@ export const auditSchema = responseObject({
   failed_count: z.number().int(),
   error_message: z.string(),
   engine_snapshots: z.array(auditEngineSnapshotSchema),
-  /** The market this run measured from; one launch shares a `launch_id`. */
   market: auditMarketSchema,
   launch_id: uuid().nullable(),
-  /** Requested engines that cannot measure this market, so never ran. */
   not_applicable_engines: z.array(logicalEngineSchema),
   created_at: z.string(),
   updated_at: z.string(),
@@ -98,7 +82,6 @@ export const auditScheduleSchema = responseObject({
   interval_minutes: z.number().int().nullable(),
   timezone: z.string(),
   engines: z.array(logicalEngineSchema),
-  /** Each occurrence launches one audit per market; `null` is the project default. */
   market_ids: z.array(uuid().nullable()),
   repetitions: z.number().int().nullable(),
   benchmark_mode: benchmarkModeSchema.nullable(),
@@ -119,7 +102,6 @@ const auditEngineEstimateSchema = responseObject({
   retrieval_enabled: z.boolean().nullable(),
   prompt_count: z.number().int(),
   repetition_count: z.number().int(),
-  /** The selected markets this engine can measure. */
   market_count: z.number().int(),
   execution_count: z.number().int(),
   maximum_attempt_count: z.number().int(),
@@ -189,8 +171,6 @@ export const auditMetricsSchema = responseObject({
   created_at: z.string(),
 });
 
-// Deterministic citation classification (B6 `_classification`, invariant 4):
-// owned / unintended (owned-but-unwanted) / competitor / third-party.
 export const citationClassificationSchema = z.enum([
   'owned',
   'unintended',
@@ -198,7 +178,6 @@ export const citationClassificationSchema = z.enum([
   'third_party',
 ]);
 
-// One classified source citation on the evidence card (B6 `CitationEvidence`).
 export const citationSchema = responseObject({
   ordinal: z.number().int(),
   url: z.string(),
@@ -206,9 +185,6 @@ export const citationSchema = responseObject({
   domain: z.string(),
   classification: citationClassificationSchema,
   source_class: z.string().nullable().optional(),
-  // Who owns the PLATFORM ('external' | 'google_owned'), independent of
-  // source_class. A YouTube citation is google_owned AND video: the platform
-  // being Google's says nothing about whether the channel is worth pursuing.
   source_origin: z.string().optional(),
   source_taxonomy_version: z.string().nullable().optional(),
   is_owned: z.boolean(),
@@ -216,13 +192,6 @@ export const citationSchema = responseObject({
   matched_competitor: z.string().nullable(),
 });
 
-// Queue/execution row status (B5 task statuses). This must list EVERY status
-// the queue can persist, not just the ones a run usually ends on: the response
-// is strictly validated, so a single row in a missing status fails the whole
-// executions list. `capacity_wait` (parked on a full provider pool) and
-// `pending_reservation` (funded task awaiting its ledger reservation) are both
-// transient, both common mid-run, and both were absent — which is why a live
-// run's executions table errored out and then loaded fine once it terminalized.
 export const executionStatusSchema = z.enum([
   'pending_reservation',
   'queued',
@@ -231,19 +200,12 @@ export const executionStatusSchema = z.enum([
   'succeeded',
   'retry_wait',
   'capacity_wait',
-  // Observed search surfaces wait on a task running at the PROVIDER, not
-  // here. Both are common mid-run and, per the note above, a status missing
-  // from this list fails the whole executions list rather than one row.
   'awaiting_provider_result',
   'submission_uncertain',
   'failed',
   'cancelled',
 ]);
 
-// One execution/queue row in the run's executions table: only what the table
-// renders, because an active run re-reads the whole list. The answer, its
-// search-surface outcome and the classified evidence live on the
-// single-execution read (`GET /executions/{id}`) below.
 export const executionSchema = responseObject({
   id: uuid(),
   prompt_index: z.number().int(),
@@ -255,12 +217,6 @@ export const executionSchema = responseObject({
   latency_ms: z.number().nullable(),
 });
 
-/**
- * One inline link the AI Overview pointed at from inside its own text
- * (`AioLinkEvidence`). Inline links only — never the block's references, which
- * arrive as citations. Keeping them apart is what lets the evidence view show
- * "linked but not cited" as the distinct fact it is.
- */
 const aioLinkSchema = responseObject({
   url: z.string(),
   domain: z.string(),
@@ -268,14 +224,6 @@ const aioLinkSchema = responseObject({
   element_index: z.number().int(),
 });
 
-/**
- * One tracked entity's presence in an AI Overview (`SurfaceEntityEvidence`).
- *
- * `mentioned`, `linked` and `cited` come from three independent sources and
- * are never derived from one another. `mention_order` is computed server-side
- * from persisted offsets and is null for an entity the answer never named —
- * which is not last place.
- */
 export const surfaceEntitySchema = responseObject({
   name: z.string(),
   kind: z.enum(['brand', 'competitor']),
@@ -287,16 +235,9 @@ export const surfaceEntitySchema = responseObject({
   mention_order: z.number().int().nullable(),
 });
 
-/**
- * What one observed-surface execution saw (`SearchSurfaceEvidence`).
- *
- * `aio_present` keeps three states: true shown, false observed absence, null
- * we never successfully looked. It must never be coerced to a boolean.
- */
 export const searchSurfaceEvidenceSchema = responseObject({
   outcome: z.string(),
   aio_present: z.boolean().nullable(),
-  // The overview BLOCK's position on the SERP. Never a brand rank.
   aio_serp_position: z.number().int().nullable(),
   provider_status_code: z.number().int().nullable(),
   error_code: z.string(),
@@ -311,12 +252,6 @@ export const searchSurfaceEvidenceSchema = responseObject({
   entities: z.array(surfaceEntitySchema),
 });
 
-/**
- * One published rate with the denominator it divided by (`AioRateValue`).
- *
- * `value` is null for UNAVAILABLE and is never 0. Rendering an empty
- * denominator as 0% would be a measurement claim nobody made.
- */
 export const aioRateSchema = responseObject({
   numerator: z.number().int(),
   denominator: z.number().int(),
@@ -330,11 +265,6 @@ const aioCompetitorRateSchema = responseObject({
   rate: aioRateSchema,
 });
 
-/**
- * The five AI Overview rates for one measurement selection
- * (`SurfaceRatesResponse`). `excluded` counts observations that entered no
- * denominator — failures on our side, reported rather than hidden.
- */
 export const surfaceRatesSchema = responseObject({
   logical_engine: z.string(),
   successful: z.number().int(),
@@ -347,8 +277,6 @@ export const surfaceRatesSchema = responseObject({
   competitor_mention_rates: z.array(aioCompetitorRateSchema),
 });
 
-// The tracked business an answer named first (AV-7). `none`: it named no tracked
-// business (not applicable).
 export const firstNamedSchema = z.discriminatedUnion('kind', [
   responseObject({ kind: z.literal('brand'), name: z.string() }),
   responseObject({ kind: z.literal('competitor'), name: z.string() }),
@@ -356,7 +284,6 @@ export const firstNamedSchema = z.discriminatedUnion('kind', [
 ]);
 export type FirstNamed = z.infer<typeof firstNamedSchema>;
 
-// The same, with the named business's mark, for a read that draws it.
 export const markedFirstNamedSchema = z.discriminatedUnion('kind', [
   responseObject({ kind: z.literal('brand'), name: z.string(), ...brandMarkFields }),
   responseObject({ kind: z.literal('competitor'), name: z.string(), ...brandMarkFields }),
@@ -364,13 +291,10 @@ export const markedFirstNamedSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const answerFormatSchema = z.enum(['shopping', 'map', 'comparison', 'image']);
-// What a scraper answer showed besides text. `observed` with no formats is a
-// finding; an API engine is `not_applicable`; an unreadable envelope `unavailable`.
 export const answerFormatsSchema = z.discriminatedUnion('kind', [
   responseObject({
     kind: z.literal('observed'),
     formats: z.array(answerFormatSchema),
-    // Distinct links written in the answer text, apart from its citations.
     in_text_links: z.number().int().nonnegative(),
   }),
   responseObject({ kind: z.literal('unavailable') }),
@@ -379,14 +303,8 @@ export const answerFormatsSchema = z.discriminatedUnion('kind', [
 export type AnswerFormat = z.infer<typeof answerFormatSchema>;
 export type AnswerFormats = z.infer<typeof answerFormatsSchema>;
 
-/**
- * Whether one answer searched the web. `not_reported`: the surface exposes no
- * search signal at all (an AI Overview is observed, not asked), which is not "no".
- */
 export const promptAnswerSearchSchema = z.enum(['used', 'not_used', 'not_reported']);
 
-// A tracked business one answer named, with its first-mention offset and its
-// rank among the named businesses (1 = named first); null when none was kept.
 const executionNamedSchema = responseObject({
   name: z.string(),
   kind: z.enum(['brand', 'competitor']),
@@ -394,10 +312,6 @@ const executionNamedSchema = responseObject({
   position: z.number().int().nullable(),
 });
 
-// One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
-// `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
-// same id space as the executions list — so the evidence page keys off the row
-// id. `analysis_id` is the internal ResponseAnalysis id (traceability only).
 export const executionEvidenceSchema = responseObject({
   id: uuid(),
   analysis_id: uuid(),
@@ -409,19 +323,12 @@ export const executionEvidenceSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
-  // Execution-level surface: singular model, frozen snapshots only.
   retrieval_enabled: z.boolean(),
   prompt_index: z.number().int(),
   repetition: z.number().int(),
   prompt_class: z.string(),
   cohort: z.string(),
-  // The answer this evidence analysed, as the execution stored it ('' when
-  // nothing was captured). Only this single read carries it, never the list.
   answer_text: z.string(),
-  // The persisted search-surface outcome; '' for an LLM execution. Absence
-  // must be read from this and never inferred from an empty answer, because
-  // an AI Overview that was present but carried no extractable text looks
-  // identical from the outside.
   search_surface_outcome: z.string(),
   brand_mentioned: z.boolean(),
   brand_first_offset: z.number().int().nullable(),
@@ -434,20 +341,14 @@ export const executionEvidenceSchema = responseObject({
   search_query_count: z.number().int(),
   avg_position: z.number().nullable(),
   first_named: markedFirstNamedSchema,
-  // Named first first; one without an offset has no rank and comes last.
   named: z.array(executionNamedSchema),
   answer_formats: answerFormatsSchema,
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
   competitors_mentioned: z.array(z.string()),
-  // Null for an LLM execution, and null for a search execution that
-  // produced no observation — a gap in ours, not a measured absence.
   search_surface: searchSurfaceEvidenceSchema.nullable().default(null),
-  // Per named business: its answer perception label and verified quotes.
   perception: z.array(executionPerceptionSchema),
-  // The brand's factual claims and their verdicts; empty outside the fact-checking pilot.
   claims: z.array(executionClaimSchema),
-  // Paid placements shown with the answer; never part of its citations.
   ads: executionAdsSchema,
   created_at: z.string(),
 });

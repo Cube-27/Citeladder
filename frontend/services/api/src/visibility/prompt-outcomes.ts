@@ -1,7 +1,3 @@
-/**
- * Outcome counts, answer states and rates for a prompt's persisted answers and
- * tasks, per run and per (engine, model) cell; summed for a pooled period.
- */
 import type {
   AnswerStates,
   measurementCountsSchema,
@@ -41,7 +37,6 @@ type Response = {
 };
 type Task = { status: string; logical_engine: string; transport_model: string };
 
-/** Each answer once, by whether it named the brand and cited an owned page. */
 export function answerStates(
   responses: readonly Pick<Response, 'brand_mentioned' | 'owned_domain_cited'>[],
 ): AnswerStates | null {
@@ -57,7 +52,6 @@ export function answerStates(
   };
 }
 
-/** Summed states; null only when no part answered. */
 export function poolStates(
   parts: readonly (AnswerStates | null | undefined)[],
 ): AnswerStates | null {
@@ -72,7 +66,6 @@ export function poolStates(
   };
 }
 
-/** A row's rates from its counts, through the one rate owner (`answerRates`). */
 export function countRates(
   counts: Pick<Counts, 'responses' | 'brand_responses' | 'owned_citation_responses'>,
 ) {
@@ -97,7 +90,6 @@ export function outcomeCounts(
     responses: responses.length,
     expected: tasks.length,
     failed: tasks.filter((task) => task.status === FAILED).length,
-    // Anything that neither succeeded nor failed has not run.
     not_run: tasks.filter((task) => task.status !== SUCCEEDED && task.status !== FAILED).length,
     brand_responses: answered.mentioned,
     owned_citation_responses: answered.cited,

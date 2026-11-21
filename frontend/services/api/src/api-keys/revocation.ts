@@ -1,7 +1,6 @@
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import type { Database } from '../db/database.ts';
 
-/** Revoke `creatorId`'s live keys, optionally only in some workspaces, with one receipt each. */
 async function revokeKeysOf(
   trx: Database,
   creatorId: string,
@@ -23,10 +22,6 @@ async function revokeKeysOf(
   );
 }
 
-/**
- * Revoke every live key `creatorId` made in these workspaces, in the caller's
- * membership-removal transaction: a key never outlives its creator's access.
- */
 export async function revokeCreatorKeys(
   trx: Database,
   workspaceIds: readonly string[],
@@ -37,11 +32,6 @@ export async function revokeCreatorKeys(
   await revokeKeysOf(trx, creatorId, actorId, 'creator_removed', workspaceIds);
 }
 
-/**
- * Revoke every live key `userId` made, in any workspace, inside the caller's
- * password-reset or password-change transaction: account recovery must not
- * leave a key minted by whoever held the old credentials.
- */
 export function revokeKeysAfterCredentialReset(
   trx: Database,
   userId: string,

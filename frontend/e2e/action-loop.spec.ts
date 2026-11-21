@@ -7,8 +7,6 @@ const SNAPSHOT = '33333333-3333-4333-8333-333333333333';
 const IMPLEMENTATION = '55555555-5555-4555-8555-555555555555';
 const ACTION = '66666666-6666-4666-8666-666666666666';
 
-/** The loop reads the project's industry into its brief, so those two fields
- * are stated; everything else is the shared shell project. */
 const project = {
   ...FIXTURE_PROJECT,
   industry: 'Software',
@@ -213,7 +211,6 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     return route.fulfill({ status: 201, json: declaration });
   });
   await page.goto(`/actions/${ACTION}?project=${PROJECT}`);
-  // A New Action is accepted first; In progress offers Mark implemented.
   await page.getByRole('button', { name: 'Accept' }).click();
   await page.getByRole('button', { name: 'Mark implemented' }).click();
   await page
@@ -279,16 +276,13 @@ test('Action filters restore through URL history and reload', async ({ page }) =
 
   await page.getByRole('button', { name: 'Status: Declined' }).click();
   await page.getByRole('menuitemradio', { name: 'New' }).click();
-  // The tree's goal row, not the goal strip's "Go to …" cell.
   await expect(
     page.getByRole('button', { name: 'Get mentioned elsewhere, 1', exact: true }),
   ).toBeVisible();
-  // The row is titled by its target; the work is its second line.
   await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
   await expect(page.getByText('Earn a placement', { exact: true })).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('open');
 
-  // A row opens its Action.
   await page.getByRole('link', { name: 'example.org/tools' }).click();
   await expect(page).toHaveURL(new RegExp(`/actions/${ACTION}`));
 });

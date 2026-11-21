@@ -1,4 +1,3 @@
-/** Explicit operator provisioning. Public signup has its own free-baseline path. */
 import { z } from 'zod';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -57,7 +56,6 @@ export async function provisionDevelopmentLogin(db: Database, config: ServiceCon
     await provisionAccount(trx, user, { provisionAccess: false });
     const scope = await ownedWorkspaceAccount(trx, user.id);
     await lockAccount(trx, scope.workspaceId, scope.accountId);
-    // Recheck under the user row lock after workspace/account provisioning.
     const current = await trx
       .selectFrom('users')
       .selectAll()

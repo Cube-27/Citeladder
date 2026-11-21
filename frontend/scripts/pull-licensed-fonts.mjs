@@ -1,25 +1,3 @@
-// Copies the brand faces named in lib/config/brand-fonts.json from the private
-// Cube27 font repository into public/fonts, where both Workers pick them up as
-// static assets, and keeps that JSON's derived fields (each face's weight range
-// and fallback metrics) in step with the files it pulled.
-//
-// Changing a face: edit its `family` and `file` in brand-fonts.json, then run
-// `pnpm fonts:pull` (add `--latest` after uploading a new file to the font
-// repository, to re-pin to its newest commit). Commit the JSON.
-//
-// That repository is the single source for every face: some are licensed for
-// self-hosting but not redistribution, so no font binary enters this public
-// repository. .gitignore excludes public/fonts and check:policy rejects a
-// tracked font file. Builds without them (forks, Docker, e2e) still render in
-// the metric-matched fallbacks.
-//
-// Auth is whatever `gh` resolves: a developer's own login locally, and
-// GH_TOKEN (a read-only token scoped to the font repository) in delivery.
-//
-// Usage: pnpm fonts:pull [--latest] [directory]. Delivery passes the
-// downloaded build output instead, so the faces never enter a (publicly
-// downloadable) Actions artifact of this public repository. The directory must
-// sit inside frontend/. Delivery never rewrites the JSON; it warns on drift.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, isAbsolute } from 'node:path';
@@ -30,10 +8,8 @@ const GH_EXECUTABLE = '/usr/bin/gh';
 const frontendRoot = resolve(import.meta.dirname, '..');
 const configPath = join(frontendRoot, 'lib', 'config', 'brand-fonts.json');
 
-/** Arial's x-height and Courier New's advance (em), which the fallbacks scale to. */
 const ARIAL_X_HEIGHT = 0.519;
 const COURIER_ADVANCE = 0.6;
-/** The design's weight ceiling (the 600 `heading` role) and its floor (dark's 350 regular, rounded down). */
 const WEIGHT_CEILING = 600;
 const WEIGHT_FLOOR = 300;
 
@@ -54,7 +30,6 @@ function gh(path, accept) {
   });
 }
 
-/** A WOFF2 variable-length integer: the value and the offset after it. */
 function base128(bytes, offset) {
   let value = 0;
   for (let index = 0; index < 5; index += 1) {
@@ -65,7 +40,6 @@ function base128(bytes, offset) {
   throw new Error('Malformed WOFF2 integer.');
 }
 
-/** The untransformed tables a fallback needs (head, hhea, OS/2, fvar), by tag. */
 function woff2Tables(bytes) {
   // The WOFF2 known-tag table, in specification order; 63 means an explicit tag.
   const KNOWN = [
@@ -164,7 +138,6 @@ function woff2Tables(bytes) {
 
 const percent = (value) => `${Math.round(value * 10000) / 100}%`;
 
-/** A variable face's weight range clamped to the design's, or a static face's one weight. */
 function weightRange(fvar, os2) {
   if (!fvar) return String(os2.readUInt16BE(4));
   const axesOffset = fvar.readUInt16BE(4);
@@ -180,7 +153,6 @@ function weightRange(fvar, os2) {
   throw new Error('A variable face without a weight axis is not supported.');
 }
 
-/** The face's requestable weight range and its local fallback's overrides. */
 function derivedFields(role, bytes) {
   if (bytes.subarray(0, 4).toString('latin1') !== 'wOF2') throw new Error('Not a WOFF2 file.');
   const tables = woff2Tables(bytes);
@@ -189,8 +161,6 @@ function derivedFields(role, bytes) {
   const os2 = tables.get('OS/2');
   if (!head || !hhea || !os2) throw new Error('The face lacks head, hhea or OS/2.');
   const unitsPerEm = head.readUInt16BE(18);
-  // The mono face is matched on its advance (a monospace face's average
-  // width) against Courier New, every other face on its x-height against Arial.
   const scale =
     role === 'mono'
       ? os2.readInt16BE(2) / unitsPerEm / COURIER_ADVANCE
@@ -225,8 +195,6 @@ for (const [role, face] of Object.entries(config.faces)) {
   console.log(`Pulled ${face.file} for ${role} (${bytes.length} bytes).`);
 }
 
-// Compared as values: the committed file carries the repository formatter's
-// layout, which the pre-commit hook restores after a rewrite.
 if (JSON.stringify(config) !== JSON.stringify(JSON.parse(original))) {
   if (process.env.CI) {
     console.warn(

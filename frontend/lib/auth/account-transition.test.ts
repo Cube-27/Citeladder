@@ -18,7 +18,6 @@ afterEach(() => {
   document.cookie = `${THEME_COOKIE}=; Max-Age=0; Path=/`;
 });
 
-/** Let `restartAt` run up to its navigation; it never resolves by design. */
 async function startRestart(queryClient: QueryClient, path: string) {
   let settled = false;
   void restartAt(queryClient, path).finally(() => {
@@ -41,17 +40,13 @@ describe('restartAt', () => {
 
     const settled = await startRestart(queryClient, '/login');
 
-    // The page on screen still has what it was showing while the next loads…
     expect(queryClient.getQueryData(['old-account'])).toEqual({ private: true });
-    // …but the next document cannot pick up the old account's selection.
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
-    // A device preference, not the account's, so it survives the change.
     expect(document.cookie).toContain(`${THEME_COOKIE}=dark`);
 
     window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(['old-account'])).toBeUndefined();
-    // Callers stay pending until the page has changed.
     expect(settled()).toBe(false);
   });
 

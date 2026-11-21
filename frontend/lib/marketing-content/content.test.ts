@@ -1,7 +1,4 @@
 // @vitest-environment node
-//
-// Pure logic: no DOM, no window, no React render. The suite-wide jsdom
-// default costs a full environment per file and buys nothing here.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -20,16 +17,6 @@ import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
 import { CITELADDER_LINKEDIN } from './social';
 import { SOLUTION_SEGMENTS } from './solutions';
 
-/**
- * `lib/marketing-content` is the public surface's copy, and it had no tests.
- *
- * These are STRUCTURAL, not snapshots. A snapshot of 1,500 lines of marketing
- * copy fails on every deliberate wording change and proves nothing; what is
- * actually worth catching is a route that does not exist, a duplicate blog
- * slug, an empty section that renders as a blank block, and a commercial page
- * misnaming the licence, the hosted product or the public repository.
- */
-/** Every policy this product publishes; each binds the parent company. */
 const ALL_LEGAL = LEGAL_DOCUMENTS;
 
 function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>): string {
@@ -41,7 +28,6 @@ function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>)
     .join(' ');
 }
 
-/** Every internal href declared anywhere in the marketing content. */
 function internalHrefs(): string[] {
   const fromDrops = NAV_DROPS.flatMap((drop) => [
     drop.href,
@@ -81,7 +67,6 @@ function marketingRouteExists(href: string): boolean {
     return PLATFORM_PAGES.some((page) => page.path === href);
   }
   const path = href.split('#', 1)[0]!;
-  // Policies and guides are served by dynamic routes from their records.
   if (ALL_LEGAL.some((document) => document.path === path)) return true;
   if (researchSlugs().includes(path)) return true;
   const pathname = path.replace(/^\//, '');
@@ -92,7 +77,6 @@ function marketingRouteExists(href: string): boolean {
   return candidates.some((candidate) => existsSync(candidate));
 }
 
-/** Every research guide's published path, from its frontmatter. */
 function researchSlugs(): string[] {
   return readdirSync(RESEARCH_DIR).flatMap((file) => {
     const slug = /^slug: '([^']+)'$/m.exec(readFileSync(resolve(RESEARCH_DIR, file), 'utf8'));
@@ -109,8 +93,6 @@ function stringsIn(value: unknown): string[] {
 
 describe('marketing navigation', () => {
   it('routes every internal link from the site root', () => {
-    // Anchors are absolute (`/#see-it`) so a row resolves from a subpage,
-    // not only from `/`.
     for (const href of internalHrefs()) {
       expect(href, href).toMatch(/^\/(?:$|[a-z0-9#/-])/);
       expect(marketingRouteExists(href), href).toBe(true);
@@ -165,14 +147,11 @@ describe('pricing content', () => {
   });
 
   it('highlights exactly one plan', () => {
-    // Two highlighted plans is a layout bug that reads as an unmade decision.
     const highlighted = Object.values(PLAN_PRESENTATION).filter((plan) => plan.highlighted);
     expect(highlighted).toHaveLength(1);
   });
 
   it('humanises an unmapped capability key instead of rendering nothing', () => {
-    // A capability key the backend adds must still produce a readable string:
-    // the helper returns a string in every branch so React can render it.
     expect(capabilityLabel('a_brand_new_capability')).toBe('A brand new capability');
     expect(capabilityLabel('')).toBe('');
   });
@@ -181,7 +160,6 @@ describe('pricing content', () => {
 describe('blog content', () => {
   it('gives every published post a PNG share image at the declared dimensions', () => {
     for (const post of POSTS) {
-      // A post without one shares as a small text card on social platforms.
       expect(post.image, post.slug).toMatch(/^\/.+\.png$/);
       const image = readFileSync(resolve(process.cwd(), 'public', String(post.image).slice(1)));
       expect(image.subarray(0, 8).toString('hex'), post.slug).toBe('89504e470d0a1a0a');
@@ -191,8 +169,6 @@ describe('blog content', () => {
   });
 
   it('has unique slugs', () => {
-    // A duplicate slug makes one post permanently unreachable at
-    // `/blog/[slug]`.
     const slugs = POSTS.map((post) => post.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
@@ -223,9 +199,6 @@ describe('blog content', () => {
   });
 
   it('gives every heading in a post its own anchor', () => {
-    // The contents rail links each heading by its slugged text. Two headings
-    // that slug alike within one post share an `id`, so the second entry
-    // silently jumps to the first section. Retitle one rather than relax this.
     for (const post of POSTS) {
       const ids = post.body
         .filter((block) => block.type === 'heading' || block.type === 'subheading')
@@ -235,8 +208,6 @@ describe('blog content', () => {
   });
 
   it('omits optional byline fields rather than storing a placeholder', () => {
-    // The module's rule: while a byline field is absent the row is omitted, so
-    // an empty string would render an empty byline instead of none.
     for (const post of POSTS) {
       for (const field of [
         'date',
@@ -253,8 +224,6 @@ describe('blog content', () => {
   });
 
   it('bylines every post with a person from ./people, never a free-typed name', () => {
-    // The byline, the Organization JSON-LD, and llms.txt all read `./people`.
-    // A name typed into a post would drift from the other two silently.
     const known = new Map([FOUNDER, PRODUCT_HEAD].map((person) => [person.name, person] as const));
     for (const post of POSTS) {
       const person = post.author ? known.get(post.author) : undefined;
@@ -265,9 +234,6 @@ describe('blog content', () => {
   });
 
   it('dates every post, and never revises one before it was published', () => {
-    // `dateModified` drives the UPDATED row, the sitemap's `lastmod`, and the
-    // index's freshness signal. A revision date behind the publication date
-    // renders "UPDATED" as though the post went backwards in time.
     for (const post of POSTS) {
       expect(post.date, post.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(Number.isNaN(Date.parse(post.date!)), post.slug).toBe(false);
@@ -358,8 +324,6 @@ describe('legal content', () => {
   });
 
   it('never publishes an unfilled placeholder or an unresolved internal path', () => {
-    // Owner-pending details stay empty and are omitted; a bracketed
-    // placeholder reaching a public policy would be a published guess.
     for (const document of ALL_LEGAL) {
       const text = stringsIn(document.sections).join(' ');
       expect(text, document.path).not.toMatch(
@@ -416,8 +380,6 @@ describe('commercial positioning', () => {
   it.each(['MIT license', 'CiteLadder Cloud', 'github.com/Cube-27'])(
     'makes no %j claim',
     (phrase) => {
-      // The source is public under AGPL-3.0, not MIT; the hosted product is
-      // plain "CiteLadder"; and the old private repository returns 404.
       expect(everyString.toLowerCase()).not.toContain(phrase.toLowerCase());
     },
   );
@@ -433,8 +395,6 @@ describe('entity profiles', () => {
 
 describe('legal tables', () => {
   it('gives every table row one cell per heading', () => {
-    // A short row renders as a shifted table: a provider's location would sit
-    // under "Data processed" and read as a different commitment.
     for (const document of ALL_LEGAL) {
       for (const section of document.sections) {
         for (const row of section.table?.rows ?? []) {

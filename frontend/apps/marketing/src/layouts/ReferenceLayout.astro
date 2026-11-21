@@ -1,11 +1,4 @@
 ---
-/**
- * A company reference page (the WebAiReference template): ContentArticle
- * with a Toc, the ArticleHeader with the last-updated date, the sections in
- * Prose (a FactList where a section has facts, its official sources under
- * it), then an ArticlePager to the other reference. The page passes its
- * sections in the default slot.
- */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import ArticlePager from '@/components/content/ArticlePager.astro';
 import Prose from '@/components/content/Prose.astro';
@@ -23,9 +16,7 @@ const REFERENCES = [
 
 interface Props {
   title: (typeof REFERENCES)[number]['title'];
-  /** The page's record: browser title, description, path and last-updated date. */
   page: PageRecord;
-  /** The ArticleHeader lead. */
   lead: string;
   sections: readonly Readonly<{ id: string; title: string }>[];
 }
@@ -64,7 +55,6 @@ const index = REFERENCES.findIndex((reference) => reference.title === title);
 </MarketingLayout>
 
 <style is:global>
-  /* A section's official sources: a mono label, then its links on one wrapping line. */
   .cl-ref-sources {
     display: flex;
     flex-wrap: wrap;

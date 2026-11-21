@@ -1,13 +1,4 @@
 /**
- * Behaviour for the server-rendered website navbar (`SiteNav.astro`).
- *
- * The markup is complete without this module: the mobile sheet is in the
- * initial HTML, hidden. This adds the sheet, its accordions and the homepage
- * logo with plain DOM listeners. The desktop menus are the `DesktopNav`
- * island, which also reads `routePath` and `inSection` from here.
- */
-
-/**
  * The route a request pathname names. The site builds with
  * `build.format: 'file'`, so a prerendered page sees `/index.html` or
  * `/pricing.html` where the browser shows `/` and `/pricing`; every
@@ -23,15 +14,10 @@ export function routePath(pathname: string): string {
   return route === '' ? '/' : route;
 }
 
-/** Is `href` the current route, or the section the current route sits in? */
 export function inSection(path: string, href: string): boolean {
   return path === href || path.startsWith(`${href}/`);
 }
 
-/**
- * The mobile sheet: a toggle, accordions, and the page behind it made inert.
- * Returns the function that closes it.
- */
 function mountSheet(chrome: HTMLElement) {
   const toggle = chrome.querySelector<HTMLButtonElement>('button[aria-controls="mobile-menu"]');
   const sheet = document.getElementById('mobile-menu');
@@ -62,11 +48,6 @@ function mountSheet(chrome: HTMLElement) {
     }
   };
 
-  /**
-   * Escape, and a tap anywhere outside the navbar, both close the sheet. The
-   * whole navbar is the boundary, so a tap on the toggle reaches its own
-   * handler.
-   */
   const desktop = window.matchMedia('(min-width: 960px)');
   const holdPage = () => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -75,14 +56,10 @@ function mountSheet(chrome: HTMLElement) {
     const onPointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node) || !chrome.contains(event.target)) closeSheet();
     };
-    // The page behind the sheet leaves the tab order and the accessibility
-    // tree until the sheet closes.
     const held = [...document.body.children].filter(
       (element) => !element.contains(chrome) && !element.hasAttribute('inert'),
     );
     for (const element of held) element.setAttribute('inert', '');
-    // Widening past the sheet's breakpoint closes it, or the page would stay
-    // inert behind a sheet nobody can see.
     const onDesktop = (event: MediaQueryListEvent) => {
       if (event.matches) closeSheet();
     };
@@ -103,8 +80,6 @@ function mountSheet(chrome: HTMLElement) {
     releasePage?.();
     releasePage = next ? holdPage() : null;
     render();
-    // The sheet is a dialog: focus moves in on open and back to the toggle
-    // on close, unless the bar has widened and hidden the toggle.
     if (next) sheet.querySelector<HTMLElement>('a[href], button')?.focus();
     else if (!desktop.matches) toggle.focus();
   };
@@ -125,10 +100,6 @@ function mountSheet(chrome: HTMLElement) {
   return closeSheet;
 }
 
-/**
- * The logo on the homepage scrolls to the top rather than navigating `/` to
- * `/`. It stays a real link, so modified clicks open a new tab as usual.
- */
 function mountHomeLogo(chrome: HTMLElement, closeSheet: () => void) {
   const logo = chrome.querySelector<HTMLAnchorElement>('a[aria-label="CiteLadder home"]');
   logo?.addEventListener('click', (event) => {
@@ -141,7 +112,6 @@ function mountHomeLogo(chrome: HTMLElement, closeSheet: () => void) {
   });
 }
 
-/** Attach the navbar's behaviour to its server-rendered markup. */
 export function mountSiteNav(chrome: HTMLElement) {
   mountHomeLogo(chrome, mountSheet(chrome));
 }

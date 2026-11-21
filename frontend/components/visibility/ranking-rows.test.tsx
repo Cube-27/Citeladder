@@ -49,7 +49,6 @@ describe('RankingRowsTable', () => {
       />,
     );
     expect(screen.getByText('You')).toBeVisible();
-    // A competitor opens its page; your own row is not a link.
     expect(
       screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([['Globex', expect.stringMatching(/\/competitors\/Globex$/)]]);
@@ -69,8 +68,6 @@ describe('RankingRowsTable', () => {
     expect(screen.getByText('0.0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
     expect(within(unknown).getAllByText('Not measured').length).toBeGreaterThan(0);
-    // No brand has a position, so that column is not drawn; win rate and
-    // change stay columns with an absence in each cell.
     expect(screen.queryByRole('columnheader', { name: /^Position/ })).toBeNull();
     expect(screen.getByRole('columnheader', { name: 'Change' })).toBeVisible();
     expect(cellsOf('Acme')[3]).toMatch(/Not applicable$/);
@@ -81,8 +78,6 @@ describe('RankingRowsTable', () => {
       <RankingRowsTable rows={[row({ name: 'Globex', gap_count: 3, visibility_delta: 0.3 })]} />,
     );
     expect(screen.getByText('0.3 pp').parentElement).toHaveTextContent('up +0.3 pp');
-    // The overlap measure is undefined for the tracked brand itself, so it is
-    // not a column of a table whose every other column applies to every row.
     expect(screen.queryByRole('columnheader', { name: /answers without you/i })).toBeNull();
   });
   it('prefers the matched-subset change when the run has one', () => {

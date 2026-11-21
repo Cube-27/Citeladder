@@ -1,8 +1,3 @@
-/**
- * The analytics queue against real PostgreSQL: claims by disjoint kind sets
- * never overlap, a workspace gets one task before any gets a second, and only
- * the lease owner may run or extend a claimed row.
- */
 import { randomUUID } from 'node:crypto';
 
 import { sql, type AliasNode, type OperationNode, type SelectQueryNode } from 'kysely';
@@ -62,7 +57,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** Column names referenced by a node, not descending into subqueries. */
 function referencedColumns(node: unknown, into = new Set<string>()): Set<string> {
   if (node === null || typeof node !== 'object') return into;
   const operation = node as OperationNode & Record<string, unknown>;

@@ -29,7 +29,6 @@ export class SignInError extends Error {
     | 'oauth_signin_email_reserved'
     | 'oauth_signin_email_disposable'
     | 'oauth_signin_disabled';
-  /** The Google address that has no account, for the signup form to prefill. */
   readonly email: string | undefined;
   constructor(code: SignInError['code'], email?: string) {
     super(code);
@@ -38,7 +37,6 @@ export class SignInError extends Error {
   }
 }
 
-/** A coded provider error naming the provider. */
 function providerError(
   status: 404 | 503,
   code: 'oauth_provider_unknown' | 'oauth_provider_not_configured',
@@ -91,18 +89,8 @@ function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvide
     );
 }
 
-/**
- * The Terms decision a sign-in or sign-up form made before starting Google:
- * the published revision the visitor accepted, and whether the start may
- * create an account. Sealed in the signed state so the callback can trust it.
- */
 type OAuthTermsDecision = { termsRevision: string; signup: boolean };
 
-/**
- * Start Google sign-in. A start from the sign-in or sign-up form carries its
- * Terms decision; only a sign-up start may create an account. Linking Google
- * from Account security carries none: that person is already signed in.
- */
 export async function startSignIn(
   config: ServiceConfig,
   provider: OAuthProvider,
@@ -263,7 +251,6 @@ async function identify(
 
 type SignInEvent = 'auth.oauth_registered' | 'auth.oauth_linked';
 
-/** An address that already has an account: link it, or claim an unverified one via Google. */
 async function claimExistingAccount(
   db: Database,
   existing: User,
@@ -307,10 +294,6 @@ async function claimExistingAccount(
   return { user: claimed, event: 'auth.oauth_linked' };
 }
 
-/**
- * The verified address's account. A missing one is created passwordless only
- * by a signup start with its Terms decision; sign-in sends the person to sign up.
- */
 async function accountForEmail(
   db: Database,
   config: ServiceConfig,
@@ -359,7 +342,6 @@ async function accountForEmail(
   throw new SignInError('oauth_signin_state_invalid');
 }
 
-/** Link the provider subject, refusing a second subject for the same user. */
 async function linkIdentity(
   db: Database,
   provider: OAuthProvider,
@@ -454,7 +436,6 @@ export async function completeSignIn(
   continuation?: { returnTo?: string; proof?: LinkProof },
 ) {
   const decision = await verifyState(config, provider, state, nonce);
-  // The Terms changed while the visitor was at Google: they start again.
   if (decision && decision.termsRevision !== policy.auth.terms_revision)
     throw new SignInError('oauth_signin_state_invalid');
   const identity = await identify(config, provider, code);
@@ -467,11 +448,8 @@ export async function completeSignIn(
       continuation?.proof,
       decision,
     );
-    // Only a sign-in that issues a session is a login; an unverified mailbox is sent recovery mail.
     if (!requiresEmailVerification(account.user)) {
       await recordSecurityEvent(trx, 'auth.google_login', account.user.id);
-      // The box ticked before starting Google, recorded once per revision.
-      // A new account already holds it from sign-up; repeating it is inert.
       if (decision)
         await recordAccountTermsDecision(trx, {
           actorId: account.user.id,

@@ -1,7 +1,3 @@
-/**
- * Brand runs created, executed and finalized as the worker does, for tests of
- * what finalization persists and the reads that serve it.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { Citation } from '../src/answer-engines/contracts.ts';
@@ -58,7 +54,6 @@ export function finalizedRuns(db: Database, fixtures: VisibilityFixtures) {
   const tasks: string[] = [],
     workspaces: string[] = [];
 
-  /** A tenant whose project owns `acme.example`, frozen into its runs. */
   async function tenant() {
     const t = await auditTenant(db, fixtures);
     workspaces.push(t.workspaceId);
@@ -75,7 +70,6 @@ export function finalizedRuns(db: Database, fixtures: VisibilityFixtures) {
     return t;
   }
 
-  /** One brand run in which every answer cites `urls`, executed and finalized as the worker does. */
   async function finalizedRun(t: Awaited<ReturnType<typeof tenant>>, urls: string[]) {
     const [auditId] = await createAudits(
       db,

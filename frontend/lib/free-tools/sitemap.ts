@@ -49,7 +49,7 @@ function sitemapUrls(source: string) {
     if (!value || extra.length)
       throw new Error('Each entry must have exactly one nonempty loc element.');
     webUrl(value);
-    return value; // Preserve exact declared URLs, including meaningful slash/query differences.
+    return value;
   });
   return { kind, urls: new Set(urls), duplicates: urls.length - new Set(urls).size };
 }

@@ -123,7 +123,6 @@ describe('Skeleton', () => {
       <Skeleton variant="table" columns={4} rows={3} label="Loading prompts" />,
     );
     expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
-    // Three rows of four cell blocks; the head row is a fill, not a ruled line.
     expect(container.querySelectorAll('[data-skeleton-block]')).toHaveLength(12);
     expect(screen.queryByRole('status')).toBeNull();
     expect(await screen.findByRole('status', { name: 'Loading prompts' })).toBeVisible();
@@ -200,7 +199,6 @@ describe('TrendChart', () => {
     within(screen.getByRole('table', { name: 'Visibility trend' }))
       .getAllByRole('row')
       .map((row) => row.textContent);
-  /** The drawn runs of the first line: each `M` lifts the pen after a gap. */
   const runsOf = (container: HTMLElement) =>
     container.querySelector('[data-trend-line="1"] path')?.getAttribute('d')?.split('M').length ??
     1;
@@ -280,7 +278,6 @@ describe('TrendChart', () => {
       [...container.querySelectorAll('[data-trend-line="1"] [data-trend-connector]')].map((path) =>
         path.getAttribute('stroke-dasharray'),
       );
-    // Two runs measured under different methods: two dots, joined by a faint dash.
     const { container, rerender } = render(
       <TrendChart
         label="Visibility trend"

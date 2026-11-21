@@ -71,7 +71,6 @@ describe('issueFamilyBrief', () => {
       ],
     });
 
-    // Two of forty pages loaded: the claim names the two, never the forty.
     const some = issueFamilyBrief({
       cohort: cohort(40),
       grouping: 'seo',

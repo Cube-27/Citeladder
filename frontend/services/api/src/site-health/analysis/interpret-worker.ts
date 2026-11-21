@@ -38,7 +38,6 @@ function interpret(input: Interpretation) {
   };
 }
 
-/** A persistent interpreter: one reply per id-tagged request, for the life of the pool. */
 parentPort!.on('message', ({ id, input }: { id: number; input: Interpretation }) => {
   try {
     const result = interpret(input);

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * Scans the branch's changed files with CI's gitleaks version and allowlist,
- * so a false positive is found before a push instead of after a CI cycle. The
- * version is read from ci.yml; the scan runs in Docker and is skipped with a
- * warning when Docker is unavailable (CI remains the gate).
- */
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,7 +13,6 @@ const version = /GITLEAKS_VERSION:\s*([\d.]+)/u.exec(
 )?.[1];
 if (!version) throw new Error('GITLEAKS_VERSION is missing from ci.yml.');
 
-// Developer tooling runs `docker` from the caller's PATH, like quality.mjs runs git and pnpm.
 const docker = (args, options) => spawnSync('docker', args, options); // NOSONAR: trusted PATH.
 
 if (docker(['version'], { stdio: 'ignore' }).status !== 0) {

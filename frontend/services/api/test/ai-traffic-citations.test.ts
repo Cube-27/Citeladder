@@ -1,10 +1,3 @@
-/**
- * The AI Traffic Overview's tracked-citation figure as a persisted projection:
- * audit finalization records each run's owned citations with their exact IDs,
- * and the Overview read serves that fact over HTTP without counting citations.
- * The Visibility Sources table reads the run's persisted source facts the same
- * way, written by the same finalization.
- */
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
@@ -44,7 +37,6 @@ type Leg = { state: string; value: number | null; reason: string | null };
 type PageRow = { url_hash: string; canonical_url: string; citations: Leg };
 type UrlDetail = { page: PageRow | null; citations: { citation_id: string; audit_id: string }[] };
 
-/** A Pages or URL detail read over HTTP, as the screen makes it. */
 async function trafficRead<T>(t: Tenant, projectId: string, path: string) {
   const response = await app.request(`/api/v1/projects/${projectId}/ai-traffic/${path}`, {
     headers: {
@@ -54,7 +46,6 @@ async function trafficRead<T>(t: Tenant, projectId: string, path: string) {
   return { status: response.status, body: response.ok ? ((await response.json()) as T) : null };
 }
 
-/** The owned citation rows the run recorded for one cited URL. */
 async function ownedRows(t: AuditTenant, auditId: string, url: string) {
   return db
     .selectFrom('citations')
@@ -78,7 +69,6 @@ describe('AI Traffic Pages citations', () => {
     const guide = await ownedRows(t, auditId, 'https://acme.example/guide');
     const pricing = await ownedRows(t, auditId, 'https://acme.example/pricing');
     const guideHash = guide[0]!.url_hash!;
-    // Finalization grouped the owned rows by page; the competitor URL has none.
     const { owned_citation_pages: pages } = await db
       .selectFrom('metric_snapshots')
       .select('owned_citation_pages')
@@ -97,7 +87,6 @@ describe('AI Traffic Pages citations', () => {
       ].sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
     );
 
-    // A citation row appended after finalization is not counted by either read.
     const template = await db
       .selectFrom('citations')
       .selectAll()
@@ -129,7 +118,6 @@ describe('AI Traffic Pages citations', () => {
     const older = await finalizedRun(t, ['https://acme.example/guide']);
     const guide = await ownedRows(t, older, 'https://acme.example/guide');
     const path = `pages/${guide[0]!.url_hash}?range=30d`;
-    // A market probe's brand-named answers cite owned pages; they are not tracked citations.
     const probe = await finalizedRun(t, ['https://acme.example/guide']);
     await db.updateTable('audits').set({ audit_scope: 'probe' }).where('id', '=', probe).execute();
     expect(
@@ -195,8 +183,6 @@ describe('AI Traffic tracked citations', () => {
       owned.map((row) => row.id).sort(),
     );
 
-    // A citation row appended after finalization is not counted: the read
-    // serves the run's fact, not an aggregate over citation rows.
     const template = await db
       .selectFrom('citations')
       .selectAll()
@@ -231,11 +217,9 @@ describe('AI Traffic tracked citations', () => {
       count: 0,
       sources: [{ audit_id: auditId }],
     });
-    // An explicit window before the run has no completed run in it.
     expect(
       (await overview(t, t.projectId, 'start_date=2026-01-01&end_date=2026-01-07')).citations,
     ).toMatchObject({ state: 'not_available', reason: 'no_completed_run', count: null });
-    // Without the run's fact the figure is not computed, never zero.
     await db.deleteFrom('metric_snapshots').where('audit_id', '=', auditId).execute();
     expect((await overview(t, t.projectId)).citations).toEqual({
       unit: 'tracked_citations',
@@ -251,7 +235,6 @@ describe('AI Traffic tracked citations', () => {
       other = await tenant();
     await finalizedRun(other, ['https://acme.example/guide']);
     expect((await overview(t, other.projectId)).status).toBe(404);
-    // The project's own runs only exist under its workspace.
     expect(
       (
         await aiTrafficOverview(
@@ -275,7 +258,6 @@ type SourcesBody = {
   items: { key: string; responses: number; prompts: number; urls: number; annotations: number }[];
 };
 
-/** A Visibility Sources table read over HTTP, as the screen makes it. */
 async function sourcesRead(t: Tenant, projectId: string, query: string) {
   const response = await app.request(`/api/v1/projects/${projectId}/visibility/sources?${query}`, {
     headers: {
@@ -316,7 +298,6 @@ describe('Visibility Sources facts', () => {
       .orderBy('id')
       .execute();
     expect([analyses.length, citations.length]).toEqual([3, 9]);
-    // Both dimensions account for every citation of the run, exactly once.
     const rows = await db
       .selectFrom('audit_source_aggregates')
       .select(['dimension', 'key', 'citation_ids', 'analysis_ids'])
@@ -346,7 +327,6 @@ describe('Visibility Sources facts', () => {
       },
     ]);
 
-    // A citation row appended after finalization is not counted.
     const template = await db
       .selectFrom('citations')
       .selectAll()
@@ -409,7 +389,6 @@ describe('Visibility Sources facts', () => {
     const t = await tenant(),
       other = await tenant();
     const auditId = await finalizedRun(other, ['https://review.example/a']);
-    // The writer is workspace-scoped: naming the run under another workspace writes nothing.
     await persistSourceAggregates(db, { workspaceId: t.workspaceId, auditId, at: new Date() });
     const foreign = await db
       .selectFrom('audit_source_aggregates')

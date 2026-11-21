@@ -51,11 +51,6 @@ export function organizationJsonLd(): JsonLdObject | null {
         addressCountry: 'IN',
       },
     },
-    // `sameAs` asserts "this URL is another identity OF THIS ENTITY", so a
-    // personal profile here would claim CiteLadder and a named individual are
-    // the same thing. The people are related to the organization, not
-    // identical to it, and `employee` is the property that says so. The
-    // CiteLadder company page, by contrast, IS this entity.
     employee: [PRODUCT_HEAD, FOUNDER].map((person) => ({
       '@type': 'Person',
       name: person.name,
@@ -78,12 +73,6 @@ export function websiteJsonLd(): JsonLdObject | null {
   };
 }
 
-/**
- * The product itself, as a web application. Deliberately carries no `offers`:
- * a price in structured data is a claim Google surfaces verbatim, and the
- * plans are not fixed here — an omitted offer is accurate, an invented one is
- * not. `aggregateRating` is likewise absent until there are real reviews.
- */
 export function softwareApplicationJsonLd(): JsonLdObject | null {
   const url = absoluteUrl('/');
   if (!url) return null;
@@ -166,12 +155,6 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
   };
 }
 
-/**
- * A research guide as an `Article`, published by the CiteLadder organization.
- * A guide with a named person author credits that person; otherwise the
- * organization. Only the dates a guide supplies are claimed: its publication
- * date when set, and its visible review date as `dateModified`.
- */
 export function researchArticleJsonLd(
   guide: {
     title: string;
@@ -186,7 +169,6 @@ export function researchArticleJsonLd(
   const url = absoluteUrl(guide.slug);
   const home = absoluteUrl('/');
   if (!url || !home) return null;
-  // A guide without its own image uses the site's social card, as its og:image does.
   const image = absoluteUrl(guide.image ?? DEFAULT_SOCIAL_IMAGE.path);
   const organization = organizationReference(home);
   return {
@@ -207,18 +189,6 @@ export function researchArticleJsonLd(
   };
 }
 
-/**
- * The blog index as a `Blog`, with its posts and then the research guides it
- * also lists as one `ItemList`.
- *
- * `dateModified` is the load-bearing part: a listing page that never states
- * when its collection last changed gives an answer engine no way to tell a
- * current index from a stale one, and CiteLadder's own crawler reports exactly
- * that absence. It is the newest REVISION date across the posts, not the
- * newest publication date -- revising an older post changes what this page
- * indexes, and reading only `date` would leave the signal stale. Guides carry
- * no publication date, so only posts set it.
- */
 export function blogIndexJsonLd({
   posts,
   guides,
@@ -261,7 +231,6 @@ export function blogIndexJsonLd({
   };
 }
 
-/** Source-review dates describe the evidence, not the page's publication date. */
 export function compareIndexJsonLd(
   competitors: readonly { slug: string; name: string }[],
 ): JsonLdObject | null {
@@ -294,11 +263,6 @@ export function compareIndexJsonLd(
   };
 }
 
-/**
- * A breadcrumb trail for the two nested routes. Every crumb is derived from the
- * route itself, so unlike `offers` above there is nothing here we cannot
- * substantiate.
- */
 export function breadcrumbJsonLd(
   crumbs: readonly { name: string; path: string }[],
 ): JsonLdObject | null {

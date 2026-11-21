@@ -24,19 +24,16 @@ type User = ReturnType<typeof userEvent.setup>;
 const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
 const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
 
-/** A filter set in Filters: its value chip after the button, holding the value; returns its ×. */
 async function findSetFilter(label: string, value: string) {
   const remove = await screen.findByRole('button', { name: `Remove ${label} filter` });
   expect(remove.parentElement).toHaveTextContent(value);
   return remove;
 }
 
-/** Opens a filter's options in Filters and picks one. */
 async function chooseFilter(user: User, label: string, choice: string) {
   await chooseFilterOption(user, label, choice);
 }
 
-/** Opens an issue from its row in the table. */
 async function openIssue(user: User, title: string) {
   await user.click(await screen.findByRole('button', { name: title }));
   return screen.findByRole('dialog', { name: title });
@@ -46,7 +43,6 @@ function currentUrl(): string {
   return window.location.pathname + window.location.search;
 }
 
-/** Both reads answered with one page of `items`; the list's params are recorded. */
 function serveIssues(items = [issue()], seen: URLSearchParams[] = [], nextCursor?: string) {
   mswServer.use(
     http.get(ISSUES, ({ request }) => {
@@ -87,7 +83,6 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // Defect types, then the advisory types the tabs also list, the pages, then each severity.
     const strip = await screen.findByRole('group', { name: 'Issue summary' });
     expect(
       within(strip)
@@ -100,12 +95,10 @@ describe('IssuesCatalog', () => {
         .map((value) => value.textContent),
     ).toEqual(['47', '2', '50', '12', '23', '12']);
     const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
-    // Each names its fix in one sentence.
     const [first, second] = within(fixFirst).getAllByRole('listitem');
     expect(within(first!).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     expect(within(second!).getByText('Add a canonical link.')).toBeInTheDocument();
     expect(within(fixFirst).queryByText(/Point it at this page/)).toBeNull();
-    // Each tab says how many issues it holds.
     expect(
       screen.getAllByRole('radio').map((tab) => tab.textContent?.replaceAll(/\s+/g, ' ').trim()),
     ).toEqual(['Technical (24)', 'Content (9)', 'AEO (14)']);
@@ -114,7 +107,6 @@ describe('IssuesCatalog', () => {
     expect(within(table).getByRole('button', { name: 'Canonical tag is missing' })).toBeVisible();
     expect(seen.at(-1)?.get('section')).toBe('technical');
     expect(seen.at(-1)?.get('sort')).toBe('severity');
-    // Nothing opens until the reader picks an issue.
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -149,14 +141,11 @@ describe('IssuesCatalog', () => {
 
     expect(within(dialog).getByText('How to fix')).toBeInTheDocument();
     expect(within(dialog).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    // The rule description states the PASSING expectation; under a failing
-    // title it reads as a contradiction, so the dialog never prints it.
     expect(
       within(dialog).queryByText(
         'Search engines cannot find WebSite structured data on this page.',
       ),
     ).toBeNull();
-    // Evidence is the notation of the fix, with no label restating the title.
     expect(
       await within(dialog).findByText('expected types WebSite, found types Organization'),
     ).toBeInTheDocument();
@@ -164,7 +153,6 @@ describe('IssuesCatalog', () => {
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
     expect(within(link).getByText('Article')).toBeInTheDocument();
 
-    // Ask agent hands the Agent the issue's ids, never its evidence.
     const ask = within(dialog).getByRole('link', { name: 'Ask agent' });
     const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
     expect(handoff.context).toEqual({
@@ -242,11 +230,6 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).not.toContain('issue=');
   });
 
-  /**
-   * The detail query keeps the previous issue's occurrences while the next
-   * loads. A dialog captioning one issue over another's pages would describe
-   * pages it is not about, so it waits with placeholders instead.
-   */
   it('never shows one issue’s pages under another issue’s title', async () => {
     serveIssues([issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })]);
     let releaseOther!: () => void;
@@ -284,14 +267,11 @@ describe('IssuesCatalog', () => {
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     const dialog = await openIssue(user, 'WebSite schema is missing');
-    // Anchor on the detail, so a pager arriving with it would be caught.
     await within(dialog).findByRole('link', { name: /Homepage/ });
 
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-    // The table ends at its last issue: no blank space is held under it (owner,
-    // 2026-11-19). The open drawer hides the page behind it.
     const table = screen.getByRole('region', { name: 'Issues', hidden: true });
     expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(table.querySelector('tbody + tbody')).toBeNull();
@@ -344,7 +324,6 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    // The deep link's one-issue filter shows as a set chip, and any other filter ends it.
     await findSetFilter('Issue', 'WebSite schema is missing');
     await chooseFilter(user, 'Severity', 'Medium');
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
@@ -465,7 +444,6 @@ describe('IssuesCatalog', () => {
     );
     expect(within(dialog).getByText('7 clicks from the homepage')).toBeInTheDocument();
     expect(within(dialog).getByText('5 clicks from the homepage')).toBeInTheDocument();
-    // Evidence carried two of three pages: the remainder is said, not hidden.
     expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
     expect(within(dialog).queryByRole('link', { name: /Homepage/ })).not.toBeInTheDocument();
   });
@@ -637,8 +615,6 @@ describe('IssuesCatalog', () => {
     await chooseFilter(user, 'Page kind', 'Article');
     await waitFor(() => expect(seen.at(-1)?.get('page_kind')).toBe('article'));
 
-    // Clearing back to "All page kinds" drops the param. That combination is
-    // already cached, so force a fresh one and assert THAT request omits it.
     await chooseFilter(user, 'Page kind', 'All page kinds');
     await chooseFilter(user, 'Severity', 'Medium');
     await waitFor(() => expect(seen.at(-1)?.get('severity')).toBe('medium'));
@@ -731,7 +707,6 @@ describe('IssuesCatalog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    // The list steps forward and back along the cursors it followed.
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
     await user.click(screen.getByRole('button', { name: 'Previous page' }));
@@ -755,7 +730,6 @@ describe('IssuesCatalog', () => {
     expect(within(typed).getByText('Page kinds').nextElementSibling?.textContent).toBe(
       'Product, Category',
     );
-    // The row already says severity, category and the page count; the drawer does not.
     expect(within(typed).queryByText('32 pages affected')).toBeNull();
     expect(within(typed).queryByText('High')).toBeNull();
     await user.click(within(typed).getByRole('button', { name: 'Close drawer' }));

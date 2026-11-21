@@ -1,16 +1,5 @@
 import { PARENT_COMPANY, type LegalDocument } from './legal';
 
-/**
- * The Data Processing Agreement and the provider list it relies on.
- *
- * The provider rows come from an audit of the code and production
- * configuration (last 12 October 2026). Each row names only a service the
- * product actually calls; open questions live in
- * docs/operations/legal-decisions.md. The crawler, a
- * dormant monitoring option and unconfigured sign-in providers are
- * deliberately absent. When a provider is added, removed or re-routed, this
- * list changes in the same pull request.
- */
 const email = PARENT_COMPANY.email;
 
 export const DATA_PROCESSING_AGREEMENT: LegalDocument = {

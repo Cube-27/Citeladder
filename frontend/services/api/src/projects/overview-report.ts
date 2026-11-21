@@ -1,9 +1,3 @@
-/**
- * The Overview PDF: a branded cover, then the project's saved layout, widget
- * by widget, from the same persisted reads the page shows, then a plain
- * reading guide. Every section prints a missing value as missing; nothing here
- * computes a metric of its own, and no internal identifier reaches the page.
- */
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import type { OverviewWidgetKey } from '@citeladder/contracts/overview';
@@ -53,7 +47,6 @@ const SEVERITY: Record<Action['severity'], Tag> = {
   info: { label: 'Informational', tone: 'neutral' },
 };
 
-/** What an action is about, from the target the backend presents (a theme label names itself). */
 function target(action: Action): string {
   const label = action.target_label;
   if (!label) return 'Across the project';
@@ -62,7 +55,6 @@ function target(action: Action): string {
   return label;
 }
 
-/** Whether the run shows changes, by the one basis the Overview screen uses. */
 function showsChange(view: View): boolean {
   const measured = view.measurement;
   if (!measured) return false;
@@ -70,10 +62,6 @@ function showsChange(view: View): boolean {
   return comparisonBasis({ status, answers: measured.comparison_answers }).kind !== 'declined';
 }
 
-/**
- * A figure's note: what it measures, then its change. Without a change to show
- * the cover's notice says why once, so a cell carries no change line of its own.
- */
 function note(view: View, meaning: string, change: string | null): string {
   if (!showsChange(view)) return meaning;
   return `${meaning} · ${change ?? NO_COMPARISON}`;
@@ -91,7 +79,6 @@ function percentStat(view: View, label: string, metric: Metric, meaning: string)
 function rankStat({ view, brands }: ReportContext): Stat {
   const { value, delta } = view.state.brand_rank;
   if (value === null) return { label: 'Brand rank', value: MISSING, note: NO_READING };
-  // A lower rank is better, so a negative change is a gain.
   let change: string | null = null;
   if (delta !== null && delta !== 0)
     change = `${delta < 0 ? 'Up' : 'Down'} ${plural(Math.abs(delta), 'place')}`;
@@ -204,7 +191,6 @@ function guide({ view, report, prompts }: ReportContext, brand: string) {
     report.text('No run has completed yet, so there are no figures to report.');
     return;
   }
-  // Prompt scores exist only for prompts the run measured, so the count says "measured".
   const scope = prompts ? `${measuredPrompts(prompts.length)} across` : 'answers from';
   report.text(
     `This report covers the run completed ${dateTime(measurement.completed_at)}: ${scope} ${engines(measurement.logical_engines)}. Changes compare it with the previous run that used the same prompts and engines. A dash (${MISSING}) means there is no value or no comparison yet; it never stands for zero.`,
@@ -213,7 +199,6 @@ function guide({ view, report, prompts }: ReportContext, brand: string) {
 
 const measuredPrompts = (count: number) => `${plural(count, 'prompt')} measured`;
 
-/** Reads a run-scoped projection, or null before the first completed run. */
 async function beforeFirstRun<T>(read: () => Promise<T>): Promise<T | null> {
   try {
     return await read();
@@ -235,7 +220,6 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
             db,
             { ...scope, marketId: null },
             {
-              // The command center's run, so every section describes the same audit.
               auditId: measurement.audit_id,
               auditIds: null,
               baselineAuditIds: null,
@@ -266,7 +250,6 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
         ]
       : [website, 'No completed measurement yet.'].filter(Boolean),
   });
-  // The track's first limitation is the basis's note or reason, worded as on the Overview.
   const limitation = view.track.limitations[0];
   if (measurement && limitation) report.note(limitation);
   const context: ReportContext = {
@@ -282,8 +265,6 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
     try {
       await sections[widget.key]?.(context); // NOSONAR -- Sections write to one PDF in layout order.
     } catch (error) {
-      // Before the first completed run a widget's read has nothing to select,
-      // and a run whose results are still being written is not that.
       if (!(error instanceof AnalysisNotFoundError)) throw error;
       quiet(
         report,

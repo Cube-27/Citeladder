@@ -2,7 +2,6 @@ import type { BrandDiscovery } from '@/lib/api/brand-discoveries';
 
 export const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
 
-/** A persisted discovery for Acme at `status` and `phase`, with one competitor found. */
 export function discovery(
   status: BrandDiscovery['status'],
   phase: BrandDiscovery['progress']['phase'],

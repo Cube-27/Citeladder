@@ -10,7 +10,6 @@ import { grantableScopes, mcpPolicy, type McpConfig } from './config.ts';
 import { mintToken, OAuthError } from './oauth.ts';
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
-// Unsupported extras (an extra grant, `offline_access`) are narrowed away, not refused.
 const metadataSchema = z.object({
   redirect_uris: z.array(z.string()).min(1).max(mcpPolicy.max_redirect_uris),
   client_name: z.string().max(mcpPolicy.max_client_name_length).optional(),
@@ -26,7 +25,6 @@ const metadataSchema = z.object({
 export function isLoopback(uri: URL) {
   return uri.protocol === 'http:' && LOOPBACK.has(uri.hostname);
 }
-/** HTTPS, loopback HTTP, or a native app's private-use scheme. */
 function acceptedRedirect(raw: string, uri: URL) {
   const scheme = uri.protocol.slice(0, -1);
   if (raw.length > mcpPolicy.max_redirect_uri_length || uri.username || uri.password || uri.hash)
@@ -65,7 +63,6 @@ function validateRegistration(input: unknown) {
   };
 }
 
-/** Spends a registration's budgets inside the transaction that stores the client. */
 export type RegistrationAdmission = (trx: Database) => Promise<void>;
 
 /**
@@ -81,12 +78,6 @@ export function admitRegistration(network: string, settings: SettingSource): Reg
     ]);
 }
 
-/**
- * A client a person has approved spends the shared global authorization
- * budget. One no person has approved yet (every fresh anonymous registration)
- * spends its network's own smaller pool instead, so a flood of registered
- * clients cannot use up authorization for anyone else.
- */
 export function admitAuthorization(
   db: Database,
   {
@@ -105,7 +96,6 @@ export function admitAuthorization(
   ]);
 }
 
-/** One budget per grant and per account; a client over its own budget spends no other. */
 export function admitToolCall(db: Database, grantId: string, userId: string) {
   return admitBudgets(db, [
     [budget('mcp_tool_call_grant'), grantId],
@@ -113,7 +103,6 @@ export function admitToolCall(db: Database, grantId: string, userId: string) {
   ]);
 }
 
-/** A change also spends a narrower per-grant budget than reads, in the same window. */
 export function admitWriteCall(db: Database, grantId: string) {
   return admitBudgets(db, [[budget('mcp_write_call_grant'), grantId]]);
 }

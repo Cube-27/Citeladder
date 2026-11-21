@@ -13,7 +13,6 @@ const planReference = z
   .string()
   .regex(/^plan_[A-Za-z0-9]+$/u)
   .max(255);
-/** Every recurring provider plan the catalog needs: one per plan, mode and region. */
 export function recurringPrices(input: unknown) {
   return validateCatalog(input).plans.flatMap((plan) =>
     MODES.flatMap((mode) =>
@@ -107,7 +106,6 @@ export class RazorpayPlanReader {
     return input;
   }
 }
-/** Resolve existing paths, including symlinks; new output uses its real parent. */
 export async function workspacePath(path: string, output = false) {
   const root = await realpath(process.cwd());
   const resolved = resolve(root, path);

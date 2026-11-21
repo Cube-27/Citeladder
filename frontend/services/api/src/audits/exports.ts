@@ -54,7 +54,6 @@ const joined = (value: unknown) =>
   !value || (Array.isArray(value) && !value.length) ? '' : JSON.stringify(value);
 const pct = (value: unknown) => (typeof value === 'number' ? `${round(value * 100, 0)}%` : '—');
 const usd = (value: unknown) => (typeof value === 'number' ? `$${value.toFixed(4)}` : '—');
-/** The prompt-panel line: unavailable, all non-branded, or the mixed class counts. */
 function promptPanel(classes: [string, unknown][]): string {
   if (!classes.length) return 'Prompt classification unavailable until executions complete.';
   if (onlyOf(classes)?.[0] === 'non_branded') return 'All prompts are unaided/non-branded.';

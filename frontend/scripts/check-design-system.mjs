@@ -8,11 +8,6 @@ import {
   literalColourViolations,
 } from './design-system-source-checks.mjs';
 
-/**
- * The design rules a machine keeps (docs/design.md): colours come only from
- * the tokens in apps/app/src/globals.css, token pairs hold WCAG AA contrast,
- * and only components/ui imports Radix. Plus the app's Tailwind @source list.
- */
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.mjs', '.astro']);
@@ -41,7 +36,6 @@ for (const path of files(root)) {
   if (!sourceExtensions.has(extension) || path === tokenOwner) continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path);
-  // An Astro component answers for its `<style>` blocks only.
   const styled =
     extension === '.astro'
       ? [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join()

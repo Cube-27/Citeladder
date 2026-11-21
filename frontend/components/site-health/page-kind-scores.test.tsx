@@ -85,17 +85,12 @@ describe('PageKindScores', () => {
         )}
       />,
     );
-    // Humanized type badges.
     expect(screen.getByText('Homepage')).toBeInTheDocument();
     expect(screen.getByText('Article')).toBeInTheDocument();
-    // Analyzed counts.
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
-    // Mean scores formatted like every other score cell.
     expect(screen.getByText('80')).toBeInTheDocument();
-    // Scores render as whole numbers everywhere.
     expect(screen.getByText('91')).toBeInTheDocument();
-    // PAGE_KINDS display order: Homepage row precedes the Article row.
     const homepage = screen.getByText('Homepage');
     const article = screen.getByText('Article');
     expect(

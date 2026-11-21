@@ -6,7 +6,6 @@ import {
   signOriginRequest,
 } from '@citeladder/contracts/origin-signature';
 
-/** Server-only transport shared by the product and marketing Workers. */
 export interface WorkerOriginConfig {
   upstream: string;
   publicHost: string;
@@ -15,7 +14,6 @@ export interface WorkerOriginConfig {
 }
 type WorkerTransport = (request: Request) => Promise<Response>;
 
-/** The origin's revalidated-read policy (`services/api/src/http/revalidate.ts`). */
 const REVALIDATED = 'private, no-cache';
 
 const HOP_HEADERS = new Set([

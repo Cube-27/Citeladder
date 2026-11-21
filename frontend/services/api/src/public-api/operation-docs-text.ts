@@ -1,8 +1,3 @@
-/**
- * The page text of every public operation, one per line:
- * `METHOD /path below the project | Summary | Description`. `{key}` in a
- * description stands for the Idempotency-Key advice (see `operation-docs.ts`).
- */
 export const OPERATION_TEXT = `
 GET /v1/projects | List projects | Returns the projects the key can reach, one page at a time. A key limited to some projects lists only those. Start here to find the project_id every other path needs.
 GET / | Get a project | Returns one project: its brand, website, markets, owned domains, competitors, prompt sets and the defaults its audits start from. A project outside the key's reach answers 404.

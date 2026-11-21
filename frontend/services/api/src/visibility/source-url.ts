@@ -1,12 +1,3 @@
-/**
- * Everything one cited URL's own page shows, from persisted rows only.
- *
- * Keyed by the URL the
- * engines reported, so a citation whose page identity was never resolved
- * still has a page. `brands` is co-occurrence (named in answers that cited
- * this URL), never presence on the page; `first_seen` is the first sighting
- * within the selection, never the page's age.
- */
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
 import type { z } from 'zod';
@@ -21,7 +12,6 @@ import { earnedPageActions } from '../opportunities/earned-page-actions.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
-// A detail page shows what a person can take in; its tables do not page.
 const limits = {
   prompts: policy.visibility.source_url_max_prompts,
   brands: policy.visibility.source_url_max_brands,
@@ -109,7 +99,6 @@ async function promptRows(db: Database, cited: Cited): Promise<SourceUrlDetail['
   }));
 }
 
-/** Names recorded in the cited answers, with the answers that named each. */
 async function mentionCounts(
   db: Database,
   workspaceId: string,
@@ -143,11 +132,6 @@ async function mentionCounts(
   return rows.map((row) => ({ name: row.name, responses: Number(row.responses) }));
 }
 
-/**
- * Brands and competitors named in the answers that cited this URL: the
- * strongest link the rows support, since a mention is recorded against the
- * response, never against the citation beside it.
- */
 async function brands(
   db: Database,
   selection: RunSelection,
@@ -176,15 +160,6 @@ async function brands(
   });
 }
 
-/**
- * What this project knows about the page itself: whether and when it was
- * read, what kind of page it is and how that was established, who is named on
- * it with the quoted line, and the open Action to get listed on it.
- *
- * Presence comes from the latest SUCCESSFUL reading only, so a later failed
- * attempt never erases what was learned, and a page nobody read carries no
- * verdicts at all. One bounded read by page identity; it never fetches.
- */
 async function pageSection(
   db: Database,
   selection: RunSelection,
@@ -256,14 +231,12 @@ export async function getSourceUrlDetail(
         sql<string>`count(distinct cited.prompt_key)`.as('prompts'),
       ])
       .executeTakeFirstOrThrow(),
-    // The page identity these citations resolved to rides on the count.
     matching
       .select([
         sql<string>`count(citation.id)`.as('citations'),
         sql<string | null>`max(citation.url_hash)`.as('url_hash'),
       ])
       .executeTakeFirstOrThrow(),
-    // The title the engines reported, most recent non-empty first.
     matching
       .where('citation.title', '!=', '')
       .select('citation.title')
@@ -279,7 +252,6 @@ export async function getSourceUrlDetail(
     retrievals,
     citations: Number(citations),
     responses: Number(denominator.responses),
-    // Per response the URL was RETRIEVED in, as the URL table's column is.
     citation_rate: retrievals ? Number(citations) / retrievals : null,
     prompts: Number(overview.prompts),
     first_seen: wireUtcOrNull(overview.first_seen),

@@ -16,27 +16,13 @@ import { Tooltip } from '@/components/ui/tooltip';
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * The four buttons (docs/design.md Buttons), flat in the app: `primary` the
- * one `primary`-filled action a view is for, `secondary` `raised` with a `rule`
- * edge, `quiet` transparent with no edge (`ink-2`, `ink` on hover) for
- * toolbars, rows and navigation, `danger` a secondary face with a negative
- * label (filled only in a confirm dialog, `danger-confirm`). The website
- * keeps its layered `.face` (globals.css, scoped to `data-public-surface`).
- */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
-/**
- * Heights 28 (default) and 44 (flow pages); below 900px or under a coarse
- * pointer every control is 44. Controls in one row share one size.
- */
 export type ButtonSize = 'md' | 'lg';
 
-/** A quiet button's hover, unless it is toggled on or its menu is open. */
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
-/** The raised face, a step up on hover, press or an open menu. */
 const RAISED_FACE =
   'face bg-raised border border-rule not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
@@ -45,7 +31,6 @@ const RAISED_FACE =
 const BUTTON_BASE =
   'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
-// `--control-md-padding` turns 16 where `control-md` turns 44 (app only).
 const BUTTON_SIZE: Record<ButtonSize, string> = {
   md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)]',
   lg: 'min-h-[var(--control-lg)] px-4',
@@ -64,7 +49,6 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
     'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
-/** The button face for an element that is not a `Button` (a link styled as one). */
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',
   className?: string,
@@ -76,7 +60,6 @@ export function buttonClasses(
 export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** Render the child element as the button (Radix Slot) instead of a <button>. */
   asChild?: boolean;
   pending?: boolean;
   pendingLabel?: ReactNode;
@@ -131,10 +114,6 @@ function NativeButton({
       disabled={props.disabled || pending}
       className={buttonClasses(variant, cn(pending && 'pointer-events-none', className), size)}
     >
-      {/* Busy keeps the button's width: the idle label keeps its box
-          (hidden) and the live rung with the label, or the pending verb,
-          is laid over it, using the side padding for the rung, so nothing
-          beside the button moves. That label is what assistive technology hears. */}
       <span
         aria-hidden={pending || undefined}
         className={cn('inline-flex items-center gap-2', pending && 'invisible')}
@@ -153,10 +132,8 @@ function NativeButton({
   );
 }
 
-/** Quiet buttons already warned about, so a re-render warns once. */
 const warnedQuiet = new Set<string>();
 
-/** An icon among a button's direct children (or its slotted link's): decorative, so `aria-hidden`. */
 function carriesIcon(children: ReactNode): boolean {
   return Children.toArray(children).some((child) => {
     if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
@@ -169,11 +146,6 @@ function carriesIcon(children: ReactNode): boolean {
   });
 }
 
-/**
- * Development only: a quiet button always carries an icon (Similarity: with
- * no edge, the icon is what says it can be pressed). Typing it would break
- * callers outside `components/ui`, so this check names them instead.
- */
 function checkQuietIcon({ variant, children }: Readonly<ButtonProps>) {
   if (!import.meta.env?.DEV || variant !== 'quiet' || carriesIcon(children)) return;
   const name = Children.toArray(children)
@@ -184,11 +156,6 @@ function checkQuietIcon({ variant, children }: Readonly<ButtonProps>) {
   console.warn(`Quiet button "${name}" has no icon: give it one, or make it secondary.`);
 }
 
-/**
- * One form per size: the size's control height (taller only when the reader's
- * text size grows its label), the control radius, the 16px icon 8px before
- * the label.
- */
 export function Button(props: Readonly<ButtonProps>) {
   checkQuietIcon(props);
   return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
@@ -196,27 +163,14 @@ export function Button(props: Readonly<ButtonProps>) {
 
 type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'aria-label'> & {
   icon: IconGlyph;
-  /** The accessible name and the tooltip: what pressing it does. */
   label: string;
-  /**
-   * `quiet` (default) in toolbars and rows; `secondary` alone on the ground;
-   * `primary` only for a form's one submit (the composer's Send).
-   */
   variant?: Extract<ButtonVariant, 'quiet' | 'secondary' | 'primary'>;
-  /** A shortcut shown in the tooltip. */
   shortcut?: string;
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
-  /** `false` only where the same words are visible beside it (a dialog's close). */
   tooltip?: boolean;
-  /**
-   * A link that looks like the icon control: an app path (`/runs`) goes
-   * through `ProjectLink`, scoped to the active project like any app link;
-   * an http(s) URL stays an external link with no referrer.
-   */
   href?: string;
 };
 
-/** The anchor an icon link renders: the project's router link for an app path. */
 function IconLinkTarget({
   href,
   label,
@@ -241,12 +195,6 @@ function IconLinkTarget({
   );
 }
 
-/**
- * IconButton — the square icon-only control for universal actions (close,
- * more, copy, sort, collapse): square at the control height, quiet by default, the 16px
- * glyph, and a required `label` that is both its accessible name and its
- * tooltip (shown after 300ms on hover, at once on keyboard focus).
- */
 export function IconButton({
   icon,
   label,

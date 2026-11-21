@@ -76,7 +76,6 @@ const item = z
         usd_minor: amount,
         regional_prices: z.partialRecord(
           billingRegionSchema,
-          // The GST rate is frozen with the price, the one rate its quotes use.
           price.extend({
             fx_inr_per_usd: z.string().default(''),
             tax_rate: z.string().default(''),

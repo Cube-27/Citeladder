@@ -1,21 +1,3 @@
-/**
- * A run's Sources facts, written once by audit finalization in its
- * transaction, so the Sources table sums and unions persisted rows instead of
- * re-joining every answer and citation per read.
- *
- * - `audit_answer_aggregates`: per (engine, cohort, frozen topic) the run asked,
- *   the exact successful answers and the prompts they answered. A run that
- *   asked an engine and got no answer still has its row, with empty arrays, so
- *   a run without rows reads "not computed", never zero.
- * - `audit_source_aggregates`: per (engine, cohort, frozen topic, dimension, key) and the
- *   citation attributes the table filters and labels by, the exact answers,
- *   prompts, URLs and citation IDs behind it. Readers count distinct values
- *   over these arrays, because a URL or prompt cited in two runs is one URL or
- *   prompt.
- *
- * Prompt keys coalesce to the frozen prompt text, as the old read did: a
- * deleted prompt's snapshot has no id.
- */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';

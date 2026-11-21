@@ -5,17 +5,6 @@ import { FileText, Search } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { groupResults, highlight, searchArticles, type SearchEntry } from '../lib/search';
 
-/**
- * DocsSearchDialog — docs search on the command palette's frame: a 48px
- * query row, results grouped by docs group as 64px two-line rows (title in
- * `ink` 500, the description with matched words in `cl-mark`, both cut to
- * one line so rows never grow) in a list of one fixed height, and the
- * keyboard legend. Type, ↑↓, ↵ and Esc; Ctrl K or ⌘K opens it from anywhere.
- * The DocsTopBar shows the field trigger from 900px and the icon below.
- *
- * A native modal <dialog>: the top layer, the focus trap and Esc come from
- * the browser, and the guide index loads on first open.
- */
 export function DocsSearchDialog() {
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -42,7 +31,6 @@ export function DocsSearchDialog() {
         dialog.current.close();
         return;
       }
-      // The visible trigger takes focus back on close, as if it had been pressed.
       const triggers = document.querySelectorAll<HTMLElement>('[data-docs-search-trigger]');
       show([...triggers].find((trigger) => trigger.offsetParent !== null) ?? null);
     };
@@ -50,8 +38,6 @@ export function DocsSearchDialog() {
     return () => document.removeEventListener('keydown', shortcut);
   }, []);
 
-  // A click on the backdrop lands on the <dialog> itself and closes it; the
-  // keyboard path is Esc, which the browser handles.
   useEffect(() => {
     const frame = dialog.current;
     if (!frame) return;
@@ -83,8 +69,6 @@ export function DocsSearchDialog() {
   const groups = groupResults(searchArticles(entries ?? [], query));
   const results = groups.flatMap((group) => group.items);
   const cursor = active < results.length ? active : 0;
-  // The input is a combobox: ↑↓ move its active descendant, so assistive
-  // technology announces the highlighted guide while focus stays in the field.
   const optionId = (index: number) => `docs-search-option-${index}`;
 
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -213,7 +197,6 @@ export function DocsSearchDialog() {
                       href={result.href}
                       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the search field while these guide links are its active descendants.
                       role="option"
-                      // Options are reached through the field's active descendant, never by Tab.
                       tabIndex={-1}
                       aria-selected={index === cursor}
                       data-active={index === cursor}
@@ -255,8 +238,6 @@ export function DocsSearchDialog() {
 }
 
 function Marked({ text, query }: Readonly<{ text: string; query: string }>) {
-  // A run's offset in the text is its stable key: the same text and query
-  // always split at the same places.
   let offset = 0;
   return highlight(text, query).map((segment) => {
     const start = offset;

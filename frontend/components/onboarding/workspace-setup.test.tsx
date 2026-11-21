@@ -59,7 +59,6 @@ describe('WorkspaceSetup', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     await user.click(submit);
     expect(screen.getByText('Name your workspace.')).toBeVisible();
-    // The Terms were agreed on the sign-in or sign-up form; setup asks for nothing more.
     expect(screen.queryByRole('checkbox')).toBeNull();
 
     await user.type(screen.getByLabelText(/^Workspace name/), '  Acme ');

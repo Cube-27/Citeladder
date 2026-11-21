@@ -195,7 +195,6 @@ async function refusal(
   return null;
 }
 
-/** One call start consumes one token and leases one unit in every applicable pool. */
 export async function acquireCapacity(
   db: Database,
   request: CapacityRequest,
@@ -223,7 +222,6 @@ export async function acquireCapacity(
         .where('lease_kind', '=', 'concurrency')
         .executeTakeFirst();
       const expiry = new Date(at.getTime() + runtime.audits.capacity_lease_ttl_seconds * 1000);
-      // Maintenance may purge a long-expired prior lease meanwhile: then a new one is written.
       const renewed = prior
         ? await trx // NOSONAR -- One transaction: leases follow the bucket lock order.
             .updateTable('provider_capacity_leases')
@@ -277,7 +275,6 @@ export async function acquireCapacity(
     );
   return decision;
 }
-/** Release concurrency only. Provider rate limits raise a shared, bounded cooldown. */
 export function releaseCapacity(
   db: Database,
   request: CapacityRequest,

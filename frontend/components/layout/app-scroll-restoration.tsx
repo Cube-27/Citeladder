@@ -1,13 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
-/**
- * The shell's panel (`#main`) scrolls, not the document, so the router's own
- * restoration cannot reach it. Positions are keyed by history entry, so only
- * Back and Forward restore one; a new path opens at the top (or at its
- * hash), and a write to the same path (a tab, a filter, a project switch)
- * keeps the position.
- */
 export function AppScrollRestoration() {
   const { key, pathname, hash } = useLocation();
   const navigationType = useNavigationType();
@@ -31,7 +24,6 @@ export function AppScrollRestoration() {
   return null;
 }
 
-/** The id a fragment names; a malformed one (`#%`) names none. */
 function fragmentId(hash: string): string {
   try {
     return decodeURIComponent(hash.slice(1));

@@ -20,14 +20,8 @@ import type { visibilitySourceMoversSchema } from '@citeladder/contracts/visibil
 type Movers = z.infer<typeof visibilitySourceMoversSchema>;
 type Mover = Movers['risers'][number];
 
-/** Each list reserves this many rows, so a short list never shortens the card. */
 const MOVER_ROWS = 5;
 
-/**
- * Sources ranked by change in citation share against the dashboard's
- * comparison, which is the previous comparable period. Without a comparable
- * baseline there is no movement to rank.
- */
 export function useSourceMovers(
   filters: SourceFilters,
   queries: SourceQueries,
@@ -68,11 +62,6 @@ const MOVER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
 ];
 
-/**
- * What both lists show instead of rows: no comparable period, a failed read,
- * the first load, or a comparison the server could not make. Undefined once
- * there are movers to list.
- */
 function moversState(
   query: ReturnType<typeof useSourceMovers>,
   comparable: boolean,
@@ -151,7 +140,6 @@ function MoverTable({
   );
 }
 
-/** Risers and fallers by citation share, current period against the previous one. */
 export function TopMoversCard({
   dimension,
   query,
@@ -159,7 +147,6 @@ export function TopMoversCard({
 }: Readonly<{
   dimension: 'domain' | 'url';
   query: ReturnType<typeof useSourceMovers>;
-  /** Whether the dashboard found a comparable earlier period at all. */
   comparable: boolean;
 }>) {
   const state = moversState(query, comparable);

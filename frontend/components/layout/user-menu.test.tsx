@@ -84,7 +84,6 @@ describe('UserMenu', () => {
     ['/billing', 'page'],
     ['/pricing', 'page'],
     ['/settings?tab=members', 'page'],
-    // Integrations has its own sidebar row, which marks it instead.
     ['/settings?tab=integrations', null],
     ['/visibility', null],
   ])('marks the account button as the location on %s', (path, current) => {
@@ -109,13 +108,11 @@ describe('UserMenu', () => {
     const connectIndex = labels.findIndex((label) => /^mcp connections$/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
-    // Order: Settings → Billing → MCP connections → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
     expect(billingIndex).toBe(settingsIndex + 1);
     expect(connectIndex).toBe(billingIndex + 1);
     expect(signOutIndex).toBe(connectIndex + 1);
 
-    // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);
     expect(items[billingIndex]).toHaveAttribute('href', `/billing?workspace=${WORKSPACE}`);
     expect(items[connectIndex]).toHaveAttribute(

@@ -15,7 +15,6 @@ const overview = {
     industry: 'Software',
     description: 'Analytics for growth teams',
     positioning: 'Evidence-led analytics',
-    // A long offering must cut inside its chip, never widen the page.
     products_services: [
       'AI Visibility tracking (brand mentions, position, sentiment and competitors across AI answers and search engines)',
       'Analytics',
@@ -41,7 +40,6 @@ const overview = {
     observed_at: evidence.observed_at,
     limitations: [],
   },
-  // A measured run, so Overview draws its widgets rather than the start card.
   measurement: {
     audit_id: '33333333-3333-4333-8333-333333333333',
     completed_at: evidence.observed_at,
@@ -68,7 +66,6 @@ const overview = {
   report_available: false,
   stale: false,
 };
-// The default layout, so Overview lays out today's sections.
 const layout = {
   widgets: [
     { key: 'project_state', size: 'full' },
@@ -154,8 +151,6 @@ test('long segments stay on one row and keyboard focus reveals the selected opti
           series: { clicks: [], impressions: [], ctr: [], position: [] },
         },
         comparison: null,
-        // Imported history, so the range controls draw (before any history the
-        // empty state holds the one step and there is no range to choose).
         coverage: { earliest_date: '2026-01-01', latest_date: '2026-01-28', covered_days: 28 },
         dimension_counts: {
           query: 0,
@@ -176,7 +171,6 @@ test('long segments stay on one row and keyboard focus reveals the selected opti
   await page.goto(fixtureProjectPath('/performance'));
   const options = page.getByRole('radiogroup', { name: 'Date range' }).getByRole('radio');
   await expect(options).toHaveCount(3);
-  // Stress the existing control with longer labels without changing product copy.
   await options.evaluateAll((nodes) =>
     nodes.forEach((node) => {
       node.firstChild!.textContent += ' reporting interval';
@@ -210,7 +204,6 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
   await page.goto('/onboarding');
   const field = page.getByLabel(/^Brand name/);
   await expect(field).toBeVisible();
-  // A script focus shows the caret only (input-modality.ts); the reader's Tab draws the ring.
   const tabInto = async () => {
     await field.focus();
     await page.keyboard.press('Shift+Tab');
@@ -233,11 +226,9 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       const style = getComputedStyle(node);
       return { edge: style.borderColor, outline: style.outlineStyle, glow: style.boxShadow };
     });
-    // A focused app field takes the accent edge and its glow, no outline (AR-13).
     expect(ordinary.outline).toBe('none');
     expect(ordinary.glow).not.toBe('none');
     expect(ordinary.edge).not.toBe(ordinaryEdge);
-    // Isolate the primitive's rendering contract from form validation policy.
     await field.evaluate((node) => {
       node.setAttribute('aria-invalid', 'true');
       node.blur();
@@ -258,7 +249,6 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
         glow: style.boxShadow,
       };
     });
-    // The danger edge survives focus, glowing in its own colour, not the accent's.
     expect(focused).toMatchObject({ edge, outline: 'none' });
     expect(focused.glow).not.toBe('none');
     expect(focused.glow).not.toBe(ordinary.glow);
@@ -279,8 +269,6 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   const restingEdge = await frame.evaluate((node) => getComputedStyle(node).borderColor);
   await password.click();
   await expect(password).toBeFocused();
-  // One boundary: the frame around the input and its end target takes the
-  // accent edge and its glow; the input draws neither.
   const lit = await frame.evaluate(async (node) => {
     await Promise.all(node.getAnimations().map((animation) => animation.finished));
     const style = getComputedStyle(node);
@@ -294,10 +282,8 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   await page.keyboard.press('Tab');
   const reveal = page.getByRole('button', { name: 'Show Password' });
   await expect(reveal).toBeFocused();
-  // The end target keeps a ring of its own.
   expect(await reveal.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('solid');
 
-  // A framed invalid field keeps its danger edge while it holds focus.
   await password.evaluate((node) => node.setAttribute('aria-invalid', 'true'));
   const invalidEdge = await frame.evaluate(async (node) => {
     await Promise.all(node.getAnimations().map((animation) => animation.finished));
@@ -318,14 +304,11 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   const inputEdge = await prompt.evaluate((node) => getComputedStyle(node).borderColor);
   await prompt.click();
   await expect(prompt).toBeFocused();
-  // The composer is the box: its frame takes the same ring as the password frame above.
   await expect(form).toHaveCSS('outline-style', lit.outline);
   await expect(form).toHaveCSS('box-shadow', lit.glow);
-  // One boundary: the field inside draws no edge, halo or outline of its own.
   expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).toBe(inputEdge);
   expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
   expect(await prompt.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  // The glow reaches 3px past the frame; the thread's scroller leaves it that room.
   const room = await form.evaluate((node) => {
     let clip = node.parentElement;
     while (clip && getComputedStyle(clip).overflowX === 'visible') clip = clip.parentElement;

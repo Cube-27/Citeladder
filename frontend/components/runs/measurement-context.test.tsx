@@ -5,11 +5,6 @@ import type { ModelProvenance } from '@citeladder/contracts';
 
 import { MeasurementContext } from './measurement-context';
 
-/**
- * The models behind a run's figures. An AGGREGATE spanning several models must
- * not elect one to stand in for the rest, which would attribute every number in
- * it to a model that produced only some of them; a missing model says so.
- */
 function provenance(model: string): ModelProvenance {
   return {
     logical_engine: 'gemini',
@@ -27,8 +22,6 @@ describe('MeasurementContext', () => {
   });
 
   it('collapses repeated routes on the same model to a singular surface', () => {
-    // Three executions on one model is still one model; "Multiple models (1)"
-    // would be nonsense.
     render(
       <MeasurementContext
         provenance={[
@@ -50,8 +43,6 @@ describe('MeasurementContext', () => {
       />,
     );
 
-    // Showing either name here would attribute the whole aggregate to a model
-    // that produced only half of it.
     expect(screen.getByText('Multiple models (2)')).toBeVisible();
     expect(screen.queryByText('gemini-2.5-pro')).not.toBeInTheDocument();
     expect(screen.queryByText('claude-4.5-sonnet')).not.toBeInTheDocument();

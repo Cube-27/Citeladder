@@ -1,15 +1,7 @@
 import type { Locator } from '@playwright/test';
 
-/** A band's x, y, width and height, or null when it is absent. */
 export type Box = readonly number[] | null;
 
-/**
- * A band's box in page coordinates, since a click below the fold scrolls the
- * shell's panel (`#main`, else the document) first. A band held in view (it
- * or an ancestor is fixed, or sticky and stuck at its inset in the panel)
- * keeps viewport coordinates: it stays put on screen while its page y
- * follows the scroll.
- */
 export async function bandBox(part: Locator): Promise<Box> {
   const box = await part.boundingBox();
   if (!box) return null;

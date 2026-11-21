@@ -74,7 +74,6 @@ describe('actionEvidence', () => {
           checks: [
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'audit', source_id: A },
             { observed_at: '2026-11-09T00:00:00Z', source_kind: 'site_crawl', source_id: B },
-            // A crawl two checks read is listed once, with its first reading.
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'site_crawl', source_id: B },
             { observed_at: null, source_kind: null, source_id: null },
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'mystery', source_id: B },

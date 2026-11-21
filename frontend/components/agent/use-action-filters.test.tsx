@@ -24,7 +24,6 @@ describe('useActionFilters', () => {
       '',
       '/actions?project=p1&status=dismissed&group_by=impact&impact=high&source=site_health',
     );
-    // A loader makes each navigation asynchronous, as the app's private routes are.
     const router = createBrowserRouter([
       { path: '/actions', loader: () => null, element: <Probe /> },
     ]);

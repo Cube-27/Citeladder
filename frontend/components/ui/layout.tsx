@@ -2,26 +2,6 @@ import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } fro
 
 import { cn } from '@/lib/utils';
 
-/**
- * Rhythm belongs to the container, never to its children.
- *
- * Ninety-odd `mt-*` utilities used to carry the spacing between stacked
- * elements, in a dozen different values, which meant changing a screen's rhythm
- * meant editing every child that participated in it. A `Stack` (vertical) or
- * an `Inline` (horizontal) owns the gap once, so the rhythm is a token edit
- * and a feature names the role, never a number.
- *
- * The rungs are one ladder for both directions, each a named relationship
- * between two elements (app values; the website and docs keep larger ones):
- *   `section`   — between titled groups of cards (32px)
- *   `workspace` — card to card, and block to block inside one pane (16px)
- *   `compact`   — elements inside one small component (8px)
- *   `item`      — atoms in one row: a badge and its text, buttons, filter
- *                 controls, the lines of a short list (8px)
- *   `tight`     — the parts of one fact: a title and its meta line, a label
- *                 and its sentence, a name and its URL (4px)
- * A Section in a Stack tops the gap up itself: 16 above a card, 32 above a group.
- */
 const STACK_GAP = {
   section: 'gap-[var(--page-section-gap)]',
   workspace: 'gap-[var(--workspace-gap)]',
@@ -47,12 +27,6 @@ export function Stack({
   );
 }
 
-/**
- * The horizontal rungs: the `Stack` ladder, plus `meta` — a wrapping line of
- * facts (a footer's timestamps, a row's counts), 16 between facts and 4
- * between wrapped lines — and `status`, a toolbar's wrapping status pieces,
- * 8 between pieces and 4 between wrapped lines.
- */
 const INLINE_GAP = {
   workspace: 'gap-[var(--workspace-gap)]',
   compact: 'gap-[var(--compact-gap)]',
@@ -64,10 +38,6 @@ const INLINE_GAP = {
 
 export type InlineGap = keyof typeof INLINE_GAP;
 
-/**
- * A row of items, centred on one line. The caller may add alignment and
- * wrapping (`justify-between`, `items-start`, `flex-wrap`), never spacing.
- */
 export function Inline({
   as,
   gap = 'item',

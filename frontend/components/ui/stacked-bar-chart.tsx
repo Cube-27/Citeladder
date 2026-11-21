@@ -12,29 +12,16 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/** One stacked part: its name and its fill (`fill-*` for the bar, `bg-*` for the key). */
 export type StackedSeries = Readonly<{ name: string; fill: string }>;
 
-/** One bar: a value per series, bottom up. */
 export type StackedBar = Readonly<{
   key: string;
-  /** The bar in full: the tooltip's title and the table's column. */
   label: string;
-  /** The short form under the axis. */
   axisLabel: string;
   values: readonly number[];
-  /** Not comparable with the bar before: marked across the plot, with its note. */
   breakBefore?: boolean;
 }>;
 
-/**
- * StackedBarChart — counts per period, stacked, drawn with Recharts in
- * HeroUI's chart style (owner, 2026-11-19): a faint dashed grid, no axis
- * lines, bars at most 32 wide with a rounded top, a key under the plot and a
- * tooltip card on hover or with the arrow keys. A bar not comparable with the
- * one before (`breakBefore`) has a dashed `warning` rule at its start. A
- * visually hidden table carries every value.
- */
 export function StackedBarChart({
   label,
   series,
@@ -42,11 +29,9 @@ export function StackedBarChart({
   breakNote,
   height: heightRole = 'sm',
 }: Readonly<{
-  /** What the chart shows, e.g. "Claims over time". */
   label: string;
   series: readonly StackedSeries[];
   bars: readonly StackedBar[];
-  /** Why a marked bar is not comparable, in the key, tooltip and table. */
   breakNote: string;
   height?: ChartHeight;
 }>) {

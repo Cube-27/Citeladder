@@ -1,15 +1,3 @@
-/**
- * One persisted page row per URL a crawl can show, filtered and keyset-paged
- * in a single query.
- *
- * A crawl shows the URLs it observed plus, for a full recrawl, the frozen
- * inventory of the crawls it inherits. A page's measurements and issues come
- * from its latest audit as the crawl shows it (`pageAuditsSql`, SH-B9): a
- * later page rerun, or an earlier audit of a page this crawl never reached.
- * The analyze task and the link metrics come from the crawl itself. The
- * presentation status is derived in SQL, so status filters page like any
- * other filter; the cursor cuts the window before the per-row projection.
- */
 import { pageAnalysisStatusSchema } from '@citeladder/contracts/site-health';
 import { sql, type RawBuilder } from 'kysely';
 
@@ -29,7 +17,6 @@ import { siteLevelRuleOf } from './rules.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
 const DUPLICATE = policy.site_health.crawl.exclusions.duplicate;
-// The largest integer depth; an unmeasured page sorts after every measured one.
 const UNMEASURED_DEPTH = 2_147_483_647;
 const MAX_REFERRERS = policy.site_health.crawl.max_referrers_per_url;
 
@@ -39,7 +26,6 @@ export type PageSort = (typeof PAGE_SORTS)[number];
 type SortSpec = { value: RawBuilder<unknown>; kind: 'text' | 'int'; descending: boolean };
 
 const SORTS: Record<PageSort, SortSpec> = {
-  // Measured pages first, then the rest, each by URL.
   status: {
     value: sql`(case when a.status = any(${PERSISTED}::text[]) then '0:' else '1:' end) || u.normalized_url`,
     kind: 'text',
@@ -59,21 +45,17 @@ const SORTS: Record<PageSort, SortSpec> = {
   },
 };
 
-/** The statuses a page filter takes: every presented status, plus both terminal failures. */
 export const PAGE_STATUS_FILTERS = [
   ...pageAnalysisStatusSchema.exclude(['failed']).options,
   'error_or_blocked',
 ] as const;
 
 export type PageRowFilters = {
-  /** A presentation status, or `error_or_blocked` for both terminal failures. */
   status?: string | null;
   monitored?: boolean | null;
   pageKind?: string | null;
-  /** Case-insensitive substring of the normalized or display URL. */
   query?: string | null;
   siteUrlId?: string;
-  /** Pages whose current analysis reports an issue of this rule. */
   rule?: string | null;
 };
 
@@ -101,7 +83,6 @@ export type PageRow = {
   aeo_measurement_state: string;
   aeo_measurement_reason: string;
   main_content_indexable: boolean | null;
-  /** The analyzed fetch was made despite a robots.txt exclusion. */
   robots_excluded: boolean;
   finalized_at: Date | null;
   issue_count: number | null;
@@ -111,7 +92,6 @@ export type PageRow = {
   sort_value: string | number;
 };
 
-/** The measurement fields every page projection carries; unmeasured without an analysis. */
 export const measurementFields = (row: PageRow) => ({
   page_kind: row.page_kind,
   web_fundamentals_score: row.web_fundamentals_score,
@@ -127,10 +107,6 @@ export const measurementFields = (row: PageRow) => ({
   issue_count: row.issue_count,
 });
 
-/**
- * Issues of a page's current analysis: its own evaluations plus the
- * architecture findings attached to it.
- */
 export function currentIssueFilter(issue: string, analysis: string) {
   const evaluation = sql.ref(issue + '.evaluation_id');
   const sources = sql.ref(analysis + '.source_evaluation_ids');
@@ -143,13 +119,6 @@ export function currentIssueFilter(issue: string, analysis: string) {
         and e.source_architecture_id is not null)))`;
 }
 
-/**
- * The issues `crawl` shows on the page whose latest audit is `analysis` (both
- * aliases): that audit's current issues, plus the crawl's own site-level
- * findings (architecture, sitewide links) on the page. Only a site crawl
- * evaluates those, so a later rerun of the root never drops them (SH-B9; the
- * same split as `viewIssuesSql`). The caller scopes the workspace.
- */
 export function shownIssueFilter(crawl: Pick<Crawl, 'id'>, issue: string, analysis: string) {
   const ref = (alias: string, column: string) => sql.ref(`${alias}.${column}`);
   const siteLevel = siteLevelRuleOf(issue);
@@ -177,11 +146,6 @@ function latestAuditsJoin(crawl: Crawl, siteUrlId?: string) {
     : sql`left join (${pageAuditsSql(crawl)}) latest on latest.site_url_id = u.id`;
 }
 
-/**
- * The URLs a window ranks (`u`) with their active tracked row (`m`). The
- * tracked filter leads from the tracked set: an inventory can list ten times
- * more URLs than the project tracks.
- */
 function pageSet(trackedOnly: boolean) {
   return trackedOnly
     ? sql`from monitored_site_urls m
@@ -193,7 +157,6 @@ function pageSet(trackedOnly: boolean) {
         and m.site_url_id = u.id and m.active`;
 }
 
-/** Rows of the crawl's page window, `limit + 1` of them so the caller can see a next page. */
 export async function pageRows(
   db: Database,
   crawl: Crawl,
@@ -221,8 +184,6 @@ export async function pageRows(
   const direction = sql.raw(spec.descending ? 'desc' : 'asc');
   const duplicate = sql`(k.analysis_id is null and k.error_code = ${DUPLICATE})`;
   const unmeasured = sql`case when ${duplicate} then 'excluded' else 'not_measured' end`;
-  // The cursor and the order cut the window first (PERF-007): only its rows
-  // pay for the projection's per-row subqueries.
   const latestAudits = latestAuditsJoin(crawl, filters.siteUrlId);
   const onePage = (column: string) =>
     filters.siteUrlId ? sql`and ${sql.ref(column)} = ${filters.siteUrlId}::uuid` : sql``;
@@ -352,10 +313,6 @@ export async function pageRows(
   return result.rows;
 }
 
-/**
- * The rule ids of each analysis's current issues, by finding class in rule
- * order: the same issues `issue_count` counts.
- */
 export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds: string[]) {
   const result = new Map<string, Record<string, string[]>>();
   if (!analysisIds.length) return result;
@@ -374,7 +331,6 @@ export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds:
   return result;
 }
 
-/** Each analysis's current evidence for one rule, keyed by analysis id. */
 export async function currentRuleEvidence(
   db: Database,
   crawl: Crawl,
@@ -396,10 +352,6 @@ export async function currentRuleEvidence(
 
 export type Referrer = { site_url_id: string; url: string };
 
-/**
- * The pages this crawl found linking to each URL, first sighting first: the
- * frontier's bounded referrer list, else the page that admitted the URL.
- */
 export async function linkedFrom(db: Database, crawl: Crawl, siteUrlIds: string[]) {
   const result = new Map<string, Referrer[]>();
   if (!siteUrlIds.length) return result;
@@ -431,7 +383,6 @@ export async function linkedFrom(db: Database, crawl: Crawl, siteUrlIds: string[
   return result;
 }
 
-/** A page window's items and the cursor after its last row. */
 export function pageWindow(
   rows: PageRow[],
   limit: number,
@@ -447,7 +398,6 @@ export function pageWindow(
   return { items, next };
 }
 
-/** The `(sort value, id)` a page cursor resumes after; `InvalidCursorError` otherwise. */
 export function pageCursor(
   cursor: string | null,
   scope: string,

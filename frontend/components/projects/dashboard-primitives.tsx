@@ -14,29 +14,13 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
 
-/**
- * A change against the previous comparable run, as every Command Center delta
- * reads it. The basis is spoken, not shown: beside the figure it cut the cards.
- */
 export const VS_PREVIOUS_RUN = {
   spokenContext: 'compared with the previous run',
   missingReason: 'No comparable run',
 } as const;
 
-/**
- * The Command Center's rates arrive already in percent (0–100). They print
- * with AI Visibility's one decimal (`percentText`), so one run never reads
- * 31.3% here and 31% there; a rank prints as AI Visibility prints it
- * (`formatRank`, "#3").
- */
 export const percentFigure = (value: number) => percentText(value / 100);
 
-/**
- * Each engine's brand mention rate in the previous and the current comparable
- * run. Both are shares of answers on the same 0–100 scale, so they are drawn as
- * meters against that scale rather than against the largest bar on screen. The
- * caller owns the empty case.
- */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   const engines = useEngineCatalog();
   const summary = movements
@@ -49,7 +33,6 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
     <ChartFrame summary={`Mention rate by engine, previous to current run. ${summary}.`}>
       <AppGrid layout="halves">
         {movements.map((row) => (
-          // Unpacked grid rows stretch, so a taller card spreads each engine's rows.
           <Stack key={row.label} gap="compact" className="min-w-0">
             <Inline className="justify-between">
               <span className={textRole('label')}>{engines.label(row.label)}</span>
@@ -96,10 +79,6 @@ function MovementMeter({
   );
 }
 
-/**
- * Where an Action applies and how much evidence backs it, worded once. A
- * theme's label repeats the title ("Orphan pages theme"), so it is left out.
- */
 function actionScope(action: Opportunity): string {
   const label = action.target_label;
   const echoes = label?.toLowerCase().startsWith(action.title.toLowerCase());
@@ -108,7 +87,6 @@ function actionScope(action: Opportunity): string {
   return target ? `${target} · ${evidence}` : evidence;
 }
 
-/** The one priority mapping the evidence drawer uses. */
 function ActionPriority({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <StatusMark variant="priority" value={severityPriority(action.severity)}>
@@ -117,7 +95,6 @@ function ActionPriority({ action }: Readonly<{ action: Opportunity }>) {
   );
 }
 
-/** The facts under an Action wherever the Overview lists it: its priority, then its scope. */
 export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <Inline>
@@ -127,14 +104,12 @@ export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   );
 }
 
-/** One ranked action, as a one-line row of the shared reorderable list. */
 export function actionItem(action: Opportunity): ReorderItem {
   return {
     key: action.id,
     name: action.title,
     content: (
       <Inline gap="item" className="min-w-0">
-        {/* The Action's own title, from its source; cut with all of it in the tooltip. */}
         <TextLink
           text="body"
           underline="hover"

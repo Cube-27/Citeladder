@@ -25,7 +25,6 @@ import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
 
-/** The refusal that tells an unchallenged sign-in to solve the check first. */
 const CHALLENGE_CODE = 'human_verification_failed';
 
 export function LoginScreen({
@@ -34,15 +33,12 @@ export function LoginScreen({
   searchParams,
 }: Readonly<{
   demoMode: boolean;
-  /** Self-serve sign-up, including Google, whose first sign-in creates an account. */
   signupOpen: boolean;
   searchParams: SearchParams;
 }>) {
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const description =
     searchParams.get('registered') === '1' ? 'Check your email to verify your account.' : undefined;
-  // The Google callback is a full-page navigation, so it reports failure as a
-  // coded query parameter rather than a response body.
   const oauthError = oauthSignInErrorMessage(searchParams.get('error'));
   const {
     register,
@@ -54,9 +50,6 @@ export function LoginScreen({
   });
   const terms = usePublishedTerms();
   const verification = useTurnstile('login');
-  // Sign-in is challenged only after repeated failures: the API refuses an
-  // unchallenged attempt with `human_verification_failed`, and from then on
-  // this form shows the widget and sends its token.
   const [challenged, setChallenged] = useState(false);
   const { mutation, submit } = useAuthMutation(
     (values: LoginFormValues & { termsRevision: string; turnstileToken?: string }) =>
@@ -81,8 +74,6 @@ export function LoginScreen({
     verification.reset();
   };
   const failure = mutation.isError ? mutation.error : terms.error;
-  // Refused credentials are about the password field: the message is that
-  // field's own error, under it, not a form alert above the form.
   const refused = mutation.error instanceof ApiError && mutation.error.status === 401;
   const formError = failure && !refused ? authErrorMessage(failure) : oauthError;
   const passwordError =
@@ -98,19 +89,13 @@ export function LoginScreen({
       submitLabel="Continue"
       pendingLabel="Signing in…"
       footerPrompt="Don't have an account?"
-      // An MCP handoff that needs an account must survive the detour through
-      // registration, so the validated resume path travels with the link.
       footerHref={withAuthReturnPath('/register', returnTo)}
       footerLabel="Sign up"
-      // Signing in records the Terms decision with the account, so no screen
-      // after sign-in asks again. Google from here never creates an account:
-      // an unknown address is sent to sign up.
       terms={{ revision: terms.revision, signup: false }}
       verification={challenged ? verification : undefined}
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
-      {/* The recovery links belong to the password: 4 under it, 16 above submit. */}
       <Stack gap="tight">
         <AuthPasswordField
           label="Password"

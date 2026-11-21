@@ -42,7 +42,6 @@ import {
 } from '../crawl-logs/uploads.ts';
 
 const root = '/api/v1/projects/{project_id}/crawl-logs';
-/** Machine routes: served only on the API host (`api.citeladder.com`). */
 const ingestPath = policy.api.machine_prefix + '/crawl-logs/ingest/{source_id}';
 const firehosePath = policy.api.machine_prefix + '/crawl-logs/firehose/{source_id}';
 const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
@@ -115,7 +114,6 @@ export const crawlLogRoutes = [
       const target = scope(c.get('workspace').workspaceId, path.project_id);
       const actorId = c.get('user').id;
       await requireCrawlLogs(db, target.workspaceId);
-      // Authority is checked before the Google call and again when its outcome is written.
       await db
         .transaction()
         .execute((trx) =>
@@ -172,7 +170,6 @@ export const crawlLogRoutes = [
     }),
     async handle({ c, db }, { path }) {
       const source = await authorizeToken(db, path.source_id, c.req.header('authorization'));
-      // The media type is checked first, so a refused request spends no batch attempt.
       const type = c.req.header('content-type')?.split(';')[0];
       if (
         type &&
@@ -186,7 +183,6 @@ export const crawlLogRoutes = [
       )
         throw new ApiError(415, 'Unsupported log media type');
       const stored = await batchQuota(db, source, new Date(), c.req.header('idempotency-key'));
-      // A retried key spent no quota, so it is answered without reading the body.
       const receipt = stored
         ? answeredReceipt(stored)
         : await ingest(db, source, await boundedBody(c.req.raw), {
@@ -268,7 +264,6 @@ export const crawlLogRoutes = [
     async handle({ c, db }, { path }) {
       const target = scope(c.get('workspace').workspaceId, path.project_id);
       await requireCrawlLogs(db, target.workspaceId);
-      // Recheck current credential authority before accepting client evidence.
       await db
         .transaction()
         .execute((trx) =>
@@ -287,7 +282,6 @@ export const crawlLogRoutes = [
       const input = uploadBatchSchema.safeParse(value);
       if (!input.success) throw new ApiError(422, 'Invalid upload batch');
       const key = path.upload_id + ':' + input.data.seq;
-      // A retried, already-accepted sequence spends no attempt quota.
       const stored = await batchQuota(db, source, new Date(), key);
       const receipt = stored
         ? answeredReceipt(stored)
@@ -298,7 +292,6 @@ export const crawlLogRoutes = [
             actorId: c.get('user').id,
             quotaChecked: true,
           });
-      // The stored batch row; the response is its receipt only.
       return crawlReceiptSchema.parse(receipt);
     },
   }),

@@ -1,11 +1,3 @@
-/**
- * FAQ content for /faq, aligned to the governed product loop in
- * docs/architecture.md.
- *
- * Commercial amounts, quotas and availability come from the published catalog.
- * Keep answers short and specific,
- * and never invent numbers, customers, or certainty.
- */
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 
 import { countWord, projectCount } from './count-words';

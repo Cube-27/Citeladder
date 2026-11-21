@@ -10,7 +10,6 @@ import { billingAccount, grant } from './prompt-fixtures.ts';
 
 const TEST_SESSION_KEY = 'api-service-test-session-key-0123456789abcdef';
 
-/** Deterministic test configuration; never inherits a live environment. */
 export function testConfig(overrides: Record<string, string> = {}): ServiceConfig {
   const databaseUrl = process.env.API_TEST_DATABASE_URL;
   if (!databaseUrl) {
@@ -26,10 +25,6 @@ export function testConfig(overrides: Record<string, string> = {}): ServiceConfi
   });
 }
 
-/**
- * A test config whose public sign-up admits reserved `example.test` fixtures.
- * Mail to them is still refused, and signup notices still skip them.
- */
 export function signupTestConfig(overrides: Record<string, string> = {}): ServiceConfig {
   const config = testConfig(overrides);
   config.auth.signupReservedDomains = [];
@@ -40,7 +35,6 @@ export function testDatabase(config: ServiceConfig = testConfig()): Database {
   return createDatabase(config);
 }
 
-/** The schema owner's URL: fixtures that arrange or remove append-only rows, and schema tests. */
 export function ownerDatabaseUrl(): string {
   const url = process.env.API_TEST_OWNER_DATABASE_URL;
   if (!url)
@@ -64,7 +58,6 @@ export async function asOwner<T>(work: (owner: Database) => Promise<T>): Promise
   }
 }
 
-/** A workspace owner's member actor, checked against `required` as a route's gate would. */
 export function ownerActor<P extends Permission>(
   workspaceId: string,
   userId: string,
@@ -80,7 +73,6 @@ export function sessionToken(claims: Record<string, unknown>, key = TEST_SESSION
     .sign(new TextEncoder().encode(key));
 }
 
-/** Rows created by one test file, removed again in `cleanup`. */
 export class Fixtures {
   private readonly users: string[] = [];
   private readonly workspaces: string[] = [];
@@ -109,13 +101,10 @@ export class Fixtures {
     return id;
   }
 
-  /** A tenant workspace created with its Owner, as workspace creation does. */
   async ownedWorkspace(ownerId: string, options: { access?: boolean } = {}): Promise<string> {
     const insert = async (trx: Database) => {
       const workspaceId = await this.insertWorkspace(trx, false);
       await this.insertMember(trx, workspaceId, ownerId, 'owner');
-      // An operator-provisioned workspace: open, able to admit a team, collect crawl
-      // logs, use Commerce and Search Intelligence, and run audits.
       if (options.access !== false) {
         const account = await billingAccount(trx, workspaceId);
         for (const key of [
@@ -126,7 +115,6 @@ export class Fixtures {
           'search_intelligence',
         ])
           await grant(trx, account, { key, value: 1, sourceKind: 'override' }); // NOSONAR -- one transaction connection; grants serialize.
-        // Generous defaults; a test that sets one of these limits replaces it (see grant()).
         for (const [key, value] of [
           ['prompt_runs_per_period', 100_000],
           ['project_slots', 1_000],
@@ -144,10 +132,6 @@ export class Fixtures {
     return id;
   }
 
-  /**
-   * Another tenant workspace the user joined (a person owns at most one): a
-   * fresh Owner holds it and the user is a member with `role`.
-   */
   async joinedWorkspace(
     userId: string,
     options: { access?: boolean; role?: 'admin' | 'member' | 'viewer' } = {},
@@ -157,14 +141,12 @@ export class Fixtures {
     return id;
   }
 
-  /** The reserved system workspace kind, which never has members. */
   async systemWorkspace(): Promise<string> {
     const id = await this.insertWorkspace(this.db, true);
     this.workspaces.push(id);
     return id;
   }
 
-  /** Add a member, as an accepted invitation does. */
   async member(workspaceId: string, userId: string, role: string): Promise<void> {
     await this.insertMember(this.db, workspaceId, userId, role);
   }

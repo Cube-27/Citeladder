@@ -1,12 +1,6 @@
 import { LEGAL_ENTITY, PARENT_COMPANY, type LegalDocument } from './legal';
 import { CONTACT_EMAIL } from '@/lib/config/contact';
 
-/**
- * Refund, cancellation and contact pages. The mechanics are the approved
- * billing behaviour. There is deliberately no mistaken-purchase refund window
- * and no fixed response-time target (owner, 2026-10-12); open and resolved
- * legal decisions live in docs/operations/legal-decisions.md.
- */
 const email = PARENT_COMPANY.email;
 
 export const REFUND_POLICY: LegalDocument = {

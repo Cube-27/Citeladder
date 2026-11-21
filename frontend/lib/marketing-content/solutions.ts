@@ -1,11 +1,3 @@
-/**
- * Audience-segment content for `/solutions`.
- *
- * One idea per team: who it is for, the proof it needs, and the product
- * screen that shows it; each team gets a different screen. Screens show the
- * shape of a surface with the shared demo data and never an invented
- * customer result.
- */
 import type { PlatformScreen } from './platform-page-types';
 
 export type SolutionSegment = {

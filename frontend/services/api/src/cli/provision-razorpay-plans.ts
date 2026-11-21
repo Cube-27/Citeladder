@@ -47,7 +47,6 @@ function readArguments() {
 }
 type Values = ReturnType<typeof readArguments>['values'];
 
-/** The plan references to bind, from a workspace file or inline JSON (Cloud Run has no files). */
 async function planRefs(values: Values): Promise<unknown> {
   const inline = values['plans-json'];
   if (inline !== undefined) {
@@ -58,7 +57,6 @@ async function planRefs(values: Values): Promise<unknown> {
   return readOperatorJson(required(values.plans, 'plans'));
 }
 
-/** Stores the bound catalog as a draft revision, and publishes it when asked. */
 async function importBound(db: Database, values: Values, payload: unknown) {
   const revision = required(values.import, 'import');
   const key = required(values['idempotency-key'], 'idempotency-key');
@@ -71,7 +69,6 @@ async function importBound(db: Database, values: Values, payload: unknown) {
   console.log(
     JSON.stringify(await catalogMutation(db, context, { kind: 'import', revision, payload })),
   );
-  // A dry run rolls the import back, so there is no draft yet to publish.
   if (values.publish && !context.apply)
     console.log('publish runs only with --apply, after the import commits');
   else if (values.publish)
@@ -117,7 +114,6 @@ await operatorMain(async () => {
     if (!configured(adapter) || adapter.mode !== environment)
       throw new Error('configured_provider_environment_mismatch');
     const reader = new RazorpayPlanReader(billingSettings(), adapter);
-    // Authoring admits at most four plans, two modes and two regions: at most sixteen GETs.
     await Promise.all(
       entries.map(async ({ price }) => {
         verifyPlan(await reader.fetchPlan(price.provider_price_ref), price);

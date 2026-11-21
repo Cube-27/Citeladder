@@ -1,44 +1,8 @@
-/**
- * Shared Vite+ lint and format configuration (Vite+ reads its lint/fmt config
- * from `vite.config.ts` blocks).
- *
- * Consumed by two configs that must not drift:
- * - `frontend/vite.config.ts` -- frontend-scoped `vp lint` / `vp fmt` / `vp test`
- * - root `vite.config.ts` -- repo-root `vp staged` pre-commit hook
- *
- * Plain object literals on purpose: the root config is loaded by the global
- * `vp` binary and must not resolve any installed package.
- *
- * Ignore patterns are root-agnostic (leading doublestar) so the same config
- * matches whether `vp` runs from `frontend/` or the repository root.
- *
- * Oxfmt replaced Prettier and prettier-plugin-tailwindcss; `sortTailwindcss`
- * produces byte-identical ordering to the plugin it replaces, including this
- * project's custom v4 tokens and variant prefixes. `../.gitattributes` pins
- * `eol=lf` because oxfmt always writes LF.
- *
- * The exports are explicitly typed with the same config types Vite+'s
- * `defineConfig` uses: without the annotation, tsc infers huge literals and
- * dies with TS2321 "Excessive stack depth" at the defineConfig call sites.
- * Type-only imports are erased before bundling, so the root config (which is
- * bundled without node_modules resolution) is unaffected.
- */
 import type { OxlintConfig } from 'vite-plus/lint';
 import type { OxfmtConfig } from 'vite-plus/fmt';
 
 export const lintConfig: OxlintConfig = {
   plugins: ['typescript'],
-  // Central strictness contract (previously CLI flags on the lint script):
-  // warnings fail the gate and unused-disable directives are errors, for every
-  // entry point (`vp check`, `vp lint`, the pre-commit staged command) because
-  // CLI flags would otherwise take precedence and scatter the policy.
-  // `lint.options.typeAware`/`typeCheck` are deliberately NOT enabled: they are
-  // coupled in vite-plus 0.3.1, and verification against this repo surfaced 47
-  // pre-existing type-aware findings (mostly deliberate fire-and-forget
-  // `router()`/`invalidateQueries()` calls and test stubs) plus a hard blocker
-  // -- tsgolint rejects `baseUrl` in apps/marketing/tsconfig.json (removed
-  // upstream, oxc-project/tsgolint#351). TypeScript diagnostics stay on
-  // `tsc --noEmit`; revisit type-aware adoption as a separate change.
   options: {
     denyWarnings: true,
     reportUnusedDisableDirectives: 'error',
@@ -56,14 +20,11 @@ export const lintConfig: OxlintConfig = {
     '**/build/**',
     '**/dist/**',
     '**/.astro/**',
-    // Wrangler's generated dev bundles and local state (gitignored).
     '**/.wrangler/**',
     '**/node_modules/**',
     '**/coverage/**',
     '**/playwright-report/**',
     '**/test-results/**',
-    // Generated service and contract inputs, byte-checked against their
-    // generators in CI.
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
   ],
@@ -195,11 +156,8 @@ export const fmtConfig: OxfmtConfig = {
     '**/coverage/**',
     '**/playwright-report/**',
     '**/test-results/**',
-    // The marketing build rewrites Wrangler's deploy config (gitignored).
     '**/.wrangler/**',
     '**/pnpm-lock.yaml',
-    // Generated service and contract inputs, byte-checked against their
-    // generators in CI.
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
     // Re-wrapping this inflates it past the owner line budget that

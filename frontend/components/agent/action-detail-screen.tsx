@@ -31,12 +31,6 @@ import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
-/**
- * One Action's page (plan v3): the trail to its goal and grouping, its
- * title, Overview with Copy as prompt, the Details card, why it
- * matters, what to do, an issue group's URLs, and the dock. One detail read;
- * a status decision moves it in place and the URL pages append below.
- */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
@@ -81,7 +75,6 @@ function ActionPage({
     grouping: action.grouping,
   };
   const placement = action.target_kind === 'earned_page';
-  // The Agent's own words are captioned as its suggestion, never as CiteLadder's.
   const suggested = action.origin === 'agent' ? 'Suggested by the agent' : null;
   const brief = useIssueFamilyBrief(action, workspaceId);
   const todo = brief?.steps ?? steps(action);
@@ -145,7 +138,6 @@ function ActionPage({
   );
 }
 
-/** The dock's primary: what the Agent is asked to do with this Action. */
 export function agentLabel(
   action: Pick<ActionDetail, 'target_kind' | 'page_count'>,
   ticked: number,
@@ -157,10 +149,6 @@ export function agentLabel(
   return 'Work with Agent';
 }
 
-/**
- * An issue family's brief, read from its Issues group (the Site Health Issues
- * page's own read); null for every other Action.
- */
 function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFamilyBrief | null {
   const cohort = action.cohort;
   const issue = useQuery({
@@ -177,15 +165,10 @@ function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFa
   });
 }
 
-/** Each distinct instruction of the Action's findings, in priority order. */
 function steps(action: ActionDetail): string[] {
   return [...new Set(action.members.map((member) => member.remediation).filter(Boolean))];
 }
 
-/**
- * What Copy as prompt puts on the clipboard: the message the Agent chat opens
- * with, then the Action's steps, for a reader working in another assistant.
- */
 function actionPrompt(action: ActionDetail, todo: readonly string[]): string {
   if (todo.length === 0) return action.handoff.message;
   const lines = todo.map((step, index) => `${index + 1}. ${step}`);

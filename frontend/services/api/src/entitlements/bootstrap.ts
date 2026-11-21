@@ -1,4 +1,3 @@
-/** Registration provenance selects the lifetime public trial or the operator baseline. */
 import { randomUUID, createHash } from 'node:crypto';
 import { sql, type RawBuilder, type Selectable } from 'kysely';
 import { subjectXactLock } from '../db/advisory-lock.ts';
@@ -17,10 +16,6 @@ import { stripTrailing } from '../text-order.ts';
 import { workspaceOwner } from '../workspaces/owned.ts';
 import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
-/**
- * The mailbox an address delivers to, for trial eligibility: lowercased, any
- * `+tag` dropped, and for Gmail the dots ignored and googlemail.com folded in.
- */
 function canonicalMailbox(email: RawBuilder<unknown>) {
   const lowered = sql<string>`lower(${email})`;
   const domain = sql<string>`case split_part(${lowered}, '@', 2) when 'googlemail.com' then 'gmail.com' else split_part(${lowered}, '@', 2) end`;
@@ -145,7 +140,6 @@ export async function ensureWorkspaceBilling(
   });
 }
 
-/** Every issuable flag, the highest level of each leveled capability and a finite counter allowance. */
 export function fullAccessSpecs(allowance: number) {
   if (!Number.isSafeInteger(allowance) || allowance < 1)
     throw new Error('invalid_development_allowance');
@@ -165,12 +159,10 @@ export function fullAccessSpecs(allowance: number) {
     });
 }
 
-/** The idempotency key (and bundle id) of an operator/legacy account's baseline grants. */
 export function baselineGrantKey() {
   return `${policy.entitlements.baseline.revision}:system:public-signup`;
 }
 
-/** Preserve family/source keys for idempotent replay of existing baseline grants. */
 export async function issueDevelopmentAccess(
   db: Database,
   input: {
@@ -233,7 +225,6 @@ export async function issueDevelopmentAccess(
     },
   );
 }
-/** Explicit workspace operator repair. Public signup never calls development issuance. */
 export async function provisionWorkspaceBilling(
   db: Database,
   input: {

@@ -1,40 +1,19 @@
-/**
- * Commercial-surface configuration (invariant 1: no component-owned prices,
- * thresholds, or cadences).
- *
- * Checkout prices, limits, and availability come only from `GET /billing/catalog`.
- */
-
 export const PROJECT_SLOTS_CAPABILITY = 'project_slots';
-/** Maximum wait for public pricing data before showing the unavailable state. */
 export const PUBLIC_CATALOG_TIMEOUT_MS = 3_000;
-/** How long the marketing Worker serves a cached catalog before reading the API again. */
 export const PUBLIC_CATALOG_FRESH_SECONDS = 600;
-/** How long the last good catalog stays available while the API is unreachable. */
 export const PUBLIC_CATALOG_STALE_SECONDS = 7 * 24 * 60 * 60;
 export const AGENT_CAPABILITY = 'agent';
 export const PROJECT_DELETION_CAPABILITY = 'project_deletion';
-/** Inviting people into a workspace; a trial is the Owner alone. */
 export const TEAM_MEMBERS_CAPABILITY = 'team_members';
 
-/** Set on return from auth when a captured pricing intent should be resumed. */
 export const PRICING_RESUME_QUERY_PARAM = 'resumeActivation';
 
-/** Where a captured pricing intent returns to after authentication. */
 export const PRICING_RETURN_PATH = '/pricing';
 
-/**
- * Fallback when a contact-only catalog plan has no `contact_url`.
- */
 export const CONTACT_SALES_HREF = '/contact';
 
-/** Same-tab storage key for a captured (untrusted) pricing intent. */
 export const PENDING_PRICING_INTENT_KEY = 'citeladder.pendingPricingIntent.v1';
 
-/**
- * A captured intent older than this is stale: the catalog it was captured
- * against may have changed, so it is discarded rather than replayed.
- */
 export const PENDING_PRICING_INTENT_MAX_AGE_MS = 60 * 60 * 1000;
 
 /**

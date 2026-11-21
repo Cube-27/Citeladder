@@ -1,11 +1,3 @@
-/**
- * Prompt scores for one run, or pooled over a period, with their outcomes.
- *
- * Scores are the persisted
- * `PromptMetricSnapshot` rows, strongest first; outcome counts come from the
- * persisted answers and tasks, never a rescore. A pooled period keeps counts
- * and rates and drops every single-run score.
- */
 import type { promptMetricItemSchema } from '@citeladder/contracts/visibility';
 import { sql } from 'kysely';
 import type { z } from 'zod';
@@ -56,15 +48,10 @@ import {
 const visibility = policy.visibility;
 
 export type PromptMetricItem = z.input<typeof promptMetricItemSchema>;
-/**
- * An item with its creation instant as sortable UTC text, and every brand its
- * answers named (the item carries only the leading few, once marks resolve).
- */
 export type PromptRow = { item: PromptMetricItem; createdAt: string; named: BrandCount[] };
 
 export type PromptQuery = {
   auditId: string | null;
-  /** Read only this tracked prompt's row; omitted reads every prompt. */
   promptId?: string;
   auditIds: string[] | null;
   baselineAuditIds: string[] | null;
@@ -86,7 +73,6 @@ export async function getPromptMetrics(
   return promptItems(db, scope, rows);
 }
 
-/** The rows' items with their Actions and named brands attached. */
 export async function promptItems(
   db: Database,
   scope: RunScope,
@@ -97,7 +83,6 @@ export async function promptItems(
   return items;
 }
 
-/** Each row's named brands as the leading few with their marks, in place. */
 async function attachBrands(
   db: Database,
   scope: RunScope,
@@ -108,7 +93,6 @@ async function attachBrands(
   for (const row of rows) Object.assign(row.item, leadingBrands(row.named, identities));
 }
 
-/** Each row's Action: the live one the refresh opened on that prompt, if any. */
 async function attachActions(
   db: Database,
   scope: RunScope,
@@ -122,7 +106,6 @@ async function attachActions(
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('target_prompt_id', 'in', promptIds)
-        // An Action whose evidence vanished has nothing left to act on here.
         .where('evidence_cleared_at', 'is', null)
         .execute()
     : [];
@@ -135,7 +118,6 @@ function latestRunId(db: Database, scope: RunScope): Promise<string | null> {
   return latestBrandRunId(db, { ...scope, marketId: marketOf(scope) });
 }
 
-/** One run's prompts, strongest first; no run yet is an empty list. */
 async function runRows(
   db: Database,
   scope: RunScope,
@@ -240,7 +222,6 @@ function nullableNumbers(value: Record<string, unknown>): Record<string, number 
   );
 }
 
-/** The explicitly named earlier baseline, when its frozen context matches. */
 async function baselineRun(
   db: Database,
   scope: RunScope,
@@ -254,7 +235,6 @@ async function baselineRun(
     .where('id', '=', baselineId)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    // Only a dashboard-ready brand run can be a baseline.
     .where('audit_scope', '=', visibility.brand_audit_scope)
     .where('status', 'in', visibility.dashboard_audit_statuses)
     .where('completed_at', '<', storedInstant(audit.completed_at))
@@ -264,7 +244,6 @@ async function baselineRun(
     : null;
 }
 
-/** Frozen prompts, answers and tasks for a set of runs, loaded once. */
 async function loadOutcomes(
   db: Database,
   scope: RunScope,
@@ -333,7 +312,6 @@ async function loadOutcomes(
   return { prompts, answers: answerRows, tasks, mentions };
 }
 
-/** The runs' outcomes with each perceived run's brand mentions, read in one batch. */
 async function withBrandMentions(
   db: Database,
   input: {
@@ -351,7 +329,6 @@ async function withBrandMentions(
   return { ...outcomes, brandMentions };
 }
 
-/** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
 async function enrichOutcomes(
   db: Database,
   scope: RunScope,
@@ -420,7 +397,6 @@ async function enrichOutcomes(
     item.answer_states = answerStates(answered);
     Object.assign(item, brandWinCounts(answered));
     Object.assign(item, promptSignals({ answered, named: row.named, brandMentions }));
-    // Over the answers that named the brand: an unnamed answer has no rank.
     const ranked = answered.flatMap((row) => (row.avg_position === null ? [] : [row.avg_position]));
     item.avg_position = ranked.length
       ? round2(ranked.reduce((total, value) => total + value, 0) / ranked.length)
@@ -460,9 +436,6 @@ async function enrichOutcomes(
   }
 }
 
-// --- A period: prompts pooled across a selected run set --------------------
-
-/** A prompt is the same across runs when its identity, text, cohort, theme and intent match. */
 function promptIdentity(item: PromptMetricItem): string {
   return JSON.stringify([
     item.prompt_id ?? item.prompt_text,
@@ -489,7 +462,6 @@ const COUNT_FIELDS: readonly CountField[] = [
   'not_run',
 ];
 
-/** Summed counts; a field unknown in any run is unknown in the pool. */
 function poolCounts(rows: readonly Counts[]): Counts {
   const responses = rows.reduce((total, row) => total + row.responses, 0);
   const pooled: Counts = {
@@ -532,7 +504,6 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
         rows.map((row) => row.item),
         [...named.values()],
       ),
-      // A single run's score and movement mean nothing across a pool.
       composite_score: null,
       previous_score: null,
       immediate_delta: null,
@@ -578,7 +549,6 @@ async function setRows(
   return enrichedRows(db, scope, query, [...new Set(auditIds)]);
 }
 
-/** The runs' rows, each enriched from its own run; the runs are already scoped. */
 export async function enrichedRows(
   db: Database,
   scope: RunScope,

@@ -1,8 +1,4 @@
-# CiteLadder local stack: PostgreSQL, migration, API, runner and the three Workers.
-#
-# =============================================================================
 # GOTCHA 1 (docs/invariants.md invariant 11) — READ BEFORE `docker compose up`
-# =============================================================================
 # This machine exports POSTGRES_PASSWORD / POSTGRES_USER / POSTGRES_DB /
 # DATABASE_URL into EVERY shell. Compose resolves ${VAR} from the shell
 # environment BEFORE .env, so those inherited shell values silently override
@@ -13,21 +9,9 @@
 #   env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 #     POSTGRES_PASSWORD=<repo-.env-value> \
 #     docker compose --env-file .env -f docker-compose.yml --profile app up -d --force-recreate
-#
-# Compose reads the root .env by default; copy .env.example -> .env.
-#
-# Plain `up` starts only PostgreSQL (and its one-shot migration): tests and the
-# pnpm dev servers need nothing else. The full stack is the `app` profile:
-# `docker compose --profile app up -d --build`.
-# =============================================================================
 
-# The API, runner and migration share this environment. They connect as the
-# least-privilege citeladder_app role, which locally reuses POSTGRES_PASSWORD;
-# only the migrate service also connects as the POSTGRES_USER schema owner.
 x-service-env: &service_env
-  # No fallback (AR-1): the API refuses to start without a known APP_ENV.
   APP_ENV: ${APP_ENV:?APP_ENV must be set (development, test or production)}
-  # OAuth redirects and invitation links target the local app Worker.
   FRONTEND_URL: http://127.0.0.1:3001
   # skipcq: SCT-A000 - password comes from environment, not hardcoded.
   DATABASE_URL: postgresql://citeladder_app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
@@ -51,8 +35,6 @@ services:
       retries: 10
       start_period: 10s
 
-  # Applies the migrations and native bootstrap once, then exits; API +
-  # workers wait on its success. Same image as the API, as in production.
   migrate:
     build:
       context: .
@@ -69,9 +51,6 @@ services:
         condition: service_healthy
     command: ['/bin/sh', '-c', 'node src/cli/migrate.ts && exec node src/cli/bootstrap-account.ts']
 
-  # Each Worker runs under `wrangler dev` as production serves it:
-  # marketing http://127.0.0.1:3000, app http://127.0.0.1:3001 (proxies /api
-  # to the API container), docs http://127.0.0.1:4322.
   frontend:
     profiles: ['app']
     build:
@@ -84,8 +63,6 @@ services:
         PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
     environment:
-      # Canonical website URLs are baked into the build; rebuild after changes.
-      # Wrangler runs the local Worker with an isolated API-container upstream.
       # No env_file: the service must not receive backend secrets.
       PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
       PUBLIC_APP_ORIGIN: http://127.0.0.1:3001
@@ -130,9 +107,6 @@ services:
     ports:
       - '127.0.0.1:3001:3001'
 
-  # Production runs the same image as Cloud Run jobs: the API starts a runner
-  # after committed work and Cloud Scheduler starts a tick. Locally one service
-  # repeats the tick (periodic owners, then drain) until stopped.
   runner:
     profiles: ['app']
     build:
@@ -147,13 +121,10 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    # A failing tick ends the loop, so Compose restarts and surfaces it.
     command: ['/bin/sh', '-c', 'while true; do node src/tick.ts || exit $?; sleep 10; done']
     healthcheck:
       disable: true
 
-  # The native API serves every application route family and issues sessions.
-  # The app Worker proxies /api/* here; the migrate service owns its schema.
   api-service:
     profiles: ['app']
     build:
@@ -169,7 +140,6 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      # Loopback only: nothing may reach this service except from this host.
       - '127.0.0.1:8100:8100'
 
 volumes:

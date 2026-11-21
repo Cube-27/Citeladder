@@ -9,16 +9,11 @@ import {
   resolvePalette,
 } from '../frontend/scripts/design-system-contrast.mjs';
 
-/**
- * A complete palette that passes every pair: every ink the matrix reads is
- * `ink` and every surface `paper`, so a new matrix row needs no fixture edit.
- */
 function palette({ ink, paper }) {
   const { inks, surfaces } = contrastRoles();
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
     ...Object.fromEntries(inks.map((token) => [token, ink])),
-    // Fills carry the other end of the scale.
     '--color-ink-hover': ink,
     '--color-on-ink': paper,
   };
@@ -138,7 +133,6 @@ test('oklch literals and relative colours resolve to the sRGB they render', () =
     ),
     ['#111111', 'rgb(17 17 17 / 6%)', '#e8501a', 'rgb(22 24 29 / 11%)'],
   );
-  // The relative colour follows the ink the scope rebinds.
   assert.equal(
     resolvePalette(source, ":root[data-theme='dark']").get('--color-hover'),
     'rgb(244 244 244 / 6%)',

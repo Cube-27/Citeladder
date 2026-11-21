@@ -20,10 +20,8 @@ const apiKeyStateSchema = z.enum(['active', 'expired', 'revoked']);
 export const apiKeySchema = z.object({
   id: z.uuid(),
   name: z.string(),
-  /** The key's public prefix, the only part of the secret ever shown again. */
   prefix: z.string(),
   scopes: z.array(apiKeyScopeSchema),
-  /** Projects the key may reach; `null` means every project in the workspace. */
   project_ids: z.array(z.uuid()).nullable(),
   created_by_email: z.string().nullable(),
   created_at: z.string(),
@@ -35,9 +33,7 @@ export const apiKeySchema = z.object({
 export type ApiKey = z.infer<typeof apiKeySchema>;
 
 export const apiKeyListSchema = z.object({
-  /** Whether the workspace's plan includes API access. */
   available: z.boolean(),
-  /** The plan's key allowance; `null` when API access is not in the plan. */
   limit: z.number().int().nullable(),
   keys: z.array(apiKeySchema),
 });
@@ -52,6 +48,5 @@ export const apiKeyCreateSchema = z.strictObject({
 });
 export type ApiKeyCreate = z.input<typeof apiKeyCreateSchema>;
 
-/** The create response: the only time the secret is returned. */
 export const apiKeyCreatedSchema = z.object({ key: apiKeySchema, secret: z.string() });
 export type ApiKeyCreated = z.infer<typeof apiKeyCreatedSchema>;

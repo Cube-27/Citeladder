@@ -1,9 +1,3 @@
-/**
- * The phases every DataForSEO-observed surface shares: commit the paid intent, submit
- * once, reconcile an uncertain submission by its exact tag, then poll the free retrieval.
- * Never resubmits: once an intent is committed only reconciliation and retrieval follow,
- * unless the provider refused the submission (a rate limit), which created nothing.
- */
 import { z } from 'zod';
 import { record } from '../../db/json.ts';
 import { failureFacts, getLogger } from '../../logging.ts';
@@ -42,23 +36,17 @@ const REFUSAL_PAUSES = new Map([
   [searchPolicy.constants.error_account_unavailable, pauseUnavailableAccount],
 ]);
 
-/** What reached the provider before a failure: nothing, a free retrieval, or the paid submission. */
 type Exchange = 'none' | 'unpaid' | 'paid';
 
-/** What differs between observed surfaces inside the shared phases. */
 export type ObservedSurface = Pick<SurfaceAdapter, 'capacity' | 'recoveryDeadline'> & {
-  /** Whether retrieval polls stop at the configured poll ceiling. */
   pollCeiling: boolean;
-  /** Only an LLM scraper freezes scraper request settings. */
   requestSettings: (frozen: ReturnType<typeof readFrozenSearchRequest>) => Record<string, unknown>;
-  /** Parses one retrieved payload and persists its result, unless the provider is still working. */
   settle: (
     deps: PhaseDeps,
     context: ExecutionContext,
     payload: unknown,
     taskId: string,
   ) => Promise<'still_pending' | 'settled'>;
-  /** Persists the surface's terminal failure evidence. */
   failTask: (
     deps: PhaseDeps,
     task: AuditTask,
@@ -67,7 +55,6 @@ export type ObservedSurface = Pick<SurfaceAdapter, 'capacity' | 'recoveryDeadlin
   ) => Promise<unknown>;
 };
 
-/** The task's observed engine; a task routed here without one is refused before any call. */
 function observedEngine(task: AuditTask): SearchEngine {
   if (!isSearchSurface(task.logical_engine))
     throw new ProviderError(providerPolicy.errors.invalid_surface);
@@ -77,10 +64,8 @@ function frozenField<T>(value: T | undefined, field: string): T {
   if (value === undefined) throw new Error(`Frozen search request has no ${field}`);
   return value;
 }
-/** The provider timeout frozen for a search-surface task. */
 const surfaceTimeoutSeconds = (task: AuditTask) =>
   frozenField(readFrozenSearchRequest(task.request_snapshot).timeout_seconds, 'timeout');
-/** The surface request exactly as frozen at admission; a missing field refuses the submission. */
 export function frozenSurfaceRequest(
   surface: ObservedSurface,
   context: ExecutionContext,
@@ -101,11 +86,9 @@ export function frozenSurfaceRequest(
   searchPayload(observedEngine(context.task), request);
   return request;
 }
-/** Settings frozen by an LLM scraper task; refused when missing. */
 export const frozenRequestSettings = (frozen: ReturnType<typeof readFrozenSearchRequest>) =>
   frozenField(frozen.request_settings, 'request_settings');
 
-/** A rejected key or a refused provider account pauses the connection the task used. */
 async function pauseRefused(deps: PhaseDeps, error: ProviderError, context: ExecutionContext) {
   const pause = REFUSAL_PAUSES.get(error.code);
   if (!pause) return;
@@ -182,7 +165,6 @@ async function poll(
     );
 }
 
-/** A failed retrieval or save: retryable failures poll again, others end the task. */
 async function pollFailed(
   surface: ObservedSurface,
   deps: PhaseDeps,
@@ -267,7 +249,6 @@ async function submit(
   }
 }
 
-/** A submission without a receipt: uncertain ones reconcile, a refused one may be sent again. */
 async function submitFailed(
   surface: ObservedSurface,
   deps: PhaseDeps,
@@ -385,7 +366,6 @@ async function reconcile(
   }
 }
 
-/** The terminal code a worker-detected failure records on an observed surface. */
 function failureCode(failure: Exclude<TaskFailure, { kind: 'internal' }>) {
   switch (failure.kind) {
     case 'context_unavailable':
@@ -403,7 +383,6 @@ function failureCode(failure: Exclude<TaskFailure, { kind: 'internal' }>) {
   }
 }
 
-/** An observed surface's adapter: the shared DataForSEO phases around its own hooks. */
 export function observedAdapter(surface: ObservedSurface): SurfaceAdapter {
   return {
     capacity: surface.capacity,

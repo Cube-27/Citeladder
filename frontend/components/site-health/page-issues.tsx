@@ -22,25 +22,16 @@ import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 
-/** Issues the list shows before "View all". */
 const PREVIEW_COUNT = 5;
 
-/** Re-audits the page; omitted for a role that may not run one. */
 export type RerunControl = Readonly<{ onRerun: () => void; busy: boolean }>;
 
-/**
- * A page's findings, said once: every issue on one list, worst first, each
- * row opening in place to its fix, its evidence and the ways to act on it;
- * then the advisories apart. The masthead's "Re-audit this page" is the one
- * re-audit action.
- */
 export function PageIssues({
   issues,
   audited,
   crawlId,
 }: Readonly<{
   issues: readonly PageIssue[];
-  /** No issues before the audit finishes means "not checked yet", not "clean". */
   audited: boolean;
   crawlId: string;
 }>) {
@@ -68,7 +59,6 @@ export function PageIssues({
   );
 }
 
-/** The issue list: the first few, then all of them on request. */
 function IssueList({
   issues,
   crawlId,
@@ -94,7 +84,6 @@ function IssueList({
   );
 }
 
-/** One issue: its title, then its severity and category, opening its body in place. */
 function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: ReactNode }>) {
   return (
     <DisclosureRow
@@ -115,7 +104,6 @@ function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: Re
   );
 }
 
-/** What the row does not say: the fix, the evidence, the scores it holds down and the actions. */
 function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: string }>) {
   const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
   const scores = scoreRoleLabels(issue.score_roles);
@@ -153,7 +141,6 @@ function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
   ) : null;
 }
 
-/** Recommendations: the section head says they are advisories, so the rows never repeat it. */
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
     <TitledSection title={`Advisories (${advisories.length})`}>

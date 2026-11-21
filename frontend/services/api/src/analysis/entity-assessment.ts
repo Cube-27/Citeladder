@@ -16,11 +16,9 @@ const promptNamed =
 const limitation =
   "Explicit-language detection over English phrasing in a 45-character window around the entity's FIRST mention. Not sentiment, not a calibrated judgement, and not a reading of the whole answer.";
 
-/** Every raw-text match of `alias` through each of its spellings. */
 const aliasMatches = (alias: string, answer: string) =>
   aliasSpellings(alias).flatMap((words) => spellingMatches(words, answer));
 
-/** Every raw-text match of one spelling; a space-free script matches inside words. */
 function spellingMatches(words: readonly string[], answer: string): RegExpExecArray[] {
   const normalized = words.join(' ');
   const tokens = words.map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
@@ -35,13 +33,11 @@ function spellingMatches(words: readonly string[], answer: string): RegExpExecAr
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
 
-/** Raw alias matches in answer order, and whether one counts under the matching policy. */
 function matchesOf(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
   const matches = aliases
     .flatMap((alias) => aliasMatches(alias, answer))
     .sort((a, b) => a.index - b.index);
   const counts = (match: RegExpExecArray) => {
-    // Only a policy that reads the surroundings needs the answer tokenized.
     if (countsAnywhere(matching)) return true;
     const before = tokensOf(answer.slice(0, match.index));
     const own = tokensOf(match[0]);
@@ -55,7 +51,6 @@ function matchesOf(aliases: readonly string[], answer: string, matching?: Entity
   return { matches, counts };
 }
 
-/** Every raw match that counts under the entity's matching policy, in answer order. */
 export function countedMatches(
   aliases: readonly string[],
   answer: string,
@@ -65,7 +60,6 @@ export function countedMatches(
   return matches.filter(counts);
 }
 
-/** The first counted match; stops at it, since the assessment reads only the first mention. */
 function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
   const { matches, counts } = matchesOf(aliases, answer, matching);
   return matches.find(counts);
@@ -131,7 +125,6 @@ function assessment(
     end = Math.min(points.length, endOffset + 60);
   return row(state, [{ start, end, text: points.slice(start, end).join('') }]);
 }
-/** The frozen brand and competitors an answer is assessed for, brand first. */
 export function trackedEntities(config: ScoringConfig) {
   return [
     {
@@ -154,10 +147,6 @@ export function assessEntities(answer: string, config: ScoringConfig) {
   );
 }
 
-/**
- * The assessments under a prompt that names the brand (AV-26): the whole
- * answer is about it, so a brand the answer never writes is still mentioned.
- */
 export function brandNamed(rows: ReturnType<typeof assessEntities>) {
   return rows.map((row) =>
     row.entity_kind === 'brand' && row.state === 'absent'

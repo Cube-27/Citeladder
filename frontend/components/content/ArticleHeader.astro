@@ -1,20 +1,9 @@
 ---
-/**
- * ArticleHeader — the head of a guide, post, policy or docs page:
- * breadcrumbs (the `crumbs` slot), an eyebrow, up to three topic tags, the
- * page's one h1 (on the website the site title, 48/52 and 32/40 below 768px;
- * in the docs `display-lg` 32/38 and `display-md` 28/34 below 768px), the lead (the default slot; on the website `body-lg` 18/30;
- * in the docs `lead` 20/30, 18/30 below 768px), and an unruled byline
- * row: the author (a 32px initials avatar on `ink`, name and role) and
- * the meta in mono `ink-muted`, separated by middle dots. Prose-wide.
- */
 import { Tag } from '@/components/ui/tag';
 
 type ArticleMeta =Readonly<{
   text: string;
-  /** Machine date for a `<time>`, when the text is a date. */
   dateTime?: string;
-  /** Words before the date, such as "Reviewed". */
   prefix?: string;
 }>;
 
@@ -101,8 +90,6 @@ const initials = author?.name
     padding: 0;
     list-style: none;
   }
-  /* On the website an article's H1 is the site title like every page's; the
-     docs fall back to display-lg (32/38), display-md on phones. */
   .cl-ahead-title {
     margin: 0;
     font-family: var(--font-display);
@@ -119,7 +106,6 @@ const initials = author?.name
     font-size: var(--text-lead);
     line-height: var(--text-lead--line-height);
   }
-  /* The website's lead is body-lg at every width; the docs keep lead. */
   :global([data-marketing-surface]) .cl-ahead-lead {
     font-size: var(--text-body-lg);
     line-height: var(--text-body-lg--line-height);
@@ -188,7 +174,6 @@ const initials = author?.name
     gap: 8px;
   }
   @media (max-width: 767px) {
-    /* The website's phone title size (globals.css); the docs fall back to display-md. */
     .cl-ahead-title {
       font-size: var(--text-site-title, var(--text-display-md));
       line-height: var(--text-site-title--line-height, var(--text-display-md--line-height));

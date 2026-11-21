@@ -123,8 +123,6 @@ describe('SessionGuard', () => {
   });
 
   it('does not log the user out when /auth/me fails with a non-401 error', async () => {
-    // A non-401 error (here a 403; also a network blip / 5xx) is not a session
-    // expiry — the guard must NOT clear the session or redirect to /login.
     mswServer.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json({ error: { message: 'Forbidden' } }, { status: 403 }),
@@ -144,7 +142,6 @@ describe('SessionGuard', () => {
       </SessionGuard>,
     );
 
-    // The guard explains the failed verification but never bounces to /login.
     await screen.findByRole('heading', { name: 'Your session could not be verified' });
     expect(screen.getByText('Neutral shell geometry')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
@@ -195,8 +192,6 @@ describe('SessionGuard', () => {
   });
 
   it('clears account state and leaves the protected document when any query returns 401', async () => {
-    // `me` succeeds so protected content mounts, then a downstream query 401s
-    // (an expired cookie mid-session) — the guard's watchdog must clear + bounce.
     mswServer.use(
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })),
       http.get('/api/v1/audits', () =>
@@ -226,9 +221,7 @@ describe('SessionGuard', () => {
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
     expect(navigate).toHaveBeenCalledTimes(1);
-    // The page stays as it was until the sign-in document replaces it…
     expect(screen.getByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
-    // …and the session cache goes with the document.
     window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
@@ -237,10 +230,6 @@ describe('SessionGuard', () => {
   });
 
   it('acts on a 401 reaching the cache directly, after the deferring microtask', async () => {
-    // The watchdog defers to a microtask because Effect Events may not be
-    // called during render, and React Query notifies subscribers synchronously
-    // — sometimes mid-render. This drives the cache itself rather than an HTTP
-    // query, so the subscription + deferral are exercised on their own.
     mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
 
     const { queryClient } = renderWithProviders(
@@ -275,12 +264,6 @@ describe('SessionGuard', () => {
   });
 
   it('drops a 401 already queued when the guard unmounts mid-notify', async () => {
-    // Isolates the `disposed` latch from `unsubscribe()`. The guard subscribed
-    // on mount, so its listener runs BEFORE the one below and has already
-    // queued its microtask by the time this one unmounts — synchronously,
-    // inside the same notify. Unsubscribing cannot help there; only the latch
-    // can. Deterministic because React Query notifies subscribers in
-    // subscription order, synchronously.
     mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
 
     const { queryClient, unmount } = renderWithProviders(
@@ -308,16 +291,6 @@ describe('SessionGuard', () => {
   });
 
   it('stops acting on cache 401s once unmounted', async () => {
-    // The plain case: a 401 arriving entirely after teardown. Nothing is
-    // triggered before unmounting on purpose — `clearSession`'s own
-    // `redirectingRef` latch would otherwise swallow the second redirect and
-    // this would pass with the teardown deleted.
-    //
-    // Scope, so the next reader does not assume more than it proves: with the
-    // `disposed` latch in place, deleting `unsubscribe()` alone changes nothing
-    // observable here (the latch stops the callback either way) — that line is
-    // leak prevention, and the redirect behaviour is pinned by the latch and by
-    // the mid-notify test above.
     mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
 
     const { queryClient, unmount } = renderWithProviders(
@@ -336,13 +309,6 @@ describe('SessionGuard', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  /**
-   * The authed layouts mount `ProjectProvider` OUTSIDE the guard so a cold
-   * entry loads the project list alongside `me` rather than after it. This
-   * pins both halves of that arrangement: the list request is already in
-   * flight while `me` is still pending, and the guard still withholds
-   * protected content until `me` settles.
-   */
   it('lets the project list load alongside me without exposing protected content', async () => {
     let projectsRequested = false;
     let resolveMe!: () => void;
@@ -377,7 +343,6 @@ describe('SessionGuard', () => {
   });
 });
 
-/** Drive a real errored `'updated'` cache event carrying a 401. */
 function reject401(queryClient: QueryClient, key: string) {
   return queryClient.fetchQuery({
     queryKey: [key],

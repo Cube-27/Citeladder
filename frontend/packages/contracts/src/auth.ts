@@ -5,7 +5,6 @@ export const workspaceAccessSchema = z.object({
     'active',
     'trial_active',
     'trial_expired',
-    // A paid plan ended (cancelled, unpaid or refunded); never a trial.
     'subscription_lapsed',
     'access_unresolved',
   ]),
@@ -28,16 +27,6 @@ export const policyStatusSchema = policyRevisionSchema.extend({
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-// ---------------------------------------------------------------------------
-// Auth / workspace
-// ---------------------------------------------------------------------------
-
-// Backend `SessionUser.role` is the ACCOUNT-level `users.role` (free-form
-// string, defaults to `"user"`). It is a
-// different axis from the per-workspace MEMBERSHIP role (`owner`/`member`,
-// carried on `workspaceSchema.role` below) and must not be conflated with it
-// via a restrictive enum — doing so previously rejected every real register/
-// login response (`role: "user"` is not `owner|admin|member|viewer`).
 export const sessionUserSchema = responseObject({
   id: uuid(),
   email: z.email(),
@@ -47,8 +36,6 @@ export const sessionUserSchema = responseObject({
   updated_at: z.string(),
 });
 
-// Login/me return the authenticated user; registration deliberately returns
-// only an enumeration-safe acknowledgement and never creates a session.
 export const authResponseSchema = responseObject({ user: sessionUserSchema });
 export const registrationResponseSchema = responseObject({ message: z.string() });
 
@@ -77,7 +64,6 @@ export const workspaceSchema = responseObject({
   updated_at: z.string(),
 });
 
-// One membership row on the workspace roster (Owner/Admin only).
 export const workspaceMemberSchema = responseObject({
   id: uuid(),
   user_id: uuid(),
@@ -107,7 +93,6 @@ export const workspaceInvitationIssuedSchema = responseObject({
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type RegistrationResponse = z.infer<typeof registrationResponseSchema>;
-/** OAuth provider ids are a request input, not a response payload. */
 export type OAuthProvider = 'google';
 export type OAuthStartResponse = z.infer<typeof oauthStartResponseSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;

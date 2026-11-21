@@ -14,33 +14,19 @@ import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/**
- * Tabs: text tabs 20 apart (docs/design.md, Tab strip). The strip is one row
- * that scrolls sideways inside itself (its scrollbar hidden) when its items
- * overflow; each item is `body` in `ink-2`, and the current one is `ink` over
- * a 2px accent underline ("you, here"). One face for page and section tabs.
- */
 const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-/** Past the edge fade, so the cue never covers the item it reveals. */
 const REVEAL_PADDING = 32;
 
-/** The strip's own current choice, never a control inside a hint beside it. */
 const SELECTED_ITEM = '.tab-face:is([aria-selected="true"], [aria-checked="true"])';
 
-/**
- * Keeps the strip's current item in view, on mount and on every selection:
- * it scrolls only the strip sideways, never the page.
- */
 function useRevealSelected(selected: string | null) {
   const strip = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const list = strip.current;
     const item = list?.querySelector<HTMLElement>(SELECTED_ITEM);
     if (!list || !item) return;
-    // A lone end stepper means scrolling will add a start one, narrowing the
-    // strip; the padding shrinks to fit, and a too-wide item shows its start.
     const wrap = list.parentElement;
     const view =
       list.clientWidth -
@@ -56,12 +42,6 @@ function useRevealSelected(selected: string | null) {
   return strip;
 }
 
-/**
- * One item at one weight, so a selection never changes width. A tab fills
- * its strip's height, its underline on the strip's foot. A segment is 4 less
- * than a control (its track's 1px edge and 1px inset each side), on
- * `state-selected` when current.
- */
 const TAB_KIND = {
   tab: {
     base: 'min-h-[var(--control-md)] self-stretch',
@@ -87,21 +67,14 @@ function tabFace({
   );
 }
 
-/** A tab strip's row: a page strip keeps the page band's height; a section strip draws its rule. */
 const STRIP_ROW = {
   page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
   section: 'border-rule border-b',
 } as const;
 
-/**
- * The website's segmented track and segment, kept for its product screens
- * (components/marketing/screens). The app's tabs and switches use `tabFace`
- * above.
- */
 export const TAB_TRACK =
   'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-/** A segment of the website's track (see `TAB_TRACK`). */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
@@ -112,13 +85,6 @@ export function tabClasses(selected: boolean, className?: string) {
   );
 }
 
-/**
- * The count a tab, segment or filter chip carries after its label, in
- * brackets ("All signals (107)"), in tabular numerals and `ink-2`. Its text
- * leads with a space, so an accessible name reads "All signals (107)".
- * `upTo`, the most it can read, holds that width, so a filter that changes
- * the count never resizes the control.
- */
 export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: number }>) {
   const text = ` (${formatCount(count)})`;
   if (upTo === undefined || upTo <= count)
@@ -138,7 +104,6 @@ export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: n
 type TabItem<T extends string> = {
   value: T;
   label: ReactNode;
-  /** Rows the tab holds, in brackets after the label. */
   count?: number;
   disabled?: boolean;
 };
@@ -154,15 +119,9 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
   value: T;
   onValueChange: (value: T) => void;
   children?: ReactNode;
-  /** Section tabs over their panel: one workspace gap between strip and panel. */
   spaced?: boolean;
 };
 
-/**
- * The stateful wrapper, split out from the strip. A page's tabs live in the
- * screen template's navigation band while their panels live two bands below,
- * so the holder of the selected value has to span both.
- */
 export function TabsRoot<T extends string>({
   value,
   onValueChange,
@@ -172,7 +131,6 @@ export function TabsRoot<T extends string>({
 }: Readonly<{
   value: T;
   onValueChange: (value: T) => void;
-  /** `vertical` for a `TabRail`: Up and Down move between its rows. */
   orientation?: 'vertical';
   className?: string;
   children: ReactNode;
@@ -191,25 +149,14 @@ export function TabsRoot<T extends string>({
   );
 }
 
-/** What a route passes to its screen template's `tabs`. */
 export type TabRowProps<T extends string = string> = Readonly<
   Pick<TabStripProps<T>, 'items' | 'ariaLabel' | 'onIntent'>
 >;
 
-/**
- * TabRow — the route's navigation strip, inside a `TabsRoot`. The page shell
- * sets a control row of filters alone right after it; a row with a
- * view, search or action stays the band under it.
- */
 export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   return <TabStrip kind="page" items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
 }
 
-/**
- * TabRail — a page's sections as a list down its left, inside a vertical
- * `TabsRoot`: rows on the sidebar's face, the current one on its tile, so
- * the header above never moves when a section is wider than the rest.
- */
 export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   const active = useContext(ActiveTabContext);
   return (
@@ -232,7 +179,6 @@ export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRow
   );
 }
 
-/** A `TabRail`'s rows while its page loads, `selected` current (else the first). */
 export function HeldTabRail({
   labels,
   selected,
@@ -257,11 +203,6 @@ export function HeldTabRail({
   );
 }
 
-/**
- * A route's tab labels while its page loads: the page strip's face and row,
- * not operable and hidden from assistive technology, `selected` current (the
- * first when it names none).
- */
 export function HeldTabRow({
   labels,
   selected,
@@ -310,11 +251,6 @@ function pageKeyScrollsPage(event: KeyboardEvent<HTMLElement>) {
   scroller.scrollBy({ top: direction * 0.9 * scroller.clientHeight });
 }
 
-/**
- * The strip: Radix tabs, so the arrows, Home and End move and select and Tab
- * leaves the list; PageUp and PageDown scroll the page instead. Must be
- * rendered inside a `TabsRoot` (or a `Tabs`).
- */
 function TabStrip<T extends string>({
   items,
   ariaLabel,
@@ -358,7 +294,6 @@ function TabStrip<T extends string>({
   );
 }
 
-/** Root, strip and panels together — the shape section-level tabs want. */
 export function Tabs<T extends string>({
   value,
   onValueChange,
@@ -402,7 +337,6 @@ export function TabPanel({
   );
 }
 
-/** Arrow keys that move the roving focus, and the direction each moves it. */
 const ARROW_DELTA: Readonly<Record<string, number>> = {
   ArrowRight: 1,
   ArrowDown: 1,
@@ -412,34 +346,15 @@ const ARROW_DELTA: Readonly<Record<string, number>> = {
 
 const EDGE_KEY: Readonly<Record<string, 'first' | 'last'>> = { Home: 'first', End: 'last' };
 
-/**
- * One choice of a SegmentedControl. A filter choice may carry the number of
- * rows it keeps (`count`), a short status after its label (`detail`, muted)
- * and an explanation beside it (`hint`, an `InfoHint`).
- */
 export type SegmentedOption<T extends string> = Readonly<{
   value: T;
   label: string;
   count?: number;
-  /** The most `count` can read; its width is held (`ControlCount`). */
   countUpTo?: number;
   detail?: string;
   hint?: ReactNode;
 }>;
 
-/**
- * SegmentedControl — a view switch for two to four exclusive views with no
- * panel (a date range, a metric, a filter, the sidebar's Dashboard | Agent):
- * a `rule`-framed track one control high, 2px inset, the current segment on
- * `state-selected`. Radiogroup semantics: one tab stop at
- * the checked option; the arrow keys move focus and selection, wrapping at
- * both ends, Home and End go to the first and last, and PageUp and PageDown
- * keep the browser's page scroll.
- *
- * `trailing` is a control that shares the track but is NOT one of the
- * choices (Performance's "More", which opens the range dialog): it sits
- * outside the radio group, on the same track.
- */
 export function SegmentedControl<T extends string>({
   value,
   onChange,
@@ -459,13 +374,10 @@ export function SegmentedControl<T extends string>({
   'aria-describedby'?: string;
   className?: string;
   disabled?: boolean;
-  /** A control on the same track that is not one of the choices. */
   trailing?: ReactNode;
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   const strip = useRevealSelected(value);
-  // With an off-list `value` nothing is checked; fall back to the first option
-  // so the group stays reachable by keyboard.
   const selectedIndex = options.findIndex((option) => option.value === value);
   const tabStop = selectedIndex === -1 ? 0 : selectedIndex;
 
@@ -525,8 +437,6 @@ export function SegmentedControl<T extends string>({
                   className={tabFace({ kind: 'segment', selected })}
                 >
                   {option.label}
-                  {/* Each part leads with a space, so the radio's accessible name
-                  reads "CTR gaps · Partial (50)". */}
                   {option.detail ? (
                     <span className="text-ink-2 font-normal">{` · ${option.detail}`}</span>
                   ) : null}
@@ -551,12 +461,6 @@ export function SegmentedControl<T extends string>({
   );
 }
 
-/**
- * A button on a SegmentedControl's track that opens something rather than
- * selecting a value (Performance's "More"). `selected` says the active range
- * is one hiding behind it. It holds the width of the widest label it can
- * show, so picking a range never resizes it.
- */
 export function SegmentedAction({
   selected = false,
   label,
@@ -567,11 +471,8 @@ export function SegmentedAction({
 }: Readonly<
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
     selected?: boolean;
-    /** What the action shows now. */
     label: string;
-    /** Every label it can show; the widest sets its width. */
     labels: readonly string[];
-    /** A trailing glyph after the label. */
     children?: ReactNode;
   }
 >) {

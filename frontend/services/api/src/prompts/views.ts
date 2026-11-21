@@ -1,4 +1,3 @@
-/** Prompt-library rows as the shared `@citeladder/contracts/project` views. */
 import {
   promptCandidateSchema,
   promptCohortSchema,
@@ -32,13 +31,10 @@ const promptOrigin = promptSchema.shape.origin;
 const topicOrigin = topicSchema.shape.origin;
 const [QUALITY_OFF, QUALITY_UNAVAILABLE] = policy.prompts.candidate.quality_gates_reported;
 
-/** The set Commerce files its buyer prompts in, found by this name. */
 export const COMMERCE_SET_NAME = 'Commerce Buyer Prompts';
 
-/** No prompt is over the limit: rows just admitted under the plan's slots. */
 export const WITHIN_LIMIT: ReadonlySet<string> = new Set();
 
-/** `overLimit` holds the workspace's prompts beyond its plan's prompt slots. */
 export function promptView(row: PromptRow, overLimit: ReadonlySet<string>): PromptView {
   return {
     id: row.id,
@@ -93,7 +89,6 @@ export function topicView(row: TopicRow, activeCount: number): TopicView {
   };
 }
 
-/** `judged`, the run's reported gate (`off`/`unavailable`), or `not_judged`. */
 function qualityStatus(decision: Record<string, unknown> | null, runGate: string | null) {
   if (decision !== null && Object.keys(decision).length > 0) return 'judged' as const;
   if (runGate === QUALITY_OFF) return 'off' as const;
@@ -102,7 +97,6 @@ function qualityStatus(decision: Record<string, unknown> | null, runGate: string
 }
 
 export function candidateView(row: CandidateRow, runGate: string | null): CandidateView {
-  // No decision is a valid state (not judged); a non-object one is corrupt.
   const decision =
     row.jev_decision === null
       ? null

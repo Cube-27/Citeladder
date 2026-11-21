@@ -16,11 +16,6 @@ import { targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
 
-/**
- * The composer's + menu, shared by every composer: Skills sets the next
- * turn's skill; Actions starts a chat on one of the project's top open
- * Actions, or opens the Actions list.
- */
 export function ComposerMenu({
   menu,
   scope,
@@ -41,7 +36,6 @@ export function ComposerMenu({
       onCloseAutoFocus={menu.onCloseAutoFocus}
     >
       {menu.skillsOnly ? (
-        // Typing `/` asked for a skill: the menu is the skills list itself.
         <SkillOptions choice={skill} onSelect={menu.onSelect} />
       ) : (
         <>
@@ -60,7 +54,6 @@ function ActionsSubmenu({
     <MenuSub>
       <MenuSubTrigger>Actions</MenuSubTrigger>
       <MenuSubContent>
-        {/* Mounted with the submenu, so the Actions are read only once reached for. */}
         <TopActions scope={scope} />
         <MenuSeparator />
         <PromptMenuLink href="/actions" label="All Actions" />
@@ -69,10 +62,6 @@ function ActionsSubmenu({
   );
 }
 
-/**
- * The project's top open Actions. Each opens a new chat on that Action with
- * its message already written, as "Work on" does everywhere else.
- */
 function TopActions({ scope }: Readonly<{ scope: { workspaceId: string; projectId: string } }>) {
   const query = useQuery(actionsQueries.list(scope));
   if (query.isPending) return <MenuItem disabled>Loading Actions…</MenuItem>;

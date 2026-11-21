@@ -6,20 +6,6 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import type { PerformanceDashboard, PerformanceDimension } from '@/lib/api/performance';
 import { BING_DIMENSION_TABS } from '@/lib/performance/performance';
 
-/**
- * Bing Webmaster Tools, in a panel of its own.
- *
- * Bing is a SECOND search engine measuring a different population, so its
- * clicks and impressions are never added to the Search Console cards, never
- * drawn on the same chart, and never given a column on a Search Console
- * table. Summing them would silently change what every existing number means
- * and would leave CTR and average position undefined across two engines.
- *
- * The panel renders only when the project actually has a Bing connection:
- * "we never imported Bing" and "Bing measured nothing" are different answers
- * (invariant 7), and an always-present empty panel would state the second
- * while meaning the first.
- */
 export function BingPanel({
   projectId,
   snapshotId,
@@ -31,7 +17,6 @@ export function BingPanel({
   projectId: string;
   snapshotId: string;
   compareSnapshotId: string | null;
-  /** The snapshot's persisted row count per dimension. */
   dimensionCounts: PerformanceDashboard['dimension_counts'];
   selectedLabel: string;
   compareLabel: string;

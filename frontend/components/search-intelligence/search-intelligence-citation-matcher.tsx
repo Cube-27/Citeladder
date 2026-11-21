@@ -27,9 +27,7 @@ export function SearchIntelligenceCitationMatcher({
   onDerived,
 }: Readonly<{
   datasets: SearchIntelligenceDataset[];
-  /** The website the Backlinks tab shows; its list is the one matched first. */
   targetOrigin?: string;
-  /** The matches are saved and the readiness is refreshed. */
   onDerived: () => void;
 }>) {
   const { workspaceId, projectId } = useProjectScope();
@@ -37,10 +35,8 @@ export function SearchIntelligenceCitationMatcher({
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
-  // The reader picks which website's list to match, starting from the one on screen.
   const lists = referringLists(datasets);
   const [listId, setListId] = useState('');
-  // Never another site's list unless the reader picks it by name.
   const referring =
     lists.find((dataset) => dataset.id === listId) ??
     lists.find((dataset) => dataset.target_origin === targetOrigin);
@@ -77,7 +73,6 @@ export function SearchIntelligenceCitationMatcher({
       />
     );
   if (audits.isPending) return <Skeleton variant="list" />;
-  // Only an audit with answers can have cited sources.
   const answered = audits.data.filter((audit) => audit.completed_count > 0);
   if (!answered.length)
     return (
@@ -92,8 +87,6 @@ export function SearchIntelligenceCitationMatcher({
       current.includes(auditId) ? current.filter((id) => id !== auditId) : [...current, auditId],
     );
   return (
-    // The drawer is the surface and its title the heading; a Card here would
-    // nest one object inside another.
     <Stack gap="compact">
       {derive.isError ? (
         <Notice

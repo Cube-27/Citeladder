@@ -1,17 +1,3 @@
-/**
- * TanStack Query client factory + retry policy (F2).
- *
- * `shouldRetryQuery`: retry transient failures only, briefly — 408/429/5xx
- * and timeouts once, bare network failures twice (`QUERY_*_RETRIES`), so a
- * failed read reaches its inline error quickly. 4xx (except 408/429) and aborts
- * never retry. When the backend (or the A3 timeout surface) classifies the failure
- * with an explicit `retryable` flag, that classification wins — an A3
- * `request_timeout` ApiError carries `retryable: true` and slots in here.
- * Read-mostly projections stay fresh for 60s and remain recoverable from the
- * cache for 30 minutes. Explicit polling intervals still own live workflows;
- * these defaults do not replace or slow their timers. Mutations never
- * auto-retry.
- */
 import { QueryClient, type FetchQueryOptions, type QueryKey } from '@tanstack/react-query';
 
 import {
@@ -22,23 +8,6 @@ import {
 
 import { ApiError, httpErrorStatus, isAbortError } from './errors';
 
-/**
- * Warm a cache entry from INTENT — a hover, a focus, a route the reader has
- * not committed to yet. Intent must never disturb what a screen is already
- * rendering.
- *
- * An errored query is permanently stale, so `prefetchQuery` always refetches
- * it, and TanStack resets `error` back to `pending` while that refetch is in
- * flight. On a screen already showing the failure (Search Demand's "no
- * snapshot exists yet" 404 alert, a tab whose panel settled on an error),
- * that flips `isLoading` true and swaps the settled alert for a full-page
- * skeleton until the identical failure returns — a hover on a sidebar link
- * or on the ALREADY SELECTED tab visibly reloading the page.
- *
- * Warming a cache is strictly an optimisation, so a key that has already
- * failed is left exactly as it is: the destination mounts and retries on its
- * own terms, and explicit retry is unaffected.
- */
 export function warmQuery<TOptions extends { queryKey: readonly unknown[] }>(
   client: QueryClient,
   options: TOptions,
@@ -49,13 +18,6 @@ export function warmQuery<TOptions extends { queryKey: readonly unknown[] }>(
   void client.prefetchQuery(options as never);
 }
 
-/**
- * Read a cache entry from intent and hand back its answer, for a prefetcher
- * that files that answer somewhere else. Repeated intent joins the request in
- * flight, or takes the fresh answer, instead of asking again. As with
- * `warmQuery`, a key that already failed is left as it is; any failure
- * answers `null`, because intent never surfaces an error.
- */
 export function readFromIntent<TData, TKey extends QueryKey>(
   client: QueryClient,
   options: FetchQueryOptions<TData, Error, TData, TKey>,
@@ -77,17 +39,6 @@ export function shouldRetryQuery(failureCount: number, error: unknown) {
   return status === 408 || status === 429 || (status !== undefined && status >= 500);
 }
 
-/**
- * Retain the prior result only while the query stays inside the same
- * project/crawl scope. Filter and cursor changes keep their mounted content,
- * while changing the active project cannot temporarily relabel another
- * project's persisted evidence as the newly selected project.
- *
- * The scope id is looked for among the key's top-level segments, not at one
- * fixed position: namespaces disagree on where it sits (Site Health puts the
- * workspace before the project in some keys, AI Traffic in all of them), and a
- * positional check silently drops the placeholder for every such key.
- */
 export function retainPreviousDataForScope<TData>(
   scopeId: string,
   previousData: TData | undefined,
@@ -96,19 +47,6 @@ export function retainPreviousDataForScope<TData>(
   return previousQuery?.queryKey.includes(scopeId) ? previousData : undefined;
 }
 
-/**
- * The one client this document runs on.
- *
- * Route loaders have no React context, so anything they warm has to reach the
- * tree some other way. Exposing the client as a module singleton is that way:
- * `PrivateRouteLayout`'s loader resolves the session and workspace bootstrap
- * into these exact keys, and the providers below it then read them from the
- * cache synchronously, with no pending render in between — which is the whole
- * point of deciding before the first paint rather than after it.
- *
- * Tests keep calling `createAppQueryClient` directly so each one gets an
- * isolated cache.
- */
 let appQueryClient: QueryClient | undefined;
 
 export function getAppQueryClient(): QueryClient {
@@ -116,7 +54,6 @@ export function getAppQueryClient(): QueryClient {
   return appQueryClient;
 }
 
-/** Point the singleton at a caller-owned client. Tests only. */
 export function setAppQueryClient(client: QueryClient | undefined) {
   appQueryClient = client;
 }

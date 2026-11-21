@@ -1,4 +1,3 @@
-/** Settings' tabs in row order. Data only: the route manifest loads it in Node. */
 export const SETTINGS_TABS = [
   { value: 'account', label: 'Account' },
   { value: 'workspace', label: 'Workspace' },

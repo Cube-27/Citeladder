@@ -26,22 +26,12 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * Where a user starts the reading a leg is waiting for; nothing runs by
- * itself. A crawl can start from here.
- */
 const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } | null> = {
   next_visibility_run: { href: '/runs', label: 'Open Runs' },
   next_search_console_window: { href: '/performance', label: 'Open Performance' },
-  // A crawl starts from here: Run crawl now.
   next_crawl: null,
 };
 
-/**
- * What the declaration measures. Findings a refresh resolved before go-live
- * are not credited to the change, which is distinct from findings no check
- * applies to.
- */
 function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
   if (declaration.resolved_before_snapshot_id)
     return (
@@ -69,10 +59,6 @@ function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration 
   );
 }
 
-/**
- * A declared Action: when it went live, each check's latest reading, what the
- * next readings wait for, and what the readings can and cannot show.
- */
 export function DeclarationStatus({
   declaration,
   shownRevision,
@@ -81,12 +67,9 @@ export function DeclarationStatus({
   titleRole = 'subheading',
 }: Readonly<{
   declaration: ActionDeclaration;
-  /** The revision on screen, when shown beside an output. */
   shownRevision?: { id: string; number: number };
   workspaceId: string;
-  /** Move focus here: the dialog that declared it just closed with its trigger gone. */
   focusOnMount?: boolean;
-  /** The Measurement title's role: a reading page passes its section-title role. */
   titleRole?: TextRole;
 }>) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -94,7 +77,6 @@ export function DeclarationStatus({
     if (focusOnMount) heading.current?.focus();
   }, [focusOnMount]);
   const hasVisibility = declaration.checks.some((check) => check.leg === 'next_visibility_run');
-  // A crawl is worth starting while any page check still lacks a met reading.
   const crawlOpen = declaration.checks.some(
     (check) => check.leg === 'next_crawl' && check.state !== 'met',
   );
@@ -168,7 +150,6 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
   );
 }
 
-/** What a check names; a prompt opens its history. */
 function CheckSubject({
   subject,
   promptId,
@@ -182,10 +163,6 @@ function CheckSubject({
   return <ClampText className={textRole('caption')}>{subject}</ClampText>;
 }
 
-/**
- * The recorded deployment step: who recorded the go-live and what shipped it.
- * A reference that is a web address opens in a new tab; any other stays text.
- */
 function Deployment({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
   const { deployed_by: by, deployment_reference: reference } = declaration;
   return (
@@ -209,7 +186,6 @@ function revisionNote(
 ): string {
   if (!declaredId) return ' · done outside CiteLadder';
   if (!shown) return '';
-  // Later edits are not what was shipped; say so rather than imply they were.
   return declaredId === shown.id
     ? ` · revision ${shown.number}`
     : ' · an earlier revision; this one was not declared';
@@ -241,7 +217,6 @@ function LegRow({
   );
 }
 
-/** Start the crawl a page check waits for, without leaving the Action. */
 function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const { activeProjectId } = useProjectContext();
   const mayWrite = useWorkspaceCapability('write');

@@ -18,7 +18,6 @@ import providers from '../src/config/providers.json' with { type: 'json' };
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
 const runtime = auditRuntime({});
-// Per test: a managed tenant's system workspace is unique (`uq_workspaces_single_system`).
 afterEach(async () => {
   await fixtures.cleanup();
 });
@@ -36,7 +35,6 @@ function input(t: Awaited<ReturnType<typeof auditTenant>>) {
 async function queued(workspaceId: string) {
   return db.selectFrom('audits').selectAll().where('workspace_id', '=', workspaceId).execute();
 }
-/** A managed (platform-key) workspace whose only route is a system platform connection. */
 async function managedTenant() {
   const t = await auditTenant(db, fixtures),
     platform = await auditTenant(db, fixtures);
@@ -59,13 +57,8 @@ async function managedTenant() {
     })
     .where('id', '=', platform.connectionId)
     .execute();
-  // The plan, not the request, makes the workspace managed (B32).
   return { t, accountId: await managedPlan(db, t.workspaceId) };
 }
-/**
- * One funded execution this month, with a cost projection per pricing version,
- * oldest first, recorded as the cost writer does; returns its audit.
- */
 async function recordSpend(
   t: Awaited<ReturnType<typeof auditTenant>>,
   accountId: string,
@@ -177,9 +170,7 @@ describe('atomic audit admission', () => {
           (task) => record(task.provider_route_snapshot).credential_source === 'platform',
         ),
       ).toBe(true);
-      // One prompt run per answer, whatever the retry budget.
       expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(tasks.length);
-      // This month's recorded platform spend reaches the one-cent budget (B20).
       await recordSpend(t, accountId, [10_000]);
       const before = (await queued(t.workspaceId)).length;
       await expect(
@@ -203,7 +194,6 @@ describe('atomic audit admission', () => {
   });
   it('counts only the latest projection of a repriced execution toward the funded month', async () => {
     const { t, accountId } = await managedTenant();
-    // One execution priced twice: 15,000 then 12,000 micro-USD against a two-cent budget.
     await recordSpend(t, accountId, [15_000, 12_000]);
     try {
       const fundedRuntime = {
@@ -212,7 +202,6 @@ describe('atomic audit admission', () => {
         audits: { ...runtime.audits, audit_prompt_count: 10 },
       };
       expect(await createAudits(db, t.workspaceId, input(t), {}, fundedRuntime)).toHaveLength(1);
-      // A second execution at 9,000 brings the latest-per-execution total to the ceiling.
       await recordSpend(t, accountId, [9_000]);
       await expect(
         createAudits(db, t.workspaceId, input(t), {}, fundedRuntime),
@@ -349,7 +338,6 @@ describe('atomic audit admission', () => {
     const t = await auditTenant(db, fixtures);
     const accountId = await billingAccount(db, t.workspaceId);
     await grant(db, accountId, { key: 'manual_runs_per_day', value: 1, sourceKind: 'override' });
-    // A deletion locks the project row, then checks occupancy under the capacity lock.
     const deletion = await db.startTransaction().execute();
     let launch: Promise<string[]> | undefined;
     try {
@@ -380,7 +368,6 @@ describe('atomic audit admission', () => {
       key: 'prompt_runs_per_period',
       value: 2,
     });
-    // Three answers cannot fit in two runs.
     await expect(createAudits(db, t.workspaceId, input(t), {}, runtime)).rejects.toMatchObject({
       status: 403,
       code: 'prompt_runs_exhausted',

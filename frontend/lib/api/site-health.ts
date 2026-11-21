@@ -1,17 +1,3 @@
-/**
- * Site Health domain endpoints (F2); its query and mutation descriptors live in
- * `site-health-queries.ts`.
- *
- * Owns transport for the Site Health slice: crawl create/list/
- * get/cancel, progressive keyset inventory, the persistent monitored set,
- * analyzed pages, issues, events, per-URL rerun, and same-origin export/stream
- * URLs. Every JSON response passes through `strictValidate` (fail loud on any
- * drift). All paths are relative `/api/v1` (same-origin proxy, invariant 12)
- * and every read accepts an `AbortSignal` via `ApiRequestOptions`.
- *
- * The frontend never invents a discovered total: count-bearing fields the
- * backend redacts for Free arrive `null`/absent and are validated as such.
- */
 import { API_BASE_URL } from '@/lib/config/operational';
 import { apiClient, type ApiRequestOptions } from './client';
 import type { queryKeys } from './query-keys';
@@ -69,36 +55,26 @@ import type {
   SiteIssuesPage,
 } from '@citeladder/contracts';
 
-/**
- * The one crawl action: it audits the project's tracked pages. Without a
- * robots choice the crawl keeps the newest site crawl's.
- */
 export type StartCrawlInput = SiteCrawlCreateRequest;
 
-/** Keyset inventory query params. `limit<=200`, ordering is URL-only. */
 export type InventoryParams = {
   cursor?: string;
   limit?: number;
   query?: string;
   status?: string;
   monitored?: boolean;
-  /** v2 P1: filter to one classified page type (omitted = all types). */
   page_kind?: string;
 };
 
 export type CrawlListParams = { project_id: string; limit?: number; cursor?: string };
-/** Server-backed orderings of the pages list (keyset, never a client sort). */
 export type PagesSort = 'status' | 'url' | 'inbound' | 'main_content_inbound' | 'depth';
 export type PagesParams = {
   cursor?: string;
   limit?: number;
   status?: string;
   monitored?: boolean;
-  /** v2 P1: filter to one classified page type (omitted = all types). */
   page_kind?: string;
-  /** Case-insensitive part of the page URL. */
   query?: string;
-  /** Ordering. Part of the cursor fingerprint, so changing it resets paging. */
   sort?: PagesSort;
 };
 export type ChangesPageRequest = Parameters<typeof queryKeys.siteHealth.changes>[1];
@@ -111,14 +87,12 @@ export type IssuesParams = {
   dimension?: string;
   rule?: string;
   site_url_id?: string;
-  /** Absent lists defects and advisories together. */
   finding_class?: 'defect' | 'advisory';
-  page_kind?: string; // v2 P1: issues affecting one classified page type
-  section?: IssueSection; // the Issues tab
+  page_kind?: string;
+  section?: IssueSection;
   sort?: IssueSort;
 };
 
-/** Keyset params for a grouped issue's affected-URL page and a URL's issue history. */
 export type IssueDetailParams = Pick<IssuesParams, 'cursor' | 'limit' | 'page_kind'>;
 export type IssueHistoryParams = Pick<IssuesParams, 'cursor' | 'limit'>;
 export type RobotsPage = Pick<IssuesParams, 'cursor' | 'limit'>;
@@ -131,7 +105,6 @@ export const siteHealthApi = {
     );
     return strictValidate(robotsHistoryPageSchema, res, 'siteHealth.getRobotsHistory');
   },
-  // The created crawl's committed tasks wake the background runner; nothing here drives it.
   createCrawl: async (input: StartCrawlInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
     return strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
@@ -197,8 +170,6 @@ export const siteHealthApi = {
     return strictValidate(pageDetailSchema, res, 'siteHealth.getPage');
   },
   rerunPage: async (crawlId: string, siteUrlId: string, options?: ApiRequestOptions) => {
-    // 202 Accepted carrying the (possibly fresh) rerun identity + status so
-    // the client polls the new run — not the terminal source crawl.
     const res = await apiClient.post<RerunPageResponse>(
       `/site-crawls/${crawlId}/pages/${siteUrlId}/rerun`,
       undefined,
@@ -233,7 +204,6 @@ export const siteHealthApi = {
     );
     return strictValidate(issueFixProgressSchema, res, 'siteHealth.markIssueFixed');
   },
-  /** Re-run all: one re-audit crawl of every tracked page the issue is still open on (202). */
   rerunIssue: async (crawlId: string, groupId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<IssueRerunResponse>(
       `/site-crawls/${crawlId}/issues/${groupId}/rerun`,
@@ -309,13 +279,10 @@ export const siteHealthApi = {
     const res = await apiClient.get<ChangesPage>(path, options);
     return strictValidate(changesPageSchema, res, 'siteHealth.getChanges');
   },
-  /** Same-origin SSE endpoint (polling is the baseline; `?stream=true`). */
   eventsUrl: (crawlId: string) => `${API_BASE_URL}/site-crawls/${crawlId}/events?stream=true`,
-  /** Same-origin export URLs (browser navigation / download links). */
   exportUrl: (
     crawlId: string,
     format: 'csv' | 'md',
-    // `architecture` is a tree, so it renders as Markdown only; CSV rejects it.
     view?: 'inventory' | 'pages' | 'issues' | 'architecture',
   ) => {
     const base = `${API_BASE_URL}/site-crawls/${crawlId}/export.${format}`;

@@ -19,11 +19,6 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { PromptBuilder } from './prompt-builder';
 
-/**
- * `/prompts/build`: the Prompt builder as its own page under Prompts. It owns
- * the generate request and the candidates read; tracking the accepted
- * suggestions returns to Prompts.
- */
 export function PromptBuilderPage() {
   const canWrite = useWorkspaceCapability('write');
   return (
@@ -57,7 +52,6 @@ function BuilderForProject() {
   // server already staged is replayed instead of drafted (and paid for) again.
   const generateKey = useRef<{ request: string; key: string } | null>(null);
   const generateMutation = useMutation(promptsMutations.generate(scope, ensurePromptSet));
-  // A run started on an earlier visit is still in flight: no second paid run.
   const isGenerating = useIsMutating({ mutationKey: queryKeys.prompts.generate(scope) }) > 0;
   const generatePrompts = async (input: PromptGenerateRequest) => {
     const request = JSON.stringify(input);
@@ -67,13 +61,11 @@ function BuilderForProject() {
       .mutateAsync({ input, idempotencyKey: generateKey.current.key })
       .catch(() => null);
     if (result === null) return null;
-    // Only this request's key retires; a different pending request keeps its own.
     if (generateKey.current?.request === request) generateKey.current = null;
     review.clearNotice();
     return result;
   };
 
-  // The forms enforce the server's bounds, so the builder waits for the set list.
   if (!limits) {
     return error ? (
       <StateBlock
@@ -89,7 +81,6 @@ function BuilderForProject() {
     );
   }
   return (
-    // A project switch is a new session, so no draft saves against another project.
     <PromptBuilder
       key={projectId}
       projectId={projectId}

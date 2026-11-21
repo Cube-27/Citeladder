@@ -51,16 +51,10 @@ type Line = {
   shape: MarkerShape;
 };
 
-/** Markers are drawn while every one still has room. */
 const MARKER_LIMIT = 40;
-/** At most four gridlines, the floor included. */
 const MAX_GRIDLINES = 4;
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
-/**
- * The chart's keys: the series key when end labels cannot name every line,
- * and the event ticks' key beside end labels or a single line.
- */
 function StepChartKeys({
   keyed,
   labelled,
@@ -77,22 +71,6 @@ function StepChartKeys({
   return null;
 }
 
-/**
- * StepChart — a time series as straight segments between measurements, on a
- * time axis proportional to the dates, with a round marker per point up to
- * 40. Your line is the accent at 2px with filled markers and a soft accent
- * fill under it; rivals take their page-wide identity colours
- * (`SeriesTonesContext`) at 1.5px with hollow markers. A missing period breaks
- * the line and shows a `well` band with its word; nothing is interpolated.
- * By default a chart of one period is no chart: each line prints as a compact
- * row under one date (`lonePoint="plot"` marks the points instead). Lines are named at
- * their right end with their latest value (dated when it is older than the
- * last point), and a key replaces the labels when they would collide or a
- * line has no value to label.
- * At most four gridlines; events are ink ticks on the time axis. The tooltip
- * is a sheet, read with the pointer or the arrow keys, and a summary and a
- * table carry every value to assistive technology.
- */
 export function StepChart({
   data,
   name,
@@ -111,33 +89,21 @@ export function StepChart({
   you = true,
   lonePoint = 'list',
 }: Readonly<{
-  /** The first line, one entry per point; its labels and timestamps place every line. */
   data: readonly TrendPoint[];
-  /** The first line's name; defaults to `label`. */
   name?: string;
-  /** The first line's brand logo in the key and tooltip. */
   mark?: ReactNode;
-  /** Up to three further lines on the same points, leader first. */
   series?: readonly TrendSeries[];
   events?: readonly TrendEvent[];
-  /** What the chart shows, e.g. "Mention rate over time". */
   label: string;
   height?: ChartHeight;
   yMin?: number;
   yMax?: number;
-  /** An axis tick: `42` as `42%`. */
   yFormat?: (value: number) => string;
-  /** A value in the labels, tooltip and table; defaults to `yFormat`. */
   format?: (value: number) => string;
-  /** False never shows a key, even when end labels collide. */
   legend?: boolean;
-  /** The key's name for the event ticks, e.g. "Marked implemented". */
   eventsLabel?: string;
-  /** List the events in words under the plot rather than label them on it. */
   eventLegend?: boolean;
-  /** The first line is your brand (the accent); false draws it as the first rival. */
   you?: boolean;
-  /** One period: `list` prints each line's value as a row; `plot` marks each line's point under a key. */
   lonePoint?: 'list' | 'plot';
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
@@ -232,7 +198,6 @@ export function StepChart({
             value: latestText(line),
           }))}
         />
-        {/* A focusable group: the arrow keys read the points one by one. */}
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the plot is a keyboard-readable group */}
         <div // NOSONAR -- a keyboard-readable plot has no native element
           ref={plotRef}
@@ -289,22 +254,16 @@ export function StepChart({
   );
 }
 
-/**
- * How one period draws: `list` as rows of values; `plot` as points whose lines
- * all end at one x, so a key names even a single line rather than end labels.
- */
 function lonePointMode(lonePoint: 'list' | 'plot', count: number) {
   const plot = count === 1 && lonePoint === 'plot';
   return {
     list: count === 1 && !plot,
     keyedFrom: plot ? 1 : 2,
-    /** End labels when every line has a latest value to name, else null and a key. */
     endLabels: (ends: Parameters<typeof placeEndLabels>[0], lines: number, right: number) =>
       !plot && ends.length === lines ? placeEndLabels(ends, right) : null,
   };
 }
 
-/** Round markers while end labels name the lines; once a key does, each line its own shape. */
 function shapedLines(lines: readonly Omit<Line, 'shape'>[], keyed: boolean): Line[] {
   return lines.map((line, index) => ({
     ...line,
@@ -312,7 +271,6 @@ function shapedLines(lines: readonly Omit<Line, 'shape'>[], keyed: boolean): Lin
   }));
 }
 
-/** The point the arrow keys move to (`null` on Escape), or undefined for any other key. */
 function keyedPoint(
   event: KeyboardEvent<HTMLDivElement>,
   active: number | null,
@@ -325,8 +283,6 @@ function keyedPoint(
   return event.key === 'ArrowRight' ? Math.min(count - 1, from + 1) : Math.max(0, from - 1);
 }
 
-/** Every value, method change and event of the chart, for a reader who cannot see it. */
-/** The hovered or focused point's values, one row per line. */
 function StepChartTip({
   data,
   lines,
@@ -392,7 +348,6 @@ function StepPlot({
   const breaks = data.map((point) => point.breakBefore === true);
   const bottom = scale.padTop + scale.plotHeight;
   const markers = data.length <= MARKER_LIMIT;
-  // Past the limit a keyed chart still marks its labelled points: the shape names the line.
   const sparse = new Set(labelledIndexes(scale, data.length));
   const keyed = lines.some((line) => line.shape !== 'circle');
   return (
@@ -493,7 +448,6 @@ function StepPlot({
   );
 }
 
-/** Events inside the plotted time span, at their place on the axis. */
 function placedEvents(
   data: readonly TrendPoint[],
   events: readonly TrendEvent[],
@@ -511,7 +465,6 @@ function placedEvents(
   });
 }
 
-/** A line's markers: every point when asked or when one stands alone, the labelled ones in a keyed chart. */
 function markedPoints(
   points: ReturnType<typeof linePoints>,
   {

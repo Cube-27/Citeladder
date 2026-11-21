@@ -16,7 +16,6 @@ function profileDraft(profile: BrandProfile | null | undefined): BrandProfileDra
   };
 }
 
-/** The editable profile fields, from the contract that owns them. */
 const DRAFT_FIELDS = brandProfileDraftSchema.keyof().options;
 const IDENTITY_FIELDS = [
   'category',
@@ -57,12 +56,6 @@ type Edits = Readonly<{
 
 const NO_EDITS: Edits = { draft: {}, identity: {} };
 
-/**
- * The company profile's editable draft on Context's Company tab (offerings
- * are the business map's), and its one save. Edits are kept as the fields the reader touched over the
- * persisted profile, so a background refresh of an untouched field shows
- * through and is never sent back stale. The page places the save action.
- */
 export function useBrandProfileForm({
   projectId,
   workspaceId,
@@ -70,7 +63,6 @@ export function useBrandProfileForm({
 }: Readonly<{
   projectId: string;
   workspaceId: string;
-  /** The persisted profile; none yet (or still loading) edits an empty draft. */
   profile: BrandProfile | null | undefined;
 }>) {
   const [edits, setEdits] = useState<Edits>(NO_EDITS);
@@ -101,9 +93,7 @@ export function useBrandProfileForm({
   return {
     draft,
     identity,
-    /** The reader changed something since the last save. */
     dirty,
-    /** The persisted profile holds no company facts yet. */
     empty:
       Object.values(savedDraft).every((value) => value.length === 0) &&
       Object.values(savedIdentity).every((value) => !value),

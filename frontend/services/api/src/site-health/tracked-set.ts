@@ -1,13 +1,3 @@
-/**
- * The project's tracked pages (SH-B6): the pages every full crawl audits. The
- * system picks them in one stable order (the root first, then value tiers,
- * then the URL's identity hash) and never re-picks them; the person cannot
- * change them. While the set is below the crawl's target, a full crawl fills
- * it from the sitemap, or from the pages its HTML walk fetched when the site
- * has no sitemap. The plan's limit is a window over the fill order: a
- * downgrade keeps the first N, an upgrade extends the set in place
- * (`fitTrackedSet`). Memberships are written by `admission-writes.ts`.
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -18,16 +8,9 @@ import type { Candidate } from './frontier.ts';
 import type { Crawl } from './site-task.ts';
 import { hostTwinHash } from './url-identity.ts';
 
-/**
- * The project's stable order: value tier first (the root's is the highest),
- * then the URL's identity hash, the SHA-256 of its canonical form. Every crawl
- * orders the same URLs the same way, and the order within a tier never
- * favours header or footer links.
- */
 export const trackedOrder = (a: Pick<Candidate, 'priority' | 'hash'>, b: typeof a) =>
   b.priority - a.priority || compareText(a.hash, b.hash);
 
-/** One candidate per URL, and one of each www/apex twin pair, in the stable order. */
 export function orderedUnique(candidates: Candidate[]) {
   const unique = new Map<string, Candidate>();
   for (const item of candidates.toSorted(trackedOrder)) {
@@ -53,17 +36,12 @@ export async function lockTrackedSet(db: Database, workspaceId: string, projectI
     .execute();
 }
 
-/** How many pages this crawl may track and audit: its plan limit within its fetch hold. */
 function trackedTarget(crawl: Crawl) {
   return (
     Number(record(crawl.configuration)[policy.site_health.crawl.automatic_monitor_limit_key]) || 0
   );
 }
 
-/**
- * Which of `hashes` the project ever tracked, and how many pages are active
- * now: bounded by the candidates, never the project's whole tracked history.
- */
 async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
   const active = await trx
     .selectFrom('monitored_site_urls')
@@ -91,12 +69,6 @@ async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
   return { hashes: new Set(rows.map((row) => row.url_hash)), active: Number(active.count) };
 }
 
-/**
- * Fill the tracked set's free slots from `candidates` in the stable order,
- * skipping every page tracked before and every document (a PDF is inventory,
- * never an audited page). Returns the joined pages with their site URL ids.
- * The caller holds the workspace runtime lock.
- */
 export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
   const ordered = orderedUnique(candidates);
   const tracked = await trackedPages(
@@ -124,7 +96,6 @@ export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Ca
   });
 }
 
-/** The tracked set's free slots for this crawl. */
 export async function trackedRoom(trx: Database, crawl: Crawl) {
   return trackedTarget(crawl) - (await trackedPages(trx, crawl, [])).active;
 }

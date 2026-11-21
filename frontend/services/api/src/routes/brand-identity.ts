@@ -55,7 +55,6 @@ import {
 import { fileResponse } from './opportunity-contracts.ts';
 
 const family = 'brand-identity';
-/** The path project inside the active workspace. */
 const activeProject = { family, authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
@@ -130,7 +129,6 @@ export const brandIdentityRoutes = [
       return importBrandFacts(db, scope, c.get('user').id, input);
     },
   }),
-  // Fact-checking's one write besides facts: a person's verdict on a claim (AV-12).
   definePostRoute({
     ...activeProject,
     path: `${root}/claim-verdicts/{verdict_id}/overrides`,

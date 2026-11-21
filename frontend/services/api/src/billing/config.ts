@@ -11,7 +11,6 @@ const policy = {
   settings: { ...api.settings, ...authRuntime.settings },
 };
 
-/** Same validated identity-bootstrap admission and defaults as the shared setting owner. */
 export function catalogBootstrapSettings(env: SettingSource = process.env) {
   const setting = (key: 'app_env' | 'demo_mode' | 'dev_login_email' | 'dev_login_password') =>
     resolveSettingSpec(policy.settings[key], env);
@@ -26,7 +25,6 @@ export function catalogBootstrapSettings(env: SettingSource = process.env) {
   };
 }
 
-/** Resolve shared policy; tests pass a deterministic environment. */
 export function billingSettings(env: SettingSource = process.env) {
   const specs = policy.billing.settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
@@ -49,7 +47,6 @@ export function billingSettings(env: SettingSource = process.env) {
     throw new ConfigError('invoice_prefix must be 1-3 uppercase letters or digits');
   return {
     enabled: get('checkout_enabled') as boolean,
-    /** Who may check out (B2): allow-listed workspaces until enablement opens it to everyone. */
     audience: audience satisfies 'allow_list' | 'everyone',
     provider: get('checkout_provider') as string,
     quoteSecret: get('quote_signing_secret') as string,

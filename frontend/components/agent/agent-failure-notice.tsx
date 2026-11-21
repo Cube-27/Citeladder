@@ -3,12 +3,6 @@ import { TextLink } from '@/components/ui/text-link';
 import type { AgentWriteFailure } from '@/lib/agent/errors';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 
-/**
- * A refused Agent write: what happened in words, and the step that fixes it.
- * No credits and no model offers a model to connect, or Billing on a managed
- * plan, which has no provider settings (B32). `newChatHref` is where a chat
- * at its turn limit continues; without it no new-chat step is offered.
- */
 export function AgentFailureNotice({
   failure,
   newChatHref,

@@ -191,7 +191,6 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     await user.click(screen.getByRole('radio', { name: 'All discovered' }));
     await waitFor(() => expect(requestedStatuses).toContain(null));
-    // Selecting another view never renames this one (or shifts the strip).
     expect(screen.getByRole('radio', { name: 'Audited' })).toHaveAttribute('aria-checked', 'false');
   });
 
@@ -245,7 +244,6 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     renderScreen();
 
-    // Partial results open on Pages like every other run (owner, 2026-11-02).
     expect(
       await screen.findByText(/This run was cancelled\. The pages analyzed so far are shown/),
     ).toBeInTheDocument();

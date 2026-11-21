@@ -237,7 +237,6 @@ describe('durable audit occurrence planning', () => {
         .execute();
     for (let pass = 0; pass < 5; pass++) {
       expect(await busyScheduler.runOnce(start)).toBe(0);
-      // Held until its Retry-After: an immediate pass claims nothing.
       expect(await busyScheduler.claimDue(start)).toEqual([]);
       await elapseRetryAfter();
     }
@@ -254,7 +253,6 @@ describe('durable audit occurrence planning', () => {
       lease_owner: null,
       next_run_at: start,
     });
-    // Once capacity frees, the same occurrence runs and the cadence keeps its anchor.
     const later = new Date(start.getTime() + 150_000);
     const scheduler = new AuditScheduler(db, runtime, settings, { now: () => later });
     expect(await scheduler.runOnce(later)).toBe(1);
@@ -348,9 +346,8 @@ describe('durable audit occurrence planning', () => {
     ).toEqual({
       failure_count: 1,
       enabled: false,
-      last_error: 'execution_credentials_unavailable', // the admission code the owner can act on
+      last_error: 'execution_credentials_unavailable',
       lease_owner: null,
-      // Paused: no backoff lease, so Resume plans the held occurrence at once.
       lease_expires_at: null,
       next_run_at: at,
     });
@@ -379,7 +376,6 @@ describe('durable audit occurrence planning', () => {
     expect(
       await new AuditScheduler(db, runtime, settings, { now: () => start }).runOnce(start),
     ).toBe(0);
-    // Backing off: the occurrence is held, not claimable on the next pass.
     const failing = new AuditScheduler(db, runtime, settings, { now: () => start });
     expect(await failing.claimDue(start)).toEqual([]);
     await connections(true);

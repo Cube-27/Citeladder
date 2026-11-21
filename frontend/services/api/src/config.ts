@@ -1,4 +1,3 @@
-/** Service policy and validated environment overrides. */
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
 import { APP_DATABASE_ROLE } from './db/database.ts';
@@ -159,7 +158,6 @@ export const policy = {
   probes,
 };
 
-/** Where the service listens; platform variables, resolved like every other setting. */
 const listenSpecs = {
   host: { env: ['HOST'], type: 'str', default: '' },
   port: { env: ['PORT'], type: 'str', default: '' },
@@ -175,7 +173,6 @@ function isSettingSpec(value: object): value is SettingSpec {
   );
 }
 
-/** Every setting the policy declares, with the key it is declared under. */
 function settingCatalog(): [string, SettingSpec][] {
   const catalog: [string, SettingSpec][] = [];
   const seen = new Set<object>();
@@ -191,12 +188,10 @@ function settingCatalog(): [string, SettingSpec][] {
 }
 const catalog = settingCatalog();
 
-/** Resolve and validate every catalogued setting once from `env`. */
 function resolveSettings(env: Env): Settings {
   return new Settings(catalog, env);
 }
 
-/** Pool, timeout and TLS settings shared by the service and terminal operators. */
 export function databaseSettings(source: SettingSource) {
   const setting = (name: keyof typeof policy.settings) => resolveSetting(name, source);
   return {
@@ -228,11 +223,9 @@ function resolveSetting(name: keyof typeof policy.settings, source: SettingSourc
   return resolveSpec(name, policy.settings[name], source);
 }
 
-/** The deployment environment (AR-1): only these names start the service. */
 type AppEnv = 'development' | 'test' | 'production';
 
 export type ServiceConfig = {
-  /** Every owner's settings, resolved once from the startup environment. */
   settings: Settings;
   execution: ReturnType<typeof executionSettings>;
   billing: BillingSettings;
@@ -265,18 +258,10 @@ export type ServiceConfig = {
     publicSignup: boolean;
     mailKey: string;
     mailTimeoutMs: number;
-    /**
-     * Domains public sign-up refuses: `mailbox.reserved_domains`. Tests of the
-     * sign-up routes admit reserved fixtures by setting it empty; the mail
-     * guard and signup notices always read the configured list.
-     */
     signupReservedDomains: readonly string[];
     frontendUrl: string;
-    /** The machine host (`api.citeladder.com`); only it serves `/v1/...` and MCP protocol routes. */
     publicApiUrl: string;
-    /** The marketing apex (`citeladder.com`): its Worker forwards signed webhooks and catalog reads. */
     publicWebsiteUrl: string;
-    /** HMAC key for public API key secrets; only the digest is stored. */
     apiKeyPepper: string;
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
@@ -287,14 +272,12 @@ export type ServiceConfig = {
      * Cloudflare's test secrets are honoured only where `testKeysAllowed`.
      */
     turnstile: { secret: string; testKeysAllowed: boolean };
-    /** Injected provider transport for recorded-fixture tests. */
     fetch?: typeof fetch;
   };
   demo: { enabled: boolean; expiresAt: Date | null };
   readinessTimeoutMs: number;
 };
 
-// The TCP port range is a protocol fact, not policy; the default is exported.
 const MAX_TCP_PORT = 65_535;
 
 function parsePort(raw: string): number {
@@ -323,7 +306,6 @@ function appEnvironment(settings: Settings): AppEnv {
   );
 }
 
-/** Development and test default to Cloudflare's always-pass test secret; nowhere else does. */
 function turnstileSettings(configured: string, appEnv: AppEnv): ServiceConfig['auth']['turnstile'] {
   const development = isDevelopmentEnv(appEnv);
   return {
@@ -344,12 +326,10 @@ const placeholderPatterns = policy.secret_policy.placeholder_patterns.map(
   (pattern) => new RegExp(pattern, 'iu'),
 );
 
-/** A template value by its shape ("replace-with-…", "<your-…>"), not by an exact-match list. */
 function secretIsPlaceholder(value: string): boolean {
   return placeholderPatterns.some((pattern) => pattern.test(value.trim()));
 }
 
-/** Deployment secret-strength admission. */
 export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
@@ -398,7 +378,6 @@ function productionSecretProblems(config: ServiceConfig): string[] {
     .map(([name]) => `${name} does not meet the production strength policy`);
   if (new Set(values).size !== values.length)
     issues.push('application secrets must be independent');
-  // The execution settings own the origin tokens' length; a copied template is refused here.
   const originTokens = {
     CITELADDER_ORIGIN_TOKEN: config.execution.originToken,
     CITELADDER_ORIGIN_TOKEN_PREVIOUS: config.execution.previousOriginToken,
@@ -423,8 +402,6 @@ function productionSecretProblems(config: ServiceConfig): string[] {
   if (values.includes(password))
     issues.push('database password must be independent of application secrets');
   const login = String(resolveSetting('dev_login_password', config.settings));
-  // Production carries no development login (BL9); only demo mode's single
-  // provisioned account still signs in with it.
   if (!config.demo.enabled)
     return login
       ? [...issues, 'DEV_LOGIN_PASSWORD must be unset outside development and demo mode']
@@ -481,11 +458,6 @@ export function assertDeployable(config: ServiceConfig, force = false): void {
   if (issues.length) throw new ConfigError(issues.join('; '));
 }
 
-/**
- * Resolve the service configuration from `env` (defaults to `process.env`):
- * every catalogued setting is resolved and validated here, once, and owners
- * read `config.settings` instead of the environment.
- */
 export function loadConfig(env: Env = process.env): ServiceConfig {
   const settings = resolveSettings(env);
   const appEnv = appEnvironment(settings);
@@ -544,7 +516,6 @@ export function loadConfig(env: Env = process.env): ServiceConfig {
   return config;
 }
 
-/** Fail closed when demo mode has no valid future access deadline. */
 export function demoAccessExpired(config: ServiceConfig, now: Date = new Date()): boolean {
   if (!config.demo.enabled) return false;
   const expiresAt = config.demo.expiresAt;

@@ -17,7 +17,6 @@ import { projectKeys } from '@/lib/api/query-keys/core';
 import { overviewRows } from '@/lib/overview/layout';
 import { useOptionalProjectContext } from '@/lib/project/project-scope';
 
-/** Each widget's body as it loads: the shape of what its card shows. */
 const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
   project_state: { kind: 'figures', count: 4 },
   movement: { kind: 'chart', height: 'sm' },
@@ -34,7 +33,6 @@ const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
   search_console: { kind: 'figures', count: 3 },
 };
 
-/** The layout a project shows before it saves one: the API's `overview_default_layout`. */
 const DEFAULT_WIDGETS: readonly OverviewWidget[] = [
   { key: 'project_state', size: 'full' },
   { key: 'movement', size: 'half' },
@@ -44,15 +42,10 @@ const DEFAULT_WIDGETS: readonly OverviewWidget[] = [
   { key: 'company_facts', size: 'full' },
 ];
 
-/** A widget's loading body, for a widget that loads its own read. */
 export function overviewWidgetShape(key: OverviewWidgetKey): LoadingShape {
   return WIDGET_SHAPES[key];
 }
 
-/**
- * The saved layout when the cache already holds it, read without a provider
- * so the shell's fallback can draw it too.
- */
 function useCachedWidgets(): readonly OverviewWidget[] | undefined {
   const client = useContext(QueryClientContext);
   const project = useOptionalProjectContext()?.activeProject;
@@ -64,15 +57,9 @@ function useCachedWidgets(): readonly OverviewWidget[] | undefined {
   return client.getQueryData<OverviewLayout>(key)?.widgets;
 }
 
-/**
- * The Overview as it loads: the project's meta line, then one block per widget
- * in the rows OverviewGrid draws (the saved layout
- * when known, else the default), each a title block over its widget's shape.
- */
 export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly OverviewWidget[] }>) {
   const cached = useCachedWidgets();
   const shown = widgets ?? cached ?? DEFAULT_WIDGETS;
-  // Sections in the page's section rhythm, so the loaded rows' rules and gaps draw already.
   const block = (widget: OverviewWidget) => (
     <section key={widget.key} data-loading-widget={widget.key} className="min-w-0">
       <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} />

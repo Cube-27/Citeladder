@@ -9,16 +9,8 @@ import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { DraftSheet } from '@/components/ui/draft-sheet';
 
-/**
- * The thinking summary, reply and document as they are written, inside the
- * running turn. Each model call's text is its own segment, so a later call
- * adds under the earlier text instead of replacing it. The saved reply
- * replaces the whole running turn.
- */
 export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
   const live = useAdaptiveThrottle(latest, AGENT_STREAM_REPAINT_MS);
-  // The turn's sources are known once it is saved; until then only the
-  // project's own hosts open directly.
   const knownHosts = useAgentLinkHosts();
   if (!live) return null;
   const { thinking, reply, document } = live;
@@ -45,7 +37,6 @@ export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefine
   );
 }
 
-/** Memoized, so only the segment being written re-renders its Markdown. */
 const ReplySegment = memo(function ReplySegment({
   text,
   knownHosts,
@@ -53,10 +44,6 @@ const ReplySegment = memo(function ReplySegment({
   return <ContentMarkdown markdown={text} density="compact" knownHosts={knownHosts} />;
 });
 
-/**
- * The document as it is written, on the one document view's draft face.
- * Memoized, so reply and thinking deltas do not re-render its Markdown.
- */
 const LiveDocument = memo(function LiveDocument({
   title,
   body,

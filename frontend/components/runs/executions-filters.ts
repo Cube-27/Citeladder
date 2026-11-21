@@ -8,20 +8,13 @@ import type { Execution, ExecutionStatus } from '@citeladder/contracts';
 
 const ALL = 'all';
 
-/** The values a column holds across the run, each once, in first-seen order. */
 function distinct<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
 
-/**
- * The executions table's Engine and Status filters, over the run's whole list
- * (it arrives in one read). Each offers only what the run holds. A choice the
- * list no longer carries (a status every row has left) reads as unfiltered.
- */
 export function useExecutionFilters(executions: readonly Execution[]): Readonly<{
   definitions: readonly FilterDefinition[];
   rows: readonly Execution[];
-  /** Changes whenever the filtered set does, so a pager can return to its first page. */
   key: string;
 }> {
   const catalog = useEngineCatalog();

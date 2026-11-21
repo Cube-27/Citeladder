@@ -1,18 +1,12 @@
-/** Business-context fixtures as generation contexts, for planner tests and live calibration. */
 import type { GenerationContext } from '../../../src/prompts/generation-context.ts';
 import fixtures from './contexts.json' with { type: 'json' };
 
 export type GenerationFixture = (typeof fixtures)[number];
 export { fixtures as generationFixtures };
 
-/** A deterministic topic UUID for the offering at `index`. */
 export const fixtureTopicId = (index: number) =>
   `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 
-/**
- * A fixture's synthetic observed searches, bound to their offering's topic, as
- * the loader would return them for a project with Search Console data.
- */
 export function fixtureObserved(fixture: GenerationFixture): GenerationContext['observed'] {
   return fixture.observed_queries.map((query, index) => ({
     id: `00000000-0000-4000-9000-${String(index).padStart(12, '0')}`,
@@ -25,10 +19,6 @@ export function fixtureObserved(fixture: GenerationFixture): GenerationContext['
   }));
 }
 
-/**
- * One topic per offering; binding vocabulary from the offering words. A
- * grounded context carries the fixture's observed searches; otherwise none.
- */
 export function fixtureContext(
   fixture: GenerationFixture,
   maps: GenerationContext['maps'] = [],

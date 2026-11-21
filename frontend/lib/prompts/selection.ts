@@ -1,14 +1,9 @@
 import { useState } from 'react';
 
-/** The ticked prompt ids, and the row a shift-click ranges from. */
 export type RowSelection = Readonly<{ ids: ReadonlySet<string>; anchor: string | null }>;
 
 const EMPTY: RowSelection = { ids: new Set(), anchor: null };
 
-/**
- * Tick or untick one row. With `range`, every row from the anchor to it in
- * `order` takes its new state; without an anchor still in `order`, just the row.
- */
 export function toggleRow(
   selection: RowSelection,
   change: Readonly<{ order: readonly string[]; id: string; checked: boolean; range: boolean }>,
@@ -26,7 +21,6 @@ export function toggleRow(
   return { ids, anchor: id };
 }
 
-/** Tick or untick every row on the page; the anchor stays. */
 export function togglePage(
   selection: RowSelection,
   pageIds: readonly string[],
@@ -40,11 +34,6 @@ export function togglePage(
   return { ids, anchor: selection.anchor };
 }
 
-/**
- * A table's row selection over the rows it shows, in their order. Only shown
- * rows count as selected, so a row a refresh removed is never acted on. Any
- * change of `view` (the filters, however they changed) starts a new selection.
- */
 export function useRowSelection<T extends { id: string }>(rows: readonly T[], view: string) {
   const [selection, setSelection] = useState<RowSelection>(EMPTY);
   const [selectedView, setSelectedView] = useState(view);

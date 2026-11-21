@@ -7,10 +7,6 @@ import { Button, buttonClasses } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
 
-/**
- * Report what the boundary caught once it shows: a route chunk that could not
- * download, an error response a loader threw, or `kind` for anything else.
- */
 function useReportedRouteError(kind: 'render' | 'route') {
   const caught = useRouteError();
   useEffect(() => {
@@ -41,11 +37,6 @@ const COULD_NOT_OPEN = {
   children: 'Reload to try again, or go back to Overview.',
 } as const;
 
-/**
- * A screen that failed to render, shown inside the shell so navigation and
- * sign-out stay available. Reloading also recovers a route chunk replaced by a
- * deployment.
- */
 export function ScreenError() {
   useReportedRouteError('render');
   return (
@@ -62,10 +53,6 @@ export function ScreenError() {
   );
 }
 
-/**
- * A signed-out route that failed to load. A fresh document also recovers
- * route chunks replaced by a deployment.
- */
 export function RouteError() {
   useReportedRouteError('route');
   return (
@@ -81,12 +68,6 @@ export function RouteError() {
   );
 }
 
-/**
- * The signed-in routes failed before the shell could open (the session or
- * workspace read failed): the path's first frame with the error where the
- * content begins, never a bare page. Its navigation needs the
- * session that failed, so the way out is a fresh load of Overview.
- */
 export function ShellRouteError() {
   useReportedRouteError('route');
   return (

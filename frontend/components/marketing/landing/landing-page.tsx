@@ -39,7 +39,6 @@ function Hero() {
           : null
       }
       frame={
-        // The real app, chrome and all, as the page's first product view.
         <ProductFrame label="The Insights page in the CiteLadder app" fit="scale" hero>
           <ScreenAppInsights />
         </ProductFrame>
@@ -48,11 +47,6 @@ function Hero() {
   );
 }
 
-/**
- * One card per module, in navigation order: its name, its one line and its
- * screen; an open card adds the module page's own lead and the feature's
- * page in the app.
- */
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
     const shown = moduleScreen(item.href);
@@ -62,7 +56,6 @@ function Modules() {
     return [{ ...item, page: shown.page, screen: <View />, lead }];
   });
   return (
-    // The rail draws the header itself, so its buttons sit on the heading's row.
     <PageSection id="platform" label="Tools for AI visibility, search and your website">
       <CardRail
         label="modules"
@@ -116,7 +109,6 @@ function HowItWorks() {
 
 const AnswerScreen = SCREEN_CATALOG.answer.View;
 
-/** The one product view after the rail: the saved answer behind every score. */
 function Evidence() {
   const modules = [
     '/platform/ai-visibility',
@@ -144,7 +136,6 @@ function Evidence() {
   );
 }
 
-/** The source's own logo: an engine mark the site already draws, a logo file, or an icon. */
 function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
   switch (mark.kind) {
     case 'engine':
@@ -172,10 +163,6 @@ function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
   }
 }
 
-/**
- * The integrations as a logo field: the title above, the logo tiles in an arch
- * round the lead and link (integrations.css places them).
- */
 function Integrations() {
   return (
     <PageSection id="integrations" label="Connect the data you already have">
@@ -253,7 +240,6 @@ function Trust() {
   );
 }
 
-/** Server-rendered to static HTML. */
 export function LandingPage() {
   return (
     <>

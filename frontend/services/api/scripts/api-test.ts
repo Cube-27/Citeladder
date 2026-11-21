@@ -1,13 +1,3 @@
-/**
- * Runs API tests, or regenerates the Kysely types with `--types`, against the
- * one local development database (docs/DEVELOPMENT.md). Pre-launch there are no
- * customers, so there are no per-branch copies. The URL comes from the shared
- * .env reader and the credentials the test guard refuses are dropped; nothing
- * secret is printed. Output goes to one reusable log in the Git directory.
- *
- *   pnpm test:api test/billing.test.ts      (from frontend/)
- *   pnpm test:api --types
- */
 import { execFileSync, spawnSync, type SpawnSyncOptions } from 'node:child_process';
 import { closeSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -38,7 +28,6 @@ const env = Object.fromEntries(
 if (types) env.TYPES_DATABASE_URL = ownerUrl;
 else Object.assign(env, { API_TEST_DATABASE_URL: appUrl, API_TEST_OWNER_DATABASE_URL: ownerUrl });
 
-// Developer tooling runs git and pnpm from the caller's PATH, like quality.mjs.
 const gitArgs = ['-C', apiRoot, 'rev-parse', '--absolute-git-dir'];
 const gitDir = execFileSync('git', gitArgs, { encoding: 'utf8' }).trim(); // NOSONAR: trusted PATH.
 const log = join(gitDir, 'api-test.log');

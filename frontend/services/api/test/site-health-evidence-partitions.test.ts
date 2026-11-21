@@ -1,8 +1,3 @@
-/**
- * Site Health evidence partitions (docs/site-health.md, "Evidence
- * partitions"): rows land in their owner id's month or the default partition,
- * and the migrate job's month maintenance creates or skips a month.
- */
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
@@ -20,7 +15,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A copy of a seeded crawl under the given id. */
 async function crawlWithId(id: string) {
   const seed = await fixtures.crawl();
   await sql`insert into site_crawls
@@ -32,7 +26,6 @@ async function crawlWithId(id: string) {
 describe('evidence partitions', () => {
   it("files a crawl's events under its crawl month, and an older random id under the default", async () => {
     const monthly = await crawlWithId(timeOrderedId());
-    // A version-4 id above every month's range, as crawls made before partitioning mostly are.
     const legacy = await crawlWithId(`f${randomUUID().slice(1)}`);
     for (const crawl of [monthly, legacy]) await recordCrawlEvent(db, crawl, 'test', 'm', {});
     const homes = await sql<{ crawl_id: string; home: string }>`
@@ -49,7 +42,6 @@ describe('evidence partitions', () => {
     const far = await asOwner(async (owner) => {
       const { rows } = await sql<{ id: string }>`
         select public.site_evidence_month_bound('2040-01-01') as id`.execute(owner);
-      // January 2040's millisecond prefix with a random tail.
       return `${rows[0]!.id.slice(0, 14)}${randomUUID().slice(14)}`;
     });
     await recordCrawlEvent(db, await crawlWithId(far), 'test', 'm', {});
@@ -77,7 +69,6 @@ describe('evidence partitions', () => {
                 where stxrelid = 'public.site_issues_p2041_03'::regclass) as stats
           `.execute(trx);
           created = { ...outcome.rows[0], ...facts.rows[0] };
-          // Rolled back, so the shared database keeps no 2041 partition.
           throw new Error('rollback');
         })
         .catch(() => undefined),

@@ -14,7 +14,6 @@ export type ContactRateLimits = {
   burst?: ContactLimiter;
 };
 export type ContactChallenge = {
-  /** Turnstile secret; without it the intake fails closed. */
   secret: string | undefined;
   hostnames: readonly string[];
 };

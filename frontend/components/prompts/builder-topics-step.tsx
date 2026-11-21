@@ -24,7 +24,6 @@ function rowTag(row: TopicRow): string | null {
   return row.nested ? 'Subtopic' : 'Existing';
 }
 
-/** One topic: its editable name, where it came from, and remove (or keep, once removed). */
 function TopicRowEditor({
   row,
   disabled,
@@ -67,11 +66,6 @@ function TopicRowEditor({
   );
 }
 
-/**
- * Step 2: the project's topics beside buyer-facing proposals. Proposals fill
- * gaps and never replace a topic; renames, removals and additions stay local
- * until the plan is confirmed.
- */
 export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }>) {
   const [name, setName] = useState('');
   const busy = topics.preview.isPending || topics.confirm.isPending;

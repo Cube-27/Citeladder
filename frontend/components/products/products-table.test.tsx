@@ -174,8 +174,6 @@ describe('ProductsTable', () => {
       '$120.00',
       'runnerstore.com (2), shoes.example.eu (1)',
     ]);
-    // A competitor seen nowhere in scope: a real zero, no rank (a narrow cell's
-    // dash, its word for assistive technology), and no catalog price to lack.
     expect(cells('Zoom Glide')).toEqual([
       '0.0%',
       '0',
@@ -185,7 +183,6 @@ describe('ProductsTable', () => {
       '—Not applicable',
       '—None',
     ]);
-    // No answer in scope: visibility is unavailable; a missing catalog price is unknown.
     expect(cells('Acme Trail Climber')).toEqual([
       '—Not measured',
       '0',

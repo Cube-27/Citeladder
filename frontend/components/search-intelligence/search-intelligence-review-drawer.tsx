@@ -33,7 +33,6 @@ import {
 } from './search-intelligence-review-parts';
 import { Notice } from '@/components/ui/notice';
 
-/** Typed depths keep a draft per dataset, so a field can be cleared while typing. */
 function useDatasetSelections(readiness: SearchIntelligenceReadiness, action: string) {
   const [selections, setSelections] = useState<SearchDatasetSelectionRequest[]>(() =>
     defaultSelections(readiness, action),
@@ -61,7 +60,6 @@ function useDatasetSelections(readiness: SearchIntelligenceReadiness, action: st
     const current = selections.find((item) => selectionKey(item) === selectionKey(option));
     return drafts[selectionKey(option)] ?? String(current?.depth ?? option.depth);
   };
-  // A depth the reader is still typing has not reached its selection yet.
   const depthsValid = selections.every((item) => {
     const draft = drafts[selectionKey(item)];
     return draft === undefined || String(item.depth) === draft;

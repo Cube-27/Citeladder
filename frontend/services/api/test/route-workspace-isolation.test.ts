@@ -1,10 +1,3 @@
-/**
- * Workspace isolation over the route registry, for every browser route whose
- * path names a resource outside `/projects/{project_id}` (those are covered in
- * `request-access.test.ts`). Each route family, keyed by the path up to its
- * first parameter, has a factory for one real resource of another workspace;
- * a family without one fails the test, so a new family cannot opt out.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -28,11 +21,6 @@ const fixtures = new SiteFixtures(db);
 const app = createApp(config, db);
 const accounts: string[] = [];
 
-/**
- * Browser routes that name a resource. Public API (`/v1/…`) routes authorize an
- * API key, and `{provider}`-first routes (OAuth starts and callbacks, provider
- * webhooks) name a provider, not a workspace resource.
- */
 const ROUTES = PRODUCT_ROUTES.flatMap(({ contract }) => {
   const { path } = contract;
   const first = /\{[a-z_]+\}/u.exec(path);
@@ -121,7 +109,6 @@ async function mcpGrant(owner: SiteSeed) {
   return id;
 }
 
-/** One connection per OAuth transport and workspace, as the grant constraint allows. */
 async function integrationConnection(
   owner: SiteSeed,
   transport: 'google_oauth' | 'microsoft_oauth' = 'google_oauth',
@@ -185,7 +172,6 @@ async function integrationMapping(owner: SiteSeed) {
 }
 
 const usd = (amount_minor: number) => ({ currency: 'USD', amount_minor });
-/** A quoted tier-1 BYOK purchase, as checkout stores it. */
 const quote = {
   quote_id: 'isolation',
   catalog_revision: 'isolation',
@@ -299,7 +285,6 @@ async function providerConnection(owner: SiteSeed) {
   return connection.id;
 }
 
-/** One real resource of the owner's workspace per route family. */
 const FACTORIES: Record<string, (owner: SiteSeed) => Promise<string>> = {
   '/api/v1/actions/{action_id}': async (owner) => {
     const row = actionRow(
@@ -356,10 +341,6 @@ const FACTORIES: Record<string, (owner: SiteSeed) => Promise<string>> = {
   '/api/v1/workspaces/{workspace_id}': async (owner) => owner.workspaceId,
 };
 
-/**
- * A valid body for each write that validates its body before authorizing the
- * resource, so the request reaches the workspace check; `{}` otherwise.
- */
 const revision = { base_revision_id: randomUUID() };
 const promptBody = { text: 'Which tool suits isolation?', cohort: 'core' };
 const BODIES: Record<string, unknown> = {
@@ -439,15 +420,11 @@ afterAll(async () => {
 it('has a resource factory for every registered route family outside a project path', () => {
   const families = [...new Set(ROUTES.map((route) => route.family))];
   expect(families.filter((family) => !FACTORIES[family])).toEqual([]);
-  // The registry, not a hand list: these families come from the route contracts.
   expect(families).toContain('/api/v1/api-keys/{key_id}');
 });
 
 it('serves each family resource to its own workspace, so the stranger 404s are not missing rows', async () => {
   const session = `${config.session.cookieName}=${await sessionToken({ sub: owner.userId, ver: 0 })}`;
-  // Every read that names only the family's resource, nothing nested, except reads
-  // that need more state than one bare row: a provider order, a rendered receipt
-  // (`billing-documents.test.ts`) or finished executions.
   const stateful = new Set([
     '/api/v1/billing/activations/{activation_id}/checkout',
     '/api/v1/billing/invoices/{invoice_id}/pdf',

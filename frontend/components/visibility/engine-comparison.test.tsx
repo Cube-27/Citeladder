@@ -27,8 +27,6 @@ describe('model outcome comparison', () => {
     render(<EngineComparison visibility={visibility([engine()])} filter="all" />);
     expect(screen.getByText('50.0%')).toBeVisible();
     expect(screen.getByText('25.0%')).toBeVisible();
-    // The answer count is the reader's; the run's expected-vs-measured
-    // bookkeeping that used to sit beside it is not.
     expect(screen.getByText('12')).toBeVisible();
     expect(screen.queryByText(/expected/)).toBeNull();
     expect(screen.queryByText(/^62(\.0)?%$/)).toBeNull();

@@ -135,7 +135,6 @@ function renderBuilder(
   step: BuilderStep,
   { generate = vi.fn(async () => result), review = noReview } = {},
 ) {
-  // The step lives in the address, as on the page.
   window.history.replaceState(null, '', `/prompts/build?step=${step}`);
   renderWithProviders(
     <PromptBuilder
@@ -160,22 +159,18 @@ describe('PromptBuilder', () => {
     serve(sent);
     renderBuilder('business');
 
-    // Prefilled from saved knowledge; an offering with commas is one offering.
     const offerings = await screen.findByRole('list', { name: 'Offerings' });
     expect(
       within(offerings)
         .getAllByRole('listitem', { name: /./ })
         .map((row) => row.getAttribute('aria-label')),
     ).toEqual([OFFERING]);
-    // A national business has no service areas.
     expect(screen.queryByRole('textbox', { name: 'Add to Service areas' })).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Add to Buyer roles' }), 'Parent{Enter}');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(sent.profile).toEqual({ buyer_roles: ['Club coach', 'Parent'] }));
-    // Only the profile changed, so the map is not written.
     expect(sent.map).toBeUndefined();
     expect(await screen.findByRole('button', { name: 'Suggest topics' })).toBeVisible();
-    // The step is in the address, so a reload or Back keeps it; the done step reopens.
     expect(window.location.search).toBe('?step=topics');
     await user.click(screen.getByRole('button', { name: /About your business/ }));
     expect(window.location.search).toBe('');
@@ -188,15 +183,12 @@ describe('PromptBuilder', () => {
     serve(sent);
     renderBuilder('business');
 
-    // Typing an offering and tabbing on adds its row.
     await user.type(await screen.findByRole('textbox', { name: 'Add offering' }), 'Hitting mats');
     await user.tab();
     await user.click(screen.getByRole('textbox', { name: 'Add to Who buys: Hitting mats' }));
-    // A comma or Enter adds a value; Tab moves to the next cell.
     await user.keyboard('beginners,club coaches{Enter}');
     await user.tab();
     expect(screen.getByRole('textbox', { name: 'Add to Situations: Hitting mats' })).toHaveFocus();
-    // A pasted list adds a value per line.
     await user.paste('small garden\nlow garage');
     await user.click(screen.getByRole('button', { name: 'Remove low garage' }));
 
@@ -228,7 +220,6 @@ describe('PromptBuilder', () => {
     renderBuilder('topics');
     await waitFor(() => expect(sent.seedReads).toBe(1));
 
-    // Proposals sit beside the existing topic; nothing is written until confirmed.
     await user.click(await screen.findByRole('button', { name: 'Suggest topics' }));
     expect(
       await screen.findByRole('textbox', { name: 'Topic name: Golf simulator enclosures' }),
@@ -245,7 +236,6 @@ describe('PromptBuilder', () => {
         delete: [],
       }),
     );
-    // The seed queries bound to topics are read again once the plan is applied.
     await waitFor(() => expect(sent.seedReads).toBe(2));
     expect(await screen.findByRole('button', { name: 'Generate' })).toBeVisible();
   });
@@ -278,14 +268,11 @@ describe('PromptBuilder', () => {
     serve({});
     const { generate } = renderBuilder('distribution');
 
-    // Defaults, a persona from step 1 and the connected search source.
     await user.click(await screen.findByRole('checkbox', { name: 'Club coach' }));
     expect(
       await screen.findByRole('checkbox', { name: 'best golf net for a small garden' }),
     ).toBeChecked();
-    // Without a tracked competitor the share split has no competitor part.
     expect(screen.queryByRole('slider', { name: /Competitor alternatives/ })).toBeNull();
-    // Each split moves in 5% steps and sends the same numbers as before.
     screen.getByRole('slider', { name: 'Unbranded and Branded' }).focus();
     await user.keyboard('{ArrowLeft}');
     screen.getByRole('slider', { name: 'Informational and Commercial' }).focus();
@@ -303,7 +290,6 @@ describe('PromptBuilder', () => {
       seed_source: 'search_console',
     });
 
-    // Step 4: the run lands in review with its coverage.
     expect(await screen.findByText(/No pending suggestions remain/)).toBeVisible();
     expect(screen.getByText('Coverage by topic')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Generate more for Golf nets' })).toBeEnabled();
@@ -369,7 +355,6 @@ describe('PromptBuilderPage', () => {
         return HttpResponse.json(result);
       }),
     );
-    // Each visit lands on Distribution; leaving goes back to Prompts.
     const visit = (onPage: boolean) => {
       window.history.pushState(null, '', onPage ? '/prompts/build?step=distribution' : '/prompts');
       return onPage;
@@ -402,7 +387,6 @@ describe('PromptBuilderPage', () => {
     await user.click(screen.getByRole('button', { name: 'Return' }));
     expect(await screen.findByRole('button', { name: /Generating/ })).toBeDisabled();
 
-    // The run finishes after the person left: their address keeps no builder step.
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     release();
     await waitFor(() => expect(queryClient.isMutating()).toBe(0));

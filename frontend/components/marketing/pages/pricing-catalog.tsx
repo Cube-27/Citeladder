@@ -40,15 +40,6 @@ import { PageHighlight } from '../sections/page-highlight';
 import { PageSection } from '../sections/page-section';
 import { PagePlans, PricingCard, PricingTable, type PlanCell } from '../sections/pricing';
 
-/**
- * The pricing page's client island. Every amount, limit and availability
- * comes from `GET /billing/catalog`; this module only lays it out.
- */
-
-/**
- * INR prices are published exclusive of GST, which the server quote adds for
- * the buyer's state. Other currencies are charged as shown.
- */
 function taxNote(currency: BillingCatalog['currency']): string {
   return currency === 'INR' ? 'excl. GST' : 'taxes confirmed at checkout';
 }
@@ -58,12 +49,6 @@ function priceLabel(price: HeadlinePrice, minorUnits: number): string {
   return price.kind === 'contact' ? 'Contact sales' : 'Not yet priced';
 }
 
-/**
- * The headline limits a plan card lists, in reading order. Values come from
- * the plan's published capabilities; a capability the plan does not publish
- * (or publishes as off) is simply not listed — the comparison table below
- * carries the full grid.
- */
 const CARD_CAPABILITIES = [
   'project_slots',
   'prompt_slots',
@@ -216,11 +201,9 @@ function ByokSwitch({
         }}
         label={BYOK_SWITCH_LABEL}
         describedBy={hint}
-        // Under a coarse pointer its hit area grows to 44px; the track keeps its size.
         className="mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3"
       />
       <span className="grid gap-1">
-        {/* The switch's aria-label already names it; this is the visible click target. */}
         <label htmlFor={id} aria-hidden className="text-body text-ink cursor-pointer">
           {BYOK_SWITCH_LABEL}
         </label>
@@ -235,7 +218,6 @@ function ByokSwitch({
   );
 }
 
-/** The public trial's published limits. */
 function trialLimits(trial: PublicTrial) {
   return [
     { label: 'Length', value: `${trial.days} days` },
@@ -261,17 +243,6 @@ function TrialButton({ appOrigin, primary }: Readonly<{ appOrigin: string; prima
   );
 }
 
-/**
- * How to start, given the two independent switches: whether the catalog has
- * open self-serve checkout, and whether the build allows self-serve sign-up.
- *
- * - Checkout open, sign-up open: the trial tile under the plans.
- * - Checkout open, sign-up closed: nothing; the plan cards are the way in.
- * - Checkout closed, sign-up open: the trial is the page's main offer.
- * - Checkout closed, sign-up closed: early access by enquiry.
- *
- * No price is shown in either closed state.
- */
 function PricingTrial({
   appOrigin,
   checkoutOpen,
@@ -311,11 +282,6 @@ function PricingTrial({
   );
 }
 
-/**
- * A capability a plan does not publish is a dash (the honest "not
- * included", distinct from a published zero); a null value is one the
- * catalog has not released for that plan yet.
- */
 function comparisonCell(value: boolean | number | string | null | undefined): PlanCell {
   if (value === null) return 'Not yet available';
   if (value === undefined) return false;
@@ -356,7 +322,6 @@ export function PublicPricingCatalog({
   catalog: BillingCatalog;
   appOrigin: string;
   initialByok: boolean;
-  /** The public trial's numbers, passed in so its config stays out of the browser bundle. */
   trial: PublicTrial;
 }>) {
   const [byok, setByok] = useState(initialByok);

@@ -82,7 +82,6 @@ async function seed() {
   const intent = await commitSubmissionIntent(db, context!, owner);
   return { ...t, task: intent!.task, owner };
 }
-/** Lease the parked task to `worker` again, as the next poll phase does. */
 async function releaseToWorker(taskId: string) {
   await db
     .updateTable('audit_tasks')
@@ -94,7 +93,6 @@ async function releaseToWorker(taskId: string) {
     .where('id', '=', taskId)
     .execute();
 }
-/** The paid submission reports its 1,800 micro-USD charge, then the poll phase re-leases it. */
 async function paidSubmission(t: Awaited<ReturnType<typeof seed>>) {
   await persistSurfaceExchange(db, t.task, t.owner, {
     taskId: 'provider-id',
@@ -104,7 +102,6 @@ async function paidSubmission(t: Awaited<ReturnType<typeof seed>>) {
   });
   await releaseToWorker(t.task.id);
 }
-/** A retrieved overview the parser cannot use. */
 function unusableOverview() {
   const result = parseOverview(
     {
@@ -119,7 +116,6 @@ function unusableOverview() {
 describe('durable surface evidence', () => {
   it('preserves the submission charge through a pending park and an atomic terminal observation', async () => {
     const t = await seed();
-    // Lease the same persisted phase; no second paid submission occurs.
     await paidSubmission(t);
     await persistSurfaceExchange(db, t.task, 'worker', { poll: true, delaySeconds: 0 });
     const parked = await db
@@ -246,7 +242,6 @@ describe('durable surface evidence', () => {
         .where('source_id', '=', projections[0]!.id)
         .execute(),
     ).toEqual([{ source: 'answer_engine', cost_microusd: '1800' }]);
-    // The overview keeps its own observation beside the failure artifact.
     expect(
       await db
         .selectFrom('aio_observations')

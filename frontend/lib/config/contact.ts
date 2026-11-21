@@ -6,7 +6,6 @@ export const CONTACT_SENDER = 'CiteLadder Website <notifications@citeladder.com>
 export const CONTACT_MAX_BODY_BYTES = 32_768;
 export const CONTACT_REQUEST_TIMEOUT_MS = 15_000;
 export const CONTACT_SEND_TIMEOUT_MS = 10_000;
-/** The Turnstile action the contact widget declares and the server requires. */
 export const CONTACT_TURNSTILE_ACTION = 'contact';
 const TURNSTILE_TOKEN_MAX = 2_048;
 export const CONTACT_LIMITS = {
@@ -38,7 +37,6 @@ export const contactSubmissionSchema = z.strictObject({
 });
 export type ContactSubmission = z.infer<typeof contactSubmissionSchema>;
 
-/** What the browser posts: the submission plus its single-use Turnstile token. */
 export const contactRequestSchema = contactSubmissionSchema.extend({
   turnstile_token: z.string().max(TURNSTILE_TOKEN_MAX).optional().default(''),
 });

@@ -1,19 +1,5 @@
-/**
- * Product-page copy for /platform and its capabilities. Published paths and
- * labels belong to nav.ts; this module owns what each page says.
- *
- * Availability statements here are deliberate: the public trial is a limited
- * ChatGPT visibility entry point, the Agent is outside it, Commerce depends on
- * project eligibility, MCP changes happen only when allowed and confirmed by
- * the user, and paid research is confirmed per collection. Keep claims inside those boundaries.
- */
-
 import type { FaqItem } from './faq';
 
-/**
- * Which product screen illustrates a page or feature: one of the website's
- * screens (`components/marketing/screens`). A page never shows one twice.
- */
 export type PlatformScreen =
   | 'visibility'
   | 'prompts'
@@ -35,18 +21,11 @@ export type PlatformScreen =
   | 'mcp'
   | 'integrations';
 
-/**
- * How a feature is shown: its copy beside its screen (`split`), its screen
- * full width under the copy (`full`), or a text card set in a row with the
- * cards next to it (`card`). A card never carries a screen, so a row never
- * sets a short text card beside a tall screenshot card.
- */
 type PlatformFeatureMedia =
   | { kind: 'split'; screen: PlatformScreen }
   | { kind: 'full'; screen: PlatformScreen }
   | { kind: 'card' };
 
-/** Which primary action a page leads with. */
 export type PlatformCta = 'trial' | 'demo' | 'mcp' | 'setup';
 
 type PlatformFeature = {
@@ -58,24 +37,18 @@ type PlatformFeature = {
 
 export type PlatformPage = {
   path: string;
-  /** When the page last changed in substance: its sitemap <lastmod> (see PageRecord). */
   updated: string;
   title: string;
   description: string;
   heading: string;
   lead: string;
   cta: PlatformCta;
-  /** The hero's screen. */
   screen: PlatformScreen;
   highlights: readonly { title: string; body: string }[];
   features: readonly PlatformFeature[];
-  /** How a team gets from setup to a result, in order. */
   steps: readonly { title: string; body: string }[];
-  /** Questions a team can answer with this capability, phrased as they would ask them. */
   questions: readonly string[];
-  /** Plain availability statement shown under the hero actions. */
   note?: string;
-  /** Rendered on the page and mirrored as FAQPage structured data. */
   faqs: readonly FaqItem[];
   closing: string;
   related: readonly string[];

@@ -10,19 +10,8 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { ProviderRow } from './provider-row';
 import { StateBlock } from '@/components/ui/state-block';
 
-/** A ruled list's rows: 12 either side of each rule, flush at the list's own edges. */
 const LEDGER_ROWS = '*:py-3 *:first:pt-0 *:last:pb-0';
 
-/**
- * The workspace's BYOK credentials, one row per provider. Shared by Settings
- * and the launch dialog's inline setup so both connect the same way.
- *
- * Rows are driven by `/provider-catalog`: a transport appears once, with every
- * engine it measures, so one DataForSEO login covers all its surfaces.
- * `expandEngine` opens the row that measures that engine on arrival (the
- * launch dialog's clicked engine chip). Settings draws the rows in its
- * group's frame (`framed`); the launch dialog keeps a ruled list.
- */
 export function ProviderList({
   expandEngine = null,
   framed = false,
@@ -30,7 +19,6 @@ export function ProviderList({
 }: Readonly<{
   expandEngine?: LogicalEngine | null;
   framed?: boolean;
-  /** Names and actions only, for the launch dialog (owner, 2026-11-21). */
   compact?: boolean;
 }>) {
   const catalogQuery = useQuery(providerQueries.catalog());
@@ -39,7 +27,6 @@ export function ProviderList({
     ...providerQueries.connections(workspaceId),
     enabled: workspaceId !== null,
   });
-  // A failure here leaves every row at its fail-closed default.
   const statesQuery = useQuery({
     ...providerQueries.states(workspaceId),
     enabled: workspaceId !== null,

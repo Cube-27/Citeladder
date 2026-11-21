@@ -1,10 +1,4 @@
 ---
-/**
- * The blog index (the WebBlogIndex template): the hero, the newest post as a
- * featured card, the other posts and the research guides as ContentIndex
- * listings, CiteLadder's studies (reports and study sections), the start paths
- * and the closing band. Static: nothing hydrates.
- */
 import { ContentCta } from '@/components/marketing/content/content-cta';
 import ContentIndex from '@/components/marketing/content/ContentIndex.astro';
 import { FeaturedPost, postMeta } from '@/components/marketing/content/featured-post';
@@ -20,7 +14,6 @@ import { STUDY_INDEXES } from '@/lib/marketing-content/studies/indexes';
 import { RESEARCH_ARTICLES } from '../../research-articles';
 import { studyGroups } from '../../study-index';
 
-// CiteLadder's own studies: the reports by research group, then the study sections, in their index copy.
 const research = STUDY_INDEXES.research;
 const STUDY_SECTIONS = Object.values(STUDY_INDEXES).filter((index) => index.path !== research.path);
 
@@ -31,7 +24,6 @@ const jsonLd = blogIndexJsonLd({
   posts: summaries,
   guides: RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, path: frontmatter.slug })),
 });
-// The newest post is the featured card and the rest are the index.
 const [featured, ...rest] = newestFirst(POSTS);
 ---
 

@@ -1,13 +1,3 @@
-/**
- * Catalog revisions: immutable, numbered copies of a project's matching
- * identity (active products with their categories, and approved competitors).
- *
- * Every answer is matched against a revision, never the mutable catalog, so a
- * match pass names exactly the catalog it read. A revision is recorded only
- * for a project whose plan grants Commerce and whose catalog or approved
- * competitor list is non-empty, and only when that identity changed; each new
- * revision queues one `commerce_answer_matching` backfill (CM1).
- */
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
@@ -33,7 +23,6 @@ const revisionIdentitySchema = z.object({
 });
 export type RevisionIdentity = z.infer<typeof revisionIdentitySchema>;
 
-/** What created a revision: a catalog writer, or an audit admission that found the catalog changed. */
 export type RevisionSource =
   | { kind: 'import'; id: string }
   | { kind: 'projection'; id: string | null }
@@ -43,7 +32,6 @@ export type RevisionSource =
 
 export type CatalogRevision = { id: string; revision_number: number };
 
-/** The current matching identity, in a stable order so equal catalogs hash equal. */
 async function catalogIdentity(db: Database, scope: CommerceScope): Promise<RevisionIdentity> {
   const products = await db
     .selectFrom('commerce_products')
@@ -81,21 +69,12 @@ async function catalogIdentity(db: Database, scope: CommerceScope): Promise<Revi
 const grantsCommerce = (db: Database, workspaceId: string) =>
   new WorkspaceEntitlements(db, workspaceId).grants('commerce');
 
-/**
- * The project's current revision, recording a new one first when the
- * matching identity changed; null when the project does not qualify. A new
- * revision queues its backfill in the caller's transaction, so the work is
- * visible exactly when the revision is.
- */
 export async function recordCatalogRevision(
   db: Database,
   scope: CommerceScope,
   source: RevisionSource,
 ): Promise<CatalogRevision | null> {
   if (!(await grantsCommerce(db, scope.workspaceId))) return null;
-  // A catalog write moves catalog-field findings even when the matching
-  // identity is unchanged (a description or price edit), so it asks for a
-  // refresh; an audit admission's own completion already announces one.
   if (source.kind !== 'audit')
     await enqueueDerivedOpportunityRefresh(db, {
       ...scope,
@@ -144,12 +123,6 @@ export async function recordCatalogRevision(
   return revision;
 }
 
-/**
- * Crawl projection writes the catalog one page at a time, so it asks for a
- * revision instead of recording one per page: queued requests coalesce and
- * keep the earliest deadline, so a long crawl records at most one revision per
- * `projection_delay_seconds`, and the task records it (`matchAnswers`).
- */
 export async function requestProjectionRevision(
   db: Database,
   scope: CommerceScope,
@@ -167,7 +140,6 @@ export async function requestProjectionRevision(
   });
 }
 
-/** One revision's identity, within its workspace and project; null when it does not exist there. */
 export async function loadRevision(db: Database, scope: CommerceScope, id: string) {
   const row = await db
     .selectFrom('commerce_catalog_revisions')
@@ -185,11 +157,6 @@ export async function loadRevision(db: Database, scope: CommerceScope, id: strin
     : null;
 }
 
-/**
- * What one answer is matched against: a buyer prompt's target sees its own
- * products and approved competitors, as the AI Shelf always has; an answer no
- * buyer prompt targets sees the whole catalog.
- */
 export function revisionShelf(
   identity: RevisionIdentity,
   target: ShelfTargetRef | null,

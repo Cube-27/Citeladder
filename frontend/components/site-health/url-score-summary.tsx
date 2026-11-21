@@ -39,7 +39,6 @@ function scoreUnavailableState(state: string, reason?: string) {
     return <Absence state="not_measured" label="Limited evidence" />;
   }
   if (state === 'excluded') return <Absence state="not_applicable" label="Excluded" />;
-  // The page's kind has no AEO checklist: a fact about the page, not a missing measurement.
   if (reason === 'unsupported_purpose_checklist') {
     return <Absence state="not_applicable" label="No AEO checklist for this page kind" />;
   }

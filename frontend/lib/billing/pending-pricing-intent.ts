@@ -1,11 +1,3 @@
-/**
- * A pricing selection captured before the visitor authenticated.
- *
- * This record is untrusted navigation state. It carries enough to locate a
- * current catalog entry and resume the bounded billing-evidence form after
- * authentication; price and availability are always read from the live
- * catalog before a server request is made.
- */
 import {
   PENDING_PRICING_INTENT_KEY,
   PENDING_PRICING_INTENT_MAX_AGE_MS,
@@ -13,7 +5,6 @@ import {
 } from '@/lib/config/billing';
 import { z } from 'zod';
 
-/** Customer evidence the server needs to determine GST/export status; drafts may be empty. */
 export const billingCustomerDetailsSchema = z.object({
   billing_name: z.string(),
   billing_address_line1: z.string(),
@@ -45,7 +36,6 @@ function hasValidTimestamp(createdAt: number, now: number): boolean {
   return now - createdAt <= PENDING_PRICING_INTENT_MAX_AGE_MS && createdAt <= now + 60_000;
 }
 
-/** Strict parse, rejecting malformed, stale, and future-versioned state. */
 export function parsePendingIntent(
   raw: unknown,
   now: number = Date.now(),
@@ -82,9 +72,7 @@ export function readPendingIntent(now: number = Date.now()): PendingPricingInten
 export function clearPendingIntent(): void {
   try {
     storage()?.removeItem(PENDING_PRICING_INTENT_KEY);
-  } catch {
-    // Stale records expire independently.
-  }
+  } catch {}
 }
 
 export function hasPendingIntent(now: number = Date.now()): boolean {

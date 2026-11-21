@@ -401,7 +401,6 @@ describe('leased audit worker phases', () => {
     ).toHaveLength(0);
   });
   it('settles every claimed task when finalizing their audit fails', async () => {
-    // One prompt at three repetitions: two run together, one stays queued.
     const t = await seed();
     await db
       .updateTable('audit_tasks')
@@ -425,7 +424,6 @@ describe('leased audit worker phases', () => {
         env: {},
         send: async () => {
           calls++;
-          // The second answer is still running when the first task's finalize fails.
           if (calls === 2) await sleep(50);
           return Response.json({
             status: 'completed',
@@ -511,7 +509,6 @@ describe('audit runner lane', () => {
         taskScope: { workspaceId: seedCrawl.workspaceId, crawlId: seedCrawl.crawlId },
         executors: {
           link_metrics: async () => {
-            // The sequential drain reached audits only after this task's window.
             answeredDuringCrawl = await Promise.race([answered.promise, sleep(3000, false)]);
           },
         },

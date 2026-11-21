@@ -1,15 +1,8 @@
-/**
- * Bounded sitemap parsing. Sitemaps are attacker-influenced XML: entity
- * declarations are refused outright, gzip expansion is capped before parsing,
- * each document's URLs are capped, and index recursion is depth-bounded and
- * loop-safe. This module only parses; the caller fetches each document.
- */
 import { gunzipSync } from 'node:zlib';
 
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 export class SitemapParseError extends Error {}
-/** A document over the decoded-byte cap: unread, not the server's answer that it has none. */
 export class SitemapTooLargeError extends SitemapParseError {}
 export type SitemapLimits = { maxDecodedBytes: number; maxUrls: number; maxIndexDepth: number };
 
@@ -23,7 +16,6 @@ const parser = new XMLParser({
   isArray: (name) => name === 'url' || name === 'sitemap',
 });
 
-/** Decompress a gzipped body under the decoded-byte cap; plain bodies pass through bounded. */
 function sitemapBytes(body: Buffer, contentType: string, maxBytes: number) {
   const gzip = (body[0] === 0x1f && body[1] === 0x8b) || contentType.toLowerCase().includes('gzip');
   if (!gzip) {
@@ -51,7 +43,6 @@ const lastmodOf = (entry: unknown) =>
     ? entry.lastmod.trim().slice(0, MAX_LASTMOD_CHARS)
     : '';
 
-/** Declared `<lastmod>` values by page URL; the first declaration of a URL wins. */
 function lastmods(entries: unknown, maxUrls: number) {
   const declared = new Map<string, string>();
   for (const entry of (Array.isArray(entries) ? entries : []).slice(0, maxUrls)) {
@@ -62,10 +53,6 @@ function lastmods(entries: unknown, maxUrls: number) {
   return declared;
 }
 
-/**
- * One document: page URLs (and their declared `<lastmod>`) from a `<urlset>`,
- * child references from a `<sitemapindex>`.
- */
 export function parseSitemap(body: Buffer, contentType: string, limits: SitemapLimits) {
   const text = sitemapBytes(body, contentType, limits.maxDecodedBytes).toString('utf8');
   if (/<!ENTITY/iu.test(text)) throw new SitemapParseError('sitemap declares entities');
@@ -76,7 +63,6 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
   const children = root && typeof root === 'object' ? (root as Record<string, unknown>) : {};
   const all = (entries: unknown) =>
     (Array.isArray(entries) ? entries : []).map(loc).filter(Boolean);
-  // A `<sitemap>` entry is a reference whichever root it appears under.
   const refs = all(children.sitemap);
   const urls = isIndex ? [] : all(children.url);
   const references = isIndex ? [...refs, ...all(children.url)] : refs;
@@ -84,14 +70,12 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
     urls: urls.slice(0, limits.maxUrls),
     lastmod: isIndex ? new Map<string, string>() : lastmods(children.url, limits.maxUrls),
     refs: references.slice(0, limits.maxUrls),
-    /** The document listed more URLs or references than the cap kept. */
     truncated: urls.length > limits.maxUrls || references.length > limits.maxUrls,
   };
 }
 
 export type SitemapDocument = ReturnType<typeof parseSitemap>;
 
-/** A sitemap reference as one fetchable identity (WHATWG-normalized, no fragment), or null. */
 export function sitemapRef(value: string) {
   try {
     const url = new URL(value.trim());
@@ -104,30 +88,21 @@ export function sitemapRef(value: string) {
 
 type CollectorOptions = {
   limits: SitemapLimits;
-  /** The site-wide safety ceiling on collected URLs. */
   maxSiteUrls: number;
-  /** Whether a child reference may be fetched; one that may not leaves the list short. */
   follows: (ref: string) => boolean;
 };
 
-/** A walk over one site's sitemap tree; it never fetches anything itself. */
 export class SitemapCollector {
   readonly urls: string[] = [];
-  /** Declared `<lastmod>` by collected URL, as the sitemap spells both. */
   readonly lastmod = new Map<string, string>();
   readonly #visited = new Set<string>();
   readonly limits: SitemapLimits;
   readonly #options: CollectorOptions;
-  /** A limit, the depth bound or an unfollowed reference dropped URLs: a lower bound. */
   truncated = false;
   constructor(options: CollectorOptions) {
     this.limits = options.limits;
     this.#options = options;
   }
-  /**
-   * Ingest one parsed document (the caller parses, off the event loop); return
-   * the unvisited child references it may follow within depth.
-   */
   add(source: string, document: SitemapDocument, depth: number) {
     this.#visited.add(sitemapRef(source) ?? source);
     const room = Math.max(0, this.#options.maxSiteUrls - this.urls.length);
@@ -144,7 +119,6 @@ export class SitemapCollector {
     );
     const refs = unseen.filter((ref) => this.#options.follows(ref));
     if (refs.length < unseen.length) this.truncated = true;
-    // Only an unread reference past the depth bound leaves the list short.
     if (depth >= this.limits.maxIndexDepth) {
       if (refs.length) this.truncated = true;
       return [];

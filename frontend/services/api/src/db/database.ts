@@ -1,11 +1,3 @@
-/**
- * PostgreSQL pool and Kysely instance.
- *
- * Pool size, recycle age, acquisition and command timeouts, and the
- * server-side statement, lock and idle-in-transaction timeouts. The numbered
- * SQL migrations (`migrations/`) are the only schema author; this module
- * holds generated types, never DDL.
- */
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import pg from 'pg';
 
@@ -24,10 +16,6 @@ export type Database = Kysely<DB>;
  */
 export const APP_DATABASE_ROLE = 'citeladder_app';
 
-/**
- * Run `work` in the caller's transaction when `db` is one, else in a new
- * transaction, so a confirmed MCP change commits with its confirmation.
- */
 export function inTransaction<T>(db: Database, work: (trx: Database) => Promise<T>): Promise<T> {
   return db.isTransaction ? work(db) : db.transaction().execute(work);
 }
@@ -68,7 +56,6 @@ export function poolOptions(config: DatabaseConfig, use: PoolUse = {}): pg.PoolC
     query_timeout: db.commandTimeoutSeconds * 1000,
     statement_timeout: db.statementTimeoutMs,
     lock_timeout: db.lockTimeoutMs,
-    // Detect a dead peer (database VM restart) instead of waiting on a silent socket.
     keepAlive: true,
     idle_in_transaction_session_timeout: db.idleTransactionTimeoutMs,
     application_name: config.appName,

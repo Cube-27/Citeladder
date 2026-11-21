@@ -1,9 +1,3 @@
-/* ---------- Home integrations: a logo field ---------- */
-/* The title above, then the tiles in an arch: one at each end of the top row,
-   two at each end of the next, a full row of seven below; the lead and link
-   sit in the arch's hollow. Under 960px everything stacks over two
-   columns of chips. Tiles are flat and static. */
-
 .cl-ifield {
   --ifield-gap: 16px;
   --ifield-row: 144px;
@@ -33,9 +27,6 @@
   list-style: none;
 }
 
-/* Content starts a fixed 24px down, so every logo in a row sits on one line
-   even where a long name wraps to a third line. */
-
 .cl-ifield-tile {
   display: flex;
   flex-direction: column;
@@ -51,9 +42,6 @@
   box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
   text-align: center;
 }
-
-/* Every logo sits in the same 36px slot, and every name keeps two lines'
-   room, so the logos stand at one height and centre in identical tiles. */
 
 .cl-ifield-logo {
   display: grid;
@@ -74,8 +62,6 @@
 }
 
 @media (min-width: 960px) {
-  /* The header's title and its lead and link become the field's own grid
-     items: the title in row 1, the lead and link over the arch's hollow. */
   .cl-ifield {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -111,7 +97,6 @@
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 
-  /* The logo and a two-line name centred in the row: the logo's offset is fixed. */
   .cl-ifield-tile {
     min-height: 0;
     padding-top: calc((var(--ifield-row) - 36px - 12px - var(--text-label--line-height) * 2) / 2);
@@ -142,9 +127,6 @@
     grid-column: 7;
   }
 }
-
-/* Under 960px the tiles become chips in two columns: the logo beside the
-   name, so fourteen integrations take seven rows, not a column. */
 
 @media (max-width: 959px) {
   .cl-ifield-tiles {

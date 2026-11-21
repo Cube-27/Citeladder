@@ -40,7 +40,6 @@ const GERMANY = {
   created_at: '2026-10-10T00:00:00Z',
 };
 
-/** The dialog as a project route opens it, under the gate's project. */
 function RoutedLaunchDialog(props: ComponentProps<typeof LaunchDialog>) {
   return (
     <ActiveProjectScopeProvider project={SCOPE_PROJECT}>
@@ -49,8 +48,6 @@ function RoutedLaunchDialog(props: ComponentProps<typeof LaunchDialog>) {
   );
 }
 
-/** The `/estimate` projection the dialog summarises. The dialog reads only
- * these five fields; the per-engine breakdown is the API layer's contract. */
 const ESTIMATE = {
   execution_count: 14,
   maximum_attempt_count: 42,
@@ -59,14 +56,12 @@ const ESTIMATE = {
   estimated_total_cost_microusd: 123_400,
 };
 
-/** The prompt-set list read: the sets plus the launch's repetition range. */
 function listed(sets: unknown[], limits = makeFormLimits()) {
   return { prompt_sets: sets, limits };
 }
 
 function stubApis(estimate: unknown = undefined) {
   vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
-    // Commerce's newer set is listed first; the launch still defaults to the main brand set.
     listed([
       {
         id: '66666666-6666-4666-8666-666666666666',
@@ -97,7 +92,6 @@ function stubApis(estimate: unknown = undefined) {
   return vi.spyOn(runsApi, 'launchAudit').mockResolvedValue([{ id: 'audit' }] as never);
 }
 
-/** Pick one engine, which is what makes the selection launchable. */
 async function selectEngineAndLaunch() {
   fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
   fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
@@ -295,9 +289,7 @@ describe('Inline provider setup', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Claude API, not connected' }));
 
     const setup = await screen.findByRole('region', { name: 'Connect a provider' });
-    // Set up in place: no second dialog is stacked on the launch dialog.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    // The provider that measures Claude arrives open on its credential form.
     expect(await within(setup).findByRole('button', { name: 'Close Anthropic' })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -307,7 +299,6 @@ describe('Inline provider setup', () => {
     fireEvent.click(within(setup).getByRole('button', { name: 'Close provider setup' }));
     expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
 
-    // Closed by its owner mid-setup, the dialog reopens without the panel.
     fireEvent.click(screen.getByRole('button', { name: 'Claude API, not connected' }));
     await screen.findByRole('region', { name: 'Connect a provider' });
     rerender(dialog(false));
@@ -355,7 +346,6 @@ describe('Engine availability changes', () => {
     expect(
       await screen.findByRole('button', { name: 'ChatGPT Search, not connected' }),
     ).toHaveAttribute('aria-pressed', 'false');
-    // The disabled primary names why as its description.
     const launch = screen.getByRole('button', { name: 'Launch run' });
     expect(launch).toBeDisabled();
     expect(launch).toHaveAccessibleDescription('Choose at least one engine to launch a run.');
@@ -366,9 +356,6 @@ describe('LaunchDialog fixed prompt selection', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('summarises the estimate once it resolves', async () => {
-    // Every other test in this file stubs `estimateAudit` to resolve
-    // undefined, so the summary branch was only ever rendered by the two
-    // full-page suites that each re-declared this payload.
     stubApis(ESTIMATE);
 
     renderWithProviders(
@@ -383,7 +370,6 @@ describe('LaunchDialog fixed prompt selection', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
     expect(await screen.findByText('14 responses planned')).toBeInTheDocument();
-    // Cost is rendered from microUSD, so a formatting slip shows up as money.
     expect(
       screen.getByText(/Maximum wall-clock budget 900s · cost complete · ~\$0\.1234/),
     ).toBeInTheDocument();
@@ -408,16 +394,12 @@ describe('LaunchDialog fixed prompt selection', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
-    // Singular, and never "~$0.0000".
     expect(await screen.findByText('1 response planned')).toBeInTheDocument();
     expect(screen.getByText(/cost unpriced · unavailable/)).toBeInTheDocument();
     expect(screen.queryByText(/\$0\.0000/)).not.toBeInTheDocument();
   });
 
   it('locks the field and shows the selection the prompt_ids payload uses', async () => {
-    // `promptSetLocked` was derived from `fixedPromptSetId` alone, so a
-    // `fixedPromptIds` caller kept an editable prompt-set select whose value
-    // `buildLaunchPayload` then ignored.
     const launch = stubApis();
 
     renderWithProviders(
@@ -505,10 +487,8 @@ describe('LaunchDialog fixed prompt selection', () => {
 describe('LaunchDialog prompt batching', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  /** A set of `count` audit-eligible prompts, in creation order. */
   function setWithPrompts(count: number) {
     return listed([
-      // Listed first as the newer set; the default is still the main brand set.
       {
         id: '66666666-6666-4666-8666-666666666666',
         name: 'Commerce Buyer Prompts',
@@ -536,8 +516,6 @@ describe('LaunchDialog prompt batching', () => {
 
   it('runs a chosen batch of ten as an explicit prompt id list', async () => {
     const user = userEvent.setup();
-    // The launch screen used to offer no choice: picking a set ran every
-    // prompt in it, however large and however expensive.
     const launch = stubApis();
     vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(setWithPrompts(23) as never);
 
@@ -572,7 +550,6 @@ describe('LaunchDialog prompt batching', () => {
     );
 
     await screen.findByRole('button', { name: 'ChatGPT API' });
-    // Seven prompts is one batch: "All 7" and "Prompts 1-7" are the same run.
     expect(screen.queryByLabelText(/Prompts to run/)).not.toBeInTheDocument();
     await selectEngineAndLaunch();
 

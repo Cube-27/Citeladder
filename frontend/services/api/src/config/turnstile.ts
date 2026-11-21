@@ -1,14 +1,8 @@
-/**
- * Cloudflare Turnstile on sign-up and the public "email me a link" requests,
- * and on sign-in once failures reach a challenge threshold in
- * `config/abuse.ts` (AR-3, 12 November 2026).
- */
 export const turnstile = {
   verify_url: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
   verify_timeout_ms: 5_000,
   /** Cloudflare's documented maximum token length. */
   token_max_length: 2_048,
-  /** The widget `action` each challenged request must have been solved for. */
   actions: {
     signup: 'signup',
     login: 'login',
@@ -27,7 +21,6 @@ export const turnstile = {
   ]),
   /** The only token Cloudflare's test secrets accept. */
   test_token: 'XXXX.DUMMY.TOKEN.XXXX',
-  /** The secret a development or test environment uses when none is set: always passes. */
   development_secret: '1x0000000000000000000000000000000AA',
 } as const;
 

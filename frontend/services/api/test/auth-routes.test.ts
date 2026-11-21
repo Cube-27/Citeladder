@@ -15,7 +15,6 @@ import { hashPassword } from '../src/auth/password.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, signupTestConfig, testConfig, testDatabase } from './support.ts';
 
-// Signs up reserved `example.test` fixtures; mail and signup notices still skip them.
 const config = signupTestConfig({ PUBLIC_SIGNUP_ENABLED: 'true' });
 const db = testDatabase(config);
 const fixtures = new Fixtures(db);
@@ -24,7 +23,6 @@ const prefix = `pr14-${randomUUID()}`;
 const email = `${prefix}@example.test`;
 const password = 'password123';
 const createdUsers: string[] = [];
-// The Terms decision every sign-up and sign-in request has to carry.
 const decision = { terms_revision: policy.auth.terms_revision, accept_terms: true };
 // Sign-up also carries a Turnstile token: the dummy one Cloudflare's always-pass
 // test secret accepts, which a test environment uses when none is configured.
@@ -71,7 +69,6 @@ beforeAll(async () => {
   const login = await call('/auth/login', { email, password, ...decision });
   expect(login.status).toBe(200);
   cookie = `${config.session.cookieName}=${(login.headers.get('set-cookie') ?? '').split(`${config.session.cookieName}=`)[1]?.split(';')[0]}`;
-  // Signing up and signing in create nothing; onboarding creates the owned workspace.
   expect(
     await db.selectFrom('workspace_members').select('id').where('user_id', '=', userId).execute(),
   ).toEqual([]);
@@ -204,7 +201,6 @@ describe('password auth routes', () => {
         )
         .execute(),
     ).toEqual([]);
-    // Unverified, so no signup notice; no mail key, so no verification mail.
     const ordinary = `${prefix}-ordinary@fixtures.citeladder.com`;
     const admitted = await call(
       '/auth/register',
@@ -275,7 +271,6 @@ describe('password auth routes', () => {
       expect(refused.headers.get('set-cookie')).toBeNull();
     }
     expect(await decisions()).toEqual([]);
-    // Without that decision, the workspace refuses an acceptance the request alone asserts.
     const undecided = await call(`/workspaces/${workspaceId}/policies`, decision, memberCookie);
     expect(undecided.status).toBe(409);
     expect(((await undecided.json()) as { error: { code: string } }).error.code).toBe(
@@ -293,7 +288,6 @@ describe('password auth routes', () => {
       terms_revision: policy.auth.terms_revision,
       accepted_at: expect.any(String),
     });
-    // The decision opens only workspaces the person belongs to.
     const foreign = await fixtures.ownedWorkspace(await fixtures.user());
     expect((await call(`/workspaces/${foreign}/policies`, decision, memberCookie)).status).toBe(
       404,
@@ -435,7 +429,6 @@ describe('password auth routes', () => {
     const attempt = async (secret: string) =>
       (await call('/auth/login', { email, password: secret, ...decision }, undefined, limited))
         .status;
-    // A success forgets earlier failures, so one wrong guess does not carry over.
     expect(await attempt('incorrect')).toBe(401);
     expect(await attempt(password)).toBe(200);
     expect(await attempt('incorrect')).toBe(401);
@@ -468,7 +461,6 @@ describe('password auth routes', () => {
           limited,
         )
       ).status;
-    // A success forgets the earlier failure; the replaced password then spends anew.
     expect(await change('incorrect', 0)).toBe(400);
     expect(await change(password, 0)).toBe(200);
     expect(await change('incorrect', 1)).toBe(400);
@@ -571,11 +563,9 @@ describe('password auth routes', () => {
         )
         .execute();
     });
-    /** A documentation-range IPv6 /48 no earlier run has used; each test spends its own. */
     function freshSite() {
       return `2001:db8:${(0x1000 + randomInt(0xefff)).toString(16)}`;
     }
-    /** A sign-in the app Worker forwards for the visitor at `clientIp`. */
     async function signIn(
       service: ReturnType<typeof createApp>,
       clientIp: string,
@@ -630,10 +620,8 @@ describe('password auth routes', () => {
           401,
           'unauthorized',
         ]);
-      // The right password alone no longer signs in from that network; solved, it does.
       expect(await signIn(service, `${site}:7::9`, { email, password })).toEqual(challenged);
       expect(await signIn(service, `${site}:7::9`, solved)).toEqual([200, null]);
-      // Another network has failed nothing and is not challenged.
       expect(await signIn(service, `${site}:8::1`, { email, password })).toEqual([200, null]);
     });
 
@@ -650,7 +638,6 @@ describe('password auth routes', () => {
         ).toEqual([401, 'unauthorized']);
       expect(await signIn(service, `${site}:9::1`, { email, password })).toEqual(challenged);
       expect(await signIn(service, `${site}:9::1`, solved)).toEqual([200, null]);
-      // The success forgot the address's failures: no challenge next time.
       expect(await signIn(service, `${site}:9::1`, { email, password })).toEqual([200, null]);
     });
 
@@ -667,7 +654,6 @@ describe('password auth routes', () => {
       const service = behindWorker({ ABUSE_LOGIN_FAILURE_GLOBAL_LIMIT: '2' });
       expect(await signIn(service, `${site}:1::1`, stranger())).toEqual([401, 'unauthorized']);
       expect(await signIn(service, `${site}:2::1`, stranger())).toEqual([401, 'unauthorized']);
-      // A third network and an address that never failed are still challenged, never refused.
       expect(await signIn(service, `${site}:3::1`, { email, password })).toEqual(challenged);
       expect(await signIn(service, `${site}:3::1`, solved)).toEqual([200, null]);
     });
@@ -712,7 +698,6 @@ describe('sign out everywhere and disconnect integrations', () => {
     return `${config.session.cookieName}=${await sessionToken({ sub: id, ver })}`;
   }
 
-  /** A person with an MCP grant and an API key they created, as connecting a client does. */
   async function connectedPerson() {
     const person = await fixtures.user();
     createdUsers.push(person);
@@ -797,7 +782,6 @@ describe('sign out everywhere and disconnect integrations', () => {
     const connected = await connectedPerson();
     const cookie = await sessionCookie(connected.person, 0);
     const me = await call('/auth/me', undefined, cookie);
-    // Only signing out clears the browser's cached pages; storage keeps device preferences.
     expect([me.status, me.headers.get('clear-site-data')]).toEqual([200, null]);
     expect(await signOut('/api/v1/auth/logout', cookie)).toEqual([204, '"cache"']);
     expect((await call('/auth/me', undefined, cookie)).status).toBe(401);
@@ -854,7 +838,6 @@ describe('Google sign-in', () => {
     db,
   );
 
-  // Every start carries the Terms decision; a sign-up start may also create an account.
   const signInStart = `?accept_terms=true&terms_revision=${policy.auth.terms_revision}`;
   const signUpStart = `${signInStart}&signup=true&turnstile_token=XXXX.DUMMY.TOKEN.XXXX`;
 
@@ -948,7 +931,6 @@ describe('Google sign-in', () => {
     expect(
       await db.selectFrom('users').select('id').where('email', '=', identityEmail).execute(),
     ).toEqual([]);
-    // Every start, sign-in or sign-up, must carry the decision and the published revision.
     const statuses = [];
     for (const query of [
       '',
@@ -1003,7 +985,6 @@ describe('Google sign-in', () => {
         .where('actor_id', '=', user.id)
         .execute(),
     ).toEqual([{ context: 'signup' }]);
-    // Google sign-in creates the identity only; onboarding creates the workspace.
     expect(
       await db
         .selectFrom('workspace_members')
@@ -1024,7 +1005,6 @@ describe('Google sign-in', () => {
         .where('event', '=', 'auth.google_login')
         .execute(),
     ).toHaveLength(2);
-    // Signing in again on the same revision keeps the first decision.
     expect(
       await db
         .selectFrom('account_policy_acceptances')

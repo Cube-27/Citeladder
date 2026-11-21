@@ -1,10 +1,3 @@
-/**
- * Prompt library commands: the one write path the browser, the public API and
- * MCP share. Each takes an actor checked against its permission, then calls
- * the prompt owners scoped to the caller's project (`RecordScope`): a set,
- * prompt or topic outside it is a 404, so no caller checks project ownership
- * itself.
- */
 import type { z } from 'zod';
 
 import { budget, spendBudget } from '../abuse/usage.ts';
@@ -24,14 +17,11 @@ import * as topicPreview from '../prompts/topic-preview.ts';
 import * as topics from '../prompts/topics.ts';
 import { permission, type Authorized } from './permission.ts';
 
-/** Changing the library. */
 export const PROMPTS_WRITE = permission({ capability: 'write', scope: 'prompts:write' });
-/** A metered model call for the library: generation and topic proposals. */
 export const PROMPTS_RUN = permission({ capability: 'run', scope: 'prompts:write' });
 type Writer = Authorized<typeof PROMPTS_WRITE>;
 type Runner = Authorized<typeof PROMPTS_RUN>;
 
-/** The scope the actor's records are found in. */
 const scopeOf = (actor: Writer, projectId: string | null): RecordScope => ({
   workspaceId: actor.workspaceId,
   projectId,
@@ -58,7 +48,6 @@ export function createPrompt(
   return prompts.createPrompt(db, scopeOf(actor, projectId), promptSetId, input);
 }
 
-/** A request passes its own entitlements; MCP builds them from its transaction. */
 export function updatePrompt(
   db: Database,
   actor: Writer,
@@ -161,7 +150,6 @@ export function deleteTopic(
   return topics.deleteTopic(db, scopeOf(actor, projectId), topicId);
 }
 
-/** The Prompt Builder's reviewed topic plan: deletes, renames and creates at once. */
 export function confirmTopics(
   db: Database,
   actor: Writer,
@@ -171,16 +159,10 @@ export function confirmTopics(
   return topics.confirmTopics(db, actor.workspaceId, projectId, input);
 }
 
-/** Proposing topics makes a metered model call, so it needs the run capability. */
 export function previewTopics(db: Database, actor: Runner, projectId: string) {
   return topicPreview.previewTopics(db, actor.workspaceId, projectId);
 }
 
-/**
- * A retried run with the same Idempotency-Key replays the staged run without
- * provider I/O. A set's project never changes, so the set is found in the
- * caller's project before generation resolves it again under its locks.
- */
 export async function startGeneration(
   db: Database,
   actor: Runner,

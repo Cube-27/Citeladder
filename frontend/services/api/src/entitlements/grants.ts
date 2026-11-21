@@ -17,13 +17,6 @@ export async function lockAccount(db: Database, workspaceId: string, accountId: 
     .executeTakeFirstOrThrow();
 }
 
-/**
- * The only entitlement lifecycle bump: every grant, revocation and
- * subscription change advances the account's version. With `expectedVersion`
- * the bump is optimistic: it applies only if no other writer bumped since that
- * read. The caller holds the capacity lock, so it never touches the Site Health
- * runtime: the transaction's owner calls `refreshRuntime` after it commits.
- */
 export async function bumpLifecycle(
   db: Database,
   request: { workspaceId: string; accountId: string; at: Date; expectedVersion?: number },
@@ -45,7 +38,6 @@ const invalidBundle = () =>
 const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>
   bumpLifecycle(db, { workspaceId, accountId, at });
 
-/** What a grant bundle was issued for; `source_ref` persists it as `<kind>:<id>`. */
 export type GrantSource =
   | { kind: 'subscription'; subscriptionId: string }
   | { kind: 'activation'; activationId: string }
@@ -73,7 +65,6 @@ export function sourceRef(source: GrantSource): string {
   }
 }
 
-/** A persisted `source_ref` read back as its source; null for one no writer produces. */
 export function grantSource(ref: string): GrantSource | null {
   if (ref === 'system:public-signup') return { kind: 'public_signup' };
   const separator = ref.indexOf(':');
@@ -93,10 +84,6 @@ export function grantSource(ref: string): GrantSource | null {
   }
 }
 
-/**
- * The reason a bundle stores: at most 255 characters, and required on an
- * override an actor issued (invariant 16); a system baseline has no actor.
- */
 function bundleReason(source: GrantSource, raw: string | undefined) {
   const reason = raw?.trim() ?? '';
   if (reason.length > 255 || (source.kind === 'override' && !reason))
@@ -121,10 +108,6 @@ export async function issueBundle(
     priority: number;
     periodStart?: Date;
     periodEnd?: Date;
-    /**
-     * Why this bundle was issued, stored as its evidence; a replay must repeat
-     * it. Every override an actor issues carries one (invariant 16).
-     */
     reason?: string;
   },
 ) {

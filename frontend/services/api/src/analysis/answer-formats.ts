@@ -1,7 +1,3 @@
-/**
- * Answer formats (shopping, map, comparison, image) and in-text links, read
- * once at analysis from the stored scraper Task GET envelope (AV-8).
- */
 import {
   answerFormatSchema,
   type AnswerFormat,
@@ -21,7 +17,6 @@ const FORMAT_OF = new Map<string, AnswerFormat>(
   ),
 );
 const ADS = new Set<string>(answerEvidence.ad_item_types);
-// A markdown link that is not an image: `[text](https://...)`.
 const LINK = /(?<!!)\[[^[\]]*\]\((https?:\/\/[^\s)]+)/gu;
 
 export type AnswerFormatColumns = {
@@ -47,7 +42,6 @@ function itemTypes(node: Record<string, unknown>, found: Set<string>, depth = 0)
   }
 }
 
-/** Distinct link targets written into the answer's prose, outside format cards and ads. */
 function inTextLinks(page: Record<string, unknown>): number {
   const urls = new Set<string>();
   for (const item of items(page)) {
@@ -61,11 +55,6 @@ function inTextLinks(page: Record<string, unknown>): number {
   return urls.size;
 }
 
-/**
- * Only a scraper answer can show formats; an API answer is not applicable. A
- * scraper envelope without one result page holding an item list is
- * unavailable, which is distinct from a page observed with no format.
- */
 export function answerFormatColumns(input: {
   logicalEngine: string;
   providerMetadata: unknown;
@@ -92,7 +81,6 @@ export function answerFormatColumns(input: {
   };
 }
 
-/** The persisted reading. */
 export function storedAnswerFormats(row: {
   answer_format_state: string;
   answer_formats: string[] | null;

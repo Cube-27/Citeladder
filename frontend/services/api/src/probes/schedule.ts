@@ -1,9 +1,3 @@
-/**
- * The optional probe schedule (AV-33): one audit schedule in the probe scope,
- * kept by the audit schedule owner, so a due probe enters the same admission
- * path as Run probe. Turning it on confirms the quote's cost per run, as Run
- * probe does; Off deletes it.
- */
 import type { ProbeScheduleRequest } from '@citeladder/contracts/probes';
 
 import { auditRuntime, type AuditRuntime } from '../audits/config.ts';
@@ -14,7 +8,6 @@ import { inTransaction, type Database } from '../db/database.ts';
 import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { changed, probePlan, promptSetOf, runnable } from './plan.ts';
 
-/** The project's probe schedules; callers add their columns. */
 export function probeSchedules(db: Database, scope: Scope) {
   return db
     .selectFrom('audit_schedules')

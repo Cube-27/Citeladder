@@ -1,14 +1,3 @@
-/**
- * The `fact_verification` analytics executor: one bounded, platform-funded
- * model call that checks an answer's brand claims against the confirmed fact
- * revisions its audit froze. Queued by the perception executor only when a
- * confident claim has a frozen fact on its topic.
- *
- * Mirrors perception: reads commit before the call and no transaction spans
- * it; caps, a missing gateway, an unusable output and a provider failure each
- * end as a persisted outcome, idempotent on
- * `(perception_id, verify_template_version)`.
- */
 import { randomUUID } from 'node:crypto';
 
 import { factTopicSchema } from '@citeladder/contracts/fact-checking';
@@ -47,7 +36,6 @@ import {
   type VerifyClaim,
 } from './verify.ts';
 
-/** Outcomes that spent a model call; caps count only these. */
 const CALLED = ['verified', 'invalid_output', 'model_error'];
 
 type Outcome =
@@ -80,7 +68,6 @@ function loadSubject(db: Database, task: QueueTask, projectId: string) {
     .executeTakeFirstOrThrow();
 }
 
-/** The confident claims with a frozen fact on their topic: the ones a model call checks. */
 async function eligibleClaims(
   db: Database,
   workspaceId: string,
@@ -111,7 +98,6 @@ async function frozenFacts(db: Database, workspaceId: string, factCheck: FrozenF
     .where('id', 'in', ids)
     .execute();
   const statements = new Map(rows.map((row) => [row.id, row.statement]));
-  // A frozen revision is append-only; one that is gone (project deleted) is skipped.
   return factCheck.facts.flatMap((fact) => {
     const statement = statements.get(fact.revision_id);
     return statement === undefined
@@ -178,7 +164,6 @@ function persist(
   };
 }
 
-/** One verification call over the package; code decides which verdicts stand. */
 function verify(
   gateway: ModelGateway,
   built: ReturnType<typeof verifyPackage>,
@@ -206,7 +191,6 @@ export function factVerification(
     const projectId = await taskProject(db, task);
     const subject = await loadSubject(db, task, projectId);
     const factCheck = frozenFactCheck(subject.configuration);
-    // An audit admitted outside the pilot is never verified.
     if (!factCheck) return;
     const version = factCheck.verify_template_version;
     const [verified, claims] = await Promise.all([
@@ -231,10 +215,8 @@ export function factVerification(
     if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
     const raw = gatewayFactory();
     if (!raw) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
-    // Verdicts compare under the audit's frozen model, so another one never checks its claims.
     if (raw.model !== frozenPerceptionVersions(subject.configuration)?.model)
       return settle({ outcome: 'unavailable', reason: 'model_changed' });
-    // Included in the prompt run (B9): recorded with its tokens, not charged.
     const gateway = meterFor(db, task.workspace_id).gateway(raw, 'fact_verification');
     const configuration = record(subject.configuration);
     const built = verifyPackage({
@@ -252,7 +234,6 @@ export function factVerification(
   };
 }
 
-/** A task that exhausted its attempts still leaves a persisted, explained outcome. */
 export async function compensateFactVerification(db: Database, task: QueueTask) {
   const projectId = await taskProject(db, task);
   const subject = await loadSubject(db, task, projectId);

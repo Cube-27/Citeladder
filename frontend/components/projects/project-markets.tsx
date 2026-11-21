@@ -14,12 +14,6 @@ import { projectMutations } from '@/lib/api/projects';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * Additional measurement markets. Each one is measured as its own run and
- * read on its own in Visibility; the default market is the project's country
- * and language above. Adding and removing apply at once, apart from the
- * panel's Save.
- */
 export function ProjectMarkets({
   projectId,
   workspaceId,

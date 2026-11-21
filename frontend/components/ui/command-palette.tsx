@@ -19,7 +19,6 @@ import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { SHEET_FACE } from '@/components/ui/slip';
 
-/** A group of shell destinations the palette lists; the shell supplies them. */
 type PaletteGroup = Readonly<{
   title: string;
   items: readonly Readonly<{
@@ -30,45 +29,18 @@ type PaletteGroup = Readonly<{
   }>[];
 }>;
 
-/**
- * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell: the
- * sidebar's groups in the same order with the same labels, the workspace and
- * account pages, then "Switch project".
- *
- * Keyboard-first velocity is the point: every nav destination and every
- * project in the workspace is reachable without leaving the home row. The
- * top-bar search is the pointer affordance for the same thing.
- *
- * Deliberately NOT built on components/ui/dialog.tsx — that wrapper owns a
- * title/description/close header, which a palette must not have (the input is
- * the header). It uses the same Radix primitive and the same scrim/surface
- * tokens, so the two stay visually consistent.
- *
- * Filtering is a plain substring match over label + group. There is no fuzzy
- * matcher and no index: the corpus is ~12 nav items plus the workspace's
- * projects, where subsequence matching mostly produces surprising ranking for
- * no measurable gain.
- */
 type Command = {
   id: string;
   label: string;
   group: string;
-  /** Nav destinations carry their canonical glyph; projects render a brand logo. */
   icon?: IconGlyph;
   logoUrl?: string | null;
   websiteUrl?: string | null;
   hint?: string;
-  /** A destination's address, warmed when its row is highlighted. */
   href?: string;
   run: () => void;
 };
 
-/**
- * Results keep ONE flat order for the keyboard cursor, but render grouped.
- * Rebuilding sections from that flat list (rather than grouping first and
- * flattening for keys) is what keeps the highlighted row and the Enter target
- * the same element — the two orders can never drift apart.
- */
 function toSections(results: readonly Command[]) {
   const sections: { group: string; rows: { command: Command; index: number }[] }[] = [];
   results.forEach((command, index) => {
@@ -79,16 +51,13 @@ function toSections(results: readonly Command[]) {
   return sections;
 }
 
-/** How the palette was first opened, by the launcher that loaded it. */
 export type PaletteLaunch = Readonly<{ returnTo: HTMLElement | null }>;
 
 export function CommandPalette({
   destinations,
   launch,
 }: Readonly<{
-  /** The shell's destinations by group; a managed plan may list fewer. */
   destinations: (options: { managed: boolean }) => readonly PaletteGroup[];
-  /** Mounts the palette open, returning focus to `returnTo` when it closes. */
   launch?: PaletteLaunch;
 }>) {
   const router = useNavigate();
@@ -110,15 +79,10 @@ export function CommandPalette({
   const restoreFocus = useCallback(() => {
     const target = returnFocusTo.current;
     returnFocusTo.current = null;
-    // The element may have unmounted while the palette was open (switching
-    // project re-renders the shell), or be folded behind More. Opened from
-    // <body> or from a vanished element, focus goes to the masthead's search.
     const opener = target === document.body ? null : returnTargetFor(target);
     (opener ?? returnTargetFor(document.querySelector<HTMLElement>(PALETTE_LAUNCHER)))?.focus();
   }, []);
 
-  // Opening resets the palette. Done in the handler, not an effect — the reset
-  // is caused by the interaction, not by state outside React.
   const setOpenState = useCallback((next: boolean) => {
     setOpen(next);
     if (next) {
@@ -148,11 +112,6 @@ export function CommandPalette({
   // browser's own find-in-page on the platforms that map ⌘K.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      // Modifier first, then `key`. This handler runs on EVERY keystroke in the
-      // app, so the cheap test should gate the string work — and `event.key` is
-      // optional on a programmatically constructed KeyboardEvent (browser
-      // extensions and IMEs dispatch these), where reading `.toLowerCase()` off
-      // it threw "Cannot read properties of undefined".
       if (!(event.metaKey || event.ctrlKey) || event.key?.toLowerCase() !== 'k') return;
       event.preventDefault();
       if (open) {
@@ -160,7 +119,6 @@ export function CommandPalette({
         return;
       }
 
-      // Capture the caller's position before the dialog steals focus.
       const activeEl = document.activeElement;
       returnFocusTo.current = activeEl instanceof HTMLElement ? activeEl : null;
       setQuery('');
@@ -191,12 +149,8 @@ export function CommandPalette({
       }),
     );
 
-    // Projects come last, after every destination. Switching project re-scopes the API client's workspace header, so this
-    // is a genuine action rather than a link.
     const projectCommands = projects.map((project) => ({
       id: `project:${project.id}`,
-      // brand_name is required by projectSchema, so there is no fallback to
-      // guard here; ProjectSwitcher shows the same label.
       label: project.brand_name,
       group: 'Switch project',
       logoUrl: project.brand?.logo_url,
@@ -216,10 +170,6 @@ export function CommandPalette({
     );
   }, [commands, query]);
 
-  // The cursor is CLAMPED during render rather than corrected in an effect:
-  // typing shrinks the result set, and storing an index that is briefly out of
-  // range would render one frame with nothing selected before a corrective
-  // pass fixed it. Deriving it means there is no such frame.
   const activeIndex = active >= results.length ? 0 : active;
 
   // Keep the highlighted row visible when moving by keyboard past the fold.
@@ -232,8 +182,6 @@ export function CommandPalette({
     }
   }, [activeIndex]);
 
-  // Highlighting a destination is the palette's pointer or keyboard intent:
-  // it warms the route's code and primary read, as hovering a nav link does.
   const onIntent = useRouteIntent();
   function highlight(index: number) {
     if (index === activeIndex) return;
@@ -248,8 +196,6 @@ export function CommandPalette({
     command.run();
   }, []);
 
-  // Movement is relative to the CLAMPED index, so wrapping stays correct even
-  // on the render right after a filter shrank the list.
   function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (!results.length) return;
     if (event.key === 'ArrowDown') {
@@ -269,11 +215,6 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
-          // Radix requires a Title for the dialog's accessible name and
-          // warns when one is absent. The palette has no visible heading —
-          // its input is the header — so the title is screen-reader only.
-          // `aria-describedby={undefined}` opts out of the description Radix
-          // otherwise looks for, which this dialog deliberately lacks.
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
@@ -289,9 +230,6 @@ export function CommandPalette({
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          {/* The search row is the dialog's header. It opens with the caret
-              only and draws the ring when Tab returns to the field
-              (globals.css, `palette-field`). */}
           <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-3.5 shrink-0" aria-hidden />
             <input
@@ -320,8 +258,6 @@ export function CommandPalette({
             ref={listRef}
             className="content-scroll max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
           >
-            {/* The empty state is a message, not an option, so it sits
-                  beside the listbox rather than inside it. */}
             {results.length === 0 ? (
               <p className="type-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
                 {`No matches for “${query}”`}
@@ -356,8 +292,6 @@ export function CommandPalette({
                           type="button"
                           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the palette input while these action options are active descendants.
                           role="option"
-                          // Options are reached through the input's active
-                          // descendant, never by Tab.
                           tabIndex={-1}
                           aria-selected={isActive}
                           data-active={isActive}
@@ -393,8 +327,6 @@ export function CommandPalette({
             </div>
           </div>
 
-          {/* Keyboard legend — the palette is a keyboard surface first, so
-                it states its own controls rather than assuming they are known. */}
           <div className="border-rule type-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
             <span className="inline-flex items-center gap-2">
               <Kbd keys={['↑', '↓']} />
@@ -411,7 +343,6 @@ export function CommandPalette({
   );
 }
 
-/** What a search found, for assistive technology as the reader types. */
 function paletteOutcome(count: number, query: string) {
   return count === 0 ? `No matches for “${query}”` : pluralCount(count, 'result');
 }

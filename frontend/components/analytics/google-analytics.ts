@@ -80,7 +80,6 @@ function marketingCtaFields(anchor: HTMLAnchorElement, demo: boolean) {
   };
 }
 
-/** One delegated listener covers SSR links and hydrated islands without double-firing. */
 function trackMarketingCta(event: MouseEvent) {
   if (!hasAnalyticsConsent() || !(event.target instanceof Element)) return;
   const anchor = event.target.closest('a');
@@ -93,13 +92,11 @@ function trackMarketingCta(event: MouseEvent) {
   if (demo) gtag?.('event', 'demo_contact_click', fields);
 }
 
-/** Successful submissions carry no visitor-supplied analytics properties. */
 export function trackContactSubmitted() {
   if (!hasAnalyticsConsent()) return;
   (window as GtagWindow).gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
 }
 
-/** Load, update or withdraw the tag to match the current consent decision. */
 function applyConsent(measurementId: string, allowed: boolean) {
   const withGtag = window as GtagWindow;
   // Google's hard opt-out also stops cookieless measurement after withdrawal.
@@ -143,10 +140,6 @@ function applyConsent(measurementId: string, allowed: boolean) {
   document.head.appendChild(script);
 }
 
-/**
- * Load the optional Google tag only after an explicit analytics opt-in, and
- * follow every later decision in this tab or another. Returns a stop function.
- */
 export function startGoogleAnalytics(measurementId: string): () => void {
   let allowed = hasAnalyticsConsent();
   document.addEventListener('click', trackMarketingCta);

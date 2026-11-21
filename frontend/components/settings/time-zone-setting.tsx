@@ -27,7 +27,6 @@ export function TimeZoneSetting() {
   const savedNamedZone = savedChoice === 'custom' ? preference : '';
   const choice = edit?.choice ?? savedChoice;
   const namedZone = edit?.namedZone ?? savedNamedZone;
-  // Each failure belongs to the control that caused it, so its Field can announce it.
   const [error, setError] = useState<{ at: 'choice' | 'zone'; message: string } | null>(null);
 
   const choose = (next: Choice) => {

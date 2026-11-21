@@ -111,8 +111,6 @@ describe('authenticated interaction primitives', () => {
     await user.keyboard('{ArrowRight}');
     expect(two).toHaveAttribute('data-state', 'active');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Second panel');
-    // The strip, never the page, scrolls the tab into view with the padding
-    // shrunk to fit: a 60px tab in a 100px strip keeps 20px each side, not 32.
     expect(list.scrollLeft).toBe(280);
     await user.keyboard('{ArrowLeft}');
     expect(list.scrollLeft).toBe(0);
@@ -254,7 +252,6 @@ describe('authenticated interaction primitives', () => {
     expect(screen.getByText('Trail shoes, waterproof')).toBeInTheDocument();
     expect(screen.getAllByText(/running shoes/i)).toHaveLength(1);
     expect(screen.getByText('2/5')).toBeInTheDocument();
-    // The ignored repeat stays in the field for the person to correct.
     expect(field).toHaveValue('running shoes');
 
     await user.clear(field);

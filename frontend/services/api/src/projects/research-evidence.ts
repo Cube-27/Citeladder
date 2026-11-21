@@ -169,7 +169,6 @@ export function createResearchClient(
       async () => {
         assertMetered('keenable');
         const value = await send(path, body);
-        // A refused request is a failed call: recorded at no cost, not the request fee.
         if (!value.ok) throw new Error('external_research_failed');
         return { value, usage: null };
       },
@@ -271,7 +270,6 @@ export function createResearchClient(
   };
 }
 export type ResearchClient = ReturnType<typeof createResearchClient>;
-/** Research continues without a failed call, but the failure stays diagnosable. */
 function logRejected(event: string, outcomes: readonly PromiseSettledResult<unknown>[]) {
   const failures = outcomes.flatMap((outcome) =>
     outcome.status === 'rejected' ? [outcome.reason] : [],
@@ -317,7 +315,6 @@ export async function collectIdentityResearch(
     };
   const pages: ResearchEvidence[] = [];
   const selected = searches.slice(0, settings.identity_fetch_max_pages);
-  // Await each batch so provider requests never exceed the configured concurrency.
   for (let offset = 0; offset < selected.length; offset += settings.keenable_concurrency) {
     const fetched =
       await /* NOSONAR -- Batches cap provider requests at the configured concurrency. */ Promise.allSettled(

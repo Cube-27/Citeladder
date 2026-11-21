@@ -17,14 +17,6 @@ import {
   type RevocationRow,
 } from './resolve.ts';
 
-/**
- * The one entitlement loader: the workspace's billing account, every grant and
- * revocation, and the current base subscription, read as one parallel batch
- * keyed by workspace (one round trip), in the caller's transaction when it
- * holds one. Usage, reads, admission and the access gate all fold this. Never
- * provisions. `null` when the workspace has no billing account, or when
- * `accountId` names another one.
- */
 export async function loadAccountState(
   db: Database,
   workspaceId: string,
@@ -74,7 +66,6 @@ export async function loadAccountState(
   return foldState(account, grants, revocations, subscription ?? null, at);
 }
 
-/** `loadAccountState` for a caller that already read the account row: it must exist. */
 export async function accountState(
   db: Database,
   workspaceId: string,
@@ -86,7 +77,6 @@ export async function accountState(
   return state;
 }
 
-/** The capability values a loaded state resolves to, as admission and projections read them. */
 export function entitlementOf(state: AccountState | null): Entitlement {
   if (state === null) return { status: 'unresolved', error: 'billing_account_missing' };
   if (state.error !== null) return { status: 'unresolved', error: state.error };
@@ -97,7 +87,6 @@ export function entitlementOf(state: AccountState | null): Entitlement {
   };
 }
 
-/** Resolve the account that bills `workspaceId`, in the caller's transaction. */
 export async function resolveAccountEntitlement(
   db: Database,
   { accountId, workspaceId }: { accountId: string; workspaceId: string },

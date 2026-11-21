@@ -70,7 +70,6 @@ export async function buildManifest(
         .execute()
     : [];
   if (rows.length !== ids.length) throw new AgentError('agent_context_unavailable');
-  // What each Action's target kind adds, such as an issue family's pages and snippet.
   const extras = new Map(
     await Promise.all(
       rows.map(async (row) => [row.id, await targetAgentContext(db, scope, row)] as const),
@@ -83,7 +82,6 @@ export async function buildManifest(
         ...extras.get(row.id),
         id: row.id,
         target_label: row.target_label,
-        // The status and measurement the Actions list shows, so the model never calls a Done Action open.
         ...statusView(row.effective_status),
         skill_id: row.skill_id,
         target_kind: row.target_kind,
@@ -110,7 +108,6 @@ export async function buildManifest(
   return manifestSchema.parse({
     version: agentPolicy.context_manifest_version,
     refs: input.refs,
-    // A page turn's content rules are judged from this same manifest (`offeredRuleIds`).
     package: withContentRules(
       { ...pack, sections: { ...pack.sections, ...scoped.sections } },
       action,
@@ -136,7 +133,6 @@ function optionalBackgroundKeys(manifest: Manifest) {
       typeof issueReference === 'object' &&
       !Array.isArray(issueReference) &&
       issueReference.site_url_id);
-  // A specifically selected page remains evidence, not background.
   return selectedPage ? ['brand'] : ['target_page', 'brand'];
 }
 function trimOccurrences(
@@ -166,7 +162,6 @@ function trimOccurrences(
 function trimIssueGroup(supplied: SuppliedManifest, manifest: Manifest, over: () => boolean) {
   const group = supplied.package.sections.issue_group;
   if (!group || typeof group !== 'object' || Array.isArray(group)) return;
-  // Preserve the selected issue before optional company/page background.
   for (const key of optionalBackgroundKeys(manifest)) {
     if (over() && Object.hasOwn(supplied.package.sections, key)) {
       delete supplied.package.sections[key];
@@ -204,32 +199,20 @@ function dropMentions(supplied: SuppliedManifest, over: () => boolean) {
     supplied.omissions.push(`mentioned_action:${removed.id}`);
   }
 }
-/** Summary keys that stay in the run's manifest and never reach the model. */
 const MANIFEST_ONLY_SUMMARY_KEYS = [
-  // Record IDs, hashes and processor versions: the model cannot use them and
-  // must never repeat them.
   'provenance',
   'site_url_ids',
   'artifact_ids',
   'crawl_urls',
-  // The context selector's own trimming. A `page_limit` count here was read as
-  // "the crawl did not analyse N URLs"; it is said below, unambiguously.
   'omissions',
 ] as const;
 
-/** Selector reasons that drop crawl pages from the Agent's context, not from the crawl. */
 const CONTEXT_PAGE_OMISSIONS = new Set([
   'page_limit',
   'character_budget',
   'background_candidate_limit',
 ]);
 
-/**
- * The context summary as the model sees it. Selector omissions are restated
- * under names that cannot be mistaken for crawl coverage: how many crawl pages
- * were left out of ITS context, and whether there was no usable crawl at all
- * (so a zero page count reads as unavailable, not as measured zero).
- */
 function modelSummary(summary: Record<string, Json>): Record<string, Json> {
   const supplied = { ...summary };
   for (const key of MANIFEST_ONLY_SUMMARY_KEYS) delete supplied[key];
@@ -279,7 +262,6 @@ export function suppliedManifest(
     omissions.push(`action.diagnosis:${supplied.action.id}`);
     supplied.action = { ...supplied.action, diagnosis: {} };
   }
-  // Keep metadata bounded while retaining named evidence and exact upstream revision.
   if (over()) {
     supplied.package.summary = { omissions: ['context_summary_size_limit'] };
     omissions.push('package.summary');
@@ -289,7 +271,6 @@ export function suppliedManifest(
     text: JSON.stringify(supplied),
     omissions,
     included: Object.keys(supplied.package.sections),
-    // Cited from what the model received: a trimmed mention or diagnosis is not a source.
     citations: contextCitations(supplied),
   };
 }
@@ -306,7 +287,6 @@ function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<
             return id.success ? [`citeladder://opportunity/${id.data}`] : [];
           })
         : [];
-      // The Action itself first: a reply naming it shows it as a link with its status.
       return [`citeladder://action/${action.id}`, ...findings];
     }),
   );

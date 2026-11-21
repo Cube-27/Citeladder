@@ -25,7 +25,6 @@ vi.mock('../src/mcp/app-resource.ts', async (importOriginal) => ({
 }));
 
 vi.mock('../src/mcp/oauth.ts', () => ({ authenticateMcp: vi.fn() }));
-// Budgets are PostgreSQL counters, covered with the OAuth owner.
 vi.mock('../src/mcp/registration.ts', () => ({ admitToolCall: vi.fn(), admitWriteCall: vi.fn() }));
 vi.mock('../src/mcp/oauth-routes.ts', () => ({
   registerOAuthRoutes: (app: Hono) => {
@@ -36,7 +35,6 @@ vi.mock('../src/mcp/oauth-routes.ts', () => ({
     );
   },
 }));
-// The real catalogue and argument validation; only the database reads are stubbed.
 vi.mock('../src/mcp/tools.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/mcp/tools.ts')>();
   return { ...actual, dispatchTool: vi.fn(actual.dispatchTool) };
@@ -129,7 +127,6 @@ describe('hosted MCP transport', () => {
           ),
         )
       ).result;
-      // The tool list follows the grant, so it is cacheable only per authorization.
       expect([listing.ttlMs, listing.cacheScope]).toEqual(
         modern ? [3_600_000, 'private'] : [undefined, undefined],
       );

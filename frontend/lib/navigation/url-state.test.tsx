@@ -82,34 +82,15 @@ describe('URL state codecs', () => {
   });
 });
 
-/**
- * URL-owned filter state and React Router must not each believe they own the
- * address.
- *
- * Writing it with `history.pushState` directly is invisible to the router — it
- * only watches `popstate` — so every consumer of `useSearchParams` kept the
- * previous query after a filter change. The damaging one is the shell's
- * canonical-URL rewrite: it rebuilds the address from what it can see, so the
- * next navigation silently dropped the filters the reader had just set.
- */
 describe('address store', () => {
-  /**
-   * `getSnapshot` reads through, so it can observe a change before the event
-   * announcing it arrives. When one variable served as both "current" and
-   * "last notified", that read satisfied the change check and the subsequent
-   * `popstate` told nobody — leaving every component that had not re-rendered
-   * for its own reasons on the previous query.
-   */
   it('notifies subscribers even when a read has already observed the change', () => {
     window.history.replaceState(null, '', '/issues?severity=low');
     const seen: string[] = [];
     const unsubscribe = subscribeToUrlState(() => seen.push(readUrlState()));
 
-    // A read lands first — a render elsewhere in the tree, say.
     window.history.replaceState(null, '', '/issues?severity=high');
     expect(readUrlState()).toContain('severity=high');
 
-    // The event still has to reach the subscribers.
     window.dispatchEvent(new PopStateEvent('popstate'));
     expect(seen).toEqual([expect.stringContaining('severity=high')]);
 
@@ -122,7 +103,6 @@ describe('address store', () => {
     setUrlParams({ view: 'trends' });
     first();
 
-    // Unwatched, the address moves back without a notice.
     window.history.replaceState(null, '', '/demand');
     const seen: string[] = [];
     const second = subscribeToUrlState(() => seen.push(readUrlState()));
@@ -141,9 +121,6 @@ describe('router registration', () => {
   }
 
   it('makes a filter write visible to useSearchParams in the same tree', async () => {
-    // `setUrlParams` composes the next address from `window.location`, which in
-    // the app IS the router's location. A memory router has its own, so they
-    // are lined up here rather than left to disagree.
     window.history.replaceState(null, '', '/issues?project=p1');
     const router = createMemoryRouter([{ path: '/issues', element: <Probe /> }], {
       initialEntries: ['/issues?project=p1'],
@@ -156,8 +133,6 @@ describe('router registration', () => {
     setUrlParams({ severity: 'medium' });
 
     await waitFor(() => expect(screen.getByTestId('search')).toHaveTextContent('severity=medium'));
-    // The scope the shell owns survives the filter write, rather than being
-    // rebuilt later from a stale read.
     expect(screen.getByTestId('search')).toHaveTextContent('project=p1');
   });
 
@@ -181,7 +156,6 @@ describe('router registration', () => {
     ]);
     setUrlStateRouter(router);
     render(<RouterProvider router={router} />);
-    // jsdom lays nothing out, so the panel's position is held here.
     const panel = document.getElementById('main')!;
     let scrollTop = 0;
     Object.defineProperty(panel, 'scrollTop', {
@@ -202,12 +176,10 @@ describe('router registration', () => {
     scrollPanelTo(300);
     await act(async () => setUrlParams({ tab: 'pages' }));
     positions.push(scrollTop);
-    // Back past the filter write, the fresh /site visit and /issues.
     await act(() => router.navigate(-3));
     positions.push(scrollTop);
 
     expect(positions).toEqual([0, 0, 300, 600]);
-    // A malformed fragment is no anchor: the visit still opens at the top.
     scrollPanelTo(200);
     await act(() => router.navigate('/issues#%'));
     expect(scrollTop).toBe(0);
@@ -223,7 +195,6 @@ describe('router registration', () => {
     const navigate = vi.spyOn(router, 'navigate');
     render(<RouterProvider router={router} />);
 
-    // A row's Clear: each filter resets itself in the same tick.
     batchUrlWrites(() => {
       setUrlParams({ severity: null });
       setUrlParams({ kind: null });
@@ -231,7 +202,6 @@ describe('router registration', () => {
 
     await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('project=p1'));
     expect(navigate).toHaveBeenCalledOnce();
-    // One entry: Back returns to every filter as it was.
     await act(() => router.navigate(-1));
     expect(screen.getByTestId('search').textContent).toBe('project=p1&severity=low&kind=faq');
     router.dispose();

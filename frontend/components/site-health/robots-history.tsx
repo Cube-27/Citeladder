@@ -21,7 +21,6 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 type RobotsHistoryPage = z.infer<typeof robotsHistoryPageSchema>;
 type Snapshot = RobotsHistoryPage['snapshots'][number];
 type Side = 'before' | 'after';
-/** The two observations chosen for comparison, on the page they were chosen from. */
 type Selection = Readonly<{ page: string; before: string; after: string }>;
 
 export function RobotsHistory({
@@ -32,8 +31,6 @@ export function RobotsHistory({
   projectId: string;
 }>) {
   const timeZone = useDisplayTimeZone();
-  // A page turn keeps the rows and the pager on screen until the next
-  // observations land; loading and errors draw inside the table.
   const { page, cursor, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -50,7 +47,6 @@ export function RobotsHistory({
     }),
     fixedPageSize: ROBOTS_HISTORY_PAGE_SIZE,
   });
-  // A new page offers different observations, so the comparison starts over.
   const pageKey = cursor.cursor ?? 'first';
   const [selection, setSelection] = useState<Selection>({ page: pageKey, before: '', after: '' });
   const selected =
@@ -71,9 +67,6 @@ export function RobotsHistory({
       : [];
   });
   const choose = (side: Side, value: string) => setSelection({ ...selected, [side]: value });
-  // The two observations to compare, each its own chip leading the row (they
-  // choose what the diff shows, so never behind Filters); one observation has
-  // nothing to compare.
   const toolbar: FilterBarProps = {
     view:
       versions.length < 2 ? undefined : (
@@ -130,7 +123,6 @@ export function RobotsHistory({
           </TableRow>
         ))}
       </DataTable>
-      {/* One observation against itself has nothing to compare. */}
       {selected.before === selected.after ? null : (
         <RobotsDiff
           before={versions.find((version) => version.value === selected.before)?.snapshot}
@@ -141,10 +133,6 @@ export function RobotsHistory({
   );
 }
 
-/**
- * What the observation captured. A stored body is content-addressed and
- * carries no time of its own, so the row's Observed time dates it.
- */
 function snapshotSummary(snapshot: Snapshot | undefined): string {
   if (!snapshot) return 'No body observed';
   const size = pluralCount(snapshot.body.length, 'character');

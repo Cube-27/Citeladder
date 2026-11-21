@@ -11,7 +11,6 @@ function action(index: number, grouping: string) {
     id: `00000000-0000-4000-8000-${id}`,
     project_id: FIXTURE_PROJECT.id,
     target_kind: 'issue_family',
-    // Titles of every length: a long one must cut, never widen its column.
     target_label: `${grouping} fix ${index + 1}${index % 3 === 0 ? ' where the structured data names a different organisation than the page footer' : ''}`,
     target_url: null,
     target_prompt_id: null,
@@ -35,7 +34,6 @@ function action(index: number, grouping: string) {
   };
 }
 
-/** The New AEO grouping holds 23 Actions; Accept takes ticked ones out. */
 const accepted = new Set<string>();
 const aeo = () =>
   Array.from({ length: 23 }, (_, index) => action(index, 'aeo')).filter(
@@ -62,7 +60,6 @@ function tree(route: Route) {
   return route.fulfill({
     json: {
       group_by: groupBy,
-      // A move changes counts by a digit; their width is reserved.
       status_counts: {
         open: aeo().length + 3,
         in_progress: 9 + accepted.size,
@@ -70,7 +67,6 @@ function tree(route: Route) {
         dismissed: 8,
       },
       goals: [
-        // Open work (New and In progress): an Accept moves nothing between goals.
         { goal: 'read_site', count: 35, blocking: true },
         { goal: 'own_pages', count: 0, blocking: false },
         { goal: 'mentions', count: 0, blocking: false },
@@ -107,7 +103,6 @@ async function stubActions(page: Page) {
   });
 }
 
-/** The bands above and beside what a click on the tree changes: x, y, width and height. */
 async function layout(page: Page): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
@@ -121,7 +116,6 @@ async function layout(page: Page): Promise<Record<string, Box>> {
   return boxes;
 }
 
-/** Within a pixel, for subpixel rounding. */
 function moved(before: Box, after: Box): boolean {
   if (!before || !after) return before !== after;
   return before.some((value, index) => Math.abs(value - (after[index] ?? Infinity)) > 1);
@@ -191,7 +185,6 @@ for (const width of [1280, 1600])
     await toggle(/^In progress, /);
     await check('Close a status');
 
-    // Only AEO holds more than ten; its Show more sits in the rows box, under the table.
     await page.getByRole('button', { name: 'Show 10 more' }).click();
     await expect(aeoRows.getByRole('row')).toHaveCount(21);
     await check('Show more');
@@ -208,7 +201,6 @@ for (const width of [1280, 1600])
     expect(shifts).toEqual([]);
   });
 
-/** A small control's tap area (`hit-area`'s ::before), width and height. */
 const hitArea = (control: Locator) =>
   control.evaluate((element) => {
     const area = getComputedStyle(element, '::before');
@@ -232,7 +224,6 @@ test('at 390px an Action title keeps 180px, a goal keeps its title and count who
     .evaluateAll((links) => links.map((link) => link.getBoundingClientRect().width));
   expect(Math.min(...titles)).toBeGreaterThanOrEqual(180);
 
-  // The Blocking tag and hint sit under the title, so the title is at most two lines.
   const goal = page.getByRole('group', { name: 'Goals' }).locator('[data-figure-cell]').first();
   const title = goal.getByText('Let AI read your site', { exact: true });
   const titleBox = await title.boundingBox();
@@ -240,7 +231,6 @@ test('at 390px an Action title keeps 180px, a goal keeps its title and count who
   if (!titleBox || !markBox) throw new Error('the first goal draws its title and Blocking tag');
   expect(titleBox.height).toBeLessThanOrEqual(40);
   expect(markBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
-  // The count is never cut; the words after it may be.
   const count = goal.locator('[data-figure-value] span span').first();
   await expect(count).toHaveText('35 ');
   const cut = await count.evaluate((element) => {
@@ -274,7 +264,6 @@ test.describe('under a coarse pointer at 1280px', () => {
   });
 });
 
-/** One issue group across 12 URLs: the detail holds ten, the URL read the rest. */
 const GROUP = action(0, 'aeo');
 const pageUrl = (index: number) => ({
   site_url_id: `55555555-5555-4555-8555-${String(index + 1).padStart(12, '0')}`,

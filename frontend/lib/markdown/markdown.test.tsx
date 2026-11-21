@@ -6,7 +6,6 @@ import { leavesForUnknownHost, linkHost, safeUrlTransform } from './safe-url';
 
 afterEach(() => vi.restoreAllMocks());
 
-/** A middle click, which opens a new tab without firing `click`. */
 function auxClick(): MouseEvent {
   return new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 });
 }
@@ -67,10 +66,6 @@ describe('safeUrlTransform', () => {
   });
 
   it('neutralises protocol-relative URLs', () => {
-    // `//evil.example/x` resolves to a `https:` URL against the fallback origin,
-    // so the protocol allowlist alone lets it through — and the browser would
-    // then resolve the returned value against the app's own origin and navigate
-    // off-site. Relative paths must keep working (asserted above).
     expect(safeUrlTransform('//evil.example/x')).toBe('');
     expect(safeUrlTransform('  //evil.example/x')).toBe('');
     expect(safeUrlTransform('//')).toBe('');

@@ -16,17 +16,11 @@ import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
 import { RELEASE_META_NAME } from '../../lib/config/operational.ts';
 import { brandFontHead } from '../../lib/fonts/brand-fonts.ts';
 
-/** Where index.html takes the brand faces' preloads and @font-face rules. */
 const BRAND_FONTS_MARKER = '<!-- brand-fonts -->';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-/**
- * The baked Turnstile site key. Local serving and Compose fall back to
- * Cloudflare's always-pass test key, which the development API accepts; any
- * other build must name the real key, reported like every empty public value.
- */
 function turnstileSiteKey(
   serving: boolean,
   environment: Record<string, string>,
@@ -41,11 +35,6 @@ function turnstileSiteKey(
   );
 }
 
-/**
- * The boot shell's sidebar rows (index.html) and `/boot-title.js`, from the
- * route manifest. Node loads the manifest itself (type imports only), so the
- * config bundle never follows its lazy screen imports.
- */
 function bootShell(): Plugin {
   let manifest: Promise<RouteManifest> | undefined;
   const load = (): Promise<RouteManifest> => {
@@ -79,7 +68,6 @@ function bootShell(): Plugin {
   };
 }
 
-/** The build's commit, when CI names one; the reporter treats absence as `development`. */
 function releaseId(): string {
   const value = process.env.PUBLIC_APP_RELEASE || process.env.GITHUB_SHA || '';
   return /^[\w.-]{1,64}$/u.test(value) ? value : '';
@@ -100,12 +88,6 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       process.env.LOCAL_COMPOSE_BUILD !== 'true',
     );
   }
-  // Every public value is BAKED into the bundle here, so an empty one is a
-  // permanent property of the image -- and it fails silently. A missing
-  // Logo.dev token simply made `logoDevUrl` answer null, and every brand mark
-  // in the deployed app quietly degraded to initials with nothing in the
-  // console to say why. The names are collected and reported once, so the
-  // build log shows what this image will be missing.
   const emptyPublicValues: string[] = [];
   const publicValue = (name: string) => {
     const value = process.env[name] ?? environment[name] ?? '';
@@ -177,12 +159,10 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
       'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
       'process.env.PUBLIC_API_ORIGIN': publicValue('PUBLIC_API_ORIGIN'),
-      // Optional: empty means the production docs origin (lib/config/docs.ts).
       'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
       ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
-      // Sign-up and email-link forms; workers-app-deploy.yml names the real key.
       'process.env.PUBLIC_TURNSTILE_SITE_KEY': turnstileSiteKey(
         command === 'serve',
         environment,
@@ -216,23 +196,12 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       assetsDir: 'app-assets',
       outDir: fileURLToPath(new URL('./dist', import.meta.url)),
       emptyOutDir: true,
-      // `scripts/check-bundle-budget.mjs` reads this to compute the EAGER set:
-      // the entry plus its transitive static imports. That is the number a cold
-      // load actually pays, and the one that regresses silently.
       manifest: true,
-      // The support matrix `package.json` already declares. Without this the
-      // build used Vite's own default and the browserslist was decorative —
-      // the two could disagree and nothing would say so.
       target: ['chrome123', 'edge123', 'firefox132', 'safari17.5'],
       rolldownOptions: {
         output: {
           codeSplitting: {
             groups: [
-              // Cache stability, not size. These three change on their own
-              // release schedule and nothing here changes them, but they were
-              // sharing a chunk with application code — so editing anything
-              // under `lib/api` invalidated React Router for every returning
-              // reader. Highest priority, so no group below can absorb them.
               {
                 name: 'vendor-react',
                 test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
@@ -240,18 +209,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
               },
               { name: 'vendor-router', test: /node_modules[\\/]react-router/, priority: 30 },
               { name: 'vendor-zod', test: /node_modules[\\/]zod[\\/]/, priority: 30 },
-              // Everything else the entry reaches statically, as one file. The
-              // boot path is paid in full on every cold load either way; left
-              // to automatic splitting it arrived as ~38 sub-5 KB requests.
               { name: 'app-boot', tags: ['$initial'], priority: 20 },
-              // Shared atoms the routes reach lazily, grouped by the set of
-              // routes that use them so no route downloads another's atoms;
-              // only sub-2 KB slivers merge into a neighbour. A single `ui`
-              // chunk cut more files but added ~60 KB to every route, and
-              // `experimentalInlineCommonChunks` halved the files but forced
-              // strict execution order and grew boot and every route.
-              // `packages/contracts` stays ungrouped: one schema chunk would put
-              // every domain's schemas in every route.
               {
                 name: 'ui',
                 test: /\/components\/ui\//,

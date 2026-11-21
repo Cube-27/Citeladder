@@ -141,7 +141,6 @@ function serve(detail: Record<string, CommerceProductDetail>) {
   );
 }
 
-/** The page at `path`; URL filters read the live address, so it is set there too. */
 function renderAt(path: string, role: TestRole = 'owner') {
   window.history.replaceState(null, '', path);
   return renderWithProviders(
@@ -169,7 +168,6 @@ describe('ProductDetailScreen', () => {
 
     expect(await screen.findByRole('heading', { name: 'Acme Road Runner' })).toBeInTheDocument();
     expect(requested).toEqual(['?window=90']);
-    // A listing title that is not the name stays in the product link's name, not its own line.
     expect(
       screen.getByRole('link', { name: /^A daily trainer for road miles\.,\s?https:\/\/shop/ }),
     ).toHaveAttribute('href', 'https://shop.example/products/road');
@@ -177,7 +175,6 @@ describe('ProductDetailScreen', () => {
     const kpis = within(screen.getByRole('group', { name: 'Product metrics' }));
     expect(kpis.getByText('75.0%')).toBeInTheDocument();
     expect(kpis.getByText('$120.00')).toBeInTheDocument();
-    // No ordered win is not measured; a price no answer quoted is not mentioned, never $0.00.
     expect(kpis.getAllByText('Not measured')).toHaveLength(1);
     expect(kpis.getByText('Not mentioned')).toBeInTheDocument();
 
@@ -316,7 +313,6 @@ describe('ProductDetailScreen', () => {
     const price = await screen.findByRole('textbox', { name: 'Price' });
     await user.clear(price);
     await user.type(price, '99.5');
-    // Someone renames the product; the page refetches while the drawer is open.
     let refetched = 0;
     mswServer.use(
       http.get(`${base}/products/:holder`, () => {

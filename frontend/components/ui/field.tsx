@@ -11,16 +11,6 @@ export type ControlProps = {
   'aria-describedby'?: string;
 };
 
-/**
- * Field — one frame for Input, Textarea, Select, Combobox, DateField and
- * SearchField: the label above in the `label` role,
- * 8px to the control, and one line of help or error below in `caption`.
- * Never help and error together: the error replaces the help, in crimson
- * with its glyph, linked to the control. An optional counter ("48/200") sits
- * at the right of that line in tabular numerals, turning `ink` at the limit.
- * `layout="row"` puts the label in a 160 column at the left and the control
- * with its help or error at the right; at phone width the two stack.
- */
 export function Field({
   label,
   hint,
@@ -35,7 +25,6 @@ export function Field({
   hint?: string;
   error?: ReactNode;
   required?: boolean;
-  /** The characters used and the limit, for a Textarea with `maxLength`. */
   count?: { used: number; max: number };
   layout?: 'stack' | 'row';
   className?: string;
@@ -47,7 +36,6 @@ export function Field({
   const name = (
     <>
       {label}
-      {/* Seen only: the control itself tells assistive tech it is required. */}
       {required ? (
         <span aria-hidden="true" className="text-ink-2 ms-0.5">
           *
@@ -84,11 +72,6 @@ export function Field({
   );
 }
 
-/**
- * The `layout="row"` frame on its own, for a row whose control is a group (a
- * fieldset of chips): without `labelFor` the label is a span with `labelId`,
- * for the group's `aria-labelledby`. The label centres on a 32 control.
- */
 export function FieldRow({
   label,
   required,
@@ -142,7 +125,6 @@ export function FieldFoot({
   count?: { used: number; max: number };
 }>) {
   if (!hint && !error && !count) return null;
-  // The error replaces the hint while it stands; an empty slot keeps the count right.
   let note: ReactNode = <span />;
   if (error) {
     note = (

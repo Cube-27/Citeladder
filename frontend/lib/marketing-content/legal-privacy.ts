@@ -1,10 +1,6 @@
 import { PARENT_COMPANY, type LegalDocument } from './legal';
 import { legalSections } from './legal-text';
 
-/**
- * CiteLadder Privacy Policy. Open and resolved legal decisions live in
- * docs/operations/legal-decisions.md; change commitments here only from there.
- */
 export const PRIVACY_POLICY: LegalDocument = {
   path: '/privacy',
   metaTitle: 'Privacy Policy · CiteLadder',

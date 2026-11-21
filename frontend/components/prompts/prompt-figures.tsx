@@ -13,26 +13,16 @@ import { ANSWER_STATES } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { AnswerStates, PromptHistory, PromptMetricItem } from '@citeladder/contracts';
 
-/** No run has measured the prompt: the muted dash, its words in the tooltip and name. */
 export const NOT_MEASURED = <Absence state="not_measured" />;
 
-/** Measured with no successful answer: unavailable, never "not measured" or zero. */
 export const NO_ANSWERS = <Absence state="unavailable" label="No answers" />;
 
-/**
- * A missing average position: no answers to rank, answers that never named
- * the brand, or answers whose brand order was not recorded.
- */
 export function positionAbsence(visibility: number | null): ReactNode {
   if (visibility === null) return NO_ANSWERS;
   if (visibility === 0) return <Absence state="none" label="Not named" />;
   return <Absence state="unavailable" reason="These answers' brand order was not recorded." />;
 }
 
-/**
- * The prompt's key figures from the latest run that measured it, each said
- * once on the page: the rates, the average position and the answers by state.
- */
 export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const point = history.points.at(-1);
@@ -76,10 +66,6 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
 
 const [BOTH, ...OTHER_STATES] = ANSWER_STATES;
 
-/**
- * The other answer states, one line in the strip's last hint (owner,
- * 2026-11-19: one row of four figures), so none of them leaves the page.
- */
 function otherStates(states: AnswerStates | null, latest: PromptMetricItem | null): string {
   const missing = latest ? 'no answers' : 'not measured';
   const parts = OTHER_STATES.map(
@@ -101,7 +87,6 @@ function stateValue(
   return latest ? NO_ANSWERS : NOT_MEASURED;
 }
 
-/** The decimal average; never named and an unrecorded order stay apart from no run. */
 function PositionValue({
   latest,
   visibility,
@@ -136,7 +121,6 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
   },
 ];
 
-/** Each engine and model the latest run asked: answered of asked, then answers naming and citing you. */
 export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetricItem | null }>) {
   const engines = useEngineCatalog();
   const outcomes = latest?.outcomes ?? [];
@@ -147,7 +131,6 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
         const mark = engineMarkKey(outcome.logical_engine);
         return (
           <TableRow key={`${outcome.logical_engine}:${outcome.transport_model}`}>
-            {/* A row is one engine AND model, so two models of one engine never read as a repeat. */}
             <TableCell>
               <Inline gap="item">
                 {mark ? <EngineMark engine={mark} /> : null}
@@ -171,7 +154,6 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
   );
 }
 
-/** Answered of asked; an unrecorded asked count stays unavailable, never derived. */
 function answered({ counts }: Outcome): ReactNode {
   if (counts.expected === null)
     return (
@@ -183,7 +165,6 @@ function answered({ counts }: Outcome): ReactNode {
   return `${formatCount(counts.responses)}/${formatCount(counts.expected)}`;
 }
 
-/** An engine whose every answer failed has no states: unavailable, never zero. */
 function StateSum({
   outcome,
   keys,

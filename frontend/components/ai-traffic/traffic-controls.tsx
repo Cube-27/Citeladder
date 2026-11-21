@@ -16,7 +16,6 @@ import { menuFieldKeys } from '@/components/ui/filter-options';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
-/** Export for the tabs that list rows, at the end of their filter bar. */
 export function TrafficExport({ model }: ControlProps) {
   return (
     <Button
@@ -30,19 +29,15 @@ export function TrafficExport({ model }: ControlProps) {
   );
 }
 
-/** Keys that set the window or the order, not a narrowing of the rows. */
 const NOT_NARROWING: ReadonlySet<string> = new Set(['range', 'sort']);
 
-/** Whether a tab's read is narrowed past its window, so an empty table means "none match". */
 export function trafficNarrowed(filters: TrafficFilters): boolean {
   return Object.entries(filters).some(
     ([key, value]) => !NOT_NARROWING.has(key) && value !== undefined && value !== null,
   );
 }
 
-/** Clears every narrowing Filters offers; the window stays as chosen. */
 export function clearTrafficFilters({ selection }: ControlProps['model']) {
-  // One history entry: the first write pushes, the rest replace it.
   selection.setVerification('default');
   selection.setPurpose(null, 'replace');
   selection.setBot(null, 'replace');
@@ -52,10 +47,8 @@ export function clearTrafficFilters({ selection }: ControlProps['model']) {
   selection.setPattern(null, 'replace');
 }
 
-/** One filter of the row, or none where the tab does not offer it. */
 type FilterBuilder = (props: TrafficControlsProps) => FilterDefinition | null;
 
-/** In menu order. */
 const FILTER_BUILDERS: readonly FilterBuilder[] = [
   trafficRangeFilter,
   verificationFilter,
@@ -67,16 +60,10 @@ const FILTER_BUILDERS: readonly FilterBuilder[] = [
   insightFilter,
 ];
 
-/**
- * Every narrowing the tab offers, for its control row: the reporting range
- * (the row's calendar chip), then in Filters verification, resource class, crawler purpose, bot, the
- * typed folder and status code, and an insight's filter.
- */
 export function trafficFilters(props: TrafficControlsProps): FilterDefinition[] {
   return FILTER_BUILDERS.flatMap((build) => build(props) ?? []);
 }
 
-/** The reporting window every tab reads. */
 function trafficRangeFilter({ model }: TrafficControlsProps) {
   return rangeFilter({
     value: model.selection.range,
@@ -86,7 +73,6 @@ function trafficRangeFilter({ model }: TrafficControlsProps) {
   });
 }
 
-// Verification filters crawler requests only.
 function verificationFilter({ model, crawlAvailable }: TrafficControlsProps) {
   if (!crawlAvailable) return null;
   return choiceFilter({
@@ -153,7 +139,6 @@ function folderFilter({ model }: TrafficControlsProps): FilterDefinition | null 
 
 function statusFilter({ model }: TrafficControlsProps): FilterDefinition | null {
   if (model.tab !== 'activity') return null;
-  // A partly typed code ("40") narrows nothing yet, so it is neither shown nor counted.
   const code = trafficStatusCode(model.selection.status);
   return {
     kind: 'custom',
@@ -178,7 +163,6 @@ function insightFilter({ model }: TrafficControlsProps): FilterDefinition | null
     isDefault: false,
     defaultLabel: 'every page',
     reset: () => setPattern(null),
-    // Its menu's "Reset to every page" clears it; there is nothing else to pick.
     content: null,
   };
 }

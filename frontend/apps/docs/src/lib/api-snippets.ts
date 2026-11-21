@@ -1,7 +1,3 @@
-/**
- * Copyable request examples for one operation in cURL, JavaScript and Python,
- * built from the operation's path, parameters and example body.
- */
 import type { ApiOperation } from './api-reference';
 import type { CodeLanguage } from './code-highlight';
 
@@ -16,7 +12,6 @@ type Snippet = {
   code: string;
 };
 
-/** A query value that fits the parameter's type: its first allowed value, else by type. */
 function queryExample(row: ApiOperation['parameters'][number]['rows'][number]): string {
   if (row.values[0] !== undefined) return row.values[0];
   const type = row.type.map((part) => part.text).join(' ');
@@ -26,7 +21,6 @@ function queryExample(row: ApiOperation['parameters'][number]['rows'][number]): 
   return 'example';
 }
 
-/** The request line's URL: path parameters filled with a fake id, required query parameters added. */
 function exampleUrl(operation: ApiOperation): string {
   const path = operation.path.replaceAll(/\{[^{}]+\}/g, FAKE_UUID);
   const required = operation.parameters
@@ -37,7 +31,6 @@ function exampleUrl(operation: ApiOperation): string {
   return `${API_ORIGIN}${path}${search}`;
 }
 
-/** A JSON value as a Python literal, indented to sit inside a call. */
 export function pythonLiteral(value: unknown, indent: number): string {
   const pad = ' '.repeat(indent);
   if (value === null || value === undefined) return 'None';

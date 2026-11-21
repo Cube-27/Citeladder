@@ -1,14 +1,3 @@
-/**
- * Operator CLI: regenerate the reviewed DataForSEO locations file.
- *
- * Fetches each search surface's location and language lists (free DataForSEO
- * list endpoints) with the platform DataForSEO login, keeps the market
- * countries, and writes `src/config/dataforseo-locations.json` for review in a
- * pull request. Never runs at request time or in CI.
- *
- *   pnpm dataforseo:locations            # write the file
- *   pnpm dataforseo:locations --dry-run  # print it instead
- */
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
@@ -48,7 +37,6 @@ async function fetchSurface(surface: SearchSurface) {
 const fetched = await Promise.all(
   searchSurfaces.map(async (surface) => [surface, await fetchSurface(surface)] as const),
 );
-// `searchSurfaces` is every key of the locations paths, so each surface was fetched above.
 const lists = Object.fromEntries(fetched) as Record<SearchSurface, SurfaceLists>;
 const text = serializeLocationsFile(
   buildLocationsFile(lists, new Date().toISOString().slice(0, 10)),

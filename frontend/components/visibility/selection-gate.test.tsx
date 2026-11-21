@@ -10,7 +10,6 @@ import { AnalysisRead, SelectionGate } from './selection-gate';
 
 const RUN_ID = '00000000-0000-4000-8000-000000000001';
 
-/** The selection projection as the dashboard reads it, answered by `answer`. */
 function Gate({ answer }: Readonly<{ answer: () => Promise<Visibility | null> }>) {
   const query = useQuery({ queryKey: ['selection-gate-test'], queryFn: answer });
   return (
@@ -23,16 +22,8 @@ function Gate({ answer }: Readonly<{ answer: () => Promise<Visibility | null> }>
 const projection = (extra: Partial<Visibility> = {}) =>
   ({ audit_id: RUN_ID, rankings: [], per_engine: [], ...extra }) as unknown as Visibility;
 
-const never = () =>
-  new Promise<never>(() => {
-    // Never settles: the selection stays unread.
-  });
+const never = () => new Promise<never>(() => {});
 
-/**
- * Every Visibility tab reads through this gate, so what it shows for a
- * selection nobody has read decides whether a tab can claim "no mentions" or
- * "no sources" about it.
- */
 describe('SelectionGate', () => {
   it('shows a loading selection as loading, never as a finding', async () => {
     render(<Gate answer={never} />);

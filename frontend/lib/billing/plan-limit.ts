@@ -1,9 +1,5 @@
 import type { ApiErrorCode } from '@citeladder/contracts/error-codes';
 
-/**
- * Refusals a bigger plan or a top-up can lift. Every notice for one of these
- * offers the way to billing, so a limit is never a dead end.
- */
 const PLAN_LIMIT_CODES = new Set<string>([
   'occupancy_limit_exceeded',
   'capability_not_granted',

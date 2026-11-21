@@ -1,21 +1,3 @@
-/**
- * Issue currency: whether a persisted issue is part of its crawl's present
- * state, kept on `site_issues.is_current`.
- *
- * A crawl's current issues are those whose evaluation a current page analysis
- * names in `source_evaluation_ids`, provisional or final, plus the crawl's
- * site-level architecture findings (CO-7: a running crawl shows its Issues as
- * they are found). The flag is kept per analysis by the writer that changes
- * it, in its transaction: an analysis written over an earlier one, a finalize
- * batch appending final revisions, a duplicate alias retiring analyses. Each
- * update reaches only the named analyses' issues, so no statement grows with
- * the crawl. Architecture findings are written current. The Issues reads then
- * filter one indexed flag instead of unnesting every current analysis's
- * evaluation list on every query.
- *
- * The flag is a derived projection: issues and evaluations stay as written, and
- * the analyses keep the exact evaluation ids the flag is computed from.
- */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -26,13 +8,8 @@ import { foldingSiteCrawl } from './reads/crawl.ts';
 import { refreshSiteSnapshot } from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
 
-/** Read per call, so a changed setting applies without a restart. */
 const batchSize = () => policy.site_health.crawl.finalize.batch_pages;
 
-/**
- * Recompute the flag for the issues of the named analyses (`site_issues.analysis_id`,
- * the analysis that first recorded them), writing only the rows that change.
- */
 export async function syncIssueCurrency(db: Database, crawl: Crawl, analysisIds: string[]) {
   if (!analysisIds.length) return;
   await sql`
@@ -59,7 +36,6 @@ export async function syncIssueCurrency(db: Database, crawl: Crawl, analysisIds:
       and i.is_current is distinct from c.current`.execute(db);
 }
 
-/** Every analysis that recorded an issue of the crawl, in keyset batches. */
 async function syncCrawlCurrency(db: Database, crawl: Crawl) {
   const size = batchSize();
   let after: string | null = null;
@@ -85,13 +61,6 @@ async function syncCrawlCurrency(db: Database, crawl: Crawl) {
   }
 }
 
-/**
- * Publish the crawl's issue set: its persisted catalog and, as the crawl's
- * audit, its issue states (`issue-states.ts`). A page rerun moves its page in
- * the site crawl that shows it (SH-B9): that crawl's catalog, snapshot and
- * score summary follow, in this transaction. `resync` first recomputes every
- * flag of the crawl, in batches, for writers that changed issues directly.
- */
 export async function refreshIssueCurrency(
   db: Database,
   crawl: Crawl,

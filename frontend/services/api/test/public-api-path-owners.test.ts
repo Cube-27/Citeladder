@@ -1,4 +1,3 @@
-/** Public path IDs: each one a public route declares has an owner that proves it is the path project's. */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, afterEach, describe, expect, it } from 'vitest';

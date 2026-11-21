@@ -1,9 +1,3 @@
-/**
- * Limit authored source files to the token budget in token-size-policy.json
- * (tokens = bytes / 4). `--staged` judges the index (pre-commit); `--base <rev>`
- * judges HEAD's files changed since <rev> (CI), or every file without a base.
- * docs/DEVELOPMENT.md (Source file size) owns the rule.
- */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -42,11 +36,6 @@ export function isChecked(policy, file) {
 
 export const tokensOf = (policy, bytes) => Math.ceil(bytes / policy.bytes_per_token);
 
-/**
- * `sizes` maps each changed path and each baseline path to its byte size in the
- * judged tree, or null when it is absent there. `basePolicy` is null when the
- * base has no policy yet.
- */
 export function tokenSizeFailures({ policy, basePolicy, changed, sizes }) {
   const limit = policy.limit_tokens;
   const oversized = changed
@@ -106,7 +95,6 @@ function git(cwd, args, input) {
 
 const splitZ = (output) => output.split('\0').filter(Boolean);
 
-/** Byte sizes of `paths` in the tree `prefix` names (`:` for the index, `<rev>:` for a commit). */
 function blobSizes(cwd, prefix, paths) {
   if (!paths.length) return new Map();
   const output = git(
@@ -127,7 +115,6 @@ function policyAt(cwd, prefix) {
   try {
     return JSON.parse(git(cwd, ['show', `${prefix}${POLICY_PATH}`]));
   } catch (error) {
-    // A policy absent from the base (its first PR) or a repository without commits.
     if (
       /does not exist|exists on disk, but not in|invalid object name/u.test(`${error.stderr ?? ''}`)
     )

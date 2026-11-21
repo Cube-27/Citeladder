@@ -10,10 +10,6 @@ const CONNECTOR_NAME = 'CiteLadder';
 
 type McpClientId = 'claude' | 'chatgpt' | 'gemini' | 'grok';
 
-/**
- * How the assistant receives the URL. A `prefilled` page carries it; on a
- * `paste` page the person adds it themselves, so the strip copies it first.
- */
 export type McpClientLink = Readonly<{
   id: McpClientId;
   label: string;
@@ -42,5 +38,4 @@ function clientLinks(serverUrl: string): readonly [McpClientLink, ...McpClientLi
   ];
 }
 
-/** Claude leads: it is the strip's default action, and the rest form its menu. */
 export const MCP_CLIENT_LINKS = clientLinks(MCP_SERVER_URL);

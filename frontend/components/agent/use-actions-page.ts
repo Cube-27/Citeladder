@@ -30,16 +30,10 @@ const treeParams = (view: ActionsView, status: ActionStatus): ActionTreeParams =
   group_by: view.groupBy,
 });
 
-/** Whether a previous read was for this workspace's project, so its rows may stand in. */
 function sameProject(key: unknown, { workspaceId, projectId }: ProjectScope): boolean {
   return Array.isArray(key) && key.includes(workspaceId) && key.includes(projectId);
 }
 
-/**
- * One status section's tree: one read per status, grouping and filter set.
- * A changed grouping or filter keeps this project's last tree on screen
- * until the next lands, so nothing collapses while it loads.
- */
 export function useStatusTree(
   scope: ProjectScope,
   view: ActionsView,
@@ -54,7 +48,6 @@ export function useStatusTree(
   });
 }
 
-/** Which levels are open: the defaults (the first status, group and grouping) unless closed. */
 export function useOpenLevels(defaults: readonly string[]) {
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
@@ -78,11 +71,6 @@ export function useOpenLevels(defaults: readonly string[]) {
   };
 }
 
-/**
- * The ticked rows (each under its grouping) and groupings, kept only while
- * the view they were ticked in stays. A ticked grouping covers its ticked
- * rows, so they are neither counted nor sent twice.
- */
 export function useTreeSelection(viewKey: string) {
   const empty = () => ({
     viewKey,
@@ -95,7 +83,6 @@ export function useTreeSelection(viewKey: string) {
   const rows = new Map([...current.rows].filter(([, ref]) => !hasGrouping(ref)));
   const size = [...current.groupings.values()].reduce((sum, ref) => sum + ref.count, rows.size);
   return {
-    /** Ticked rows outside every ticked grouping: the ones a decision names by id. */
     rows,
     groupings: current.groupings,
     size,
@@ -122,18 +109,12 @@ function toggled<V>(map: ReadonlyMap<string, V>, key: string, value: V): Map<str
 
 type Selection = ReturnType<typeof useTreeSelection>;
 
-/**
- * Accept or Decline the ticked rows and groupings: each status's tree moves
- * them out at once, the server is asked (a grouping by its filter, rows by
- * id), and every Actions read refetches to settle the counts on its answer.
- */
 export function useBulkDecision(scope: ProjectScope, view: ActionsView, selection: Selection) {
   const client = useQueryClient();
   const toast = useToast();
   const bulk = useMutation(actionsMutations.bulkStatus(scope));
   const decide = async (to: ActionUserStatus) => {
     const { rows, groupings } = selection;
-    // Every request is built before the list changes, so a bad filter changes nothing.
     const filters = [...groupings.values()].flatMap((ref) => {
       const parsed = actionBulkFilterSchema.safeParse(
         groupingParams({ ref, groupBy: view.groupBy, filters: view.filters }),

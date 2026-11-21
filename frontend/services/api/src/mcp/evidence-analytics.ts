@@ -1,4 +1,3 @@
-/** Visibility reads compose the canonical visibility owners; they own no metrics. */
 import {
   analyticsAppPath,
   type AnalyticsSelection,
@@ -69,13 +68,6 @@ async function requireTopic({ db, scope }: ProjectRead, topicId: string | null |
   if (!topic) throw new McpInputError('topic_id is not a topic of this project');
 }
 
-/**
- * The default selection with nothing to read yet: `no_completed_run`, or
- * `metrics_pending` while the latest run's results are still being written,
- * or `topic_not_measured` when the run, once resolved (`ranRun`), asked no
- * prompt in the topic. Any other missing run the caller named is the caller's
- * error, so it is rethrown.
- */
 export function notYetMeasured(error: unknown, named: boolean, ranRun = false): Evidence {
   if (!(error instanceof AnalysisNotFoundError)) throw error;
   if (ranRun && error.reason === 'not_measured') return unavailable('topic_not_measured');
@@ -125,11 +117,6 @@ export async function visibilityTrends(
   };
 }
 
-/**
- * Answer perception for the latest or a chosen run: the summary (net
- * sentiment always with its coverage) or a page of verified quotes. Sources
- * in `drivers` were cited alongside criticism; they are never a cause.
- */
 export async function perceptionRead(
   { db, scope }: ProjectRead,
   args: Selection &
@@ -172,12 +159,6 @@ export async function perceptionRead(
   }
 }
 
-/**
- * Fact-check accuracy for the latest or a chosen run: the summary (accuracy
- * always with its coverage), a page of claims with their verdicts and the
- * confirmed facts behind them, or each fact with the verdicts that cite it.
- * Outside the pilot the read is `not_enabled`.
- */
 export async function factChecksRead(
   { db, scope }: ProjectRead,
   args: Selection &
@@ -229,11 +210,6 @@ export async function factChecksRead(
   }
 }
 
-/**
- * Ads in ChatGPT Search answers for the latest or a chosen run: the same
- * summary as the Ads tab, creatives paged by cursor. Ads are paid placements,
- * reported apart from citations and never as a cause of visibility.
- */
 export async function adsRead(
   { db, scope }: ProjectRead,
   args: Selection & Page,
@@ -274,10 +250,6 @@ const dashboardQuery = (args: Selection) =>
     cohort: args.cohort,
   }) as const;
 
-/**
- * The dashboard projection for one run, with that run's status and progress;
- * or the same selection per topic (`topics`) or per topic and market (`matrix`).
- */
 export async function visibilityOverview(read: ProjectRead, args: OverviewArgs): Promise<Evidence> {
   const { db, scope } = read;
   const query = dashboardQuery(args);
@@ -299,7 +271,6 @@ export async function visibilityOverview(read: ProjectRead, args: OverviewArgs):
       };
     }
     if (args.baseline_id) await authorizeRunSet(db, scope, [args.baseline_id]);
-    // A missing topic block means "topic not asked" only once a run exists.
     if (args.topic_id && !named) await scopedSelection(db, runs(scope, args));
     topicInRun = Boolean(args.topic_id);
     const projection = visibilitySchema.parse(
@@ -332,7 +303,6 @@ export async function visibilityOverview(read: ProjectRead, args: OverviewArgs):
   }
 }
 
-/** One run's selection, or why there is nothing to read yet. */
 export async function oneRun(
   read: ProjectRead,
   args: Selection,
@@ -402,7 +372,6 @@ export async function visibilitySources(
   args: Selection & Page & { level: 'domain' | 'url'; domain?: string | null },
 ): Promise<Evidence> {
   const { db } = read;
-  // One run, as the description promises: the named run or the market's latest.
   const run = await oneRun(read, args);
   if (run.kind === 'none') return run.evidence;
   const { selection } = run;
@@ -421,7 +390,6 @@ export async function visibilitySources(
       baselineAuditIds: null,
     });
   } catch (error) {
-    // A run whose source facts are not written yet is pending, never empty.
     return notYetMeasured(error, Boolean(args.audit_id));
   }
   return {
@@ -471,7 +439,6 @@ function validateSelection(selection: AnalyticsSelection) {
 }
 
 function validateCompetitor(selection: AnalyticsSelection, evidence: Evidence) {
-  // Names must occur in canonical evidence; they select display, not new scoring.
   if (!selection.competitor || evidence.state !== 'available') return;
   const rankings = Array.isArray(evidence.rankings) ? evidence.rankings : [];
   const points = Array.isArray(evidence.points) ? evidence.points : [];
@@ -487,7 +454,6 @@ function validateCompetitor(selection: AnalyticsSelection, evidence: Evidence) {
     throw new McpInputError('Competitor is absent from the selected evidence');
 }
 
-/** The interactive app's view: one selection resolved to concrete persisted evidence. */
 export async function renderAnalytics(
   db: Database,
   scope: ReadScope,

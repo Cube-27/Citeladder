@@ -7,19 +7,6 @@ import { MENU_PANEL } from '@/components/ui/menu';
 import { CalendarDays } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * DateField — an ISO date input with a calendar picker beside it.
- *
- * Replaces `<input type="date">`, whose popup is drawn by the BROWSER: it
- * ignores the design tokens entirely, and differs between Chrome, Safari and
- * Firefox, so the one control on the surface that opened a picker looked like
- * no other control in the product. The text input stays — typing a date is
- * often faster than clicking to it, and it keeps the field usable with a
- * keyboard alone — and the button opens the token-styled `Calendar`.
- *
- * The value is an ISO `YYYY-MM-DD` string throughout (see `Calendar` for why
- * a `Date` would be the wrong currency here).
- */
 export function DateField({
   value,
   onChange,
@@ -40,7 +27,6 @@ export function DateField({
   ariaLabel: string;
   id?: string;
   'aria-describedby'?: string;
-  /** Accepts `aria-invalid` directly, so it drops into a `Field` render prop. */
   'aria-invalid'?: boolean;
   invalid?: boolean;
   disabled?: boolean;

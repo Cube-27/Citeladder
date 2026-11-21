@@ -54,7 +54,6 @@ describe('visibility dashboard helpers', () => {
       },
     ]);
     expect(options.map((o) => o.id)).toEqual([AUDIT_C, AUDIT_A]);
-    // Runs are named in the strips' short form.
     expect(options.map((o) => o.label)).toEqual(['14 Jul 00:00', '10 Jul 00:00']);
   });
 
@@ -75,7 +74,6 @@ describe('visibility dashboard helpers', () => {
       status: 'queued',
       createdAt: '2026-07-14T00:00:00Z',
     });
-    // A newer Commerce run is neither the active run nor a run option on brand pages.
     const scoped = runs.map((run) => ({
       ...run,
       completed_at: null,

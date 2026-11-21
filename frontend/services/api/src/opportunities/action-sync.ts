@@ -1,16 +1,3 @@
-/**
- * Re-derive every Action of a project from its new live Opportunity set
- * (`actions.sync_actions`), inside the refresh transaction and under its
- * project lock, so members, priority and diagnosis always describe the
- * snapshot that superseded the old rows.
- *
- * The refresh derives evidence Actions and restamps every live row's members;
- * the Agent only inserts its own `agent`-origin rows under the same project
- * lock, so the locked read below sees them and the refresh adopts the row on
- * that key. Identity and origin never change here. An Action no member
- * targets any more keeps its row with its evidence cleared, written once, and
- * its last non-empty member set, which a later declaration freezes.
- */
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -38,10 +25,8 @@ import type { Scope } from './sources.ts';
 
 const a = policy.opportunity.actions;
 
-/** A new row with the target its producer named. */
 type NewMember = NewOpportunity & { target: TargetRef };
 
-/** One new row as the grouping reads it. */
 export function actionMember(row: NewMember): ActionMember {
   const evidence = record(row.evidence);
   const prompt = evidence.prompt_text || evidence.prompt;
@@ -62,16 +47,11 @@ export function actionMember(row: NewMember): ActionMember {
   };
 }
 
-/** An issue-family finding's cohort as its evidence stores it; nothing for any other rule. */
 function issueFamilyCohort(rule: string, evidence: Record<string, unknown>) {
   if (rule !== policy.opportunity.opportunities.SITE_ISSUE_FAMILY.RULE_ID) return {};
   return { cohort: siteIssueFamilyEvidenceSchema.parse(evidence).cohort };
 }
 
-/**
- * The grouping a finding files its Action under (`RULE_GROUPING`): an issue
- * group by its rule's Issues section, an earned page by its source class.
- */
 function memberGrouping(rule: string, evidence: Record<string, unknown>): ActionGrouping {
   const source = a.RULE_GROUPING[rule];
   switch (source?.kind) {
@@ -99,10 +79,6 @@ function memberGrouping(rule: string, evidence: Record<string, unknown>): Action
   }
 }
 
-/**
- * What a member's stored evidence states for its handoff message: the
- * competitors read on an earned page, and a content gap's angle.
- */
 function handoffFacts(rule: string, evidence: Record<string, unknown>): HandoffFacts {
   return {
     competitors: strings(record(evidence.content_handoff).observed_competitors).filter(Boolean),
@@ -112,10 +88,6 @@ function handoffFacts(rule: string, evidence: Record<string, unknown>): HandoffF
 
 type Group = ReturnType<typeof groupMembers>[number];
 
-/**
- * The columns one group writes onto its Action with their PostgreSQL types, in
- * the batched update's VALUES order.
- */
 const GROUP_COLUMN_TYPES = [
   ['target_label', 'varchar'],
   ['target_url', 'text'],
@@ -136,7 +108,6 @@ const GROUP_COLUMN_TYPES = [
 type GroupColumn = (typeof GROUP_COLUMN_TYPES)[number][0];
 const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
 
-/** The persisted fields one group writes onto its Action. */
 function groupFields(group: Group, snapshotId: string) {
   const members = JSON.stringify(group.members.map((member) => member.opportunity_id));
   return {
@@ -149,13 +120,10 @@ function groupFields(group: Group, snapshotId: string) {
     skill_id: group.skill_id,
     diagnosis: JSON.stringify(group.diagnosis),
     member_opportunity_ids: members,
-    // A group always has members; clearing leaves this set as it was.
     last_member_opportunity_ids: members,
     opportunity_snapshot_id: snapshotId,
     evidence_cleared_at: null,
-    // Clearing leaves an issue family's last cohort as it was, like its last members.
     cohort: group.cohort ? JSON.stringify(group.cohort) : null,
-    // Clearing leaves these as they were, so a cleared Action stays where it was filed.
     goal: group.goal,
     goal_grouping: group.grouping,
   } satisfies Record<GroupColumn, unknown>;
@@ -165,10 +133,8 @@ function groupFields(group: Group, snapshotId: string) {
 // id plus every group column; the statement adds updated_at and workspace_id.
 const MAX_BIND_PARAMETERS = 65_535;
 const UPDATE_BATCH_ROWS = Math.floor((MAX_BIND_PARAMETERS - 2) / (GROUP_COLUMNS.length + 1));
-// An insert row binds every group column plus ten identity and audit columns.
 const INSERT_BATCH = Math.floor(MAX_BIND_PARAMETERS / (GROUP_COLUMNS.length + 10));
 
-/** Restamp every existing Action, one bounded statement per batch in the caller's transaction. */
 async function updateActions(
   trx: Database,
   scope: Scope,
@@ -200,10 +166,6 @@ async function updateActionBatch(
     where actions.id = v.id and actions.workspace_id = ${scope.workspaceId}::uuid`.execute(trx);
 }
 
-/**
- * Upsert the project's Actions for `rows` and return each row's Action id.
- * The caller inserts the rows with that id, after this runs.
- */
 export async function syncActions(
   trx: Database,
   scope: Scope,
@@ -279,7 +241,6 @@ export async function syncActions(
   await updateActions(trx, scope, updates, now);
   await writeActionUrls(trx, scope, urls);
   const seen = new Set(groups.map((group) => group.target.group_key));
-  // An Action already cleared keeps its row untouched; only the transition writes.
   const cleared = [...existing.values()].filter(
     (action) => !seen.has(action.group_key) && Number(action.members) > 0,
   );
@@ -289,7 +250,6 @@ export async function syncActions(
       .set({
         member_opportunity_ids: '[]',
         families: '[]',
-        // The diagnosis names the retired members, so it clears with them.
         diagnosis: '{}',
         priority_score: null,
         opportunity_snapshot_id: snapshotId,

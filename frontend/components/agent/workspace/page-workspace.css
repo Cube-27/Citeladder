@@ -1,12 +1,3 @@
-/* The page workspace's editor (CodeMirror with live preview, E2): the page
-   reads as an article in the prose ladder; headings, bold, italics and links
-   render styled while their Markdown marks hide off the cursor's line. A
-   suggestion's text is underlined in the info tint when it is ready to apply
-   and the warning tint when it needs a fact. Unlayered and scoped under
-   `.page-editor .cm-editor`, because CodeMirror injects its base theme
-   (monospace, its own padding, a dotted focus outline) as unlayered rules at
-   run time. Imported by the page workspace, so it loads with the chat route,
-   not on boot; the text field's inset ring stays in globals.css. */
 .page-editor {
   min-height: 100%;
 }

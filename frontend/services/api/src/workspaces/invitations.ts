@@ -74,7 +74,6 @@ export function issueInvitation(
     .execute((trx) => issueInvitationInTransaction(trx, workspaceId, actorId, email, role));
 }
 
-/** Caller transaction keeps operator identity creation atomic with invitation issuance. */
 export async function issueInvitationInTransaction(
   trx: Database,
   workspaceId: string,
@@ -168,14 +167,12 @@ export function updateInvitation(
     const now = new Date();
     if (row.accepted_at || row.revoked_at || row.expires_at <= now)
       refusal('invitation_not_pending');
-    // Revoking always works; a fresh link needs a plan that admits members.
     if (!revoke) await requireFlag(trx, workspaceId, 'team_members');
     const { token, token_sha256 } = tokenValues();
     const values = revoke
       ? { revoked_at: now, updated_at: now }
       : {
           token_sha256,
-          // The member who reissues a link vouches for it from now on.
           invited_by_user_id: actorId,
           expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
           updated_at: now,
@@ -249,7 +246,6 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       .executeTakeFirst();
     if (!member) {
       if (invitation.accepted_at) refusal('invitation_invalid', 400);
-      // A link issued under a plan cannot add a member after it has lapsed.
       await requireFlag(trx, workspace.id, 'team_members');
       member = await trx
         .insertInto('workspace_members')

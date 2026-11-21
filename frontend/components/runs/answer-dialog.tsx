@@ -26,32 +26,18 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { EXECUTION_STATES, executionStatusLabel } from '@/lib/runs/status';
 import { usePromptEngineAnswers } from '@/lib/runs/use-prompt-engine-answers';
 
-/**
- * The answer view and the markdown renderer behind it are fetched when a
- * dialog opens, not with every screen that can open one: Visibility lists
- * source rows on every visit, and few of those visits open an answer.
- */
 const loadAnswerEvidence = () => import('@/components/runs/answer-evidence');
 const AnswerEvidence = lazy(() =>
   loadAnswerEvidence().then(({ AnswerEvidence }) => ({ default: AnswerEvidence })),
 );
 
-/**
- * What the dialog needs from whatever row opened it: the execution id, and
- * what it knows of the prompt. Structural, so a run's executions and the
- * source-prompt rows (`task_id`) both open it without fabricating an
- * `Execution`; the answer itself comes from the single-execution read.
- */
 export type EvidenceSubject = {
-  /** The execution id; null while the opener is still finding it. */
   id: string | null;
   prompt_text?: string;
   prompt_index?: number;
-  /** The library prompt, when the opener knows it: the header links to its history. */
   prompt_id?: string | null;
 };
 
-/** The dialog names the prompt once: its text, or its number when the opener has no text. */
 function answerTitle(subject: EvidenceSubject | null): ReactNode {
   if (subject?.prompt_text) return <ClampText>{subject.prompt_text}</ClampText>;
   if (subject?.prompt_index !== undefined) return `Prompt #${subject.prompt_index + 1}`;
@@ -68,7 +54,6 @@ function AnswerLoading() {
   );
 }
 
-/** A country's flag from its two-letter code; nothing for any other code. */
 function flagOf(code: string): string | null {
   const upper = code.trim().toUpperCase();
   if (!/^[A-Z]{2}$/u.test(upper)) return null;
@@ -109,7 +94,6 @@ const SENTIMENT_WORDS = {
   mixed: 'Mixed sentiment',
 } as const;
 
-/** Your brand's sentiment in this answer, only where it was classified; no score is stored. */
 function SentimentChip({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const own = evidence.perception.find((entity) => entity.is_brand);
   const label = own?.state === 'classified' ? own.label : null;
@@ -121,7 +105,6 @@ function SentimentChip({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) 
   );
 }
 
-/** Answer features we record, each shown only when the stored evidence knows it. */
 function FeatureFlags({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const { ads, answer_formats: formats } = evidence;
   let adsWord: string | null = null;
@@ -147,7 +130,6 @@ function StatusChip({ status, engine }: Readonly<{ status: ExecutionStatus; engi
   );
 }
 
-/** The dialog's body: the stated absence, the read's failure, loading, or the answer itself. */
 function AnswerBody({
   query,
   promptText,
@@ -155,7 +137,6 @@ function AnswerBody({
   unavailable,
 }: Readonly<{
   query: UseQueryResult<ExecutionEvidence>;
-  /** The prompt as the run asked it, not as the library words it now. */
   promptText: string | null;
   promptId: string | undefined;
   unavailable?: string;
@@ -183,7 +164,6 @@ function AnswerBody({
   );
 }
 
-/** The chips that describe the shown answer, the engine filter, and the prompt's history link. */
 function AnswerToolbar({
   evidence,
   engines,
@@ -206,7 +186,6 @@ function AnswerToolbar({
           <FeatureFlags evidence={evidence} />
         </>
       ) : null}
-      {/* One engine's answer has nothing to choose; the filter appears with a second. */}
       {engines.options.length > 1 && engines.activeId !== null ? (
         <FilterControls
           filters={[
@@ -230,7 +209,6 @@ function AnswerToolbar({
   );
 }
 
-/** One answer, drawn as the chat it was, over the screen that opened it. */
 export function AnswerDialog({
   execution,
   open,
@@ -240,7 +218,6 @@ export function AnswerDialog({
   execution: EvidenceSubject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Said in place of the answer when the opener found none to show. */
   unavailable?: string;
 }>) {
   const { workspaceId } = useProjectScope();
@@ -253,7 +230,6 @@ export function AnswerDialog({
     ...runsQueries.execution(workspaceId, engines.activeId),
     enabled: open && engines.activeId !== null,
   });
-  // Start the view's download beside the evidence read rather than after it.
   useEffect(() => {
     if (open) void loadAnswerEvidence().catch(() => {});
   }, [open]);

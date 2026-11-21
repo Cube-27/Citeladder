@@ -59,12 +59,10 @@ const {
   jsonLd = [],
 } = Astro.props;
 const canonicalUrl = canonical ? (absoluteUrl(canonical) ?? canonical) : undefined;
-// Social cards carry the site name separately (og:site_name), so drop it from the title.
 const socialTitle = [` · ${SITE_NAME}`, ` | ${SITE_NAME}`].reduce(
   (value, suffix) => (value.endsWith(suffix) ? value.slice(0, -suffix.length) : value),
   title,
 );
-// A page image without its own alt text is described by the page title.
 const socialImage = image ? { path: image, alt: imageAlt || socialTitle } : DEFAULT_SOCIAL_IMAGE;
 const imageUrl = absoluteUrl(socialImage.path) ?? undefined;
 const resolvedTwitterCard = twitterCard ?? (imageUrl ? 'summary_large_image' : 'summary');
@@ -72,9 +70,6 @@ const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
   (data): data is JsonLdObject => data !== null,
 );
-// `data-marketing-surface` on <html> keys the marketing-only display sizes
-// and secondary button (globals.css); docs carries `data-public-surface`
-// alone.
 ---
 
 <!doctype html>
@@ -83,7 +78,6 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
     <script is:inline src="/theme-preference.js"></script>
     <meta name="description" content={description} />
     {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}

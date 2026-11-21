@@ -6,14 +6,6 @@ import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/**
- * One group of the Settings layout (docs/design.md): its heading, an optional
- * one-line caption 4 below, the group's one action at the right of the
- * heading, then 12 below its body: a `SettingRows` frame, a `DataTable`, or a
- * read's state. Notices about the group sit between the head and the body.
- * A group whose body is one table is not a region itself (`region={false}`):
- * the table is the region, under the same name.
- */
 export function SettingsGroup({
   title,
   status,
@@ -24,12 +16,9 @@ export function SettingsGroup({
   children,
 }: Readonly<{
   title: ReactNode;
-  /** A status mark on the heading's line, 8 after it. */
   status?: ReactNode;
   description?: ReactNode;
-  /** The group's one action (Invite, Create key): secondary, at the heading's right. */
   action?: ReactNode;
-  /** The section's anchor, for a page link to it (`#change-plan`). */
   id?: string;
   region?: boolean;
   children: ReactNode;
@@ -62,11 +51,6 @@ export function SettingsGroup({
   );
 }
 
-/**
- * A group's framed list of rows: the one framed surface, a hairline between
- * rows, each row (whatever it is) padded 12 by 16 and at least 52 high. A
- * form's Save goes in `foot`, right-aligned under the last row.
- */
 export function SettingRows({
   label,
   foot,
@@ -85,7 +69,6 @@ export function SettingRows({
   );
 }
 
-/** The frame's recipe, for a list that must be a `ul` (a provider per `li`). */
 export function settingRowsClasses(className?: string) {
   return cn(
     SLIP_FACE,
@@ -94,12 +77,6 @@ export function settingRowsClasses(className?: string) {
   );
 }
 
-/**
- * One setting row: its name and, under it, a caption saying what it does; at
- * the right its current value in `ink-2` and its action (a switch, a select,
- * a button). `control` is a form control that names itself, in a 320 column.
- * Content that needs the row's width (a notice) goes in `children`, under it.
- */
 export function SettingRow({
   label,
   description,
@@ -111,7 +88,6 @@ export function SettingRow({
   label: ReactNode;
   description?: ReactNode;
   control?: ReactNode;
-  /** The setting's current value, read-only, at the right. */
   value?: ReactNode;
   action?: ReactNode;
   children?: ReactNode;
@@ -138,11 +114,6 @@ export function SettingRow({
   );
 }
 
-/**
- * A form field as a settings row: its label and hint, then the control under
- * them across the row, its error under the control. `inline` puts a short
- * choice (a select) at the row's right instead, no wider than it needs.
- */
 export function SettingField({
   label,
   hint,
@@ -155,7 +126,6 @@ export function SettingField({
   hint?: string;
   error?: ReactNode;
   required?: boolean;
-  /** At the row's right: a short choice, or `wide` a text field in the 320 control column. */
   inline?: boolean | 'wide';
   children: (props: ControlProps) => ReactNode;
 }>) {

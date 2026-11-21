@@ -6,7 +6,6 @@ import { Pause, Play } from '@/lib/icons';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { cn } from '@/lib/utils';
 
-/** A product picture in `public/auth/`, at its CSS size (the files are 2x). */
 type Shot = Readonly<{ file: string; width: number; height: number }>;
 
 type SlideId = 'mcp' | 'search' | 'site-health';
@@ -15,15 +14,10 @@ type Slide = Readonly<{
   id: SlideId;
   name: string;
   line: string;
-  /** The product window, and the card that floats over it. */
   main: Shot;
   accent: Shot;
 }>;
 
-/**
- * Captured from the website's coded product views (synthetic `.example`
- * records) at device scale 2, so no picture shows a real customer's data.
- */
 const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   {
     id: 'mcp',
@@ -48,7 +42,6 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   },
 ];
 
-/** A picture's edges and width, in percent of the stage. */
 type Place = Readonly<
   Partial<Record<'top' | 'bottom' | 'left' | 'right', number>> & { width: number }
 >;
@@ -69,7 +62,6 @@ const PLACEMENT: Readonly<Record<SlideId, Readonly<{ main: Place; accent: Place 
 
 const ADVANCE_MS = 7000;
 
-/** The stage's shape: every slide's pictures are placed inside the same box. */
 const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
 
 /*
@@ -96,13 +88,9 @@ function ShotPicture({
   );
   return (
     <div className={cn('absolute', over && 'z-10')} style={style}>
-      {/* The `-dark` files are the same drawings recoloured to the dark palette. */}
       {THEMES.map(({ theme, suffix }) => (
         <picture key={theme} data-theme-art={theme} className="block">
           <source type="image/avif" srcSet={`/auth/${shot.file}${suffix}.avif`} />
-          {/* Lazy: the panel is hidden below `desktop:`, so phones never fetch it.
-              Grayscale: the panel is black and white; the captures predate the
-              system's palette. Flat: a hairline edge, no shadow. */}
           <img
             src={`/auth/${shot.file}${suffix}.webp`}
             width={shot.width}
@@ -120,7 +108,6 @@ function ShotPicture({
   );
 }
 
-/** Whether the pointer is over `target` or focus is inside it. */
 function useHeld(target: RefObject<HTMLElement | null>): boolean {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -151,11 +138,6 @@ function useHeld(target: RefObject<HTMLElement | null>): boolean {
   return hovered || focused;
 }
 
-/**
- * Calls `onTick` every `intervalMs` while `enabled`, `target` is on screen and
- * the tab is visible. Pausing restarts the interval, so a resumed carousel
- * never jumps straight to its next slide.
- */
 function useAutoplay({
   target,
   intervalMs,
@@ -203,20 +185,10 @@ function useAutoplay({
 const SHOWCASE_CONTROL =
   'focus-ring rounded-mark grid size-6 place-items-center transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
 
-/**
- * AuthShowcase — account access's product showcase: one feature per slide on
- * a flat, black-and-white `well` half filling the window's right side edge to
- * edge, its content centred. Every slide shares one grid cell, so the stage
- * and line keep the tallest slide's size and nothing moves between slides.
- * It turns slowly, pauses while hovered or focused, and never turns on its own
- * under reduced motion; the dots and the pause control are keyboard reachable.
- */
 export function AuthShowcase() {
   const root = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
   const [active, setActive] = useState(0);
-  // Slides that have been shown, or are next (fetched at low priority, so a
-  // turn never reveals an empty stage); the rest do not fetch pictures yet.
   const [seen, setSeen] = useState<ReadonlySet<number>>(() => new Set([0, 1]));
   const held = useHeld(root);
   const [stopped, setStopped] = useState(false);
@@ -299,7 +271,6 @@ export function AuthShowcase() {
                 aria-current={current ? 'true' : undefined}
                 onClick={() => show(index)}
               >
-                {/* A fixed 24px target: the current dot only widens inside it. */}
                 <span
                   aria-hidden
                   className={cn(

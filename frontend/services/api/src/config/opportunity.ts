@@ -1,7 +1,5 @@
-/** Opportunity catalog: deterministic decisions over persisted evidence. */
 import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
 
-/** What a per-product metric rule reads and the value that clears it. */
 type ProductMetricRule = Pick<
   Extract<ExpectedCheck, { kind: 'product_metric' }>,
   'metric' | 'comparison' | 'target' | 'min_samples'
@@ -16,13 +14,9 @@ export const opportunities = {
   CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
   RULE_CITED_ALTERNATIVES: 'cited_alternatives_without_uploaded_presence',
   RULE_CATALOG_FIELDS_MISSING: 'catalog_fields_missing',
-  // A confirmed decline already passed the audit's materiality and agreement
-  // gates, so confidence and size rank it and never drop it below the floor.
   CONFIRMED_DECLINE_CONFIDENCE_FLOOR: 0.5,
   CONFIRMED_DECLINE_GAP_CAP: 2,
   DEMAND_SIGNAL_GAP_FACTOR: 2,
-  // A demand signal's value factor is its priority score over this scale,
-  // capped at 1 and never below the floor, so a zero score still ranks.
   DEMAND_SIGNAL_PRIORITY_SCALE: 100,
   DEMAND_SIGNAL_VALUE_FACTOR_FLOOR: 0.01,
   OPPORTUNITY_TYPE_VISIBILITY: 'visibility',
@@ -41,7 +35,6 @@ export const opportunities = {
   // after that its last observation stands. Declarations may be backdated by
   // at most the same span, and never placed in the future beyond the skew.
   VERIFICATION_WINDOW_DAYS: 30,
-  // A new page takes longer to rank than an edited one takes to recrawl.
   CHECK_KIND_WINDOW_DAYS: { keyword_presence: 90 } satisfies Partial<
     Record<ExpectedCheck['kind'], number>
   >,
@@ -49,7 +42,6 @@ export const opportunities = {
   VISIBILITY_METRIC_PROMPT_SCORE: 'prompt_score',
   VISIBILITY_CHECK_MIN_DELTA: 1,
   TRAFFIC_METRIC_CLICKS: 'clicks',
-  // Clicks per day: sync windows differ in length, so windows compare as rates.
   TRAFFIC_CHECK_MIN_DAILY_GAIN: 0.1,
   OPPORTUNITY_RULES_BY_ID: {
     brand_absent_high_value_prompt: {
@@ -250,9 +242,6 @@ export const opportunities = {
       severity: 'low',
       title: 'Page has weak internal-link authority',
     },
-    // One Site Health Issues group (one rule across its pages in the latest
-    // crawl) as one finding: `SITE_ISSUE_FAMILY`. Severity and title are the
-    // group's own Site Health rule's, and so is its fix, as Issues shows it.
     site_issue_family: {
       action_path: 'owned',
       enabled: true,
@@ -263,8 +252,6 @@ export const opportunities = {
       severity: 'high',
       title: 'A Site Health issue repeats across pages',
     },
-    // A site change is a field that moved between two crawls, not a Site
-    // Health rule a crawl evaluates, so no check can read it.
     site_change_potential_regression: {
       action_path: 'owned',
       enabled: true,
@@ -320,8 +307,6 @@ export const opportunities = {
       severity: 'medium',
       title: 'Competitors rank for a search you do not',
     },
-    // Content gaps from persisted content angles (content optimization section 2).
-    // Measured by `owned_url_cited`: an answer to the angle's prompts cites your page.
     content_gap_improve_page: {
       action_path: 'owned',
       enabled: true,
@@ -377,8 +362,6 @@ export const opportunities = {
       severity: 'high',
       title: 'Competitors listed on a cited page you are absent from',
     },
-    // `check_kind`: what a declaration freezes for the rule's findings; null
-    // when nothing can isolate the work (`opportunities/checks/`).
   } satisfies Record<
     string,
     Record<string, unknown> & { check_kind: ExpectedCheck['kind'] | null }
@@ -392,12 +375,6 @@ export const opportunities = {
     emerging_query: 'emerging_query',
     declining_query: 'declining_query',
   },
-  // Every Site Health defect and advisory rule becomes one finding per Issues
-  // group (owner 2026-11-16, IA1); diagnostics stay in Issues. The cohort lists
-  // at most `COHORT_PAGES_MAX` pages in URL order, which bounds what a
-  // declaration freezes and a crawl re-reads; the Agent reads `AGENT_PAGES_MAX`.
-  // A defect's value factor lifts it just above an advisory of its severity
-  // without leaving the severity's priority band.
   SITE_ISSUE_FAMILY: {
     RULE_ID: 'site_issue_family',
     FINDING_CLASSES: ['defect', 'advisory'],
@@ -445,7 +422,6 @@ export const opportunities = {
     not_assessed: 1,
     unavailable: 1,
   },
-  // Keyword gaps from published Search Intelligence datasets (owner, 2026-10-09).
   SEARCH_GAP: {
     RULE_ID: 'search_keyword_gap',
     MIN_SEARCH_VOLUME: 50,
@@ -454,59 +430,42 @@ export const opportunities = {
     MAX_DATASET_AGE_DAYS: 90,
     MAX_ROWS_READ: 5000,
     EXCLUDED_INTENTS: ['navigational'],
-    // log10(volume) / this, clamped: 100 → 0.5, 10,000 → 1.
     VALUE_LOG_DIVISOR: 4,
     MIN_VALUE_FACTOR: 0.25,
     GAP_FACTOR_BASE: 2,
     GAP_FACTOR_PER_EXTRA_COMPETITOR: 0.5,
     GAP_FACTOR_CAP: 3,
   },
-  // Content-gap priority (content optimization section 2). The raising
-  // thresholds are `min_citations` and `min_domains` in content optimization
-  // policy; these only rank what they let through. The model never scores.
   CONTENT_GAP: {
     RULE_IMPROVE_PAGE: 'content_gap_improve_page',
     RULE_NEW_PAGE: 'content_gap_new_page',
-    // Each prompt beyond the first adds this much value, up to the cap.
     VALUE_PER_EXTRA_PROMPT: 0.1,
     VALUE_FACTOR_CAP: 2,
-    // 1 + log10(citations) + this × the share of cited domains that are competitors, capped.
     COMPETITOR_SHARE_WEIGHT: 1,
     GAP_FACTOR_CAP: 3,
   },
-  // Commerce Actions from the per-product metrics (commerce improvement PR 9).
-  // Each rule names the metric it reads, the value that clears it and the
-  // fewest samples a reading needs: below that the product has too little data
-  // and fires nothing. A rule fires when a sufficient reading is not cleared;
-  // a declared Action is met when a later window's reading clears it.
   PRODUCT_METRICS: {
-    // One of `policy.commerce.products.window_days`.
     WINDOW_DAYS: 30,
     PAGE_SIZE: 500,
     RULES: {
-      // Samples: executions in the window. Cleared by one appearance.
       product_not_mentioned: {
         metric: 'appearances',
         comparison: 'at_least',
         target: 1,
         min_samples: 5,
       },
-      // Samples: quotes in the catalog currency. Cleared within 10% of the catalog price.
       price_mismatch: {
         metric: 'price_gap_share',
         comparison: 'at_most',
         target: 0.1,
         min_samples: 2,
       },
-      // Samples: ordered appearances. Cleared by a win rate of 20% or more.
       losing_position: {
         metric: 'win_rate',
         comparison: 'at_least',
         target: 0.2,
         min_samples: 3,
       },
-      // Samples: merchant mentions (answers per merchant domain). Cleared by
-      // one answer sending shoppers to your own store.
       merchant_absent: {
         metric: 'owned_merchant_answers',
         comparison: 'at_least',

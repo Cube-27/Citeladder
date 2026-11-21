@@ -11,7 +11,6 @@ import { enqueueTask } from '../queue/enqueue.ts';
 
 const probes = policy.probes;
 
-/** Runs that recorded answers; only these are labelled and read. */
 export const ANSWERED_STATUSES = ['completed', 'partially_completed'];
 
 export function enqueueProbeLabelling(
@@ -28,11 +27,6 @@ export function enqueueProbeLabelling(
   });
 }
 
-/**
- * In the transaction that ends a run: queues its launch's labelling once no
- * sibling is still open. A launch that answered nothing stays failed, unlabelled,
- * so the reads keep the last labelled probe.
- */
 export async function labelEndedLaunch(
   db: Database,
   audit: { workspaceId: string; projectId: string; scope: string; launchId: string | null },

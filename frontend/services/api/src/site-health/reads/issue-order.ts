@@ -1,7 +1,3 @@
-/**
- * The Issues catalog's orderings and the keyset cursor that resumes them.
- * An advisory follows the defects of its severity in either ordering.
- */
 import type { IssueSort } from '@citeladder/contracts/site-health';
 
 import {
@@ -38,33 +34,24 @@ const groupKey = (group: Ranked): GroupKey =>
 const byIdentity = (a: GroupKey, b: GroupKey) => compareText(a[3], b[3]) || compareText(a[4], b[4]);
 const bySeverity = (a: GroupKey, b: GroupKey) => a[0] - b[0] || a[1] - b[1];
 
-/**
- * Worst first (then the issue on the most pages), or the issue on the most
- * pages first (then the worst). Both end on the group's identity, so the
- * order is total and a cursor resumes it.
- */
 const KEY_ORDER: Readonly<Record<IssueSort, (a: GroupKey, b: GroupKey) => number>> = {
   severity: (a, b) => bySeverity(a, b) || b[2] - a[2] || byIdentity(a, b),
   pages: (a, b) => b[2] - a[2] || bySeverity(a, b) || byIdentity(a, b),
 };
 
-/** The ordering's comparator over catalog groups. */
 export const groupOrder =
   (sort: IssueSort) =>
   (a: Ranked, b: Ranked): number =>
     KEY_ORDER[sort](groupKey(a), groupKey(b));
 
-/** The cursor after `last`, bound to the read's filters. */
 export const groupCursorAfter = (fingerprint: Record<string, unknown>, last: Ranked) =>
   encodeKeysetCursor('issues', fingerprint, groupKey(last).map(String));
 
-/** Where a decoded cursor resumes: the first group after it, or -1 past the end. */
 export function resumeIndex(groups: readonly Ranked[], sort: IssueSort, after: GroupKey | null) {
   if (!after) return 0;
   return groups.findIndex((group) => KEY_ORDER[sort](groupKey(group), after) > 0);
 }
 
-/** A cursor's position, refused unless it was issued under the same filters. */
 export function decodeGroupCursor(cursor: string | null, fingerprint: Record<string, unknown>) {
   if (!cursor) return null;
   const [rank, advisory, affected, rule, id, ...rest] = decodeKeysetCursor(

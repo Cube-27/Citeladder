@@ -7,7 +7,6 @@ import { pageOutline, type OutlineHeading } from '@/lib/agent/page-workspace';
 
 type OutlineNode = { heading: OutlineHeading; children: OutlineNode[] };
 
-/** The headings as a tree: each one under the nearest heading of a higher level before it. */
 function nest(headings: readonly OutlineHeading[]): OutlineNode[] {
   const roots: OutlineNode[] = [];
   const open: OutlineNode[] = [];
@@ -44,10 +43,6 @@ function Branch({
   );
 }
 
-/**
- * The Outline tab: the headings of the page as it is now (the person's
- * unsaved edits included). Choosing one puts the cursor on it in the page.
- */
 export function OutlinePanel({
   body,
   onJump,

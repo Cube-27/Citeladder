@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 
 export type NoticeTone = 'info' | 'positive' | 'warning' | 'negative';
 
-/** Each tone's dot and the word a screen reader hears first. */
 const TONE: Record<NoticeTone, { dot: string; word: string }> = {
   info: { dot: 'bg-info', word: 'Note' },
   positive: { dot: 'bg-positive', word: 'Done' },
@@ -24,51 +23,38 @@ type MessageNotice = Readonly<{
   kind?: 'message';
   tone?: NoticeTone;
   title?: ReactNode;
-  /** One or two sentences: what is true, then what to do. */
   children?: ReactNode;
-  /** One secondary Button or a TextLink. */
   action?: ReactNode;
-  /**
-   * A standing caveat on the page (a warning beside a destructive control),
-   * not news: it is read in place and never announced as an alert.
-   */
   standing?: boolean;
   className?: string;
 }>;
 
-/** A failed write, from `mutationNoticeForError`. */
 type MutationFailure = Readonly<{
   kind: 'mutation';
   notice: MutationNoticeData;
-  /** Rendered only when the failure is transient. */
   onRetry?: () => void;
-  /** The step that recovers this failure; replaces Try again when given. */
   recovery?: ReactNode;
   className?: string;
 }>;
 
-/** A failed persisted read: Retry re-runs exactly that read. */
 type ReadFailure = Readonly<{
   kind: 'read';
   error: unknown;
   fallback: string;
   onRetry: () => void;
   pending?: boolean;
-  /** The headline: what failed to load ("Couldn't load the business map"). */
   title: string;
   className?: string;
 }>;
 
 export type NoticeProps = MessageNotice | MutationFailure | ReadFailure;
 
-/** The read a failure notice reports on and retries: a TanStack query, or its shape. */
 export type RetryableRead = Readonly<{
   error: unknown;
   refetch: () => unknown;
   isFetching: boolean;
 }>;
 
-/** A read failure Notice's props from one query. */
 export function readErrorProps(read: RetryableRead) {
   return {
     error: read.error,
@@ -77,15 +63,6 @@ export function readErrorProps(read: RetryableRead) {
   };
 }
 
-/**
- * Notice — the app's one inline message (`Callout` is the website's): a
- * `rule`-edged strip on the panel, the tone's 6px dot beside the tone's word
- * for a screen reader, a sentence and at most one action; never a loud fill.
- * Failures of a write (`kind="mutation"`) and of a read
- * (`kind="read"`) are notices too, so a failure renders one way everywhere;
- * both offer to copy the support reference when the API sent one. Negative and
- * warning notices are alerts, the rest a polite status.
- */
 export function Notice(props: NoticeProps) {
   switch (props.kind) {
     case 'mutation':
@@ -119,14 +96,7 @@ function MessageNoticeView({
     <Root
       role={urgent ? 'alert' : undefined}
       data-notice-tone={tone}
-      className={cn(
-        textRole('body'),
-        // No frame (owner, 2026-11-21): the dot and the words carry it. Actions
-        // that do not fit beside the text wrap under it, at the right; below
-        // 768 they sit under the message, on its left edge.
-        'flex flex-wrap items-start gap-2',
-        className,
-      )}
+      className={cn(textRole('body'), 'flex flex-wrap items-start gap-2', className)}
     >
       <span aria-hidden className="inline-flex h-5 shrink-0 items-center">
         <span className={cn('size-1.5 rounded-full', style.dot)} />
@@ -175,17 +145,10 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
   );
 }
 
-/**
- * The headline names what failed ("Couldn't load runs"); a server's words
- * never are. A sentence a person can act on follows it; a server fault shows
- * the notice's own fallback, never its status text.
- */
 function ReadFailureNotice({ error, fallback, onRetry, pending, title, className }: ReadFailure) {
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
-  // The failure's own words when a person wrote them, the fallback for a
-  // server fault ("Internal Server Error" is never shown); words repeating the headline drop.
   const said = (detail.status ?? 0) >= 500 ? fallback : detail.message;
   const sentence = said.replace(/\.$/u, '') === title ? null : said;
   const action = retryable ? (
@@ -209,7 +172,6 @@ function ReadFailureNotice({ error, fallback, onRetry, pending, title, className
   );
 }
 
-/** The failure's actions, then the support reference as a quiet copy control. */
 function withReference(action: ReactNode, requestId: string | undefined): ReactNode {
   if (!requestId) return action;
   return (

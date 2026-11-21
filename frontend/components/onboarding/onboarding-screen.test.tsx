@@ -16,8 +16,6 @@ import { useOnboardingFlow } from './onboarding-flow';
 
 const { setActiveProjectId, selection } = vi.hoisted(() => ({
   setActiveProjectId: vi.fn(),
-  // Mutable so a test can describe a workspace that has no project yet, which
-  // is the state that decides whether leaving setup leads anywhere.
   selection: { activeProjectId: '55555555-5555-4555-8555-555555555555' as string | null },
 }));
 
@@ -26,15 +24,11 @@ const ACTIVE_PROJECT_ID = '55555555-5555-4555-8555-555555555555';
 
 let discoveryState: BrandDiscovery;
 let useRealDiscovery = false;
-// The URL the screen loads with. A reload mid-generation resumes straight to
-// the review step, which is the only way to reach that screen without a
-// `ready` discovery to click through.
 let searchParams = '';
 const visitedLocations: string[] = [];
 
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
-/** What `GET /projects/{id}` returns for the project the completion creates. */
 const createdProject = makeProject({
   id: PROJECT_ID,
   workspace_id: WORKSPACE_ID,
@@ -53,9 +47,6 @@ vi.mock('@/lib/project/project-context', () => ({
 vi.mock('@/lib/onboarding/use-brand-discovery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/onboarding/use-brand-discovery')>();
   return {
-    // Mirrors the real hook: a persisted `resumeId` alone is enough to resolve
-    // the discovery. On reload the brand draft is hydrated FROM that row, so
-    // gating on `input` only would leave the screen with no discovery at all.
     useBrandDiscovery: (...args: Parameters<typeof actual.useBrandDiscovery>) => {
       if (useRealDiscovery) return actual.useBrandDiscovery(...args);
       const [input, resumeId = null] = args;
@@ -364,7 +355,6 @@ describe('OnboardingScreen', () => {
       expect(screen.getByTestId('location')).toHaveTextContent(`discovery=${DISCOVERY_ID}`),
     );
 
-    // Persisting the resumable URL must not replay the progress screen.
     expect(screen.getByRole('heading', { name: 'Finding what to track' })).toBe(research);
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByLabelText(/^Brand name/)).toHaveValue('Acme');
@@ -375,10 +365,6 @@ describe('OnboardingScreen', () => {
   });
 
   it('offers a way out of the account from first-time setup', async () => {
-    // `/onboarding` mounts outside the application chrome, so for a brand new
-    // account this flow bar is the ONLY place a sign-out can be. It used to
-    // offer a link to the marketing site instead, which left the product
-    // without ending the session.
     const user = userEvent.setup();
     mswServer.use(catalogHandler());
     renderOnboarding();
@@ -391,11 +377,6 @@ describe('OnboardingScreen', () => {
   });
 
   it('offers no way out of an additional-project flow that has nowhere to go', async () => {
-    // "Add project" on the empty state also sets `?new=1` — it says the reader
-    // asked for a project, not that they already have one. Offering Exit there
-    // sent them to `/projects`, which is exactly the address that returns an
-    // empty workspace to setup: a flicker, and back in the flow they were
-    // trying to leave.
     searchParams = `new=1&workspace=${WORKSPACE_ID}`;
     selection.activeProjectId = null;
     mswServer.use(catalogHandler());
@@ -412,8 +393,6 @@ describe('OnboardingScreen', () => {
     mswServer.use(catalogHandler());
     renderOnboarding();
 
-    // An additional project has somewhere to go back TO, so this flow keeps
-    // its exit — and gains the account beside it rather than instead of it.
     expect(await screen.findByRole('link', { name: 'Exit' })).toHaveAttribute(
       'href',
       `/projects?project=${ACTIVE_PROJECT_ID}`,
@@ -502,8 +481,6 @@ describe('OnboardingScreen', () => {
       catalogHandler(),
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async ({ request }) => {
         completionBody = await request.json();
-        // A completion whose project already exists (the replay path) carries
-        // its id straight back, so the redirect needs no poll.
         return HttpResponse.json(
           {
             discovery_id: DISCOVERY_ID,
@@ -513,9 +490,6 @@ describe('OnboardingScreen', () => {
           { status: 202 },
         );
       }),
-      // The committed creation is resolved through the project-detail read
-      // before the shell is navigated to, so the destination is usable on
-      // arrival rather than waiting on a list that predates the project.
       http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
       http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
         HttpResponse.json(createdProject),
@@ -536,13 +510,8 @@ describe('OnboardingScreen', () => {
         products_services: ['Product feeds'],
         target_audience: 'Retailers',
       },
-      // Discovered competitors start selected up to the cap.
       competitors: [expect.objectContaining({ name: 'Globex' })],
     });
-    // The destination NAMES the project. The shell resolves that exact id
-    // instead of inferring one from a list fetched before it existed — which
-    // is what used to land people on their previous project, or on an empty
-    // account that then refused to create the one they had just made.
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
@@ -565,9 +534,6 @@ describe('OnboardingScreen', () => {
           warnings: [],
         });
       }),
-      // The committed creation is resolved through the project-detail read
-      // before the shell is navigated to, so the destination is usable on
-      // arrival rather than waiting on a list that predates the project.
       http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
       http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
         HttpResponse.json(createdProject),
@@ -598,9 +564,6 @@ describe('OnboardingScreen', () => {
     discoveryState = { ...discovery('project_created', 'complete'), project_id: PROJECT_ID };
     mswServer.use(
       catalogHandler(),
-      // The committed creation is resolved through the project-detail read
-      // before the shell is navigated to, so the destination is usable on
-      // arrival rather than waiting on a list that predates the project.
       http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
       http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
         HttpResponse.json(createdProject),
@@ -621,8 +584,6 @@ describe('OnboardingScreen', () => {
     mswServer.use(catalogHandler());
     renderOnboarding();
 
-    // The retry keeps the workspace the discarded draft belonged to, so it is
-    // not silently re-targeted at whichever workspace resolves by default.
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent(
         `/onboarding?new=1&workspace=${WORKSPACE_ID}`,
@@ -646,8 +607,6 @@ describe('OnboardingScreen', () => {
   });
 
   it('gates creation on the one thing the confirm screen asks for', async () => {
-    // Brand knowledge moved to the app, so a blank category -- not a blank
-    // positioning statement -- is what should block project creation.
     const ready = discovery('ready', 'preparing_review');
     discoveryState = {
       ...ready,
@@ -699,7 +658,6 @@ describe('OnboardingScreen', () => {
 
     expect(await screen.findByRole('checkbox', { name: 'Globex' })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'acme.example' })).not.toBeChecked();
-    // A reload leaves focus where the page load put it.
     expect(
       screen.getByRole('heading', { level: 1, name: 'Does this look right?' }),
     ).not.toHaveFocus();

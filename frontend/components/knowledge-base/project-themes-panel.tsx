@@ -9,7 +9,6 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { themeMutations, themeQueries } from '@/lib/api/project-themes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 
-/** The project's themes, added, renamed and deleted one at a time. */
 export function ProjectThemesPanel({
   scope,
   mayEdit,

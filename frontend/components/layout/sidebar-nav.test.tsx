@@ -4,10 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const mocks = vi.hoisted(() => ({
   prefetchQuery: vi.fn((_options: { queryKey: readonly unknown[] }) => Promise.resolve()),
-  // `prefetchRoute` skips keys whose query already failed, so the stub client
-  // needs the cache lookup that guard performs. Nothing has failed here.
   find: vi.fn((_filters: { queryKey: readonly unknown[] }) => undefined),
-  // The Actions list read behind the open count.
   actionsList: { status_counts: { open: 3, in_progress: 2, completed: 9 } },
   chats: [
     {
@@ -22,7 +19,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: mocks.actionsList, isLoading: false }),
-  // The Agent list's chats.
   useInfiniteQuery: () => ({
     data: { pages: [{ items: mocks.chats }] },
     isPending: false,
@@ -35,8 +31,6 @@ vi.mock('@tanstack/react-query', () => ({
     prefetchQuery: mocks.prefetchQuery,
     getQueryCache: () => ({ find: mocks.find }),
   }),
-  // Query-options factories are typed identity at runtime; the route
-  // prefetchers call them to build the key asserted below.
   queryOptions: <T,>(options: T) => options,
 }));
 
@@ -75,7 +69,6 @@ import { AgentNav } from '@/components/agent/agent-nav';
 import { ModeSwitch } from './mode-switch';
 import { DashboardNav, SidebarFootNav } from './sidebar-nav';
 
-/** The labelled sidebar as the shell draws it: the switch, the mode's list, the foot. */
 function SidebarNav() {
   return (
     <div data-sidebar-state="expanded">
@@ -90,8 +83,6 @@ const SCOPE = {
   workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   projectId: '11111111-1111-4111-8111-111111111111',
 };
-// The key the Performance screen's own landing selection reads, so a hover
-// warms exactly the entry the destination consumes.
 const PERFORMANCE_LANDING_KEY = performanceQueries.dashboard(
   SCOPE,
   INITIAL_DASHBOARD_PARAMS,
@@ -120,8 +111,6 @@ describe('station navigation', () => {
 
   it('shows open and in-progress Actions as the Actions count', async () => {
     render(<SidebarNav />);
-    // The count's code loads after the shell, so it arrives a moment later.
-    // It says what it counts: open Actions, not issues.
     expect(
       await screen.findByRole('link', { name: 'Actions, 5 open Actions' }, { timeout: 4_500 }),
     ).toHaveAttribute('href', '/actions?project=11111111-1111-4111-8111-111111111111');
@@ -137,7 +126,6 @@ describe('station navigation', () => {
     );
     unmount();
 
-    // A destination that names a tab is current only on that tab.
     pathname = '/settings';
     searchParams = new URLSearchParams('tab=members');
     render(<SidebarNav />);
@@ -151,7 +139,6 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: 'Products' })).not.toHaveAttribute('aria-current');
     unmount();
 
-    // A product's own page is still under Products.
     pathname = '/products/22222222-2222-4222-8222-222222222222';
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
@@ -173,7 +160,6 @@ describe('station navigation', () => {
     expect(screen.queryByRole('link', { name: /^Actions/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'New chat' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Skills' })).toHaveAttribute('aria-current', 'page');
-    // The chats load in their own chunk after the rows.
     expect(await screen.findByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Why did citations drop/ })).toHaveAttribute(
       'href',
@@ -233,7 +219,6 @@ describe('station navigation', () => {
     );
     unmount();
 
-    // Reloaded on another page, the group stays folded and shows nothing it holds.
     pathname = '/runs';
     render(<SidebarNav />);
     expect(screen.getByRole('button', { name: 'Website' })).toHaveAttribute(
@@ -246,9 +231,6 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: 'Issues' })).toBeInTheDocument();
   });
 
-  // Intent warms the key, but no longer in the same tick: each prefetcher
-  // imports its API module on demand, so that the ten domains this map reaches
-  // stay out of the chunk the browser needs before it can paint anything.
   it('prefetches the destination primary query on pointer and keyboard intent', async () => {
     render(<SidebarNav />);
     const performance = screen.getByRole('link', { name: 'Performance' });
@@ -263,11 +245,6 @@ describe('station navigation', () => {
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
   });
 
-  /**
-   * The same contract for Sources: intent must warm the key the screen
-   * itself reads. A key spelled out in the prefetcher drifted from the
-   * selection the dashboard builds and warmed an entry nothing consumed.
-   */
   it('warms the Visibility landing selection the screen actually reads', async () => {
     render(<SidebarNav />);
     fireEvent.mouseEnter(screen.getByRole('link', { name: 'Sources' }));

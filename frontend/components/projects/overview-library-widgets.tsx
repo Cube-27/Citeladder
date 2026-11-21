@@ -40,7 +40,6 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 import { overviewWidgetShape } from './overview-loading';
 import { WidgetFrame } from './widget-frame';
 
-/** A library widget: its title, and a link to the page it summarises. */
 function WidgetCard({
   id,
   href,
@@ -49,7 +48,6 @@ function WidgetCard({
 }: Readonly<{
   id: OverviewWidgetKey;
   href: string;
-  /** `figure` for a number widget: its figures under the head, its link at the foot. */
   fill?: 'figure';
   children: ReactNode;
 }>) {
@@ -65,12 +63,6 @@ function WidgetCard({
   );
 }
 
-/**
- * Loading, failed or loaded, in the same footprint. A read that waits on the
- * latest run (`waitsOn`) stays disabled while that read fails, so the failure
- * shown is the one that can be retried. A run whose metrics are not written
- * yet is not a failure: it says so instead.
- */
 function Loaded<T>({
   widget,
   query,
@@ -79,11 +71,9 @@ function Loaded<T>({
   fallback,
   children,
 }: Readonly<{
-  /** The widget it fills, for its loading shape. */
   widget: OverviewWidgetKey;
   query: UseQueryResult<T>;
   waitsOn?: UseQueryResult<unknown>;
-  /** What failed, for the error's headline: "Couldn't load {subject}". */
   subject: string;
   fallback: string;
   children: (data: T) => ReactNode;
@@ -107,13 +97,11 @@ function Loaded<T>({
 }
 
 const unavailable = <Absence state="unavailable" />;
-/** The latest projection is `null`: no run has been measured yet. */
 const noMeasuredRun = <StateBlock kind="empty" inline message="No measured run yet." />;
 const metricsPending = (
   <StateBlock kind="empty" inline message="Results are still being prepared." />
 );
 
-/** Why the latest run has no source movement to rank, by its comparison status. */
 function notCompared(status: string, skippedRuns = 0) {
   const message =
     comparisonDeclinedReason(status, skippedRuns) ??
@@ -122,12 +110,10 @@ function notCompared(status: string, skippedRuns = 0) {
 }
 
 const valueOr = (value: string | null) => value ?? unavailable;
-/** A perception figure under the classified minimum reads "Too few classified". */
 const gatedOr = (reading: GatedReading | null) =>
   reading ? gatedFigure(reading) : { value: unavailable };
 const count = (value: number | null) => (value === null ? null : formatCount(value));
 
-/** A ledger padded to the widget's row count, so a short list keeps the card's height. */
 function Rows({ rows }: Readonly<{ rows: { key: string; label: ReactNode; value: ReactNode }[] }>) {
   return <ValueLedger items={rows} rows={WIDGET_ROWS} />;
 }
@@ -298,7 +284,6 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
         fallback="Perception could not be loaded."
       >
         {(data) => {
-          // Pending, unavailable and no-mentions reads keep the absence mark, never "too few".
           const score = data.state === 'value' ? (data.brand?.score ?? null) : null;
           return (
             <FigureStrip

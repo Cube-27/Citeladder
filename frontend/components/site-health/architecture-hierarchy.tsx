@@ -13,11 +13,6 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
 import { ChevronDown } from '@/lib/icons';
 import { formatCount, readableUrl, sharedOrigin } from '@/lib/format';
 
-/**
- * Where a page's parent came from. Most pages sit under their URL parent, so
- * that default goes unlabelled and only the exceptions say where they came
- * from: a caption on every row said nothing.
- */
 const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string | null> = {
   breadcrumb: 'Breadcrumb',
   explicit_structure: 'Site structure',
@@ -25,16 +20,8 @@ const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string | n
   unknown: 'No known parent',
 };
 
-/** Rows shown before "Show all": the card stays one screen tall and never scrolls inside. */
 const HIERARCHY_PREVIEW_ROWS = 10;
 
-/**
- * Group nodes under the parent the crawl actually resolved.
- *
- * A parent id that is missing from this crawl's node set, or that points at
- * the node itself, is treated as no parent: rendering it would either drop the
- * page from the tree entirely or recurse forever.
- */
 function nodesByParent(nodes: ArchitectureNode[]): Map<string | null, ArchitectureNode[]> {
   const nodeIds = new Set(nodes.map((node) => node.site_url_id));
   const grouped = new Map<string | null, ArchitectureNode[]>();
@@ -138,7 +125,6 @@ function HierarchyList({
     <ul className={treeBranchClasses()}>
       {visible.map((node) => {
         const children = grouped.get(node.site_url_id) ?? [];
-        // The home page is the root by definition, not a page missing a parent.
         const home = node.depth_from_home === 0;
         const source = home ? null : PARENT_SOURCE_LABELS[node.parent_source];
         const childShown = children.some((child) => !shown || shown.has(child.site_url_id));

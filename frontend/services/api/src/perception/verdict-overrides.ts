@@ -1,9 +1,3 @@
-/**
- * Verdict overrides (AV-12): a person's verdict on one claim, appended beside
- * the model's. The `claim_verdicts` row is never rewritten; reads take the
- * newest override per verdict, so a later change supersedes an earlier one
- * and changing back to the model's verdict clears the "edited" mark.
- */
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -34,7 +28,6 @@ export const verdictOverrideRequest = verdictOverrideRequestSchema.extend({
 
 export type NewestOverride = { verdict: OverrideVerdict; note: string | null; at: Date };
 
-/** The newest override of each verdict row, by verdict id; rows never overridden are absent. */
 export async function newestOverrides(
   db: Database,
   workspaceId: string,
@@ -60,11 +53,6 @@ export async function newestOverrides(
   );
 }
 
-/**
- * The override as a claim's edit mark: null when it matches the model's
- * verdict. A low-confidence verdict reads as low confidence, so any person's
- * verdict on it is an edit.
- */
 export function editedMark(
   model: { verdict: ClaimVerdict; low_confidence: boolean },
   override: NewestOverride | undefined,

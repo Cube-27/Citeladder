@@ -5,20 +5,6 @@ import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 
-/**
- * The Pages tab.
- *
- * ONE composed screen that stays mounted through the entire discover → analyze
- * → scored lifecycle. Phase changes update each section's DATA and
- * mode — they never swap the layout for a different panel, so starting,
- * cancelling, or finishing a crawl visibly updates the screen the user is
- * already on. (The per-URL crawl detail view and the issues screen remain the
- * only other screens in the flow.)
- *
- * Under the screen's status line: the figure strip (scores and page counts),
- * the URL inventory, then page-kind diagnostics. The inventory's view switch,
- * page-kind filter and export lead its table's own toolbar.
- */
 export function SiteHealthDashboardLayout({
   screen,
   mutationsAllowed = true,
@@ -27,7 +13,6 @@ export function SiteHealthDashboardLayout({
   mutationsAllowed?: boolean;
 }>) {
   const { inventoryMode, crawl, active, dashboardQuery, runExport, exporting } = screen;
-  // Before the first crawl the screen shows its first-crawl state on every tab.
   if (!crawl) return null;
 
   return (

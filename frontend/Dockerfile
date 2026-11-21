@@ -15,7 +15,6 @@ COPY frontend/services/api/package.json ./services/api/
 COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# The runtime only runs `wrangler dev`: ship its locked closure, not the toolchain.
 FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
@@ -73,8 +72,6 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# This image runs the marketing Worker in local Compose only; GCP delivery
-# publishes no frontend image.
 COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/marketing/dist ./apps/marketing/dist
 COPY --from=builder --chown=node:node /app/apps/marketing/wrangler.jsonc ./apps/marketing/wrangler.jsonc

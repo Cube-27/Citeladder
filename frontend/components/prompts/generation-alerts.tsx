@@ -10,7 +10,6 @@ const SHORTFALL: Record<NonNullable<PromptGenerateResponse['shortfall_reason']>,
   model_error: 'The AI provider failed partway, so the set is smaller; generate again for more.',
 };
 
-/** What a run drafted, and why it fell short of the request when it did. */
 export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateResponse }>) {
   const total = result.candidates.length;
   const topicCount = new Set(
@@ -24,8 +23,6 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
   const gated = result.quality_rejected
     ? `; ${pluralCount(result.quality_rejected, 'weak suggestion')} removed by quality checks`
     : '';
-  // Say so when the request could not be filled, rather than letting a short
-  // set read as the number that was asked for.
   const shortfall =
     result.requested_count > total ? ` (${total} of ${result.requested_count} requested)` : '';
   const drops = admissionDropSummary(result.admission_drops, ['duplicate']);
@@ -47,11 +44,10 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
   );
 }
 
-/** A failed model action (generation or a topic proposal), in customer terms. */
 export function GenerateErrorAlert({
   error,
   action = 'generate prompts',
-}: Readonly<{ error: unknown; /** Completes "Could not ___". */ action?: string }>) {
+}: Readonly<{ error: unknown; action?: string }>) {
   const status = httpErrorStatus(error);
   if (status === 429) {
     const retryAfter = humanizeApiError(error).retryAfterSeconds;

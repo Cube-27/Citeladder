@@ -21,15 +21,10 @@ import { wellClasses } from '@/components/ui/slip';
 
 type ConnectionState = ReturnType<typeof useProviderConnection>;
 
-/** Anthropic's mark ships locally; the other transports resolve by domain. */
 const TRANSPORT_LOGOS: Partial<Record<ProviderGroup['transport'], string>> = {
   anthropic: ENGINE_LOGOS.claude,
 };
 
-/**
- * One badge for the credential. The engines share it, so any verified engine
- * means the key works; a stored key nobody has verified is not "connected".
- */
 function StatusBadge({
   group,
   connection,
@@ -53,7 +48,6 @@ function StatusBadge({
       </StatusMark>
     );
   }
-  // A stored key nobody verified needs attention; no key is neutral (not started).
   if (isConfigured(connection)) {
     return (
       <StatusMark variant="status" value="warning">
@@ -64,9 +58,7 @@ function StatusBadge({
   return compact ? null : <StatusMark>Not connected</StatusMark>;
 }
 
-/** "ChatGPT API · gpt-6.1-terra" for an API; the bare surface name for a consumer app. */
 function engineSummary(engine: EngineCardModel): string {
-  // An observed surface's model is the vendor's endpoint name, not provenance.
   const model = engine.route?.surface_kind === 'llm' ? engine.route.model : null;
   return model ? `${engine.label} · ${model}` : engine.label;
 }
@@ -122,11 +114,6 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
   );
 }
 
-/**
- * One provider credential as a list row: who it is, what it measures, whether
- * it works, and — on demand — its write-only credential form. A verified save
- * collapses the row; a failed one keeps it open with the reason.
- */
 export function ProviderRow({
   group,
   connections,
@@ -136,11 +123,8 @@ export function ProviderRow({
   group: ProviderGroup;
   connections: ProviderConnection[];
   defaultOpen?: boolean;
-  /** Drops the engine summary and the neutral "Not connected" mark. */
   compact?: boolean;
 }>) {
-  // A credential is offered only to a role that manages credentials; the rest
-  // read whether each provider works.
   const canManage = useWorkspaceCapability('manage_credentials');
   const [open, setOpen] = useState(defaultOpen && canManage);
   const formId = useId();

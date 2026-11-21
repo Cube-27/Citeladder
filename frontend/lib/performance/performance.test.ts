@@ -74,8 +74,6 @@ describe('comparison differences', () => {
   });
 
   it('is unavailable when either side was not observed', () => {
-    // A key the comparison period never saw has no difference. Substituting
-    // zero would report a change that was never measured.
     expect(metricDifference(14, null)).toBeNull();
     expect(metricDifference(14, undefined)).toBeNull();
     expect(metricDifference(null, 8)).toBeNull();
@@ -98,8 +96,6 @@ describe('window description', () => {
 
 describe('year-over-year availability', () => {
   it('needs more than a year of history beyond the selected window', () => {
-    // A first connect imports 365 days, so YoY is genuinely unavailable
-    // until history accumulates — it must never render as an observed zero.
     expect(canCompareYearOverYear(365, 7)).toBe(false);
     expect(canCompareYearOverYear(371, 7)).toBe(true);
     expect(canCompareYearOverYear(0, 1)).toBe(false);
@@ -112,10 +108,8 @@ describe('chart projection', () => {
       { date: '2026-07-22', value: 3 },
       { date: '2026-07-23', value: null },
     ]);
-    // Positional, because a comparison window covers different dates.
     expect(points.map((point) => point.index)).toEqual([1, 2]);
     expect(points[0]?.date).toBe('2026-07-22');
-    // A null bucket stays null: the line breaks rather than dropping to zero.
     expect(points[1]!.value).toBeNull();
   });
 });

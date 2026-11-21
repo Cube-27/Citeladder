@@ -51,18 +51,15 @@ import { SegmentedControl } from '@/components/ui/tabs';
 
 const TITLE = 'Query fanouts';
 
-/** Rows (or groups) per page, matching the shared table footer. */
 const PAGE_SIZE = 10;
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'search', label: 'Search' },
-  // The page's filter calls these surfaces; the column uses the same word.
   { key: 'surface', label: 'Surface', width: 'name' },
   { key: 'occurrences', label: 'Occurrences', width: 'figure', kind: 'number' },
   ...METRIC_COLUMNS,
 ];
 
-/** What a page of this grouping is counting, for the shared table footer. */
 const GROUP_NOUNS: Record<(typeof GROUP_OPTIONS)[number]['value'], string> = {
   none: 'searches',
   prompt: 'prompts',
@@ -80,11 +77,6 @@ const groupCodec = stringUrlCodec(
   'none',
 );
 
-/**
- * How the searches are grouped, in the page's Filters. It reads and
- * writes the same `group` URL state the table reads, so the menu and the
- * table never disagree.
- */
 export function useFanoutGroupFilter(): FilterDefinition {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
   return choiceFilter({
@@ -97,22 +89,6 @@ export function useFanoutGroupFilter(): FilterDefinition {
   });
 }
 
-/**
- * The searches an engine ran before answering, as ONE table.
- *
- * This tab used to be two stacked cards that answered the same question twice:
- * a summary card listing query strings with event counts, and a second card
- * repeating every query nested inside per-execution panels. Both are folded
- * into one table whose grouping the reader chooses — no grouping, by prompt, or
- * by topic — which is the only axis that actually changed between them.
- *
- * The three per-execution states stay distinct, because they are different
- * facts: a query whose text the model exposed becomes a row; a search whose
- * wording was withheld, and an answer that searched nothing at all, are counted
- * under the group rather than invented as rows.
- */
-/** No searches at all, or none under the current filters. */
-/** What the fanout tab reads: the evidence query and whether filters narrowed it. */
 type EvidenceTabProps = Readonly<{
   query: UseQueryResult<VisibilityEvidenceResponse, unknown>;
   isFiltered: boolean;
@@ -187,8 +163,6 @@ export function FanoutEvidence({
   const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
   const matched = summaryMatchesInput ? selectionMatchedQueries(summary) : null;
 
-  // Pending, not merely loading: a read still waiting on its scope fetches
-  // nothing and has no items, which is not "no searches recorded".
   if (query.isPending)
     return (
       <StateBlock
@@ -211,13 +185,10 @@ export function FanoutEvidence({
   }
 
   return (
-    // Named, not titled: the tab row already says "Query fanouts", so a
-    // heading over the table only repeated it (2026-11-03 app review).
     <DataTable
       label={TITLE}
       busy={{ active: query.isFetching || queries.read.isFetching, label: 'Updating evidence' }}
       toolbar={{
-        // Rising and Falling rank queries by share change; they are never grouped.
         view: (
           <SegmentedControl
             ariaLabel="Query fanouts view"
@@ -235,7 +206,6 @@ export function FanoutEvidence({
             maxLength={SEARCH_MAX_LENGTH}
           />
         ),
-        // What a search kept closes the row; the footer counts the rows.
         status: <SearchScopeNote search={needle} matched={matched} />,
       }}
       columns={COLUMNS}
@@ -248,7 +218,6 @@ export function FanoutEvidence({
   );
 }
 
-/** Top: the evidence rows with each query's server figures; Rising and Falling: the server's rows. */
 function FanoutRows({
   view,
   groups,
@@ -280,7 +249,6 @@ function FanoutRows({
   ));
 }
 
-/** Top pages by row or group; Rising and Falling are one page. */
 function tablePager(
   input: Pick<
     ReturnType<typeof useSearchTable>,
@@ -294,7 +262,6 @@ function tablePager(
   };
 }
 
-/** The table's state: Top's search-match empty state, or Rising and Falling's own. */
 function tableState(input: {
   view: FanoutView;
   rows: number;
@@ -306,19 +273,9 @@ function tableState(input: {
   return input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined;
 }
 
-/**
- * Everything the table derives from one loaded evidence window.
- *
- * Kept out of the component because it is all one derivation — choose a
- * grouping, filter by text, page the result, and total what survives — and
- * reading it inline buried the four states the component actually renders.
- */
 function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) {
   const [grouping] = useUrlState('group', groupCodec);
   const [search, setSearch] = useUrlState('q', optionalStringUrlCodec, { history: 'replace' });
-  // Trimmed and capped ONCE: the table filter, the server scope, the match
-  // count and the empty state all read this, so none of them can be asking
-  // about a different string than the others.
   const needle = useMemo(() => normalizeSearch(search), [search]);
   const topicOf = usePromptTopics(runId, grouping === 'topic');
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
@@ -337,12 +294,8 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
       }))
       .filter((group) => group.rows.length);
   }, [groups, needle]);
-  // Grouped views page by group so a prompt's searches are never split across
-  // two pages; the ungrouped view pages by row.
   const grouped = grouping !== 'none';
   const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
-  // Regrouping or searching produces a different set; page 3 of the old set is
-  // not page 3 of the new one.
   const { page, setPage, pageCount, from, to } = useTablePage(unit, {
     pageSize: PAGE_SIZE,
     resetKey: `${grouping}\u0000${needle}`,
@@ -371,13 +324,6 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
   };
 }
 
-/**
- * One group's heading row and its searches, inside the shared table.
- *
- * A group renders as rows of the SAME table rather than a table of its own, so
- * every search in the tab sits on one set of columns. Repeating a header per
- * group restarted the column widths at each prompt and left nothing aligned.
- */
 function SearchGroupRows({
   group,
   metrics,
@@ -433,7 +379,6 @@ function SearchGroupRows({
   );
 }
 
-/** One query: its text, the surfaces that ran it, its count, then its share, change and brands. */
 function QueryRow({
   query,
   engines,
@@ -463,30 +408,12 @@ function QueryRow({
   );
 }
 
-/**
- * Selection-wide fanout counts, straight from the server: the table below is
- * one loaded evidence window, so it cannot say how many searches match across
- * the whole selection.
- *
- * The normalized search is sent, so the count of matching queries covers
- * the whole run set rather than whatever happens to be loaded: a query stored
- * past the first page was previously unfindable. It is the SAME value the
- * table filters by, so the two can never disagree about what matched.
- */
 function useFanoutSummary(scope: FanoutScope, scopeReady: boolean, needle: string) {
   const { workspaceId, projectId } = useProjectScope();
-  const params = useMemo(
-    // Already normalized by `normalizeSearch`, which caps it at the bound the
-    // endpoint declares — a longer value is rejected as a 422 before it can
-    // match anything, turning a long paste into an error rather than a search.
-    () => ({ ...scope, search: needle || undefined }),
-    [scope, needle],
-  );
+  const params = useMemo(() => ({ ...scope, search: needle || undefined }), [scope, needle]);
   const result = useQuery({
     ...visibilityQueries.fanout({ workspaceId, projectId }, params),
     enabled: scopeReady,
-    // Totals for a selection do not change while the reader pages through it;
-    // keeping the previous values avoids the headline flickering to blank.
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
   return {
@@ -497,13 +424,6 @@ function useFanoutSummary(scope: FanoutScope, scopeReady: boolean, needle: strin
   };
 }
 
-/**
- * Prompt-to-topic map for the topic grouping.
- *
- * Evidence rows carry no topic; the prompt metrics projection already publishes
- * one per prompt, so the join happens here rather than being pushed into the
- * evidence endpoint. Only fetched when the reader actually groups by topic.
- */
 function usePromptTopics(runId: string | null, enabled: boolean) {
   const { workspaceId, projectId } = useProjectScope();
   const result = useQuery({

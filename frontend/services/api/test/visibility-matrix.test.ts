@@ -1,9 +1,3 @@
-/**
- * GET /visibility/matrix (W6) against the real PostgreSQL schema: each metric
- * per cell from the persisted run and topic blocks, not run versus not
- * measured, the ten-item axis cap and workspace isolation. Frozen-topic
- * grouping across a refile is in visibility-topics.test.ts.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -26,7 +20,6 @@ const VERSIONS = {
   model: 'test',
 };
 
-/** One stored aggregate slice: `brand` and `globex` answers name each; `wins` counts first-named. */
 function slice(input: {
   answers: number;
   brand: number;
@@ -57,7 +50,6 @@ const chatgpt = slice({
   position: 1.5,
   wins: { answers: 3, brand: 1 },
 });
-// Globex only: the brand is never named, so its position is not measured.
 const perplexity = slice({
   answers: 2,
   brand: 0,
@@ -65,7 +57,6 @@ const perplexity = slice({
   position: null,
   wins: { answers: 1, brand: 0 },
 });
-// No tracked business named: win rate is not applicable.
 const gemini = slice({
   answers: 1,
   brand: 0,
@@ -102,7 +93,6 @@ async function topicBlock(tenant: Tenant, auditId: string, topicId: string, metr
     .execute();
 }
 
-/** A perceived chatgpt answer in which `entity` was classified `label`. */
 async function perceived(
   tenant: Tenant,
   auditId: string,
@@ -236,7 +226,6 @@ describe('GET /visibility/matrix', () => {
       avg_position: 2,
       win_rate: 1,
     });
-    // Measured, never named: a zero rate, but no position; perceived without a mention.
     expect(engineBrand[1]![0]).toMatchObject({
       mention_rate: 0,
       avg_position: null,
@@ -244,7 +233,6 @@ describe('GET /visibility/matrix', () => {
       sentiment: { mentions: 0, classified: 0, net_sentiment: null },
     });
     expect(engineBrand[2]![0]).toMatchObject({ answers: 1, win_rate: null });
-    // A pair the run never asked is not run, never zero.
     expect(grids.engine_topic!.map((row) => row.map((c) => c.kind))).toEqual([
       ['measured', 'not_run'],
       ['not_run', 'not_run'],
@@ -254,7 +242,6 @@ describe('GET /visibility/matrix', () => {
     expect(rankings.engine![1]).toEqual({
       kind: 'measured',
       leaders: [
-        // Each leader carries the mark its record stores, for the chip.
         {
           name: 'Globex',
           is_brand: false,
@@ -273,13 +260,11 @@ describe('GET /visibility/matrix', () => {
     });
     expect(rankings.topic![1]).toEqual({ kind: 'not_run' });
 
-    // The engine filter narrows its axis and every other cell to that engine.
     const narrowed = (await get(tenant, route(tenant, '/matrix'), { engine: 'chatgpt' }))
       .body as unknown as Matrix;
     expect(narrowed.axes.engine).toEqual([{ logical_engine: 'chatgpt', answers: 4 }]);
     expect(narrowed.grids.market_brand![0]![1]).toMatchObject({ answers: 4, share_of_voice: 0.5 });
 
-    // A named run from another market reads under its own market, not the default one.
     const ukRun = await run(tenant, { ...gemini, per_engine: { gemini } });
     await db.updateTable('audits').set({ market_id: uk }).where('id', '=', ukRun).execute();
     const named = (

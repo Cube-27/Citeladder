@@ -40,7 +40,6 @@ function doneMessage(change: PromptBulkChange, count: number, topics: readonly T
   }
 }
 
-/** Runs one bulk change, says how it went in a toast, and clears the selection once it lands. */
 export function usePromptBulk(
   scope: ProjectScope,
   { topics, onDone }: Readonly<{ topics: readonly Topic[]; onDone: () => void }>,
@@ -66,7 +65,6 @@ export function usePromptBulk(
   return { run, pending: mutation.isPending };
 }
 
-/** Why Activate is held for this selection, or null when it can run. */
 function activateHold(selected: Selected): string | null {
   const beyond = selected.filter((prompt) => prompt.over_plan_limit).length;
   if (beyond > 0)
@@ -82,7 +80,6 @@ function archiveHold(selected: Selected): string | null {
   return null;
 }
 
-/** A bar button that stays focusable when held, and says why on hover and to assistive technology. */
 function HeldButton({
   hold,
   onClick,
@@ -104,11 +101,6 @@ function HeldButton({
   );
 }
 
-/**
- * What can be done to the ticked prompts, in the dock held over the foot of
- * the column: it takes no height, so ticking moves nothing, and the view tab
- * already counts the prompts.
- */
 export function PromptBulkBar({
   selected,
   topics,
@@ -120,7 +112,6 @@ export function PromptBulkBar({
 }: Readonly<{
   selected: Selected;
   topics: readonly Topic[];
-  /** The most prompts one bulk request takes. */
   max: number;
   pending: boolean;
   onClear: () => void;

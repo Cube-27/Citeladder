@@ -8,7 +8,6 @@ import { extendTailwindMerge } from 'tailwind-merge';
  */
 const twMerge = extendTailwindMerge({
   extend: {
-    // The app's named radii, so a caller's `rounded-card` replaces a primitive's `rounded-mark`.
     theme: { radius: ['mark', 'control', 'card', 'overlay'] },
     classGroups: {
       'font-size': [
@@ -47,7 +46,6 @@ const twMerge = extendTailwindMerge({
   },
 });
 
-/** Merge conditional class names, resolving Tailwind conflicts. */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -61,7 +59,6 @@ export function ownValue<V>(table: Readonly<Record<string, V>>, key: string): V 
   return Object.hasOwn(table, key) ? table[key] : undefined;
 }
 
-/** A non-null, non-array object. */
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -73,22 +70,11 @@ export function isOneOf<T extends string | number>(
   return allowed.some((item) => item === value);
 }
 
-/**
- * Two-letter avatar initials from an email address, taken from the local part
- * (before the `@`) and upper-cased. Falls back to the raw value when there is
- * no `@`, and yields `''` for an empty string. Shared by the sidebar user menu
- * and the Settings account card so both avatars stay in sync.
- */
 export function emailInitials(email: string) {
   const local = email.split('@')[0] ?? email;
   return local.slice(0, 2).toUpperCase();
 }
 
-/**
- * A snake_case lifecycle/status token in sentence case for display
- * (`partially_completed` → `Partially completed`). Shared by the run/execution
- * and Site Health status view-models so their labels stay byte-identical.
- */
 export function sentenceCaseStatus(status: string): string {
   const words = status.replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);

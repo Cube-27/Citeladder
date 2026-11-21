@@ -16,10 +16,6 @@ import {
 import { useSseEventStream } from '@/lib/sse/use-event-stream';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
-/**
- * Subscribes to a run's audit-event stream while it is active. The stream only
- * accelerates invalidations: the run page's polling remains the baseline.
- */
 export function useRunEvents(
   auditId: string | null | undefined,
   projectId: string | null | undefined,

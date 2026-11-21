@@ -35,20 +35,13 @@ type Declarable = Pick<
 type MarkImplementedProps = Readonly<{
   workspaceId: string;
   action: Declarable;
-  /** The output revision shipped; null declares work done outside CiteLadder. */
   revision: { id: string; number: number } | null;
   disabled?: boolean;
   recommendationIds?: string[];
   onDeclared?: () => void;
-  /** What the Agent proposed from what the person said; the dialog opens with it, still editable. */
   proposed?: Proposed;
 }>;
 
-/**
- * "Mark implemented": the user's explicit declaration. The server freezes the
- * targets and expected checks; the user names only the revision they shipped
- * (or none, for work done outside CiteLadder) and the day it went live.
- */
 export function MarkImplementedButton(props: MarkImplementedProps) {
   const { start, dialog } = useMarkImplemented(props);
   return (
@@ -59,10 +52,6 @@ export function MarkImplementedButton(props: MarkImplementedProps) {
   );
 }
 
-/**
- * The declaration dialog and the way to open it, for a surface that starts it
- * from more than one control (a record's bar and its More menu).
- */
 export function useMarkImplemented({
   workspaceId,
   action,
@@ -193,7 +182,6 @@ export function useMarkImplemented({
   return { start, dialog };
 }
 
-/** `MarkImplementedButton` for a surface that holds only the Action's id. */
 export function MarkActionImplemented({
   workspaceId,
   actionId,
@@ -213,7 +201,6 @@ export function MarkActionImplemented({
   return <MarkImplementedButton workspaceId={workspaceId} action={action.data} {...props} />;
 }
 
-/** What each current finding will be measured by, before the user commits. */
 function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
   if (action.members.length === 0) return null;
   return (
@@ -244,11 +231,6 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
   );
 }
 
-/**
- * Whether an Action can be declared now: New or In progress, with a finding to
- * declare. A recrawl that resolved every finding leaves the last set, which
- * the server freezes; with none there is nothing to declare, and it refuses.
- */
 export function isDeclarable(action: { status: string; declarable_member_count: number }): boolean {
   return (
     (action.status === 'open' || action.status === 'in_progress') &&
@@ -256,7 +238,6 @@ export function isDeclarable(action: { status: string; declarable_member_count: 
   );
 }
 
-/** The declaration request's bound on what shipped it. */
 const DEPLOYMENT_REFERENCE_MAX = 500;
 
 type Proposed = { day: string | null; reference: string | null };
@@ -271,12 +252,6 @@ function newAttempt(proposed?: Proposed) {
   };
 }
 
-/**
- * The output pane's implementation state. Declaring anchors the Action to the
- * revision on screen; an output with no target has no Action to declare. A
- * document naming another page than its Action asks where it belongs first,
- * so a declaration never anchors it to the wrong Action.
- */
 export function OutputDeclaration({
   workspaceId,
   chatId,
@@ -316,7 +291,6 @@ export function OutputDeclaration({
 
 type NamedTarget = NonNullable<AgentOutput['named_target']>;
 
-/** A page by its path ("/pricing"), a planned page by its topic. */
 function targetName(named: NamedTarget) {
   if (named.kind === 'planned_page') return named.target;
   try {
@@ -327,7 +301,6 @@ function targetName(named: NamedTarget) {
   }
 }
 
-/** Where a document naming another page than its Action belongs: there, or with the Action. */
 function TargetChoice({
   workspaceId,
   chatId,
@@ -435,7 +408,6 @@ function AttachedDeclaration({
   );
 }
 
-/** Contextual links are declared one link at a time, from the Website's link review. */
 const SELECT_IMPLEMENTED_LINKS = {
   label: 'Select implemented links',
   href: '/site?tab=internal-links',

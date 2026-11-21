@@ -1,24 +1,9 @@
-/**
- * The app's display formatters, one owner (invariant 2): absence marks and
- * labels, percents, amounts, counts and plurals, dates and timestamps,
- * snapshot granularity, scores, and URL and host text.
- *
- * Everything is pure and framework-free. Calendar bucket dates are fixed to
- * UTC; timestamp displays receive an explicit resolved timezone. Unparseable
- * input passes through untouched — never a fabricated value (invariant 9).
- */
 import type { z } from 'zod';
 
 import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics';
 
-/** Snapshot bucket granularity — mirrors the backend contract vocabulary. */
 type BucketGranularity = z.infer<typeof snapshotGranularitySchema>;
 
-/**
- * The one list of absence kinds and their words. A value is missing in exactly
- * one of these ways; in a value position `Absence` prints `ABSENCE_MARK` and
- * keeps the word as its tooltip and accessible name, so the kinds stay distinct.
- */
 export const ABSENCE_STATES = [
   'not_measured',
   'not_connected',
@@ -43,19 +28,12 @@ const availabilityLabels: Record<DataAvailabilityState, string> = {
   too_few: 'Too few',
 };
 
-/** The word for a kind of absence. */
 export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
 
-/**
- * A formatter's missing value. Tagged, not null and not a word: JSX rejects an
- * object child, so printing one raw fails the type check, and real text that
- * equals an absence word ("None") still prints as text.
- */
 export type Absent = Readonly<{ absent: DataAvailabilityState }>;
 
-/** What a nullable formatter returns: the text, or which absence it is. */
 export type Formatted = string | Absent;
 
 export function absent(state: DataAvailabilityState = 'not_measured'): Absent {
@@ -66,21 +44,12 @@ export function isAbsent(value: unknown): value is Absent {
   return typeof value === 'object' && value !== null && 'absent' in value;
 }
 
-/** A formatted value as prose (a summary, a label, a CSV cell): absence as its word. */
 export function formattedText(value: Formatted): string {
   return isAbsent(value) ? availabilityLabel(value.absent) : value;
 }
 
-/**
- * The muted em dash every absent value prints (owner 2026-11-18). Never
- * an empty string: a blank and a measured zero are opposite findings.
- */
 export const ABSENCE_MARK = '—';
 
-/**
- * A persisted fraction (0.125) as a percentage ("12.5%"), always one decimal
- * so "92.0%" and "10.0%" read as one format; null is not measured.
- */
 export function formatPercent(fraction: number): string;
 export function formatPercent(fraction: number | null): Formatted;
 export function formatPercent(fraction: number | null): Formatted {
@@ -88,28 +57,20 @@ export function formatPercent(fraction: number | null): Formatted {
   return percentText(fraction);
 }
 
-/** A measured fraction as a percentage, one decimal ("12.5%"); absence is the caller's. */
 export function percentText(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`;
 }
 
-/**
- * An amount in its currency when the code is an ISO currency ("$12.50"),
- * else the bare amount with whatever code it came with ("12.5 pts").
- */
 export function formatAmount(amount: number, currency: string | null): string {
   if (currency && /^[A-Z]{3}$/u.test(currency)) {
     try {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-    } catch {
-      // An unknown code falls through to the bare amount with its code.
-    }
+    } catch {}
   }
   const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
   return currency ? `${number} ${currency}` : number;
 }
 
-/** A mean or a ratio (an average position, citations per response), one decimal ("8.4"). */
 export function formatMean(value: number): string {
   return value.toFixed(1);
 }
@@ -120,14 +81,12 @@ export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: st
   { value: 'month', label: 'Month' },
 ] as const;
 
-/** `2026-07-23` → `Jul 23` (series bucket labels + active-run windows). */
 export function formatShortDate(isoDay: string): string {
   const date = new Date(`${isoDay}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return isoDay;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-/** `2026-07-23` → `Jul 23, 2026` (window labels in notes). */
 export function formatWindowDate(isoDay: string): string {
   const date = new Date(`${isoDay}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return isoDay;
@@ -139,7 +98,6 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
-/** `2026-07` (or a day in it) → `Jul 2026` (monthly series labels). */
 export function formatMonth(isoMonth: string): string {
   const date = new Date(`${isoMonth.slice(0, 7)}-01T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return isoMonth;
@@ -148,10 +106,6 @@ export function formatMonth(isoMonth: string): string {
 
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
 
-/**
- * One cached formatter per variant and zone: zoned formatters are costly and
- * run per table cell. A bad zone throws on construction and is never cached.
- */
 function dateFormat(variant: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   const key = `${variant}\u0000${options.timeZone}`;
   let format = dateFormats.get(key);
@@ -162,10 +116,6 @@ function dateFormat(variant: string, options: Intl.DateTimeFormatOptions): Intl.
   return format;
 }
 
-/**
- * A persisted instant in the display timezone (`Nov 14, 2026, 05:03 PM`). No
- * zone is printed anywhere: the reader knows their own (owner, 2026-11-21).
- */
 export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -183,10 +133,6 @@ export function formatDisplayTimestamp(timestamp: string, timeZone: string): str
   }
 }
 
-/**
- * A persisted instant in a strip's meta, short and zoneless (`18 Nov 09:12`),
- * the one form every page's strip prints (owner, 2026-11-18).
- */
 export function formatStripTimestamp(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -207,7 +153,6 @@ export function formatStripTimestamp(timestamp: string, timeZone: string): strin
   }
 }
 
-/** `2026-07-23` → `23 Jul`: a day in a strip's meta, in the strip's short form. */
 export function formatStripDay(isoDay: string): string {
   const date = new Date(`${isoDay}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return isoDay;
@@ -221,7 +166,6 @@ export function formatStripDay(isoDay: string): string {
   return `${part('day')} ${part('month')}`;
 }
 
-/** Date portion of a persisted instant, using the same display timezone. */
 export function formatDisplayDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -232,7 +176,6 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-/** Time-of-day portion of a persisted instant, in the same display timezone. */
 export function formatDisplayTime(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -247,7 +190,6 @@ export function formatDisplayTime(timestamp: string, timeZone: string): string {
   }
 }
 
-/** Compact chart label for a persisted instant. */
 export function formatDisplayShortDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -264,33 +206,20 @@ export function formatScore(score: number | null): Formatted {
 
 const numberFormat = new Intl.NumberFormat('en-US');
 
-/** Whole-number grouping for counts (`1,162,000`), never abbreviated. */
 export function formatCount(value: number): string {
   return numberFormat.format(value);
 }
 
-/** A grouped count with its noun, pluralized with a trailing `s` (`1 answer`, `1,200 answers`). */
 export function pluralCount(count: number, noun: string): string {
   return `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-/**
- * Close a sentence once: a text that already ends in `.`, `!` or `?` (a
- * worker's reason, a brand like "Bluebird Bean Co.") gets no second stop.
- */
 export function endSentence(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
-/** Percent-encoding layers a crawled URL can carry (`%2527` is `'` encoded twice). */
 const MAX_URL_DECODE_PASSES = 3;
 
-/**
- * A URL or path as a reader reads it: percent-escapes decoded, layer by
- * layer, so `/Women%2527s-Clothing` shows as `/Women's-Clothing`. Display
- * only; the stored value is never changed. A layer with a malformed escape
- * is shown as it is.
- */
 export function readableUrl(value: string): string {
   let current = value;
   for (let pass = 0; pass < MAX_URL_DECODE_PASSES; pass += 1) {
@@ -306,12 +235,6 @@ export function readableUrl(value: string): string {
   return current;
 }
 
-/**
- * A web address as a short title: its host without `www.`, then its last
- * path segment, readable, with `…` for any segments between
- * (`bestandless.com.au/…/Womens-Maxi-Dress`). The query and fragment are
- * dropped. Anything that is not an http(s) URL is only made readable.
- */
 export function shortUrlTitle(value: string): string {
   let url: URL;
   try {
@@ -327,7 +250,6 @@ export function shortUrlTitle(value: string): string {
   return `${host}${segments.length > 1 ? '/…' : ''}/${readableUrl(last)}`;
 }
 
-/** The scheme and host of an http(s) URL ("https://www.example.com"), else null. */
 function originOf(value: string): string | null {
   try {
     const url = new URL(value);
@@ -337,10 +259,6 @@ function originOf(value: string): string | null {
   }
 }
 
-/**
- * The origin every URL in a column shares, so its cells can drop it and give
- * the width to the path; null when they differ or any is not an http(s) URL.
- */
 export function sharedOrigin(values: readonly string[]): string | null {
   const [first, ...rest] = values.map(originOf);
   if (first === undefined || first === null) return null;
@@ -372,7 +290,6 @@ const ALPHA3_TO_ALPHA2 = new Map(
 
 let regionNames: Intl.DisplayNames | undefined;
 
-/** A country code as its English name ("usa" → "United States"); an unknown code upper-case. */
 export function formatCountry(code: string): string {
   const upper = code.trim().toUpperCase();
   const alpha2 = ALPHA3_TO_ALPHA2.get(upper) ?? (/^[A-Z]{2}$/u.test(upper) ? upper : null);
@@ -381,10 +298,6 @@ export function formatCountry(code: string): string {
   return regionNames.of(alpha2) ?? upper;
 }
 
-/**
- * A URL's origin when it is on the project's own site (ignoring `www.`), so
- * its cell prints the path alone; null for a foreign host, which stays printed.
- */
 export function ownOrigin(url: string, website: string | null | undefined): string | null {
   try {
     return isOwnHost(new URL(url).host, website) ? originOf(url) : null;
@@ -393,7 +306,6 @@ export function ownOrigin(url: string, website: string | null | undefined): stri
   }
 }
 
-/** Whether a host is the project website's own, ignoring `www.`. */
 export function isOwnHost(host: string, website: string | null | undefined): boolean {
   const bare = (value: string) => value.toLowerCase().replace(/^www\./u, '');
   try {
@@ -403,7 +315,6 @@ export function isOwnHost(host: string, website: string | null | undefined): boo
   }
 }
 
-/** A URL as its cell prints it: readable, without the column's shared origin. */
 export function urlCellText(value: string, origin: string | null): string {
   const readable = readableUrl(value);
   if (origin === null || originOf(value) !== origin || !value.startsWith(origin)) return readable;

@@ -43,11 +43,9 @@ describe('shouldRetryQuery', () => {
   });
 
   it('honors an explicit retryable classification over the status heuristic', () => {
-    // Server-classified non-retryable 5xx → no futile retry.
     expect(
       shouldRetryQuery(0, new ApiError('down', 503, '', undefined, { retryable: false })),
     ).toBe(false);
-    // Server-classified retryable → retry even without a transient status.
     expect(shouldRetryQuery(0, new ApiError('busy', 400, '', undefined, { retryable: true }))).toBe(
       true,
     );
@@ -122,12 +120,6 @@ describe('warmQuery', () => {
     await vi.waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1));
   });
 
-  /**
-   * Tab and link intent fires on the ACTIVE target too. Re-driving a key that
-   * already failed resets `error` → `pending`, so the settled alert a panel is
-   * rendering would be replaced by its skeleton until the identical failure
-   * returns — hovering a tab visibly reloading its own content.
-   */
   it('leaves an already-failed key untouched so a settled error cannot flicker', async () => {
     const queryFn = vi.fn(async () => {
       throw new ApiError('gone', 404, '');

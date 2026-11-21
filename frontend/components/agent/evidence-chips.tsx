@@ -2,10 +2,6 @@ import { RecordTag, Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
 import { groupEvidence } from '@/lib/agent/evidence';
 
-/**
- * The records a reply or revision cites, grouped by kind. Each group links to
- * the screen that shows that evidence, so a claim can be checked in one click.
- */
 export function EvidenceChips({
   refs,
   label = 'Cited evidence',

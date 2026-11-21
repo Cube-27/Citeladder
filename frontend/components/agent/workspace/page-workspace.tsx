@@ -90,7 +90,6 @@ function lockedReason(canEdit: boolean, runActive: boolean, editing: boolean): s
   return editing ? 'Save or discard your edits to the page first.' : null;
 }
 
-/** The header: the page named under Actions, through its Action when it has one. */
 function workspaceHeader(detail: AgentChatDetail, output: AgentOutput) {
   const label = output.target_label ?? detail.chat.target_label ?? output.latest_revision.title;
   const actionId = detail.chat.action_id;
@@ -126,13 +125,6 @@ function SuggestionsTab({
   );
 }
 
-/**
- * A page chat's workspace (E1): the page on the left in the live-preview
- * editor, and on the right Suggestions, Outline and SEO with the chat docked
- * under them; below 1024px the rail becomes tabs under the page. The page is
- * the chat's `page` document; every write goes through the server's
- * compare-and-set on the revision on screen.
- */
 export function PageWorkspace({
   detail,
   output,

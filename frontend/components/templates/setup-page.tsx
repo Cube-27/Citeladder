@@ -12,10 +12,6 @@ import { textRole } from '@/components/ui/typography';
 import { Check, ChevronLeft } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * The column a step and its action rail share: `max-w-thread` for a step with
- * several fields, `max-w-prose` for a one-field step, centred in the gutter.
- */
 const STEP_COLUMN = {
   wide: 'max-w-thread mx-auto w-full px-[var(--content-gutter)]',
   narrow: 'max-w-prose mx-auto w-full px-[var(--content-gutter)]',
@@ -23,13 +19,6 @@ const STEP_COLUMN = {
 
 type StepWidth = keyof typeof STEP_COLUMN;
 
-/**
- * Workspace and project setup across the whole viewport: a top rail pinned
- * while the page scrolls, with the logo, the steps in the centre (a numbered
- * stepper; "Step n of N" on phones) and the way out, account menu and theme
- * switch at the right. A rule along the rail's foot fills as steps complete.
- * The steps' controls take the website's height (`control-lg`).
- */
 export function SetupPage({
   label,
   steps,
@@ -37,11 +26,8 @@ export function SetupPage({
   barEnd,
   children,
 }: Readonly<{
-  /** The main landmark's name. */
   label: string;
-  /** The setup's steps; leave out for a one-screen setup. */
   steps?: readonly [string, ...string[]];
-  /** 0-based. */
   current?: number;
   barEnd?: ReactNode;
   children: ReactNode;
@@ -80,12 +66,6 @@ export function SetupPage({
   );
 }
 
-/**
- * The steps in the top rail: from `desktop:` each step's numbered mark (a
- * check when done, the current one ringed) and label, joined by short rules;
- * below it, "Step n of N". The current step is `aria-current="step"`, and the
- * count is a native progress bar named by the current step.
- */
 function SetupStepper({
   steps,
   current,
@@ -135,7 +115,6 @@ function SetupStepper({
 
 const MARK = 'grid size-6 shrink-0 place-items-center rounded-full';
 
-/** A done step's check on ink, the current step's ringed number, a later step's muted one. */
 function StepMark({ index, current }: Readonly<{ index: number; current: number }>) {
   if (index < current) {
     return (
@@ -161,13 +140,6 @@ function StepMark({ index, current }: Readonly<{ index: number; current: number 
   );
 }
 
-/**
- * One setup step in a centred column: the heading and help, then the step's
- * body in one card across the column, laid out with StepColumns so a desktop
- * step reads across the width. Back and the one primary sit in a rail pinned
- * to the viewport's foot; a step with neither action (one that is working)
- * has no rail.
- */
 export function SetupStep({
   title,
   titleId,
@@ -178,14 +150,10 @@ export function SetupStep({
   children,
 }: Readonly<{
   title: ReactNode;
-  /** The heading's id, so the flow can move focus to it on a new step. */
   titleId?: string;
   help?: ReactNode;
-  /** A StepBack, or a quiet link; leave out on the first step. */
   back?: ReactNode;
-  /** The step's primary Button. */
   next?: ReactNode;
-  /** `narrow` for a step with a single field. */
   width?: StepWidth;
   children: ReactNode;
 }>) {
@@ -196,7 +164,6 @@ export function SetupStep({
     <div className="flex flex-1 flex-col">
       <div className={cn(STEP_COLUMN[width], 'flex flex-1 flex-col gap-4 py-6')}>
         <header className="flex flex-col gap-2">
-          {/* Takes focus by script (tabIndex -1) when the flow moves to a new step. */}
           <h1 id={headingId} tabIndex={-1} className={textRole('title', 'text-balance')}>
             {title}
           </h1>
@@ -221,7 +188,6 @@ export function SetupStep({
   );
 }
 
-/** Two top-aligned columns from `desktop:` (one below it), for fields or groups of answers. */
 export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="desktop:grid-cols-2 grid min-w-0 items-start gap-[var(--card-padding)]">
@@ -230,12 +196,10 @@ export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** A working step's progress: the large RungTrail, 16px labels 12 apart. */
 export function StepTrail(props: Readonly<Omit<ComponentProps<typeof RungTrail>, 'size'>>) {
   return <RungTrail {...props} size="lg" />;
 }
 
-/** What a working step has found so far: a label over a wrapping run of tags. */
 export function StepFindings({
   title,
   items,
@@ -254,7 +218,6 @@ export function StepFindings({
   );
 }
 
-/** Back: the quiet button with its chevron. */
 export function StepBack({
   children = 'Back',
   ...props

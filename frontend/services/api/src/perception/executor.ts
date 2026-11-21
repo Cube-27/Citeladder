@@ -1,14 +1,3 @@
-/**
- * The `answer_perception` analytics executor: one bounded, platform-funded
- * model call per answer that names the brand or a competitor.
- *
- * Reads are committed before the call and no transaction spans it; the
- * analytics claim already committed the attempt. The outcome is written in
- * the worker's lease-fenced terminal transaction and is idempotent on
- * `(analysis_id, extractor_version)`. Caps, a missing gateway, an unusable
- * output and a provider failure all end as a persisted outcome, so the audit
- * never fails because perception could not run.
- */
 import { randomUUID } from 'node:crypto';
 
 import { cohortNamesBrand, scoringConfig } from '../analysis/scoring.ts';
@@ -49,7 +38,6 @@ import {
   type VerifiedClaim,
 } from './validate.ts';
 
-/** Outcomes that spent a model call; caps count only these. */
 const CALLED = ['classified', 'invalid_output', 'model_error'];
 
 type Outcome =
@@ -106,7 +94,6 @@ async function alreadyPerceived(db: Database, subject: Subject, extractorVersion
   return row !== undefined;
 }
 
-/** Whether any confident claim has a frozen fact on its topic, so verification has work. */
 function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFactCheck) {
   const topics = checkedTopics(factCheck);
   return claims.some((claim) => !claim.low_confidence && topics.has(claim.topic));
@@ -203,7 +190,6 @@ function persist(
         })),
       )
       .execute();
-    // Same transaction, no network: verification follows only a committed claim set.
     if (factCheck && needsVerification(outcome.claims, factCheck))
       await enqueueTask(db, {
         workspaceId: task.workspace_id,
@@ -216,10 +202,6 @@ function persist(
   };
 }
 
-/**
- * One classification; claims ride the same call only for a fact-checked audit.
- * Untracked names ride every call and are checked against `tracked`.
- */
 function classify(
   gateway: ModelGateway,
   input: {
@@ -251,7 +233,6 @@ function classify(
       drops: { ...validated.drops, ...claims.drops, ...names.drops },
     };
   };
-  // Without claims the plain schema is used, so plain perception is unchanged.
   if (!claimsRequest)
     return callStructured(gateway, { ...request, schema: perceptionOutputSchema }, (value) =>
       classified(value, { claims: [], drops: {} }),
@@ -269,7 +250,6 @@ export function answerPerception(
     const projectId = await taskProject(db, task);
     const subject = await loadSubject(db, task, projectId);
     const versions = frozenPerceptionVersions(subject.configuration);
-    // An audit admitted without perception is never classified.
     if (!versions || (await alreadyPerceived(db, subject, versions.extractor_version))) return;
     const factCheck = frozenFactCheck(subject.configuration);
     const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
@@ -286,10 +266,8 @@ export function answerPerception(
     if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
     const raw = gatewayFactory();
     if (!raw) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
-    // The audit froze its model: another one never classifies its answers.
     if (raw.model !== versions.model)
       return settle({ outcome: 'unavailable', reason: 'model_changed' });
-    // Included in the prompt run (B9): recorded with its tokens, not charged.
     const gateway = meterFor(db, task.workspace_id).gateway(raw, 'answer_perception');
     const config = scoringConfig(subject.configuration);
     const languageCode = scalarText(record(subject.configuration).language_code);
@@ -321,7 +299,6 @@ export function answerPerception(
   };
 }
 
-/** A task that exhausted its attempts still leaves a persisted, explained outcome. */
 export async function compensatePerception(db: Database, task: QueueTask) {
   const projectId = await taskProject(db, task);
   const subject = await loadSubject(db, task, projectId);

@@ -10,12 +10,7 @@ import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 export type { SiteSeed };
 
-/** Site fixtures that also run a crawl's `finalize` task. */
 export class FinalizeFixtures extends SiteFixtures {
-  /**
-   * Reconciles the crawl, then claims and runs the `finalize` task a drain
-   * enqueued (or one already open); false when none could be claimed.
-   */
   async terminalize(seed: SiteSeed, worker = this.worker(seed)) {
     await reconcileCrawl(this.siteDb, seed.workspaceId, seed.crawlId);
     const open = await this.siteDb
@@ -38,11 +33,6 @@ export class FinalizeFixtures extends SiteFixtures {
   }
 }
 
-/**
- * Lands the crawl's unfinalized analyses as final revisions in one
- * transaction the caller holds (the crawl locked), with issue currency, as
- * the finalize task's batches and publication do for a crawl of any status.
- */
 export async function landFinalRevisions(trx: Database, crawl: Selectable<SiteCrawls>) {
   const { pendingIds } = await prepareFinalization(trx, crawl, {
     crossPage: false,

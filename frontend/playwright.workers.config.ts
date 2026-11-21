@@ -1,7 +1,5 @@
 import { defineConfig } from '@playwright/test';
 
-// Build both artifacts before this suite. Exercise real Workerd GET responses,
-// including direct assets; Vite development responses cannot prove edge CSP.
 export default defineConfig({
   testDir: './e2e',
   projects: [

@@ -15,10 +15,6 @@ export function cancellationSendAt(periodEnd: Date, config: ServiceConfig) {
   return new Date(periodEnd.getTime() - config.billing.cancellationLeadSeconds * 1000);
 }
 
-/**
- * Until when a scheduled cancellation is still held and can be resumed; null
- * when none is scheduled, it was sent, or its send time has come.
- */
 export function cancellationHeldUntil(
   sub: {
     cancel_at_period_end: boolean;
@@ -49,11 +45,6 @@ async function currentBase(trx: Database, workspaceId: string) {
   return { ...row, current_period_end: row.current_period_end };
 }
 
-/**
- * Schedules cancellation at period end. Nothing is sent to the provider now:
- * the subscription sweep sends it at the lead before renewal, and the
- * customer may resume until then (B46).
- */
 export async function cancelSubscription(db: Database, config: ServiceConfig, workspaceId: string) {
   const sub = await db.transaction().execute(async (trx) => {
     const row = await currentBase(trx, workspaceId);
@@ -85,7 +76,6 @@ export async function cancelSubscription(db: Database, config: ServiceConfig, wo
   });
 }
 
-/** Keeps the plan renewing: possible only while the cancellation is still held (B46). */
 export async function resumeSubscription(db: Database, config: ServiceConfig, workspaceId: string) {
   const sub = await db.transaction().execute(async (trx) => {
     const row = await currentBase(trx, workspaceId);

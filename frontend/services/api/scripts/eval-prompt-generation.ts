@@ -1,10 +1,3 @@
-/**
- * Live prompt-generation calibration: each business-context fixture through
- * the quick-generate planner, the configured model and admission, scored by the
- * deterministic set metrics against the configured thresholds. Operator-run
- * only (it calls the provider and spends budget); never part of CI. Metrics and
- * the selected responses append to one log in the worktree's Git directory.
- */
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -31,15 +24,12 @@ const { values } = parseArgs({
     live: { type: 'boolean', default: false },
     count: { type: 'string', default: '20' },
     fixture: { type: 'string' },
-    // Grounded runs give draft batches the fixture's observed searches; `both`
-    // reports each fixture ungrounded and grounded side by side.
     grounding: { type: 'string', default: 'both' },
   },
 });
 if (!values.live)
   throw new Error('Calibration calls the configured model provider; pass --live to run it');
 const count = Number(values.count);
-// The same ceiling the API enforces, so an eval cannot outspend a request.
 if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_count'))
   throw new Error(`--count must be an integer from 1 to ${generationSetting('max_count')}`);
 const modes = new Map([
@@ -52,7 +42,6 @@ const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');
 const run = new Date().toISOString();
 
-/** One fixture through planning, the live model, admission and selection, scored. */
 async function evaluate(fixture: (typeof generationFixtures)[number], grounded: boolean) {
   const started = performance.now();
   const output = await generateDrafts(
@@ -81,8 +70,6 @@ async function evaluate(fixture: (typeof generationFixtures)[number], grounded: 
     fixture: fixture.name,
     grounded,
     slots_grounded: output.grounding.slots_grounded,
-    // Measured against the fixture's searches in both modes, so the grounded
-    // run's change is visible beside the ungrounded baseline.
     observed_likeness: observedLikeness(
       selected.map((draft) => ({ text: draft.text, topic_id: draft.slot.topic_id })),
       fixtureObserved(fixture),

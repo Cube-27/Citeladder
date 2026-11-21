@@ -1,4 +1,3 @@
-/** Prompt-library, billing and candidate rows for the prompts suites. */
 import { randomUUID } from 'node:crypto';
 import { vi } from 'vitest';
 
@@ -42,7 +41,6 @@ export type GrantInput = {
   priority?: number;
   validFrom?: Date;
   validUntil?: Date | null;
-  /** A tenant's default allowance, replaced by any explicit grant of the same key. */
   fixtureDefault?: boolean;
 };
 
@@ -51,7 +49,6 @@ const FIXTURE_DEFAULT = 'fixture-default';
 export async function grant(db: Database, accountId: string, input: GrantInput): Promise<string> {
   const id = randomUUID();
   const key = input.key ?? 'prompt_slots';
-  // An explicit grant sets the limit the test means, not one added to the default.
   if (!input.fixtureDefault)
     await asOwner((owner) =>
       owner
@@ -89,7 +86,6 @@ export async function promptSet(db: Database, projectId: string): Promise<string
     .insertInto('prompt_sets')
     .values({
       id,
-      // The owning project's workspace, read inside this insert.
       workspace_id: (eb) =>
         eb.selectFrom('projects').select('workspace_id').where('projects.id', '=', projectId),
       project_id: projectId,
@@ -153,7 +149,6 @@ export async function prompt(
   return id;
 }
 
-/** A persisted generation run. */
 export async function generationRun(
   db: Database,
   scope: { workspaceId: string; projectId: string; setId: string },
@@ -218,18 +213,12 @@ export async function candidate(
   return id;
 }
 
-/** One draft request as the model received it: the system prompt, brief and the batch's slots. */
 export type DraftRequest = {
   system: string;
   slots: (Record<string, unknown> & { slot_id: string })[];
   reference: Record<string, unknown>;
 };
 
-/**
- * Generation dependencies whose gateway answers every planned slot of a batch
- * with a distinct question, or fails the calls `fail` names (1-based) with a
- * non-retried provider error. `onRequest` sees each answered request.
- */
 export function echoDependencies({
   fail = [],
   onCall,
@@ -240,9 +229,7 @@ export function echoDependencies({
   fail?: number[];
   onCall?: (call: number) => void;
   onRequest?: (request: DraftRequest) => void;
-  /** The answer to a topic proposal request, which carries offerings instead of slots. */
   topics?: { name: string; offerings: string[] }[];
-  /** The answer to a business-map suggestion request, which also carries the knowledge base. */
   maps?: { offering: string; attributes: string[]; situations: string[]; audiences: string[] }[];
 } = {}) {
   let calls = 0;
@@ -267,8 +254,6 @@ export function echoDependencies({
       slots: user.slots,
       reference: user.reference_evidence,
     });
-    // Two words unique to the slot, so no two answers are near duplicates; a
-    // branded batch names the brand it was given.
     const brand = user.reference_evidence.brand_name;
     const named = typeof brand === 'string' && brand ? brand + ' ' : '';
     const prompts = user.slots.map((slot) => ({
@@ -279,7 +264,6 @@ export function echoDependencies({
     }));
     return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
   };
-  // A throw becomes a rejection, as a real fetch would.
   const fetch = vi.fn<typeof globalThis.fetch>((_url, init) =>
     Promise.resolve().then(() => answer(init)),
   );

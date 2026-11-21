@@ -212,7 +212,6 @@ describe('audit schedule management', () => {
     expect(
       (await request(a.userId, 'PATCH', a.projectId, `/${row.id}`, { cadence: null })).status,
     ).toBe(422);
-    // Probe schedules are written only by their own owner, which shows their cost.
     expect(
       (
         await request(a.userId, 'POST', a.projectId, '', {
@@ -225,7 +224,6 @@ describe('audit schedule management', () => {
       (await request(a.userId, 'PATCH', a.projectId, `/${row.id}`, { audit_scope: 'probe' }))
         .status,
     ).toBe(422);
-    // An existing probe schedule here only pauses or resumes.
     await db
       .updateTable('audit_schedules')
       .set({ audit_scope: 'probe' })

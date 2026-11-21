@@ -236,7 +236,6 @@ it("reads a crawl's link metrics at the formula the crawl wrote, not the current
     .execute();
   await fixtures.task(seed);
   expect(await fixtures.worker(seed, { owner: 'pinned', settings }).runOnce()).toBe(1);
-  // A later release changes the formula; this crawl's rows stay what it measured.
   await db
     .updateTable('site_page_link_metrics')
     .set({ formula_version: 'historical' })
@@ -401,7 +400,6 @@ it('leaves a task whose row a cancel still holds to lease recovery instead of fa
   const claimed = await fixtures.claim(worker, seed, 'link_metrics', id);
   const held = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  // A second session holds the claimed task's row, as a crawl cancel did, until the run ends.
   const holder = db.transaction().execute(async (trx) => {
     await trx
       .selectFrom('site_crawl_tasks')

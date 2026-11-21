@@ -1,9 +1,3 @@
-/**
- * The trend read's events: prompt-panel and model changes between runs, and
- * Actions that went live, each on the first run where it applies.
- *
- * Runs against the real PostgreSQL schema, with workspace isolation.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -22,7 +16,6 @@ afterAll(async () => {
 
 const metrics = { total_completed: 1, brand_mention_count: 1, brand_mention_rate: 1 };
 
-/** A run freezing `promptIds` as its panel and `model` as ChatGPT's route. */
 async function run(
   tenant: Tenant,
   input: {
@@ -73,7 +66,6 @@ async function run(
   return auditId;
 }
 
-/** An Action declared live at `at`, titled `title`. */
 async function wentLive(tenant: Tenant, title: string, at: string) {
   const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
   const snapshot = snapshotRow(scope);
@@ -121,7 +113,6 @@ describe('GET /visibility/trends events', () => {
     const second = [kept!, also!, newA!, newB!];
     await wentLive(tenant, 'before the trend', '2026-03-01T00:00:00Z');
     await run(tenant, { at: '2026-03-02T09:00:00Z', panel: 'p1', promptIds: first, model: 'm-a' });
-    // A run of selected prompts is not a panel change, and never a baseline for one.
     await run(tenant, {
       at: '2026-03-09T09:00:00Z',
       panel: 'p-kept',

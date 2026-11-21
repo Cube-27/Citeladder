@@ -79,7 +79,6 @@ export function revisionView(revision: {
     created_at: iso(revision.created_at),
   });
 }
-/** A reply's stored steps; a malformed one fails the read. */
 function messageSteps(steps: unknown) {
   return z.array(agentStepSchema).parse(steps);
 }
@@ -92,7 +91,6 @@ function pendingStepStatus(outcome: string, live: boolean, latest: boolean) {
   if (live) return modelStepStatus(outcome, latest);
   return outcome === 'dispatched' ? 'interrupted' : modelStepStatus(outcome, false);
 }
-/** Each model call, followed by the reads its response made, in the order they finished. */
 export async function progress(db: Database, run: Run) {
   if (run.attempt_count < 1) return [];
   const [models, tools] = await Promise.all([
@@ -156,11 +154,6 @@ async function chatIn(db: Database, workspace: Pick<Scope, 'workspaceId'>, chatI
 const ACTION_REF =
   /^citeladder:\/\/action\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u;
 
-/**
- * The Actions a chat's messages mention, cite or propose, as they read now, in
- * one read scoped to the chat's project: a reply's chips and cards show the
- * current status.
- */
 async function referencedActions(
   db: Database,
   scope: Pick<Scope, 'workspaceId' | 'projectId'>,
@@ -215,7 +208,6 @@ export async function readChat(
       .executeTakeFirst(),
     chatDocuments(db, chat),
   ]);
-  // Each document's latest generating reply, where the thread places it.
   const generated = documents.length
     ? await db
         .selectFrom('agent_output_revisions')
@@ -316,7 +308,6 @@ export async function readChat(
   });
 }
 const cursorSchema = z.object({ at: z.iso.datetime({ offset: true }), id: z.uuid() });
-/** One document's revisions, newest first; a document outside the chat has none. */
 export async function listRevisions(
   db: Database,
   workspace: Pick<Scope, 'workspaceId'>,
@@ -343,7 +334,6 @@ export async function listRevisions(
     items: revisions.map((revision) => revisionView(revision)),
   });
 }
-/** The project's open chats; the caller has authorized the project (`authorize: 'active-project'`). */
 export async function listChats(
   db: Database,
   scope: Pick<Scope, 'workspaceId' | 'projectId'>,
@@ -365,7 +355,6 @@ export async function listChats(
     )
     .selectAll('chat')
     .select('action.target_label')
-    // The kind of the document the chat most recently changed.
     .select((eb) =>
       eb
         .selectFrom('agent_outputs as output')

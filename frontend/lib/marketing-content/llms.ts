@@ -5,17 +5,10 @@ import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
-/** MCP and its OAuth metadata are served on the API host, not the website. */
 const MCP_ORIGIN = new URL(MCP_SERVER_URL).origin;
 
 export type LlmsPage = { title: string; url: string; kind: 'page' | 'policy' };
 
-/**
- * Plain-text facts for answer engines at `/llms.txt`. Keep this aligned with
- * public pages. Do not add unpublished claims, customer results, or causal
- * ranking language. `pages` is the site's public route list, so every page in
- * the sitemap is listed here too.
- */
 export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
   const link = (page: LlmsPage) => `- [${page.title}](${page.url})`;
   return [

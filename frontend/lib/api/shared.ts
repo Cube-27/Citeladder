@@ -1,7 +1,3 @@
-/**
- * Small query-string helpers shared by the per-domain API modules (F2).
- * These own no transport — they only build relative paths.
- */
 type QueryParamValue = string | number | boolean | readonly string[] | null | undefined;
 
 export function definedQuery<T extends Record<string, QueryParamValue>>(params?: T) {

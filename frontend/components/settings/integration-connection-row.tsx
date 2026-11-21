@@ -39,7 +39,6 @@ type ConnectionMutation = {
 };
 type SyncRun = Awaited<ReturnType<typeof integrationsApi.getSync>>;
 
-/** A mutation's state with the one action the row runs through it. */
 const connectionAction = (
   mutation: Omit<ConnectionMutation, 'mutate'>,
   run: () => void,
@@ -56,7 +55,6 @@ function waitingLabel(status: SyncRun['status']): string {
   return 'waiting for a worker';
 }
 
-/** Test failures in words; the provider code stays out of the UI. */
 const TEST_FAILURE: Record<string, string> = {
   grant_auth_failed: 'The provider refused this grant. Reconnect to renew consent.',
   token_refresh_failed: 'The provider did not renew access. Try again, or reconnect.',
@@ -64,7 +62,6 @@ const TEST_FAILURE: Record<string, string> = {
   rate_limited: 'The provider is rate limiting requests. Try again in a few minutes.',
 };
 
-/** Sync now, disabled with its reason (tooltip and description) until a property is chosen. */
 function SyncButton({
   label,
   disabled,
@@ -92,7 +89,6 @@ function SyncButton({
       Sync now
     </Button>
   );
-  // One tree either way, so the button keeps its node when a property arrives.
   return (
     <>
       <span id={reasonId} hidden>
@@ -106,11 +102,6 @@ function SyncButton({
   );
 }
 
-/**
- * Sync now on the row; Change, Test and Remove share its More menu (owner,
- * 2026-11-19), so the property beside them has the room to show. Select
- * stays a button until a property is chosen: it is the row's next step.
- */
 function ConnectionActions({
   connection,
   label,
@@ -132,8 +123,6 @@ function ConnectionActions({
   onSync: () => void;
   onRemove: () => void;
 }>) {
-  // Testing and removing touch the credential; syncing is a run. Each is
-  // offered only to a role that may do it.
   const canManage = useWorkspaceCapability('manage_credentials');
   const canRun = useWorkspaceCapability('run');
   const picker = usePropertyPicker(connection);
@@ -188,7 +177,6 @@ function ConnectionActions({
   );
 }
 
-/** A status mark and the sentence after it, cut to one line with the whole in a tooltip. */
 function MarkLine({ mark, text }: Readonly<{ mark: ReactNode; text: ReactNode }>) {
   return (
     <>
@@ -198,7 +186,6 @@ function MarkLine({ mark, text }: Readonly<{ mark: ReactNode; text: ReactNode }>
   );
 }
 
-/** The latest sync from this card: waiting, importing, building reports, then its result. */
 function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: boolean }>) {
   const rows = `${formatCount(run.row_count)} rows`;
   const window = `window ${formatShortDate(run.window_start)}–${formatShortDate(run.window_end)}`;
@@ -238,12 +225,6 @@ function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: bool
   return <MarkLine mark={mark} text={result} />;
 }
 
-/**
- * The row's one status value. Every outcome — a failed action, a test
- * result, the sync this card started — replaces it in place rather than
- * adding a notice under the row, so nothing below moves (the newest action
- * wins: starting a sync clears the test result).
- */
 function ConnectionStatus({
   working,
   actionError,
@@ -252,7 +233,6 @@ function ConnectionStatus({
   runActive,
   grantConnected,
 }: Readonly<{
-  /** A test or removal in flight, run from the More menu. */
   working: string | null;
   actionError: unknown;
   testState: { ok: boolean; message: string } | null;
@@ -330,7 +310,6 @@ function ConnectionRowView({
   let working: string | null = null;
   if (testMutation.isPending) working = 'Testing…';
   else if (removeMutation.isPending) working = 'Removing…';
-  // Until a property is chosen the row's only state is that it has none.
   const status =
     hasProperty || working || actionError || testState || activeRun ? (
       <ConnectionStatus
@@ -378,11 +357,6 @@ const CaptionDot = () => (
   </span>
 );
 
-/**
- * When the source last synced and how much history it holds, each its own
- * cut piece of the caption. The connection is the workspace's, so its sync
- * is too; the card's foot names the zone.
- */
 function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }>) {
   const timeZone = useDisplayTimeZone();
   const lastSynced = connection.last_synced_at;
@@ -406,7 +380,6 @@ function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }
   );
 }
 
-/** Polling and mutation owner for one connection on an OAuth grant. */
 export function ConnectionRow({
   connection,
   grant,
@@ -420,10 +393,8 @@ export function ConnectionRow({
     activeProject?.id ?? null,
   );
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null);
-  // The test descriptor owns no callbacks; this row's status slot is local state.
   const testMutation = useMutation({
     ...integrationsMutations.test(connection.workspace_id, connection.id),
-    // The newest action owns the status slot: an older failure must not mask this result.
     onMutate: () => {
       syncMutation.reset();
       removeMutation.reset();
@@ -442,12 +413,10 @@ export function ConnectionRow({
     },
     onError: (error) => setTestState({ ok: false, message: humanizeApiError(error).message }),
   });
-  // The terminal sync poll refreshes every imported read; enqueueing alone persists no projection.
   // react-doctor-disable-next-line
   const syncMutation = useMutation(
     integrationsMutations.sync(connection.workspace_id, connection.id),
   );
-  // Name the project: a connection serving several projects needs it.
   const startSync = () =>
     syncMutation.mutate(activeProject ? { project_id: activeProject.id } : {}, {
       onSuccess: (enqueued) => {
@@ -462,16 +431,13 @@ export function ConnectionRow({
   const activeRun = syncRunQuery.data ?? null;
   const runActive = activeRun !== null && SYNC_RUN_STATES[activeRun.status].active;
   const runInFlight = activeRun !== null && isSyncInFlight(activeRun);
-  // Pages read the projections, so they refresh once the reports are rebuilt.
   const runTerminal = activeRun !== null && !runInFlight;
 
   useEffect(() => {
     if (runTerminal) void refreshImportedReads(client);
   }, [client, runTerminal]);
 
-  // Stops importing this property into the project; imported data stays.
   const removeMutation = useMutation(integrationsMutations.deleteMapping(connection.workspace_id));
-  // Remove renders only with a mapping; a stale click after it is gone is a no-op.
   const removeMapping = () => {
     if (mapping) removeMutation.mutate(mapping.id);
   };
@@ -481,7 +447,6 @@ export function ConnectionRow({
     <ConnectionRowView
       connection={connection}
       grant={grant}
-      // The active mapping, never the connection's account_ref (see `useActiveMapping`).
       hasProperty={Boolean(mapping?.property_ref)}
       testMutation={connectionAction(testMutation, () => testMutation.mutate())}
       syncMutation={connectionAction(syncMutation, startSync)}

@@ -40,12 +40,6 @@ import {
 const invalid = (message: string) => new ApiError(400, message);
 const probes = policy.probes;
 
-/**
- * The requested engines that run in this market. An engine with no location
- * control (the Gemini API) cannot measure an additional market and is not
- * applicable there, never failed; a search surface without DataForSEO support
- * for the market's location and language refuses the run before any spend.
- */
 export function marketEngines(
   requested: readonly Engine[],
   market: Market,
@@ -53,8 +47,6 @@ export function marketEngines(
 ) {
   const engines: Engine[] = [],
     notApplicable: Engine[] = [];
-  // A market without a language searches in the default; one with a language
-  // searches in its primary subtag (pt-BR is pt) or is refused, never swapped.
   const language = market.language_code.trim()
     ? searchLanguageOf(market.language_code)
     : searchPolicy.constants.default_language_code;
@@ -87,7 +79,6 @@ export function marketEngines(
   return { engines, notApplicable };
 }
 
-/** Whether `engine` measures `market`: refused or not applicable there means it does not. */
 export function canMeasure(engine: Engine, market: Market) {
   try {
     const context = searchContext(market.country_code, market.language_code);
@@ -103,11 +94,6 @@ export type FrozenRoute = {
   connection_id: string | null;
   base_url: string;
 };
-/**
- * The prompts a launch measures, shared with the estimate: `selected` are the
- * active, enabled prompts in the project; `measured` drops those beyond the
- * plan's prompt slots. The caller requires a prompt set or prompt IDs.
- */
 export async function launchPrompts(
   db: Database,
   workspaceId: string,
@@ -118,7 +104,6 @@ export async function launchPrompts(
     .selectFrom('prompts as p')
     .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
     .innerJoin('projects as project', 'project.id', 's.project_id')
-    // The topic's name as filed now: the run freezes it with the prompt.
     .leftJoin('topics as topic', (join) =>
       join.onRef('topic.id', '=', 'p.topic_id').onRef('topic.workspace_id', '=', 'p.workspace_id'),
     )
@@ -134,7 +119,6 @@ export async function launchPrompts(
   else if (input.prompt_set_id) query = query.where('p.prompt_set_id', '=', input.prompt_set_id);
   else return { selected: [], measured: [] };
   const selected = await query.execute();
-  // Prompts beyond the plan's slots (after a downgrade) are kept but never measured.
   const overLimit = await overLimitPromptIds(db, new WorkspaceEntitlements(db, workspaceId));
   return { selected, measured: selected.filter((prompt) => !overLimit.has(prompt.id)) };
 }
@@ -162,7 +146,6 @@ async function loadPrompts(
     throw invalid('Selected prompts exceed the configured length limit');
   return prompts;
 }
-/** A selection's panel differs from the set's without the set changing. */
 const promptSelection = (input: Pick<AuditInput, 'prompt_ids'>): 'selected' | 'set' =>
   input.prompt_ids.length ? 'selected' : 'set';
 function assertPromptCount(
@@ -220,7 +203,6 @@ function usableCandidate(
     return false;
   }
 }
-/** The workspace's own active routes and their connections, default first. */
 export function byokRoutes(db: Database, workspaceId: string) {
   return db
     .selectFrom('provider_routes as r')
@@ -248,7 +230,6 @@ export function byokRoutes(db: Database, workspaceId: string) {
     .orderBy('r.id')
     .execute();
 }
-/** The first of `candidates` that can run `engine` now: keyed, tested, unpaused, approved. */
 export function usableRoute<Candidate extends RouteCandidate>(
   candidates: readonly Candidate[],
   engine: Engine,
@@ -296,7 +277,6 @@ async function freezeRoutes({
 }: {
   db: Database;
   workspaceId: string;
-  /** A managed workspace measures on platform keys for every engine (B32). */
   funded: boolean;
   engines: Engine[];
   prompts: { text: string }[];
@@ -305,7 +285,6 @@ async function freezeRoutes({
   providerSettings: ProviderSettings;
   at: Date;
 }) {
-  // A managed workspace's own routes are never used, so they are not read.
   const candidates = funded ? [] : await byokRoutes(db, workspaceId);
   const routes: FrozenRoute[] = [];
   for (const engine of engines) {
@@ -415,11 +394,6 @@ function parseSeed(randomSeed: string | null | undefined) {
     throw invalid('random_seed must be an integer');
   }
 }
-/**
- * What an audit asks, on which requested engines, how often. A probe asks its
- * own frozen questions on search-capable engines a fixed number of times,
- * skipping an engine that cannot measure this market (the quote skips it too).
- */
 async function panelOf(
   db: Database,
   {
@@ -456,9 +430,7 @@ async function panelOf(
 type PrepareOptions = {
   search?: ReturnType<typeof searchSettings>;
   at?: Date;
-  /** The market to measure from; the project's default when omitted. */
   selected?: Market | null;
-  /** A managed workspace's audit, run on platform keys. */
   funded?: boolean;
 };
 export async function prepareAudit(
@@ -478,7 +450,6 @@ export async function prepareAudit(
   trigger = trigger.trim().toLowerCase();
   if (!auditPolicy.constants.audit_triggers.includes(trigger))
     throw invalid(`Unsupported trigger: ${trigger}`);
-  // Commerce measurement runs AI shelf extraction, a Commerce capability.
   if (input.audit_scope === 'commerce') await requireFlag(db, workspaceId, 'commerce');
   const stored = await db
     .selectFrom('projects')
@@ -492,7 +463,6 @@ export async function prepareAudit(
     country_code: stored.country_code,
     language_code: stored.language_code,
   };
-  // The run measures from its market: every frozen country, language and search context below.
   const project = {
     ...stored,
     country_code: market.country_code,
@@ -565,7 +535,6 @@ export async function prepareAudit(
     unintended_domains: unintended.map((row) => row.domain),
     competitors,
     products_services: profile?.products_services ?? [],
-    // Analysis matches names under this frozen policy, never the live one.
     entity_matching: frozenEntityMatching(
       projectEntityMatching(profile?.business_context, strings(profile?.products_services), [
         { name: brandName, aliases: aliases.map((row) => row.alias) },
@@ -591,13 +560,11 @@ export async function prepareAudit(
     anthropic_max_uses: providerSettings.anthropicMaxUses,
     openai_max_tool_calls: providerSettings.openaiMaxToolCalls,
     slot_order_version: 'mt19937-v1',
-    // Perception results carry the versions and model in force at admission (brand audits only).
     perception: admittedPerceptionVersions({
       auditScope: input.audit_scope,
       factCheck,
       model: gatewaySettings().model,
     }),
-    // Fact-checking pilot: the confirmed fact revisions this audit checks against.
     fact_check: factCheck,
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
@@ -634,7 +601,6 @@ export async function prepareAudit(
     searchTimeoutSeconds: search.timeoutSeconds,
   };
 }
-/** Integer-seeded slot order, including unsigned 64-bit seeds. */
 export function auditSlots(
   prompts: number,
   engines: readonly Engine[],

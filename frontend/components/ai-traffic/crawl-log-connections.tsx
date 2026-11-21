@@ -52,7 +52,6 @@ export function CrawlLogConnections({
 }: Readonly<{
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Overview already offers Connect on its Crawlers card, so it hides an empty section. */
   headerWhenEmpty?: boolean;
 }> = {}) {
   const { activeProject } = useProjectContext(),
@@ -177,10 +176,6 @@ function Connections({
   );
 }
 
-/**
- * A card like every other connection on the page: title left, its one action
- * right. With no source yet it is the compact empty state, its action the one way in.
- */
 function ConnectionsHead({ empty, connect }: Readonly<{ empty: boolean; connect: ReactNode }>) {
   if (empty && connect)
     return (
@@ -198,7 +193,6 @@ function ConnectionsHead({ empty, connect }: Readonly<{ empty: boolean; connect:
   );
 }
 
-/** Revoking stops ingestion for a host, so it is confirmed by name. */
 function revokeRequest(
   source: z.infer<typeof crawlSourceSchema> | null,
   onRevoke: (id: string) => void,
@@ -213,11 +207,6 @@ function revokeRequest(
   };
 }
 
-/**
- * Setup opens only on a read that says collection is available. An unavailable
- * workspace gets the explanation, not a setup it cannot complete; a pending or
- * failed read keeps the button, and the dialog explains the read.
- */
 function setupState(sources: ReturnType<typeof useCrawlConnections>['sources']) {
   const availability = sources.data?.availability;
   return {
@@ -253,7 +242,6 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
     </>
   );
 }
-/** Why a source is stalled; a failed subscription check also says which check. */
 function StallDetail({ source }: Readonly<{ source: z.infer<typeof crawlSourceSchema> }>) {
   if (!source.stall_reason) return null;
   const failure = source.pull?.verification_failure;
@@ -278,7 +266,6 @@ function SourceDiagnostics({
   canManage: boolean;
   onRotate: (source: z.infer<typeof crawlSourceSchema>) => void;
   onRevoke: (source: z.infer<typeof crawlSourceSchema>) => void;
-  /** Reopen a Google Cloud source's setup commands and subscription check. */
   onSetup: (id: string) => void;
 }>) {
   return (
@@ -363,17 +350,12 @@ type RotateTokenProps = Readonly<{
   workspaceId: string;
   onClose: () => void;
 }>;
-/** Each rotation starts fresh: a new source remounts the dialog and its mutation. */
 function RotateTokenDialog({
   source,
   ...props
 }: Omit<RotateTokenProps, 'source'> & Readonly<{ source: RotateTokenProps['source'] | null }>) {
   return source ? <RotateToken key={source.id} source={source} {...props} /> : null;
 }
-/**
- * Rotation has its own dialog and mutation: it shows only the rotation, its
- * failure with a retry, and the new token, never the new-source form.
- */
 function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenProps) {
   const rotate = useMutation(aiTrafficMutations.source({ workspaceId, projectId }));
   const run = () => rotate.mutate({ kind: 'rotate', id: source.id });

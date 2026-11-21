@@ -29,13 +29,6 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
   { value: 'archived', label: 'Archived' },
 ];
 
-/**
- * The prompt library's control row (Active / Archived are the page's tabs): the
- * search, the Topic and Branded chips, then Filters: Intent, Buyer stage,
- * Persona (when the library has any), Brands and Sources (once a run has
- * measured the prompts) and Enabled. Presentational; state lives in the page.
- */
-/** The two single choices share a vocabulary but not their wording. */
 const ENABLED_FILTER_LABEL: Record<EnabledFilter, string> = {
   all: 'All prompts',
   enabled: 'Enabled only',
@@ -79,14 +72,12 @@ function singleChoice({
 }
 
 type FilterChoice = Readonly<{ value: string; label: string }>;
-/** Sets some of the library's filters on top of the current ones. */
 type Patch = (part: Partial<PromptFilters>) => void;
 type MeasuredChoices = Readonly<{
   brands: readonly FilterChoice[];
   sources: readonly FilterChoice[];
 }>;
 
-/** Brands and Sources: what the prompts' latest answers named and cited. */
 function measuredFilters({
   choices: { brands, sources },
   filters,
@@ -120,7 +111,6 @@ function measuredFilters({
   ];
 }
 
-/** Active / Archived, with the number of prompts in each: the library page's tabs. */
 export function PromptStatusTabs({
   counts,
 }: Readonly<{ counts: Readonly<Record<PromptStatus, number>> }>) {
@@ -148,13 +138,9 @@ export function promptFilterControls({
   search: string;
   onSearchChange: (value: string) => void;
   filters: PromptFilters;
-  /** Takes an update of the current filters, so Clear's resets in one tick all land. */
   onFiltersChange: (update: (current: PromptFilters) => PromptFilters) => void;
-  /** The personas the library uses; the menu lists them when there are any. */
   personas?: readonly string[];
-  /** The Brands and Sources choices, once a run has measured the prompts. */
   measured?: MeasuredChoices;
-  /** The Topic filter (`topicFilter`), the row's first chip. */
   topic?: FilterDefinition;
 }>): FilterBarProps {
   const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
@@ -217,23 +203,16 @@ export function promptFilterControls({
   };
 }
 
-/** The three ways to add prompts, one named action wherever it appears. */
 export type AddPromptsHandlers = Readonly<{
   onImport: () => void;
   onAdd: () => void;
   onGenerate: () => void;
 }>;
 
-/**
- * The library's own actions, for the masthead: "Add prompts" and Launch run.
- * An empty library carries "Add prompts" in its empty state instead
- * (`inEmptyState`), so the action never shows twice in one view.
- */
 export function PromptActions({
   add,
   inEmptyState = false,
 }: Readonly<{ add: AddPromptsHandlers; inEmptyState?: boolean }>) {
-  // Each control is offered only to a role that may use it.
   const canWrite = useWorkspaceCapability('write');
   return (
     <>
@@ -245,7 +224,6 @@ export function PromptActions({
   );
 }
 
-/** "Add prompts": defined once (label, icon, look) for the masthead and the empty state. */
 export function AddPromptsMenu({ onImport, onAdd, onGenerate }: AddPromptsHandlers) {
   return (
     <Menu>

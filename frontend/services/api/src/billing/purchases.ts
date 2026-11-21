@@ -32,7 +32,6 @@ import {
 } from './razorpay.ts';
 
 const evidence = subscriptionCheckoutRequestSchema.shape;
-/** The state code and GSTIN must also be valid stored-identity values. */
 export const baseRequest = subscriptionCheckoutRequestSchema.extend({
   billing_state_code: evidence.billing_state_code.refine(
     (value) => !value || identitySchema.shape.state_code.safeParse(value).success,
@@ -112,7 +111,6 @@ function matches(pending: Pending, request: ReturnType<typeof requestIdentity>) 
     pending.activation_kind === request.kind &&
     pending.catalog_key === request.key &&
     pending.quantity === request.quantity &&
-    // A pack follows the plan's mode; only a base purchase chooses one.
     (request.kind !== 'base' || pending.credential_mode === request.mode) &&
     pending.country_code === request.country &&
     digest(snapshot.customer) === digest(request.identity)
@@ -208,7 +206,6 @@ export async function dispatch(db: Database, pending: Pending, provider: Billing
     .executeTakeFirstOrThrow();
 }
 
-/** Refuses a purchase the account's current subscription or open intents rule out. */
 async function purchasable(db: Database, accountId: string, request: Purchase) {
   const current = await db
     .selectFrom('billing_subscriptions')
@@ -223,7 +220,6 @@ async function purchasable(db: Database, accountId: string, request: Purchase) {
     .where('status', '=', 'pending')
     .execute();
   if (request.kind === 'base') {
-    // Any current row refuses, including a halted one awaiting its cancellation.
     if (current) refuse('subscription_already_active');
     if (pending.some((row) => row.activation_kind === 'base')) refuse('subscription_pending');
   } else {

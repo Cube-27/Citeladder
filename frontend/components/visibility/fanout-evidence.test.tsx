@@ -46,7 +46,6 @@ const evidence: VisibilityEvidenceResponse = {
   ],
 };
 
-/** Fifteen distinct searches: one more page than the table's ten rows. */
 const manySearches: VisibilityEvidenceResponse = {
   truncated: false,
   items: evidence.items.map((item) => ({
@@ -72,7 +71,6 @@ function Panel({
     initialData: data,
   });
   const project = useMemo(() => makeProject({ id: projectId }), [projectId]);
-  // The project route's gate hands the panel its project; a switch is a new one.
   return (
     <ActiveProjectScopeProvider project={project}>
       <FanoutEvidence
@@ -87,7 +85,6 @@ function Panel({
   );
 }
 
-/** The grouping as the page lists it: in Filters, outside the table. */
 function PageGroupFilter() {
   return <FiltersMenu filters={[useFanoutGroupFilter()]} />;
 }
@@ -118,8 +115,6 @@ function EmptyPanel({ onClearFilters }: Readonly<{ onClearFilters?: () => void }
 afterEach(() => vi.restoreAllMocks());
 
 describe('Fanout empty states', () => {
-  // No searches yet sends the reader to run something; filters that hide
-  // every search offer to clear them instead, since the data may exist.
   it('tells an empty read from one the filters emptied', async () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
     const onClear = vi.fn();
@@ -170,7 +165,6 @@ describe('Fanout query share, change and brands', () => {
     renderWithProviders(<Panel projectId={A} />);
     const best = (await screen.findByText('75.0%')).closest('tr')!;
     expect(within(best).getByText('best crm')).toBeVisible();
-    // Measured before brands were matched: not counted, never "no tracked brand".
     expect(within(best).getByText('Not counted')).toBeVisible();
 
     await user.click(screen.getByRole('radio', { name: 'Rising' }));
@@ -229,7 +223,6 @@ describe('Fanout grouping', () => {
 
   it('keeps a cut surface list on one line, its whole list in a tooltip and a tab stop', async () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
-    // jsdom lays nothing out: report every value as wider than its line, the frame as fitting.
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
       this: HTMLElement,
     ) {

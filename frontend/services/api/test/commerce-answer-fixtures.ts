@@ -1,8 +1,3 @@
-/**
- * A Commerce answer recorded through the real audit, matching and persistence
- * path: one audit of the tenant's prompt whose single ChatGPT answer is the
- * given text, claimed, matched against the catalog and persisted as a success.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { AuditRuntime } from '../src/audits/config.ts';
@@ -18,7 +13,6 @@ type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 
 export type RecordedAnswer = { auditId: string; taskId: string };
 
-/** What an answer cited and searched for, as the provider returned it. */
 export type AnswerEvidence = { citations: { url: string; title: string }[]; queries: string[] };
 const NO_EVIDENCE: AnswerEvidence = { citations: [], queries: [] };
 
@@ -93,11 +87,6 @@ export async function recordAnswer(
   return { auditId: auditId!, taskId: task.id };
 }
 
-/**
- * A competitor candidate of the catalog's Acme Road Runner, at its own
- * rival.example page; approved from a provider unless `state` and `source` say
- * otherwise.
- */
 export async function addCompetitor(
   db: Database,
   t: Tenant,
@@ -129,7 +118,6 @@ export async function addCompetitor(
     .execute();
 }
 
-/** A ChatGPT carousel envelope holding `items`, as the scraper returns it. */
 export const carousel = (items: Record<string, unknown>[]) => ({
   status_code: 20000,
   tasks: [
@@ -140,12 +128,10 @@ export const carousel = (items: Record<string, unknown>[]) => ({
     },
   ],
 });
-/** One organic carousel card. */
 export const carouselCard = (fields: Record<string, unknown>) => ({
   type: 'chat_gpt_products_element',
   ...fields,
 });
-/** A ChatGPT answer whose stored provider response carries `envelope`. */
 export const carouselAnswer = (task: AuditTask, envelope: unknown): ExecutionResult => ({
   logical_engine: 'chatgpt',
   transport_provider: 'openai',

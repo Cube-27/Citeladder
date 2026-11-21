@@ -1,8 +1,3 @@
-/**
- * Abuse budgets, PostgreSQL-enforced except the event-stream limits
- * (`sse_streams_per_user`, which each API instance counts in memory, and
- * `sse_access_recheck_seconds`); all environment overrides must be positive integers.
- */
 import authRuntime from './auth-runtime.json' with { type: 'json' };
 import publicApi from './public-api.json' with { type: 'json' };
 import { integrations } from './connected-data.ts';
@@ -14,9 +9,7 @@ const defaults = {
   login_email_limit: 10,
   login_client_limit: 30,
   login_window_seconds: 300,
-  // Sign-in failures for one address or one network before sign-in is challenged.
   login_challenge_failures: 5,
-  // Sign-in failures across every address past which every sign-in is challenged.
   login_failure_global_limit: 200,
   register_client_limit: 20,
   register_window_seconds: 86400,
@@ -26,7 +19,6 @@ const defaults = {
   mcp_register_client_window_seconds: 600,
   mcp_register_global_limit: 300,
   mcp_register_global_window_seconds: 3600,
-  // Authorizations per network for clients no person has approved yet, per authorization window.
   mcp_authorize_unapproved_network_limit: 10,
   agent_call_limit: 30,
   agent_call_window_seconds: 86400,
@@ -55,7 +47,6 @@ const defaults = {
   prompt_judge_calls_per_workspace_daily: 500,
   active_job_retry_after_seconds: 60,
   sse_streams_per_user: 3,
-  // An open event stream re-checks its caller's membership this often.
   sse_access_recheck_seconds: 30,
   usage_window_cleanup_batch: 500,
   security_event_retention_days: 30,
@@ -72,12 +63,6 @@ export const abuse = Object.fromEntries(
   { env: string[]; type: string; default: number; minimum: number }
 >;
 
-/**
- * Who a budget counts against; the kind is part of the persisted window key.
- * `client` is always the visitor's network (`trustedClientNetwork`), `global`
- * one fixed subject shared by everyone, and `mcp_client` a registered MCP
- * OAuth client.
- */
 export type BudgetSubject =
   | 'api_key'
   | 'workspace'
@@ -99,7 +84,6 @@ export type BudgetSubject =
 export const clientNetworkPrefixes = { client: 64, registration: 56 } as const;
 export type ClientNetworkScope = keyof typeof clientNetworkPrefixes;
 
-/** A literal policy number, or an overridable setting resolved from the startup settings. */
 type BudgetValue = number | SettingSpec;
 
 type Budget = {
@@ -110,7 +94,6 @@ type Budget = {
   windowSeconds: BudgetValue;
 };
 
-/** The fixed subjects shared budgets count against. */
 export const GLOBAL_MAIL_SUBJECT = 'global-mail';
 export const GLOBAL_TRIAL_SUBJECT = 'global-trial';
 export const MCP_REGISTER_SUBJECT = 'mcp.register';
@@ -129,7 +112,6 @@ const daily = (operation: string, limit: SettingSpec): Budget => ({
   windowSeconds: DAY_SECONDS,
 });
 
-/** Every fixed-window usage budget, by name. */
 export const budgets = {
   agent_provider_call: {
     operation: 'agent.provider_call',
@@ -283,7 +265,6 @@ export const budgets = {
   crawl_log_batches: {
     operation: 'crawl_logs.batch',
     subject: 'crawl_source',
-    // The crawl-log owner keeps these numbers; read them when the budget resolves.
     get limit() {
       return crawlLogs.batches_per_source_per_hour;
     },
@@ -345,7 +326,6 @@ export const budgets = {
     limit: mcpLimits.authorization_global_limit,
     windowSeconds: mcpLimits.authorization_window_seconds,
   },
-  // A client no person has approved spends this per-network pool, never the global one.
   mcp_authorize_unapproved_network: {
     operation: 'mcp.authorize.unapproved_network',
     subject: 'client',

@@ -3,12 +3,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { makeProject } from '../test/fixtures/project';
 import { FIXTURE_PROJECT, FIXTURE_WORKSPACE_ID, stubAuthedShell } from './helpers/app-fixture';
 
-/**
- * Every frame across sign-in, sign-out, the chooser, setup and a workspace
- * switch (PRs 524, 551): a flow path never draws the shell, no frame between
- * documents is blank, and an in-app workspace switch keeps the one shell.
- */
-
 const TERMS = { terms_revision: '2026-09-24', privacy_notice_revision: '2026-09-24' };
 const USER = {
   id: '22222222-2222-4222-8222-222222222222',
@@ -18,8 +12,6 @@ const USER = {
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 };
-// The flow paths these transitions visit. Importing the route manifest would tie
-// this spec to every screen through its lazy imports.
 const FLOW_PATHS = new Set([
   '/login',
   '/register',
@@ -48,11 +40,9 @@ type Frame = {
 
 type Recorder = {
   frames: Frame[];
-  /** The first delivered sample matching `match`, now or once it arrives. */
   next: (match: (frame: Frame) => boolean) => Promise<Frame>;
 };
 
-/** One sample per painted frame that differs from the last, from every document. */
 async function recordFrames(page: Page): Promise<Recorder> {
   const frames: Frame[] = [];
   const waiting: Array<{ match: (frame: Frame) => boolean; found: (frame: Frame) => void }> = [];
@@ -113,7 +103,6 @@ function expectFlowFramesPlain(frames: readonly Frame[]) {
   expect(frames.filter((frame) => frame.surfaces > 1)).toEqual([]);
 }
 
-/** The fixture shell behind a session that exists only after sign-in. */
 async function stubSignIn(
   page: Page,
   memberships: ReadonlyArray<{ id: string; name: string; role: string }>,
@@ -174,7 +163,6 @@ test('a single-workspace owner signs in to one shell and signs out to a plain si
   await expect(page).toHaveURL(/\/projects\?.*project=/u);
   await expect(accountMenu(page)).toBeVisible();
   const app = (await next((f) => f.path === '/projects' && f.shell !== null)).doc;
-  // The new document draws the shell once: no placeholder shell before it.
   expect(new Set(frames.filter((f) => f.doc === app && f.shell).map((f) => f.shell)).size).toBe(1);
 
   await accountMenu(page).click();
@@ -206,7 +194,6 @@ test('the chooser opens on its plain frame and a workspace switch keeps the shel
   await expect(page).toHaveURL(new RegExp(`project=${BETA_PROJECT.id}`, 'u'));
   await expect(page.getByRole('button', { name: 'Beta', exact: true })).toBeVisible();
   await next((f) => f.search.includes(BETA_PROJECT.id));
-  // One document and one shell element throughout the switch: never torn down or swapped.
   const during = frames.slice(start);
   expect([...new Set(during.map((frame) => frame.doc))]).toEqual([entered.doc]);
   expect([...new Set(during.map((frame) => frame.shell))]).toEqual([entered.shell]);

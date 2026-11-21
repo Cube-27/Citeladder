@@ -76,7 +76,6 @@ async function brand(): Promise<string> {
   return row.id;
 }
 
-/** A profile as onboarding leaves it: products, a web-evidence field, other context. */
 async function profile(
   input: { products?: string[]; businessContext?: Record<string, unknown> } = {},
 ): Promise<void> {
@@ -129,7 +128,6 @@ async function readyLogo(owner: 'brands' | 'competitors', ownerId: string, image
   await db.updateTable(owner).set({ logo_asset_id: id }).where('id', '=', ownerId).execute();
 }
 
-/** A cited-domain suggestion, or a name-based one when `domain` is null. */
 async function suggestion(input: {
   name: string;
   domain: string | null;
@@ -224,7 +222,6 @@ describe('project themes', () => {
     const delivery = await add('Delivery');
     expect([price.status, delivery.status]).toEqual([201, 201]);
     expect([(await add('price')).status, (await add('other')).status]).toEqual([409, 422]);
-    // Inner spaces collapse, so a spacing variant is the same theme.
     const spaced = await add('Customer   support');
     expect([spaced.body.name, (await add('customer support')).status]).toEqual([
       'Customer support',
@@ -320,8 +317,6 @@ describe('brand profile', () => {
       body: { category: '  trail running shoes ', buyer_type: 'both' },
     });
     expect(edited.status).toBe(200);
-    // Unsupplied facets and other context stay as they were; terms inferred
-    // from the replaced category go, and the older `business_type` key gives way.
     expect(edited.body.business_context).toEqual({
       category: 'trail running shoes',
       buyer_type: 'both',
@@ -356,8 +351,6 @@ describe('brand profile', () => {
       },
     });
     expect(edited.status).toBe(200);
-    // Sent terms survive the category change that drops inferred ones; lists
-    // are trimmed and deduplicated, and an empty list clears the field.
     expect(edited.body.business_context).toEqual({
       category: 'trail running shoes',
       category_terms: ['trail shoes', 'hiking shoes'],
@@ -459,7 +452,6 @@ describe('business map', () => {
     expect(offering!.offering).toBe('running shoes');
     expect(offering!.attributes).toMatchObject([
       { value: 'waterproof', origin: 'model', review_state: 'suggested' },
-      // A new entry is a confirmed manual fact, whatever the request asked.
       { value: 'wide fit', origin: 'manual', review_state: 'confirmed', reviewed_by: t.userId },
     ]);
     expect(offering!.situations.map((entry) => entry.value)).toEqual(['wet trails']);
@@ -479,7 +471,6 @@ describe('business map', () => {
       },
     ]);
     expect(await call<BusinessMap>('/business-map')).toMatchObject({ body: confirmed.body });
-    // Only the map key changed; other persisted facts are untouched.
     expect((await call<BrandProfile>('/brand-profile')).body.business_context).toMatchObject({
       category: 'footwear',
     });
@@ -518,7 +509,6 @@ describe('competitor suggestions', () => {
       auditId,
     });
     await suggestion({ name: 'Done', domain: 'done.example', status: 'accepted', auditId });
-    // An earlier audit's pending row for the same domain is shown once, as the latest.
     const earlier = await fixtures.audit(t);
     await suggestion({
       name: 'Strong',
@@ -541,7 +531,6 @@ describe('competitor suggestions', () => {
     );
     expect(listed.body[1]).not.toHaveProperty('domain');
 
-    // Tracked by hand since: by an alias, and by a domain; another workspace's roster counts for nothing.
     await fixtures.competitor(t.projectId, { name: 'Ledgerly Inc', aliases: ['Ledgerly'] });
     await fixtures.competitor(t.projectId, { name: 'Weak Co', domains: ['weak.example'] });
     const outsider = await fixtures.tenant();
@@ -576,7 +565,6 @@ describe('competitor suggestions', () => {
     expect((await call<ObservedCompetitor[]>('/competitor-suggestions')).body).toEqual([
       expect.objectContaining({ id: other }),
     ]);
-    // Rejecting again keeps the decision; an accepted suggestion cannot be rejected.
     expect((await call(`/competitor-suggestions/${older}/reject`, { method: 'POST' })).status).toBe(
       200,
     );
@@ -717,7 +705,6 @@ describe('competitor suggestions', () => {
       .select('name')
       .where('project_id', '=', t.projectId)
       .execute();
-    // Whichever ran first decided both rows, and the other is refused.
     expect(new Set(rows.map((row) => row.status)).size).toBe(1);
     expect({ statuses, tracked }).toEqual(
       rows[0]!.status === 'accepted'

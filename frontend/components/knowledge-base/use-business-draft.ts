@@ -9,13 +9,6 @@ import {
   type BusinessDraft,
 } from '@/lib/prompts/builder-business';
 
-/**
- * The business facts' edit state, shared by the Prompt Builder's first step
- * and Agent › Context › Business map: the saved brand profile and business
- * map as a draft, and one save that writes each owner only what changed or
- * was accepted — the profile first, so the map never names an offering the
- * profile does not list yet.
- */
 export function useBusinessDraft({
   projectId,
   workspaceId,
@@ -38,7 +31,6 @@ export function useBusinessDraft({
   const save = {
     isPending: saveBusiness.isPending,
     error: saveBusiness.error,
-    /** Write what changed; the draft becomes the saved state once both owners land. */
     mutateAsync: () =>
       saveBusiness.mutateAsync(
         { profile: Object.keys(profileUpdate).length ? profileUpdate : null, map: mapUpdate },
@@ -59,7 +51,6 @@ export function useBusinessDraft({
     retrying: profileQuery.isFetching || mapQuery.isFetching,
     draft,
     setDraft: setEdited,
-    /** Drops every unsaved edit. */
     discard: () => setEdited(null),
     dirty,
     save,

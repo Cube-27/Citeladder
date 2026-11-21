@@ -1,4 +1,3 @@
-/** Live authorization for persisted MCP evidence. */
 import type { RecordKindName } from '@citeladder/contracts/record-kinds';
 import { sql, type RawBuilder } from 'kysely';
 import { policy } from '../config.ts';
@@ -98,10 +97,6 @@ export async function authorizeProject(
   if (!row) throw new McpInputError('Project was not found in this account');
   return row;
 }
-/**
- * The member's actor for a change in the project's workspace. The grant must
- * hold write; the live role, read here, decides what each command allows.
- */
 export async function writeActor(
   db: Database,
   principal: McpPrincipal,
@@ -138,10 +133,6 @@ export async function writeActor(
   };
 }
 
-/**
- * A project's topic or competitor by its name, which is unique ignoring case,
- * inside the write actor's workspace.
- */
 export async function requireNamed(
   db: Database,
   actor: Actor,
@@ -158,7 +149,6 @@ export async function requireNamed(
   return row;
 }
 
-/** The named prompt set, or the project's only one, inside the write actor's workspace. */
 export async function promptSetOf(
   db: Database,
   actor: Actor,
@@ -200,13 +190,11 @@ export function decodeCursor(value: string, size: number): string[] {
     throw new McpInputError('cursor is invalid');
   }
 }
-/** A record a later `fetch` can resolve; the Agent derives a turn's sources from these. */
 export const reference = (kind: RecordKindName, id: string) => ({
   kind,
   id,
   record_uri: `citeladder://${kind}/${id}`,
 });
-/** Evidence that does not exist yet: never zero, never repaired by reading it. */
 export const unavailable = (reason: string): Evidence => ({
   state: 'unavailable',
   reason,
@@ -307,8 +295,6 @@ async function searchActions({
   append,
 }: SearchContext) {
   const a = policy.opportunity.actions;
-  // Every status the Actions list shows, the work queue first: an Action is
-  // often looked up by name once it is being measured or done.
   let actions = db
     .selectFrom('actions')
     .select(['id', 'project_id', 'target_label', 'approach', 'effective_status'])
@@ -362,7 +348,6 @@ export async function searchBusinessContext(
   limit: number,
   origin: string,
 ) {
-  // A pinned caller searches its own project.
   if ('kind' in principal) projectId ??= principal.projectId;
   const normalized = query.trim();
   if (!normalized) throw new McpInputError('query must not be empty');

@@ -26,8 +26,6 @@ export function AiReferralsContent({
   tabs?: TabRowProps;
   notice?: React.ReactNode;
 }>) {
-  // The control band stays drawn while the data loads. Hiding it left the
-  // work jumping a row's height the moment data arrived.
   const data = <AiReferralsDataRegion range={range} query={query} />;
   const region = notice ? (
     <SectionStack>
@@ -72,13 +70,6 @@ function AiReferralsDataRegion({
   return <AiReferralsDashboard data={data} fetching={query.isFetching} />;
 }
 
-/**
- * Nothing is PROJECTED at this length yet — distinct from "measured zero",
- * which renders as a dashboard of zeroes. The preset is named rather than a
- * date window: the server resolves a preset against persisted evidence, so
- * there are no client-side bounds to quote, and quoting a window the client
- * invented is what made this surface wrong in the first place.
- */
 function AiReferralsNoSnapshot({ range }: Readonly<{ range: AiReferralsRange }>) {
   return (
     <Notice tone="info">

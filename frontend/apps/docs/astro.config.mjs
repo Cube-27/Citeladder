@@ -11,9 +11,6 @@ import { proseMarkdownBlocks } from '../../components/content/prose-blocks.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-// The docs are static, so the website and app links are baked at build time.
-// Local Compose and a local `.env` point them at local servers; the production
-// deploy sets neither, so it links the production hosts.
 const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 const environment = loadEnv(mode, frontendRoot, '');
 const origin = (name, production) =>
@@ -24,7 +21,6 @@ export default defineConfig({
   output: 'static',
   security: { csp: docsContentSecurityPolicy([cspScriptHash(SPECULATION_RULES_JSON)]) },
   integrations: [react()],
-  // Fences render as the system's CodeBlock and tables get Prose's scroll frame.
   markdown: { syntaxHighlight: false, processor: satteri({ hastPlugins: [proseMarkdownBlocks] }) },
   server: { host: '127.0.0.1', port: 4322 },
   vite: {

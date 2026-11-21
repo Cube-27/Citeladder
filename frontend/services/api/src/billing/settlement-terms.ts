@@ -1,7 +1,3 @@
-/**
- * Pure settlement rules: the frozen subscription terms, and what provider
- * evidence means for them. settlement.ts performs every write.
- */
 import { z } from 'zod';
 import {
   credentialModeSchema,
@@ -38,7 +34,6 @@ export const STATUS = policy.billing.subscription_status;
 export const grantedStates = new Set<string>([STATUS.active, STATUS.cancel_scheduled]);
 export const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);
 
-/** The provider record must be this intent's, in its mode and catalog revision. */
 export function verifiedReference(pending: Pending, mode: string, evidence: Evidence) {
   if (pending.provider !== 'razorpay' || pending.provider_mode !== mode)
     refuse('provider_identity_mismatch');
@@ -56,7 +51,6 @@ export function verifiedReference(pending: Pending, mode: string, evidence: Evid
   return ref;
 }
 
-/** Only a subscription can fail at the provider; an unpaid order ends by abandonment. */
 export function providerFailed(evidence: Evidence) {
   return (
     evidence.kind === 'base' &&
@@ -65,15 +59,10 @@ export function providerFailed(evidence: Evidence) {
   );
 }
 
-/** Whether a full refund cancelled this subscription, pending the provider's confirmation (B52). */
 export function refundCancelled(sub: Pick<Subscription, 'is_current' | 'status'>) {
   return sub.is_current && sub.status === STATUS.cancelled;
 }
 
-/**
- * A scheduled change takes effect when the provider reports its first period at
- * the new price; a change the provider refused lapses once that period starts.
- */
 export function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
   const terms = frozenTermsSchema.parse(sub.frozen_terms);
   const change = sub.scheduled_change ? scheduledSchema.parse(sub.scheduled_change) : null;
@@ -83,7 +72,6 @@ export function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
   return { terms, renewal: false, lapsed: due && change?.state === 'provider_rejected' };
 }
 
-/** What the evidence asks of later sweeps and of a held cancellation. */
 export function followUps(
   sub: Subscription,
   event: SubscriptionEvidence,
@@ -91,17 +79,13 @@ export function followUps(
   now: Date,
 ) {
   return {
-    // A cancellation the provider holds can no longer be resumed here (B46).
     ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
-    // The next subscription sweep cancels a halted or refunded subscription
-    // promptly; one the provider already ends at its cycle waits its cadence.
     ...(status === STATUS.unpaid || (status === STATUS.cancelled && !event.cancelAtEnd)
       ? { reconciliation_next_at: now }
       : {}),
   };
 }
 
-/** The renewed period takes the scheduled change's terms. */
 export function renewedTerms(terms: {
   catalog_key: string;
   catalog_revision: string;

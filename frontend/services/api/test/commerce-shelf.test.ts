@@ -53,7 +53,6 @@ const emptyTarget: FrozenShelfTarget = {
   products: [],
   approved_competitors: [],
 };
-/** A Commerce audit whose prompt targets a Shoes category holding one frozen Acme product. */
 async function shoeAudit(repetitions: number) {
   const t = await auditTenant(db, fixtures),
     foreign = await auditTenant(db, fixtures);
@@ -117,7 +116,6 @@ describe('frozen Commerce shelf projections', () => {
         throw new Error('unavailable');
       },
     });
-    // A failed resolver call keeps the span as evidence and records the failure.
     expect(unresolved).toMatchObject([
       {
         span: { rank: 1, orderObservable: true },
@@ -197,17 +195,13 @@ describe('frozen Commerce shelf projections', () => {
     ]);
   });
   it("accepts an AI-observed PDP only when the answer carries it and it is not the business's own", () => {
-    // The sentence's full stop is not part of the URL.
     const answer = 'Try https://rival.example/p/1. Or https://www.shop.example/p/2';
     const evidence = { answer, citations: [], ownedHosts: ['shop.example'] };
     expect(resolvedCompetitorUrl('https://rival.example/p/1', evidence)).toBe(
       'https://rival.example/p/1',
     );
-    // Invented by the resolver: nowhere in the answer.
     expect(resolvedCompetitorUrl('https://other.example/p/3', evidence)).toBeNull();
-    // The business's own product page.
     expect(resolvedCompetitorUrl('https://www.shop.example/p/2', evidence)).toBeNull();
-    // A citation alone is not an independently resolved PDP.
     expect(
       resolvedCompetitorUrl('https://rival.example/p/1', {
         ...evidence,
@@ -251,9 +245,7 @@ describe('frozen Commerce shelf projections', () => {
     expect(holder('The Acme Runner is the pick')).toBe('owned:Acme Runner');
     expect(holder('Rival Runner, a cheaper alternative to the Acme Runner')).toBe('competitor');
     expect(holder('The Acme Runner beats the Rival Runner')).toBe('owned:Acme Runner');
-    // A prefix of a longer word is not the product.
     expect(holder('Acme Runners club meets weekly')).toBe('none');
-    // Brand plus a colour both Acme products share names neither.
     expect(holder('Anything black from Acme')).toBe('none');
     expect(holder('Acme Trailblazer edition')).toBe('owned:Acme Runner');
   });
@@ -281,7 +273,6 @@ describe('frozen Commerce shelf projections', () => {
       average_shelf_position: null,
       first_position_win_rate: null,
     });
-    // One answer naming the same product three times holds one slot, at its best rank.
     expect(
       shelfMetrics(
         ['one'],
@@ -304,7 +295,6 @@ describe('frozen Commerce shelf projections', () => {
       first_position_win_rate: 1,
       recognized_slot_count: 2,
     });
-    // Text list and carousel both rank from 1; the carousel's ranks order the execution.
     const rival = { product_id: null, competitor_candidate_id: 'rival' };
     expect(
       shelfMetrics(
@@ -352,7 +342,6 @@ describe('frozen Commerce shelf projections', () => {
       share_of_shelf: 0.5,
       recognized_slot_count: 2,
     });
-    // A shelf held only by unreviewed or rejected rivals has no slot to share.
     expect(shelfMetrics(['one'], [pending, rejected])).toMatchObject({
       product_visibility: 0,
       share_of_shelf: null,
@@ -410,7 +399,6 @@ describe('frozen Commerce shelf projections', () => {
       model: 'fixture',
       resolve: async (spans) => {
         calls++;
-        // Model I/O runs after the context read, with no persistence transaction/row lock.
         return {
           recommendations: spans.map((span, index) => ({
             span: index,
@@ -423,7 +411,6 @@ describe('frozen Commerce shelf projections', () => {
         };
       },
     });
-    // The owned span matches deterministically; the other two share one call.
     expect(calls).toBe(1);
     await expect(
       prepareShelfExecution(db, { ...task, workspace_id: foreign.workspaceId }, result, null),
@@ -492,7 +479,6 @@ describe('frozen Commerce shelf projections', () => {
       .where('audit_id', '=', auditId)
       .execute();
     expect(snapshots).toHaveLength(1);
-    // The pending AI-observed rival holds no slot until it is approved.
     expect(snapshots[0]).toMatchObject({
       product_visibility: 1,
       share_of_shelf: 1,
@@ -503,7 +489,6 @@ describe('frozen Commerce shelf projections', () => {
     expect(new Set(snapshots[0]!.source_observation_ids as string[])).toEqual(
       new Set(observations.map((row) => row.id)),
     );
-    // Recreate the older writer boundary: the answer committed without shelf derivation.
     await db.deleteFrom('commerce_shelf_snapshots').where('audit_id', '=', auditId).execute();
     await db
       .deleteFrom('commerce_observation_citations')
@@ -534,8 +519,6 @@ describe('frozen Commerce shelf projections', () => {
       new Set([artifactId]),
     );
     await projections.finalize(t.workspaceId, auditId);
-    // The same answer to a branded comparison prompt names the owned brand by
-    // design, so it leaves the shelf: no execution, no slot, no source.
     await db.deleteFrom('commerce_shelf_snapshots').where('audit_id', '=', auditId).execute();
     await db
       .updateTable('audit_prompt_snapshots')
@@ -583,12 +566,10 @@ describe('frozen Commerce shelf projections', () => {
         }),
       ]),
     ];
-    // A later answer names both by product key only, under other titles.
     const keysOnly = carousel([
       carouselCard({ title: 'Another listing for the rival', product_id: 'rival-key' }),
       carouselCard({ title: 'Renamed listing', product_id: 'own-key' }),
     ]);
-    // The same cards in an answer captured before any key was matched, derived last.
     envelopes.push(keysOnly, keysOnly);
     const capturedAt = [undefined, undefined, beforeAnyMatch];
     const taskIds: string[] = [];
@@ -633,7 +614,6 @@ describe('frozen Commerce shelf projections', () => {
       canonical_url: 'https://rival.example/products/trail',
       product_name: 'Rival Trail Runner',
     });
-    // The sponsored card holds no slot; the organic cards rank from 1.
     expect(slotsOf(taskIds[0]!)).toMatchObject([
       {
         rank: 1,
@@ -685,7 +665,6 @@ describe('frozen Commerce shelf projections', () => {
       [1, 'unresolved', null, null],
       [2, 'unresolved', null, null],
     ]);
-    // Text spans stay recommendations beside the carousel.
     const surfaces = await db
       .selectFrom('commerce_recommendation_observations')
       .select('surface_kind')
@@ -698,7 +677,6 @@ describe('frozen Commerce shelf projections', () => {
       'shopping_result',
       'shopping_result',
     ]);
-    // Another workspace cannot read this audit's shelf context.
     await expect(
       prepareShelfExecution(
         db,
@@ -728,7 +706,6 @@ describe('frozen Commerce shelf projections', () => {
           created_at: createdAt,
         })
         .execute();
-    // Another workspace's older namesake must never be the product this one attaches to.
     await known(foreign, 'https://foreign.example/products/club', new Date(Date.now() - 60_000));
     await known(t, 'https://bluebird.example/products/club', new Date());
     const queue = new AuditQueue(db, 120);
@@ -758,7 +735,6 @@ describe('frozen Commerce shelf projections', () => {
       .where('workspace_id', '=', t.workspaceId)
       .orderBy('target_kind')
       .execute();
-    // The Shoes category gets its own pending record of the same product, never a Walmart one.
     expect(candidates.map(({ id: _id, ...row }) => row)).toEqual([
       {
         target_kind: 'category',

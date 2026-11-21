@@ -12,13 +12,8 @@ import { readErrorProps } from '@/components/ui/notice';
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
-/** The details open with the AEO readiness by pillar table: Pillar, Score, Coverage. */
 const PILLAR_TABLE = { kind: 'table', columns: 3 } satisfies LoadingShape;
 
-/**
- * Overview shares the screen's single polling dashboard while a crawl runs.
- * Its immutable snapshot query is enabled only after the crawl terminalizes.
- */
 export function OverviewPanel({
   workspaceId,
   projectId,
@@ -46,13 +41,6 @@ export function OverviewPanel({
       </Stack>
     );
   let overviewBody: ReactNode = null;
-  // The snapshot is WRITTEN at terminalization, so before then the endpoint
-  // answers 404 by design — an absence, not a failure. Two things used to turn
-  // that into a red alert over a perfectly healthy running crawl: hovering the
-  // Overview tab warmed this exact query key regardless of the crawl's state,
-  // and `isError` is sticky, so the 404 it cached stayed on screen long after
-  // `enabled` went false. Report only a failure this query is actually making
-  // now, and never the expected absence.
   if (terminal && overview.isError && httpErrorStatus(overview.error) !== 404) {
     overviewBody = (
       <StateBlock
@@ -78,13 +66,6 @@ export function OverviewPanel({
   );
 }
 
-/**
- * The panel's first paint waits for a finished crawl's snapshot as one loading
- * box. Drawn early, the score row came up from the live dashboard with a
- * loading box under it, and only then the details: a second loader between
- * the page's first one and the data. Once the scores have been on screen they
- * stay — a recrawl finishing loads its snapshot under them.
- */
 function useAwaitingFirstSnapshot(snapshotPending: boolean): boolean {
   const [scoresShown, setScoresShown] = useState(false);
   if (!snapshotPending && !scoresShown) setScoresShown(true);

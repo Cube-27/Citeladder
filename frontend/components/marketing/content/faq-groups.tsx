@@ -5,7 +5,6 @@ import { FAQ_GROUPS, type FaqGroup } from '@/lib/marketing-content/faq';
 import { Linkify } from '../primitives/linkify';
 import { FaqList } from '../sections/steps-faq-cta';
 
-/** The anchors published FAQ links already point at. */
 const GROUP_ANCHORS: Readonly<Record<string, string>> = {
   Platform: 'faq-platform',
   'Site Health': 'faq-site-health',
@@ -30,23 +29,16 @@ function fallbackAnchor(heading: string): string {
   return anchor;
 }
 
-/** A group's in-page anchor, such as `faq-billing`. */
 function groupAnchor(group: Pick<FaqGroup, 'heading'>): string {
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallbackAnchor(group.heading)}`;
 }
 
-/** The FAQ's Topics: one Toc row per group. */
 export const FAQ_TOPICS = FAQ_GROUPS.map((group) => ({
   id: groupAnchor(group),
   label: group.heading,
   level: 2 as const,
 }));
 
-/**
- * Every FAQ group as Prose children: its heading, then a FaqList whose
- * answers keep their paths and links navigable. Native details rows, so the
- * page ships no client JavaScript.
- */
 export function FaqGroups() {
   return (
     <>

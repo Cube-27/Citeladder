@@ -16,10 +16,8 @@ function StatusBadge({ status }: Readonly<{ status: ActionStatus }>) {
   );
 }
 
-/** The actions the card lists: the top of the priority order, a page, an earned page and a prompt. */
 const LISTED_ACTIONS = [0, 1, 2, 3].flatMap((index) => ACTIONS[index] ?? []);
 
-/** Actions: the work list, highest priority first, each with its approach and status. */
 export function ScreenActions() {
   return (
     <Vignette
@@ -41,11 +39,6 @@ export function ScreenActions() {
   );
 }
 
-/**
- * Content gaps in Actions: content pages to improve and pages to write, each
- * with its lead angle, the angle's prompts and the sites and competitors
- * cited for it. Counts from evidence, never a score.
- */
 export function ScreenContentOptimization() {
   return (
     <Vignette
@@ -71,7 +64,6 @@ export function ScreenContentOptimization() {
   );
 }
 
-/** The Agent answering "Why did we drop on Gemini this week?" and the action it added. */
 export function ScreenAgentChat() {
   return (
     <Vignette title="Agent" meta="acme.com · today, 09:14" badge={<Badge>Chat</Badge>}>
@@ -94,7 +86,6 @@ export function ScreenAgentChat() {
   );
 }
 
-/** A content brief the Agent drafted: its reason, its outline and the sources answers cite now. */
 export function ScreenAgentBrief() {
   return (
     <Vignette
@@ -121,7 +112,6 @@ export function ScreenAgentBrief() {
   );
 }
 
-/** Commerce: who held the AI shelf for one product, the products answers recommended. */
 export function ScreenCommerce() {
   return (
     <Vignette

@@ -1,4 +1,3 @@
-/** Live provider configuration and secrets a test runner must never inherit. */
 export const isInheritedCredential = (name: string) =>
   /(?:_API_KEY|_CLIENT_SECRET|_CLIENT_ID|_SECRET_KEY|_CREDENTIAL_REF)$/iu.test(name) ||
   /^(?:DEFAULT_AGENT_(?:BASE_URL|MODEL)|BILLING_|RAZORPAY_|DATAFORSEO_API_|CITELADDER_ORIGIN_TOKEN)/iu.test(

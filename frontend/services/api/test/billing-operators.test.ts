@@ -66,7 +66,6 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   if (revisions.length) {
-    // Import requests are append-only for the application role.
     await asOwner((owner) =>
       owner.deleteFrom('billing_catalog_imports').where('revision', 'in', revisions).execute(),
     );
@@ -110,10 +109,8 @@ it('replaces a draft never published under a new request, and never a published 
   const first = context();
   const firstImport = { kind: 'import' as const, revision, payload: authored('first') };
   await catalogMutation(db, first, firstImport);
-  // Binding provider plans re-imports the draft with its references.
   await catalogMutation(db, context(), { kind: 'import', revision, payload: authored('bound') });
   expect(await payload('bound')).toBe(true);
-  // The first request's replay answers from its own record, not by rewriting the draft.
   expect(await catalogMutation(db, first, firstImport)).toEqual({ revision, state: 'draft' });
   expect(await payload('bound')).toBe(true);
   await expect(
@@ -192,7 +189,6 @@ it('refuses an operator override without a reason and writes nothing', async () 
         reason,
         specs: [{ key: 'monitored_urls', value: 3 }],
         revision: 'fixture',
-        // Already expired, so it never adds to the allowances later tests resolve.
         from: new Date(Date.now() - 120_000),
         until: new Date(Date.now() - 60_000),
         primary: false,
@@ -248,7 +244,6 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   const issued = await grantMutation(db, ctx, target(), operation);
   await grantMutation(db, ctx, target(), operation);
   expect(await version()).toBe(initialVersion + 1);
-  // The override's reason is grant evidence, and a replay must repeat it.
   expect(
     await db
       .selectFrom('account_grants')
@@ -299,8 +294,6 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).rejects.toThrow();
 });
 it('concurrent baseline repair freezes cohort and development top-ups stay in one workspace', async () => {
-  // A development top-up targets the operator's own workspace; a person owns
-  // one, so this operator is fresh.
   const operator = await fixtures.user();
   await db.updateTable('users').set({ role: 'admin' }).where('id', '=', operator).execute();
   const owned = await fixtures.ownedWorkspace(operator, { access: false });
@@ -354,7 +347,6 @@ it('concurrent baseline repair freezes cohort and development top-ups stay in on
   expect(resolved.status === 'resolved' && resolved.values.get('monitored_urls')).toBe(
     Number(baselineLimit) + 150,
   );
-  // Full development access carries every flag except the explicit operator grants.
   const flag = (key: string) => (resolved.status === 'resolved' && resolved.values.get(key)) || 0;
   expect([flag('crawl_logs'), flag('operator_controls'), flag('billing_checkout')]).toEqual([
     1, 0, 0,
@@ -405,7 +397,6 @@ it('rejects reattributing bootstrap imports and preserves previously published r
     .executeTakeFirstOrThrow();
   expect(original.created_idempotency_key).toBeNull();
   expect(original.created_reason).toBe('original bootstrap');
-  // The historical runtime shape supports HTTP contacts; new authoring requires HTTPS.
   payload.support_contact!.contact_url = 'http://example.test/legacy';
   expect(() => validateCatalog(payload)).toThrow();
   await db

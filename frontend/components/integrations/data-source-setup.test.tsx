@@ -135,7 +135,6 @@ describe('DataSourceSetup', () => {
     );
     first.unmount();
 
-    // Bing connected, Search Console not: the rows name each source's next step.
     serve([connection(GA4, 'bing')]);
     renderWithProviders(page, { initialEntries: [`/performance?project=${PROJECT}`] });
     expect(await screen.findByTestId('data-source-setup')).toBeInTheDocument();
@@ -167,7 +166,6 @@ describe('DataSourceSetup', () => {
     renderSetup(`/performance?project=${PROJECT}&connected=gsc`);
 
     expect(await screen.findByText('Google connected.')).toBeInTheDocument();
-    // Discovery starts by itself on return, for every source the consent covered.
     await ue.click(
       await screen.findByRole('button', { name: 'Use example.com for Google Search Console' }),
     );
@@ -178,7 +176,6 @@ describe('DataSourceSetup', () => {
         project_id: PROJECT,
       }),
     );
-    // GA4 exposes no site to match, so its only property is the suggestion.
     expect(
       screen.getByRole('button', { name: 'Use Main GA4 for Google Analytics 4' }),
     ).toBeInTheDocument();
@@ -193,7 +190,6 @@ describe('DataSourceSetup', () => {
     expect(
       await screen.findByRole('button', { name: 'Choose Search Console property' }),
     ).toBeInTheDocument();
-    // A connected source is never headed "Connect …".
     expect(
       screen.getByRole('heading', { name: 'Choose the Search Console property' }),
     ).toBeVisible();

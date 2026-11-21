@@ -15,7 +15,6 @@ import { persistTopicMetrics, runAggregate, type ScopedTask } from './run-metric
 import { compareText } from '../text-order.ts';
 import { persistSourceAggregates } from '../visibility/source-aggregates.ts';
 
-/** Derives one successful answer inside the caller's transaction. */
 type DeriveAnswer = (
   db: Database,
   task: ScopedTask,
@@ -23,11 +22,6 @@ type DeriveAnswer = (
   artifactId: string,
 ) => Promise<void>;
 type OwnedPage = { url_hash: string; canonical_url: string | null; citation_ids: string[] };
-/**
- * The run's owned citations per cited page, for the AI Traffic Pages and URL
- * reads: each identified page's exact citation IDs in the run's citation order. A citation
- * without a page identity has no page to count against.
- */
 function ownedPages(
   citations: {
     id: string;
@@ -44,7 +38,6 @@ function ownedPages(
       canonical_url: null,
       citation_ids: [],
     };
-    // The lowest canonical URL, so the fact is independent of answer order.
     if (
       c.canonical_url &&
       (page.canonical_url === null || compareText(c.canonical_url, page.canonical_url) < 0)
@@ -64,11 +57,6 @@ function artifactsByTask<T extends { task_id: string }>(artifacts: T[]) {
   return byTask;
 }
 
-/**
- * Derives a settled run inside the caller's audit lock: every successful answer, then the
- * run's metric snapshot with its prompt, source and observed-competitor facts. Writes only
- * derived rows; the audit's state transitions and downstream work belong to the caller.
- */
 export async function deriveRunMetrics(
   trx: Database,
   audit: Selectable<Audits>,
@@ -147,8 +135,6 @@ export async function deriveRunMetrics(
     engines,
   });
   const versions = policy.audits.analysis;
-  // The run's owned-citation fact for AI Traffic: the exact citation rows,
-  // all cohorts, so readers select it and never count citations themselves.
   const ownedCitationIds = citations.filter((c) => c.is_owned).map((c) => c.id);
   const ownedCitationPages = ownedPages(citations);
   const metric = await trx
@@ -173,8 +159,6 @@ export async function deriveRunMetrics(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-  // The run's Sources facts, beside its metric snapshot, so the Sources
-  // table reads them instead of re-joining answers and citations.
   await persistSourceAggregates(trx, { workspaceId, auditId, at });
   await persistTopicMetrics(trx, audit, {
     rows,

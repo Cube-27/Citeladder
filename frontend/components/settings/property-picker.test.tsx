@@ -44,7 +44,6 @@ vi.mock('@/lib/project/project-context', () => ({
 
 import { SelectedPropertyMark, usePropertyPicker } from './property-picker';
 
-/** The picker's action as a plain button beside the chosen property (or none). */
 function Picker({ connection }: Readonly<{ connection: IntegrationConnection }>) {
   const picker = usePropertyPicker(connection);
   return (
@@ -86,7 +85,6 @@ function connection(overrides: Partial<IntegrationConnection> = {}): Integration
   } as IntegrationConnection;
 }
 
-// Distinct labels so a query for the label can never also match the ref.
 const properties = [
   {
     property_ref: 'sc-domain:example.com',
@@ -121,7 +119,6 @@ function mapping(propertyRef: string, status = 'active', projectId = PROJECT) {
   };
 }
 
-/** The active mapping — not account_ref — is what marks a property chosen. */
 function mockMappings(rows: unknown[] = []) {
   mswServer.use(http.get(`/api/v1/integrations/${CONN}/mappings`, () => HttpResponse.json(rows)));
 }
@@ -156,7 +153,6 @@ describe('PropertyPicker', () => {
   it('flags an unselected connection instead of showing an empty ref', async () => {
     renderPicker(connection());
 
-    // The state that made syncs fail silently must be visible, not blank.
     expect(await screen.findByText('No property selected')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
@@ -174,7 +170,6 @@ describe('PropertyPicker', () => {
     );
     renderPicker(connection());
 
-    // Discovery is a live upstream call — it must be lazy, not on mount.
     expect(calls).toBe(0);
 
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
@@ -248,9 +243,6 @@ describe('PropertyPicker', () => {
     const ue = userEvent.setup();
     mswServer.use(
       http.post(`/api/v1/integrations/${CONN}/properties`, () =>
-        // A rejected grant: the envelope's `retryable: false` is what stops
-        // the shared query policy from retrying a 5xx, so the error surfaces
-        // immediately instead of after a backoff chain.
         HttpResponse.json(
           {
             detail: 'grant rejected',
@@ -269,7 +261,6 @@ describe('PropertyPicker', () => {
 
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
 
-    // A broken upstream must never read as "you own no properties".
     expect(await screen.findByText('grant rejected')).toBeInTheDocument();
     expect(screen.getByText('Support: code grant_auth_failed')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy reference' })).toBeInTheDocument();
@@ -300,9 +291,6 @@ describe('PropertyPicker', () => {
   });
 
   it('reports no selection when account_ref outlives its mapping', async () => {
-    // Mappings cascade away with their project while account_ref lives on the
-    // connection. Trusting account_ref showed a confidently "selected"
-    // property whose every sync was failing `unmapped_property`.
     mockMappings([mapping('sc-domain:example.com', 'disabled')]);
     renderPicker(connection({ account_ref: 'sc-domain:example.com' }));
 
@@ -314,7 +302,6 @@ describe('PropertyPicker', () => {
 
   it("shows only the active project's property, and refuses another site's property", async () => {
     const ue = userEvent.setup();
-    // The connection also serves another project; that mapping is not this row's.
     mockMappings([
       mapping('https://other.test/', 'active', '77777777-7777-4777-8777-777777777777'),
     ]);

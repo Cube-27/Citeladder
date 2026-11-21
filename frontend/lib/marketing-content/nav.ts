@@ -1,9 +1,3 @@
-/**
- * The website chrome's content in one place: the navbar's menus and links,
- * the footer's columns, tagline and policy row, and the published platform
- * routes. SiteNav and SiteFooter render only this, so a destination added
- * here reaches the header, the footer and every page together.
- */
 import { docsHref } from '@/lib/config/docs';
 
 import { PARENT_COMPANY } from './legal';
@@ -19,7 +13,6 @@ export type NavDropItem =
 
 type NavDropGroup = { label?: string; items: readonly NavDropItem[] };
 
-/** Resources renders each group as a named section, so every group has a label. */
 type LabelledNavDropGroup = { label: string; items: readonly NavDropItem[] };
 
 type NavDropBase = { label: string; href: string };
@@ -32,7 +25,6 @@ export type NavDrop =
   | (NavDropBase & {
       key: 'resources';
       groups: readonly LabelledNavDropGroup[];
-      /** Sections the menu does not list that still mark it current. */
       sections: readonly string[];
     });
 
@@ -118,7 +110,6 @@ export const PLATFORM_GROUPS: readonly {
   },
 ];
 
-/** Editorial publication only: never an entitlement or rollout switch. */
 export const PUBLISHED_PLATFORM = [
   PLATFORM_OVERVIEW,
   ...PLATFORM_GROUPS.flatMap((group) => group.items),
@@ -170,12 +161,10 @@ export const NAV_DROPS: readonly NavDrop[] = [
     key: 'resources',
     label: 'Resources',
     href: '/blog',
-    // Every study section, and the root-level guide no menu lists.
     sections: [
       ...Object.values(STUDY_INDEXES).map((index) => index.path),
       '/best-ai-visibility-platforms',
     ],
-    // Labelled sections, shown side by side as columns (owner, 2026-10-31).
     groups: [
       {
         label: 'Learn',
@@ -200,7 +189,6 @@ export const NAV_DROPS: readonly NavDrop[] = [
             desc: 'Guides and research on AI visibility',
             href: '/blog',
           },
-          // CiteLadder's own studies; label and line come from the index's study-written copy.
           {
             title: STUDY_INDEXES.research.title,
             desc: STUDY_INDEXES.research.metaTitle.replace(/ \| CiteLadder$/u, ''),
@@ -255,10 +243,6 @@ export const NAV_DROPS: readonly NavDrop[] = [
   },
 ];
 
-/**
- * Data-led pages the footer links from every page; too many for the Resources
- * menu. CiteLadder's study sections first, by their index titles.
- */
 const RESEARCH_LINKS = [
   ...Object.values(STUDY_INDEXES).map((index) => ({ title: index.title, href: index.path })),
   { title: 'AI search market share 2026', href: '/blog/ai-search-market-share-2026' },
@@ -269,7 +253,6 @@ const RESEARCH_LINKS = [
   { title: 'Profound alternatives', href: '/compare/profound-alternatives' },
 ];
 
-/** Plain links that sit after the dropdown triggers. */
 export const NAV_LINKS = [
   { label: 'Enterprise', href: '/enterprise' },
   { label: 'Pricing', href: '/pricing' },
@@ -283,18 +266,12 @@ export type FooterLink = {
   external?: boolean;
 };
 
-/** A social profile: an icon-only link whose `label` is its accessible name. */
 type SocialLink = { network: SocialNetwork; label: string; href: string };
 
 export type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
 export const FOOTER_TAGLINE = 'See what AI answers say about your brand, and what to fix next.';
 
-/**
- * The footer's columns, derived from the menus above so a published
- * destination cannot drift between the header and the footer. Platform reads
- * as one list: the overview first, then every capability in menu order.
- */
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     key: 'platform',
@@ -336,19 +313,14 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   },
 ];
 
-/** The footer's social row under the launch badges, one icon each. */
 export const FOOTER_SOCIAL: readonly SocialLink[] = [
   { network: 'github', label: 'github.com', href: CITELADDER_GITHUB },
   { network: 'x', label: 'x.com', href: CITELADDER_X },
   { network: 'linkedin', label: 'linkedin.com', href: CITELADDER_LINKEDIN },
 ];
 
-/** The policy row under the ownership line; Contact already sits in Company. */
 export const FOOTER_POLICY_LINKS = FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact');
 
-/**
- * Demo enquiries use CiteLadder's own contact page in the same tab.
- */
 export const DEMO_HREF = '/contact';
 export const DEMO_EXTERNAL = false;
 export const DEMO_CTA = 'Book a demo';

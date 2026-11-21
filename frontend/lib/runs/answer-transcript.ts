@@ -1,23 +1,17 @@
 import type { ExecutionEvidence, Project } from '@citeladder/contracts';
 import { hostOf } from '@/lib/visibility/sources';
 
-/** One tracked business the answer named, as the answer view draws it. */
 export type AnswerBrand = Readonly<{
   name: string;
   you: boolean;
-  /** First-mention offset into the analysed answer; null when the analysis kept none. */
   offset: number | null;
-  /** 1 = named first among the brands with an offset; null without one, never last place. */
   position: number | null;
   logoUrl: string | null;
   websiteUrl: string | null;
-  /** The words that name it in the text: its name, then its aliases. */
   phrases: readonly string[];
 }>;
 
-/** One cited source, listed once however often the answer cites it. */
 export type AnswerSource = Readonly<{
-  /** The safe http(s) address, or null when the stored URL is not one. */
   href: string | null;
   url: string;
   domain: string;
@@ -27,7 +21,6 @@ export type AnswerSource = Readonly<{
   citation: ExecutionEvidence['citations'][number];
 }>;
 
-/** One address the answer text links to, listed once however often it is written. */
 export type AnswerLink = Readonly<{ href: string; domain: string; count: number; you: boolean }>;
 
 export function safeCitationUrl(value: string): string | null {
@@ -62,7 +55,6 @@ function ownBrand(evidence: ExecutionEvidence, named: Named, project: Project | 
     position: named.position,
     logoUrl: project?.brand.logo_url ?? mark?.logoUrl ?? null,
     websiteUrl: project?.website_url || mark?.websiteUrl || null,
-    // The name the run matched too: a brand renamed since keeps its chip in older answers.
     phrases: [...new Set([name, named.name, ...(project?.brand.aliases ?? [])].filter(Boolean))],
   };
 }
@@ -87,10 +79,6 @@ function competitorBrand(
   };
 }
 
-/**
- * The tracked businesses the answer named, in the API's order (named first
- * first), with the analysis's own positions; this view adds only their marks.
- */
 export function answerBrands(
   evidence: ExecutionEvidence,
   project: Project | null,
@@ -125,7 +113,6 @@ function ownHosts(project: Project | null): readonly string[] {
   return [...project.owned_domains.map(bareHost), ...(site ? [site] : [])].filter(Boolean);
 }
 
-/** Each address the answer text links to once, in first-written order, with how often. */
 export function answerLinks(answerText: string, project: Project | null): readonly AnswerLink[] {
   const own = ownHosts(project);
   const byHref = new Map<string, AnswerLink>();
@@ -144,7 +131,6 @@ export function answerLinks(answerText: string, project: Project | null): readon
   return [...byHref.values()];
 }
 
-/** Each cited address once, in first-cited order, with how often the answer cites it. */
 export function answerSources(citations: ExecutionEvidence['citations']): readonly AnswerSource[] {
   const byKey = new Map<string, AnswerSource>();
   for (const citation of citations) {

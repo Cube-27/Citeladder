@@ -1,18 +1,8 @@
 ---
-/**
- * SourcesList — the numbered sources at the end of a guide or post, as one
- * disclosure: the `title` with the count beside it, then optional
- * notes (the `notes` slot) and one SourceRow per source, the whole list
- * between two `line` hairlines, so open or closed it ends on one rule. Up to six sources start open; a longer list starts closed so it
- * never runs on under the article. Each row is `#source-n`, the target
- * of an InlineCitation: following one opens the list (the browser reveals a
- * closed `details` for its fragment) and the row takes `surface-sunken`.
- */
 import { Plus } from '@/lib/icons';
 
 interface Props {
   title?: string;
-  /** How many sources the list holds. */
   count: number;
 }
 const { title = 'Sources', count } = Astro.props;
@@ -99,7 +89,6 @@ const { title = 'Sources', count } = Astro.props;
     border-bottom: 1px solid var(--color-line);
     scroll-margin-top: calc(var(--nav-height) + 32px);
   }
-  /* The list's own bottom rule closes the last row. */
   .cl-source:last-child {
     border-bottom: 0;
   }
@@ -113,7 +102,6 @@ const { title = 'Sources', count } = Astro.props;
     line-height: var(--text-body-sm--line-height);
     text-align: right;
   }
-  /* A source reads in one ink, its link marked by an underline. */
   .cl-source-body {
     display: flex;
     flex-direction: column;

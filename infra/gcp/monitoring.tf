@@ -1,7 +1,3 @@
-# Uptime, error and capacity alerts, all sent to one email channel. Cloud Run
-# already reports request and job outcomes as metrics; the webhook quarantine
-# and database size come from the API's structured logs (logging.ts severity).
-
 locals {
   api_host = trimprefix(google_cloud_run_v2_service.api.uri, "https://")
   alert_runbook = join("\n", [
@@ -18,9 +14,6 @@ resource "google_monitoring_notification_channel" "email" {
   }
 }
 
-# GET /health skips the origin token (AR-10), so the check reaches the API
-# directly. Every five minutes from three regions keeps the API warm; an idle
-# instance is not billed under request-based billing.
 resource "google_monitoring_uptime_check_config" "api_health" {
   display_name     = "${local.name}-api /health"
   timeout          = "30s"
@@ -82,8 +75,6 @@ resource "google_monitoring_alert_policy" "api_down" {
   }
 }
 
-# Pre-launch traffic is low, so any server error in five minutes is worth a
-# look; this also covers a scheduled tick whose periodic phase failed (500).
 resource "google_monitoring_alert_policy" "api_5xx" {
   display_name          = "${local.name}-api server errors"
   combiner              = "OR"
@@ -113,8 +104,6 @@ resource "google_monitoring_alert_policy" "api_5xx" {
   }
 }
 
-# The runner, migrate and billing jobs never retry (max_retries 0), so each
-# failed execution is one failed attempt at queued or operator work.
 resource "google_monitoring_alert_policy" "job_failures" {
   display_name          = "${local.name} job execution failed"
   combiner              = "OR"
@@ -220,7 +209,6 @@ resource "google_monitoring_alert_policy" "database_size" {
   conditions {
     display_name = "Database larger than ${var.database_size_alert_gb} GB of the 30 GB disk"
     condition_threshold {
-      # Only the API's scheduled tick runs the periodic phases in Cloud Run.
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.database_size.name}\" AND resource.type=\"cloud_run_revision\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.database_size_alert_gb * 1073741824

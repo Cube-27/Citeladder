@@ -53,13 +53,11 @@ const safeFailures = new Set([
   'invalid_grant_validity',
 ]);
 
-/** An operator refusal built only from reviewed text; its message is safe to print. */
 export class OperatorRefusal extends Error {}
 
 export function operatorDiagnostic(error: unknown): string {
   if (error instanceof OperatorRefusal) return error.message;
   if (error instanceof PlatformAdminRequired) return 'active_admin_required';
-  // An API refusal's code is a declared machine code, never input.
   if (error instanceof ApiError) return error.code;
   if (error instanceof Error && safeFailures.has(error.message)) return error.message;
   // A PostgreSQL SQLSTATE (28P01: password rejected) names the cause without any input.
@@ -73,7 +71,6 @@ export function operatorDiagnostic(error: unknown): string {
   return error instanceof Error ? error.constructor.name : 'Error';
 }
 
-/** Commercial CLI errors expose a reviewed slug or type, never arbitrary input. */
 export async function operatorMain(run: () => Promise<void>) {
   try {
     await run();
@@ -83,7 +80,6 @@ export async function operatorMain(run: () => Promise<void>) {
   }
 }
 
-/** Connection lifecycle only. Each command's domain owner enforces its own operator authority. */
 export async function withOperatorDatabase(
   run: (db: Database) => Promise<void>,
   config: DatabaseConfig = loadConfig(),

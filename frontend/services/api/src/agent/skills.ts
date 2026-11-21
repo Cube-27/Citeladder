@@ -1,4 +1,3 @@
-/** Packaged model input; files stay under their existing config owner. */
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
@@ -85,12 +84,8 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
   }
   if (!skills.length || !operatingContract.trim() || !formats.size)
     throw new TypeError('Incomplete skill catalog');
-  // Workflows are presentation and routing, but they change what a run is
-  // started with, so they share the catalog fingerprint.
   const workflowFile = await readFile(join(root, 'workflows.json'), 'utf8');
   digest.update('workflows.json').update('\0').update(workflowFile).update('\0');
-  // The content rule catalog is the page methodology's rule list, so a change to
-  // it asks a queued turn again like a skill change does.
   digest.update('content-rules').update('\0').update(contentRulesVersion).update('\0');
   if (
     new Set(skills.map((skill) => skill.id)).size !== skills.length ||
@@ -109,11 +104,9 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
     workflows: parseWorkflows(workflowFile, catalogSkills, formats),
   };
 }
-/** Kinds with content formats choose a format. */
 export function usesFormats(skill: Pick<Skill, 'outputKind'>) {
   return (p.format_kinds as readonly string[]).includes(skill.outputKind);
 }
-/** Kinds whose document is a fetched page: it starts from a page fetch, never from `save_document`. */
 export function fetchesPage(skill: Pick<Skill, 'outputKind'>) {
   return (p.fetched_kinds as readonly string[]).includes(skill.outputKind);
 }

@@ -44,10 +44,6 @@ import { StateBlock } from '@/components/ui/state-block';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 
-/**
- * The billing reads, each scoped to the active workspace so one workspace's
- * plan and receipts never render in another's view.
- */
 function useBillingReads(workspaceId: string | null, country: string) {
   const entitlementQuery = useQuery({ ...billingQueries.entitlement(workspaceId), retry: false });
   const catalogQuery = useWorkspaceCatalog(workspaceId, country);
@@ -61,7 +57,6 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
   const mutation = useMutation(billingMutations.cancelSubscription(workspaceId));
   return {
     open,
-    // Each attempt starts clean: a failure belongs to the dialog that made it.
     setOpen: (next) => {
       if (next) mutation.reset();
       setOpen(next);
@@ -88,7 +83,6 @@ function usePlanChangeControls(workspaceId: string | null, checkout: Checkout): 
   };
 }
 
-/** Quote requests for a new subscription and for one-time extras. */
 function purchaseActions(checkout: Checkout, country: string) {
   const buyExtra: ExtraPurchase = (kind, catalogKey, quantity) =>
     void checkout
@@ -110,11 +104,6 @@ function isSubscribed(entitlement: BillingEntitlement | null): boolean {
 
 type PlanStep = Readonly<{ label: string; href: string; closed: boolean }>;
 
-/**
- * The page's next step: changing the plan a workspace has, or choosing one it
- * lacks; `closed` when checkout cannot complete it. None while a quote is
- * under review, since its own confirm is then the step.
- */
 function planStep({
   catalog,
   entitlement,
@@ -141,10 +130,6 @@ function planStep({
   return { label: 'Choose a plan', href: '#choose-plan', closed: newPlanCheckoutClosed(catalog) };
 }
 
-/**
- * The step in the masthead: the view's primary while checkout is open; while
- * it is closed, a disabled secondary with the reason beside it (2.8 Disabled).
- */
 function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
   if (!step) return null;
   if (step.closed)
@@ -167,12 +152,6 @@ function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
   );
 }
 
-/**
- * Billing, in the owner's order (2026-11-10): the plan with everything that
- * changes it, then usage, then invoices; cancelling, the one destructive
- * action, is the last group. A prepared purchase is reviewed right under the
- * plan that started it; the masthead holds the next step.
- */
 export function BillingScreen() {
   const { isLoading: entitlementLoading } = useEntitlement();
   const workspaceId = useActiveWorkspaceId();
@@ -184,7 +163,6 @@ export function BillingScreen() {
   const cancellation = useCancellation(workspaceId);
   const planChanges = usePlanChangeControls(workspaceId, checkout);
   const resetPrepared = checkout.resetPrepared;
-  // A quote answers the exact inputs it was asked for; change them and it is stale.
   useEffect(() => {
     resetPrepared();
   }, [workspaceId, country, details, resetPrepared]);
@@ -267,7 +245,6 @@ export function BillingScreen() {
   );
 }
 
-/** What changes the plan: a plan change and extras for a subscriber, else a new plan. */
 function PlanOffers({
   catalog,
   catalogRead,

@@ -1,19 +1,4 @@
 ---
-/**
- * ContentArticle — the website's reading layout for research guides, blog
- * posts, the FAQ and the AI reference: the `header` slot (an ArticleHeader)
- * and the body (Prose) in one 640px column, the end matter (the `end` slot:
- * FAQ, sources, author, pager) under the body, 64px under the navbar.
- *
- * - **With `toc`:** the column starts on the content edge. From 1280px the
- *   280px Toc starts on the content edge and the column follows 48px on; the
- *   header starts with the column, its title, lead and byline kept to the
- *   column, and tables run on to the content's right
- *   edge; below 1280px an "On this page" JumpMenu between
- *   the header and the body, its closed height reserved. The Toc starts level
- *   with the body and stays sticky until the end matter ends.
- * - **Without:** the column is centred.
- */
 import JumpMenu from '@/components/content/JumpMenu.astro';
 import Toc, { type TocItem } from '@/components/content/Toc.astro';
 import './reading.css';
@@ -59,7 +44,6 @@ const hasEnd = Astro.slots.has('end');
 
 <style is:global>
   .cl-cpage-article {
-    /* One measure: the header, body, tables, figures and end matter share it. */
     --cpage-article-width: 640px;
     padding-top: 64px;
   }
@@ -85,8 +69,6 @@ const hasEnd = Astro.slots.has('end');
   .cl-cpage-article-body > .cl-prose {
     max-width: none;
   }
-  /* The body's first block, a heading included, starts on the row's top edge,
-     level with the Toc's title. */
   .cl-cpage-article-body > .cl-prose > :first-child {
     margin-top: 0;
   }
@@ -99,8 +81,6 @@ const hasEnd = Astro.slots.has('end');
     gap: 48px;
     padding-top: 64px;
   }
-  /* Below 1280px the Toc is a JumpMenu between the header and the body, its
-     closed height reserved, so the column keeps its full width. */
   .cl-cpage-article--toc .cl-cpage-article-jump {
     grid-row: 2;
     height: var(--control-lg);
@@ -112,10 +92,6 @@ const hasEnd = Astro.slots.has('end');
   .cl-cpage-article--toc .cl-cpage-article-end {
     grid-row: 4;
   }
-  /* From 1280px the 280px Toc starts on the content edge and the column
-     follows 48px on; the header starts with the column and runs to the
-     content's right edge (a third track takes the rest), so the title gets
-     the width and its lead stays at the column's measure. */
   @media (min-width: 1280px) {
     .cl-cpage-article--toc .cl-cpage-article-grid {
       --cpage-toc-width: 280px;
@@ -136,8 +112,6 @@ const hasEnd = Astro.slots.has('end');
     .cl-cpage-article--toc .cl-cpage-article-head :is(.cl-ahead-title, .cl-ahead-lead, .cl-ahead-byline, .cl-crumbs) {
       max-width: var(--cpage-article-width);
     }
-    /* Toc entries wrap on phrases; the entry in view is ink beside its bar, at
-       the same weight, so it never re-wraps. */
     .cl-site .cl-cpage-article-toc .cl-toc-link {
       color: var(--color-ink-secondary);
       text-wrap: pretty;
@@ -150,13 +124,9 @@ const hasEnd = Astro.slots.has('end');
         color: var(--color-ink);
       }
     }
-    /* A wrapped entry stays flush left; entries are 8px apart (their 4px
-       padding each), and the bar spans the whole entry. */
     .cl-site .cl-cpage-article-toc .cl-toc-link {
       line-height: var(--text-body-sm--line-height);
     }
-    /* Sticky through the body and the end matter rows. A long Toc scrolls its
-       entries under its fixed title, so every entry stays reachable. */
     .cl-cpage-article-toc {
       display: flex;
       flex-direction: column;
@@ -217,7 +187,6 @@ const hasEnd = Astro.slots.has('end');
     }
   }
 
-  /* Website scale for the shared Callout inside an article (brand book, Callout). */
   .cl-cpage-article [data-callout-tone] {
     gap: 16px;
     padding: 20px 24px;

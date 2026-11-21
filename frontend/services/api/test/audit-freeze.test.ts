@@ -67,7 +67,6 @@ describe('audit admission freeze', () => {
       brand_name: 'Acme Running',
       engines: ['chatgpt'],
       repetitions: 2,
-      // The run's own repetition count, not the configured default.
       measurement_policy: { retrieval_enabled: true, repetitions: 2 },
       anthropic_max_uses: providers.anthropicMaxUses,
       openai_max_tool_calls: 1,

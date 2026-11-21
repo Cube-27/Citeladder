@@ -65,8 +65,6 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
-  // The docs and Worker specs belong to their own Playwright configs, so a
-  // change to one never sends it to the app E2E job.
   assert.deepEqual(
     selectE2EFiles([
       'frontend/e2e/docs.spec.ts',
@@ -86,7 +84,6 @@ test('the browser jobs run in full when their workflow or setup action changes',
   for (const path of ['.github/workflows/ci.yml', '.github/actions/setup-frontend/action.yml']) {
     const selected = classifyPaths([path]);
     assert.deepEqual([selected.e2e, selected.workers], [true, true], path);
-    // A mapped frontend change in the same diff does not narrow the suite.
     assert.deepEqual(e2eSpecArgs([path, 'frontend/components/performance/metric-cards.tsx']), []);
   }
   assert.deepEqual(e2eSpecArgs(['frontend/components/performance/metric-cards.tsx']), [
@@ -105,7 +102,6 @@ test('billing selects existing browser suites and browser configuration runs eve
   assert.ok(selected.length > 0, `${path} must retain browser coverage`);
   for (const spec of selected) assert.ok(available.has(spec), `${path} selected missing ${spec}`);
 
-  // The global configuration shapes every spec, so it runs the complete suite.
   assert.equal(classifyPaths(['frontend/playwright.config.ts']).e2e, true);
   assert.deepEqual(e2eSpecArgs(['frontend/playwright.config.ts']), []);
 });
@@ -148,9 +144,6 @@ test('the native API runs for its code and canonical schema inputs', () => {
   assert.equal(classifyPaths(['frontend/services/api/src/server.ts']).compose, true);
 });
 
-// Every repository file the API's code, scripts and tests name by a literal
-// relative import or `new URL(..., import.meta.url)`, outside the API package
-// and the contracts it depends on. Directories expand to their files.
 function apiExternalReads() {
   const reference = /(?:\bfrom\s*|\bimport\s*\(\s*|\bnew URL\(\s*)'(\.\.?\/[^'`$]+)'/gu;
   const reads = new Set();
@@ -162,7 +155,6 @@ function apiExternalReads() {
       const source = readFileSync(join(repositoryRoot, file), 'utf8');
       for (const [, specifier] of source.matchAll(reference)) {
         const target = posix.normalize(posix.join(posix.dirname(file), specifier));
-        // Bare repository roots locate other paths; they are not reads.
         if (['.', './', 'frontend/'].includes(target)) continue;
         if (/^frontend\/(?:services|packages)\//u.test(target) || target.startsWith('..')) continue;
         const absolute = join(repositoryRoot, target);
@@ -183,7 +175,6 @@ function apiExternalReads() {
 
 test('every frontend file the API reads outside its package selects the API suite', () => {
   const reads = apiExternalReads();
-  // The scan must find the reads that once skipped the suite, or it proves nothing.
   for (const path of [
     'frontend/apps/app/src/globals.css',
     'frontend/apps/docs/public/templates/citeladder-crawl-log-worker.js',
@@ -193,7 +184,6 @@ test('every frontend file the API reads outside its package selects the API suit
     assert.ok(reads.includes(path), `the API read scan missed ${path}`);
   }
   for (const path of reads) assert.equal(classifyPaths([path]).api, true, path);
-  // The SPA's own sources stay out of the API suite.
   assert.equal(classifyPaths(['frontend/apps/app/src/router.tsx']).api, false);
 });
 
@@ -269,13 +259,11 @@ test('a fixture or helper change selects every spec that imports it', () => {
     'e2e/visibility.spec.ts',
   ];
   assert.deepEqual(selectE2EFiles(['frontend/e2e/helpers/app-fixture.ts']), fixtureUsers);
-  // Imported by the helper, so every helper user depends on it too.
   assert.deepEqual(selectE2EFiles(['frontend/test/fixtures/project.ts']), fixtureUsers);
   assert.deepEqual(selectE2EFiles(['frontend/test/agent-chat-fixture.ts']), [
     'e2e/agent-conversation.spec.ts',
     'e2e/page-workspace.spec.ts',
   ]);
-  // Shared content the marketing specs assert against.
   assert.deepEqual(selectE2EFiles(['frontend/lib/fonts/brand-fonts.ts']), [
     'e2e/marketing-pages.spec.ts',
   ]);
@@ -332,7 +320,6 @@ test('external-service and deploy-only configuration runs only the security and 
       compose: false,
     },
   );
-  // The CI workflow itself still escalates: owners run under its definition.
   assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
 });
 
@@ -344,7 +331,6 @@ test('the API host deploy and the deploy gate run no owner suite', () => {
     assert.equal(isOwnerFreeChange([path]), true, path);
     assert.equal(classifyPaths([path]).api, false, path);
   }
-  // The shared toolchain setup runs inside every owner job, so it escalates.
   assert.equal(classifyPaths(['.github/actions/setup-frontend/action.yml']).api, true);
 });
 
@@ -354,7 +340,6 @@ test('a shared contract change runs every E2E spec', () => {
     'frontend/components/ui/command-palette.tsx',
   ];
   assert.equal(classifyPaths(paths).e2e, true);
-  // Empty: Playwright runs every spec, not only the mapped shell spec.
   assert.deepEqual(e2eSpecArgs(paths), []);
   assert.deepEqual(e2eSpecArgs(['frontend/components/ui/command-palette.tsx']), [
     'e2e/shell.spec.ts',
@@ -381,7 +366,6 @@ test('Terraform and workflow changes are validated before deploy', () => {
 test('main skips full validation only for an owner-free push', () => {
   assert.equal(isOwnerFreeChange(['docs/README.md', '.sonarcloud.properties']), true);
   assert.equal(isOwnerFreeChange(['docs/README.md', 'frontend/components/card.tsx']), false);
-  // An unknown range must never read as an owner-free change.
   assert.equal(isOwnerFreeChange([]), false);
 });
 
@@ -415,20 +399,12 @@ test('packaged Agent skills select their native API and image owners', () => {
 });
 
 test('Compose selects container-shaped changes only, on every push of a PR', () => {
-  // Application code does not smoke the stack: the API, frontend and E2E
-  // owners already cover it. `{ initial: true }` is asserted alongside the plain
-  // call because a PR's first push used to escalate to Compose on any changed
-  // application file -- re-adding that option must not bring the escalation back.
   for (const path of ['frontend/components/card.tsx', 'scripts/quality.mjs']) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }
-  // The safety net: `main` pushes and merge-queue runs classify as full.
   assert.equal(classifyPaths([], { full: true }).compose, true);
 
-  // What Compose is for: the images, the stack, the schema, and what gets
-  // installed into a container. Every one of these must hold on EVERY push --
-  // `frontend/Dockerfile` used to select Compose on the first push only.
   for (const path of [
     'frontend/Dockerfile',
     'frontend/services/api/Dockerfile',
@@ -468,7 +444,6 @@ test('previous CI evidence requires every owner to be successful or intentionall
     { name: 'CI result', status: 'completed', conclusion: 'success' },
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);
-  // The aggregate always runs: a skipped one vouches for nothing.
   assert.equal(
     hasTrustworthyJobEvidence(
       complete.map((job) => (job.name === 'CI result' ? { ...job, conclusion: 'skipped' } : job)),
@@ -583,7 +558,6 @@ test('pull-request synchronization uses latest-push diff and main is full', () =
     full: true,
     range: 'before..head',
   });
-  // A force-pushed main has no meaningful push range.
   assert.deepEqual(
     selectDiff({
       eventName: 'push',
@@ -593,7 +567,6 @@ test('pull-request synchronization uses latest-push diff and main is full', () =
     }),
     { full: true, range: null },
   );
-  // A previous main commit whose run did not pass cannot be skipped over.
   assert.deepEqual(
     selectDiff({
       eventName: 'push',
@@ -624,7 +597,6 @@ test('an owner-free main push is vouched for only by a passed run on the previou
   assert.equal(previousMainRunPassed([run({ head_sha: 'other' })], 'before'), false);
   assert.equal(previousMainRunPassed([run({ event: 'workflow_dispatch' })], 'before'), false);
   assert.equal(previousMainRunPassed([], 'before'), false);
-  // The newest run for the commit decides.
   assert.equal(
     previousMainRunPassed(
       [run({ run_number: 1 }), run({ run_number: 2, conclusion: 'failure' })],

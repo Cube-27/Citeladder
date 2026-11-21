@@ -1,8 +1,3 @@
-/**
- * Ranking rows with each business's net sentiment over the same selection the
- * ranking counts: the dashboard's run or pool, and each trend point's runs.
- * Derived from persisted perceptions; never classified here.
- */
 import type { NetSentiment } from '@citeladder/contracts/visibility';
 
 import { policy } from '../config.ts';
@@ -15,7 +10,6 @@ import type { TrendPoint } from './trend-folding.ts';
 
 type Entity = { name: string; is_brand: boolean; sentiment: NetSentiment };
 
-/** A perceived selection whose answers never named the business: zero mentions, not unknown. */
 const NOT_NAMED: NetSentiment = {
   mentions: 0,
   classified: 0,
@@ -24,11 +18,6 @@ const NOT_NAMED: NetSentiment = {
   net_sentiment: null,
 };
 
-/**
- * Each row's sentiment; the brand row's name is the snapshot's label, so it
- * matches by role. Null entities (a run admitted without perception) leave
- * every row unknown.
- */
 function withSentiment<Row extends { name: string; is_brand: boolean }>(
   rows: readonly Row[],
   entities: readonly Entity[] | null,
@@ -81,10 +70,6 @@ export async function getRankedVisibility(
   };
 }
 
-/**
- * The newest points whose runs fit one selection (`selection_max_runs`), as
- * the index of the oldest one covered; older points stay unmeasured.
- */
 function coveredFrom(groups: readonly (readonly string[])[]): number {
   const runs = new Set<string>();
   for (let index = groups.length - 1; index >= 0; index--) {
@@ -95,11 +80,6 @@ function coveredFrom(groups: readonly (readonly string[])[]): number {
   return 0;
 }
 
-/**
- * Each trend point's rankings with sentiment over exactly the runs the point
- * folds. Only the newest points within one selection's run bound are read;
- * an older point's sentiment is null (not measured), never a partial pool.
- */
 export async function withPointSentiments(
   db: Database,
   scope: RunScope,

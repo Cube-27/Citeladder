@@ -83,7 +83,6 @@ describe('versioned audit aggregates', () => {
     });
   });
   it('names first only the tracked roster, through aliases, and counts wins over answers naming one', () => {
-    // Zeta is untracked and named before everyone: it never wins. "Contender" is Rival's alias.
     const answers = [
       execution('Zeta, then Acme, then Rival'),
       execution('Contender beats Acme'),
@@ -103,7 +102,6 @@ describe('versioned audit aggregates', () => {
       win_answers: 2,
       win_rate: 0.5,
     });
-    // Nothing tracked named: not applicable (no rate), distinct from a zero win rate.
     expect(winCounts(aggregateRun(answers.slice(2), config).win_tally, 'Acme')).toEqual({
       win_count: 0,
       win_answers: 0,
@@ -114,7 +112,6 @@ describe('versioned audit aggregates', () => {
       win_answers: 2,
       win_rate: 0,
     });
-    // A tracked name that is also an Object.prototype key counts like any other.
     const shadow = winTally([{ kind: 'competitor', name: 'constructor' }], 'Acme');
     expect(shadow).toEqual({ answers: 1, first: { constructor: 1 } });
     expect(winCounts(metrics.win_tally, 'constructor')).toMatchObject({ win_count: 0 });
@@ -124,7 +121,6 @@ describe('versioned audit aggregates', () => {
       [
         execution('Acme', [], true, ['best shoes', 'acme shoes review', 'shoe sale']),
         execution('Acme', [], true, ['best shoes']),
-        // Its queries were hidden: unknown, not zero queries.
         execution('Acme', [], false),
       ],
       config,

@@ -1,9 +1,3 @@
-/**
- * The persisted visibility reads over HTTP: executions, the Sources series
- * and URL detail, and the AI Overview rates.
- *
- * Includes workspace isolation on every route.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -105,7 +99,6 @@ describe('GET /executions/{execution_id}', () => {
       first_named: { kind: 'competitor', name: 'Globex' },
       competitors_mentioned: ['Globex'],
       search: 'not_used',
-      // An LLM execution has no observed surface: null, not an empty one.
       search_surface: null,
       created_at: '2026-03-01T10:20:30.123000Z',
     });
@@ -124,7 +117,6 @@ describe('GET /executions/{execution_id}', () => {
         brandMentioned: true,
         brandFirstOffset: 30,
         brandMentions: ['Acme Corp'],
-        // Initech is not among the mentioned names, but its offset still ranks ahead.
         score: {
           brand_first_offset: 30,
           competitors_mentioned: ['Globex'],
@@ -321,7 +313,6 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
     expect(body.competitor_mention_rates).toEqual([
       {
         name: 'Globex',
-        // The roster record's site, so the row draws its logo.
         logo_url: null,
         website_url: 'https://globex.example',
         rate: {
@@ -391,7 +382,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
   let selected: string;
   let unselected: string;
   const url = 'https://example.com/selected';
-  // The page identity its citations resolved to; this project has no record of it until a test adds one.
   const pageHash = `hash-${randomUUID()}`;
 
   beforeAll(async () => {
@@ -423,7 +413,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       promptIndex: 1,
       analysis: { citations: [{ url: 'https://other.example/x', domain: 'other.example' }] },
     });
-    // A task that did not succeed is not evidence, even with an analysis.
     await fixtures.execution(tenant, {
       auditId: selected,
       promptIndex: 2,
@@ -523,7 +512,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         logo_url: `/api/v1/projects/${tenant.projectId}/logo`,
         website: 'https://acme.example',
       },
-      // Resolved through the competitor's alias, not only its name.
       {
         kind: 'competitor',
         name: 'TransferWise',
@@ -570,7 +558,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       created_at: new Date(at),
     });
     const read = reading('inspected', '2026-02-02T00:00:00Z');
-    // A later attempt that failed must not erase what the earlier one learned.
     await db
       .insertInto('source_page_snapshots')
       .values([read, reading('failed', '2026-02-03T00:00:00Z')])
@@ -648,8 +635,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       action_id: action.id,
     });
 
-    // The URL table carries the same standing and Action, and its gap filter
-    // keeps exactly the pages that show that standing.
     const urlRows = async (query: Record<string, string>) => {
       const { body: page } = await get(
         tenant,
@@ -667,7 +652,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       ['https://other.example/x', null, null],
     ]);
     expect(await urlRows({ standing: 'gap' })).toEqual([[url, 'gap', action.id]]);
-    // Publisher rows have no standing, so the filter is refused there.
     const domains = await get(tenant, `/api/v1/projects/${tenant.projectId}/visibility/sources`, {
       query: { audit_id: selected, standing: 'gap' },
     });
@@ -722,7 +706,6 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       query: { from: '2026-03-01T00:00:00Z', to: '2026-02-01T00:00:00+05:30' },
     });
     expect(record(reversed.body.error).message).toBe("'from' must not be after 'to'");
-    // A numeric timestamp beyond the years a datetime holds is malformed input.
     const outOfRange = await get(tenant, path, { query: { from: '99999999999999999' } });
     expect(outOfRange.status).toBe(422);
     expect(outOfRange.body.error).toMatchObject({ code: 'validation_error' });

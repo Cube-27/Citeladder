@@ -51,10 +51,6 @@ const SOURCES: readonly { value: CommerceProductSource; label: string }[] = [
   { value: 'archived', label: 'Archived' },
 ];
 
-/**
- * The column settings: which metric columns the table draws and exports. A
- * setting of the table, not a filter, so it sits with Export at the row's end.
- */
 function ColumnSettings({
   shown,
   onToggle,
@@ -85,10 +81,6 @@ function ColumnSettings({
   );
 }
 
-/**
- * The cursor stack of the current filters: going back pops it, and a change
- * of filters starts again from the first page.
- */
 function useCursorStack(search: string) {
   const [state, setState] = useState<{ search: string; stack: (string | null)[] }>({
     search,
@@ -104,7 +96,6 @@ function useCursorStack(search: string) {
   };
 }
 
-/** The rows on screen ("11–20 of 110 products"), once the page has loaded. */
 function pageRange({
   page,
   pageSize,
@@ -116,7 +107,6 @@ function pageRange({
   return { from, to: from + shown - 1, total, noun: 'products' };
 }
 
-/** Whether the reader narrowed the list, so an empty page is "none match", not "none yet". */
 function narrowed(filters: ProductFilters): boolean {
   return Boolean(
     filters.q.trim() ||
@@ -127,7 +117,6 @@ function narrowed(filters: ProductFilters): boolean {
   );
 }
 
-/** Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar. */
 function noProducts({
   catalog,
   page,
@@ -137,13 +126,11 @@ function noProducts({
   page: Pick<UseQueryResult<{ items: readonly unknown[] }>, 'data' | 'isError'>;
   filters: ProductFilters;
 }>) {
-  // A failed refetch keeps its cached zero, which is no longer a current zero.
   if (catalog.isError || page.isError) return false;
   if (filters.source !== 'catalog' || narrowed(filters)) return false;
   return catalog.data?.product_total === 0 && page.data?.items.length === 0;
 }
 
-/** The page's one empty state carries its actions; the masthead repeats none of them. */
 function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHeader>['empty'] }>) {
   return (
     <ReportPage actions={empty.dialog}>
@@ -159,11 +146,6 @@ function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHea
   );
 }
 
-/**
- * Commerce's Products collection (commerce improvement PR 3): every product
- * holder with its metrics over the chosen window, narrowed by the filter bar
- * (source, search, category and scope). A catalog product opens its own page.
- */
 export function ProductsScreen() {
   const { workspaceId, projectId } = useProjectScope();
   return <ProductsContent workspaceId={workspaceId} projectId={projectId} />;
@@ -177,7 +159,6 @@ function ProductsContent({
   const productFilters = useProductFilters();
   const { filters } = productFilters;
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
-  // A new page size is a new search, so it starts again from the first page.
   const q = useDebounced(filters.q, TABLE_SEARCH_DEBOUNCE_MS);
   const search = productSearch({ ...filters, q }, pageSize);
   const cursors = useCursorStack(search);
@@ -252,7 +233,6 @@ function ProductsContent({
               promptSets: promptSets.data?.prompt_sets ?? [],
             }),
           ]}
-          // What the table lists closes the row: its products and the answers they came from.
           status={
             page.data ? (
               <>
@@ -297,7 +277,6 @@ function ProductsContent({
             </TextLink>
           ) : undefined
         }
-        // Columns and Export act on the table, so they sit at its top right (design.md).
         actions={
           <>
             <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
@@ -308,7 +287,6 @@ function ProductsContent({
           </>
         }
         trackable={filters.source === 'all'}
-        // Checked products are for competitor discovery, a run.
         selectable={canRun && filters.source !== 'archived'}
         columns={columns.shown}
         sort={filters.sort}

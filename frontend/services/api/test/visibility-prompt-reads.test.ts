@@ -1,9 +1,3 @@
-/**
- * The per-prompt visibility reads over HTTP: one run's prompt scores, each
- * prompt's own latest measurement for the library, and one prompt's history.
- *
- * Runs against the real PostgreSQL schema, with workspace isolation on every route.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -62,7 +56,6 @@ describe('GET /visibility/prompts', () => {
       promptIndex: 1,
       promptText: 'cheap crm',
     });
-    // A surface that exposes no search signal: not reported, which is not "no".
     await db
       .updateTable('response_analyses')
       .set({ fanout_state: 'unavailable' })
@@ -92,18 +85,14 @@ describe('GET /visibility/prompts', () => {
       win_answers: 2,
       win_rate: 0.5,
       comparison_status: 'no_baseline',
-      // Acme in 1 of the 4 tracked-brand namings below.
       share_of_voice: 0.25,
-      // The failed task has no answer; both answers' engines report search use.
       web_search: { searched: 1, reported: 2, share: 0.5 },
-      // A run admitted without perception classifies nothing: not a zero.
       sentiment: null,
     });
     expect([body[0]!.share_of_voice, body[0]!.web_search]).toEqual([
       null,
       { searched: 0, reported: 0, share: null },
     ]);
-    // Every brand the answers named, most answers first: competitors count too.
     expect(scored).toMatchObject({
       mentions: 3,
       brands: [
@@ -123,7 +112,6 @@ describe('GET /visibility/prompts', () => {
         logical_engine: 'claude',
         gap_counts: { Globex: 1 },
       }),
-      // An engine whose every task failed reads as failed, not as missing.
       expect.objectContaining({
         logical_engine: 'gemini',
         transport_model: 'model-a',
@@ -143,7 +131,6 @@ describe('GET /visibility/prompts', () => {
       404,
       'Audit not found',
     ]);
-    // Only a brand run has prompt scores to read.
     const crawl = await fixtures.audit(tenant, { scope: 'site_health' });
     expect((await get(tenant, route(tenant, '/prompts'), { audit_id: crawl })).status).toBe(404);
   });
@@ -183,10 +170,8 @@ describe('GET /visibility/prompts', () => {
       rolling_four: [],
       counts: { responses: 2, brand_responses: 1 },
       visibility_rate: 0.5,
-      // Over the pooled namings and pooled answers; neither run searched: 0%, reported.
       share_of_voice: 1 / 3,
       web_search: { searched: 0, reported: 2, share: 0 },
-      // A name's answers are summed across the pooled runs.
       mentions: 2,
       brands: [
         { name: 'Globex', responses: 2 },
@@ -233,21 +218,17 @@ describe('GET /visibility/prompts', () => {
       return auditId;
     };
     const gb = frozen({ country_code: 'GB' });
-    // Measured once before, from another country; older than its previous measurement.
     await run(tenant, '2026-02-23', [[older, 'best crm']], gb);
     const first = await run(tenant, '2026-03-02', [
       [older, 'best crm'],
       [newer, 'cheap crm'],
       [brandQuestion, 'is acme crm any good', 'brand_diagnostic'],
     ]);
-    // A batch from another country skips the older prompt.
     await run(tenant, '2026-03-09', [[newer, 'cheap crm']], gb);
     const third = await run(tenant, '2026-03-16', [
       [newer, 'cheap crm'],
       [older, 'best crm'],
     ]);
-    // Two more answers to the older prompt in its latest run: what they cite
-    // and name is counted across both, most citations first.
     const cited = (domain: string, path = '') => ({ url: `https://${domain}/${path}`, domain });
     await fixtures.execution(tenant, {
       auditId: third,
@@ -269,7 +250,6 @@ describe('GET /visibility/prompts', () => {
         brandMentions: ['Acme'],
       },
     });
-    // Another workspace's later run never reaches this project's library.
     const foreignSet = await promptSet(db, outsider.projectId);
     const foreign = await run(outsider, '2026-03-23', [
       [await trackedPrompt(db, foreignSet, 'best crm'), 'best crm'],
@@ -298,10 +278,8 @@ describe('GET /visibility/prompts', () => {
         ];
       }),
     ).toEqual([
-      // Its previous measurement skips the run that did not ask it.
       [third, 'core', 0, -100, 'comparable'],
       [third, 'core', 1, null, 'changed_context'],
-      // A brand question is shown too; one measurement has nothing to compare, and its 0 is a reading.
       [first, 'brand_diagnostic', 0, null, 'no_baseline'],
     ]);
     expect(body).toHaveLength(3);
@@ -318,15 +296,12 @@ describe('GET /visibility/prompts', () => {
         { kind: 'competitor', name: 'Rival' },
       ]),
     );
-    // Answered with nothing cited or named: an empty list, a finding.
     expect([byPrompt.get(newer)!.sources, byPrompt.get(newer)!.named]).toEqual([[], []]);
-    // The default read is still the latest run alone, and headline cohorts stay core.
     const latestRun = await get(tenant, route(tenant, '/prompts'));
     expect(latestRun.body.map((item) => [item.prompt_id, item.audit_id])).toEqual([
       [newer, third],
       [older, third],
     ]);
-    // Every cohort is the per-prompt read's own; it takes no engine, cohort or named run.
     const narrowed: Record<string, string>[] = [
       { cohort: 'core' },
       { audit_id: first },
@@ -344,7 +319,6 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
   const history = (tenant: Tenant, promptId: string) =>
     route(tenant, `/prompts/${promptId}/history`);
 
-  /** One run's answers for the tracked prompt, scored under its id. */
   async function measuredRun(
     tenant: Tenant,
     promptId: string,
@@ -486,7 +460,6 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
         false,
       ],
     ]);
-    // Each point names the persisted answers it counted.
     const zeroAnswers = await db
       .selectFrom('response_analyses')
       .select('id')
@@ -602,7 +575,6 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
     ]);
     expect(record(body.latest).action_id).toBe(promptAction.id);
 
-    // An Action whose evidence was cleared is no longer offered as the hand-off.
     await db
       .updateTable('actions')
       .set({ evidence_cleared_at: new Date() })

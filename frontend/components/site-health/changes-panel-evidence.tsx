@@ -23,7 +23,6 @@ function boundedText(value: string) {
 function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: number }>) {
   if (value === null || value === undefined || value === '') return <>Not present</>;
   if (Array.isArray(value)) {
-    // An observed empty list is not an absent value.
     if (!value.length) return <>0 items</>;
     if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT) return <>{pluralCount(value.length, 'item')}</>;
     return (
@@ -48,7 +47,6 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
   return text === null ? <>Not present</> : <>{boundedText(text)}</>;
 }
 
-/** Persisted evidence is JSON, so anything that is not a container is a scalar. */
 function scalarText(value: unknown): string | null {
   switch (typeof value) {
     case 'string':
@@ -90,7 +88,6 @@ function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number 
   const fields = Object.entries(value);
   if (!fields.length) return <>Not present</>;
   if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT) return <>{pluralCount(fields.length, 'field')}</>;
-  // Comparison outcomes precede capture details in the bounded content record.
   const rank = (key: string) => {
     const index = CONTENT_FIELD_ORDER.indexOf(key);
     return index < 0 ? CONTENT_FIELD_ORDER.length : index;
@@ -133,11 +130,6 @@ function EvidenceValue({ heading, value }: Readonly<{ heading: string; value: un
   );
 }
 
-/**
- * Where the change was read: each side's page evidence, linked by the crawl
- * that captured it. The implementation event has no readable name in this
- * projection, so its ID stays as a copyable detail.
- */
 function EvidenceSources({
   row,
   crawlAId,
@@ -174,7 +166,6 @@ function EvidenceSources({
   );
 }
 
-/** One change's before and after values, in a drawer so the table never grows. */
 export function ChangeEvidenceDrawer({
   row,
   crawlAId,
@@ -192,7 +183,6 @@ export function ChangeEvidenceDrawer({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      // The row names the page and the field; the drawer holds only their values.
       title="Change evidence"
     >
       {row ? (

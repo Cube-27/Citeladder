@@ -1,17 +1,9 @@
-/**
- * Worker-to-origin request signing. The Workers never send the origin key
- * itself: each upstream request carries an HMAC-SHA256 over the facts the API
- * trusts (time, method, public host, path with query, visitor address), so a
- * captured header cannot be reused for another route, host or client, and
- * expires with its timestamp.
- */
 export const ORIGIN_TIMESTAMP_HEADER = 'X-CiteLadder-Origin-Timestamp';
 export const ORIGIN_SIGNATURE_HEADER = 'X-CiteLadder-Origin-Signature';
 export const ORIGIN_PUBLIC_HOST_HEADER = 'X-CiteLadder-Public-Host';
 export const ORIGIN_CLIENT_IP_HEADER = 'X-CiteLadder-Client-IP';
 
 export type OriginSignedFacts = Readonly<{
-  /** Unix seconds when the Worker signed the request. */
   timestamp: number;
   method: string;
   publicHost: string;
@@ -51,7 +43,6 @@ function hmacKey(key: string): Promise<CryptoKey> {
   return imported;
 }
 
-/** Lowercase hex HMAC-SHA256 of the signed facts under one origin key. */
 export async function signOriginRequest(key: string, facts: OriginSignedFacts): Promise<string> {
   const signature = await crypto.subtle.sign(
     'HMAC',

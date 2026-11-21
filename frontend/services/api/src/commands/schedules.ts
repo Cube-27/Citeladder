@@ -1,4 +1,3 @@
-/** Audit schedule commands for the browser and the public API. */
 import type { z } from 'zod';
 
 import type { scheduleCreate, scheduleUpdate } from '../audits/schedule-inputs.ts';
@@ -25,7 +24,6 @@ export function createSchedule(
   return schedules.createSchedule(db, scopeOf(actor, projectId), input);
 }
 
-/** A probe schedule's cadence, engines and markets are set where its cost is confirmed; here it only pauses or resumes. */
 export async function updateSchedule(
   db: Database,
   actor: Writer,

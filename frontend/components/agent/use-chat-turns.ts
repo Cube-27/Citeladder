@@ -15,18 +15,11 @@ import {
 } from '@/lib/api/agent';
 import type { AgentAttachment, AgentContextRefs } from '@citeladder/contracts/agent';
 
-/**
- * The persisted chat. Reads never run the agent. While a turn is active its
- * stream shows progress; without an open stream (another tab, a reload, a
- * dropped connection) the chat is polled until the run reaches a terminal
- * state, and it is read again the moment a stream closes.
- */
 export function useChatDetail(workspaceId: string, chatId: string) {
   const query = useQuery({
     ...agentQueries.chat(workspaceId, chatId),
     enabled: Boolean(workspaceId && chatId),
     refetchInterval: (state) => {
-      // A page chat is read until its page fetch queues the first turn.
       if (isPageReading(state.state.data?.page_fetch)) return AGENT_PAGE_FETCH_POLL_MS;
       const run = state.state.data?.latest_run;
       return run && isRunActive(run) && !isLiveTurnConnected(run.id) ? runPollMs(run) : false;
@@ -37,7 +30,6 @@ export function useChatDetail(workspaceId: string, chatId: string) {
   useEffect(() => {
     if (closed) void refetch();
   }, [closed, refetch]);
-  // The server queued a page chat's first turn; it runs inside this tab's stream.
   const fetchedTurn = fetchedTurnToStart(query.data);
   useEffect(() => {
     if (fetchedTurn) startLiveTurn(chatId, fetchedTurn, workspaceId);
@@ -48,7 +40,6 @@ export function useChatDetail(workspaceId: string, chatId: string) {
 export type NewChatInput = {
   message: string;
   skillId: string | null | undefined;
-  /** A defined workflow; the server pins its skill and format. */
   workflowId?: string;
   actionId?: string;
   context: AgentContextRefs;
@@ -56,15 +47,12 @@ export type NewChatInput = {
   attachments?: AgentAttachment[];
 };
 
-/** Starts a chat once per accepted request; `onCreated` receives its id. */
 export function useCreateChat(
   workspaceId: string,
   projectId: string,
   onCreated: (chatId: string) => void,
 ) {
   const requestKey = useRequestKey();
-  // The descriptor reads the saved conversation before success resolves, so
-  // the current composer stays until the chat can render.
   const mutation = useMutation(agentMutations.createChat(workspaceId));
   const start = ({
     message,
@@ -101,7 +89,6 @@ export function useCreateChat(
   };
 }
 
-/** An ordinary follow-up; only requested work creates an output revision. */
 export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const chatId = detail.chat.id;
   const [draft, setDraft] = useState('');
@@ -119,14 +106,8 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   });
   type Turn = Parameters<typeof mutation.mutate>[0];
   const userMessages = detail.messages.filter((message) => message.role === 'user').length;
-  // How many requests the chat held when the last send went out: an accepted
-  // send stays in the thread until the read that holds its saved message.
   const [sentAt, setSentAt] = useState(userMessages);
   const awaitingSaved = mutation.isSuccess && userMessages <= sentAt;
-  /**
-   * Every send goes through here: an accepted turn retires its request key,
-   * and clears the composer only if it still holds what was sent.
-   */
   const submit = (turn: Turn) => {
     setSentAt(userMessages);
     mutation.mutate(turn, {
@@ -148,7 +129,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
       },
     });
   };
-  /** The skill choice a recorded request was sent with, as the picker's tri-state. */
   const skillFor = (message: AgentMessage) => {
     if (message.skill_source === 'user') return message.skill_id;
     return message.skill_source === 'automatic' ? null : undefined;
@@ -167,7 +147,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const send = (message: string) => {
     const text = message.trim();
     if (!text) return;
-    // A resolved Action link becomes `@label` in the draft too, so acceptance still clears it.
     commands.prepare({ message: text, edit: setDraft }, (prepared) => {
       setLastMessage(prepared.message);
       const typed = request(prepared.message, skillId, prepared);
@@ -184,7 +163,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
       setSkillId(skillFor(message));
       commands.restore({ mentions: message.mentions, pastes: message.attachments });
     },
-    /** Sends a recorded request again as a new turn, leaving the draft alone. */
     resend: (message: AgentMessage) =>
       submit({
         ...request(message.content, skillFor(message), {
@@ -193,7 +171,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
         }),
         idempotencyKey: newIdempotencyKey(),
       }),
-    /** The message being sent, shown in the thread until the chat read holds it. */
     pendingMessage:
       mutation.isPending || awaitingSaved ? (mutation.variables?.message ?? null) : null,
     skillId,
@@ -203,7 +180,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     commands,
     pending: mutation.isPending || commands.resolving,
     failure: mutation.isError ? agentWriteFailure(mutation.error, 'send the message') : null,
-    /** The message whose send failed, which Retry sends again. */
     failedMessage: mutation.isError ? (mutation.variables?.message ?? null) : null,
     retrySubmission: () => {
       if (mutation.variables) submit(mutation.variables);

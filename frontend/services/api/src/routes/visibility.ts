@@ -1,14 +1,3 @@
-/**
- * `visibility`: every persisted visibility read for one measurement
- * selection: the dashboard, prompt scores and one prompt's history, trends,
- * query fanout, Sources (table, series and one URL), per-answer evidence, answer perception
- * (summary and quotes), fact-check accuracy (summary, claims, claims CSV and by fact), ads in AI
- * answers and the observed AI Overview rates.
- *
- * Reads of persisted projections; nothing is
- * fetched. An unknown or out-of-scope run is `Audit not found`, and a
- * malformed selection is a 422 carrying the reader's message.
- */
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import {
   accuracyClaimPageSchema,
@@ -78,7 +67,6 @@ import {
 } from './visibility-selection.ts';
 import { visibilitySourceRoutes } from './visibility-sources.ts';
 
-/** The dashboard's selection: the latest run, one run, or a period of one configuration. */
 const DASHBOARD_SELECTION = {
   audit_id: RUNS.audit_id,
   ...MARKET,
@@ -123,14 +111,12 @@ const GRANULARITY_NAMES = policy.visibility.trend_granularities
   .map((value) => `\`${value}\``)
   .join(', ');
 
-// `topic` here is a claim's fact-check topic, not a project topic.
 const CLAIM_FILTERS = {
   ...PERCEPTION_SELECTION,
   topic: { scalar: { kind: 'literal', values: policy.perception.fact_check.topics } },
   verdict: { scalar: { kind: 'literal', values: claimVerdictSchema.options } },
 } as const;
 
-/** A claims read's selection: its `topic` filters claims, never answers by project topic. */
 const claimSelection = (
   workspaceId: string,
   projectId: string,

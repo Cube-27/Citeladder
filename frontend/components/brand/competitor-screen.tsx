@@ -39,11 +39,6 @@ type Queries = ReturnType<typeof useVisibilityQueries>;
 const isUnknownCompetitor = (error: unknown) =>
   error instanceof ApiError && error.code === 'competitor_not_found';
 
-/**
- * Brand → Competitors → one competitor (AV-6): its key figures beside yours,
- * its trend against yours, the sources cited when it is named and the prompts
- * naming it instead of you. Keyed by the roster name.
- */
 export function CompetitorScreen() {
   const { name = '' } = useParams();
   const filters = useVisibilityFilters();
@@ -159,7 +154,6 @@ const FIGURES: readonly Figure[] = [
   },
 ];
 
-/** The competitor's figures, each over yours from the same ranking read. */
 function FocusFigures({
   name,
   rankings,

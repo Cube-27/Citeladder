@@ -7,13 +7,8 @@ import { Button, IconButton } from './button';
 import { Icon } from './icon';
 import { SHEET_FACE } from '@/components/ui/slip';
 
-/** Every modal sheet's one scrim (dialog, drawer, command palette, navigation drawer). */
 export const SCRIM = 'bg-scrim z-overlay fixed inset-0';
 
-/**
- * The element that opened an overlay. An item of a menu closes with its menu,
- * so the menu's trigger stands in for it.
- */
 function opener(active: Element | null) {
   if (!(active instanceof HTMLElement) || active === document.body) return null;
   if (active === document.documentElement) return null;
@@ -26,11 +21,6 @@ const FIELD =
 const CONTROL =
   'input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
 
-/**
- * The body's first control when it is a text field: it takes focus on open
- * with the caret only (input-modality.ts). Any other first control (a choice
- * whose focus means something) leaves Radix's default.
- */
 function leadingField(content: EventTarget | null): HTMLElement | null {
   if (!(content instanceof HTMLElement)) return null;
   const first = [
@@ -40,11 +30,6 @@ function leadingField(content: EventTarget | null): HTMLElement | null {
 }
 const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
-/**
- * Where focus goes back to: the opener while it shows, else the visible
- * control that folds or expands the region hiding it (the masthead's More
- * button, named by `data-folded-by`, for an action folded behind it).
- */
 export function returnTargetFor(node: HTMLElement | null) {
   if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
   const folder = node.closest<HTMLElement>('[data-folded-by]')?.dataset.foldedBy;
@@ -63,11 +48,6 @@ export function returnTargetFor(node: HTMLElement | null) {
   return null;
 }
 
-/**
- * Remembers the element that opened an overlay, so closing returns focus to
- * it even when Radix's own trigger is not the opener: a menu item's menu
- * trigger, or the More button when the opener was folded away.
- */
 export function useReturnFocus(open: boolean) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
@@ -125,20 +105,6 @@ function DialogHeader({
   );
 }
 
-/**
- * Dialog — a modal panel for one short task, centred across the scrim with its
- * top edge fixed at 12dvh, so content that changes inside it (a tab, a picked
- * file) grows or shrinks it downward and nothing above moves: the sheet face
- * (`raised`, 1px `rule` edge, radius 12, `shadow-sheet`), 16 padding and gaps, 480 wide
- * (640 `wide`, 720 `prose`; the overlay widths are 480, 560, 640 and 720).
- * The title is the section title (500, 22/28), the description
- * `ink-2`, the footer right-aligned (Cancel first, then the action).
- * Header, body and footer are divided by hairlines. `tone="danger"` is a
- * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
- * title and no close button, so the person picks Cancel or the named action.
- * Focus opens on the body's first control when it is a text field, else the
- * first tabbable element, and returns to the opener.
- */
 export function Dialog({
   open,
   onOpenChange,
@@ -156,15 +122,8 @@ export function Dialog({
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
-  /** Chips and controls under the title, outside the description. */
   toolbar?: ReactNode;
   tone?: 'default' | 'danger';
-  /**
-   * `wide` (640px) only for a side-by-side review the narrow panel cannot
-   * hold (two calendar months, a CSV preview); a long form is a Drawer.
-   * `prose` (720px) is a label-left form whose controls need the width (Launch a run).
-   * `answer` is the answer view alone: most of the viewport, up to `--container-answer`.
-   */
   width?: 'narrow' | 'wide' | 'prose' | 'answer';
 }>) {
   const returnFocus = useReturnFocus(open);
@@ -254,11 +213,6 @@ export type ConfirmRequest = {
   onConfirm: () => void;
 };
 
-/**
- * Ask before an action that is hard to undo. Closed while `request` is null;
- * the confirm button names exactly what will happen ("Stop tracking", never
- * "OK"), and Cancel stays the safe default.
- */
 export function ConfirmDialog({
   request,
   onCancel,

@@ -2,11 +2,6 @@ import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-/**
- * Whether this member can send to the Agent, and why not when they cannot.
- * The server re-checks role, capability and funding on every turn; this only
- * decides what the composer offers and explains.
- */
 export type AgentAccess =
   | { canSend: true }
   | { canSend: false; reason: 'role' | 'capability'; message: string };

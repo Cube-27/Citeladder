@@ -1,9 +1,5 @@
 import { mountCookieBanner } from '@/components/marketing/chrome/cookie-banner';
 
-/**
- * The consent region as `CookieBanner.astro` serves it: hidden, with the two
- * answer buttons. Mounted with its real behaviour; returns a cleanup.
- */
 export function mountCookieBannerFixture(): () => void {
   document.body.insertAdjacentHTML(
     'beforeend',

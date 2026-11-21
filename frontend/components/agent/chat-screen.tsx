@@ -20,26 +20,18 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/** A chat working on a page (`optimize_page`) has this document, and opens as its workspace (E1). */
 const PAGE_OUTPUT_KIND = 'page';
 
-// The workspace carries the editor (CodeMirror), so it loads only for a page chat.
 const PageWorkspace = lazy(() =>
   import('./workspace/page-workspace').then(({ PageWorkspace }) => ({ default: PageWorkspace })),
 );
 
-/**
- * One chat: a single thread with its documents inline and the composer pinned
- * below, or, once a page chat has its page, the page workspace.
- */
 export function ChatScreen() {
   const { chatId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
   const query = useChatDetail(workspaceId, chatId);
 
-  // A 404 means the chat is gone, even with a cached copy on screen.
   if (isNotFound(query.error)) return <NotFoundScreen />;
-  // A failed background refresh keeps the chat on screen; only a first load fails the page.
   if (query.isError && !query.data)
     return (
       <ThreadPage>
@@ -123,7 +115,6 @@ function ChatView({
       actions={<ChatHeaderActions detail={detail} />}
     >
       <Stack gap="workspace" className="min-w-0 flex-1 content-start">
-        {/* The masthead cuts a long title below desktop; the thread opens with it in full. */}
         <p aria-hidden className={textRole('heading', 'desktop:hidden')}>
           {detail.chat.title}
         </p>

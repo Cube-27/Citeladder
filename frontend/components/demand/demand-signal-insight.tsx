@@ -9,14 +9,6 @@ import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { wellClasses } from '@/components/ui/slip';
 
-/**
- * The plain-language reading of one signal, for its evidence drawer.
- *
- * Every figure quoted here must come from `signal.metrics`/`signal.evidence`.
- * When a metric was not observed the sentence drops it rather than
- * substituting a default — a page whose whole premise is "versioned GSC
- * evidence" cannot print a count it did not measure.
- */
 export function SignalInsight({
   signal,
   policy,

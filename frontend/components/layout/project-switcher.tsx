@@ -22,23 +22,6 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 import { useProjectCreation } from '@/components/layout/use-project-creation';
 
-/**
- * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
- * the workspaces the reader can select and the projects inside the active one.
- *
- * Selection goes through the shared navigation owners so the context, the
- * device storage and the URL cannot disagree: the destination NAMES the
- * chosen project, which is what the arriving context resolves against. An
- * additional project carries its target workspace for the same reason — a
- * refresh of the creation route must not re-target it.
- *
- * A workspace is selectable INDEPENDENTLY of its projects (plan §2.4): an
- * empty workspace appears here like any other and stays manageable, because
- * choosing one is an explicit act rather than something inferred from a
- * project. The workspace section is shown only when there is more than one to
- * choose between, so the ordinary single-workspace account sees exactly the
- * switcher it saw before.
- */
 export function ProjectSwitcher() {
   const router = useNavigate();
   const queryClient = useQueryClient();
@@ -90,8 +73,6 @@ export function ProjectSwitcher() {
                 <MenuItem
                   key={workspace.id}
                   data-active={selected}
-                  // The same page in the new workspace, its record ids dropped;
-                  // re-picking the active workspace stays the no-op it looks like.
                   onSelect={() => selectWorkspace(workspace.id)}
                   icon={<Building2 aria-hidden />}
                   selected={selected}
@@ -118,9 +99,6 @@ export function ProjectSwitcher() {
             <MenuItem
               key={project.id}
               data-active={selected}
-              // The list carries summaries, so a switch renders only once the
-              // project's own view has answered. Highlighting a row (pointer
-              // or keyboard) asks for it, so a choice rarely waits on it.
               onFocus={() => {
                 if (!selected) void queryClient.prefetchQuery(projectQueries.detail(project.id));
               }}

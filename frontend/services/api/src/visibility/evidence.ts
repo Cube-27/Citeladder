@@ -1,11 +1,3 @@
-/**
- * Per-answer evidence for a selection: mentions, citations and query fanout.
- *
- * Shared API/MCP reader of persisted rows: stored search events are
- * normalized, never invented, and an answer's fanout state distinguishes
- * query text, a count alone, no search, and an engine that exposes nothing.
- * Pages are keyset cursors bound to the selection, its filters and `as_of`.
- */
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { visibilityEvidenceResponseSchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
@@ -35,8 +27,6 @@ import {
 
 export type VisibilityEvidenceResponse = z.input<typeof visibilityEvidenceResponseSchema>;
 type EvidenceItem = VisibilityEvidenceResponse['items'][number];
-
-// --- The paged evidence read -----------------------------------------------
 
 export type EvidenceFilters = {
   promptId: string | null;
@@ -84,7 +74,6 @@ export function applyFilters(base: Scope, filters: EvidenceFilters): Scope {
   }
   if (filters.promptId) {
     const promptId = filters.promptId;
-    // A deleted prompt's answers are found by the frozen text its snapshot kept.
     const frozenText = base
       .clearSelect()
       .select('snapshot.text')
@@ -123,7 +112,6 @@ function cursorPosition(
   }
 }
 
-/** The filter offers the prompts of the runs the evidence reads: brand runs only. */
 function promptOptions(db: Database, selection: RunSelection, asOf: string) {
   let query = selectedRuns(db, selection)
     .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
@@ -224,7 +212,6 @@ export async function getVisibilityEvidence(
     }),
     citationsByAnalysis(db, selection.workspaceId, ids),
   ]);
-  // One label per prompt; a prompt renamed within the selection shows one text.
   const prompts = new Map<string, string>();
   for (const option of promptChoices) prompts.set(option.identity, option.text);
   const last = shown.at(-1);
@@ -282,7 +269,6 @@ export async function getVisibilityEvidence(
 
 type Mention = EvidenceItem['mentions'][number];
 
-/** Brand then competitor mentions per answer, each in recorded order. */
 async function mentionsByAnalysis(
   db: Database,
   {

@@ -23,10 +23,6 @@ function shouldInvalidateCrawl(frame: RawSseFrame): boolean {
   }
 }
 
-/**
- * Subscribes to a crawl's event stream while active. Lifecycle bursts refresh
- * the dashboard; per-page progress deliberately remains polling-backed.
- */
 export function useCrawlEvents(
   crawlId: string | null | undefined,
   projectId: string | null | undefined,

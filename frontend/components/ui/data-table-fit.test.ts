@@ -6,7 +6,6 @@ const column = (floor: number, low = false): FitColumn => ({ floor, low });
 
 describe('table fit', () => {
   it('hides low columns, the last first, only until the floors fit the frame', () => {
-    // Prompts at 1280: prompt, visibility, mentions, two low figures, enabled, actions.
     const prompts = [
       column(200),
       column(112),
@@ -16,11 +15,9 @@ describe('table fit', () => {
       column(80),
       column(80),
     ];
-    // 40 + 200 + 112 + 128 + 112 + 96 + 80 + 80 = 848.
     expect(hiddenLowColumns({ columns: prompts, select: 40, frame: 848 })).toEqual([]);
     expect(hiddenLowColumns({ columns: prompts, select: 40, frame: 800 })).toEqual([4]);
     expect(hiddenLowColumns({ columns: prompts, select: 40, frame: 700 })).toEqual([3, 4]);
-    // With every low column gone the table still scrolls rather than hiding a priority column.
     expect(hiddenLowColumns({ columns: prompts, select: 40, frame: 400 })).toEqual([3, 4]);
   });
 });

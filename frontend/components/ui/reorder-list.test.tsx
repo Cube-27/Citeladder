@@ -6,7 +6,6 @@ import { ReorderList } from './reorder-list';
 
 const ITEMS = ['Alpha', 'Beta', 'Gamma'].map((name) => ({ key: name, name, content: name }));
 
-/** A drag's data store, shared by its start and its drop like the browser's. */
 function dataTransfer(entries: Record<string, string> = {}) {
   const store = new Map(Object.entries(entries));
   return {

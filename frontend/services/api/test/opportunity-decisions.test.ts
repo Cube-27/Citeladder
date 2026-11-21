@@ -1,9 +1,3 @@
-/**
- * Opportunity decisions the seeded PostgreSQL scenario never reaches: earned
- * page selection and scoring, the Actions list's groups and priority bands,
- * which site changes promote to a rule, how a
- * confirmed decline ranks, and how verification folds per-check readings.
- */
 import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
@@ -86,7 +80,6 @@ describe('earned page opportunities', () => {
   });
 
   it('acts on every Gap page, whatever its format and however rarely it is cited', () => {
-    // An article cited by one answer, read thinly: still a Gap, so still an Action.
     const once = page({
       page_format: 'article',
       recurrence_count: 1,
@@ -100,7 +93,6 @@ describe('earned page opportunities', () => {
       value_factor: 7 / 6,
       gap_factor: 1.4,
     });
-    // It ranks below the same page cited by three answers.
     expect(hit!.value_factor).toBeLessThan(detect([page()])[0]!.value_factor);
   });
 
@@ -155,7 +147,6 @@ describe('site change promotion', () => {
     expect(content({ ...complete, content_change_classification: 'minor_change' })).toBe(
       'site_change_metadata_inconsistency',
     );
-    // A substantial rewrite stays in change history instead of becoming an action.
     expect(
       content({ ...complete, content_change_classification: 'substantial_change' }),
     ).toBeNull();

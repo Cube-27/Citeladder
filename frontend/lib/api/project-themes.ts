@@ -1,7 +1,3 @@
-/**
- * A project's themes: the buyer-facing themes Perception classifies answers
- * against. Every response passes through `strictValidate`.
- */
 import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -47,7 +43,6 @@ export const themeQueries = {
     }),
 };
 
-/** A theme write re-reads the list, Perception and the probe reads, whose themes it names. */
 function refresh(client: QueryClient, projectId: string) {
   void client.invalidateQueries({ queryKey: queryKeys.projects.resource(projectId, 'themes') });
   void client.invalidateQueries({ queryKey: queryKeys.projects.resource(projectId, 'probes') });

@@ -14,12 +14,6 @@ import {
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { pageDisplayTitle } from '@/lib/site-health/status';
 
-/**
- * Evidence shared by several pages is usually one template element, so the
- * question is the one fix that clears it everywhere. The scope is built from
- * the counts, not from the label the reader sees, and claims no more than the
- * loaded rows prove.
- */
 type SharedIssue = Pick<SiteIssue, 'group_id' | 'title' | 'rule_id'>;
 
 function sharedAskAgentPrompt(issue: SharedIssue, evidence: string, scope: SharedScope): string {
@@ -31,12 +25,6 @@ function sharedAskAgentPrompt(issue: SharedIssue, evidence: string, scope: Share
 
 type SharedScope = Parameters<typeof sharedPagesLabel>[0];
 
-/**
- * Evidence several pages share, said once: the element, how many pages carry
- * it, one question for all of them, then the pages themselves. The handoff
- * names the issue group without a page, since the question is the fix that
- * clears every page at once.
- */
 export function SharedOccurrences({
   issue,
   entry,
@@ -81,11 +69,6 @@ export function SharedOccurrences({
   );
 }
 
-/**
- * One affected page, linking to its detail: its title with its kind at the
- * row's end, bound 4 over its URL. Title and URL each keep to one line (the
- * full value in its tooltip), so a long title or query never stacks the row.
- */
 export function AffectedPageLink({
   crawlId,
   siteUrlId,

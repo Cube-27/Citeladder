@@ -51,10 +51,6 @@ function lastRun(run: ProbeRun | null, date: (iso: string) => string): string {
   }
 }
 
-/**
- * The probe's last run, its schedule and Run probe, above Market and Objections.
- * Off saves at once; Daily or Weekly confirms the cost per run first.
- */
 export function ProbeBar({
   scope,
   status,
@@ -70,7 +66,6 @@ export function ProbeBar({
   const mayRun = useWorkspaceCapability('run');
   const mayWrite = useWorkspaceCapability('write');
   const schedule = useMutation(probeMutations.schedule(scope));
-  // After Run probe the cached status is stale until the re-read lands: no second launch.
   const refreshing = useIsFetching({ queryKey: queryKeys.projects.probes(scope) }) > 0;
   return (
     <Section variant="framed">
@@ -112,7 +107,6 @@ export function ProbeBar({
   );
 }
 
-/** Market and Objections before a probe is labelled: one sentence and Run probe. */
 export function ProbeEmpty({
   status,
   onRun,

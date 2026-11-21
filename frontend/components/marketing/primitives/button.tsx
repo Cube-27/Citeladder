@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost' | 'soft';
 type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
 
-/** `dark` and `nav` are marketing-only skins over the shared secondary. */
 const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
   primary: 'primary',
   ghost: 'quiet',
@@ -20,7 +19,6 @@ const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
 
 const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 
-/** A marketing button link's attributes. */
 function buttonLinkAttributes({ variant = 'primary', className }: VisualProps) {
   const shared = sharedVariant(variant);
   return {
@@ -53,11 +51,6 @@ export function ButtonLink({
   );
 }
 
-/**
- * The demo CTA, in one place.
- *
- * The shared destination keeps demo enquiries on CiteLadder.
- */
 export function DemoButtonLink({
   variant = 'primary',
   className,
@@ -81,11 +74,6 @@ export function DemoButtonLink({
   );
 }
 
-/**
- * The website's one pair of calls to action, the same on every page: Start
- * free trial while self-serve signup is open, then Book a demo (the primary
- * when signup is closed).
- */
 export function SiteActions() {
   const signup = selfServeSignupOpen();
   return (

@@ -1,4 +1,3 @@
-/** zod validation with the published status/code/location/type error contract. */
 import type { Context } from 'hono';
 import { z } from 'zod';
 import { ApiError } from '../errors.ts';
@@ -7,7 +6,6 @@ import { parseRequestDate } from './datetimes.ts';
 
 const dateFields = new WeakMap<z.ZodType, Set<string>>();
 
-/** Top-level `format: date` fields, derived once per schema. */
 function datesOf(schema: z.ZodType): Set<string> {
   let fields = dateFields.get(schema);
   if (!fields) {
@@ -22,7 +20,6 @@ function datesOf(schema: z.ZodType): Set<string> {
   return fields;
 }
 
-/** The published 422 `type` token for one zod issue at the received value `at`. */
 function issueType(issue: z.core.$ZodIssue, at: unknown, dateField: boolean): string {
   if (at === undefined && issue.path.length > 0) return 'missing';
   const malformed = issue.code === 'invalid_type' || issue.code === 'invalid_format';
@@ -45,7 +42,6 @@ function issueType(issue: z.core.$ZodIssue, at: unknown, dateField: boolean): st
   }
 }
 
-/** The media type a JSON body declares; a Reporting API delivery declares its own. */
 type JsonMedia = 'application/json' | 'application/reports+json';
 
 export async function readBody<T extends z.ZodType>(
@@ -59,7 +55,6 @@ export async function readBody<T extends z.ZodType>(
   return value;
 }
 
-/** Whether the request declares `media` as its body's type (any parameters such as charset). */
 function declares(c: Context, media: JsonMedia): boolean {
   return c.req.header('content-type')?.split(';')[0]?.trim().toLowerCase() === media;
 }
@@ -81,7 +76,6 @@ export async function readOptionalBody<T extends z.ZodType>(
   try {
     value = JSON.parse(raw);
   } catch (error) {
-    // Keep the parser's input location, not its runtime-specific wording.
     const position =
       error instanceof SyntaxError ? /position (\d+)/u.exec(error.message)?.[1] : undefined;
     const offset = position === undefined ? raw.length : Number(position);

@@ -1,7 +1,3 @@
-// The website and docs are static multi-page sites, so a link the reader is
-// about to follow (hover or press, `moderate`) is prefetched. Document rules
-// match same-origin links only; the API, the machine routes and the contact
-// intake under /api never are.
 export const SPECULATION_RULES = {
   prefetch: [
     {

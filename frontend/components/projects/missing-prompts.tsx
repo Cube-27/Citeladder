@@ -13,14 +13,8 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 
 import { WidgetFrame } from './widget-frame';
 
-/** Rows shown on Overview; the rest are one click away in Prompts. */
 const SHOWN = 5;
 
-/**
- * Overview's "Where you're missing": prompts in the latest run (default
- * market) whose answers named a competitor but not the brand, with the
- * engines that did so and the Action that targets each prompt.
- */
 export function MissingPrompts({
   projectId,
   workspaceId,

@@ -15,8 +15,6 @@ const { list, revoke, mayManage } = vi.hoisted(() => ({
   revoke: vi.fn<(id: string, workspaceId?: string) => Promise<void>>(),
   mayManage: { value: false },
 }));
-// The transport is replaced on the module's own client object, so the real
-// query and mutation descriptors run against it.
 Object.assign(mcpConnectionsApi, { list, revoke });
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeWorkspaceId: WORKSPACE }),
@@ -59,7 +57,6 @@ it('leads with the connect strip and shows only the lists that hold rows', async
   renderTab();
   expect(screen.getByRole('link', { name: 'Connect to Claude' })).toBeInTheDocument();
   expect(await screen.findByRole('heading', { name: 'No connections yet' })).toBeVisible();
-  // The workspace's own list was read, and holds nothing, so it has no card.
   await waitFor(() => expect(list.mock.calls.map(([id]) => id)).toContain(WORKSPACE));
   expect(screen.getByRole('heading', { name: 'Your connections' })).toBeVisible();
   expect(

@@ -1,6 +1,4 @@
 #!/bin/bash
-# Container-Optimized OS startup script (Terraform template): runs on every
-# boot and converges the single PostgreSQL container. Idempotent by design.
 set -euo pipefail
 
 image='${postgres_image}'
@@ -33,7 +31,6 @@ if ! grep -q "$state/swapfile" /proc/swaps; then
   swapon "$state/swapfile" || echo 'citeladder-db: swap unavailable on this kernel'
 fi
 
-# Private Google Access: metadata token -> Secret Manager -> password file.
 read_password() {
   local token
   token=$(curl --fail --silent --show-error -H 'Metadata-Flavor: Google' \
@@ -67,9 +64,6 @@ fi
 chown 999:999 "$config/server.key" "$config/server.crt" "$config/db-password"
 chmod 0600 "$config/server.key" "$config/db-password"
 chmod 0644 "$config/server.crt"
-# The socket exists only inside the container; boot uses it to apply the secret.
-# Over the VPC, the migrate job connects as the schema owner and every service
-# as the least-privilege citeladder_app role, whose password the migrate job sets.
 cat > "$config/pg_hba.conf" <<'HBA'
 local     all         all                         trust
 host      all         all         127.0.0.1/32    scram-sha-256
@@ -89,20 +83,15 @@ run_args=(
   -c hba_file=/run/citeladder/pg_hba.conf
   -c ssl=on -c ssl_cert_file=/run/citeladder/server.crt -c ssl_key_file=/run/citeladder/server.key
   -c password_encryption=scram-sha-256
-  # Planner and memory for a 1 GB, 0.25 vCPU VM whose database fits in RAM
-  # (docs/operations/GOOGLE_CLOUD.md).
   -c max_connections=40 -c shared_buffers=128MB -c effective_cache_size=512MB
   -c work_mem=8MB -c maintenance_work_mem=64MB
   -c random_page_cost=1.5 -c max_parallel_workers_per_gather=0
   -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=6
-  # Measurement (docs/operations/GOOGLE_CLOUD.md). Slow-statement lines never carry bind values.
   -c jit=off -c track_io_timing=on
   -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track_planning=on
   -c log_lock_waits=on -c log_min_duration_statement=500 -c log_parameter_max_length=0
   -c log_autovacuum_min_duration=1s
 )
-# Recreate the container whenever its image, arguments or access rules change;
-# the data directory persists. An unchanged specification only starts it.
 spec=$({ printf '%s\n' "$${run_args[@]}"; cat "$config/pg_hba.conf"; } | sha256sum | cut -c1-16)
 current=$(docker inspect --format '{{index .Config.Labels "citeladder.spec"}}' citeladder-postgres 2>/dev/null || true)
 if [[ "$current" == "$spec" ]]; then
@@ -119,7 +108,6 @@ for attempt in $(seq 1 60); do
   [[ "$attempt" -lt 60 ]] || exit 1
   sleep 2
 done
-# The value travels through the container-local environment, never argv or SQL logs.
 docker exec -i citeladder-postgres sh -c \
   'ROLE_PASSWORD="$(cat /run/citeladder/db-password)" psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder' \
   >/dev/null <<'SQL'

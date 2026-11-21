@@ -73,7 +73,6 @@ function renderPalette(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 
-/** The shell's wiring: the palette loads on its first open. */
 function Palette() {
   return (
     <>
@@ -83,7 +82,6 @@ function Palette() {
   );
 }
 
-/** Opens via the sidebar trigger and returns the user-event instance. */
 async function open() {
   const user = userEvent.setup();
   renderPalette(<Palette />);
@@ -181,7 +179,6 @@ describe('CommandPalette', () => {
 
   it('lists every nav destination and every project', async () => {
     await open();
-    // Layer destinations, plus both projects.
     expect(screen.getByRole('option', { name: /keyword research/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /site/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /acme/i })).toBeInTheDocument();
@@ -261,7 +258,6 @@ describe('CommandPalette', () => {
     await user.keyboard('{ArrowDown}');
     expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
 
-    // Wraps backwards past the start to the last result.
     await user.keyboard('{ArrowUp}{ArrowUp}');
     const after = screen.getAllByRole('option');
     expect(after[after.length - 1]).toHaveAttribute('aria-selected', 'true');
@@ -275,10 +271,7 @@ describe('CommandPalette', () => {
     await user.keyboard('zzzzz');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
-    // Focus stays in the field, so the outcome is announced as a status.
     expect(screen.getByRole('status')).toHaveTextContent('No matches for “cezzzzz”');
-    // One message the reader sees, one announced; it is not an option, so it
-    // sits outside the listbox.
     expect(screen.getAllByText('No matches for “cezzzzz”')).toHaveLength(2);
     expect(within(screen.getByRole('listbox')).queryByText(/no matches for/i)).toBeNull();
   });
@@ -291,9 +284,6 @@ describe('CommandPalette', () => {
   });
 
   it('returns focus to where the caller was before ⌘K', async () => {
-    // Radix restores focus to its own Trigger; the shortcut path has none, so
-    // without an explicit hand-back focus falls to <body> and the caller
-    // loses their place in the page.
     const user = userEvent.setup();
     renderPalette(
       <>

@@ -22,10 +22,6 @@ import {
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
-/**
- * Brand → Competitors (AV-16): you beside the brands you track, then the
- * suggestions. Context keeps owning the roster; Edit competitors goes there.
- */
 export function CompetitorsScreen() {
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, 'competitors');
@@ -48,7 +44,6 @@ export function CompetitorsScreen() {
       filters={selectionPageFilterBar(state, pageFilters)}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
-      {/* While the runs load, the gate below draws the table's footprint. */}
       {state && state !== 'loading' ? (
         <SelectionPageStateBlock state={state} queries={queries} />
       ) : (

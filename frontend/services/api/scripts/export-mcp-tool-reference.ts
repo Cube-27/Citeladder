@@ -1,4 +1,3 @@
-/** Public documentation metadata comes from the live TypeScript catalogue. */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { tools } from '../src/mcp/tools.ts';
@@ -13,7 +12,6 @@ const entry = (tool: (typeof tools)[number] | (typeof writeTools)[number]) => ({
   access: tool.annotations.readOnlyHint ? 'read' : 'write',
 });
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
-// Reads first, then changes, which only a connection with Allow changes lists.
 const contents = `${JSON.stringify(
   {
     server_version: mcpPolicy.server_version,

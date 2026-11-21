@@ -10,7 +10,6 @@ on:
 permissions:
   contents: read
 
-# See ci.yml: only pull-request runs are superseded.
 concurrency:
   group: compose-smoke-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -54,12 +53,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # No host toolchain and no host dependency install. The images install
-      # their own dependencies with `pnpm install --frozen-lockfile`, so a stale
-      # lockfile fails the build below. The API and frontend CI jobs additionally
-      # install frozen on the host, and the lockfile classifies as security- AND
-      # compose-sensitive, so it always selects those jobs.
-
       - name: Create disposable Compose environment
         run: |
           cat > .env <<'EOF'
@@ -78,7 +71,6 @@ jobs:
           DEV_LOGIN_COUNTER_ALLOWANCE=100
           EOF
 
-      # Build both frontend runtimes cold to verify clean-clone delivery.
       - name: Build and start empty-database stack
         run: |
           set -euo pipefail
@@ -94,20 +86,13 @@ jobs:
           }
           trap cleanup EXIT
 
-          # `docker compose build`/`up` pull postgres:16-alpine when absent;
-          # GitHub runners must not require the image to be pre-cached.
           if ss -ltn '( sport = :3000 or sport = :3001 or sport = :4322 or sport = :8100 or sport = :55432 )' | grep -q LISTEN; then
             echo 'Required smoke-test port is already in use.' >&2
             exit 1
           fi
           "${compose[@]}" down --volumes --remove-orphans
           "${compose[@]}" build
-          # `up` blocks until the one-shot migration dependency succeeds before
-          # starting the API process and workers.
           "${compose[@]}" up --detach
-          # The runtime image budget catches full-toolchain base-image drift and
-          # accidental inclusion of the frontend workspace dependency graph. The
-          # migrate service runs this same image.
           for service in api-service; do
             image="$(docker inspect --format '{{.Image}}' "$("${compose[@]}" ps --all -q "$service")")"
             bytes="$(docker image inspect --format '{{.Size}}' "$image")"
@@ -119,7 +104,6 @@ jobs:
           "${compose[@]}" run --rm --no-deps migrate node src/cli/bootstrap-catalog.ts --help
           "${compose[@]}" run --rm --no-deps migrate node src/cli/bootstrap-account.ts --help
           "${compose[@]}" run --rm --no-deps migrate node src/cli/billing-admin.ts --help
-          # A repeated migrate job is a no-op schema step and retains the same immutable catalog.
           "${compose[@]}" run --rm --no-deps migrate
           "${compose[@]}" exec -T api-service node --input-type=module -e "await import('@citeladder/contracts')"
           for _ in $(seq 1 45); do
@@ -129,8 +113,6 @@ jobs:
             sleep 2
           done
           curl --fail --silent --show-error http://127.0.0.1:8100/health | grep -qx '{"status":"ok"}'
-          # Readiness is the probe that proves the stack can actually serve:
-          # /health stays 200 with the database down, /ready does not.
           curl --fail --silent --show-error http://127.0.0.1:8100/ready | grep -qx '{"status":"ready"}'
           for origin in http://127.0.0.1:3000 http://127.0.0.1:3001/health http://127.0.0.1:4322; do
             for _ in $(seq 1 45); do
@@ -142,7 +124,6 @@ jobs:
             curl --fail --silent --show-error --max-time 10 "$origin" >/dev/null
           done
           node scripts/frontend-ingress-smoke.mjs http://127.0.0.1:3000 http://127.0.0.1:3001
-          # The runner loop is the only executor: one tick must complete on a clean database.
           # grep reads the whole log (no -q): an early exit closes the pipe, `compose logs`
           # fails with 255, and pipefail turns a match into a failed step.
           for _ in $(seq 1 45); do

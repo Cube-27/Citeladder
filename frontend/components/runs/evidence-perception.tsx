@@ -15,7 +15,6 @@ const SENTIMENT_LABELS = {
   mixed: 'Mixed',
 } as const;
 
-/** The verified quotes, to mark in the rendered answer. */
 export function perceptionHighlights(perception: readonly ExecutionPerception[]): Highlight[] {
   return perception.flatMap((entity) =>
     entity.state === 'classified'
@@ -49,7 +48,6 @@ function PerceptionChip({ entity }: Readonly<{ entity: ExecutionPerception }>) {
   );
 }
 
-/** How this answer portrayed each business it named, with the quotes behind it. */
 export function EvidencePerception({
   perception,
 }: Readonly<{ perception: readonly ExecutionPerception[] }>) {

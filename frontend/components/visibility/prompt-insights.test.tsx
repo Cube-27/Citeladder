@@ -113,8 +113,6 @@ describe('CompetitorSuggestions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Accept Northstar as a competitor' }));
 
-    // The company facts and the suggestion list both re-read; the accepted
-    // competitor leaves the list.
     await waitFor(() => expect(stale()).toEqual([true, true]));
   });
 

@@ -36,11 +36,6 @@ type Change = { fact: BrandFact; update: Partial<Omit<BrandFact, 'id' | 'revisio
 
 const EMPTY_DRAFT: Draft = { topic: 'pricing', statement: '', source_url: '' };
 
-/**
- * Brand facts for the fact-checking pilot: statements of record that answers
- * are checked against. Only confirmed facts are used, and a run checks the
- * facts confirmed when it started.
- */
 export function BrandFactsPanel({
   workspaceId,
   projectId,
@@ -50,14 +45,12 @@ export function BrandFactsPanel({
   const scope = { workspaceId, projectId };
   const create = useMutation(projectMutations.createBrandFact(scope));
   const change = useMutation(projectMutations.updateBrandFact(scope));
-  // Settles with the save; the panel shows the error notice when it fails.
   const addFact = (draft: Draft) =>
     create.mutateAsync({
       topic: draft.topic,
       statement: draft.statement.trim(),
       source_url: draft.source_url.trim() || null,
     });
-  // Edits name the revision that was read; a stale one is refused.
   const changeFact = ({ fact, update }: Change) =>
     change.mutateAsync({
       factId: fact.id,
@@ -113,15 +106,12 @@ export function BrandFactsPanel({
   );
 }
 
-/** The add form as its own frame of setting rows, after the facts it adds to. */
 function AddFact({
   maxChars,
   pending,
   onAdd,
 }: Readonly<{ maxChars: number; pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
-  // A refused fact stays in the form to correct; only a saved one clears it,
-  // and only if it was not edited while the save was in flight.
   const submit = async () => {
     const sent = draft;
     try {
@@ -197,7 +187,6 @@ function FactRow({
   mayEdit: boolean;
   maxChars: number;
   pending: boolean;
-  /** Settles with the save; the panel shows the error notice when it fails. */
   onChange: (update: Change['update']) => Promise<unknown>;
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -248,7 +237,6 @@ function FactRow({
   );
 }
 
-/** Confirm, Edit and Retire; while editing, Cancel then Save. */
 function FactActions({
   fact,
   editing,
@@ -299,7 +287,6 @@ function FactActions({
         variant="secondary"
         disabled={pending || !editing.trim()}
         onClick={() => {
-          // Keep the draft open until the save lands, so a failed save loses nothing.
           onChange({ statement: editing.trim() }).then(
             () => onEdit(null),
             () => undefined,

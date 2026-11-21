@@ -1,14 +1,3 @@
-/**
- * Slug for a body heading, used as its anchor id and Toc target.
- *
- * A heading carrying no ASCII alphanumerics at all — one written entirely in
- * another script, or in punctuation — would otherwise slug to the bare prefix,
- * so every such heading in a post would answer to the same anchor. The
- * character-sum fallback keeps those distinct. Two headings with identical
- * text still collide here; a Markdown guide numbers repeats through
- * `headingIds`, and `content.test.ts` fails the build on a block post that
- * contains a pair.
- */
 export function headingId(text: string): string {
   const slug = text
     .toLowerCase()
@@ -20,7 +9,6 @@ export function headingId(text: string): string {
   return `s-h${sum}`;
 }
 
-/** Anchor ids for one document's headings in order: a repeated heading gets `-2`, `-3`… */
 export function headingIds() {
   const seen = new Map<string, number>();
   return (text: string) => {
@@ -31,7 +19,6 @@ export function headingIds() {
   };
 }
 
-/** Stable React keys for a list whose values may repeat. */
 export function withOccurrenceKeys<T>(
   values: readonly T[],
   identity: (value: T) => string,

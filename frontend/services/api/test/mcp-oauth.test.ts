@@ -47,7 +47,6 @@ beforeEach(async () => {
     ABUSE_MCP_REGISTER_BURST_LIMIT: '2',
     ABUSE_MCP_REGISTER_CLIENT_LIMIT: '100',
     ABUSE_MCP_REGISTER_GLOBAL_LIMIT: '1000',
-    // Every request here comes from one visitor; the pool's own test lowers it.
     ABUSE_MCP_AUTHORIZE_UNAPPROVED_NETWORK_LIMIT: '1000',
   });
   tenant = await fixtures.tenant();
@@ -84,7 +83,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** Fixture registrations spend no registration budget; the budget tests spend theirs. */
 const unmetered = () => Promise.resolve();
 async function client(method: 'none' | 'client_secret_basic' = 'none') {
   const result = await registerClient(
@@ -174,7 +172,6 @@ it('serializes parallel authorization admission at the per-client outstanding ca
   expect(targets.filter((url) => url.origin === browser)).toHaveLength(
     mcpPolicy.authorization_outstanding_limit,
   );
-  // Over the cap, the error goes back to the client's proven redirect.
   expect(
     targets
       .filter((url) => url.origin !== browser)
@@ -224,11 +221,9 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
   ).toEqual([]);
 });
 
-// A client no person has approved spends its network's pool; an approved one the global budget.
 it.each([
   ['mcp.authorize.client', 'mcp_client', null, mcpPolicy.authorization_client_limit, false],
   ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit, false],
-  // The limit `beforeEach` sets for every request's one shared visitor.
   ['mcp.authorize.unapproved_network', 'client', 'unavailable', 1000, false],
   ['mcp.authorize.global', 'global', 'mcp.authorize', mcpPolicy.authorization_global_limit, true],
 ] as const)(
@@ -365,7 +360,6 @@ it('cleans only expired unconsumed protocol rows and preserves grants and audit 
       .where('client_id', '=', c.client_id)
       .execute(),
   ).toHaveLength(2);
-  // Recently consumed audit stays; past retention it goes, like stale unconsumed codes.
   expect(
     await db
       .selectFrom('mcp_authorization_codes')
@@ -427,11 +421,9 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
     access_token: string;
   };
   expect(row.access_token_hash).toBe(tokenHash(config, success.access_token));
-  // The second presentation of the code was a replay: what it minted is revoked.
   expect(row.revoked_at).not.toBeNull();
 });
 
-/** Approve a fresh authorization and return its client and unexchanged code. */
 async function mintedCode() {
   const c = await client();
   const destination = await callbackOf(await consent(await pending(c.client_id)));
@@ -499,7 +491,6 @@ it('mints no code when the session ends while the approval waits for the account
   const transaction = await pending(c.client_id);
   let approval: Promise<Response> | undefined;
   await db.transaction().execute(async (trx) => {
-    // A credential reset holds the account row; the approval passed its session check already.
     await trx
       .selectFrom('users')
       .select('id')
@@ -536,7 +527,6 @@ it('renders untrusted client metadata inert on the consent page', async () => {
     { headers: { cookie } },
   );
   expect(page.status).toBe(200);
-  // The form posts only here; the callback is reached by a later navigation.
   expect(page.headers.get('content-security-policy')).toMatch(/; form-action 'self'$/u);
   const body = await page.text();
   expect(body).toContain('&lt;Unverified&gt;');
@@ -570,7 +560,6 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
     scope: mcpPolicy.read_scope,
     token_endpoint_auth_method: 'client_secret_basic',
   });
-  // A client naming no scope may be offered changes; the person still decides.
   expect((await client()).scope).toBe('citeladder:read citeladder:write');
 });
 
@@ -651,7 +640,6 @@ it('rotates refresh tokens once and excludes membership changes, new tenants and
     .set({ refresh_rotated_at: new Date(Date.now() - 120_000) })
     .where('id', '=', live.grantId)
     .execute();
-  // The superseded token presented after the grace window: it leaked.
   expect((await token(c.client_id, refresh)).status).toBe(400);
   expect(await authorizedWorkspaceIds(db, live)).toEqual([]);
   expect(
@@ -766,15 +754,12 @@ it('lets workspace admins remove only their authorization while users cannot rev
   ).toBeNull();
 });
 
-/** A documentation-range IPv6 /48 (`2001:db8:xxxx`) no earlier run has used. */
 function freshSite() {
   return `2001:db8:${(0x1000 + randomInt(0xefff)).toString(16)}`;
 }
 
-/** A registration request carrying valid metadata. */
 const registration = { redirect_uris: [callback], token_endpoint_auth_method: 'none' };
 
-/** Register through the route, keeping what it created for cleanup. */
 async function registerOver(service: Hono<AppEnv>, headers: Record<string, string> = {}) {
   const response = await service.request(`${protocol}/mcp/register`, {
     method: 'POST',
@@ -786,10 +771,6 @@ async function registerOver(service: Hono<AppEnv>, headers: Record<string, strin
   return response;
 }
 
-/**
- * The routes behind an admitted Worker: `clientIp` is what the origin check
- * sets from the signed visitor address, here taken from a test header.
- */
 function visitorApp(settings = config) {
   const service = new Hono<AppEnv>();
   service.use(async (c, next) => {
@@ -804,7 +785,6 @@ function visitorApp(settings = config) {
 it('refuses malformed and invalid registrations before spending, exempts preflight, and serializes concurrent budgets', async () => {
   const identity = randomUUID();
   identities.push(identity);
-  // Budgets are fixed clock windows; a held clock keeps every request in one of them.
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T10:00:15Z') });
   onTestFinished(() => {
     vi.useRealTimers();
@@ -857,7 +837,6 @@ it('refuses malformed and invalid registrations before spending, exempts preflig
   expect(
     (await app.request(`${protocol}/mcp/register`, { method: 'POST', body: '{}' })).status,
   ).toBe(400);
-  // None of the refused requests spent the burst of two: both of these register.
   expect((await registerOver(app)).status).toBe(201);
   expect((await registerOver(app, { 'x-forwarded-for': '203.0.113.50' })).status).toBe(201);
   const limited = await registerOver(app, { 'x-forwarded-for': '203.0.113.51' });
@@ -870,16 +849,13 @@ it('counts every address in one IPv6 /56 as one registering network', async () =
   onTestFinished(() => {
     vi.useRealTimers();
   });
-  // A fresh documentation /48 per run, so earlier runs' windows never count here.
   const site = freshSite();
   identities.push(`${site}:500::/56`, `${site}:600::/56`);
   const service = visitorApp();
   const from = (visitor: string) => registerOver(service, { 'x-test-visitor': visitor });
   expect((await from(`${site}:500::1`)).status).toBe(201);
   expect((await from(`${site}:5ff:1:2:3:4`)).status).toBe(201);
-  // A third address in the same /56 is the same network, past its burst of two.
   expect((await from(`${site}:5ab::9`)).status).toBe(429);
-  // The next /56 is a different network with its own budget.
   expect((await from(`${site}:600::1`)).status).toBe(201);
 });
 
@@ -902,7 +878,6 @@ it('keeps a registration flood from spending the authorization budget approved c
       ABUSE_MCP_AUTHORIZE_UNAPPROVED_NETWORK_LIMIT: '3',
     }),
   );
-  // The shared authorization budget has one unit left in this window.
   const window = mcpPolicy.authorization_window_seconds;
   const epoch = Math.floor(Date.now() / 1000);
   const started = new Date((epoch - (epoch % window)) * 1000);
@@ -944,8 +919,6 @@ it('keeps a registration flood from spending the authorization budget approved c
     );
     return new URL(response.headers.get('location')!);
   };
-  // Freshly registered clients flood authorization from one /64: its own pool
-  // of three admits three, then refuses, and the shared budget is untouched.
   const flood = [await client(), await client()];
   const outcomes = [];
   for (const [index, visitor] of [
@@ -961,10 +934,8 @@ it('keeps a registration flood from spending the authorization budget approved c
     true,
     'temporarily_unavailable',
   ]);
-  // Another network's new client still has its own pool.
   const neighbour = await client();
   expect((await authorize(neighbour.client_id, `${neighbourSite}::1`)).origin).toBe(browser);
-  // The approved client takes the shared budget's last unit, which the flood left.
   expect((await authorize(approved.client.client_id, `${site}::1`)).origin).toBe(browser);
   expect((await authorize(approved.client.client_id, `${site}::1`)).searchParams.get('error')).toBe(
     'temporarily_unavailable',
@@ -994,7 +965,6 @@ it('prunes expired unused clients while preserving a live authorization request'
 
 it('caps tool calls per connection and refuses the next until the window ends', async () => {
   const { principal } = await grant();
-  // Budgets are fixed clock windows; a held clock keeps every call in one of them.
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T10:00:15Z') });
   onTestFinished(() => {
     vi.useRealTimers();
@@ -1053,7 +1023,6 @@ it('pre-selects the only shareable workspace and names the signed-in account', a
   expect(view.terms).toBeUndefined();
 });
 
-/** A workspace whose public trial ended yesterday. */
 async function endedTrialWorkspace() {
   const workspaceId = await fixtures.joinedWorkspace(tenant.userId, { access: false });
   const trial = await accountGrant(db, await billingAccount(db, workspaceId), {
@@ -1174,7 +1143,6 @@ it('publishes discovery from the API host only and refuses a token for another r
     resource: 'https://protocol.example.test/mcp',
     authorization_servers: ['https://protocol.example.test'],
   });
-  // The app host never answers for the protocol, and consent never runs on the API host.
   expect((await app.request(`${browser}/.well-known/oauth-authorization-server`)).status).toBe(403);
   expect((await app.request(`${protocol}/mcp/oauth/consent?transaction=x`)).status).toBe(403);
   const c = await client();
@@ -1187,7 +1155,6 @@ it('publishes discovery from the API host only and refuses a token for another r
   expect(refused.searchParams.get('iss')).toBe('https://protocol.example.test');
 });
 
-/** Approve a fresh authorization, then exchange its code for the granted scope. */
 async function grantedScope(options: { scope?: string; extra?: Record<string, string> }) {
   const c = await client();
   const transaction = await pending(c.client_id, options.scope);
@@ -1216,7 +1183,6 @@ it('grants write only when the client asks and the person ticks Allow changes', 
   const ticked = await grantedScope({ extra: { allow_changes: 'yes' } });
   expect(ticked.value.scope).toBe('citeladder:read citeladder:write');
 
-  // A client that asked only to read is never offered, nor given, changes.
   const readOnly = await grantedScope({
     scope: 'citeladder:read offline_access',
     extra: { allow_changes: 'yes' },

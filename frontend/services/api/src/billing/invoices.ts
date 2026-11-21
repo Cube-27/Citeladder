@@ -1,4 +1,3 @@
-/** Workspace-scoped receipt projections; settlement still owns immutable issuance. */
 import {
   billingInvoiceSchema,
   moneySchema,
@@ -70,7 +69,6 @@ function payload(invoice: Invoice) {
     amounts.subtotal_minor - amounts.discount_minor !== amounts.taxable_minor ||
     amounts.cgst_minor + amounts.sgst_minor + amounts.igst_minor !== amounts.tax_minor ||
     amounts.taxable_minor + amounts.tax_minor !== amounts.total_minor ||
-    // Each treatment renders only its own tax rows, so no other component may carry tax.
     (amounts.tax_treatment === 'IGST' && amounts.cgst_minor + amounts.sgst_minor !== 0) ||
     (amounts.tax_treatment === 'CGST_SGST' && amounts.igst_minor !== 0) ||
     (amounts.tax_treatment === 'EXPORT_ZERO_RATED' && amounts.tax_minor !== 0)
@@ -107,7 +105,6 @@ function summary(invoice: Invoice) {
   });
 }
 
-/** Reads never provision: a workspace without a billing account has no receipts. */
 async function accountId(db: Database, workspaceId: string): Promise<string | undefined> {
   const account = await db
     .selectFrom('billing_accounts')
@@ -145,7 +142,6 @@ export async function readInvoice(
     .where('id', '=', invoiceId)
     .executeTakeFirst();
   if (!invoice) throw notFound('Receipt');
-  // The persisted enum is validated before it chooses a document or filename.
   summary(invoice);
   return invoice;
 }
@@ -170,7 +166,6 @@ const DATE_FORMAT = new Intl.DateTimeFormat('en-IN', {
   dateStyle: 'long',
 });
 const date = (value: Date) => DATE_FORMAT.format(value);
-/** A frozen period that does not parse is shown as stored rather than failing the document. */
 function periodDate(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : date(parsed);

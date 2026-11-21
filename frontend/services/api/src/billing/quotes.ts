@@ -15,7 +15,6 @@ import type { CatalogPlan, CatalogItem } from './catalog.ts';
 export type Quote = z.infer<typeof resolvedQuoteSchema>;
 export type Intent = {
   kind: 'base' | 'addon' | 'topup' | 'upgrade';
-  /** Whose keys the purchase measures with (B32). */
   mode: CredentialMode;
   key: string;
   quantity: number;
@@ -31,7 +30,6 @@ export type Intent = {
   changeTerms: Record<string, unknown> | null;
 };
 
-/** Integer rational arithmetic keeps minor-unit rounding exact. */
 export function roundedRatio(numerator: bigint, denominator: bigint): number {
   if (numerator < 0n || denominator <= 0n) throw new RangeError('Invalid money ratio');
   return amount.parse(Number((numerator * 2n + denominator) / (2n * denominator)));
@@ -57,7 +55,6 @@ export function quoteIntent(
     identity: Identity;
     currency: Currency;
     unitAmount: number;
-    /** The GST rate frozen with the catalog price: the only rate a quote uses. */
     taxRate: string;
     priceRef: string;
     revision: string;

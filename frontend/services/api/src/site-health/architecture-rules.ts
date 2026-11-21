@@ -18,7 +18,6 @@ import { canonicalUrl } from './url-identity.ts';
 const p = policy.site_health.architecture;
 
 type KindRow = ReturnType<typeof buildArchitecture>['page_kinds'][number];
-/** The bounded sample a finding names: its pages or its page kinds. */
 type Sample = Pick<PageListEvidence, 'pages'> | Pick<UnhubbedPageKindEvidence, 'page_kinds'>;
 const pageSample = (pages: PageListEvidence['pages']) => ({ pages });
 const evidencePage = (page: ArchitecturePage) => ({
@@ -27,7 +26,6 @@ const evidencePage = (page: ArchitecturePage) => ({
   title: page.title,
   page_kind: page.kind,
 });
-/** Each kind with the pages no hub parents. */
 const unhubbedSample =
   (byId: Map<string, ArchitecturePage>) =>
   (kinds: KindRow[]): Pick<UnhubbedPageKindEvidence, 'page_kinds'> => ({
@@ -40,10 +38,6 @@ const unhubbedSample =
     })),
   });
 
-/**
- * The affected pages of each page kind, over every row rather than the bounded
- * sample: the Issues page-kind filter counts a site-level finding by these.
- */
 function pageKindCounts<Row extends { page_kind: string }>(
   rows: readonly Row[],
   pagesOf: (row: Row) => number = () => 1,
@@ -87,11 +81,6 @@ function evaluation<Row extends { page_kind: string }>(
   };
 }
 
-/**
- * Indexable pages across every page kind repeating one exact title or meta
- * description. A noindex page or one canonicalized elsewhere has already said
- * which page should rank, so it never counts.
- */
 function duplicateMetadata(
   id: 'architecture.duplicate_titles' | 'architecture.duplicate_meta_descriptions',
   source: ArchitecturePage[],
@@ -128,7 +117,6 @@ function canonicalizedElsewhere(page: ArchitecturePage) {
   const canonical = declared ? canonicalUrl(declared, page.url) : null;
   return canonical !== null && canonical !== page.url;
 }
-/** The first two path segments: `/blogs/testimonials/a-review` is `/blogs/testimonials`. */
 function sectionOf(url: string) {
   try {
     const segments = new URL(url).pathname.split('/').filter(Boolean);
@@ -138,7 +126,6 @@ function sectionOf(url: string) {
   }
 }
 
-/** Unreachable pages grouped by section, largest first, each with one example. */
 function sections(pages: { url: string }[]) {
   const groups = new Map<
     string,
@@ -155,11 +142,6 @@ function sections(pages: { url: string }[]) {
     .slice(0, p.max_evidence_items);
 }
 
-/**
- * Content pages whose main content links to no internal page. Links are read
- * from the page's own facts, so an unread body has none to judge; when no
- * content page was read, nothing can be called linked or a dead end.
- */
 function deadEndPages(
   pages: ReturnType<typeof buildArchitecture>['hierarchy'],
   byId: Map<string, ArchitecturePage>,
@@ -180,12 +162,6 @@ function deadEndPages(
   };
 }
 
-/**
- * Pages other pages link to but no link path from the homepage reaches: a
- * section linked only from itself. Orphans (no inbound link at all) are
- * `architecture.orphan_pages`, so they never repeat here. Without an observed
- * homepage no page has a depth, and nothing can be called unreachable.
- */
 function unreachableFromHome(
   pages: ReturnType<typeof buildArchitecture>['hierarchy'],
   byId: Map<string, ArchitecturePage>,

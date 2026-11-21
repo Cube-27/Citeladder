@@ -27,13 +27,6 @@ import { Spinner } from '@/components/ui/spinner';
 
 type TopicChoice = Readonly<{ topic: Topic; prompts: readonly Prompt[] }>;
 
-/**
- * Analyze a page (CO6), from the Actions page's Create action menu. Pick one
- * of the latest crawl's content pages, a topic that has prompts and the
- * prompts to optimize the page for; Generate action creates or reuses the
- * page's Action and opens the new chat, which reads the live page first.
- * Mount it only while open, so each opening starts from empty choices.
- */
 export function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -52,7 +45,6 @@ export function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>
   const pickTopic = (id: string) => {
     setTopicId(id);
     const prompts = topics.choices.find((choice) => choice.topic.id === id)?.prompts ?? [];
-    // Every prompt of the topic starts selected.
     setPromptIds(new Set(prompts.map((prompt) => prompt.id)));
   };
   const generate = () => {
@@ -124,10 +116,6 @@ export function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>
   );
 }
 
-/**
- * The project's topics that hold active prompts, each with those prompts,
- * from the same reads as the Prompts screen.
- */
 function useTopicChoices(scope: ProjectScope) {
   const topicsQuery = useQuery(topicsQueries.list(scope));
   const setsQuery = useQuery(promptsQueries.sets(scope));
@@ -146,7 +134,6 @@ function useTopicChoices(scope: ProjectScope) {
   return { choices, state };
 }
 
-/** A page's path as a reader reads it; the whole address when it cannot be parsed. */
 function pagePath(url: string) {
   try {
     const parsed = new URL(url);
@@ -156,11 +143,6 @@ function pagePath(url: string) {
   }
 }
 
-/**
- * The content page, searched on the server: the latest crawl's content pages
- * whose address or title matches, at most the server's cap. The picked page
- * stays an option while a later search leaves it out.
- */
 function PageField({
   scope,
   page,
@@ -174,7 +156,6 @@ function PageField({
   const searched = useDebounced(search, ANALYZE_PAGE_SEARCH_DEBOUNCE_MS);
   const query = useQuery({
     ...actionsQueries.analyzablePages(scope, searched),
-    // A new search keeps the last matches on screen until its own land.
     placeholderData: (previous) => previous,
   });
   const items = query.data?.items ?? [];

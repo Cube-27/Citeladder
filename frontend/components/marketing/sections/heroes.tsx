@@ -5,15 +5,6 @@ import { cn } from '@/lib/utils';
 import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
 import './heroes.css';
 
-/**
- * PageHero: an inner page's opening, its H1 the site title (48, 32 on
- * phones), then the lead, a meta line, the actions and the page's product
- * image below, left-aligned on the page's column edge. Without an image the
- * lead, meta and actions sit right of the title from 1024px; with one, from
- * 1280px the image sits beside the copy (5/12 copy, 7/12 image). `size` only changes the
- * title's measure. `entrance` gives a landing page's copy the one load-in
- * the website keeps.
- */
 export function PageHero({
   crumbs,
   title,
@@ -31,11 +22,9 @@ export function PageHero({
   meta?: ReactNode;
   size?: 'lg' | '2xl';
   entrance?: boolean;
-  /** The hero's product image, under the copy or beside it from 1280px. */
   children?: ReactNode;
 }>) {
   return (
-    // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
     <section
       className={cn('cl-phero', `cl-phero--${size}`, children && 'cl-phero--split')}
       data-cta-placement="hero"
@@ -60,11 +49,6 @@ export function PageHero({
   );
 }
 
-/**
- * LandingHero: the home page's opening. The announcement sits over the H1;
- * the lead, note and actions follow it, and from 1024px sit right of it. The
- * frame goes below the copy. Its copy loads in; the frame is static.
- */
 export function LandingHero({
   announcement,
   title,

@@ -9,7 +9,6 @@ const DIFF_LINE = {
   added: { mark: '+', label: 'Added', tone: 'bg-well text-ink-2' },
 } as const;
 
-/** A computed line diff, with removed/added marks announced to screen readers. */
 export function LineDiff({
   lines,
   label,

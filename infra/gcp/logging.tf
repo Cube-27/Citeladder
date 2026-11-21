@@ -1,5 +1,3 @@
-# Origin-rejected requests can be flooded at the public Cloud Run URL.
-# Retain application logs and all other request statuses for diagnostics.
 resource "google_logging_project_exclusion" "api_forbidden_requests" {
   project     = var.project_id
   name        = "citeladder-api-forbidden-requests"

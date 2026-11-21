@@ -1,11 +1,3 @@
-/**
- * A run's metric blocks over a set of its answers: every answer for the run's
- * metric snapshot, or one frozen topic's answers for its topic row.
- *
- * A topic row groups answers by the topic their prompt snapshot froze, so
- * refiling or renaming a topic later never moves a past run's answers (AV-5).
- * It is the same aggregate over fewer answers, never a classification.
- */
 import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 
@@ -21,14 +13,12 @@ import { round } from '../numbers.ts';
 import { aggregateRun, type Aggregate, type AggregateExecution } from './aggregate.ts';
 import type { scoringConfig } from './scoring.ts';
 
-/** A run task with its prompt snapshot's cohort. */
 export type ScopedTask = Selectable<AuditTasks> & { cohort: string };
 
 type Answers = {
   rows: AggregateExecution[];
   tasks: ScopedTask[];
   config: ReturnType<typeof scoringConfig>;
-  /** Every engine the run asked, so each block has a slice per engine. */
   engines: string[];
 };
 
@@ -77,7 +67,6 @@ function cohortMetrics(
   };
 }
 
-/** The stored metric blocks and composite score over these answers. */
 export function runAggregate(answers: Answers) {
   const { rows, tasks, config } = answers;
   const organic = cohortMetrics(answers, policy.visibility.organic_cohorts, 'market_visibility');
@@ -93,8 +82,6 @@ export function runAggregate(answers: Answers) {
       rows.filter((r) => r.cohort === 'brand_diagnostic').length,
     ),
   };
-  // Unbranded and branded prompts together: its own block, never a blend of
-  // the other two, so its rates are counted over the answers they share.
   const all = cohortMetrics(answers, policy.visibility.all_cohorts, policy.visibility.all_cohort);
   const metrics = { ...organic, comparison, brand_diagnostic: diagnostic, all };
   const visibility = organic.per_prompt.length
@@ -107,11 +94,6 @@ export function runAggregate(answers: Answers) {
   return { metrics, visibility, organic, comparison, diagnostic };
 }
 
-/**
- * One row per topic a brand run's prompts were filed under, with the name it
- * froze and the analyses it counts. Topics are brand-only, so a Commerce run
- * writes none.
- */
 export async function persistTopicMetrics(
   db: Database,
   audit: Selectable<Audits>,

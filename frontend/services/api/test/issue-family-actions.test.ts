@@ -1,8 +1,3 @@
-/**
- * Issue-group Actions (A4, IA1) against real PostgreSQL: one Site Health issue
- * across many pages is one Action with its cohort; a declaration freezes the
- * whole cohort; the next comparable crawl decides the outcome page by page.
- */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -19,9 +14,7 @@ import { testDatabase } from './support.ts';
 
 const db = testDatabase();
 const RULE = 'web.mobile_viewport';
-// More pages than one declaration may target on its own.
 const PAGES = policy.opportunity.opportunities.IMPLEMENTATION_TARGETS_MAX + 6;
-// The crawl analyzed more URLs than the viewport fails on.
 const CRAWLED = PAGES + 10;
 const HOUR = 3_600_000;
 const seeds: SiteSeed[] = [];
@@ -29,14 +22,12 @@ const seeds: SiteSeed[] = [];
 type Page = { id: string; url: string };
 type Rule = Readonly<{ rule_id: string; category: string; scope: string }>;
 const VIEWPORT: Rule = { rule_id: RULE, category: 'mobile', scope: 'page' };
-// A site-level rule: judged once per crawl, filed on the root, naming its pages.
 const ORPHANS: Rule = {
   rule_id: 'architecture.orphan_pages',
   category: 'architecture',
   scope: 'graph',
 };
 
-/** One page's reading of `rule` (the viewport by default) in `seed.crawlId`, fetched at `fetchedAt`. */
 async function readPage(
   trx: Database,
   fixtures: SiteFixtures,
@@ -107,7 +98,6 @@ async function readPage(
         remediation: 'Add a viewport meta tag.',
         analyzer_version: 'v1',
         rule_version: 'v1',
-        // The finalized analysis names its evaluation, so the issue is current.
         is_current: true,
         created_at: options.fetchedAt,
       })
@@ -117,7 +107,6 @@ async function readPage(
 
 const path = (index: number) => `/p${String(index).padStart(3, '0')}`;
 
-/** A project whose crawl two hours ago found the viewport missing on `PAGES` pages. */
 async function familyProject(): Promise<{ seed: SiteSeed; pages: Page[] }> {
   return db.transaction().execute(async (trx) => {
     const fixtures = new SiteFixtures(trx);
@@ -142,11 +131,6 @@ async function familyProject(): Promise<{ seed: SiteSeed; pages: Page[] }> {
   });
 }
 
-/**
- * A later crawl of the same project: the first `failing` pages still miss the
- * viewport, the last `notApplicable` no longer have the rule apply, the rest
- * pass. `values` override the crawl's defaults.
- */
 async function laterCrawl(
   seed: SiteSeed,
   pages: Page[],
@@ -202,7 +186,6 @@ let sampled: { seed: SiteSeed; pages: Page[] };
 let rerunFixed: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
-  // Six independent tenants, each seeded in its own transaction.
   [own, foreign, fixedLater, partialBeforeDeclaring, sampled, rerunFixed] = await Promise.all([
     familyProject(),
     familyProject(),
@@ -213,7 +196,6 @@ beforeAll(async () => {
   ]);
 });
 
-/** Declares `project`'s family Action as implemented an hour ago. */
 async function declareFamily(project: { seed: SiteSeed }) {
   const [action] = await familyAction(project.seed);
   const { row } = await declareAction(
@@ -249,7 +231,6 @@ describe('an issue family', () => {
       approach: 'fix_technical',
       member_count: 1,
       priority_band: 'high',
-      // The rule's own fix from the catalog, as Issues shows it, not the issue row's copy.
       summary: 'Add a responsive viewport meta declaration.',
       handoff: {
         context: 'action',
@@ -265,7 +246,6 @@ describe('an issue family', () => {
       page_count: PAGES,
       crawl_analyzed_url_count: CRAWLED,
     });
-    // The cohort's URLs page through `action_urls`, ten at a time in URL order.
     expect([detail.urls.whole_site, detail.urls.total]).toEqual([false, PAGES]);
     expect(detail.urls.items.map((page) => page.url)).toEqual(
       own.pages.slice(0, 10).map((page) => page.url),
@@ -293,7 +273,6 @@ describe('an issue family', () => {
       db,
       { ...scopeOf(own.seed), userId: own.seed.userId },
       { refs: {}, request: '', actionId: action!.id, mentionIds: [] },
-      // The evidence owners' package is not what this reads.
       () =>
         Promise.resolve({
           version: 'test',
@@ -313,7 +292,6 @@ describe('an issue family', () => {
       pages: own.pages
         .slice(0, policy.opportunity.opportunities.SITE_ISSUE_FAMILY.AGENT_PAGES_MAX)
         .map((page) => page.url),
-      // No snippet was captured for this rule in this crawl's catalog.
       reference_snippet: null,
     });
   });
@@ -333,7 +311,6 @@ describe('an issue family', () => {
       },
     ]);
 
-    // A crawl with another rule catalog cannot be compared: inconclusive.
     const other = await laterCrawl(own.seed, own.pages, 0, { rule_catalog_version: 'other' });
     await drainWorkspace(db, own.seed.workspaceId, { owner: `a4-${randomUUID()}` });
     let detail = await getAction(db, own.seed.workspaceId, action.id);
@@ -346,7 +323,6 @@ describe('an issue family', () => {
       },
     ]);
 
-    // Two pages still fail in the next comparable crawl.
     const next = await laterCrawl(own.seed, own.pages, 2);
     await drainWorkspace(db, own.seed.workspaceId, { owner: `a4-${randomUUID()}` });
     detail = await getAction(db, own.seed.workspaceId, action.id);
@@ -366,11 +342,9 @@ describe('an issue family', () => {
         },
       },
     ]);
-    // The Action still shows the cohort and crawl that were declared.
     expect(detail.cohort?.crawl_id).toBe(own.seed.crawlId);
     expect(detail.cohort?.page_count).toBe(PAGES);
 
-    // The foreign project's declaration-free Action is untouched by this one's crawls.
     const [foreignAction] = await familyAction(foreign.seed);
     const foreignDetail = await getAction(db, foreign.seed.workspaceId, foreignAction!.id);
     expect(foreignDetail.declaration).toBeNull();
@@ -380,7 +354,6 @@ describe('an issue family', () => {
     const { seed, pages } = fixedLater;
     const { action } = await declareFamily(fixedLater);
 
-    // Every page still fails: each one is named.
     await laterCrawl(seed, pages, PAGES);
     await drainWorkspace(db, seed.workspaceId, { owner: `a4-${randomUUID()}` });
     let detail = await getAction(db, seed.workspaceId, action.id);
@@ -393,7 +366,6 @@ describe('an issue family', () => {
     ]);
     expect(detail.declaration?.checks[0]?.pages?.failing).toHaveLength(PAGES);
 
-    // Every page passes, or no longer has the rule apply (counted apart): verified.
     const fixed = await laterCrawl(seed, pages, 0, { notApplicable: 1 });
     await drainWorkspace(db, seed.workspaceId, { owner: `a4-${randomUUID()}` });
     detail = await getAction(db, seed.workspaceId, action.id);
@@ -410,7 +382,6 @@ describe('an issue family', () => {
 
   it('larger than its cohort, counts the pages beyond it and never reads verified', async () => {
     const { seed, pages } = sampled;
-    // The family's last two pages fall beyond a cohort cut at the rest.
     const family = policy.opportunity.opportunities.SITE_ISSUE_FAMILY;
     const cohortMax = family.COHORT_PAGES_MAX;
     family.COHORT_PAGES_MAX = PAGES - 2;
@@ -421,7 +392,6 @@ describe('an issue family', () => {
       { kind: 'issue_family', site_url_ids: pages.slice(0, -2).map((page) => page.id) },
     ]);
 
-    // Every page passes, but two were never in the cohort: not verified.
     const fixed = await laterCrawl(seed, pages, 0);
     await drainWorkspace(db, seed.workspaceId, { owner: `a3-${randomUUID()}` });
     const detail = await getAction(db, seed.workspaceId, declared.action.id);
@@ -450,7 +420,6 @@ describe('an issue family', () => {
       { state: 'unmet', reason: 'partially_resolved', source_id: next },
     ]);
 
-    // The rerun reads one page; its reading takes every tracked page's latest audit.
     const rerun = await db.transaction().execute(async (trx) => {
       const fixtures = new SiteFixtures(trx);
       const crawlId = await fixtures.sibling(seed, {
@@ -483,9 +452,6 @@ describe('an issue family', () => {
 
   it('is read now against a partial site crawl that finished after a backdated go-live, never a later rerun', async () => {
     const { seed, pages } = partialBeforeDeclaring;
-    // A partial crawl still failing every page finished after the go-live
-    // declared below; a one-page rerun after it is newer, but only its own
-    // page's evidence.
     const partial = await laterCrawl(seed, pages, PAGES, { status: 'partially_completed' });
     await new SiteFixtures(db).sibling(seed, {
       configuration: JSON.stringify({ page_rerun: true }),
@@ -543,7 +509,6 @@ describe('an issue family', () => {
       project.pages.map((page) => page.id).sort(),
     );
 
-    /** A later crawl reading the root: `outcome` of the orphan rule, or (null) no orphan evaluation. */
     const later = (outcome: string | null) =>
       db.transaction().execute(async (trx) => {
         const fixtures = new SiteFixtures(trx);

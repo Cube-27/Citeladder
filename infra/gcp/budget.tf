@@ -2,8 +2,6 @@ data "google_project" "current" {
   project_id = var.project_id
 }
 
-# Fixed hosting target: under the monthly amount, excluding provider usage. The
-# forecast rule raises the alarm early when the daily run rate would exceed it.
 resource "google_billing_budget" "monthly" {
   billing_account = var.billing_account
   display_name    = "CiteLadder monthly hosting"

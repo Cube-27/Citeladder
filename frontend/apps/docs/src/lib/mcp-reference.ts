@@ -1,7 +1,3 @@
-/**
- * The MCP tool reference, read from the backend's generated tool catalogue
- * (`pnpm gen` writes `data/mcp-tools.json`).
- */
 import { z } from 'zod';
 import catalog from '../data/mcp-tools.json';
 import { jsonSchema, referenceRow } from './json-schema';
@@ -18,7 +14,6 @@ const toolCatalog = z.object({
   ),
 });
 
-/** Every registered tool in catalogue order, with its input fields as table rows. */
 export const MCP_TOOLS = toolCatalog.parse(catalog).tools.map((tool) => {
   const required = new Set(tool.input_schema.required ?? []);
   return {

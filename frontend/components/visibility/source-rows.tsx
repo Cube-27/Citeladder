@@ -41,18 +41,11 @@ import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashb
 
 export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
 
-/**
- * What the panel around a source table supplies: its toolbar, pager, the
- * background-refetch bar, the state that replaces the rows, and the page size
- * the body reserves. Loading, error and empty render inside the body under
- * the same header, so a filter change never moves the columns or the pager.
- */
 export type SourceTableFrame = Pick<
   ComponentProps<typeof DataTable>,
   'toolbar' | 'pager' | 'busy' | 'state' | 'pageSize'
 >;
 
-/** The name cell: the whole cell opens the source's own level, and its chevron says so at rest. */
 export function OpenSource({
   onOpen,
   children,
@@ -67,22 +60,16 @@ export function OpenSource({
   );
 }
 
-/** A source's type, with the basis for the claim behind a tooltip and in hidden text. */
 function TypeChip({
   token,
   dimension,
   method,
 }: Readonly<{ token: string | null; dimension: 'domain' | 'url'; method?: string | null }>) {
   const label = typeLabel(token, dimension);
-  // A type nobody has established is "not measured", not a blank: the page has
-  // simply not been read and its address did not settle the question. The
-  // column header carries that explanation for the whole column.
   if (!label) return <Absence />;
   const chip = <Tag>{label}</Tag>;
   const basis = pageFormatBasis(method);
   if (!basis) return chip;
-  // The tooltip serves a pointer; the hidden text gives keyboard and screen
-  // reader users the same basis, since the chip itself cannot take focus.
   return (
     <>
       <Tooltip content={basis}>{chip}</Tooltip>
@@ -98,10 +85,6 @@ function domainColumns(
   engineLabel: (key: string) => string,
 ): DataTableColumn[] {
   return [
-    // Every figure takes the `figure` role and the source is the one flexible
-    // column; the hint sits on the header button, so a figure's width holds
-    // its label. Where the frame is too narrow the low-priority figures hide,
-    // then the table scrolls behind the pinned source rather than squeezing it.
     { key: 'source', label: 'Source', sort: sortProps(sort, onSort, 'key') },
     {
       key: 'type',
@@ -112,7 +95,6 @@ function domainColumns(
     {
       key: 'cited',
       label: 'Cited in',
-      // A share here, a count in the URL table: the unit is on the header.
       sublabel: '% of answers',
       width: 'figure',
       kind: 'number',
@@ -173,15 +155,6 @@ function domainColumns(
   ];
 }
 
-/**
- * The cited domains.
- *
- * Cited in and Retrieved sit next to each other on purpose: the first is how
- * often the engines cited the publisher, the second how often they read it.
- * A publisher read far more than it is cited is reaching the engines and still
- * losing the citation. Retrieved counts only answers whose engine exposes what
- * it read, so its denominator is those answers, never the whole selection.
- */
 export function DomainTable({
   rows,
   sort,
@@ -236,10 +209,6 @@ function standingTone(standing: SourceItem['standing']) {
   return null;
 }
 
-/**
- * Where the business stands on the page, and the Action to get listed on it
- * when one exists. Only a read page carries a verdict.
- */
 function PageStandingCell({
   standing,
   actionId,
@@ -268,9 +237,6 @@ function urlColumns(
   retrieval: SourcesData['retrieval'] | undefined,
   engineLabel: (key: string) => string,
 ): DataTableColumn[] {
-  // The URL is the one flexible column; every other column holds a role's
-  // width. Nine columns cannot fit beside a readable URL at the owner's 982px,
-  // so the last low-priority columns hide until the rest fit.
   return [
     { key: 'url', label: 'URL', sort: sortProps(sort, onSort, 'key') },
     {
@@ -282,7 +248,6 @@ function urlColumns(
     {
       key: 'standing',
       label: 'On the page',
-      // A Gap badge and its Action link share one line.
       width: 'category',
       desktopOnly: true,
       hint: 'Whether this page has been read, and where you stand on it. A gap lists competitors and not you.',
@@ -349,14 +314,6 @@ function urlColumns(
   ];
 }
 
-/**
- * The cited pages.
- *
- * "Mentioned" is co-occurrence, never presence on the page: the chips are the
- * brands named in the ANSWERS that cited this URL, because no persisted row
- * links a mention to the citation beside it. The header tooltip says so, and
- * the column is not called "On page" for the same reason.
- */
 export function UrlTable({
   rows,
   sort,

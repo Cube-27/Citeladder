@@ -7,7 +7,6 @@ import { DEMAND_DETECTORS } from '@/lib/config/demand';
 import { availabilityLabel } from '@/lib/format';
 import { FILTER_TABS, type FilterTab } from '@/lib/demand/signals';
 
-/** A detector's state in words, or null when it ran in full. */
 function detectorStatus(state: DemandDetectorState): string | null {
   switch (state) {
     case 'available':
@@ -27,12 +26,6 @@ function detectorStatus(state: DemandDetectorState): string | null {
 
 type Detector = (typeof DEMAND_DETECTORS)[number];
 
-/**
- * The filter in the signals table's control band: one `SegmentedControl`,
- * the same status filter every screen uses. Each choice carries only its
- * label and count, so every filter fits the strip at 982; how far each
- * detector ran is one fact on the summary line (`DemandDetectorCoverage`).
- */
 export function DemandSignalFilters({
   activeTab,
   onTabChange,
@@ -44,8 +37,6 @@ export function DemandSignalFilters({
 }>) {
   const options = FILTER_TABS.flatMap(({ tab, label }): SegmentedOption<FilterTab>[] => {
     const count = tabCounts.get(tab) ?? 0;
-    // Branded stays hidden while empty, but a tab the user has already
-    // selected must remain visible to switch away from.
     if (tab === 'branded' && count === 0 && activeTab !== tab) return [];
     return [{ value: tab, label, count }];
   });
@@ -60,11 +51,6 @@ export function DemandSignalFilters({
   );
 }
 
-/**
- * The detectors that did not run in full, named by status on the summary
- * line ("Partial: Striking distance, CTR gap"), and one hint with every
- * detector's rule and what limited it.
- */
 export function DemandDetectorCoverage({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const states = snapshot.summary.detectors;
   const byStatus = new Map<string, Detector[]>();
@@ -93,11 +79,6 @@ export function DemandDetectorCoverage({ snapshot }: Readonly<{ snapshot: Demand
   );
 }
 
-/**
- * Data caveats shared by the signals, behind one hint on the summary line:
- * at the end of the filter strip it sat beside the last filter's own hint
- * and read as a second hint for that filter.
- */
 export function DemandDataCaveats({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const limitations = Array.from(
     new Set(snapshot.signals.flatMap((signal) => signal.limitations).filter(Boolean)),

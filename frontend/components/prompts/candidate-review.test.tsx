@@ -8,7 +8,6 @@ import type { PromptCandidate } from '@citeladder/contracts';
 
 import { CandidateReview, useCandidateSelection } from './candidate-review';
 
-/** The review with its selection held, as the builder holds it. */
 function Review(props: Readonly<Omit<ComponentProps<typeof CandidateReview>, 'selection'>>) {
   const selection = useCandidateSelection(props.candidates);
   return <CandidateReview {...props} selection={selection} />;
@@ -51,8 +50,6 @@ describe('CandidateReview', () => {
     );
     const choices = screen.getAllByRole('checkbox', { name: /Select “/ });
     choices.forEach((choice) => expect(choice).toBeEnabled());
-    // Disabled judging and skipped/failed checks must not become the same
-    // state; a clean pass says nothing.
     expect(
       choices.map((choice) => {
         const id = choice.getAttribute('aria-describedby');
@@ -81,7 +78,6 @@ describe('CandidateReview', () => {
     await user.click(reject);
     expect(onReject).toHaveBeenLastCalledWith(['b']);
 
-    // The selection survives the request (a failure can be retried).
     await user.click(all);
     await user.click(reject);
     expect(onReject).toHaveBeenLastCalledWith(['a', 'b']);

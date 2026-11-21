@@ -129,10 +129,6 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
   };
 }
 
-/**
- * A page chat as its read returns it while the page is read, once the fetch
- * queued the first turn, and after that turn answered with `reply`.
- */
 export function pageChatPhases(reply: string) {
   const base = detail(revision(REV1, 1, 'agent', 'Body.'));
   const request = base.messages[0]!;

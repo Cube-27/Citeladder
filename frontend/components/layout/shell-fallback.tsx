@@ -32,14 +32,6 @@ import { MODES } from './mode-switch';
 import { RouteLoadingScreen } from './page-shell';
 import { ShellContext } from './shell-context';
 
-/**
- * A shell route's first frame (`FirstFrame` picks it; flow routes never get
- * it), drawn at once (OL-01): the sidebar with its real rows from the route manifest (no
- * read needed; inert until the shell opens), blocks where the project and
- * the account go, the masthead titled from the route, and the page's
- * skeleton in `main`. The settled shell draws every part at the same place,
- * so only the blocks fill in.
- */
 export function ShellFallback({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <ShellContext.Provider value={FALLBACK_SHELL}>
@@ -50,14 +42,12 @@ export function ShellFallback({ children }: Readonly<{ children?: ReactNode }>) 
   );
 }
 
-/** The header's menu button holds its place below 900px; the drawer opens with the shell. */
 const FALLBACK_SHELL = {
   navDrawer: { open: false, onOpen: () => {} },
   searchTrigger: null,
   agentTrigger: null,
 } as const;
 
-/** A shell page's skeleton; a path the shell has no page for shows the loading notice. */
 function DestinationLoading() {
   const { pathname } = useLocation();
   return hasPageTitle(pathname ?? '') ? (
@@ -67,7 +57,6 @@ function DestinationLoading() {
   );
 }
 
-/** The project switcher's or the account's place, held by blocks until their reads answer. */
 function IdentBlock() {
   return (
     <SidebarIdentButton

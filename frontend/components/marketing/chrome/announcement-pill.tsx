@@ -3,10 +3,6 @@ import { ArrowRight } from '@/lib/icons';
 
 import './announcement-pill.css';
 
-/**
- * AnnouncementPill: one line of news above the landing hero, with an
- * optional tag. With an `href` the whole pill is the link.
- */
 export function AnnouncementPill({
   href,
   tag,

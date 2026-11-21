@@ -24,11 +24,6 @@ import {
   visibilityEvidenceHref,
 } from '@/lib/visibility/use-visibility-dashboard';
 
-/**
- * Brand → Insights (AV-14, AV-16): the lede with its key figures, your brand
- * over time, the performance matrix and top rankings (W6), then by model, the
- * observed surface's rates and by market.
- */
 export function InsightsScreen() {
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, 'insights');
@@ -67,8 +62,6 @@ export function InsightsScreen() {
                     )
                   }
                 />
-                {/* Only once the reader narrows to an observed surface: these
-                    rates divide by observations, not answers. */}
                 {queries.surfaceEngine ? (
                   <SurfaceRatesPanel query={queries.surfaceRatesQuery} />
                 ) : null}

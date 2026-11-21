@@ -46,7 +46,6 @@ export function AiReferralsDashboard({
   data,
   fetching,
 }: Readonly<{ data: AiReferrals; fetching: boolean }>) {
-  // The view is in the URL like every other tab, so it links and Back returns to it.
   const [tab, setTab] = useUrlState('referrals_view', viewCodec);
   return (
     <SectionStack aria-busy={fetching}>
@@ -78,11 +77,6 @@ export function AiReferralsDashboard({
   );
 }
 
-/**
- * A referral trend in a card: the series on the chart's own axes (dates
- * under the plot, the scale in its gutter), so no hand-placed labels drift
- * from the line they name.
- */
 function TrendCard({
   title,
   badge,
@@ -94,7 +88,6 @@ function TrendCard({
   title: string;
   badge: string;
   points: TrendPoint[];
-  /** What the line counts: its name in the legend and the table. */
   unit: string;
   domainMax?: number;
   formatTick?: (value: number) => string;

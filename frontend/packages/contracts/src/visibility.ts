@@ -4,7 +4,6 @@ import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
 import { projectMarketSchema } from './markets.ts';
 import { buyerTypeSchema, marketScopeSchema, promptCohortSchema } from './project.ts';
 
-/** What a Visibility read counts: one prompt cohort, or `all` prompts together. */
 export const visibilityCohortSchema = z.enum([...promptCohortSchema.options, 'all']);
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
@@ -30,7 +29,6 @@ export const measurementCountsSchema = responseObject({
   not_run: z.number().int().nullable().describe(`Answers never attempted. ${UNKNOWN}`),
 });
 
-// The cached mark this project holds, or a site to derive one from.
 export const namedBrandSchema = responseObject({
   kind: z.enum(['brand', 'competitor']).describe('The tracked brand, or a roster competitor.'),
   name: z.string(),
@@ -47,7 +45,6 @@ export const citedDomainSchema = responseObject({
 });
 export type CitedDomain = z.infer<typeof citedDomainSchema>;
 
-// Win rate (AV-7). Absent: this read does not serve win rate.
 export const winCountsSchema = responseObject({
   win_count: z
     .number()
@@ -71,11 +68,6 @@ export const winCountsSchema = responseObject({
 });
 export type WinCounts = z.infer<typeof winCountsSchema>;
 
-// ---------------------------------------------------------------------------
-// Visibility dashboard (selected-run projection)
-// ---------------------------------------------------------------------------
-
-// One per-engine comparison row for the selected run (B6 `EngineComparisonRow`).
 const RATE = 'Share of answers, 0–1; null when no answer completed.';
 const MENTION_RATE = z.number().nullable().describe(`Answers that named the brand. ${RATE}`);
 const OWNED_RATE = z
@@ -100,8 +92,6 @@ export const visibilityEngineSchema = responseObject({
   ...winCountsSchema.shape,
 });
 
-// `website_url` lets BrandLogo use its Logo.dev fallback when the cached `logo_url` is absent.
-// Tone is the Perception read, never a ranking column.
 export const netSentimentSchema = responseObject({
   mentions: z.number().int().describe('Answers that named the business.'),
   classified: z.number().int().describe('Of those, the ones whose tone was classified.'),
@@ -164,10 +154,6 @@ export const rankingRowSchema = responseObject({
     ),
 });
 
-// Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
-// server-side from the persisted MetricSnapshot for the selected audit
-// (defaults to the latest completed audit). No cross-run trend in this payload
-// — the Insights page reads /visibility/trends for that.
 export const visibilityComparisonSchema = responseObject({
   status: z
     .string()
@@ -211,9 +197,6 @@ export const visibilitySchema = responseObject({
   counts: measurementCountsSchema.optional(),
   comparison_key: z.string().nullable().optional(),
   comparison: visibilityComparisonSchema.optional(),
-  // Citations counted as citations. `owned_citation_rate` above counts ANSWERS
-  // that contained one, which is a different measure with a different
-  // denominator — both are true and they are never interchangeable.
   citation_totals: z
     .object({
       citations: z.number().int(),
@@ -221,7 +204,6 @@ export const visibilitySchema = responseObject({
       owned_share: z.number().nullable(),
     })
     .optional(),
-  // Accepting only run|range once failed the default landing request on a good 200.
   selection_mode: z
     .enum(['latest', 'run', 'range'])
     .optional()
@@ -232,7 +214,6 @@ export const visibilitySchema = responseObject({
   configuration_groups: z.record(z.string(), z.number().int()).optional(),
   from_at: z.string().nullable().optional(),
   to_at: z.string().nullable().optional(),
-  // Aggregate surface: never a forced singular model across engines.
   model_provenance: z.array(modelProvenanceSchema).default([]),
   rankings: z.array(rankingRowSchema),
   per_engine: z.array(visibilityEngineSchema),
@@ -240,7 +221,6 @@ export const visibilitySchema = responseObject({
   created_at: z.string(),
 });
 
-// Brand mention crossed with an owned citation, one answer counted once. Null when nothing was answered.
 export const answerStatesSchema = responseObject({
   mentioned_and_cited: z.number().int(),
   mentioned_only: z.number().int(),
@@ -341,7 +321,6 @@ export const promptMetricItemSchema = responseObject({
     .optional(),
 });
 
-// One run that measured the prompt, oldest first.
 export const promptHistoryPointSchema = responseObject({
   audit_id: uuid(),
   completed_at: z.string(),
@@ -363,8 +342,6 @@ export const promptHistoryPointSchema = responseObject({
   source_snapshot_id: uuid().describe('Provenance: the persisted prompt score this point reads.'),
 });
 
-// An Action whose frozen declaration checks measure this prompt, at the time
-// the user said the work went live. A marker, never an attribution.
 export const promptHistoryImplementationSchema = responseObject({
   implementation_event_id: uuid(),
   action_id: uuid(),
@@ -408,7 +385,6 @@ const observedCompetitorFields = {
   created_at: z.string(),
 };
 
-/** A suggestion is a domain the answers cited, or a business name they mentioned. */
 export const observedCompetitorSchema = z.discriminatedUnion('kind', [
   responseObject({
     ...observedCompetitorFields,
@@ -428,9 +404,6 @@ const discoveryProfileSchema = responseObject({
   business_type: buyerTypeSchema.nullable(),
   price_tier: z.string(),
   field_confidence: z.record(z.string(), z.number()),
-  // Resolved business context. `category` and `category_terms` are open
-  // vocabulary and carry the specificity; the rest are closed facets that
-  // decide which kinds of question get generated.
   category: z.string().default(''),
   category_options: z.array(z.string()).default([]),
   category_aliases: z.array(z.string()).default([]),
@@ -498,17 +471,12 @@ export const brandDiscoveryCatalogSchema = responseObject({
   subindustries: z.record(z.string(), z.array(z.string())),
 });
 
-// Completion creates the project in the request, with an empty prompt set.
-// A replay after the project was deleted reports no project.
 export const brandDiscoveryCompleteSchema = responseObject({
   discovery_id: uuid(),
   project_id: uuid().nullable(),
   warnings: z.array(z.string()),
 });
 
-// Visibility → By market: each market's latest dashboard-ready run, measured
-// apart. `no_run` is a market never measured, never a zero; `metrics_pending`
-// is a market whose latest run's results are still being written.
 export const visibilityMarketRowSchema = responseObject({
   market: projectMarketSchema,
   state: z.enum(['measured', 'no_run', 'metrics_pending']),
@@ -517,7 +485,6 @@ export const visibilityMarketRowSchema = responseObject({
   mention_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),
   sentiment: netSentimentSchema.nullable(),
-  // Movement in points against that market's previous comparable run.
   comparison_status: z.string().nullable(),
   mention_rate_delta: z.number().nullable(),
   share_of_voice_delta: z.number().nullable(),

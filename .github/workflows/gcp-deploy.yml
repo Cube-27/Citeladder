@@ -1,7 +1,5 @@
 name: GCP - Deploy
 
-# Scale-to-zero production on Cloud Run (us-central1) with one free-tier
-# PostgreSQL VM. Owner procedure: docs/operations/GCP_RUNBOOK.md.
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +21,6 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # Up to 30 minutes waiting for CI, then Terraform, image builds and the migrate job.
     timeout-minutes: 90
     environment: gcp-demo
     concurrency:
@@ -35,16 +32,13 @@ jobs:
       ZONE: ${{ vars.GCP_ZONE || 'us-central1-a' }}
       STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
       DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
-      # The Cloud Run API service infra/gcp/run.tf declares.
       API_SERVICE: citeladder-api
       BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
       BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE || 'INR' }}
       BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS || '500' }}
-      # Receives the monitoring alerts (infra/gcp/monitoring.tf).
       ALERT_EMAIL: ${{ vars.GCP_ALERT_EMAIL }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME || 'citeladder.com' }}
       APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME || 'app.citeladder.com' }}
-      # 'true' restores the single-account demo (no public sign-up).
       DEMO_MODE: ${{ vars.DEMO_MODE || 'false' }}
       DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL || 'dev@citeladder.com' }}
@@ -54,7 +48,6 @@ jobs:
       DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
       DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
       TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/20 * * * *' }}
-      # Billing stays closed and allow-listed unless these say otherwise (B2, B42).
       BILLING_CHECKOUT_ENABLED: ${{ vars.BILLING_CHECKOUT_ENABLED || 'false' }}
       BILLING_CHECKOUT_AUDIENCE: ${{ vars.BILLING_CHECKOUT_AUDIENCE || 'allow_list' }}
       BILLING_RAZORPAY_MODE: ${{ vars.BILLING_RAZORPAY_MODE || 'disabled' }}
@@ -71,7 +64,6 @@ jobs:
       BILLING_SELLER_SAC: ${{ vars.BILLING_SELLER_SAC }}
       BILLING_SELLER_LUT_REFERENCE: ${{ vars.BILLING_SELLER_LUT_REFERENCE }}
       BILLING_FUNDED_MONTHLY_BUDGET_MINOR: ${{ vars.BILLING_FUNDED_MONTHLY_BUDGET_MINOR }}
-      # Managed plans measure on these platform credentials (B32, B40).
       PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF }}
       PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF }}
       PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF }}
@@ -81,8 +73,6 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-      # This workflow publishes only the API (which also runs migrations) and PostgreSQL images;
-      # the Workers ship through their own workflows, behind the same gate.
       - uses: ./.github/actions/require-green-main
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
@@ -106,7 +96,6 @@ jobs:
         working-directory: infra/gcp
         shell: bash
         env:
-          # Presence only: refuse an incomplete Razorpay mode before any secret changes.
           RAZORPAY_KEY_SECRET_SET: ${{ secrets.BILLING_RAZORPAY_KEY_SECRET != '' }}
           RAZORPAY_WEBHOOK_SECRET_SET: ${{ secrets.BILLING_RAZORPAY_WEBHOOK_SECRET != '' }}
         run: |
@@ -128,7 +117,6 @@ jobs:
             echo "::error::BILLING_RAZORPAY_MODE=$BILLING_RAZORPAY_MODE needs BILLING_RAZORPAY_KEY_ID and both Razorpay secrets."
             exit 1
           fi
-          # Plain billing settings reach every service; empty ones keep the app default.
           billing_names=(BILLING_CHECKOUT_ENABLED BILLING_CHECKOUT_AUDIENCE BILLING_RAZORPAY_MODE
             BILLING_RAZORPAY_KEY_ID BILLING_RAZORPAY_TEST_READY BILLING_RAZORPAY_TEST_INTERNATIONAL_READY
             BILLING_RAZORPAY_TEST_INDIA_READY BILLING_RAZORPAY_LIVE_READY BILLING_RAZORPAY_INTERNATIONAL_READY
@@ -140,8 +128,6 @@ jobs:
           billing_env="$(for name in "${billing_names[@]}"; do
             jq -n --arg key "$name" --arg value "${!name}" 'select($value != "") | {($key): $value}'
           done | jq -s 'add // {}')"
-          # The Workers commit the deterministic Cloud Run URL, which embeds the
-          # project number; refuse to deploy an API they would not reach.
           api_url="https://citeladder-api-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
           for worker in app marketing api-host; do
             upstream="$(sed -n 's/.*"ORIGIN_UPSTREAM": *"\([^"]*\)".*/\1/p' "../../frontend/apps/$worker/wrangler.jsonc")"
@@ -176,13 +162,6 @@ jobs:
               demo_expires_at:$expires,dev_login_email:$email,dev_login_counter_allowance:$allowance,
               oauth_google_enabled:$google,public_signup_enabled:$signup,tick_schedule:$tick,
               billing_env:$billing_env,optional_secrets:[]}' > deploy.auto.tfvars.json
-          # Images and secret versions need the registry and secret containers
-          # first. On the first run this also replaces the retired asia-south1
-          # registry, deleting every stale image with it. The migrate job's
-          # identity and secret grants go first too, so they have propagated
-          # by the time the migrate job starts under that identity, and so do
-          # the deployer's own per-secret version grants, first used after the
-          # image builds.
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
             -target=google_secret_manager_secret.runtime \
@@ -203,7 +182,6 @@ jobs:
             gcloud artifacts docker images list "$registry/$name" --include-tags --filter="tags:$tag" \
               --format='value(version)' --quiet 2>/dev/null | head -n 1
           }
-          # Reuses an image already pushed for this tag, so retries are safe.
           publish() {
             local name="$1" tag="$2" digest
             shift 2
@@ -221,7 +199,6 @@ jobs:
             '.api_image=$api | .postgres_image=$postgres' \
             deploy.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars deploy.auto.tfvars.json
-          # The backticks are Markdown code spans, not command substitution.
           # shellcheck disable=SC2016
           printf -- '- API service and migrate job: `%s`\n- PostgreSQL: `%s`\n' \
             "$api" "$postgres" > /tmp/release-images.md
@@ -262,9 +239,6 @@ jobs:
             has_version "$name" || openssl rand -hex 32 \
               | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
           }
-          # Cloud Run and the database VM read only `latest`, and a rotation's
-          # old value lives in its own *-previous secret, so every older
-          # version of a synchronized secret is superseded: destroy it.
           destroy_superseded() {
             local name="$1" newest
             newest="$(gcloud secrets versions describe latest --secret "$name" --project "$PROJECT_ID" --format='value(name)')"
@@ -317,11 +291,6 @@ jobs:
           add_generated citeladder-referral-salt
           add_generated citeladder-api-key-pepper
           add_generated citeladder-billing-quote-secret
-          # 10.28.0.10 is the database VM's fixed private address (locals.tf).
-          # Only the migrate job connects as the schema owner; the API, runner
-          # and billing jobs connect as citeladder_app, whose password the
-          # migrate job sets from this URL.
-          # Assignments, so a failed secret read stops the step (set -e).
           owner_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
           owner_password_uri="$(jq -rn --arg value "$owner_password" '$value | @uri')"
           app_password="$(gcloud secrets versions access latest --secret citeladder-db-app-password --project "$PROJECT_ID")"
@@ -330,8 +299,6 @@ jobs:
             "postgresql://citeladder:${owner_password_uri}@10.28.0.10:5432/citeladder"
           sync_value citeladder-database-url \
             "postgresql://citeladder_app:${app_password_uri}@10.28.0.10:5432/citeladder"
-          # Only demo mode's single account signs in with a configured password;
-          # production carries none, so its versions are disabled (BL9).
           if [ "$DEMO_MODE" = true ]; then
             if [ "${#DEMO_LOGIN_PASSWORD}" -lt 8 ] || [ "${#DEMO_LOGIN_PASSWORD}" -gt 128 ]; then
               echo '::error::DEMO_LOGIN_PASSWORD must hold 8 to 128 characters in demo mode.'
@@ -346,9 +313,7 @@ jobs:
             exit 1
           fi
           sync_value citeladder-worker-origin-token "$CITELADDER_ORIGIN_TOKEN"
-          # Without it, sign-up and email-link requests answer 503 (fail closed).
           sync_value citeladder-turnstile-secret "$TURNSTILE_SECRET_KEY"
-          # Without the Google pair, sign-in and every Google connect button 503.
           sync_value citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
           sync_value citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"
           sync_optional_value citeladder-worker-origin-token-previous "$CITELADDER_ORIGIN_TOKEN_PREVIOUS"
@@ -393,7 +358,6 @@ jobs:
         run: |
           set -euo pipefail
           replace=()
-          # Replacing the VM deletes its boot disk, which holds every row.
           if [ "$RESET_DATABASE" = true ]; then replace=(-replace=google_compute_instance.db); fi
           # The VM runs its startup script (image, access rules) only at boot,
           # and Terraform updates it in place. Restart an existing VM whose
@@ -416,8 +380,6 @@ jobs:
           test "$(terraform output -raw db_address)" = 10.28.0.10
           gcloud run jobs execute "$(terraform output -raw migrate_job)" \
             --project "$PROJECT_ID" --region "$REGION" --wait
-      # Terraform ignores the API's traffic (run.tf). Pinning the serving
-      # revision first means the apply creates the new revision with no traffic.
       - name: Pin API traffic to the serving revision
         shell: bash
         run: |
@@ -425,7 +387,6 @@ jobs:
           run=(--project "$PROJECT_ID" --region "$REGION")
           existing="$(gcloud run services list "${run[@]}" \
             --filter="metadata.name=$API_SERVICE" --format='value(metadata.name)')"
-          # The first deploy creates the service; there is no traffic to protect.
           [ -z "$existing" ] && exit 0
           serving="$(gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json \
             | jq -r '[.status.traffic[]? | select(.percent == 100) | .revisionName] | first // empty')"
@@ -467,8 +428,6 @@ jobs:
           test -n "$url"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
-      # Everything up to the traffic shift reaches only the tagged revision; a
-      # failure here leaves the previous revision serving all traffic.
       - name: Smoke the new revision at its tagged URL
         id: smoke
         shell: bash
@@ -481,8 +440,6 @@ jobs:
           code() {
             curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"
           }
-          # Signs like the Workers (packages/contracts/src/origin-signature.ts): an
-          # HMAC over time, method, public host, path and an empty visitor address.
           signed() {
             local host="${1,,}" path="$2" ts signature
             ts="$(date +%s)"
@@ -496,7 +453,6 @@ jobs:
             local status=000
             for _ in $(seq 10); do
               status="$(signed "$1" "$2" || true)"
-              # Retry what curl --retry did: no response, 408, 429 and 5xx while the revision starts.
               [[ "$status" != 000 && "$status" != 408 && "$status" != 429 && "$status" != 5* ]] && break
               sleep 6
             done
@@ -505,7 +461,6 @@ jobs:
           ready="$(admitted "$APP_DOMAIN_NAME" /ready)"
           providers="$(admitted "$APP_DOMAIN_NAME" /api/v1/auth/oauth/providers)"
           mcp="$(admitted "api.$DOMAIN_NAME" /.well-known/oauth-authorization-server)"
-          # GET /health alone skips the origin token (liveness probe, uptime check).
           live="$(code "$API_URL/health")"
           anonymous="$(code "$API_URL/ready")"
           foreign="$(signed attacker.example /ready)"
@@ -538,8 +493,6 @@ jobs:
             echo "::error::$API_SERVICE serves '${serving:-nothing}', not the smoked revision $REVISION."
             exit 1
           fi
-      # The scheduler calls the service URL, so the tick runs on the revision
-      # that now serves; its account alone can mint the tick's ID token.
       - name: Smoke the scheduled tick
         shell: bash
         env:
@@ -547,7 +500,6 @@ jobs:
           TICK_SCHEDULER: ${{ steps.terraform.outputs.tick_scheduler }}
         run: |
           set -euo pipefail
-          # The scheduled tick runs every periodic owner in the API; it must finish cleanly.
           scheduler=(--project "$PROJECT_ID" --location "$REGION")
           before="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(lastAttemptTime)')"
           gcloud scheduler jobs run "$TICK_SCHEDULER" "${scheduler[@]}"

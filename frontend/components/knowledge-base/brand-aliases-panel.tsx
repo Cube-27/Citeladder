@@ -13,10 +13,6 @@ import { Check } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 
-/**
- * The brand's aliases: the other spellings answers use for it. Each change
- * saves the whole list; suggestions are kept with one click.
- */
 export function BrandAliasesPanel({
   project,
   mayEdit,
@@ -25,7 +21,6 @@ export function BrandAliasesPanel({
     projectMutations.update({ workspaceId: project.workspace_id, projectId: project.id }),
   );
   const aliases = project.brand.aliases;
-  // Settles with the save; the notice shows a failure.
   const saveAliases = (next: readonly string[]) =>
     save.mutateAsync({ brand: { aliases: [...new Set(next.map((alias) => alias.trim()))] } });
   const suggestions = project.brand.alias_suggestions;
@@ -68,7 +63,6 @@ export function BrandAliasesPanel({
             {suggestions.map((suggestion) => (
               <SettingRow
                 key={suggestion}
-                // Suggested, not yet kept: the dashed draft edge (docs/design.md).
                 label={<Tag kind="draft">{suggestion}</Tag>}
                 action={
                   <Button

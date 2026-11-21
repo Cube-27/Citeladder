@@ -1,7 +1,3 @@
-/**
- * Answer perception reads over HTTP: the selection summary and its states,
- * paged quotes, the execution evidence label, and workspace isolation.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -54,7 +50,6 @@ type Entity = {
   }[];
 };
 
-/** One analysed answer and, unless `outcome` is omitted, its persisted perception. */
 async function answer(
   tenant: Tenant,
   auditId: string,
@@ -139,7 +134,6 @@ async function answer(
 const SUPPORT = randomUUID();
 const PRICING = randomUUID();
 
-/** The project's themes, as research or a person saved them. */
 async function themes(tenant: Tenant, rows: [id: string, name: string][]) {
   await db
     .insertInto('project_themes')
@@ -281,7 +275,6 @@ describe('GET /visibility/perception', () => {
           name: 'Rival',
           kind: 'competitor',
           label: 'negative',
-          // Two aspects on one theme are one mention raising it.
           aspects: [
             aspect('negative', 'Rival support is slow'),
             aspect('negative', 'Rival support is rude', 30),
@@ -324,7 +317,6 @@ describe('GET /visibility/perception', () => {
       [],
       [],
     ]);
-    // Aspects keep the theme's id: a rename shows on past answers, a deletion reads as Other.
     const rival = async () =>
       (
         (
@@ -360,7 +352,6 @@ describe('GET /visibility/perception', () => {
         competitor_mention_rate: { Rival: 1 / 6, Ghost: 0 },
       },
     });
-    // Each answer above is its own prompt; index 0 holds the first (Acme negative).
     await fixtures.promptScore(tenant, auditId, {
       promptIndex: 0,
       promptText: 'best tools?',
@@ -373,17 +364,13 @@ describe('GET /visibility/perception', () => {
     expect(ranking.status).toBe(200);
     const sentiments = (rows: unknown) => (rows as Body[]).map((row) => [row.name, row.sentiment]);
     const expected = [
-      // Five mentions, two confidently classified: one each way nets to zero.
       ['Acme', { mentions: 5, classified: 2, positive: 1, negative: 1, net_sentiment: 0 }],
       ['Rival', { mentions: 1, classified: 1, positive: 1, negative: 0, net_sentiment: 100 }],
-      // Perceived, never named: zero mentions ("Not named"), not unknown.
       ['Ghost', { mentions: 0, classified: 0, positive: 0, negative: 0, net_sentiment: null }],
     ];
     expect(sentiments(ranking.body.rankings)).toEqual(expected);
-    // The trend point for this run carries the same sentiments over its own runs.
     const point = (trend.body as unknown as Body[]).find((row) => row.audit_id === auditId);
     expect(sentiments(point?.rankings)).toEqual(expected);
-    // The brand's mentions only: Rival's positive label in that answer is not counted.
     expect((prompts.body as unknown as Body[])[0]!.sentiment).toEqual({
       mentions: 1,
       classified: 1,
@@ -462,7 +449,6 @@ describe('GET /visibility/perception', () => {
       ['comparison', 0, 1],
       ['all', 1, 1],
     ]);
-    // Insights' sentiment reads keep the measured cohorts: "all" there is unbranded and comparison.
     const insights = await perceivedAnswers(db, {
       workspaceId: own.workspaceId,
       projectId: own.projectId,
@@ -597,7 +583,6 @@ describe('GET /visibility/perception', () => {
     );
 
     expect(status).toBe(200);
-    // The headline stays on the pool; the trend covers the period.
     expect(body).toMatchObject({
       source_audit_ids: [pooled],
       brand: { score: { classified: 1, net_sentiment: 100 } },
@@ -630,7 +615,6 @@ describe('GET /visibility/perception', () => {
       },
     );
     const evidence = await get(outsider, `/api/v1/executions/${classifiedTask}`);
-    // The ranking read that now carries sentiment, asked from the outsider's own project.
     const ranking = await get(outsider, `/api/v1/projects/${outsider.projectId}/visibility`, {
       audit_id: auditId,
     });

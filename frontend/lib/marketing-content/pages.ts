@@ -1,14 +1,5 @@
-/**
- * A marketing page's identity: its URL, browser title, meta description and
- * when it last changed in substance (copy, data or layout; not the shared
- * header and footer). Revise `updated` with the page: it is the sitemap
- * <lastmod>, and a new value makes the post-deploy IndexNow ping resubmit
- * the URL. Pages whose content carries its own date (posts, guides, tools,
- * policies, platform and comparison pages) keep it on their own record.
- */
 export type PageRecord = Readonly<{
   path: `/${string}`;
-  /** The page's name where the site lists it, such as llms.txt. */
   title: string;
   metaTitle: string;
   description: string;
@@ -70,7 +61,6 @@ export const PAGES = {
     metaTitle: 'AI Instructions · CiteLadder',
     description:
       'Official CiteLadder facts and guidance for AI assistants: product identity, capabilities, evidence, pricing sources, and accurate attribution.',
-    // The reference pages show this as their "Last updated" date.
     updated: '2026-11-04',
   },
   entityMap: {

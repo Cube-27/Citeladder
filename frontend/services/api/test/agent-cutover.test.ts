@@ -59,7 +59,6 @@ describe('served Agent cutover on PostgreSQL', () => {
       worker: new AgentWorker(db, bindings, scope.workspaceId),
     };
   }
-  /** Accepts one message and opens the browser's stream for its turn. */
   async function startTurn(
     projectId: string,
     headers: Record<string, string>,
@@ -132,7 +131,6 @@ describe('served Agent cutover on PostgreSQL', () => {
       `${long}\n\nDocument 1 saved in Website page format.`,
     );
     expect(detail.outputs.map((output) => output.latest_revision.body)).toEqual(['Outline body']);
-    // A second request for the finished turn never executes it again.
     const again = await app.request(
       `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
       { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
@@ -176,9 +174,7 @@ describe('served Agent cutover on PostgreSQL', () => {
       content: 'Fix this form',
       attachments: [{ kind: 'pasted_text', text: pasted }],
     });
-    // A UUID in the person's paste is theirs: the saved document keeps it.
     expect(detail.outputs.map((output) => output.latest_revision.body)).toEqual([fixed]);
-    // The same key with another paste is another request.
     const changed = await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
       method: 'POST',
       headers: keyed,
@@ -196,7 +192,6 @@ describe('served Agent cutover on PostgreSQL', () => {
     });
     bindings.runtime.deps.modelFor = () => ({
       ...scripted([]),
-      // The model answers only when the turn is stopped.
       converse: (_request, signal) =>
         new Promise((_resolve, reject) => {
           started();
@@ -229,7 +224,6 @@ describe('served Agent cutover on PostgreSQL', () => {
         workflows: z.array(z.record(z.string(), z.unknown())),
       })
       .parse(body);
-    // A workflow is only named in the browser; admission resolves its skill and format.
     expect(raw.workflows.find((workflow) => workflow.id === 'optimize_page')).toEqual({
       id: 'optimize_page',
       label: 'Optimize a content page',
@@ -274,9 +268,7 @@ describe('served Agent cutover on PostgreSQL', () => {
     const before = await app.request(chat, { headers });
     expect(before.status).toBe(200);
     expect(agentChatDetailSchema.parse(await before.json()).latest_run?.status).toBe('queued');
-    // The runner never executes a turn; the browser's run request does.
     expect(await worker.runOnce()).toBe(0);
-    // It is due for the lane only once no stream has claimed it within the grace.
     const { available_at } = await db
       .selectFrom('agent_runs')
       .select('available_at')

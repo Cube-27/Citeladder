@@ -7,7 +7,6 @@ import { LazyIsland } from '@/components/ui/lazy-island';
 import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
 import { useProjectContext } from '@/lib/project/project-context';
 
-// The chats (and the Agent's API schemas they read) load apart from the shell's first chunk.
 const ChatSection = lazy(() =>
   import('./agent-chat-list').then((module) => ({ default: module.ChatSection })),
 );
@@ -15,9 +14,6 @@ const ChatsFlyout = lazy(() =>
   import('./agent-chat-list').then((module) => ({ default: module.ChatsFlyout })),
 );
 
-/**
- * Agent mode's list: the "New chat" button; Skills and Context; then the chats.
- */
 export function AgentNav() {
   const { location } = useDestinations();
   const { activeWorkspaceId, activeProjectId } = useProjectContext();
@@ -35,7 +31,6 @@ export function AgentNav() {
   );
 }
 
-/** Agent mode in the rail: New chat, Skills and Context as links, then Chats. */
 export function AgentRail() {
   const { isActive, href } = useDestinations();
   const { activeWorkspaceId, activeProjectId } = useProjectContext();

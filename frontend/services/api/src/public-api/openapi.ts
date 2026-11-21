@@ -1,11 +1,3 @@
-/**
- * The public API's OpenAPI document, generated from the `public` route
- * contracts. `GET /v1/openapi.json` serves it, and the docs site's reference
- * (`apps/docs/src/data/public-api.json`) is checked against it.
- *
- * Each shared contract schema is emitted once, under `components.schemas`,
- * with its contract export as its public name: `promptSetSchema` is `PromptSet`.
- */
 import * as contracts from '@citeladder/contracts';
 import { z } from 'zod';
 
@@ -19,13 +11,11 @@ import { docKey, OPERATION_DOCS } from './operation-docs.ts';
 const P = policy.public_api;
 const PROJECT_PREFIX = `${policy.api.machine_prefix}/projects/{project_id}/`;
 
-/** The docs group of a public path: the resource below the project, else `projects`. */
 function groupOf(path: string): string {
   if (!path.startsWith(PROJECT_PREFIX)) return 'projects';
   return path.slice(PROJECT_PREFIX.length).split('/')[0] ?? 'projects';
 }
 
-/** Contract schemas by public name; an alias keeps the first export's name. */
 const CONTRACT_NAMES = new Map<z.ZodType, string>();
 for (const [name, value] of Object.entries(contracts).sort(([a], [b]) => a.localeCompare(b)))
   if (name.endsWith('Schema') && value instanceof z.ZodType && !CONTRACT_NAMES.has(value))
@@ -67,7 +57,6 @@ export function publicApiDocument(routes: readonly RouteContract[]) {
               return [status, media ? { ...response, content: json(media, example) } : response];
             }),
           );
-          // `x-citeladder-scope`: the API key scope the operation needs.
           return [
             method,
             {

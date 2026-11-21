@@ -2,10 +2,6 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageSection } from '../sections/page-section';
 import { CtaBand } from '../sections/steps-faq-cta';
 
-/**
- * The closing band of a content page: a CtaBand in its own section, the demo
- * as the primary action and the page's own next step beside it.
- */
 export function ContentCta({
   title,
   lead,

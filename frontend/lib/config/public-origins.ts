@@ -1,5 +1,3 @@
-/** The two browser-visible origins. Production artifacts require both explicitly. */
-
 function invalidOrigin(parsed: URL, production: boolean): boolean {
   return (
     !['http:', 'https:'].includes(parsed.protocol) ||
@@ -35,10 +33,6 @@ function parsePublicOrigin(
   return parsed;
 }
 
-/**
- * The API host machine senders post to (`https://api.citeladder.com`): crawl
- * log endpoints shown in setup. Production app artifacts require it.
- */
 export function publicApiOrigin(
   value = process.env.PUBLIC_API_ORIGIN,
   production = process.env.NODE_ENV === 'production' && process.env.LOCAL_COMPOSE_BUILD !== 'true',

@@ -14,11 +14,9 @@ type ChangeFrequency = 'monthly' | 'weekly' | 'yearly';
 export type PublicRoute = {
   path: string;
   title: string;
-  /** Policies are listed apart from product and guide pages in llms.txt. */
   kind: 'page' | 'policy';
   changeFrequency: ChangeFrequency;
   priority: number;
-  /** The sitemap <lastmod>, from the page's record. */
   updated?: string;
 };
 
@@ -33,7 +31,6 @@ const page = (
 const fromRecord = (record: PageRecord, changeFrequency: ChangeFrequency, priority: number) =>
   page(record.path, record.title, changeFrequency, priority, record.updated);
 
-/** An index page changes whenever a page it lists does. */
 const latest = (dates: readonly (string | undefined)[]) =>
   dates
     .filter((date): date is string => date !== undefined)
@@ -48,10 +45,6 @@ const postUpdated = (post: (typeof POSTS)[number]) => post.dateModified ?? post.
 const platformUpdated = (path: string) =>
   PLATFORM_PAGES.find((candidate) => candidate.path === path)?.updated;
 
-/**
- * Every indexable marketing page, once. The sitemap and llms.txt both read this
- * list, so a page published to one is published to the other.
- */
 export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   fromRecord(PAGES.home, 'weekly', 1),
   ...PUBLISHED_PLATFORM.map((item) =>
@@ -114,7 +107,6 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   ...FREE_TOOLS.map((tool) =>
     page(`/tools/${tool.slug}`, tool.title, 'monthly', 0.7, tool.updated),
   ),
-  // Contact shares the legal footer row but is a page, not a policy.
   ...LEGAL_DOCUMENTS.map((document) => {
     const route = page(
       document.path,

@@ -9,15 +9,9 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { YouTag } from '@/components/ui/table';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
-/** Items an axis shows at most. */
 const AXIS_LIMIT = 10;
-/** A pending axis the selection cannot count (topics, markets) reserves this many. */
 const UNCOUNTED_AXIS = 5;
 
-/**
- * How many items a pending axis will draw, from the selection already on
- * screen, so the skeleton holds the loaded table's height.
- */
 export function pendingAxisLength(selected: Visibility, dimension: MatrixDimension): number {
   return Math.min(AXIS_LIMIT, Math.max(1, countedAxisLength(selected, dimension)));
 }
@@ -28,7 +22,6 @@ function countedAxisLength(selected: Visibility, dimension: MatrixDimension): nu
   return UNCOUNTED_AXIS;
 }
 
-/** The read failed or is loading: the card's body says so instead of a table. */
 export function matrixBodyState(
   query: UseQueryResult<unknown>,
   what: string,
@@ -47,7 +40,6 @@ export function matrixBodyState(
   return null;
 }
 
-/** Each axis item's label as text, for headers, CSV and screen readers. */
 export function useAxisText() {
   const { label: engineLabel } = useEngineCatalog();
   return (axes: MatrixAxes, dimension: MatrixDimension): string[] => {
@@ -68,7 +60,6 @@ export function useAxisText() {
   };
 }
 
-/** One axis item as drawn: a brand with its mark and "You", a renamed topic marked. */
 export function AxisLabel({
   axes,
   dimension,

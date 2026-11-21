@@ -2,11 +2,6 @@ import type { RankingRow } from '@citeladder/contracts';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 
-/**
- * A brand's mark from a ranking read that names it: the tracked brand when
- * `name` is null, else the competitor of that name. The letter holds the
- * place until the read loads, so the name beside it never moves.
- */
 export function RankedBrandMark({
   rows,
   name,

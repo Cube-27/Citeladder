@@ -3,7 +3,6 @@ import { sendAuthMail } from '../src/auth/mail.ts';
 import { setLogSink } from '../src/logging.ts';
 import { testConfig } from './support.ts';
 
-// A fake key and a recording transport: no request leaves the process.
 const config = testConfig({ RESEND_API_KEY: 'test-only-resend', AUTH_MAIL_TIMEOUT_MS: '1000' });
 const recipients: string[] = [];
 config.auth.fetch = async (_url, init) => {

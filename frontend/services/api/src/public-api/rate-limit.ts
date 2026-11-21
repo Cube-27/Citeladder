@@ -17,7 +17,6 @@ const POLICY = Object.entries(WINDOWS)
   .map(([name, { limit, windowSeconds }]) => `"${name}";q=${limit};w=${windowSeconds}`)
   .join(', ');
 
-/** One window's `RateLimit` item; over its limit, the 429 carries it with `r=0`. */
 async function spend(db: Database, name: keyof typeof WINDOWS, subject: string): Promise<string> {
   try {
     const state = await spendBudgetState(db, WINDOWS[name], subject);
@@ -35,10 +34,6 @@ async function spend(db: Database, name: keyof typeof WINDOWS, subject: string):
   }
 }
 
-/**
- * Spend one request from the key's window, then the workspace's (a throttled
- * key spends nothing of its workspace), and return the RateLimit fields.
- */
 export async function spendRateLimits(
   db: Database,
   key: { id: string; workspace_id: string },

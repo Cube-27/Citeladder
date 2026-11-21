@@ -47,8 +47,6 @@ export async function runExecution(tick: boolean) {
     drained.abort();
     const failed = failure instanceof LaneFailures ? failure.lanes : new Set<string>();
     const handedOver = await handover;
-    // A started handover successor is already waiting for this drain's lock;
-    // a refused or skipped handover falls back to the exit-time start.
     const successor =
       handedOver ||
       (await startSuccessor({
@@ -74,11 +72,6 @@ export async function runExecution(tick: boolean) {
   }
 }
 
-/**
- * About one cold start before the deadline, start the successor while this
- * drain still holds the lock, so it is warm when the in-flight tail ends.
- * Resolves whether it started one; never once the drain ended or shutdown began.
- */
 export async function handOver(options: {
   delayMs: number;
   signal: AbortSignal;
@@ -93,12 +86,6 @@ export async function handOver(options: {
   return options.successor(options.signal);
 }
 
-/**
- * The drain lock is released: work due within a fresh budget gets a successor
- * now instead of waiting for the next tick. A failed lane is excluded, but the
- * owners that did not fail still get theirs. The starter skips an active drain.
- * Resolves whether an execution started.
- */
 export async function startSuccessor(options: {
   lanes: readonly RunnerLane[];
   budgetMs: number;
@@ -107,7 +94,6 @@ export async function startSuccessor(options: {
 }): Promise<boolean> {
   if (options.signal.aborted) return false;
   const due = await nextDueDelay(options.lanes);
-  // Shutdown may arrive while the probe runs; never start a successor after it.
   if (options.signal.aborted || due === null || due >= options.budgetMs) return false;
   return options.start();
 }

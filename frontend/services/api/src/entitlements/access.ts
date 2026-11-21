@@ -11,21 +11,18 @@ export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>['status'];
 
 type DeniedAccess = Exclude<WorkspaceAccess, 'active' | 'trial_active'>;
 
-/** The message a request refused in each denied state carries. */
 const DENIALS: Record<DeniedAccess, string> = {
   trial_expired: 'Your trial has expired. Contact support to restore access.',
   subscription_lapsed: 'Your plan has ended. Contact support to restore access.',
   access_unresolved: 'Workspace access is unavailable. Contact support.',
 };
 
-/** Whether this access state admits work in the workspace. */
 export function accessGranted(status: WorkspaceAccess): status is 'active' | 'trial_active' {
   return status === 'active' || status === 'trial_active';
 }
 
 type AccessResult = { status: WorkspaceAccess; expires_at: string | null };
 
-/** Persisted authority plus wall time; this read never repairs a projection. */
 export async function workspaceAccess(
   db: Database,
   workspaceId: string,
@@ -34,7 +31,6 @@ export async function workspaceAccess(
   return accessOf(await loadAccountState(db, workspaceId, at), at);
 }
 
-/** The access a loaded account state grants at `at`. */
 function accessOf(state: AccountState | null, at: Date): AccessResult {
   const unresolved = { status: 'access_unresolved' as const, expires_at: null };
   if (state?.account.status !== 'active' || state.error) return unresolved;
@@ -65,8 +61,6 @@ function accessOf(state: AccountState | null, at: Date): AccessResult {
     selected.some((grant) => grant.bundle_role === 'primary')
   )
     return { status: 'active', expires_at: state.validUntil?.toISOString() ?? null };
-  // A paid plan's access that took effect and has ended: a lapsed customer,
-  // whatever trial preceded it.
   const ends = state.grants
     .filter(
       (grant) =>
@@ -90,7 +84,6 @@ function accessOf(state: AccountState | null, at: Date): AccessResult {
   return unresolved;
 }
 
-/** The access result, or the 403 its denied state carries. */
 function admitted(access: AccessResult): AccessResult {
   if (!accessGranted(access.status))
     throw new ApiError(403, DENIALS[access.status], { code: access.status });
@@ -101,13 +94,6 @@ export async function requireWorkspaceAccess(db: Database, workspaceId: string) 
   return admitted(await workspaceAccess(db, workspaceId));
 }
 
-/**
- * One workspace's entitlement state, read once on first use and then shared by
- * everything that asks: the access gate, capability flags and allowances. A
- * request keeps one on its context (`entitlements`), so a revocation applies
- * from the next request; it is never kept across requests. Code holding a
- * transaction, or a worker, builds its own from that executor.
- */
 export class WorkspaceEntitlements {
   readonly workspaceId: string;
   readonly #db: Database;
@@ -125,28 +111,19 @@ export class WorkspaceEntitlements {
     return this.#state;
   }
 
-  /** 403 unless the workspace's access state admits work. */
   async requireAccess(): Promise<AccessResult> {
     return admitted(accessOf(await this.#load(), this.#at));
   }
 
-  /** The granted capability values; `null` when the account is missing or unresolvable. */
   async granted(): Promise<ReadonlyMap<string, number> | null> {
     const entitlement = entitlementOf(await this.#load());
     return entitlement.status === 'resolved' ? entitlement.values : null;
   }
 
-  /** Whether the plan currently grants flag `key`; unresolvable grants fail closed. Reads only. */
   async grants(key: string): Promise<boolean> {
     return ((await this.granted())?.get(key) ?? 0) >= 1;
   }
 
-  /**
-   * The plan gate for work behind flag `key`: reads the grants under the
-   * account's capacity lock, so grant changes serialize with the action, and
-   * refuses with the registry's refusal for that flag. Unresolvable grants
-   * refuse with 403 `occupancy_unresolved`.
-   */
   async requireFlag(key: GatedFlag): Promise<void> {
     const { values } = await lockedGrants(this.#db, this.workspaceId, this.#at);
     if ((values.get(key) ?? 0) >= 1) return;
@@ -158,10 +135,8 @@ export class WorkspaceEntitlements {
   }
 }
 
-/** A flag with a registered refusal: the work it gates can be refused. */
 export type GatedFlag = keyof typeof policy.entitlements.flag_refusals;
 
-/** `WorkspaceEntitlements.requireFlag` for code holding a transaction or a worker. */
 export function requireFlag(db: Database, workspaceId: string, key: GatedFlag): Promise<void> {
   return new WorkspaceEntitlements(db, workspaceId).requireFlag(key);
 }
@@ -175,12 +150,6 @@ export function hasOperatorControls(db: Database, workspaceId: string): Promise<
   return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.operator_controls);
 }
 
-/**
- * `requireWorkspaceAccess` for a long-running worker: a grant is reused for
- * `ttlMs`, so a revocation takes effect within that window, while a denial or
- * failure is never cached and concurrent checks share one read. Requests never
- * use it: they read access once per request (`WorkspaceEntitlements`).
- */
 export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => performance.now()) {
   const granted = new Map<string, { until: number; check: Promise<unknown> }>();
   return (workspaceId: string) => {
@@ -190,7 +159,6 @@ export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => p
     const entry = { until: now() + ttlMs, check: check as Promise<unknown> };
     granted.set(workspaceId, entry);
     check.then(
-      // A grant that ends inside the window (a trial) is reused only until it ends.
       ({ expires_at: expiresAt }) => {
         if (expiresAt)
           entry.until = Math.min(entry.until, now() + (Date.parse(expiresAt) - Date.now()));

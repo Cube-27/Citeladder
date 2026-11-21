@@ -1,13 +1,3 @@
-/**
- * The Site Health scale fixture (CO-7): a generated crawl of
- * `SITE_HEALTH_SCALE_PAGES` pages (5,000 in CI) through site setup over a real
- * sitemap, analysis, a batched Issues publication while the crawl runs, and
- * the finalize task at production batch sizes. It asserts the batch boundary
- * and the published result; it prints peak heap and read times as
- * measurements, never asserting wall-clock. Runs under its own config:
- *
- *   SITE_HEALTH_SCALE_PAGES=51000 pnpm test:api --config vitest.scale.config.ts test/scale/site-health-crawl.scale.ts
- */
 import { randomUUID } from 'node:crypto';
 import { sql, type KyselyPlugin, type QueryId, type RootOperationNode } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -56,7 +46,6 @@ function primaryTable(node: RootOperationNode) {
   const text = node.kind === 'RawNode' ? node.sqlFragments.join(' ') : '';
   return /\bfrom\s+(\w+)/.exec(text)?.[1] ?? '';
 }
-/** The most rows any one read returned per crawl-sized table, and the peak heap seen between queries. */
 function meter() {
   const tables = new Map<QueryId, string>();
   const most: Record<string, number> = {};
@@ -78,7 +67,6 @@ function meter() {
 }
 
 const path = (index: number) => (index === 0 ? '/' : `/page-${index}`);
-/** Words unique to the page, so no two pages read as duplicates. */
 const text = (index: number) =>
   Array.from({ length: 80 }, (_, word) => `w${(index * 7919 + word * 104_729) % 1_000_003}`).join(
     ' ',
@@ -95,7 +83,6 @@ const facts = (url: string, index: number) => ({
   canonical_declarations: [url],
 });
 
-/** Every page the sitemap listed, settled as the analyze task would: artifact, analysis, evaluations, issues. */
 async function analyze(seed: SiteSeed, limit: number) {
   const tasks = await db
     .selectFrom('site_crawl_tasks')
@@ -125,7 +112,6 @@ function chunkOf(tasks: readonly AnalyzeTask[], offset: number) {
   }));
 }
 
-/** One chunk's artifacts, analyses, evaluations and issues, in foreign-key order. */
 async function settleChunk({
   seed,
   chunk,
@@ -226,7 +212,6 @@ async function settleChunk({
       })),
     )
     .execute();
-  // The analyze writer's issues are current at once (CO-7).
   await db
     .insertInto('site_issues')
     .values(
@@ -280,11 +265,6 @@ function urlset(urls: readonly string[]) {
   return `<urlset>${entries}</urlset>`;
 }
 
-/**
- * Scans one read starts on the per-page tables, in its own transaction: a plan
- * that probes them once per tracked page scales with the crawl, not the page.
- * Printed, never asserted: the count is the planner's choice.
- */
 function scanned(read: (trx: Database) => Promise<unknown>) {
   const scans = async (trx: Database) => {
     const { rows } = await sql<{ scans: number }>`
@@ -302,7 +282,6 @@ function scanned(read: (trx: Database) => Promise<unknown>) {
   });
 }
 
-/** Milliseconds a read took: a measurement printed for the PR, never asserted. */
 async function timed<T>(read: () => Promise<T>) {
   const started = performance.now();
   const value = await read();
@@ -358,7 +337,6 @@ describe('Site Health crawl at scale', () => {
       .executeTakeFirstOrThrow();
     expect(tracked.count).toBe(PAGES);
 
-    // Half the crawl analyzed: its Issues publish while it runs.
     const half = await analyze(seed, Math.floor(PAGES / 2));
     await publishRunningIssues(db, { workspace_id: seed.workspaceId, crawl_id: seed.crawlId });
     const paging = { limit: 50, cursor: null };
@@ -369,7 +347,6 @@ describe('Site Health crawl at scale', () => {
       running.value.items.find((item) => item.rule_id === 'technical.title_present')
         ?.affected_url_count,
     ).toBe(half);
-    // Planned on analyzed statistics, as production autoanalyze leaves them.
     await asOwner((owner) =>
       sql`analyze site_urls, monitored_site_urls, site_page_analyses, site_crawl_tasks, site_issues`.execute(
         owner,
@@ -401,7 +378,6 @@ describe('Site Health crawl at scale', () => {
       .where('s.crawl_id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(published.count).toBe(PAGES);
-    // No read held more analyses than one projection batch.
     const batch = policy.site_health.crawl.finalize;
     expect(metered.most.site_page_analyses).toBeLessThanOrEqual(
       Math.max(batch.projection_pages, batch.read_pages, batch.batch_pages),

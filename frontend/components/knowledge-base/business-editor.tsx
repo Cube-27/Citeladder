@@ -26,17 +26,10 @@ import {
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { cn } from '@/lib/utils';
 
-/**
- * The business facts that steer prompt generation, edited in place by the
- * Prompt Builder's first step and Agent › Context › Business map alike: every
- * offering as one grid row of multi-value cells, then the business-wide
- * lists. A suggestion is dashed until accepted (docs/design.md, line language).
- */
 type EditorProps = Readonly<{
   draft: BusinessDraft;
   onChange: (draft: BusinessDraft) => void;
   disabled: boolean;
-  /** The most entries a list or a map cell takes (`context_list_max_entries`). */
   listMax: number;
 }>;
 
@@ -58,13 +51,11 @@ const itemEntries = (items: readonly ChipItem[]): MapEntryDraft[] =>
 const listItems = (values: readonly string[], suggested: boolean): ChipItem[] =>
   values.map((value) => ({ value, suggested }));
 
-// One grid at the split width: the offering, its three cells, remove. Below it each row stacks.
 const ROW_GRID =
   'column-split:grid-cols-[minmax(9rem,22%)_repeat(3,minmax(0,1fr))_2.25rem] column-split:gap-0 grid gap-1';
 const CELL = 'column-split:border-s column-split:border-rule min-w-0 column-split:p-1';
 const FIELD_LABEL = textRole('caption', 'column-split:hidden px-2 pt-1');
 
-/** The suggestions still waiting, with the one Accept all; nothing when there are none. */
 export function SuggestionsNotice({ draft, onChange, disabled }: Omit<EditorProps, 'listMax'>) {
   const count = suggestionCount(draft);
   if (!count) return null;
@@ -82,7 +73,6 @@ export function SuggestionsNotice({ draft, onChange, disabled }: Omit<EditorProp
   );
 }
 
-/** One offering's row: its name, a cell per map dimension, and remove. */
 function OfferingRow({
   map,
   disabled,
@@ -140,7 +130,6 @@ function OfferingRow({
   );
 }
 
-/** The last row: type an offering and press Enter, Tab away, or paste one per line. */
 function AddOffering({
   disabled,
   onAdd,
@@ -180,13 +169,6 @@ function AddOffering({
   );
 }
 
-/**
- * Every offering as a grid row: Offering | Who buys | Situations | Attributes.
- * A cell adds a value on Enter or a comma; Tab walks the cells in reading
- * order and on from the last row into "Add offering", so a whole catalogue is
- * filled without leaving the keyboard. Below the split width each row stacks
- * its fields under the offering's name.
- */
 export function OfferingsGrid({
   draft,
   onChange,
@@ -195,7 +177,6 @@ export function OfferingsGrid({
   saved,
 }: EditorProps &
   Readonly<{
-    /** The saved map, which a re-added offering takes its saved facts from. */
     saved: BusinessMap;
   }>) {
   const setOfferings = (offerings: string[]) => onChange(withOfferings(draft, offerings, saved));
@@ -283,12 +264,6 @@ function FactRow({
   );
 }
 
-/**
- * The business-wide facts: buyer roles, service areas (a local or regional
- * business only), category terms, jobs to be done, each a multi-value cell,
- * and the business model. A list discovery inferred is a suggestion until a
- * person accepts or edits it.
- */
 export function BusinessFacts({
   draft,
   onChange,
@@ -297,7 +272,6 @@ export function BusinessFacts({
   context,
 }: EditorProps & Readonly<{ context: Record<string, unknown> }>) {
   const lists = LISTS.filter((list) => list.key !== 'serviceAreas' || showsServiceAreas(context));
-  // A saved model this app does not recognize stays distinct from none.
   const savedModel = context.business_model;
   const unknownModel = typeof savedModel === 'string' && savedModel !== '' && !draft.businessModel;
   const accept = (key: ContextListKey | 'businessModel') =>

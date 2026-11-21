@@ -1,16 +1,3 @@
-/**
- * The `citeladder://<kind>/<id>` record kinds: the MCP retrieval allowlist,
- * the label a reader sees and the app screen that shows each kind. MCP
- * retrieval (`services/api/src/mcp/retrieval.ts`), its links
- * (`mcp/links.ts`) and the browser's evidence chips (`lib/agent/evidence.ts`)
- * all read this one table.
- *
- * `page` is a record's own screen, built from its fields; it answers null
- * when a field it needs is absent. The browser holds only a reference, so it
- * passes the id alone and a page that needs another field falls back to
- * `screen`; MCP passes the whole record.
- */
-
 type Field = (name: string) => string;
 
 type RecordKind = {
@@ -53,7 +40,6 @@ export const RECORD_KINDS = {
   demand_snapshot: { label: 'Demand snapshot', screen: '/search-intelligence' },
   query_snapshot: { label: 'Search Console snapshot', screen: '/performance' },
   query_row: { label: 'Search Console query', screen: '/performance' },
-  // The Keyword research page opens on Demand; keyword records open its Overview.
   search_run: { label: 'Keyword research run', screen: KEYWORD_RESEARCH },
   search_dataset: { label: 'Keyword research dataset', screen: KEYWORD_RESEARCH },
   search_row: { label: 'Keyword research row', screen: KEYWORD_RESEARCH },
@@ -65,7 +51,6 @@ export function isRecordKind(kind: string): kind is RecordKindName {
   return Object.hasOwn(RECORD_KINDS, kind);
 }
 
-/** The screen that shows one record: its own page when its fields allow, else its kind's screen. */
 export function recordScreen(kind: RecordKindName, field: Field): string {
   const entry: RecordKind = RECORD_KINDS[kind];
   return entry.page?.(field) ?? entry.screen;

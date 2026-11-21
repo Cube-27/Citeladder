@@ -6,7 +6,6 @@ import { ApiError } from '../errors.ts';
 import { GLOBAL_MAIL_SUBJECT } from '../config/abuse.ts';
 import { sendAuthMail } from '../auth/mail.ts';
 
-/** Issuance has already committed; a failed send retains the copy-link fallback. */
 export async function deliverInvitation<
   T extends { invitation: { email: string; expires_at: string }; token: string },
 >(db: Database, config: ServiceConfig, issued: T) {

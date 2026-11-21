@@ -15,18 +15,15 @@ import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { sortUrlCodec, useUrlState, type UrlSort } from '@/lib/navigation/url-state';
 
-/** A launch's per-market runs arrive together; later rows point back to the first. */
 const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
   audit.launch_id !== null && previous?.launch_id === audit.launch_id;
 
-/** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
 const PAGE_KEYS = ['page'] as const;
 
 const SORT_KEYS = ['created', 'requested', 'completed', 'failed'] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 type Sort = UrlSort<SortKey>;
-/** Newest first, the default, is left out of the address. */
 const SORT_CODEC = sortUrlCodec(SORT_KEYS, { key: 'created', descending: true });
 
 const SORT_VALUE: Record<SortKey, (audit: Audit) => number> = {
@@ -69,29 +66,16 @@ function runsColumns(sort: Sort, onSort: (key: SortKey) => void): DataTableColum
   ];
 }
 
-/**
- * Runs (audits) list table (F10), on the shared `DataTable`.
- *
- * One row per audit, named by its own title (scope and day) that links to
- * the run; the caption gives the time, the market when it is not the
- * project's default, or that the row belongs to the launch above. Every
- * column but the status sorts; newest first by default. A status filter that
- * matches nothing keeps the header and states the absence inside the table.
- */
 export function RunsTable({
   audits,
   status,
   emptyHeading,
 }: Readonly<{
-  /** The runs the status filter left. */
   audits: Audit[];
-  /** A live note in the table header, e.g. that the list is polling. */
   status: ReactNode;
-  /** What the filtered-empty state says. */
   emptyHeading: string;
 }>) {
   const timeZone = useDisplayTimeZone();
-  // A new sort starts on the first page: one address write sets one and drops the other.
   const [sort, setSort] = useUrlState('sort', SORT_CODEC, { clearKeys: PAGE_KEYS });
   const sorted = sortAudits(audits, sort);
   const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, {
@@ -159,7 +143,6 @@ export function RunsTable({
   );
 }
 
-/** The time it was created, its market when not the default, or its place in the launch above. */
 function runCaption({
   audit,
   timeZone,

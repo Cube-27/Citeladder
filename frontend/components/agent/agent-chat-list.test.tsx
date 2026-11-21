@@ -43,8 +43,7 @@ describe('ChatSection', () => {
       http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
         up
           ? HttpResponse.json({ items: [CHAT], next_cursor: null })
-          : // A failure the client does not retry on its own.
-            HttpResponse.json({ detail: 'refused' }, { status: 400 }),
+          : HttpResponse.json({ detail: 'refused' }, { status: 400 }),
       ),
     );
     renderWithProviders(<ChatSection />, {
@@ -64,9 +63,7 @@ describe('ChatSection', () => {
   });
 
   it('skips the poll while this tab streams the running chat, then reads and polls once it closes', async () => {
-    // Only the poll's interval is faked, so it runs only when the test advances it.
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-    // Whether this tab streamed the turn when each list read was served.
     const reads: boolean[] = [];
     let streamed!: (close: () => void) => void;
     const streaming = new Promise<() => void>((resolve) => {
@@ -94,7 +91,6 @@ describe('ChatSection', () => {
         status: 'ready',
       },
     });
-    /** Resolves when the next list read lands, after the poll is re-armed for it. */
     const landed = () =>
       new Promise<void>((resolve) => {
         const stop = queryClient.getQueryCache().subscribe((event) => {

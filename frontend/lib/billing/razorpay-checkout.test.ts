@@ -25,8 +25,6 @@ describe('subscription modal', () => {
         provider: 'razorpay',
         provider_mode: 'test',
         sdk_name: 'razorpay-checkout',
-        // The PUBLIC initialization fields: a publishable key and the
-        // provider's own reference for the intent. No secret, no amount.
         public_key: 'rzp_test_fixture',
         reference: 'sub_fixture',
         reference_kind: 'subscription',
@@ -112,7 +110,5 @@ it('allows a payment retry to succeed inside the same open modal', async () => {
     onFailure,
   );
   expect(onFailure).toHaveBeenCalledWith(expect.stringContaining('Payment failed'));
-  // The vendor's field names go back inside the NEUTRAL wrapper: the shared
-  // controller never reads them, and this vendor's adapter allowlists them.
   expect(result).toEqual({ fields: callback });
 });

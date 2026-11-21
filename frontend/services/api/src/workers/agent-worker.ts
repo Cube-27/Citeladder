@@ -60,12 +60,6 @@ export class AgentWorker {
       .execute();
     return rows.map((row) => row.workspace_id);
   }
-  /**
-   * When this lane can next end a turn, so the chat is not blocked until the
-   * next tick: the earlier of the earliest unclaimed turn passing its grace and
-   * the earliest held turn's lease expiry. A live turn's heartbeat keeps moving
-   * its expiry, so only a turn whose process stopped ever comes due.
-   */
   async nextDue(): Promise<Date | null> {
     const row = await this.db
       .selectFrom('agent_runs')
@@ -87,11 +81,6 @@ export class AgentWorker {
     ].filter((time) => time !== null);
     return due.length ? new Date(Math.min(...due)) : null;
   }
-  /**
-   * Turns execute only inside the browser's request; this lane never runs one.
-   * It ends turns whose process stopped or that no stream claimed, and settles
-   * cancelled turns' outstanding model attempts.
-   */
   async runOnce() {
     const workspaces = await this.workspaces(),
       { queue, models, settings } = this.dependencies;

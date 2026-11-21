@@ -7,12 +7,6 @@ import { Tooltip } from '@/components/ui/tooltip';
 
 const NO_CHANGES = 'No changes to save';
 
-/**
- * A Context form's Save, for its frame's foot (`SettingRows`), the view's
- * one primary. With nothing changed it is `aria-disabled` rather than
- * disabled, so it stays focusable and its reason reaches a tooltip and
- * `aria-describedby`. `label` names what it saves.
- */
 export function SaveFoot({
   label,
   changed,

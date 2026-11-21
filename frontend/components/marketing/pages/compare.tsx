@@ -9,7 +9,6 @@ import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 
-/** Related reading: CiteLadder's own guides and product pages. */
 const GUIDES = [
   {
     href: '/compare/profound-alternatives',
@@ -53,11 +52,6 @@ const GUIDES = [
   },
 ] as const;
 
-/**
- * `/compare`: the comparison index. Each vendor is a linked card with its
- * public positioning, followed by the shared evaluation questions and
- * related guides. A vendor disclosure sits under the heading.
- */
 export function CompareIndex() {
   return (
     <>

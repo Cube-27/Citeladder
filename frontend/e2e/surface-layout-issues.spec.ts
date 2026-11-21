@@ -19,7 +19,6 @@ const summary = {
   section_counts: { technical: 30, content: 9, aeo: 3 },
 };
 
-/** Each view lists a different number of rows; the bands above the rows must not move. */
 function rowsFor(params: URLSearchParams): number {
   if (params.get('finding_class') === 'advisory') return 2;
   if (params.get('severity')) return 4;
@@ -40,7 +39,6 @@ function issue(index: number, params: URLSearchParams) {
     category: 'schema',
     severity: ['high', 'medium', 'low'][index % 3],
     finding_class: params.get('finding_class') ?? 'defect',
-    // Titles of every length: a long one must clamp, never widen its column.
     title: `${params.get('section') ?? 'top'} issue ${index + 1}${index % 4 === 0 ? ' where the structured data names a different organisation than the page footer' : ''}`,
     description: 'What this check looks for.',
     remediation: 'Fix it.',
@@ -54,7 +52,6 @@ function issue(index: number, params: URLSearchParams) {
 
 function issuesPage(route: Route) {
   const params = new URL(route.request().url()).searchParams;
-  // The summary's read names no tab; it lists the crawl's worst three.
   const total = params.has('section') ? rowsFor(params) : 3;
   const start = params.get('cursor') === 'page-2' ? PAGE_SIZE : 0;
   const count = Math.min(PAGE_SIZE, total - start);
@@ -63,7 +60,6 @@ function issuesPage(route: Route) {
     json: {
       items: Array.from({ length: count }, (_, index) => issue(start + index, params)),
       next_cursor: start + count < total ? 'page-2' : null,
-      // A narrower view counts fewer, in fewer digits; the counts must keep their width.
       summary:
         narrowed || params.get('finding_class') === 'advisory'
           ? {
@@ -101,19 +97,12 @@ async function stubIssues(page: Page) {
   await page.route(new RegExp(`/api/v1/site-crawls/${CRAWL}/issues(\\?|$)`), issuesPage);
 }
 
-/**
- * Every band above the rows a click could move: x, y, width and height. The
- * table ends at its last row (owner, 2026-11-19: no blank space under a short
- * view), so its height, its pager and the page height follow the rows.
- */
 async function layout(page: Page, table: Locator): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
     tabs: page.getByRole('radiogroup', { name: 'Issue type' }),
     filters: table.locator('[data-filter-bar]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
-    // Severity and Page kind live in Filters, whose count (like a chip's value)
-    // widens it once set: only what follows it moves (owner, 2026-11-18).
     summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').first(),
@@ -121,13 +110,10 @@ async function layout(page: Page, table: Locator): Promise<Record<string, Box>> 
   const boxes: Record<string, Box> = {};
   for (const [name, part] of Object.entries(parts))
     boxes[name] = (await part.count()) === 1 ? await bandBox(part) : null;
-  // The controls after the view are right-aligned (owner, 2026-11-19), so the
-  // search moves sideways as what follows it widens; it keeps its line and size.
   boxes.search = boxes.search?.slice(1) ?? null;
   return boxes;
 }
 
-/** Within a pixel, for subpixel rounding. */
 function moved(before: Box, after: Box): boolean {
   if (!before || !after) return before !== after;
   return before.some((value, index) => Math.abs(value - (after[index] ?? Infinity)) > 1);
@@ -153,11 +139,9 @@ for (const width of [1280, 1600])
       return layout(page, table);
     };
     const before = await settled();
-    // One row: the view switch and the search share the filter bar's one line.
     const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
     const [searchY = 0, , searchHeight = 0] = before.search ?? [];
     expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
-    // A second line would add the 8 row gap and another control.
     expect(before.filters?.[3] ?? Infinity).toBeLessThan(Math.max(tabsHeight, searchHeight) + 8);
     const shifts: string[] = [];
     const check = async (step: string) => {
@@ -261,7 +245,6 @@ test('at phone width the search takes a line and the other controls share the ne
     box(clear),
     box(bar),
   ]);
-  // The search fills its line; Filters and Clear sit side by side on the line under it.
   expect(search.width).toBeGreaterThan(barBox.width / 2);
   expect(filtersBox.y).toBeGreaterThanOrEqual(search.y + search.height);
   expect(Math.abs(filtersBox.y - clearBox.y)).toBeLessThanOrEqual(1);

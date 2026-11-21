@@ -14,12 +14,6 @@ import { ACTIONS_GROUPING_PAGE_SIZE } from '@/lib/config/agent';
 import { formatCount, pluralCount } from '@/lib/format';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 
-/**
- * An Action's URLs: the detail read's first ten, then "Show 10 more" from the
- * URL read's cursor, rows already shown kept while the next land. Each row
- * opens its URL page and can be ticked (at most `HANDOFF_URLS_MAX`) to send
- * only those URLs to the Agent.
- */
 export function ActionUrls({
   action,
   workspaceId,
@@ -98,7 +92,6 @@ export function ActionUrls({
   );
 }
 
-/** A URL by its path, its last segment strong, so a list of one site's pages reads by what differs. */
 function UrlPath({ url }: Readonly<{ url: string }>) {
   const path = actionTarget({ target_kind: 'page', target_label: url });
   const home = !path.startsWith('/');

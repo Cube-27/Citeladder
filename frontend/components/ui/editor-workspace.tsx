@@ -3,15 +3,7 @@ import type { ReactNode, RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { SLIP_FACE } from '@/components/ui/slip';
 
-/**
- * The editor workspace (the Agent's page workspace, E1): a document beside
- * its rail, filling the viewport below the header so the window never
- * scrolls; each column scrolls inside itself. Wide, the page takes 3fr and
- * the rail 2fr (60/40). Narrow, `EditorStack` puts the same parts under one
- * row of tabs. The route picks one form; the parts are the same.
- */
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
-// `surface-card` marks a container, so a panel inside it takes the inset fill.
 const COLUMN = cn('surface-card', SLIP_FACE, 'flex min-h-0 min-w-0 flex-col overflow-hidden');
 
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
@@ -29,7 +21,6 @@ export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail
   );
 }
 
-/** The narrow form: `tabs` (a `TabRow` inside the caller's `TabsRoot`), then the open panel. */
 export function EditorStack({
   tabs,
   children,
@@ -45,10 +36,6 @@ export function EditorStack({
   );
 }
 
-/**
- * The document's column: a card whose head (its actions and notices) stays
- * while the document scrolls under it. The document pads itself.
- */
 export function EditorPane({
   label,
   head,
@@ -64,11 +51,6 @@ export function EditorPane({
   );
 }
 
-/**
- * The rail: its `head` (the tabs) stays, its panel scrolls with the card's
- * padding, and the `dock` (the docked chat) keeps up to half the rail at its
- * foot under a hairline. Without a panel the dock fills the rail.
- */
 export function EditorRail({
   head,
   children,
@@ -99,10 +81,6 @@ export function EditorRail({
   );
 }
 
-/**
- * A docked conversation: the thread scrolls in its own region (`scrollRef`,
- * named by `label`) and the composer stays under it.
- */
 export function EditorDock({
   label,
   scrollRef,

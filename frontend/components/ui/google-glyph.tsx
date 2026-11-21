@@ -1,6 +1,5 @@
 import type { BrandGlyph } from '@/components/ui/icon';
 
-/** The Google "G" in Google's own four colours, a brand glyph `Icon` sizes. */
 export const GoogleGlyph: BrandGlyph = (props) => {
   return (
     <svg viewBox="0 0 24 24" {...props}>
@@ -24,7 +23,6 @@ export const GoogleGlyph: BrandGlyph = (props) => {
   );
 };
 
-/** Google's 24px mark beside a title, on the card's own surface in both themes. */
 export function GoogleMark() {
   return <GoogleGlyph aria-hidden className="size-6 shrink-0" />;
 }

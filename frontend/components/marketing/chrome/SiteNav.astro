@@ -14,19 +14,6 @@ import './site-nav.css';
 import { NavIcon } from './nav-icons';
 import { routePath } from './site-nav';
 
-/**
- * The website's navbar (the system's SiteNav): a full-bleed bar, sticky at
- * the viewport top over a hairline, with the three mega menus, Enterprise and
- * Pricing, the ThemeSwitch and the account actions (Log in, then Sign up, or
- * the demo link while self-serve signup is closed). Below 960px the links
- * fold into a sheet under the bar.
- *
- * The desktop menus are one island (`DesktopNav`): a Radix navigation
- * menu with a shared popup. The sheet is server-rendered, hidden, and
- * `site-nav.ts` adds its behaviour with plain listeners. Every menu
- * destination is also in the sheet and the footer, so the server HTML links
- * them all.
- */
 interface Props {
   path: string;
 }

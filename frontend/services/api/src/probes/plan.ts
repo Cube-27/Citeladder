@@ -1,9 +1,3 @@
-/**
- * One probe launch, planned once (AV-34): per market, the usable probe engines
- * that can measure it, the questions asked there and the AI credits held. The
- * quote shows the plan with its fingerprint; Run probe sends that fingerprint
- * back, and the launch refuses rather than charge a plan the user never saw.
- */
 import { createHash } from 'node:crypto';
 
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
@@ -21,7 +15,6 @@ import { countryName, probeQuestions, probeSubject } from './questions.ts';
 
 const probes = policy.probes;
 
-/** The search-capable engines this workspace can probe on: CiteLadder's, or its own usable keys. */
 async function probeEngineList(
   db: Database,
   scope: Scope,
@@ -37,7 +30,6 @@ async function probeEngineList(
   );
 }
 
-/** What a probe launched now would ask and hold, market by market. */
 export async function probePlan(
   db: Database,
   scope: Scope,
@@ -50,14 +42,12 @@ export async function probePlan(
     probeSubject(db, scope),
     workspaceAccess(db, scope.workspaceId, at),
   ]);
-  // An engine that cannot measure a market is skipped there, never the whole probe.
   const runs = markets.flatMap(({ id, country_code, language_code }) => {
     const market = { id, country_code, language_code };
     const engines = usable.filter((engine) => canMeasure(engine, market));
     const questions = probeQuestions({ ...subject, country: countryName(country_code) });
     return engines.length ? [{ market, engines, questions: questions.map((q) => q.text) }] : [];
   });
-  // Every market asks the same questions, only its country differs.
   const questions = probeQuestions({ ...subject, country: '' }).length;
   const asks = questions * probes.repetitions;
   let credits = 0;
@@ -69,9 +59,7 @@ export async function probePlan(
     .digest('hex');
   return {
     funded,
-    // The trial allows one ask on ChatGPT; a probe asks three times on every engine.
     trial: access.status === 'trial_active',
-    // Admission refuses a market whose tasks pass the audit task limit.
     overLimit: runs.some(
       (run) =>
         run.questions.length * probes.repetitions * run.engines.length >
@@ -87,7 +75,6 @@ export async function probePlan(
   };
 }
 
-/** The project's prompt set: a probe launch names it because every launch does. */
 export async function promptSetOf(db: Database, scope: Scope) {
   const set = await db
     .selectFrom('prompt_sets')
@@ -103,10 +90,6 @@ export async function promptSetOf(db: Database, scope: Scope) {
 
 type Plan = Awaited<ReturnType<typeof probePlan>>;
 
-/**
- * Why a plan cannot run: a trial workspace, no usable key, no usable engine
- * measuring any market, or a market asking more than the audit task limit.
- */
 export function blockedBy(plan: Plan) {
   if (plan.trial) return 'trial';
   if (!plan.usable.length) return 'no_key';
@@ -114,7 +97,6 @@ export function blockedBy(plan: Plan) {
   return plan.overLimit ? 'task_limit' : null;
 }
 
-/** A plan that can run, or the refusal saying why not. */
 export function runnable(plan: Plan) {
   const blocked = blockedBy(plan);
   if (blocked === 'trial')
@@ -139,7 +121,6 @@ export const changed = () =>
     code: 'probe_quote_changed',
   });
 
-/** AI credits the launch's new tasks hold. */
 async function heldCredits(db: Database, workspaceId: string, auditIds: readonly string[]) {
   const row = await db
     .selectFrom('consumable_ledger')
@@ -155,11 +136,6 @@ async function heldCredits(db: Database, workspaceId: string, auditIds: readonly
   return Number(row?.units ?? 0);
 }
 
-/**
- * Launches the quoted probe: one run per market on the engines that measure
- * it. Refuses `probe_quote_changed` when the plan is no longer the quoted one,
- * or when admission would hold a different number of credits, rolling back.
- */
 export function runProbe(
   db: Database,
   scope: Scope,

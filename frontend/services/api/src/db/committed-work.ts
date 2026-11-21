@@ -141,7 +141,6 @@ class ConnectionWork {
   }
 }
 
-/** Observe successful statements without network I/O while a connection is held. */
 export function observeConnection(connection: DatabaseConnection): void {
   const execute = connection.executeQuery.bind(connection);
   const work = new ConnectionWork();

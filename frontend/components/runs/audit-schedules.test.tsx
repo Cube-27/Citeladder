@@ -12,14 +12,12 @@ import { renderWithProviders, selectionAs } from '@/test/render';
 
 import { AuditSchedules } from './audit-schedules';
 
-// The schedule descriptors read through runsApi, so the transport is stubbed there.
 const createSchedule = vi.spyOn(runsApi, 'createSchedule');
 const listSchedules = vi.spyOn(runsApi, 'listSchedules');
 const updateSchedule = vi.spyOn(runsApi, 'updateSchedule');
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 let workspaceId = WORKSPACE_ID;
 
-/** The schedules on `/runs`, under the gate's project in the current workspace. */
 function RoutedSchedules(props: ComponentProps<typeof AuditSchedules>) {
   return (
     <ActiveProjectScopeProvider
@@ -45,7 +43,6 @@ describe('AuditSchedules', () => {
     renderWithProviders(
       <RoutedSchedules
         projectId="11111111-1111-4111-8111-111111111111"
-        // Commerce's newer set comes first; the schedule defaults to the main brand set.
         promptSets={[
           {
             id: '66666666-6666-4666-8666-666666666666',
@@ -88,7 +85,6 @@ describe('AuditSchedules', () => {
 
   it('asks for a prompt set when none is chosen, and schedules once one is', async () => {
     const user = userEvent.setup();
-    // No brand set: nothing is preselected.
     renderWithProviders(
       <RoutedSchedules
         projectId="11111111-1111-4111-8111-111111111111"
@@ -182,7 +178,6 @@ describe('AuditSchedules', () => {
     renderWithProviders(<RoutedSchedules projectId={projectId} promptSets={[]} />);
 
     expect(await screen.findByText(/Paused/)).toBeVisible();
-    // Its prompt set is gone from the project, so the row names it as removed.
     expect(screen.getByRole('listitem')).toHaveTextContent(
       'Weekly · Removed prompt set · Brand visibility · ChatGPT API',
     );
@@ -228,7 +223,6 @@ describe('AuditSchedules', () => {
     );
 
     expect(await screen.findByText(/Paused/)).toBeVisible();
-    // A paused row still names its prompt set, scope and engines, then why it paused.
     expect(screen.getByRole('listitem')).toHaveTextContent(
       "Weekly · Core prompts · Commerce AI Shelf · ChatGPT APIPausedThis month's included budget is used up",
     );

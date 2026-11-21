@@ -14,12 +14,9 @@ const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CRAWL = '22222222-2222-4222-8222-222222222222';
 const activeProject = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
-/** `/issues` under the gate, which hands the screen the active project. */
 const projectRoute = { projectSelection: { activeProject } };
 
 vi.mock('@/components/site-health/issues-catalog', () => ({
-  // The catalog now carries a refresh failure itself, so the stub has to render
-  // the notice it is handed — the screen no longer draws one beside it.
   IssuesCatalog: ({
     workspaceId,
     crawlId,

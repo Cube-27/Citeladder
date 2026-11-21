@@ -1,12 +1,9 @@
-/* ---------- Footer: flat on the page's paper, under a hairline ----------
-   Both hairlines span the content container, not the viewport. */
 .cl-footer {
   padding: 0 0 40px;
   background: var(--site-page);
   color: var(--color-ink-secondary);
 }
 
-/* The brand above five full-width link columns, so no label wraps. */
 .cl-footer-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -23,8 +20,6 @@
   border-top: 0;
 }
 
-/* A page that closes on a ruled link list already ends on a hairline, so the
-   footer draws no second one across the empty band. */
 .cl-site-main:has(main > section:last-child :is(.cl-cpage-index, .cl-related):last-child)
   ~ .cl-footer
   .cl-footer-top {
@@ -54,9 +49,6 @@
   line-height: var(--text-body--line-height);
 }
 
-/* In the bottom row at the right, 8px apart and centred on one line: each
-   badge in the same fixed 112x32 box, its embed contained in it, so a slow or
-   failed third-party load never changes the row. */
 .cl-footer-badges {
   display: flex;
   flex: none;
@@ -70,8 +62,6 @@
   border-radius: var(--radius-sm);
 }
 
-/* Third-party badges in their own colours would be the page's only colour.
-   The transparent text keeps a failed load's alt text out of the layout. */
 .cl-footer-badge {
   display: block;
   width: 112px;
@@ -82,8 +72,6 @@
   filter: grayscale(1);
 }
 
-/* The badges are white slabs, so in dark each sits on a grey chip and turns
-   negative, screened onto it: the slab takes the chip's grey, its text stays light. */
 :root[data-theme='dark'] .cl-footer-badges > a {
   padding: 4px;
   background: var(--color-site-chip);
@@ -93,9 +81,6 @@
   filter: grayscale(1) invert(1);
   mix-blend-mode: screen;
 }
-
-/* The social profiles, one row of icon links under the badges. The row
-   pulls left by the icon's inset so the first glyph lines up with the copy. */
 
 .cl-footer-social {
   display: flex;
@@ -125,8 +110,6 @@
   }
 }
 
-/* A 44px target under a coarse pointer; the icons keep their size and place,
-   12px apart so the targets meet without overlapping. */
 @media (pointer: coarse) {
   .cl-footer-social {
     gap: 12px;
@@ -224,7 +207,6 @@
   text-decoration: none;
 }
 
-/* 16px apart, so the nine policy links fit one line beside the badges at 1440. */
 .cl-footer-legal {
   display: flex;
   flex-wrap: wrap;
@@ -242,8 +224,6 @@
   cursor: pointer;
 }
 
-/* Fewer columns than groups: the groups flow down the columns, so a short
-   group never leaves a hole beside a long one. */
 @media (max-width: 1023px) {
   .cl-footer-cols {
     display: block;

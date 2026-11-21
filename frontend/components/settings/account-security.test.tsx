@@ -31,7 +31,6 @@ beforeEach(() => {
 
 it('disconnects integrations only after the person confirms what it revokes', async () => {
   renderWithProviders(<AccountSecurity />);
-  // Grouped by subject: the password sits in the Sign-in card, not a card of its own.
   expect(
     ['Sign-in', 'Sessions'].map(
       (name) => screen.getByRole('region', { name }).querySelector('h2')?.textContent,
@@ -66,7 +65,6 @@ it('says in words under each field why a password change was not sent, and focus
   expect(next).toHaveAccessibleDescription('Use at least 8 characters.');
   expect(mailbox).not.toHaveBeenCalled();
 
-  // Once both are valid the change is sent; a rejection is said under Current password.
   mailbox.mockRejectedValueOnce(new Error('Current password is incorrect.'));
   await user.type(current, 'wrong-password');
   await user.type(next, 'defghijk');

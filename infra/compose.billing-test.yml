@@ -3,7 +3,6 @@ services:
     ports: !override
       - "127.0.0.1:55433:5432"
   migrate:
-    # Schema only: billing staging disables the identity/catalog bootstrap.
     command: ["node", "src/cli/migrate.ts"]
   api-service:
     ports: !override
@@ -11,7 +10,6 @@ services:
   frontend:
     ports: !override
       - "127.0.0.1:3300:3000"
-  # Keep the parallel stack off the default stack's app and docs ports.
   vite-app:
     ports: !override
       - "127.0.0.1:3301:3001"

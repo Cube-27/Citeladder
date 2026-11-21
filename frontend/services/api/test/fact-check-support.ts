@@ -1,9 +1,3 @@
-/**
- * The fact-checking test harness against real PostgreSQL: the API app, a
- * pilot enrolment, confirmed facts, a pilot audit's frozen configuration, an
- * analysed execution, and the analytics worker drained over a fake model
- * gateway.
- */
 import { randomUUID } from 'node:crypto';
 
 import { vi } from 'vitest';
@@ -99,7 +93,6 @@ export function factCheckHarness() {
     return id;
   }
 
-  /** A pilot audit's configuration, frozen the way admission freezes it. */
   async function pilotConfiguration(owner: Tenant) {
     const factCheck = await admittedFactCheck(db, {
       workspaceId: owner.workspaceId,
@@ -112,13 +105,11 @@ export function factCheckHarness() {
       competitors: [{ name: 'Rival', domains: [], aliases: [] }],
       country_code: 'US',
       language_code: 'en',
-      // Frozen with the fake gateway's model, as admission freezes the deployment's.
       perception: admittedPerceptionVersions({ auditScope: 'brand', factCheck, model: 'test' }),
       fact_check: factCheck,
     };
   }
 
-  /** A succeeded execution analysed the way the result transaction analyses it. */
   async function analysed(owner: Tenant, auditId: string, answerText = ANSWER) {
     const { taskId } = await fixtures.execution(owner, {
       auditId,

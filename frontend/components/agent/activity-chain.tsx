@@ -2,7 +2,6 @@ import { FoldedTrail, type TrailStep } from '@/components/ui/rung-trail';
 import { STEP_SLIP } from '@/components/ui/slip';
 import { activityLabel, activitySummary, type ActivityRow } from '@/lib/agent/activity';
 
-/** A saved turn's activity, in its step slip; nothing when no step is visible. */
 export function ActivityChain({ rows }: Readonly<{ rows: readonly ActivityRow[] }>) {
   if (rows.length === 0) return null;
   return (
@@ -16,7 +15,6 @@ export function ActivityChain({ rows }: Readonly<{ rows: readonly ActivityRow[] 
   );
 }
 
-/** One rung per row, the same in a saved turn and the running one. */
 export function activitySteps(rows: readonly ActivityRow[]): TrailStep[] {
   return rows.map((row) => ({
     id: row.key,

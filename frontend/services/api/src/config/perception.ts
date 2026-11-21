@@ -1,8 +1,3 @@
-/**
- * Answer perception policy: versions, caps, the project-theme limits and the
- * model templates, plus the gated fact-checking block (claim addendum,
- * verification template, topics and platform caps).
- */
 import { factTopicSchema } from '@citeladder/contracts/fact-checking';
 import { z } from 'zod';
 import value from './perception.json' with { type: 'json' };
@@ -17,8 +12,6 @@ const factCheck = z.strictObject({
   verify_template_version: version,
   metrics_version: version,
   topics: z.array(factTopicSchema).min(1),
-  // Neighbouring topics whose facts a claim is also checked against, so a
-  // claim filed under an adjacent topic still meets the fact that decides it.
   related_topics: z.record(z.string(), z.array(factTopicSchema)),
   statement_max_chars: positive,
   source_url_max_chars: positive,
@@ -70,7 +63,6 @@ const schema = z.strictObject({
   task_max_attempts: positive,
   quotes_default_limit: positive,
   quotes_max_limit: positive,
-  // Each project's own themes (AV-27, AV-39); `fallback` takes any aspect none fits.
   project_themes: z.strictObject({
     fallback: z.string().trim().min(1),
     name_max_chars: positive,
@@ -134,7 +126,6 @@ function loadPerception(input: unknown) {
 export const perception = loadPerception(value);
 export type PerceptionPolicy = typeof perception;
 
-/** Each configured fact topic's display and freeze order; unconfigured topics are absent. */
 export const factTopicOrder: ReadonlyMap<string, number> = new Map(
   perception.fact_check.topics.map((topic, index) => [topic, index]),
 );

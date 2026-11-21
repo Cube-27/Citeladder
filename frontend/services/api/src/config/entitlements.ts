@@ -1,4 +1,3 @@
-/** Capability vocabulary, validated before any grant can be interpreted. */
 import vocabulary from './entitlements.json' with { type: 'json' };
 import { ConfigError } from './config-error.ts';
 
@@ -38,7 +37,6 @@ function validateCapability(key: string, entry: CapabilityDefinition) {
 }
 
 for (const [key, entry] of Object.entries(vocabulary.capabilities)) validateCapability(key, entry);
-// A flag refusal names a flag capability and a code from the registry's codes block.
 const codes = new Set<string>(Object.values(vocabulary.codes));
 const flags = new Set(
   Object.entries(vocabulary.capabilities)

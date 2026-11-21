@@ -1,22 +1,4 @@
-/*
- * The website's shared base, loaded on every page by MarketingLayout: the page
- * root and container, the section rhythm, text roles, check lists, card-grid
- * columns, the large buttons and the tint tokens. Everything else lives next
- * to the component that draws it and ships only on pages that render it.
- */
-
-/* ---------- Page root, container and section rhythm ---------- */
-/* Nothing floats (owner, 2026-11-14): depth comes from recessed wells, washes,
-   gradient hairlines and a lit backdrop behind product images, never a raised
-   shadow. Orange is the only hue: big effects are soft warm light, small marks grey. */
-
 .cl-site {
-  /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
-     48, with nothing under 12px and 12px text at least 1.4 leading. The
-     product roles the website reuses (the eyebrow, the mono data and code
-     roles, the drawn app's page title, the 18px title) and the shared
-     components drawn in product images are re-pointed onto that scale here,
-     so the app's own tokens stay as they are. */
   --text-eyebrow: var(--text-caption);
   --text-eyebrow--line-height: var(--text-body-sm--line-height);
   --text-caption--line-height: var(--text-body-sm--line-height);
@@ -36,9 +18,6 @@
   --text-display-md: 1.5rem;
   --text-display-md--line-height: 1.875rem;
 
-  /* The site's colours (globals.css owns their light and dark values).
-     Panels are wells: a shade under the page, darker along their top edge
-     and ringed by a hairline, so they sit in it rather than on it. */
   --site-page: var(--color-site-page);
   --site-mark: var(--color-site-mark);
   --site-chip: var(--color-site-chip);
@@ -47,13 +26,9 @@
   --site-rule-from: var(--color-site-rule-from);
   --site-rule-to: var(--color-site-rule-to);
   --tint-neutral: var(--color-site-well);
-  /* Wells are set apart by their fill alone: no inner shade (experiment, owner 2026-11-20). */
   --site-well-shade: none;
   --site-band-vignette: var(--color-site-vignette);
 
-  /* Film-grain noise: grey speckle centred on mid-grey, so an `overlay`
-     blend lightens and darkens a gradient pixel by pixel without shifting its
-     hue (the backdrop and the closing band use it). */
   --site-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
     0 0 / 220px 220px;
 
@@ -62,7 +37,6 @@
   font-family: var(--font-sans);
 }
 
-/* A section heading sets 32/36 from 768px up; phones keep their own step. */
 @media (min-width: 768px) {
   .cl-site {
     --text-site-section--line-height: 2.25rem;
@@ -75,12 +49,6 @@
   margin-inline: auto;
   padding-inline: var(--site-gutter);
 }
-
-/* The "Answers collected from" strip is framed by a pale-warm-to-accent
-   hairline above and below it (its own section's top and the next
-   section's), across the content column, halfway down the section's top
-   space. Other sections have no rule. It is 2px at a lighter alpha, so it
-   keeps its colour where a section starts on a fractional pixel. */
 
 .cl-section {
   padding-top: 128px;
@@ -111,15 +79,9 @@
   margin: 0;
 }
 
-/* The site sets four radii: controls 6, the card, the panel and full pills.
-   Callouts, notices and alerts are boxes, so they take the card's; the
-   product images keep the app's own. */
-
 .cl-site :is([data-callout-tone], [role='alert'], [role='status']):not(:is(.cl-screen, .cl-vig) *) {
   border-radius: var(--site-radius-card);
 }
-
-/* The lead under a heading: body-lg 18/30 at every width. */
 
 .cl-lead {
   margin: 0;
@@ -129,14 +91,9 @@
   text-wrap: pretty;
 }
 
-/* Running text avoids one-word last lines; at zero specificity, so a
-   component that balances its own text keeps it. */
-
 :where(.cl-site) :is(p, li, dd, blockquote) {
   text-wrap: pretty;
 }
-
-/* Body copy outside a component (an aside line, an empty state): body 16/26. */
 
 .cl-body {
   margin: 0;
@@ -146,16 +103,12 @@
   text-wrap: pretty;
 }
 
-/* A small note beside a control or under a list: body-sm 14/20, muted. */
-
 .cl-note {
   margin: 0;
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
-
-/* A check list: FeatureSplit points and PricingCard features. */
 
 .cl-checks {
   display: flex;
@@ -175,8 +128,6 @@
   line-height: var(--text-body--line-height);
 }
 
-/* Each mark is a small grey square, centred on the item's first line. */
-
 .cl-checks-mark {
   width: 6px;
   height: 6px;
@@ -192,9 +143,6 @@
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
-
-/* Card grids whose column count follows the item count, so 2, 3 or 4 cards
-   always fill the row. `--cols` carries the count to the card lists below. */
 
 .cl-cols-1 {
   --cols: 1;
@@ -235,16 +183,10 @@
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
 }
 
-/* A short last row (five cards at three a row) starts at the column edge,
-   like every row above it. */
-
 .cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: flex;
   flex-wrap: wrap;
 }
-
-/* Five cards at three a row fill both rows: three, then two halves, on a
-   six-column grid. */
 
 @media (min-width: 900px) {
   .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) {
@@ -261,17 +203,11 @@
   }
 }
 
-/* `height: auto` lets a card that is itself the list item stretch to its row. */
-
 .cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
   flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
   height: auto;
 }
 
-/* ---------- Calls to action and the standalone arrow link ---------- */
-/* Calls to action are the app's buttons (owner, 2026-11-19): rounded, sentence
-   case, the sans face, the shared primary and secondary faces. A page's and the
-   phone sheet's take one 44px height (marketing.css); the bar's are its row. */
 .cl-btn-lg {
   min-height: 44px;
   padding-inline: 16px;
@@ -317,10 +253,6 @@
   }
 }
 
-/* ---------- Touch: 44px under a coarse pointer, 24px everywhere ----------
-   (owner, 2026-11-19). The shared buttons grow through --control-coarse; other
-   controls grow beside their component, and a text link keeps its size and
-   takes a 44px hit area. */
 @media (pointer: coarse) {
   :root[data-marketing-surface] {
     --control-coarse: 44px;
@@ -337,14 +269,10 @@
   }
 }
 
-/* ---------- The page above the footer ---------- */
 .cl-site-main {
   padding-bottom: 96px;
   background: var(--site-page);
 }
-
-/* Dashed guides on the content column's two edges, behind every section;
-   wells and product images cover them. */
 
 .cl-site-main::before {
   --guide: repeating-linear-gradient(180deg, var(--site-guide) 0 4px, transparent 4px 12px);
@@ -366,18 +294,11 @@
   translate: -50% 0;
 }
 
-/* On a phone the content runs to the gutters, so the guides would sit on
-   its edges: they are left out. */
-
 @media (max-width: 767px) {
   .cl-site-main::before {
     content: none;
   }
 }
-
-/* Eyebrows are highlighter chips: ink on a grey chip, with an orange
-   square on the top-right corner. Product images keep their own, and a
-   featured post's date line is plain text, not a label. */
 
 .cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
@@ -404,7 +325,6 @@
   }
 }
 
-/* ---------- Tile grids: cards or tiles in a list, columns from `cl-cols-*` ---------- */
 .cl-tiles {
   --cl-list-gap: 16px;
 

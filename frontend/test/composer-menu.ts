@@ -14,7 +14,6 @@ export async function openComposerSubmenu(
   await user.keyboard('{ArrowRight}');
 }
 
-/** Opens a + submenu and picks one of its rows with Enter. */
 export async function pickFromComposerMenu(
   user: ReturnType<typeof userEvent.setup>,
   submenu: RegExp,

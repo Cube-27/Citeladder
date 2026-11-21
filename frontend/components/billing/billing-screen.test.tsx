@@ -197,7 +197,6 @@ const ACTIVE_STARTER = {
   scheduled_change: null,
 };
 
-/** Starter, Growth and one add-on: enough for a subscriber's choices. */
 const SUBSCRIBER_CATALOG = {
   ...CATALOG,
   plans: [
@@ -249,7 +248,6 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
 
-    // The `status` announcement is held back until the spinner becomes visible.
     expect(await screen.findByRole('status')).toHaveAccessibleName('Loading billing…');
   });
 
@@ -290,7 +288,6 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
 
-    // The headline equals the catalog's own base_price — never a constant.
     expect(await screen.findByText('$49 / month')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose Starter/ })).toBeDisabled();
 
@@ -323,8 +320,6 @@ describe('BillingScreen', () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
 
-    // Nothing is charged yet: the server quote and the recurring consent come
-    // first, with the policies the buyer is agreeing to.
     const review = await screen.findByRole('region', { name: 'Review your subscription' });
     expect(within(review).getByText('Total')).toBeInTheDocument();
     expect(within(review).getByText(/recurring monthly charge/i)).toBeInTheDocument();
@@ -390,7 +385,6 @@ describe('BillingScreen', () => {
     expect(screen.queryByText('$49 / month')).toBeNull();
     expect(screen.queryByRole('button', { name: /Choose Starter/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
-    // The plan step is not the primary while checkout is closed: disabled, with its reason.
     const step = screen.getByRole('button', { name: 'Choose a plan' });
     expect(step).toBeDisabled();
     expect(step).toHaveAccessibleDescription('Checkout is not open yet');
@@ -415,11 +409,9 @@ describe('BillingScreen', () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
     renderWithProviders(<BillingScreen />);
-    // A finite row shows the real figures…
     const table = await screen.findByRole('table', { name: 'Usage limits' });
     const [, prompts, runs] = within(table).getAllByRole('row');
     expect(prompts?.textContent).toBe('Prompts4210058');
-    // …and an `unknown` row says so rather than rendering a zero.
     expect(runs?.textContent).toMatch(/^Prompt runs.*Unavailable/u);
     expect(runs?.textContent).not.toMatch(/\b0\b/u);
     expect(within(table).getAllByRole('meter')).toHaveLength(1);
@@ -446,11 +438,9 @@ describe('BillingScreen', () => {
       'Projects0Unlimited—Not applicable',
       'AI credits0Not included—Not applicable',
     ]);
-    // The reset date stays with its quota.
     expect(rows[1]?.textContent).toMatch(/Resets .+\./u);
     expect(within(table).queryByRole('meter')).toBeNull();
 
-    // A held reservation is usage, so the same table gains its meters.
     view.unmount();
     mswServer.use(usageHandler(idle({ reserved: 3, remaining: 50197 })));
     renderWithProviders(<BillingScreen />);
@@ -584,7 +574,6 @@ describe('BillingScreen', () => {
 
     const retry = await screen.findByRole('button', { name: 'Retry' });
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
-    // No component-owned fallback price may appear when the catalog is gone.
     expect(document.body.textContent).not.toMatch(/\$\d/);
 
     available = true;
@@ -640,8 +629,6 @@ describe('BillingScreen', () => {
 
     expect(await screen.findByText(/Invoice INV-1001/)).toBeInTheDocument();
     expect(screen.getByText(/Receipt RCT-1001/)).toBeInTheDocument();
-    // The GST shows once, in its own column: only the components the invoice
-    // carries, with no repeated caption line.
     const row = screen.getByText(/Invoice INV-1001/).closest('tr')!;
     expect(within(row).getByText(/^CGST .*810 · SGST .*810$/)).toBeVisible();
     expect(within(row).queryByText(/IGST/)).not.toBeInTheDocument();
@@ -707,7 +694,6 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
     const upgrade = await screen.findByRole('button', { name: 'Upgrade to Growth' });
-    // Changing the plan is its own section, with the plan and before its usage.
     const section = screen.getByRole('region', { name: 'Change plan' });
     expect(within(section).getByRole('button', { name: 'Upgrade to Growth' })).toBe(upgrade);
     const usage = screen.getByRole('region', { name: 'Usage' });

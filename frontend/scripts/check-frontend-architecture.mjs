@@ -24,7 +24,6 @@ for (const owner of [
   }
 }
 
-// Keep direct location mutations in the dedicated navigation owner.
 const NAVIGATION_OWNERS = new Set(['lib/navigation/hard-navigate.ts']);
 const HARD_NAVIGATION = /location\s*\.\s*(?:assign|replace)\s*\(|location\s*\.\s*href\s*=[^=]/;
 
@@ -42,7 +41,6 @@ function sourceFiles(directory) {
 for (const file of ['app', 'components', 'lib'].flatMap(sourceFiles)) {
   if (NAVIGATION_OWNERS.has(file) || file.includes('.test.')) continue;
   const source = fs.readFileSync(path.join(root, file), 'utf8');
-  // Strip comments so the seam's own prose references do not trip the guard.
   const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
   if (HARD_NAVIGATION.test(code)) {
     failures.push(`${file} navigates the browser directly; use lib/navigation/hard-navigate.ts.`);

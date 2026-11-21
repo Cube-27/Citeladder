@@ -91,7 +91,6 @@ export type RuntimeDependencies = {
   attachTarget: AttachTarget;
 };
 export type Turn = Awaited<ReturnType<AgentRuntime['load']>>;
-/** What the turn had built when it stopped. */
 type Progress = {
   summary?: PromptSummary;
   open?: { turn: Turn; model: AgentModel; state: TurnState };
@@ -105,7 +104,6 @@ const result = (call: ToolCall, text: string, error: boolean): ConversationBlock
   ...(error ? { is_error: true } : {}),
 });
 
-/** Executes exactly one already-owned turn, fenced at every durable boundary. */
 export class AgentRuntime {
   readonly db: Database;
   readonly deps: RuntimeDependencies;
@@ -126,7 +124,6 @@ export class AgentRuntime {
         userId: run.user_id,
       };
       await authorize(trx, scope);
-      // A turn queued before the Agent changed is asked again, not misreported as a model fault.
       if (
         run.skill_catalog_version !== this.deps.catalog.version ||
         run.registry_version !== this.deps.tools.version ||
@@ -151,20 +148,13 @@ export class AgentRuntime {
         ),
         manifest,
         pages: await pageStates(trx, scope.workspaceId, pageDocuments(documents)),
-        // The content rules this turn's context offered; suggest_edits accepts only these.
         rules: offeredRuleIds({ sections: manifest.package.sections, action: manifest.action }),
-        // Fixed for the turn: computed once, not on every call.
         context: suppliedManifest(manifest, budget.context_package_max_chars),
         transcripts: await chatTranscripts(trx, scope, chat.id),
         budget,
       };
     });
   }
-  /**
-   * `events` listens to this execution only; persisted state never depends on it.
-   * A stopped turn is left for its caller to end, with the documents it staged
-   * when it can still save them.
-   */
   async execute(
     lease: Lease,
     signal?: AbortSignal,
@@ -175,10 +165,8 @@ export class AgentRuntime {
     try {
       await this.turn(lease, latest, signal, events);
     } catch (error) {
-      // A stopped turn is ended by its caller; a lost lease by recovery.
       if (signal?.aborted) return this.stopped(lease, latest);
       if (error instanceof AgentError && error.code === 'lease') return undefined;
-      // Provider failures were already retried within the call; the turn ends with its reply.
       const code = failureCode(error);
       logLaneFailure(
         AGENT_LANE.table,
@@ -189,10 +177,6 @@ export class AgentRuntime {
     }
     return undefined;
   }
-  /**
-   * A stopped turn that staged a document saves it with a fixed reply and is
-   * charged (B69); without one, or when it cannot be saved, it ends interrupted.
-   */
   private stopped(lease: Lease, { open, summary }: Progress): StoppedTurn | undefined {
     if (!open || !closable(open.state)) return undefined;
     return {
@@ -206,7 +190,6 @@ export class AgentRuntime {
       },
     };
   }
-  /** The turn's state with its opening message, and the earlier turns it replays. */
   private opened(turn: Turn, model: AgentModel, latest: Progress) {
     const { budget } = turn;
     const { kept, dropped } = replayed(turn.transcripts, model.adapter, budget);
@@ -240,7 +223,6 @@ export class AgentRuntime {
     };
     return { state, kept };
   }
-  /** The last replayed turn's final response, which the first call continues. */
   private async replayedResponseId(turn: Turn, kept: ReturnType<typeof replayed>['kept']) {
     const lastKept = kept.at(-1);
     return lastKept ? lastResponseId(this.db, turn.scope, lastKept.runId) : null;
@@ -252,7 +234,6 @@ export class AgentRuntime {
     const model = await this.deps.modelFor(turn.run);
     const { state, kept } = this.opened(turn, model, latest);
     const history = kept.flatMap((item) => item.messages);
-    // The cached prefix: built once per turn from the catalog and the run's frozen bounds.
     const system = systemPrefix(this.deps.catalog);
     const tools = agentToolList(this.deps.tools, this.deps.catalog, budget);
     let effort = budget.reasoning_effort;
@@ -271,7 +252,6 @@ export class AgentRuntime {
       const response = await this.callModel(lease, ordinal, model, request, signal, events).catch(
         unlessClosable(state),
       );
-      // Finished work is kept: a document already staged commits with a fixed reply (B60).
       if (!response)
         return this.finish(lease, turn, model, state, UNFUNDED_REPLY, latest.summary, true);
       previousResponseId = response.response_id || previousResponseId;
@@ -299,12 +279,10 @@ export class AgentRuntime {
         events,
       );
       state.messages.push(resultsMessage(budget, state, { ordinal, last, results }));
-      // At the cap the final call's tool calls were refused; its text is the reply.
       if (last) return this.finish(lease, turn, model, state, response.text, latest.summary);
     }
     throw new AgentError('stopped_at_limit');
   }
-  /** One model call, after rechecking that the workspace may still run the Agent. */
   private async callModel(
     lease: Lease,
     ordinal: number,
@@ -333,7 +311,6 @@ export class AgentRuntime {
         : {}),
     });
     signal?.throwIfAborted();
-    // Neither is repaired by asking again: the same input is too long or refused again.
     if (result.stop === 'context_window') throw new AgentError('context_too_long');
     if (result.stop === 'refusal') throw new AgentError('model_refused');
     return result;
@@ -366,7 +343,6 @@ export class AgentRuntime {
       }
       if (isBuiltin(call.name))
         return runBuiltin(this.db, this.deps.catalog, { turn, state, call }).then((outcome) => {
-          // An edit's input is not the document, so the edited text is shown once applied.
           const edited = outcome.document ? state.staged.get(outcome.document) : undefined;
           if (call.name === EDIT_DOCUMENT && outcome.ok && edited)
             events?.document?.({
@@ -402,7 +378,6 @@ export class AgentRuntime {
     signal?: AbortSignal,
   ) {
     const started = performance.now();
-    // The model receipt just rechecked the lease; the result is fenced again on record.
     const outcome =
       limit ??
       (await this.deps.tools.execute(
@@ -467,11 +442,6 @@ export class AgentRuntime {
         .execute();
     });
   }
-  /**
-   * The reply, the staged document and the transcript commit together, or not
-   * at all. A `closing` reply is one the model did not write; it ends the
-   * transcript as its answer, so a later turn replays a well-formed chat.
-   */
   private finish(
     lease: Lease,
     turn: Turn,
@@ -523,7 +493,6 @@ export class AgentRuntime {
       });
       for (const [number, document] of staged) {
         const saved = turn.documents.find(({ output }) => output.number === number);
-        // A revision keeps its predecessor's sources and adds this turn's.
         await /* NOSONAR -- One transaction connection: outputs save in order. */ saveAgentOutput(
           trx,
           chat,
@@ -543,7 +512,6 @@ export class AgentRuntime {
           this.deps.attachTarget,
         );
       }
-      // Suggestions anchor to each page's latest revision, so they follow the documents.
       await saveSuggestions(trx, chat, state.suggestions, {
         runId: run.id,
         messageId: message.id,
@@ -574,11 +542,6 @@ export class AgentRuntime {
       await terminalize(trx, lease, 'succeeded');
     });
   }
-  /**
-   * Ends the turn with its code-specific reply. A failed turn saves nothing,
-   * so its model calls are settled and then refunded (B58). A member who lost
-   * access gets no summary or reply, but the turn still settles and ends.
-   */
   async fail(lease: Lease, code: string, summary?: PromptSummary) {
     try {
       await this.db.transaction().execute(async (trx) => {

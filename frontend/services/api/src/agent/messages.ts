@@ -1,4 +1,3 @@
-/** Chat and message writes shared by admission, the runtime and the queue. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -7,12 +6,6 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { Chat, Json, Run, Scope } from './contracts.ts';
 
-/**
- * A chat found by its workspace alone, which names its project: the one chat
- * read a request under `/agent/chats/{chat_id}` makes. The session read
- * already proved the membership, and every read after it filters by the
- * chat's workspace and project.
- */
 export async function workspaceChat(db: Database, workspaceId: string, id: string): Promise<Chat> {
   const chat = await db
     .selectFrom('agent_chats')
@@ -46,13 +39,10 @@ export async function appendMessage(
     skillId?: string | null;
     skillSource?: string | null;
     evidence?: string[];
-    /** Web pages the turn's searches returned, kept apart from CiteLadder records. */
     webSources?: { url: string; title: string }[];
     steps?: Json[];
     mentions?: Json[];
-    /** Long pastes the person attached, kept apart from what they typed. */
     attachments?: Json[];
-    /** What the reply proposed for the person to confirm. */
     proposals?: Json[];
   },
 ) {
@@ -87,11 +77,6 @@ export async function appendMessage(
     .returningAll()
     .executeTakeFirstOrThrow();
 }
-/**
- * A turn's request (its text and attachments) and the text of every message
- * the person wrote in the chat, pastes included: a UUID in pasted code is
- * theirs, so a saved document keeps it. The chat's turn limit bounds these.
- */
 export async function turnRequest(db: Database, chat: Chat, messageId: string) {
   const messages = await db
     .selectFrom('agent_messages')
@@ -164,7 +149,6 @@ export function touchChat(db: Database, workspaceId: string, chatId: string) {
     .returningAll()
     .executeTakeFirstOrThrow();
 }
-/** Every terminal turn answers its request, so no message is left unanswered. */
 export async function appendRecoveryReply(db: Database, run: Run, code: string) {
   const chat = await touchChat(db, run.workspace_id, run.chat_id);
   await appendMessage(db, chat, {

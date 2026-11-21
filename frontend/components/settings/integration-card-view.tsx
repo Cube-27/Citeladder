@@ -63,7 +63,6 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   return null;
 }
 
-/** The grant's status, on its family's heading line. */
 function GrantStatus({
   family,
   grant,
@@ -79,7 +78,6 @@ function GrantStatus({
   );
 }
 
-/** The family's name, after Google's mark. */
 function GrantTitle({ family }: Readonly<{ family: GrantFamily }>) {
   return (
     <>
@@ -89,7 +87,6 @@ function GrantTitle({ family }: Readonly<{ family: GrantFamily }>) {
   );
 }
 
-/** Connect, or connect again: Google's is the named action (3.1). */
 function ConnectButton({
   workspaceId,
   family,
@@ -142,16 +139,10 @@ function ReconnectButton({
   );
 }
 
-/**
- * Disconnect the whole grant: access is revoked at the provider and every
- * property it serves stops importing. Imported data is kept, so reconnecting
- * resumes the same history.
- */
 function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
   const [open, setOpen] = useState(false);
   const title = FAMILY_META[grant.family].title;
   const [connection] = grant.connections;
-  // Disconnecting stops imports into the same projections a new property feeds.
   const disconnect = useMutation(integrationsMutations.disconnect(connection.workspace_id));
   const sources = joinProviderLabels(grant.connections.map((item) => item.provider));
   return (
@@ -204,7 +195,6 @@ function ConnectedCard({
   family,
   grant,
 }: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel }>) {
-  // Connecting and disconnecting are credential actions.
   const canManage = useWorkspaceCapability('manage_credentials');
   const actions = canManage ? (
     <>

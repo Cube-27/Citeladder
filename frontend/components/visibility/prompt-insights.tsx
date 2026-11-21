@@ -26,7 +26,6 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 
 const TITLE = 'Suggested competitors';
 
-/** What found a suggestion, and how often: citations of its domain, or prompts naming it. */
 const FOUND_BY = {
   cited_domain: 'Cited domain',
   named_in_answers: 'Named in answers',
@@ -48,18 +47,12 @@ function seenIn(candidate: ObservedCompetitor): string {
 const engines = ({ engine_count: count, engine_total: total }: ObservedCompetitor) =>
   `${formatCount(count)} of ${formatCount(total)}`;
 
-/**
- * Competitors the runs observed but the project does not yet track: a domain
- * the answers cited repeatedly or a name they used across prompts and engines.
- * Accept adds one to the roster; Reject keeps it from being suggested again.
- */
 export function CompetitorSuggestions({
   projectId,
   tracked,
   suggestionsQuery,
 }: Readonly<{
   projectId: string;
-  /** How many competitors the project tracks now. */
   tracked: number;
   suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
 }>) {
@@ -71,10 +64,8 @@ export function CompetitorSuggestions({
   const rejectMutation = useMutation(
     visibilityMutations.rejectCompetitorSuggestion({ workspaceId, projectId }),
   );
-  // The same ceiling the server enforces; while it loads, the server still guards Accept.
   const limit = useQuery(brandDiscoveryQueries.catalog(workspaceId)).data?.maximum_competitors;
   const full = limit !== undefined && tracked >= limit;
-  // Adding a competitor edits the project; a role without write reads the list.
   const canWrite = useWorkspaceCapability('write');
   const rows = suggestionsQuery.data ?? [];
   const deciding = acceptMutation.isPending || rejectMutation.isPending;
@@ -162,7 +153,6 @@ function sectionDescription(tracked: number, limit: number | undefined): string 
     : `${formatCount(tracked)} of ${formatCount(limit)} tracked`;
 }
 
-/** A failed accept or reject in the server's words; Try again only for a transient failure. */
 function DecisionFailure({
   mutation,
   action,
@@ -191,7 +181,6 @@ function columns(canWrite: boolean): DataTableColumn[] {
   ];
 }
 
-/** A failed read says so; only an answered, empty list is "none yet". */
 function tableState(
   query: UseQueryResult<ObservedCompetitor[], unknown>,
 ): DataTableState | undefined {

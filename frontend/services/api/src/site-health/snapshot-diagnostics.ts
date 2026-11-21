@@ -1,9 +1,3 @@
-/**
- * Persist diagnostic panels with the same frozen evaluation and page sources
- * as scores. Each panel is a fold fed one measured page at a time
- * (`score-summary.ts`), so a crawl of tens of thousands of pages never holds
- * its evaluations at once; a shared site evaluation is fed once.
- */
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import type { ProjectionEvaluation } from './score-summary.ts';
@@ -15,7 +9,6 @@ const catalog = new Map(policy.site_health.rule_catalog.map((row) => [row.rule_i
 type Evaluation = ProjectionEvaluation;
 const OUTCOMES = ['satisfied', 'partial', 'missing', 'unknown', 'not_applicable', 'error'];
 const failing = (row: Evaluation) => reads.failing_outcomes.includes(row.outcome);
-/** An entity check's own failure count: a finite number or a digit string, otherwise none. */
 function reportedFailures(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
   return typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : 0;
@@ -30,7 +23,6 @@ function count(counts: Record<string, number>, outcome: string) {
   if (key in counts) counts[key]! += 1;
 }
 
-/** One measured page as the diagnostics see it. */
 export type DiagnosticPage = {
   id: string;
   site_url_id: string;
@@ -54,7 +46,6 @@ class DimensionFold {
   checkedPages = 0;
   failingPages = 0;
   evidence: EvidencePage[] = [];
-  /** Counts the row on its check; true when it fails a page-scope check. */
   private countCheck(row: Evaluation) {
     const check = this.checks.get(row.rule_id) ?? {
       scope: row.scope,
@@ -89,7 +80,6 @@ class DimensionFold {
     if (!failures.length) return;
     this.failingPages++;
     this.evidence.push({ page, failures });
-    // Keep only the pages that can still be shown: most failures, then URL and id.
     this.evidence.sort(
       (a, b) =>
         b.failures.length - a.failures.length ||
@@ -114,7 +104,6 @@ export class ReadinessDiagnosticFold {
       if (!catalog.has(row.rule_id) || !row.readiness_dimension) continue;
       if (!row.score_roles?.includes('aeo_readiness')) continue;
       this.total++;
-      // Counts and evidence are truncated at the configured evaluations, in page order.
       if (this.taken >= reads.aeo_max_evaluations) continue;
       this.taken++;
       const group = byDimension.get(row.readiness_dimension) ?? [];

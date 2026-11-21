@@ -14,10 +14,6 @@ const GRANT = '22222222-2222-4222-8222-222222222222';
 const CONN = '33333333-3333-4333-8333-333333333333';
 const SYNC = '44444444-4444-4444-8444-444444444444';
 
-// Fixture shapes come from the approved plan
-// (docs/integrations-traffic-analytics.md contracts) + the integrations spec
-// (docs/roadmap/integrations.md §5): a connection joined to grant status +
-// granted scopes, NEVER a token field.
 const connection = {
   id: CONN,
   workspace_id: WS,
@@ -199,7 +195,6 @@ describe('integrationsApi.delete + oauthStartUrl', () => {
   it('builds the relative same-origin OAuth start URL for window navigation', () => {
     const url = integrationsApi.oauthStartUrl('gsc', WS);
     expect(url).toBe(`/api/v1/integrations/workspaces/${WS}/oauth/gsc/start`);
-    // Never an absolute/cross-origin URL (invariant 12).
     expect(url.startsWith('/')).toBe(true);
     expect(integrationsApi.oauthStartUrl('ga4', WS)).toBe(
       `/api/v1/integrations/workspaces/${WS}/oauth/ga4/start`,

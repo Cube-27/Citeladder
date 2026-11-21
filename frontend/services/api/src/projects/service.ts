@@ -50,10 +50,6 @@ async function projectRow(db: Database, scope: ProjectScope) {
   return row;
 }
 
-/**
- * Batch the embedded identity and prompt library for the entire project list:
- * independent reads, run together on the pool (callers never hold a transaction).
- */
 async function views(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -191,7 +187,6 @@ async function views(
   });
 }
 
-/** One project's view; a request passes its own entitlements so they are read once. */
 export async function readProject(
   db: Database,
   scope: ProjectScope,
@@ -202,10 +197,6 @@ export async function readProject(
 }
 type ProjectSummaryView = z.input<typeof projectSummarySchema>;
 
-/**
- * The workspace's projects as the switcher shows them: one read, newest
- * first, with the brand entity's name and logo where it has them.
- */
 export async function listProjectSummaries(
   db: Database,
   workspaceId: string,
@@ -246,7 +237,6 @@ export async function listProjectSummaries(
   }));
 }
 
-/** Full views of every project: the public API's list. */
 export async function listProjects(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -261,7 +251,6 @@ export async function listProjects(
   return views(db, entitlements, rows);
 }
 
-/** Caller owns the transaction, including onboarding's atomic completion. */
 export async function insertProject(
   db: Database,
   workspaceId: string,
@@ -362,7 +351,6 @@ export async function insertProject(
   return id;
 }
 
-/** The brand aliases and the owned and unintended domains; competitors have their own owner. */
 async function saveCollections(
   db: Database,
   { workspaceId, projectId }: ProjectScope,
@@ -385,7 +373,6 @@ async function saveCollections(
     }));
     if (values.length) await db.insertInto('brand_aliases').values(values).execute();
   }
-  // One transaction connection: each list's statements run in order.
   for (const [table, values] of [
     ['owned_domains', input.owned_domains],
     ['unintended_domains', input.unintended_domains],
@@ -395,11 +382,6 @@ async function saveCollections(
   }
 }
 
-/**
- * Save a domain list as a diff: a submitted domain matching a stored one
- * (case-insensitively) keeps its row and ID, new ones are added and the rest
- * removed.
- */
 async function saveDomainList(
   db: Database,
   table: 'owned_domains' | 'unintended_domains',
@@ -457,11 +439,6 @@ export async function createProject(
     .execute((trx) => insertProject(trx, workspaceId, userId, input));
   return readProject(db, { workspaceId, projectId });
 }
-/**
- * Save the submitted matching policies over the stored ones and drop names the
- * project no longer tracks; an untouched name keeps following its default.
- * Only the `entity_matching` key of the business context changes.
- */
 async function replaceEntityMatching(
   db: Database,
   scope: ProjectScope,
@@ -514,10 +491,6 @@ async function replaceEntityMatching(
     .execute();
 }
 
-/**
- * The project editor's save. The competitor list goes through the competitor
- * command as a diff, so the actor is checked against its permission.
- */
 export async function updateProject(
   db: Database,
   actor: CompetitorWriter,
@@ -575,11 +548,6 @@ export async function updateProject(
   });
   return readProject(db, scope);
 }
-/**
- * Delete the project and everything it owns. Billing and usage records stay
- * and keep the IDs of the deleted audits, crawls and Agent runs. Refused while
- * metered work still holds reserved units.
- */
 export async function deleteProject(db: Database, scope: ProjectScope) {
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
@@ -597,13 +565,6 @@ export async function deleteProject(db: Database, scope: ProjectScope) {
   });
 }
 
-/**
- * Locks the project row before a deletion checks for open holds; false when
- * the project is gone. Work that holds credits under this row lock (Keyword
- * Research confirmation, Site Health crawls, Agent outputs) then either commits
- * first, so the check sees its hold, or waits and finds the project deleted.
- * The project advisory lock alone does not serialize with them.
- */
 export async function lockProjectRow(trx: Database, scope: ProjectScope) {
   const row = await trx
     .selectFrom('projects')
@@ -615,10 +576,6 @@ export async function lockProjectRow(trx: Database, scope: ProjectScope) {
   return row !== undefined;
 }
 
-/**
- * The deletion itself, for a caller holding the project lock and row lock and
- * its authority, that has checked no metered work still holds reserved units.
- */
 export async function removeProject(trx: Database, scope: ProjectScope) {
   await trx
     .deleteFrom('projects')

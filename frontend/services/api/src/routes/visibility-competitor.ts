@@ -1,4 +1,3 @@
-/** One roster competitor against the brand: a `visibility` family route, served by `visibility.ts`. */
 import { competitorFocusSchema } from '@citeladder/contracts/visibility-competitor';
 
 import { ApiError } from '../errors.ts';

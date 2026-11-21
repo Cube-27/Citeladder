@@ -27,10 +27,6 @@ import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useDebounced } from '@/lib/use-debounced';
 
-/**
- * Every chat in the project, newest activity first, searchable and paged; a
- * running chat is polled until its turn ends.
- */
 function useChatList() {
   const { activeWorkspaceId, activeProjectId } = useProjectContext();
   const [search, setSearch] = useState('');
@@ -41,8 +37,6 @@ function useChatList() {
       { q: needle },
     ),
     enabled: Boolean(activeWorkspaceId && activeProjectId),
-    // Several chats can run at once; their markers clear as each turn ends. A
-    // turn this tab streams is read again when its stream closes, not polled.
     refetchInterval: (query) =>
       query.state.data?.pages.some((page) =>
         page.items.some((chat) => chat.running && !isChatLiveTurnConnected(chat.id)),
@@ -61,7 +55,6 @@ function useChatList() {
     setSearch,
     rows,
     state,
-    // Only a new search shows the live rung; background polls while a chat runs do not.
     searching: chats.isFetching && !chats.isFetchingNextPage && !chats.isRefetching,
     more: chats.hasNextPage
       ? { busy: chats.isFetchingNextPage, load: () => void chats.fetchNextPage() }
@@ -72,7 +65,6 @@ function useChatList() {
 
 type ChatList = ReturnType<typeof useChatList>;
 
-/** The sentence standing in for the rows: none yet or none match (a failed read is `ChatListError`). */
 function chatListNotice(list: ChatList): string | null {
   if (list.state === 'error' || list.state === 'loading' || list.rows.length > 0) return null;
   return list.state === 'filtered' ? 'No chats match this search.' : 'No chats yet.';
@@ -80,7 +72,6 @@ function chatListNotice(list: ChatList): string | null {
 
 const LOAD_FAILED = "Couldn't load chats.";
 
-/** A failed read of the list, with Retry for that read. */
 function ChatListError({ onRetry }: Readonly<{ onRetry: () => void }>) {
   return (
     <HistoryFailed
@@ -111,7 +102,6 @@ function ChatSearch({
   );
 }
 
-/** Where the chat started and when it last moved ("Website · Nov 12, 2026"). */
 function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
   return (
     <>
@@ -123,7 +113,6 @@ function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
   );
 }
 
-/** The labelled list's chats: search, rows with the running marker, "Show more chats". */
 export function ChatSection() {
   const list = useChatList();
   const projectHref = useProjectHref();
@@ -171,7 +160,6 @@ function keepTyping(event: KeyboardEvent<HTMLInputElement>) {
   }
 }
 
-/** The Chats flyout: the search, then the chats as menu links. */
 export function ChatsFlyout() {
   const list = useChatList();
   const projectHref = useProjectHref();
@@ -195,7 +183,6 @@ export function ChatsFlyout() {
           </RailFlyoutSlot>
           <MenuItem
             icon={<Icon icon={RefreshCw} />}
-            // Retrying keeps the flyout open for the list it loads.
             onSelect={(event) => {
               event.preventDefault();
               list.retry();
@@ -221,7 +208,6 @@ export function ChatsFlyout() {
       {list.more ? (
         <MenuItem
           disabled={list.more.busy}
-          // Loading more keeps the flyout open on the longer list.
           onSelect={(event) => {
             event.preventDefault();
             list.more?.load();

@@ -21,10 +21,8 @@ import { ScreenButton, ScreenTabs } from './screen-parts';
 import './screen-vignette.css';
 import './screen-app.css';
 
-/** Which header actions a drawn page carries, as the app's page has them. */
 export type PageActions = 'launch' | 'crawl' | 'analysis';
 
-/** A drawn page's head: its title, the sidebar row it lights, its tabs and actions. */
 export type AppPageHead = Readonly<{
   title: string;
   active?: NavLabel;
@@ -32,11 +30,6 @@ export type AppPageHead = Readonly<{
   actions?: PageActions;
 }>;
 
-/**
- * The app's Dashboard navigation as the sidebar shows it
- * (lib/navigation/app-routes.ts): the same groups, labels and icons in the
- * same order, drawn because the live rows fold to a rail below 1280px.
- */
 const NAV = [
   {
     title: 'Home',
@@ -85,7 +78,6 @@ const NAV = [
   },
 ] as const;
 
-/** Agent mode: New chat, Skills and Context, then the chats. */
 const AGENT_NAV = [
   {
     title: null,
@@ -105,12 +97,10 @@ const AGENT_NAV = [
   },
 ] as const;
 
-/** The foot's row, above the account button. */
 const FOOT = ['Integrations', ICONS.setup] as const;
 
 export type NavLabel = (typeof NAV)[number]['items'][number][0];
 
-/** Open Actions in the Actions row's count slot. */
 const OPEN_COUNTS: Readonly<Partial<Record<string, number>>> = { Actions: 7 };
 
 type NavGroup = Readonly<{
@@ -171,12 +161,6 @@ export function ScreenSidebar({
   );
 }
 
-/**
- * One feature's page inside the app's own chrome: the same sidebar with
- * that feature's row current (or the Agent mode), the page title on the
- * ruled bar with the run action, and the feature's screen as the page's
- * content. The website's open module cards show it.
- */
 export function ScreenAppPage({
   title,
   active,
@@ -187,7 +171,6 @@ export function ScreenAppPage({
 }: Readonly<
   AppPageHead & {
     mode?: 'Dashboard' | 'Agent';
-    /** The feature's screen (a vignette), set as the page body. */
     children: ReactNode;
   }
 >) {
@@ -207,7 +190,6 @@ export function ScreenAppPage({
   );
 }
 
-/** A drawn menu trigger: its words, then the chevron. */
 export function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ScreenButton>
@@ -217,11 +199,6 @@ export function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>
   );
 }
 
-/**
- * The header actions a page carries in the app: Sources' Launch run and
- * metrics help, Site health's schedule and split Run new crawl, Keyword
- * research's cost, refresh and New analysis. Other pages carry none.
- */
 function HeaderActions({ actions }: Readonly<{ actions: PageActions }>) {
   switch (actions) {
     case 'launch':
@@ -260,11 +237,6 @@ function HeaderActions({ actions }: Readonly<{ actions: PageActions }>) {
   }
 }
 
-/**
- * The page title on the ruled bar the sidebar's project switcher shares, then,
- * as the app's masthead orders them, the page's actions, Search and "Ask agent"
- * (which the Agent's own pages do not carry).
- */
 export function ScreenPageHeader({
   title,
   actions,

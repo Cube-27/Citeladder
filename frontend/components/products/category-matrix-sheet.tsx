@@ -15,7 +15,6 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
 import { Notice } from '@/components/ui/notice';
 
-/** What a category's matrix covers: contexts × stages of non-branded prompts, plus branded ones. */
 function matrixCoverage(rows: readonly BuyerPrompt[]) {
   const organic = rows.filter((row) => !row.branded && row.context && row.buyer_stage);
   const contexts = [...new Set(organic.map((row) => row.context))];
@@ -30,11 +29,6 @@ function matrixCoverage(rows: readonly BuyerPrompt[]) {
   };
 }
 
-/**
- * Generates and reviews one category's shopping-prompt matrix. Standalone: the
- * caller owns the open state and passes that category's prompts, so the trigger
- * can live on any screen that names a category.
- */
 export function CategoryMatrixSheet({
   projectId,
   categoryId,
@@ -55,7 +49,6 @@ export function CategoryMatrixSheet({
   const decide = useMutation(commerceMutations.decideBuyerPrompt(scope));
   const coverage = matrixCoverage(rows);
   const busy = generate.isPending || decide.isPending;
-  // Generating is a run and approving a write; a role without them reads the matrix.
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
   const toggle = (row: BuyerPrompt) =>

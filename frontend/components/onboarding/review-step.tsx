@@ -17,7 +17,6 @@ function competitorUrl(competitor: ReviewCompetitor): string {
   return /^https?:\/\//i.test(domain) ? domain : `https://${domain}`;
 }
 
-/** A manual choice, not yet named: it opens in the identity editor immediately. */
 function isBlank(competitor: ReviewCompetitor): boolean {
   return competitor.name === '' && competitor.domains.length === 0;
 }
@@ -34,8 +33,6 @@ function competitorItem(competitor: ReviewCompetitor, limitReached: boolean): Ch
     checked: competitor.selected,
     disabled: limitReached,
     editable: true,
-    // Kept for assistive tech and tests: the visible row is a control, so it
-    // cannot also be the link to the competitor's site.
     extra: url ? (
       <a href={url} target="_blank" rel="noreferrer" className="sr-only">
         {url}
@@ -64,9 +61,7 @@ export function ReviewStep({
   onRemoveCompetitor: (index: number) => void;
   onAddCompetitor: () => void;
   maximumCompetitors: number | undefined;
-  /** Why Create project waits on the websites. */
   domainNote?: string;
-  /** Why Create project waits on the competitors. */
   competitorNote?: string;
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -90,7 +85,6 @@ export function ReviewStep({
       };
     },
     onSave: (id, values) => onEditCompetitor(indexOf(id), values.name, values.domain),
-    // Cancelling a choice that was never named removes it, freeing its slot.
     onCancel: (id) => {
       const competitor = competitors[indexOf(id)];
       if (competitor && isBlank(competitor)) onRemoveCompetitor(indexOf(id));

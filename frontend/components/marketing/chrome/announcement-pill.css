@@ -1,4 +1,3 @@
-/* ---------- AnnouncementPill ---------- */
 .cl-announce {
   display: inline-flex;
   align-items: center;
@@ -47,9 +46,6 @@
   white-space: nowrap;
 }
 
-/* On a phone the pill stays one row: caption-size type and a tighter tag,
-   the message cut with an ellipsis only where even that will not fit. */
-
 @media (max-width: 767px) {
   .cl-announce {
     gap: 4px;
@@ -62,7 +58,6 @@
     padding: 0 8px;
   }
 
-  /* The whole pill is the link; its arrow gives the message the room. */
   .cl-announce > svg {
     display: none;
   }

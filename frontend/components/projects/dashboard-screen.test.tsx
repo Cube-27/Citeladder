@@ -15,7 +15,6 @@ const { project, downloadOverviewReport, queryResult, promptsResult, layoutResul
       competitors: [],
     },
     downloadOverviewReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
-    // The project's saved Overview layout; the default until a test changes it.
     layoutResult: {
       data: undefined as unknown,
       error: null as unknown,
@@ -31,7 +30,6 @@ const { project, downloadOverviewReport, queryResult, promptsResult, layoutResul
       isError: false,
       refetch: vi.fn(),
     },
-    // The latest run's prompt results, read by "Where you're missing".
     promptsResult: {
       data: [] as unknown,
       error: null as unknown,
@@ -129,7 +127,6 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   }),
   capabilityRemaining: () => 0,
 }));
-// The Launch run dialog has its own suite; here only whether it opens matters.
 vi.mock('@/components/runs/launch-dialog', () => ({
   LaunchDialog: ({ open }: { open: boolean }) =>
     open ? <dialog open aria-label="Launch run" /> : null,
@@ -138,7 +135,6 @@ vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
   useQuery: (options: { queryKey: readonly unknown[] }) => {
     if (options.queryKey[0] === 'providers') return { data: providerCatalogFixture };
-    // Launch run reads whether there is an active prompt to measure.
     if (options.queryKey[0] === 'prompts') return promptSetsResult;
     if (options.queryKey[1] === 'overview-layout') return layoutResult;
     return options.queryKey[0] === 'visibility' ? promptsResult : queryResult;
@@ -156,8 +152,6 @@ vi.mock('@/lib/project/project-context', () => {
   });
   return {
     useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    // `ProjectControls` gates the create affordance on the caller's role as
-    // well as on the remaining allowance; this fixture is an Owner.
     useWorkspaceCapability: () => role.canWrite,
     useActiveProject: () => project,
     useOptionalProjectContext: context,
@@ -185,7 +179,6 @@ import { makeProject } from '@/test/fixtures/project';
 import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 import { DashboardScreen } from './dashboard-screen';
 
-// `/projects` is a project route: the gate hands the screen this project.
 const scopeProject = makeProject({
   id: project.id,
   workspace_id: project.workspace_id,
@@ -206,13 +199,11 @@ function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 
-/** The masthead's More menu, opened. */
 async function openMore(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'More' }));
   return screen.findByRole('menu');
 }
 
-/** Presses Export PDF, which the Overview keeps behind More at every width. */
 async function exportPdf(user: ReturnType<typeof userEvent.setup>) {
   await user.click(within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }));
 }
@@ -251,16 +242,12 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    // The project is named by the sidebar's switcher; the Overview keeps one
-    // line with the site and the run it was tracked in.
     expect(screen.queryByRole('heading', { name: 'Acme' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^acme\.com/ })).toHaveAttribute(
       'href',
       'https://acme.com/',
     );
-    // Engines by the names the catalogue gives them, never their stored keys.
     expect(screen.getByText(/^Tracked .*· ChatGPT API, Gemini API$/u)).toBeVisible();
-    // The names and one-decimal precision AI Visibility uses for the same run.
     const state = within(screen.getByRole('region', { name: 'Project state' }));
     expect(state.getByText('Visibility')).toBeVisible();
     expect(state.getByText('72.5%')).toBeVisible();
@@ -269,8 +256,6 @@ describe('DashboardScreen', () => {
     expect(state.getByText('Rank')).toBeVisible();
     expect(state.getByText('#2')).toBeVisible();
     expect(state.queryByText('Brand rank')).not.toBeInTheDocument();
-    // Rank is better when it falls, so climbing one place reads as an improvement.
-    // The basis is spoken, never shown beside the figure.
     const rankChange = state
       .getAllByText('compared with the previous run')
       .map((context) => context.closest('[data-outcome]'))
@@ -283,7 +268,6 @@ describe('DashboardScreen', () => {
     expect(
       within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%'),
     ).toBeVisible();
-    // With no open actions the widget keeps its place and title, still linking to every action.
     const ranked = within(screen.getByRole('region', { name: 'Ranked actions' }));
     expect(ranked.getByRole('heading', { name: 'No open actions' })).toBeVisible();
     expect(ranked.getByRole('link', { name: 'View all' })).toHaveAttribute(
@@ -322,7 +306,6 @@ describe('DashboardScreen', () => {
       '/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
     expect(ranked.getByText('/pricing · 3 evidence items')).toBeVisible();
-    // The badge carries the priority; the score is not repeated beside it.
     expect(ranked.getByText('High')).toBeVisible();
     expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();
@@ -338,7 +321,6 @@ describe('DashboardScreen', () => {
       },
       movements: [],
     };
-    // A role that may not run is not told to launch one.
     role.canWrite = false;
     const viewer = renderDashboard(
       <TooltipProvider>
@@ -361,9 +343,7 @@ describe('DashboardScreen', () => {
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
     const reason = 'The earlier run used different settings. Launch run to measure movement.';
     expect(movement.getByText(reason)).toBeVisible();
-    // A compact note, not a block empty state with a heading of its own.
     expect(screen.queryByRole('heading', { name: reason })).not.toBeInTheDocument();
-    // The note names the page's one Launch run, which opens the dialog where the run is confirmed.
     expect(movement.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Launch run' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Launch run' }));
@@ -391,12 +371,10 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const state = within(screen.getByRole('region', { name: 'Project state' }));
-    // The note is the first figure's hint, never a visible third row.
     expect(state.getByRole('button', { name: 'Basis of Visibility' })).toHaveAccessibleDescription(
       '8 of 12 answers comparable',
     );
     expect(state.getByText('8 of 12 answers comparable')).not.toBeVisible();
-    // Owned citation rate is the strip's fourth figure; its label opens Insights.
     expect(
       state.getByRole('button', { name: 'Basis of Owned citation rate' }),
     ).toHaveAccessibleDescription(/^\d+ engines? · 8 of 12 answers comparable$/);
@@ -588,7 +566,6 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    // Manage project and Launch run stay in the row; More holds only the two.
     expect(screen.getByRole('button', { name: /manage project/i })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Launch run' })).toBeVisible();
     const menu = await openMore(user);
@@ -702,19 +679,15 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    // One start card with the steps and the one Launch run; no stack of empty widgets.
     const start = within(screen.getByRole('region', { name: 'Get your first results' }));
     expect(start.getByRole('list', { name: 'Steps to your first results' })).toBeVisible();
-    // The step you are on carries the card's one action; done steps say so.
     const next = within(start.getByRole('listitem', { current: 'step' }));
     expect(next.getByText('Next')).toBeVisible();
     expect(next.getByRole('button', { name: 'Launch run' })).toBeVisible();
     expect(start.getAllByRole('listitem')[0]).toHaveTextContent('Add prompts, Done');
     expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
     expect(screen.queryByRole('region', { name: 'Project state' })).not.toBeInTheDocument();
-    // A widget with something to show stays.
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
-    // The PDF exports the layout, so it is available before the first audit too.
     expect(
       within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }),
     ).toBeVisible();
@@ -731,7 +704,6 @@ describe('DashboardScreen', () => {
       'href',
       '/prompts/build?project=00000000-0000-4000-8000-000000000001',
     );
-    // A measured project keeps its widgets beside the card.
     expect(screen.getByRole('region', { name: 'Project state' })).toBeVisible();
   });
   it('omits the start card once a run is measured and prompts are tracked', () => {

@@ -17,7 +17,6 @@ import { PricingTable } from '../sections/pricing';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 import { CatalogFrame } from '../screens/screen-catalog';
 
-/** Where to read on after a comparison. */
 const FURTHER_READING = [
   { href: '/compare/profound-alternatives', title: 'Profound alternatives' },
   { href: '/best-ai-visibility-platforms', title: 'AI visibility platforms compared' },
@@ -42,13 +41,6 @@ function SourceLink({ source }: Readonly<{ source: Competitor['sources'][number]
   );
 }
 
-/**
- * `/compare/[competitor]`: a side-by-side table of public positioning, one
- * shared evaluation checklist, CiteLadder's own case beside its answer
- * screen, then the sources and vendor disclosure. Every competitor statement
- * comes from `compare.ts`, where it is tied to a first-party source and its
- * review date.
- */
 export function CompareDetailView({ competitor }: Readonly<{ competitor: Competitor }>) {
   const [source] = competitor.sources;
   return (

@@ -1,8 +1,3 @@
-/**
- * The `http://` origin probe, one request per crawl during site setup: does
- * the plain-HTTP root hand visitors to HTTPS? It goes through the crawl's own
- * acquirer, so robots.txt, pacing and SSRF rules apply as to any page.
- */
 import type { FetchedPage } from '../safe-fetch.ts';
 import { policy } from '../config.ts';
 import { failureFacts } from '../logging.ts';
@@ -14,18 +9,15 @@ const limits = policy.site_health.page_analysis.facts.limits;
 // Only a refused port proves nothing is served; a reset or unreachable host may be transient.
 const NOT_SERVED = new Set(['ECONNREFUSED']);
 
-/** The plain-HTTP root of a web origin; null on a custom port, whose HTTP twin is unknowable. */
 export function httpOriginUrl(origin: string) {
   const url = URL.parse(origin);
   const web = url?.protocol === 'https:' || url?.protocol === 'http:';
   return url && web && !url.port ? `http://${url.hostname}/` : null;
 }
 
-/** The code a failed probe keeps: a named certificate failure, else the error's own code. */
 export const probeFailureCode = (error: unknown) =>
   tlsCertificateCode(error) ?? failureFacts(error).error_code ?? 'fetch_failed';
 
-/** What the probe observed, as the `site.http_origin` fact the rule reads. */
 export function httpOriginFacts(
   url: string | null,
   observed: { kind: 'page'; page: FetchedPage } | { kind: 'error'; code: string },
@@ -56,7 +48,6 @@ export async function probeHttpOrigin(ctx: ProbeContext, origin: string) {
   if (!url) return httpOriginFacts(null, { kind: 'error', code: '' });
   await ctx.checkAccess();
   const { acquirer, settings } = ctx.fetcher;
-  // robots.txt is the origin's first request; when it got no answer, the root would not be fetched.
   const robots = await acquirer.robots(new URL(url).origin);
   if (robots.failure) return httpOriginFacts(url, { kind: 'error', code: robots.failure });
   const startedAt = performance.now();

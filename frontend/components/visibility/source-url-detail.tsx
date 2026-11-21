@@ -20,16 +20,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-/**
- * One cited URL: whether there is something to do about it, what is on it,
- * how engines use it over time, and the answers that used it.
- *
- * Every figure here is scoped to the selection above it, including First seen —
- * which is the earliest sighting in the period being looked at, not the page's
- * age. The label says "in this period" for that reason: a reader who narrows
- * to thirty days and sees the date move would otherwise conclude the page had
- * been republished.
- */
 export function SourceUrlDetail({
   url,
   domain,
@@ -42,9 +32,7 @@ export function SourceUrlDetail({
   domain: string | null;
   filters: SourceFilters;
   queries: SourceQueries;
-  /** Up one level: the domain's page when opened from it, else the inventory. */
   onBack: () => void;
-  /** All the way out to the Domains / URLs inventory. */
   onOpenInventory: () => void;
 }>) {
   const query = useSourceUrl(filters, queries, url);
@@ -55,16 +43,12 @@ export function SourceUrlDetail({
     url,
   });
   const data = query.data;
-  // Pending, not merely loading: a read still waiting on its run fetches
-  // nothing, and no data then is not "no engine used this page".
   const pending = query.isPending;
   const title = data?.title?.trim() || pathOf(url);
 
   return (
     <Stack gap="workspace">
       <SourceBreadcrumb
-        // Two crumbs, two destinations. Both calling `onBack` meant clicking
-        // "Sources" from a URL opened inside a domain landed on that domain.
         trail={[
           { label: 'Sources', onClick: onOpenInventory },
           ...(domain ? [{ label: domain, onClick: onBack }] : []),
@@ -102,7 +86,6 @@ export function SourceUrlDetail({
   );
 }
 
-/** The page's mark, its title and the live link to it. */
 function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) {
   const host = hostOf(url);
   return (
@@ -115,7 +98,6 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
         />
         <Stack gap="tight" className="min-w-0">
           <SectionTitle className="truncate">{title}</SectionTitle>
-          {/* An unsafe cited URL renders as plain text rather than a link. */}
           <TextLink variant="external" text="caption" href={url} className="min-w-0">
             <span className="truncate">{url}</span>
           </TextLink>

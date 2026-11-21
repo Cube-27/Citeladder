@@ -40,7 +40,6 @@ import {
   scopedDataset,
 } from './acquisition-reads.ts';
 
-/** Datasets whose rows say whether the project ranks for a search. */
 const KEYWORD_EVIDENCE_KINDS = new Set(['missing_keywords', 'ranking_keywords', 'shared_keywords']);
 
 type Run = Selectable<SearchIntelligenceRuns>;
@@ -57,7 +56,6 @@ export type PreparedResearch =
       dataset: Dataset;
       ordinal: number;
       connection: Selectable<ProviderConnections>;
-      /** The paying account of a managed analysis; null for BYOK. */
       accountId: string | null;
     };
 const terminal = new Set(['succeeded', 'failed', 'partial', 'cancelled', 'uncertain']);
@@ -69,7 +67,6 @@ export class AcquisitionState {
   readonly runId: string;
   readonly projectId: string;
   constructor(db: Database, task: QueueTask, runId: string) {
-    // A Search Intelligence run always belongs to a project; fail here, not in a later query.
     if (!task.project_id) throw new Error('Search Intelligence task has no project');
     this.db = db;
     this.task = task;
@@ -93,7 +90,6 @@ export class AcquisitionState {
     return runConnection(db, run);
   }
   private payerId: string | null | undefined;
-  /** The billing account a managed analysis is held against, read once per execution. */
   private async payer(db: Database, run: Run) {
     if (run.credential_source !== 'platform') return null;
     if (this.payerId === undefined) {
@@ -106,8 +102,6 @@ export class AcquisitionState {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (!run || terminal.has(run.status) || !(await this.owned(trx))) return null;
-      // A parked run may already have published datasets, so a restart that
-      // finds the price or connection changed ends it like any other stop.
       const priced = run.pricing_version === si.price_version;
       if (!priced || !run.confirmed_at || !(await this.connection(trx, run))) {
         await this.stopRun(trx, run, priced ? 'connection_changed' : 'pricing_changed', at);
@@ -148,8 +142,6 @@ export class AcquisitionState {
           .executeTakeFirstOrThrow();
       if (['succeeded', 'failed', 'uncertain'].includes(call.status)) return { action: 'skip' };
       const latest = await latestDispatch(trx, run, call.id);
-      // The reviewed estimate is a ceiling: never send a call that could pass it.
-      // The page's own price, not the stored average: a short last page costs less.
       const pageCost = pageEstimateMicrousd(kind, Number(request.limit)) * 100;
       if (
         call.status === 'intent' &&
@@ -218,8 +210,6 @@ export class AcquisitionState {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (run?.status !== 'running' || !(await this.owned(trx))) return false;
-      // A connection or member change since `prepare` ends the run, as there:
-      // returning without a transition would leave it running with its hold.
       if (!(await this.connection(trx, run))) {
         await this.stopRun(trx, run, 'connection_changed', at);
         return false;
@@ -252,7 +242,6 @@ export class AcquisitionState {
       return true;
     });
   }
-  /** Raw paid response survives a lost queue lease; projection recovery uses this exact receipt. */
   saveResponse(callId: string, response: ResearchResponse, at = new Date()) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
@@ -348,8 +337,6 @@ export class AcquisitionState {
         await this.failScopeViolation(trx, { run, call, dataset, update, missingCost }, at);
         return true;
       }
-      // Bound SQL parameters even when a provider returns more than the requested page.
-      // The locked dataset's saved count grows by the rows this page added; never a recount.
       let saved = dataset.unique_rows_saved;
       for (let offset = 0; offset < normalized.rows.length; offset += si.page_size) {
         const [inserted] = await trx // NOSONAR -- One transaction: pages insert in order.
@@ -452,7 +439,6 @@ export class AcquisitionState {
         .execute();
     });
   }
-  /** The plan's dataset for this run: the existing locked row, or a new collecting one. */
   private async upsertDataset(
     trx: Database,
     run: Run,
@@ -469,7 +455,6 @@ export class AcquisitionState {
         .executeTakeFirstOrThrow();
     return dataset;
   }
-  /** A paid page escaped the reviewed scope: its call and dataset fail and the run stops. */
   private async failScopeViolation(
     trx: Database,
     o: {
@@ -511,7 +496,6 @@ export class AcquisitionState {
       .execute();
     await this.closeCollecting(trx, at);
   }
-  /** A published keyword dataset can open or close keyword-gap Actions. */
   private async announce(trx: Database, datasetId: string) {
     await announceEvidence(
       trx,
@@ -519,7 +503,6 @@ export class AcquisitionState {
       { kind: 'search_intelligence_dataset', id: datasetId },
     );
   }
-  /** Publish a saved receipt; one the schema refuses fails its dataset instead of blocking the run. */
   async settle(
     plan: ResearchPlan,
     callId: string,
@@ -534,7 +517,6 @@ export class AcquisitionState {
       return this.reject(callId, at, terminalTask);
     }
   }
-  /** The paid receipt stays as provenance; its reported cost still counts. */
   reject(callId: string, at = new Date(), terminalTask = false) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
@@ -578,7 +560,6 @@ export class AcquisitionState {
       return missingCost;
     });
   }
-  /** A local check failed before dispatch: nothing was sent, and no later call can be either. */
   refuse(
     prepared: Extract<PreparedResearch, { action: 'dispatch' | 'publish' }>,
     error: ProviderError,
@@ -597,7 +578,6 @@ export class AcquisitionState {
       await this.stopRun(trx, run, error.code, at);
     });
   }
-  /** End a running run early; completed datasets remain. */
   private async stopRun(trx: Database, run: Run, code: string, at: Date) {
     await trx
       .updateTable('search_intelligence_runs')
@@ -613,7 +593,6 @@ export class AcquisitionState {
   }
 }
 
-/** A terminal run cannot leave a dataset waiting for another paid dispatch. */
 export function closeCollecting(
   db: Database,
   run: { workspaceId: string; projectId: string | null; runId: string },

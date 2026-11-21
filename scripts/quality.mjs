@@ -22,7 +22,6 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const frontendRoot = join(repositoryRoot, 'frontend');
 const args = process.argv.slice(2).filter((argument) => argument !== '--');
 
-// The last occurrence wins, so `pnpm gate --mode check` overrides the script's defaults.
 function option(name, fallback) {
   const separateIndex = args.lastIndexOf(name);
   if (separateIndex >= 0) return args[separateIndex + 1] ?? fallback;
@@ -41,8 +40,6 @@ for (const scope of requestedScopes) {
   if (!validScopes.has(scope)) throw new Error(`Unknown quality scope: ${scope}`);
 }
 
-// Developer tooling runs `git` from the caller's PATH, like every other command
-// this script launches; a pinned absolute path would not be portable.
 function git(arguments_, options = {}) {
   return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR: trusted PATH.
 }
@@ -65,8 +62,6 @@ function resolveScopes() {
 const scopes = resolveScopes();
 const gitDirectory = gitPaths(['rev-parse', '--absolute-git-dir'])[0];
 
-// A local `changed` run is the pre-push gate: one per worktree, and it scans the
-// branch's changed files for secrets even when no code owner is affected.
 if (requestedScopes.includes('changed')) {
   claimWorktree(gitDirectory);
   const scan = spawnSync(process.execPath, [join(repositoryRoot, 'scripts/secrets-scan.mjs')], {
@@ -83,9 +78,6 @@ if (scopes.size === 0) {
   process.exit(0);
 }
 
-// `all` builds every production artifact (CI, release). `affected` builds only
-// the artifacts whose sources or build configuration are in the working diff:
-// tsc and `vp check` already cover ordinary TypeScript, and CI still builds.
 const builds = option('--builds', 'all');
 if (!['all', 'affected'].includes(builds)) throw new Error(`Unknown builds mode: ${builds}`);
 
@@ -125,8 +117,6 @@ function selectedBuilds() {
   );
 }
 
-// A passing run records the exact tree it judged. Rerunning the same checks on
-// an unchanged tree cannot produce new evidence, so it is skipped.
 const passRecordPath = join(gitDirectory, 'quality-pass.json');
 
 function treeFingerprint() {
@@ -161,7 +151,6 @@ if (
   process.exit(0);
 }
 
-// The checks below are heavy; at most CITELADDER_HEAVY_CHECKS run on one machine.
 await claimMachineSlot();
 
 const logDirectory = join(gitDirectory, 'quality-logs');
@@ -197,9 +186,6 @@ function pnpm(name, commandArgs, env = process.env) {
   return step(name, 'pnpm', commandArgs, frontendRoot, env);
 }
 
-// Production-mode quality builds require the public origins. CI exports the
-// deploy's baked values (.github/actions/app-build-config); a local check falls
-// back to the same origins, while an explicit value still wins.
 const QUALITY_BUILD_ENV = {
   ...process.env,
   PUBLIC_WEBSITE_ORIGIN: process.env.PUBLIC_WEBSITE_ORIGIN || 'https://citeladder.com',
@@ -207,7 +193,6 @@ const QUALITY_BUILD_ENV = {
   PUBLIC_API_ORIGIN: process.env.PUBLIC_API_ORIGIN || 'https://api.citeladder.com',
 };
 
-// The PR base (or the push's previous head) the ratchets compare their policy with.
 function policyBase() {
   const base = process.env.COMPLEXITY_BASE_SHA;
   return base && !/^0+$/.test(base) ? base : null;
@@ -224,11 +209,7 @@ function frontendChecks() {
   if (artifacts.has('docs')) {
     pnpm('Astro documentation build', ['build:docs'], QUALITY_BUILD_ENV);
   }
-  // The budget reads the build's manifest, so it only runs against a fresh
-  // build; after a failed one it would judge stale output.
   if (artifacts.has('app') && pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
-    // A pass prints its measurement too: the budget's buffer is reset from it
-    // (frontend/scripts/bundle-budget.json).
     if (pnpm('Eager bundle budget', ['check:bundle'])) {
       process.stdout.write(readFileSync(logPathFor('Eager bundle budget'), 'utf8'));
     }
@@ -236,17 +217,9 @@ function frontendChecks() {
   if (artifacts.size < Object.keys(BUILD_INPUTS).length) {
     process.stdout.write('Unaffected production builds skipped; CI builds every artifact.\n');
   }
-  // Single static-check step: `vp check` (format + lint) reads its strict
-  // policy — denyWarnings, unused-disable-directives-as-errors — from the
-  // `lint.options` block shared by frontend/vite.config.ts and the root
-  // vite.config.ts, so editor, hook, and CI cannot drift apart.
   pnpm(mode === 'check' ? 'Vite+ static checks' : 'Vite+ static checks with fixes', [
     mode === 'check' ? 'check' : 'check:fix',
   ]);
-  // TypeScript compiler diagnostics stay on tsc: vite-plus 0.3.1 couples
-  // lint.options.typeCheck to typeAware, whose rule surface still reports 47
-  // pre-existing findings here and whose tsgolint rejects the marketing
-  // tsconfig's baseUrl. See the comment in frontend/vp-shared-config.ts.
   pnpm('TypeScript', ['exec', 'tsc', '--noEmit']);
   pnpm('Frontend complexity policy', ['check:complexity', ...policyDiffArgs()]);
   pnpm('Duplication policy', ['check:duplicates', ...policyDiffArgs()]);
@@ -255,9 +228,6 @@ function frontendChecks() {
   pnpm('Frontend dead-code and dependency policy', ['check:dead-code']);
 }
 
-// The numbered SQL migrations are the only schema author (docs/invariants.md 17):
-// every other service file holds generated types and queries, never DDL. The
-// migrate CLI applies the migrations; it does not author schema.
 const SCHEMA_MIGRATIONS = 'api/migrations/<NNNN>_<name>.sql';
 const SCHEMA_MIGRATION = /^\/api\/migrations\/\d{4}_[a-z0-9_]+\.sql$/u;
 const SCHEMA_AUTHORING = [
@@ -274,7 +244,6 @@ function schemaAuthorityViolations(root) {
       const relative = path.slice(root.length);
       if (SCHEMA_MIGRATION.test(relative)) return false;
       if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
-      // Tests build disposable databases and constraint fixtures; only shipped source is policed.
       if (relative.includes('/test/')) return false;
       if (!/\.[cm]?[jt]s$/u.test(path)) return false;
       const source = readFileSync(path, 'utf8');
@@ -282,8 +251,6 @@ function schemaAuthorityViolations(root) {
     });
 }
 
-// A table has one TypeScript application writer (docs/invariants.md 1); the
-// allowlist records today's writers and may only tighten (scripts/table-writers.mjs).
 const API_ROOT = join(frontendRoot, 'services', 'api');
 const TABLE_WRITERS = 'frontend/services/api/table-writers.json';
 
@@ -293,7 +260,6 @@ function baseTableWriters(base) {
       JSON.parse(git(['show', `${base}:${TABLE_WRITERS}`], { encoding: 'utf8', stdio: 'pipe' })),
     );
   } catch (error) {
-    // The allowlist's first PR has no base allowlist to compare with.
     if (/does not exist in|exists on disk, but not in/u.test(`${error.stderr ?? ''}`)) return null;
     throw error;
   }
@@ -357,7 +323,6 @@ if (failedSteps.length) {
   process.stderr.write(`\nFailed: ${failedSteps.join(', ')}. Logs: ${logDirectory}\n`);
   process.exit(1);
 }
-// Fingerprint after the run: fix mode may have rewritten files.
 writeFileSync(
   passRecordPath,
   JSON.stringify({ tree: treeFingerprint(), scopes: [...scopes], builds }),

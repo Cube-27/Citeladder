@@ -3,21 +3,6 @@ import type { Page } from '@playwright/test';
 import { makeProject } from '../../test/fixtures/project';
 import { providerCatalogFixture } from '../../test/provider-catalog-fixture';
 
-/**
- * Authed-shell network fixture for e2e + visual specs.
- *
- * The app authenticates by cookie session: `SessionGuard` calls
- * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/workspaces` and
- * `GET /api/v1/projects` plus the selected project detail, and
- * `EntitlementProvider` calls the billing entitlement and usage endpoints.
- * The workspace list is what resolves the
- * shell's workspace — it is answered independently of any project, because a
- * workspace with none is still a workspace.
- * Stubbing those endpoints is the whole "logged in with one project" arrangement
- * — no token needs seeding. Feature-permitted shell fixtures also provide a
- * schema-valid resolved billing entitlement; negative access states
- * belong in specs that explicitly exercise denied or unresolved behavior.
- */
 const FIXTURE_USER = {
   id: '22222222-2222-4222-8222-222222222222',
   email: 'shell@example.com',
@@ -27,17 +12,14 @@ const FIXTURE_USER = {
   updated_at: '2026-01-01T00:00:00Z',
 } as const;
 
-/** The workspace every fixture account belongs to. */
 export const FIXTURE_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const PROJECT_SLOTS_GRANT_ID = '33333333-3333-4333-8333-333333333333';
 const AGENT_GRANT_ID = '66666666-6666-4666-8666-666666666666';
 const ENTITLEMENT_PERIOD_END = '2030-02-01T00:00:00Z';
 
-/** The one project allowance this fixture account has, used everywhere. */
 const PROJECT_SLOT_ALLOWANCE = 1;
 
-/** A bounded, resolved account state for feature-permitted shell flows. */
 const PERMITTED_ENTITLEMENT = {
   billing_account_id: '44444444-4444-4444-8444-444444444444',
   status: 'resolved',
@@ -124,11 +106,6 @@ function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
   return {
     workspace_id: workspaceId,
     status: 'resolved',
-    // Member-safe occupancy hints: the shell reads its remaining project
-    // allowance from here rather than from the owner-private usage report.
-    // Derived exactly like `permittedUsage`, and from the same allowance the
-    // fixture's `project_slots` capability grants — three places disagreeing
-    // about one number is how a fixture stops describing a real account.
     occupancy: [
       {
         key: 'project_slots',
@@ -152,15 +129,6 @@ function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
   } as const;
 }
 
-/**
- * The shell's one project.
- *
- * Built from the vitest `makeProject` fixture so the `Project` SHAPE has a
- * single definition across both suites: this file used to hand-write the same
- * twenty fields and had already drifted from it on `website_url`, `industry`
- * and `primary_market`. The overrides below are the values the e2e specs
- * actually render, and are the only intentional differences.
- */
 export const FIXTURE_PROJECT = makeProject({
   workspace_id: FIXTURE_WORKSPACE_ID,
   website_url: 'https://acme.example',
@@ -168,30 +136,12 @@ export const FIXTURE_PROJECT = makeProject({
   primary_market: 'United States',
 });
 
-/** Build the canonical project-owned URL used by authenticated browser journeys. */
 export function fixtureProjectPath(href: string): string {
   const target = new URL(href, 'https://citeladder.test');
   target.searchParams.set('project', FIXTURE_PROJECT.id);
   return `${target.pathname}?${target.searchParams.toString()}`;
 }
 
-/**
- * Stub the two shell endpoints, plus a 404 catch-all for everything else
- * under `/api/v1/`. The catch-all is what makes screenshots deterministic:
- * 4xx never retries (lib/api/query-client.ts), so every unstubbed data query
- * settles into its empty/error state in ONE attempt instead of flapping
- * between skeleton and error across the two-retry window. It is also what
- * keeps an unstubbed downstream call (GettingStartedCard's audits query, the
- * shell EntitlementProvider's entitlement query) from falling through to a
- * live backend, 401-ing, and tripping the session guard's "any 401 → logout"
- * path — which is how a spec that only stubs auth/me + projects ends up
- * bounced to /login.
- *
- * Playwright matches routes in reverse registration order, so register the
- * catch-all FIRST and the specific stubs after it; the last-registered
- * matching route wins. `stubs` lets a spec layer its own endpoints on top.
- */
-/** One membership row per workspace the fixture projects belong to. */
 function workspacesFor(projects: ReadonlyArray<typeof FIXTURE_PROJECT>) {
   const ids = new Set(projects.map((project) => project.workspace_id));
   if (ids.size === 0) ids.add(FIXTURE_WORKSPACE_ID);
@@ -203,8 +153,6 @@ function membershipRows(ids: readonly string[]) {
     id,
     name: 'Fixture Workspace',
     role: 'owner',
-    // The Owner's effective capabilities, as the backend's one role policy
-    // publishes them. The shell gates controls on these names.
     capabilities: [
       'manage_billing',
       'manage_credentials',
@@ -231,15 +179,10 @@ export async function stubAuthedShell(
     }),
   );
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
-  // Answered even when `projects` is empty: the shell resolves its workspace
-  // from here, not from a project, so an empty account still has a workspace to
-  // scope its reads (and its allowance check) against.
   await page.route('**/api/v1/workspaces', (route) =>
     route.fulfill({ json: workspacesFor(projects) }),
   );
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
-  // The shell reads the engine catalogue before any screen: every engine's
-  // name, order and surface kind come from it.
   await page.route('**/api/v1/provider-catalog', (route) =>
     route.fulfill({ json: providerCatalogFixture }),
   );
@@ -268,7 +211,6 @@ export async function stubAuthedShell(
   await page.route('**/api/v1/billing/usage', (route) =>
     route.fulfill({ json: permittedUsage(projects.length) }),
   );
-  // The shell's Terms gate: the fixture owner has accepted the current revision.
   await page.route('**/api/v1/workspaces/*/policies', (route) =>
     route.fulfill({
       json: {

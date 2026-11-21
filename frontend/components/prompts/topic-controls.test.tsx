@@ -223,7 +223,6 @@ describe('ManageTopicsDialog', () => {
 
   it('says when the topics could not be loaded, not that there are none, and reads them again on Retry', async () => {
     const refetch = vi.fn();
-    // Read and empty, the dialog says there are none; failed, it says only that.
     const empty = renderManage({ topics: [] });
     expect(screen.getByText('No topics yet.')).toBeVisible();
     empty.unmount();

@@ -66,7 +66,6 @@ describe('bounded runner', () => {
       await db.destroy();
     }
   });
-  // One pooled connection stays free for cadence work beside the task slots.
   it.each([
     { concurrency: 1, pool: 4, slots: 1 },
     { concurrency: 8, pool: 4, slots: 3 },
@@ -199,7 +198,6 @@ describe('bounded runner', () => {
   it('pauses only within the remaining budget and backs off on due-but-unclaimed work', () => {
     expect(idlePause(null, 10_000, 5000)).toBeNull();
     expect(idlePause(40, 300, 5000)).toBe(40);
-    // A due row another claimer holds must not spin, nor pause past the deadline.
     expect(idlePause(0, 10_000, 5000)).toBe(250);
     expect(idlePause(0, 200, 5000)).toBeNull();
     expect(idlePause(60_000, 300_000, 5000)).toBe(5000);
@@ -228,7 +226,6 @@ describe('bounded runner', () => {
         .set({ status: 'running', lease_owner: 'dead-worker', lease_expires_at: expiry })
         .where('id', '=', running)
         .execute();
-      // A killed holder's lease is recovered at expiry, so the runner must stay for it.
       expect((await worker.nextDue())?.getTime()).toBe(expiry.getTime());
       await db
         .updateTable('site_crawl_tasks')
@@ -253,8 +250,6 @@ describe('bounded runner', () => {
         taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
         executors: { link_metrics: async () => {} },
       });
-      // A sibling holds the crawl lock for the whole run, so both the task's
-      // own lock and the settle that follows time out.
       let release = () => {};
       const released = new Promise<void>((resolve) => {
         release = resolve;
@@ -333,9 +328,7 @@ describe('bounded runner', () => {
       { name: 'good', run: async () => 0, nextDue: async () => new Date(Date.now() + 1000) },
     ];
     expect(await startSuccessor({ lanes, budgetMs: 300_000, signal: live, start })).toBe(true);
-    // Work due beyond a fresh budget waits for tick.
     expect(await startSuccessor({ lanes, budgetMs: 500, signal: live, start })).toBe(false);
-    // Cloud Run refused the start: a handover must fall back to the exit-time start.
     expect(await startSuccessor({ lanes, budgetMs: 300_000, signal: live, start })).toBe(false);
     expect(start).toHaveBeenCalledTimes(2);
   });
@@ -344,7 +337,6 @@ describe('bounded runner', () => {
     const successor = vi.fn(async () => true);
     const live = new AbortController().signal;
     expect(await handOver({ delayMs: 1, signal: live, successor })).toBe(true);
-    // A drain that already ended (or a budget shorter than the lead) leaves the successor to its end.
     expect(await handOver({ delayMs: 60_000, signal: AbortSignal.abort(), successor })).toBe(false);
     expect(await handOver({ delayMs: -5, signal: live, successor })).toBe(false);
     expect(successor).toHaveBeenCalledTimes(1);
@@ -393,7 +385,6 @@ describe('bounded runner', () => {
           run: async () => {
             if (order.includes('site claimed')) return 0;
             order.push('site claimed');
-            // The pre-fix sequential drain reaches the audits only after this window.
             await Promise.race([released.promise, sleep(1000)]);
             order.push('site settled');
             return 1;
@@ -516,7 +507,6 @@ describe('bounded runner', () => {
           name: 'site-health',
           run: async () => {
             if (!busy) return 0;
-            // New audit work is committed after the audits lane went idle.
             setTimeout(() => (queued = 1), 20);
             await sleep(200);
             busy = false;
@@ -535,7 +525,6 @@ describe('bounded runner', () => {
       ],
       { ...options(), deadline: Number.POSITIVE_INFINITY, idlePollMs: 50 },
     );
-    // Picked up within the poll interval, before the busy lane returned.
     expect(picked).toBe(1);
   });
 
@@ -654,7 +643,6 @@ it('refuses arbitrary credential destinations, unbounded pools and unprotected C
   expect(() => executionSettings({ RUNNER_BUDGET_SECONDS: '0' })).toThrow();
   expect(() => executionSettings({ K_SERVICE: 'api' })).toThrow();
   expect(() => executionSettings({ CITELADDER_ORIGIN_TOKEN_PREVIOUS: 'a'.repeat(32) })).toThrow();
-  // A job execution serves no HTTP; it may start its successor without the origin token.
   const job = 'projects/p/locations/us-central1/jobs/citeladder-runner';
   expect(
     executionSettings({ CLOUD_RUN_RUNNER_JOB: job, CLOUD_RUN_JOB: 'citeladder-runner' }),

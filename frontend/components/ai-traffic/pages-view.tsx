@@ -19,10 +19,8 @@ import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 
 type PageRow = z.infer<typeof aiTrafficPagesSchema>['items'][number];
 
-/** A non-breaking space: a blank line that still takes a line's height. */
 const BLANK_LINE = ' ';
 
-/** The sort a header button sets: the path ascending, a figure descending. */
 const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {
   path: 'url_asc',
   crawl: 'requests_desc',
@@ -31,7 +29,6 @@ const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {
   citations: 'citations_desc',
 };
 
-/** The path and its three signals fit at 982; the rest come last and scroll. */
 const PAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'path', label: 'Path', kind: 'identity' },
   { key: 'crawl', label: 'Requests', kind: 'number' },
@@ -44,7 +41,6 @@ const PAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'errors', label: '4xx / 5xx', kind: 'number', priority: 'low' },
 ];
 
-/** Whether a row has no value for a column; the path is never absent. */
 const ABSENT: Readonly<Record<string, (row: PageRow) => boolean>> = {
   crawl: (row) => row.crawl.value === null,
   referrals: (row) => row.referrals.value === null,
@@ -56,10 +52,6 @@ const ABSENT: Readonly<Record<string, (row: PageRow) => boolean>> = {
   errors: (row) => row.errors_4xx === null && row.errors_5xx === null,
 };
 
-/**
- * The columns a page of rows measures: a column in which every row is absent
- * is left out rather than drawn as a column of absences.
- */
 function measuredPageColumns<C extends Pick<DataTableColumn, 'key'>>(
   columns: readonly C[],
   rows: readonly PageRow[],
@@ -71,7 +63,6 @@ function measuredPageColumns<C extends Pick<DataTableColumn, 'key'>>(
   });
 }
 
-/** Pages' columns, sortable from their headers like every other table's. */
 function pageColumns(
   sort: TrafficPagesSort | undefined,
   onSort: ((sort: TrafficPagesSort) => void) | undefined,
@@ -96,11 +87,6 @@ const NOTHING_MEASURED: DataTableState = {
   description: 'No signal measured these paths in this window.',
 };
 
-/**
- * Path-level AI traffic: the coverage line over one cursor-paged table. A
- * page turn or filter keeps the rows, the line and the pager on screen until
- * the next page lands. The crawler drawer reads the same view for one bot.
- */
 export function TrafficPages({
   workspaceId,
   projectId,
@@ -145,7 +131,6 @@ export function TrafficPages({
         urlHash={urlHash}
         onClose={() => setUrlHash(null)}
         fromRow
-        // A path opened from the crawler drawer keeps that crawler's evidence.
         filters={{
           range: filters.range,
           verification: filters.verification,
@@ -156,12 +141,10 @@ export function TrafficPages({
   );
 }
 
-/** A value the row does not have, with why on hover and focus. */
 function Unavailable({ reason }: Readonly<{ reason: string }>) {
   return <Absence state="unavailable" reason={reason} />;
 }
 
-/** Whether any of the row's counted signals covers only part of the window. */
 function partialCoverage(row: PageRow): boolean {
   return [row.crawl, row.referrals, row.citations, row.findings].some(
     (leg) => leg.value !== null && leg.coverage === 'partial',
@@ -180,7 +163,6 @@ function TrafficErrors({ page }: Readonly<{ page: PageRow }>) {
   );
 }
 
-/** Each signal column's cell, by column key. */
 const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
   crawl: (r) => (
     <TableCell numeric>
@@ -245,7 +227,6 @@ function TrafficPageRow({
   return (
     <TableRow>
       <TableCell>
-        {/* The path opens its evidence; a cut keeps its start and tail. */}
         <TextLink asChild text="inherit" underline="hover">
           <Pressable
             onClick={() => onOpen(r.url_hash)}
@@ -266,12 +247,6 @@ function TrafficPageRow({
   );
 }
 
-/**
- * The tab's one context line: which sources are not connected, crawl coverage
- * and the inventory behind the rows. An absent value explains itself on
- * focus, so the line does not repeat that. Until the first page lands it is
- * a blank line, so the table does not drop a line when it arrives.
- */
 function CoverageLine({
   data,
 }: Readonly<{ data: z.infer<typeof aiTrafficPagesSchema> | undefined }>) {
@@ -287,8 +262,6 @@ function CoverageLine({
     ([key]) =>
       data.items.length > 0 && data.items.every((row) => row[key].state === 'not_connected'),
   );
-  // Unknown (logs connected, nothing to measure against) and unavailable stay
-  // distinct; disconnected crawler logs already say why coverage is missing.
   let crawlCoverage: string | null =
     coverage.state === 'unknown' ? 'Crawl coverage unknown' : 'Crawl coverage unavailable';
   if (coverage.share !== null)

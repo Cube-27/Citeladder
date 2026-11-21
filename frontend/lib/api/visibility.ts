@@ -1,15 +1,3 @@
-/**
- * Visibility domain endpoint (F2): the selected-run dashboard projection —
- * Visibility Score, per-engine comparison, and the brand-vs-competitor rankings
- * table. `avg_position` is present but nullable. Defaults
- * to the project's latest completed audit when `audit_id` is omitted. Response
- * passes through `strictValidate`.
- *
- * `getVisibilityTrends` is the additive cross-run trend projection
- * (`/projects/{id}/visibility/trends`): an ordered series of
- * `VisibilityTrendPoint`s over persisted `MetricSnapshot` rows, filtered by
- * engine/date and bucketed by run/week/month. Same-origin `/api/v1` only.
- */
 import { z } from 'zod';
 import {
   visibilityEvidenceResponseSchema,
@@ -59,31 +47,18 @@ import type {
 const promptMetricListSchema = z.array(promptMetricItemSchema);
 const observedCompetitorListSchema = z.array(observedCompetitorSchema);
 
-/** Which prompts a Visibility read counts: unbranded, branded, or all of them. */
 export type VisibilityCohortParam = 'core' | 'comparison' | 'all';
 
-/** Filters for the cross-run trend request (all optional; same-origin only). */
 type VisibilityTrendParams = {
-  /** A non-default market's id; omitted reads the project default. */
   market?: string;
   cohort?: VisibilityCohortParam;
-  /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
-  /** A project topic: answers to prompts filed under it when their run froze them. */
   topic?: string;
-  /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
   from?: string;
-  /** Inclusive UTC upper bound (ISO 8601) for the completion window. */
   to?: string;
-  /** Bucketing: `run` (default) | `week` | `month`. */
   granularity?: string;
 };
 
-/**
- * Filters for the shared execution-evidence request (all optional). When both
- * `audit_id` and a date bound are set the backend intersects them (the selected
- * audit must fall inside the inclusive window). Same-origin only.
- */
 type VisibilityEvidenceParams = {
   audit_ids?: string[];
   cursor?: string;
@@ -93,25 +68,17 @@ type VisibilityEvidenceParams = {
   domain?: string;
   url?: string;
   cohort?: VisibilityCohortParam;
-  /** Restrict to one audit in the authorized project. */
   audit_id?: string;
-  /** Restrict by the source prompt frozen on `AuditPromptSnapshot.prompt_id`. */
   prompt_id?: string;
-  /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
   topic?: string;
-  /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
   from?: string;
-  /** Inclusive UTC upper bound (ISO 8601) for the completion window. */
   to?: string;
-  /** Newest-window size (default 100, max 500). */
   limit?: number;
 };
 
-/** The selection one Visibility request resolves to. */
 export type ProjectVisibilityParams = {
   audit_id?: string;
-  /** A non-default market's id; omitted reads the project default. */
   market?: string;
   cohort?: VisibilityCohortParam;
   engine?: string;
@@ -123,18 +90,12 @@ export type ProjectVisibilityParams = {
   configuration_key?: string;
 };
 
-/**
- * The landing selection: the latest run, the core cohort, no baseline and no
- * frozen configuration pinned. Navigation intent warms exactly this, so a
- * hovered link and the screen it opens share ONE cache entry.
- */
 export const INITIAL_VISIBILITY_PARAMS: ProjectVisibilityParams = {
   cohort: 'core',
   selection_mode: 'latest',
 };
 
 export const visibilityApi = {
-  /** Answer perception for the selected runs: net sentiment with its coverage, themes and quotes. */
   getPerception: async (
     projectId: string,
     params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
@@ -146,7 +107,6 @@ export const visibilityApi = {
     );
     return strictValidate(perceptionResponseSchema, result, 'visibility.getPerception');
   },
-  /** One roster competitor against you: sources when it is named, prompts naming it instead. */
   getCompetitorFocus: async (
     projectId: string,
     params: {
@@ -169,7 +129,6 @@ export const visibilityApi = {
     );
     return strictValidate(competitorFocusSchema, result, 'visibility.getCompetitorFocus');
   },
-  /** Fact-check accuracy for the selected runs: verdicts on the brand's claims with their coverage. */
   getAccuracy: async (
     projectId: string,
     params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
@@ -181,7 +140,6 @@ export const visibilityApi = {
     );
     return strictValidate(accuracyResponseSchema, result, 'visibility.getAccuracy');
   },
-  /** The selection's frozen fact revisions, each with the verdicts that cite it. */
   getAccuracyFacts: async (
     projectId: string,
     params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
@@ -193,7 +151,6 @@ export const visibilityApi = {
     );
     return strictValidate(accuracyFactListSchema, result, 'visibility.getAccuracyFacts');
   },
-  /** The selection's claims, newest answer first, paged by the read's own cursor. */
   getAccuracyClaims: async (
     projectId: string,
     params: {
@@ -211,7 +168,6 @@ export const visibilityApi = {
     );
     return strictValidate(accuracyClaimPageSchema, result, 'visibility.getAccuracyClaims');
   },
-  /** A person's verdict on one claim; the model's verdict is kept beside it. */
   overrideVerdict: async (
     projectId: string,
     verdictId: string,
@@ -225,7 +181,6 @@ export const visibilityApi = {
     );
     return strictValidate(verdictOverrideSchema, result, 'visibility.overrideVerdict');
   },
-  /** The selection's claims as a CSV file. */
   exportAccuracyClaims: (
     projectId: string,
     params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
@@ -235,7 +190,6 @@ export const visibilityApi = {
       withQuery(`/projects/${projectId}/visibility/accuracy/claims/export`, definedQuery(params)),
       options,
     ),
-  /** Ads in ChatGPT Search answers for the selected runs: presence, advertisers and creatives. */
   getAds: async (
     projectId: string,
     params: {
@@ -306,12 +260,6 @@ export const visibilityApi = {
     );
     return strictValidate(visibilitySourcesSchema, result, 'visibility.getSources');
   },
-  /**
-   * The five AI Overview rates for one selection.
-   *
-   * `engine` is required: the rates belong to an observed surface, and asking
-   * for them without naming one would answer a question nobody asked.
-   */
   getSurfaceRates: async (
     projectId: string,
     params: {
@@ -411,7 +359,6 @@ export const visibilityApi = {
     );
     return strictValidate(visibilitySourceUrlSchema, result, 'visibility.getSourceUrl');
   },
-  /** Each market's latest run side by side (Visibility → By market). */
   getMarketVisibility: async (
     projectId: string,
     params: { cohort?: string; topic?: string },
@@ -423,7 +370,6 @@ export const visibilityApi = {
     );
     return strictValidate(visibilityMarketsSchema, result, 'visibility.getMarketVisibility');
   },
-  /** The selection's By topic breakdown: one row per project topic, frozen per run. */
   getVisibilityTopics: async (
     projectId: string,
     params: Omit<ProjectVisibilityParams, 'baseline_id' | 'topic'>,
@@ -433,7 +379,6 @@ export const visibilityApi = {
     const res = await apiClient.get(path, options);
     return strictValidate(visibilityTopicsSchema, res, 'visibility.getVisibilityTopics');
   },
-  /** The selection's performance matrix and top rankings (Insights). */
   getVisibilityMatrix: async (
     projectId: string,
     params: Omit<ProjectVisibilityParams, 'baseline_id'>,
@@ -453,14 +398,6 @@ export const visibilityApi = {
     return strictValidate(visibilitySchema, res, 'visibility.getProjectVisibility');
   },
 
-  /**
-   * Cross-run Visibility trend projection for a project (roadmap surface, now
-   * live). An ordered series of `VisibilityTrendPoint`s over the project's
-   * persisted dashboard-ready `MetricSnapshot` rows — optionally filtered by
-   * `engine` and an inclusive UTC `from`/`to` window, and bucketed by
-   * `granularity`. Same-origin relative path only; response is strictly
-   * validated (backend is the source of truth).
-   */
   getVisibilityTrends: async (
     projectId: string,
     params?: VisibilityTrendParams,
@@ -471,13 +408,6 @@ export const visibilityApi = {
     return strictValidate(visibilityTrendListSchema, res, 'visibility.getVisibilityTrends');
   },
 
-  /**
-   * Shared persisted execution-evidence dataset for Query fanouts and the
-   * Sources drill-downs (`/projects/{id}/visibility/evidence`). Returns a
-   * bounded newest-first window of `VisibilityExecutionEvidence` plus a
-   * `truncated` flag — no provider is called and no evidence is inferred at read
-   * time. Same-origin relative path only; response is strictly validated.
-   */
   getVisibilityEvidence: async (
     projectId: string,
     params?: VisibilityEvidenceParams,
@@ -511,10 +441,6 @@ export const visibilityApi = {
     const res = await apiClient.get<PromptMetricItem[]>(path, options);
     return strictValidate(promptMetricListSchema, res, 'visibility.getPromptMetrics');
   },
-  /**
-   * One prompt's mention and owned-citation rates per run in a market, the
-   * Actions declared on it, and its latest per-engine outcomes.
-   */
   getPromptHistory: async (
     projectId: string,
     promptId: string,

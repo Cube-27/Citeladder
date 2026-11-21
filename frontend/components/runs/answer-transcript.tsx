@@ -43,15 +43,6 @@ function joinsWithSpace(previous: string, block: string, content: string): boole
   );
 }
 
-/**
- * Repair paragraph breaks introduced around inline citation annotations.
- *
- * Some answer transports persist a list item as several blank-line-separated
- * fragments (including punctuation in a block of its own). Markdown correctly
- * treats those as separate paragraphs, but the reader sees a sentence pulled
- * apart vertically. This changes only the rendered copy: the persisted answer
- * remains the immutable evidence and proper Markdown blocks remain untouched.
- */
 export function normalizeEvidenceMarkdown(markdown: string): string {
   const blocks = markdown
     .replaceAll('\r\n', '\n')
@@ -81,11 +72,6 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
   return normalized.join('\n\n');
 }
 
-/**
- * A chip for each word that names a brand the analysis placed in the text.
- * A brand without a stored offset gets none: it is listed in the rail only,
- * never drawn at a guessed place.
- */
 function brandChips(brands: readonly AnswerBrand[]): PhraseChip[] {
   const seen = new Set<string>();
   return brands.flatMap(({ position, ...brand }) =>
@@ -117,7 +103,6 @@ function brandChips(brands: readonly AnswerBrand[]): PhraseChip[] {
   );
 }
 
-/** A link in the answer to an address it cites becomes that source's chip, where it stands. */
 function sourceLinks(sources: readonly AnswerSource[]): LinkChip {
   const byHref = new Map(sources.flatMap((source) => (source.href ? [[source.href, source]] : [])));
   return (href, children) => {
@@ -140,7 +125,6 @@ function sourceLinks(sources: readonly AnswerSource[]): LinkChip {
   };
 }
 
-/** The engine's avatar: its mark, or its initial for a surface without one. */
 function EngineAvatar({ engine, label }: Readonly<{ engine: string; label: string }>) {
   const key = engineMarkKey(engine);
   return (
@@ -154,11 +138,6 @@ function EngineAvatar({ engine, label }: Readonly<{ engine: string; label: strin
   );
 }
 
-/**
- * The prompt and the engine's answer as a chat: the prompt is your message,
- * on the right; the answer is the engine's, on the left, as markdown with its
- * brands and cited sources drawn as chips where the text names them.
- */
 export function AnswerTranscript({
   promptText,
   engine,
@@ -169,7 +148,6 @@ export function AnswerTranscript({
 }: Readonly<{
   promptText: string | null;
   engine: string;
-  /** The answer markdown, or the sentence that stands in for a missing one. */
   body: Readonly<{ kind: 'markdown'; text: string }> | Readonly<{ kind: 'note'; text: string }>;
   brands: readonly AnswerBrand[];
   sources: readonly AnswerSource[];

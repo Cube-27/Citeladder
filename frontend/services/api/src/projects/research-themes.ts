@@ -1,9 +1,3 @@
-/**
- * Onboarding research's theme candidates and the filter that keeps only the
- * confident, buyer-facing ones (AV-27). The identity call proposes them; code
- * drops company facts, long phrases, low confidence and repeats, and never
- * keeps more than the cap. Too little research leaves none, never invented ones.
- */
 import { z } from 'zod';
 
 import type { PerceptionPolicy } from '../config/perception.ts';
@@ -26,7 +20,6 @@ const words = (text: string) =>
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 
-/** The identity's kept themes; none without an identity. */
 export function researchThemes(
   identity: { themes: readonly Candidate[] } | null,
   limits: PerceptionPolicy['project_themes'],

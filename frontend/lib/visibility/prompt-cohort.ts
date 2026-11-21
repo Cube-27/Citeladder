@@ -1,9 +1,3 @@
-/**
- * Which prompts Visibility reads: unbranded (`core`), branded comparison
- * prompts, or all of them together. The choice is a device convenience
- * remembered per project, so a reader who works on branded prompts returns to
- * them; the URL still wins.
- */
 import type { UrlCodec } from '@/lib/navigation/url-state';
 
 export const PROMPT_COHORTS = ['core', 'comparison', 'all'] as const;
@@ -11,13 +5,11 @@ export type PromptCohort = (typeof PROMPT_COHORTS)[number];
 
 const storageKey = (projectId: string) => `citeladder.prompt-cohort.${projectId}`;
 
-/** The cohorts widened for membership tests against untrusted stored text. */
 const COHORT_VALUES: readonly (string | null)[] = PROMPT_COHORTS;
 
 const isPromptCohort = (value: string | null): value is PromptCohort =>
   COHORT_VALUES.includes(value);
 
-/** The project's remembered cohort; unbranded when none is stored or storage fails. */
 function readStoredCohort(projectId: string | null): PromptCohort {
   if (projectId === null || typeof window === 'undefined') return 'core';
   try {
@@ -28,11 +20,6 @@ function readStoredCohort(projectId: string | null): PromptCohort {
   }
 }
 
-/**
- * The `cohort` URL param: always written, so a copied link names its view;
- * when absent or unknown, the project's remembered choice is read at parse
- * time, so it is never stale.
- */
 export function cohortUrlCodec(projectId: string | null): UrlCodec<PromptCohort> {
   return {
     parse: (raw) => (isPromptCohort(raw) ? raw : readStoredCohort(projectId)),

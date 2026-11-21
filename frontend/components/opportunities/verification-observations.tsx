@@ -5,17 +5,11 @@ import { movementLegLabel, movementStateLabel } from '@/lib/agent/vocabulary';
 
 type VerificationResult = Record<string, unknown>;
 
-/**
- * What else has been observed since a declaration — the before/after movement
- * and the gap changes — reported as observations, never as one verdict. The
- * per-check states sit above this, in the declaration.
- */
 export function VerificationObservations({
   implementation,
   showAuditLink,
 }: Readonly<{
   implementation: { verification_events?: Array<{ result: Record<string, unknown> }> } | undefined;
-  /** Only a declaration with a prompt check is measured by a later run. */
   showAuditLink: boolean;
 }>) {
   const result = implementation?.verification_events?.at(-1)?.result;
@@ -33,7 +27,6 @@ export function VerificationObservations({
   );
 }
 
-/** The before/after legs: visibility, AI referral traffic, branded demand. */
 function ComparableMovement({ result }: Readonly<{ result: VerificationResult | undefined }>) {
   const legs = result?.legs;
   if (!legs || typeof legs !== 'object') return null;
@@ -71,7 +64,6 @@ function GapChanges({ result }: Readonly<{ result: VerificationResult | undefine
   );
 }
 
-/** The leg's persisted state; a leg with none is unrecognized, not unavailable. */
 function legState(value: unknown): string {
   if (!value || typeof value !== 'object' || !('state' in value)) return 'unrecognized';
   return String(value.state);

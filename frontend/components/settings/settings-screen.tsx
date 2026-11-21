@@ -32,11 +32,6 @@ import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Someone who belongs to no workspace yet has only their account to manage;
- * API keys are for the Owners and Admins who manage credentials.
- */
-/** A managed plan brings the platform's keys, so it has no provider settings (B32). */
 function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean, managed: boolean) {
   return SETTINGS_TABS.filter(
     (tab) =>
@@ -82,11 +77,9 @@ function ProjectDeletionControls() {
       },
     });
 
-  // Both must allow it: the plan grants deletion, and the role (Owner/Admin) may use it.
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
-      {/* Settings has no project-scoped tab, so it stays under Account, last. */}
       <SettingsGroup title="Delete project">
         {deleteMutation.isError ? (
           <Notice
@@ -149,23 +142,6 @@ function ProjectDeletionControls() {
   );
 }
 
-/**
- * SettingsScreen — tabbed settings (Account / Workspace / Providers / Integrations),
- * following the WAI-ARIA tabs idiom used by the Visibility
- * workspace (roving tabindex, Arrow/Home/End navigation, `aria-selected`,
- * labelled panels).
- *
- * - **Account**: your email and your role in the selected workspace, display
- *   timezone and account security controls. No internal identifiers.
- * - **Workspace**: the selected workspace, your role, leaving it, and its
- *   members for those who manage them.
- * - **Provider Settings**: the BYOK provider configuration (formerly the
- *   settings-owned Providers tab), rendered by `ProviderSettings`.
- * - **Integrations**: first-party data connections (GSC/GA4 on one shared
- *   Google OAuth grant, Bing on a Microsoft grant), rendered by
- *   `IntegrationSettings`. `?tab=integrations` is the OAuth-callback landing
- *   surface (contract C2).
- */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus; members, providers, and integrations are extracted.
 export function SettingsScreen() {
   const user = useSessionUser();
@@ -176,16 +152,11 @@ export function SettingsScreen() {
   const updatedLabel = user.updated_at
     ? formatDisplayTimestamp(user.updated_at, timeZone)
     : undefined;
-  // Deep-linkable initial tab (`/settings?tab=providers` from the onboarding
-  // card); invalid/absent values fall back to Account.
   const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
   const { activeWorkspace } = useProjectContext();
   const managesCredentials = useWorkspaceCapability('manage_credentials');
   const managed = useManagedPlan();
   const tabs = visibleTabs(activeWorkspace !== null, managesCredentials, managed);
-  // `?tab=` is deep-linkable, so someone can arrive asking for a tab that is
-  // not offered. Fall back to Account rather than selecting
-  // a tab that no longer exists, which would leave no panel visible at all.
   const activeTab = tabs.some((tab) => tab.value === requestedTab) ? requestedTab : 'account';
 
   return (
@@ -212,11 +183,6 @@ export function SettingsScreen() {
           <ProviderSettings />
         </TabPanel>
 
-        {/* Not forceMount, unlike its siblings. This panel owns a connection
-            list that fans out into a mappings query and a 3s backfill poll per
-            connection, so mounting it behind every other tab meant opening
-            Profile issued five integration requests and then polled a backfill
-            the reader could not see. */}
         <TabPanel value="integrations" className="focus-ring">
           <IntegrationSettings />
         </TabPanel>

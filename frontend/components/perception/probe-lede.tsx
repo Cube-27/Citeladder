@@ -5,7 +5,6 @@ import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 
-/** The Market and Objections lede: the probe it reads, a headline and its figures. */
 export function ProbeLede({
   createdAt,
   headline,

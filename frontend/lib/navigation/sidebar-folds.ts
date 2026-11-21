@@ -3,19 +3,12 @@ import { z } from 'zod';
 
 import type { SidebarGroup } from './route-types';
 
-/**
- * Which sidebar groups the reader folded: a per-browser preference, kept
- * across reloads and project switches. Storage can be unavailable (private
- * windows, blocked site data), so a fold then lasts for the session only.
- */
 const STORAGE_KEY = 'citeladder:app:sidebar-folds';
 
 const foldsSchema = z.array(z.string());
 
 const listeners = new Set<() => void>();
-/** Folds kept for the session when the browser blocks storage. */
 let volatile: readonly string[] | null = null;
-/** The last snapshot, so an unchanged store returns the same array. */
 let snapshot: { raw: string | null; folds: readonly string[] } = { raw: null, folds: [] };
 
 function readRaw(): string | null {
@@ -34,9 +27,7 @@ function read(): readonly string[] {
   try {
     const parsed = foldsSchema.safeParse(raw ? JSON.parse(raw) : []);
     if (parsed.success) folds = parsed.data;
-  } catch {
-    // A corrupt value is no preference.
-  }
+  } catch {}
   snapshot = { raw, folds };
   return folds;
 }
@@ -50,7 +41,6 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** Fold or unfold one group; the choice persists. */
 export function setGroupFolded(group: SidebarGroup, folded: boolean): void {
   const next = read().filter((entry) => entry !== group);
   if (folded) next.push(group);
@@ -63,7 +53,6 @@ export function setGroupFolded(group: SidebarGroup, folded: boolean): void {
   for (const listener of listeners) listener();
 }
 
-/** Whether the group is folded (default: open). */
 export function isGroupFolded(group: SidebarGroup): boolean {
   return read().includes(group);
 }

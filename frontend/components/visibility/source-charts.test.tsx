@@ -27,7 +27,6 @@ const cellsOf = (table: HTMLElement, name: string) =>
   within(within(table).getByRole('rowheader', { name }).closest('tr')!)
     .getAllByRole('cell')
     .map((cell) => cell.textContent);
-/** A PartDonut's ChartTable body rows as "name share value". */
 const typeRows = (name: string) =>
   within(screen.getByRole('table', { name }))
     .getAllByRole('row')

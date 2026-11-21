@@ -1,4 +1,3 @@
-/** The competitor read composes the roster, focus and suggestion owners; it owns no metrics. */
 import { listSuggestions } from '../projects/competitor-suggestions.ts';
 import { getCompetitorFocus } from '../visibility/competitor-focus.ts';
 import { reference } from './data.ts';
@@ -6,10 +5,6 @@ import { competitorsAndDomains } from './evidence.ts';
 import { notYetMeasured, oneRun, type Selection } from './evidence-analytics.ts';
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
 
-/**
- * The tracked roster (`list`), one competitor against the brand over a run
- * (`focus`), or the pending suggestions later audits found (`suggestions`).
- */
 export async function competitorsRead(
   read: ProjectRead,
   args: Selection & { view: 'list' | 'focus' | 'suggestions'; name?: string | null },

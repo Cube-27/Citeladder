@@ -5,12 +5,7 @@ import { runMetered } from '../models/meter-scope.ts';
 import { AgentError, type Run } from './contracts.ts';
 import type { AgentModel } from './model-calls.ts';
 
-/**
- * The Agent always answers through the platform gateway (B19). Its dispatch
- * owner holds the credits before each call, so calls run in its metering scope.
- */
 export function agentModels(platform: GatewaySettings, transport: Transport = defaultTransport) {
-  // Built inside the promise, so a changed model or an unconfigured gateway rejects, never throws.
   return (run: Run): Promise<AgentModel> =>
     Promise.resolve().then(() => {
       if (run.requested_model !== platform.model) throw new AgentError('model_changed');

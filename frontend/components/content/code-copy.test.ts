@@ -52,7 +52,6 @@ describe('code block Copy', () => {
     await copyCodeBlock(other.button, undefined);
     expect(other.status.textContent).toBe('Couldn’t copy');
 
-    // The next successful press replaces the failure.
     await copyCodeBlock(other.button, { writeText: async () => undefined });
     expect(other.status.textContent).toBe('Copied');
     expect(other.status.hasAttribute('data-failed')).toBe(false);

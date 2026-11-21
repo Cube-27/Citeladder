@@ -7,12 +7,6 @@ import { renderWithProviders as render } from '@/test/render';
 
 import { RunsTable } from './runs-table';
 
-/**
- * The runs list. The list arrives whole and is paginated client-side, so the
- * assertions that matter are that a long history stays navigable and that every
- * row still reaches its own run — a "View" link that loses the id is how a user
- * ends up unable to open the run they just launched.
- */
 const PAGE_SIZE = 10;
 
 function audit(index: number, overrides: Partial<Audit> = {}): Audit {
@@ -71,8 +65,6 @@ describe('RunsTable', () => {
       'Brand repair run · Aug 1, 2026',
     ],
   ] as const)('distinguishes a run by what it measured (%o)', (overrides, name) => {
-    // Brand and Commerce runs measure different things, and a repair reruns
-    // another run's failures; a shared list has to say which one a row is.
     renderTable([audit(1, overrides)]);
 
     expect(screen.getByRole('link', { name })).toBeVisible();
@@ -84,7 +76,6 @@ describe('RunsTable', () => {
       audit(1, { failed_count: 0 }),
       audit(2, { failed_count: 7, created_at: '2026-07-01T00:00:00Z' }),
     ]);
-    // Newest first by default.
     expect(runLinks()[0]).toHaveAttribute('href', `/runs/${audit(1).id}`);
     expect(screen.getByRole('columnheader', { name: /Run/ })).toHaveAttribute(
       'aria-sort',
@@ -102,7 +93,6 @@ describe('RunsTable', () => {
       'aria-sort',
       'descending',
     );
-    // The sort is in the address, so a reload keeps it.
     expect(window.location.search).toBe('?sort=-failed');
     cleanup();
     renderTable([
@@ -122,7 +112,6 @@ describe('RunsTable', () => {
     await user.click(screen.getByRole('button', { name: /Failed/ }));
     expect(window.location.search).toBe('?sort=-failed');
 
-    // The most failures lead the first page, not the eleventh of the new order.
     expect(runLinks()[0]).toHaveAttribute('href', `/runs/${rows[24]!.id}`);
   });
 
@@ -156,7 +145,6 @@ describe('RunsTable', () => {
 
     await user.click(screen.getByRole('button', { name: /next/i }));
 
-    // Page two starts at the eleventh run, not back at the first.
     const afterPaging = runLinks()[0]!;
     expect(afterPaging).toHaveAttribute('href', `/runs/${rows[PAGE_SIZE]!.id}`);
   });
@@ -168,7 +156,6 @@ describe('RunsTable', () => {
     await user.click(screen.getByRole('button', { name: /next/i }));
     await user.click(screen.getByRole('button', { name: /next/i }));
 
-    // 25 runs over pages of 10 leaves five on the last page.
     expect(bodyRows()).toHaveLength(5);
   });
 
@@ -179,7 +166,6 @@ describe('RunsTable', () => {
 
     rerender(<RunsTable audits={[audit(1)]} status="Updating" emptyHeading="No failed runs" />);
 
-    // The same node now holds the note, so assistive tech hears the change.
     expect(screen.getByRole('status')).toBe(region);
     expect(region).toHaveTextContent('Updating');
   });

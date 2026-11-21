@@ -1,9 +1,3 @@
-/**
- * The only module that imports the icon library (lint enforces it), so a swap
- * remaps this file. Glyph names are the app's own vocabulary, each mapped to a
- * Tabler drawing by meaning. Glyphs are plain re-exports so each route chunk
- * keeps only the glyphs it uses.
- */
 import {
   IconActivity,
   IconAlertCircle,
@@ -172,34 +166,12 @@ export {
 
 export type IconGlyph = TablerIcon;
 
-/**
- * Canonical icon map — the single source of truth for which glyph represents
- * each product concept. Nav and shared UI import icons by concept
- * (`ICONS.warning`) instead of picking glyph names ad hoc.
- *
- * Conventions: warning = `TriangleAlert`, danger = `AlertCircle`, success =
- * `Check` (only). Issues uses `OctagonAlert`, not the danger glyph.
- * `Settings` is for the user menu only; the Setup nav concept uses `Wrench`.
- *
- * Visual contract (every glyph — see the icon stroke ladder in
- * `apps/app/src/globals.css` and docs/design.md):
- * - Size is the only thing a call site picks, and a glyph beside text draws
- *   no taller than it: `size-3.5` beside the 14px body (chrome included),
- *   `size-3` in dense chips, `size-4` beside 16px website text and in
- *   empty-state tiles, `size-5` in marketing wells; larger only for marks.
- * - Weight follows from that size: the stylesheet sets it, so don't pass
- *   `stroke`. A deliberate outlier uses inline `style={{ strokeWidth: n }}`.
- * - Colour stays `currentColor`, so `text-ink-2` and `text-accent-text` paint
- *   the glyph. Never hard-code a stroke colour.
- */
 export const ICONS = {
-  // The four layers (§4) — these are the sidebar's primary destinations.
   site: IconWorld,
   demand: IconRadar,
   agent: IconRobot,
   reports: IconFileAnalytics,
   overview: IconLayoutDashboard,
-  // Nav concepts.
   visibility: IconGauge,
   insights: IconChartLine,
   perception: IconQuote,
@@ -217,7 +189,6 @@ export const ICONS = {
   siteHealth: IconShieldCheck,
   issues: IconAlertOctagon,
   opportunities: IconBulb,
-  // Agent workspace.
   newChat: IconEdit,
   skills: IconSparkles,
   context: IconBook,
@@ -225,11 +196,9 @@ export const ICONS = {
   settings: IconSettings,
   billing: IconCreditCard,
   connect: IconPlug,
-  // Shared UI concepts.
   market: IconMapPin,
   warning: IconAlertTriangle,
   danger: IconAlertCircle,
 } as const;
 
-/** A product concept with a canonical glyph. */
 export type IconName = keyof typeof ICONS;

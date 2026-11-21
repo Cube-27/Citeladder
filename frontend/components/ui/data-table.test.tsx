@@ -13,7 +13,6 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow, TableSelectCell 
 
 const PROMPTS = ['Best CRM for startups', 'Cheapest CRM for agencies'];
 
-/** A selectable table as a page builds one: the page owns which rows are selected. */
 function SelectablePrompts() {
   const [selected, setSelected] = useState<readonly string[]>([]);
   let all: boolean | 'indeterminate' = false;
@@ -76,21 +75,17 @@ describe('DataTable', () => {
         String.raw`\[data-table-scope="S"\] tr:not\(\[data-table-state\]\) > :nth-child\(${position}\)\{([^}]*)\}`,
         'u',
       ).exec(rules)?.[1];
-    // The page takes the spare width; the count, the date and the actions hug their content.
     expect(rule(2)).toBe(
       'text-align:start;width:100.000%;max-width:0;min-width:var(--data-table-identity-min);',
     );
     expect(rule(3)).toBe(
       'text-align:end;width:1px;white-space:nowrap;min-width:calc(var(--spacing) * 16);',
     );
-    // The date opens on a gutter after the end-aligned count; the count does not after the page.
     expect(rule(4)).toContain('padding-inline-start:calc(var(--table-cell-padding-x) + 12px);');
     expect(rule(5)).toContain('text-align:end;');
     expect(rules).toContain(':nth-child(3){font-variant-numeric:tabular-nums}');
     expect(rules).toContain(':nth-child(4){font-variant-numeric:tabular-nums}');
-    // The checkbox and the identity column are one pinned block.
     expect(frame).toHaveAttribute('data-pinned', '2');
-    // The actions column keeps an accessible head.
     expect(screen.getByRole('columnheader', { name: 'Open' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((head) => head.getAttribute('scope'))).toEqual([
       'col',
@@ -246,7 +241,6 @@ describe('DataTable', () => {
     expect(screen.getByText('No referrers in this period.')).toBeVisible();
     expect(screen.queryByRole('columnheader')).toBeNull();
 
-    // Under the table's h2 title, the empty state's headline is an h3.
     rerender(table({ kind: 'empty', icon: Inbox, heading: 'No referrers yet' }));
     expect(screen.getByRole('heading', { name: 'Referrers' }).tagName).toBe('H2');
     expect(screen.getByRole('heading', { name: 'No referrers yet' }).tagName).toBe('H3');
@@ -312,7 +306,6 @@ describe('DataTable', () => {
       />,
     );
     expect(screen.getAllByRole('columnheader')).toHaveLength(3);
-    // Four rows of three cell blocks; no placeholder is a line.
     expect(container.querySelectorAll('tbody tr')).toHaveLength(4);
     expect(container.querySelectorAll('tbody [data-skeleton-block]')).toHaveLength(12);
     expect(await screen.findByRole('status', { name: 'Loading runs…' })).toBeInTheDocument();
@@ -328,7 +321,6 @@ describe('DataTable', () => {
     );
     const frame = container.querySelector<HTMLElement>('[data-scroll-content]')!;
     const cue = container.querySelector<HTMLElement>('[data-scroll-frame]')!;
-    // The edges that fade; the table scrolls by its scrollbar, with no stepper buttons.
     const fades = () =>
       (['start', 'end'] as const).filter((edge) => cue.hasAttribute(`data-scroll-${edge}`));
     const layout = (scrollWidth: number, scrollLeft: number) => {
@@ -346,7 +338,6 @@ describe('DataTable', () => {
     expect(frame).toHaveAttribute('tabindex', '0');
     expect(frame).toHaveAttribute('aria-label', 'Wide');
     expect(container.querySelector('[data-scroll-step]')).toBeNull();
-    // The pinned first column covers the leading edge, so only the far edge fades.
     layout(900, 200);
     expect(fades()).toEqual(['end']);
     layout(900, 500);
@@ -400,7 +391,6 @@ describe('DataTable', () => {
     const count = screen.getByRole('status');
     expect(count).toHaveAttribute('aria-live', 'polite');
     rerender(<FilterBar status="12 prompts" />);
-    // The same region, still mounted, carries the new count.
     expect(screen.getByRole('status')).toBe(count);
     expect(count).toHaveTextContent('12 prompts');
   });

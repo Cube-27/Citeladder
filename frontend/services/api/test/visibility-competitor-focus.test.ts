@@ -1,8 +1,3 @@
-/**
- * One roster competitor against the brand over HTTP: the sources cited when
- * it is named with the "cited too" count, the prompts naming it instead of
- * the brand, an unknown roster name, and workspace isolation.
- */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -51,7 +46,6 @@ describe('GET /visibility/competitors/{name}', () => {
           citations: input.cited.map((domain) => ({ url: `https://${domain}/page` })),
         },
       });
-    // Prompt 0: Globex alone on chatgpt, beside you on gemini.
     await answer({
       prompt: 0,
       engine: 'chatgpt',
@@ -66,7 +60,6 @@ describe('GET /visibility/competitors/{name}', () => {
       named: ['Globex'],
       cited: ['g2.example'],
     });
-    // Prompt 1: Globex alone on chatgpt; you alone on perplexity cite review.example.
     await answer({ prompt: 1, engine: 'chatgpt', you: false, named: ['Globex'], cited: [] });
     await answer({
       prompt: 1,
@@ -75,7 +68,6 @@ describe('GET /visibility/competitors/{name}', () => {
       named: [],
       cited: ['review.example'],
     });
-    // Prompt 2: only Initech, never Globex.
     await answer({
       prompt: 2,
       engine: 'chatgpt',
@@ -94,13 +86,10 @@ describe('GET /visibility/competitors/{name}', () => {
       competitor: { id: expect.any(String), name: 'Globex' },
       answers: 3,
       sources: [
-        // Cited in both Globex answers on prompt 0, one of which names you.
         { domain: 'g2.example', answers: 2, answers_naming_you: 1 },
-        // Cited beside Globex once; your perplexity answer cites it too.
         { domain: 'review.example', answers: 1, answers_naming_you: 1 },
       ],
       sources_total: 2,
-      // Prompt 2 never names Globex; ties on engines run in prompt order.
       named_instead: [
         {
           prompt_id: tracked,
@@ -159,7 +148,6 @@ describe('GET /visibility/competitors/{name}', () => {
       audit_id: auditId,
       topic,
     });
-    // review.example is cited in the topic only beside you, never beside Globex.
     expect([body.answers, body.sources, body.named_instead]).toEqual([
       1,
       [],
@@ -201,8 +189,6 @@ describe('GET /visibility/competitors/{name}', () => {
       record(foreign.body.error).message,
       listed.status,
     ]).toEqual([404, 'competitor_not_found', 404, 'Project not found', 200]);
-    // The outsider's own roster entry does not open this tenant's run, and
-    // that is not read as an unknown competitor.
     const crossed = await get(outsider, route(outsider, '/competitors/Globex'), {
       audit_id: auditId,
     });

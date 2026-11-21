@@ -2,13 +2,6 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { cn } from '@/lib/utils';
 
-/**
- * Citation — the pill for one source an AI answer cited: footnote number,
- * favicon, domain and page title. 28px, `radius-sm` (the footnote number
- * alone is a count pill), `surface` with the xs
- * ring; the tracked brand's own pages (`own`) turn `accent-soft` with a Flare
- * number. The title truncates; the full URL belongs in the detail view.
- */
 export function Citation({
   domain,
   index,
@@ -18,7 +11,6 @@ export function Citation({
   own = false,
 }: Readonly<{
   domain: string;
-  /** The footnote number in the answer. */
   index?: number;
   title?: string;
   favicon?: string | null;

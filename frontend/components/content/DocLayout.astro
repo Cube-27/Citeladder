@@ -1,17 +1,4 @@
 ---
-/**
- * DocLayout — a rail, the reading column and a 232px "On this page" column
- * (its right edge fixed, so the extra width comes from the reading column),
- * 48px apart, the rail and Toc sticky under the bar. The docs pass their
- * sidebar in the `rail` slot; the website's legal pages pass `nav`, a list of
- * pages drawn on the rail's 36px rows (the current one on `surface-sunken`).
- * Below 1200px the Toc leaves the grid for an "On this page" JumpMenu across
- * the reading column (on the website, under the page's ArticleHeader, which
- * it passes in the `header` slot so the DOM keeps that order); below
- * 900px the rail leaves too: the docs move it into the top bar's sheet, and
- * `nav` becomes a second JumpMenu named `navSummary`, the two side by side.
- * A Toc taller than the viewport scrolls on its own.
- */
 import JumpMenu from './JumpMenu.astro';
 import Toc, { type TocItem } from './Toc.astro';
 
@@ -19,10 +6,8 @@ type DocNavItem =Readonly<{ label: string; href: string; current?: boolean }>;
 
 interface Props {
   toc: readonly TocItem[];
-  /** The rail's pages, under the `navLabel` landmark name. */
   nav?: readonly DocNavItem[];
   navLabel?: string;
-  /** The rail's JumpMenu name below 900px. */
   navSummary?: string;
 }
 const { toc, nav, navLabel = 'Pages', navSummary = navLabel } = Astro.props;
@@ -191,8 +176,6 @@ const hasBar = hasToc || nav !== undefined;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    /* While the rail is still beside the column, the Toc is the bar's only
-       menu and takes its whole width. */
     .cl-doc-bar-toc {
       grid-column: 1 / -1;
     }

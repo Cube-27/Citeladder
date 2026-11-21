@@ -8,7 +8,6 @@ import {
   type ReferenceSection,
 } from '@/lib/marketing-content/ai-reference';
 
-/** A section's official sources, under its text. */
 function Sources({ links }: Readonly<{ links: ReferenceSection['sources'] }>) {
   return (
     <p className="cl-ref-sources">
@@ -22,7 +21,6 @@ function Sources({ links }: Readonly<{ links: ReferenceSection['sources'] }>) {
   );
 }
 
-/** The AI Instructions sections as Prose children: text, facts, bullets and sources. */
 export function AiInstructionSections() {
   return (
     <>
@@ -56,7 +54,6 @@ export function AiInstructionSections() {
   );
 }
 
-/** The Entity Map entries as Prose children: kind, description, relations and sources. */
 export function EntitySections() {
   return (
     <>

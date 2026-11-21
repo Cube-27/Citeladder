@@ -19,10 +19,6 @@ import { StateBlock } from '@/components/ui/state-block';
 
 type View = { id: string; mode: 'view' | 'compare' } | null;
 
-/**
- * Every revision of one document, newest first. Any earlier revision can be
- * viewed or restored; a restore appends a new revision rather than rewinding.
- */
 export function OutputHistory({
   workspaceId,
   chatId,
@@ -145,7 +141,6 @@ function RevisionRow({
   );
 }
 
-/** Who wrote a revision: a page document's first revision is the page as fetched. */
 function revisionAuthorLabel(author: AgentRevision['author']) {
   switch (author) {
     case 'user':
@@ -161,7 +156,6 @@ function revisionAuthorLabel(author: AgentRevision['author']) {
   }
 }
 
-/** What changed from this revision to the current one, line by line. */
 function RevisionDiff({
   before,
   after,

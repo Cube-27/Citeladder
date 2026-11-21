@@ -23,7 +23,6 @@ const invalid = () =>
     code: 'auth_challenge_invalid',
   });
 
-/** Whether a mail budget admits this request; an exhausted one sends nothing, silently. */
 async function withinBudget(spend: () => Promise<void>): Promise<boolean> {
   try {
     await spend();
@@ -230,7 +229,6 @@ export async function consumeChallenge(
       purpose === 'verification' ? 'auth.email_verified' : 'auth.password_reset',
       user.id,
     );
-    // A completed reset proves mailbox ownership, so earlier failures stop counting.
     if (replacement) {
       await releaseBudget(trx, 'login_email_failure', current.email);
       await revokeDelegatedAccess(trx, user.id, user.id);
@@ -238,11 +236,6 @@ export async function consumeChallenge(
   });
 }
 
-/**
- * Account recovery revokes what the old credentials could have minted: MCP
- * grants and the API keys this person created. Runs in the recovery
- * transaction so access ends with the old sessions.
- */
 export async function revokeDelegatedAccess(trx: Database, userId: string, actorId: string) {
   await revokeGrantsAfterCredentialReset(trx, userId, actorId);
   await revokeKeysAfterCredentialReset(trx, userId, actorId);

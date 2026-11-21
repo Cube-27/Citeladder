@@ -3,7 +3,6 @@ name: Documentation Worker delivery
 on:
   workflow_dispatch:
 
-# Deny by default; every job grants what it needs.
 permissions: {}
 
 concurrency:
@@ -14,11 +13,9 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # require-green-main reads ci.yml's and compose-smoke.yml's runs for this commit.
     permissions:
       actions: read
       contents: read
-    # Up to 30 minutes waiting for CI (require-green-main), then the build.
     timeout-minutes: 50
     outputs:
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}

@@ -10,12 +10,6 @@ const escapeHtml = (value: string) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
   );
 
-/**
- * Every CiteLadder auth and invitation mail goes through here. Caller commits
- * before sending. Acceptance is not inbox delivery. A recipient in a reserved
- * domain is refused without reaching the provider: no mailbox exists there,
- * and such addresses are test fixtures.
- */
 export async function sendAuthMail(
   config: ServiceConfig,
   input: {

@@ -31,7 +31,6 @@ export function CohortCompositionContext({
   );
 }
 
-/** An empty kind list says nothing, so its clause is omitted rather than reading "None". */
 function kindClause(label: string, kinds: readonly string[]) {
   return kinds.length === 0 ? null : `${label}: ${kinds.map(pageKindLabel).join(', ')}.`;
 }

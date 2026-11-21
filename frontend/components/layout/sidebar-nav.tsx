@@ -16,11 +16,6 @@ import {
 } from './nav-items';
 import { RailGroupMenu, RailLink } from './sidebar-rail';
 
-/**
- * Whether a destination is current, and where its row goes: always the
- * destination's front door (owner, 2026-11-16: no remembered screens), scoped
- * to the active project or workspace.
- */
 export function useDestinations() {
   const { pathname = '', search = '' } = useLocation();
   const searchParams = useSearchParams()[0];
@@ -31,7 +26,6 @@ export function useDestinations() {
   return { isActive, href, location: `${pathname}${search}` };
 }
 
-/** Rows for some destinations. */
 export function DestinationRows({ items }: Readonly<{ items: readonly NavItem[] }>) {
   const { isActive, href } = useDestinations();
   const onIntent = useRouteIntent();
@@ -42,7 +36,6 @@ export function DestinationRows({ items }: Readonly<{ items: readonly NavItem[] 
   ));
 }
 
-/** A titled group that folds; folded, it still shows the current page's row. */
 function FoldingGroup({ group }: Readonly<{ group: NavGroup }>) {
   const folded = useGroupFolded(group.group);
   const { isActive } = useDestinations();
@@ -58,7 +51,6 @@ function FoldingGroup({ group }: Readonly<{ group: NavGroup }>) {
   );
 }
 
-/** Dashboard mode's list: one folding group per Dashboard group. */
 export function DashboardNav() {
   const { location } = useDestinations();
   return (
@@ -70,7 +62,6 @@ export function DashboardNav() {
   );
 }
 
-/** Dashboard mode in the rail: a flyout per group. */
 export function DashboardRail() {
   const { isActive, href } = useDestinations();
   return DASHBOARD_GROUPS.map((group) => (
@@ -85,7 +76,6 @@ export function DashboardRail() {
   ));
 }
 
-/** The foot's destinations (Integrations), above the account button. */
 export function SidebarFootNav({ rail }: Readonly<{ rail: boolean }>) {
   const { isActive, href } = useDestinations();
   return (

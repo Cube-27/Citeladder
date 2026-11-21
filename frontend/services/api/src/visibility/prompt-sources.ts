@@ -1,9 +1,3 @@
-/**
- * What the Prompts table filters each prompt's latest measurement by: every
- * brand its answers named and every domain they cited. Both come from the
- * persisted mentions and citations over the same answers the row's rates
- * count, never a re-read of the answers themselves.
- */
 import type { CitedDomain } from '@citeladder/contracts/visibility';
 import { sql } from 'kysely';
 
@@ -17,7 +11,6 @@ type DomainRow = CitedDomain & { audit_id: string; prompt_index: number };
 
 const rowKey = (auditId: string, promptIndex: number) => `${auditId}:${promptIndex}`;
 
-/** Each (run, prompt index)'s cited domains in one cohort, most citations first. */
 async function citedDomains(
   db: Database,
   scope: { workspaceId: string },
@@ -49,7 +42,6 @@ async function citedDomains(
   return found;
 }
 
-/** Each latest row's named brands and cited domains, in place; rows are read per cohort. */
 export async function attachNamedAndSources(
   db: Database,
   scope: { workspaceId: string },

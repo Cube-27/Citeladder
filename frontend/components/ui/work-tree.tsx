@@ -8,12 +8,6 @@ import { ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/**
- * A work tree: status rows, shaded group rows and indented grouping rows on a
- * tree line, every row 40px tall, so opening a level or a count changing only
- * moves what is below it.
- */
-
 function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   return (
     <ChevronDown
@@ -26,7 +20,6 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   );
 }
 
-/** A row's count after its name, wide enough for three digits so a changing count moves nothing. */
 function CountText({ children }: Readonly<{ children: string }>) {
   return (
     <span className={textRole('body', 'text-ink-2 min-w-7 shrink-0 tabular-nums')}>{children}</span>
@@ -35,7 +28,6 @@ function CountText({ children }: Readonly<{ children: string }>) {
 
 type ToggleProps = Omit<PressableProps, 'children'> & { open: boolean };
 
-/** A status's row: chevron, state ring, name and a count kept four digits wide. */
 export function TreeStatusRow({
   open,
   tone,
@@ -63,7 +55,6 @@ export function TreeStatusRow({
   );
 }
 
-/** A group's row: chevron, name, count and any trailing mark. */
 export function TreeGroupRow({
   open,
   name,
@@ -91,10 +82,6 @@ export function TreeGroupRow({
   );
 }
 
-/**
- * A grouping's row on the tree line: the toggle covers the row, and the tick
- * sits above it so it only ticks.
- */
 export function TreeGroupingRow({
   open,
   name,
@@ -127,28 +114,20 @@ export function TreeGroupingRow({
   );
 }
 
-/**
- * One level down: indented under its parent's chevron. Below 768 the three
- * levels indent 8 + 13 + 0 instead of 20 + 33 + 24, so a row's title keeps
- * its width (at least 180 at 390).
- */
 export function TreeIndent({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="phone:ml-2 ml-5 grid gap-1 pb-2">{children}</div>;
 }
 
-/** The groupings under a group, on a tree line. */
 export function TreeLine({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="border-rule phone:ml-2 phone:pl-1 ml-5 grid border-l pl-3">{children}</div>
   );
 }
 
-/** A level's rows under one grouping: aligned past the grouping's chevron. */
 export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="phone:ms-0 ms-6 pb-2">{children}</div>;
 }
 
-/** An empty level in the rows' rhythm. */
 export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <p className={textRole('body', 'text-ink-2 ml-5 flex h-10 items-center px-2 phone:ml-2')}>
@@ -157,7 +136,6 @@ export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** A level loading: three row-high blocks, and the words for a screen reader. */
 export function TreeLoading({ label }: Readonly<{ label: string }>) {
   return (
     <div aria-busy className="phone:ml-2 ml-5 grid gap-1">

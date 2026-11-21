@@ -1,12 +1,4 @@
 ---
-/**
- * A research guide (the WebResearchGuide template): ContentArticle with a
- * Toc, the ArticleHeader with the review date, the guide's Markdown in
- * Prose with its FAQ as a FaqList, an optional product section from the
- * guide's frontmatter (a heading, the guide's own copy and a link to the
- * module), then the sources, the author card
- * when the guide credits a person, and More guides.
- */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import Prose from '@/components/content/Prose.astro';
 import '@/components/marketing/content/reading.css';
@@ -50,9 +42,7 @@ const breadcrumb = breadcrumbJsonLd([
   { name: parent.label, path: parent.href },
   { name: meta.title, path: meta.slug },
 ]);
-// The visible FAQ section, mirrored as FAQPage data so the questions are machine-readable.
 const faqs = researchFaqs(article.markdown);
-// The credited person, when the guide names one; otherwise the organization authors it.
 const author = researchAuthor(article);
 const jsonLd = [
   researchArticleJsonLd(meta, author),
@@ -65,7 +55,6 @@ const toc = [
   ...researchHeadings(parts.after),
   ...(product ? [{ id: headingId(product.heading), label: product.heading, level: 2 }] : []),
 ];
-// Curated related guides, or the next ones in publication order, so every guide ends with a way on.
 const more = moreGuides(article);
 ---
 

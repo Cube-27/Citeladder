@@ -1,4 +1,3 @@
-/** Fresh SQL-baseline schema for bootstrap/seed tests. Never reset a supplied database. */
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -13,7 +12,6 @@ import { ownerDatabaseUrl } from './support.ts';
 export function disposableDatabase() {
   const root = fileURLToPath(new URL('../../../../', import.meta.url));
   const name = `citeladder_bootstrap_test_${randomUUID().replaceAll('-', '')}`;
-  // The owner creates, migrates and drops it; the code under test connects as the application role.
   const owner = new URL(ownerDatabaseUrl());
   const admin = new URL(owner);
   admin.pathname = '/postgres';

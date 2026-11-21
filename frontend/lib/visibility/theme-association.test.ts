@@ -79,7 +79,6 @@ describe('themeAssociation', () => {
         },
       ],
       top: { theme: 'support', share: 0.5 },
-      // Tiny's 100% pricing is too few to lead.
       gap: { theme: 'pricing', leader: 'Rival', points: 40 },
     });
   });

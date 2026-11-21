@@ -13,7 +13,6 @@ const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 const environment = loadEnv(mode, frontendRoot, '');
-/** A build value from the process environment, then the local .env file. */
 const env = (name) => process.env[name] ?? environment[name];
 if (mode === 'production') {
   publicOrigins(
@@ -22,7 +21,6 @@ if (mode === 'production') {
     process.env.LOCAL_COMPOSE_BUILD !== 'true',
   );
 }
-/** Bake each public value into the bundle as `process.env.NAME`. */
 const publicDefines = Object.fromEntries(
   [
     'NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS',
@@ -36,9 +34,6 @@ const publicDefines = Object.fromEntries(
 );
 
 export default defineConfig({
-  // Pages are built once and served as free static assets. Only routes that
-  // read the request (pricing, contact and the apex
-  // proxy in middleware) opt out with `prerender = false`.
   output: 'static',
   build: { format: 'file' },
   trailingSlash: 'never',

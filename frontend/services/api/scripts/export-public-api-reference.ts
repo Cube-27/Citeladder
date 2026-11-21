@@ -1,4 +1,3 @@
-/** The docs site's public API reference is the document `GET /v1/openapi.json` serves. */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 import { publicApiDocument } from '../src/public-api/openapi.ts';

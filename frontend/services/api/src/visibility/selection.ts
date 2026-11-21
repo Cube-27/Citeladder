@@ -1,12 +1,3 @@
-/**
- * The measurement selection every persisted visibility reader is scoped by.
- *
- * Ports `RunSelection`, `authorize_run_set`, `validate_engine_and_range` and
- * the evidence base scope (`_evidence_statement`) from
- * `app/domain/analysis`. A selected run outside the project is not found,
- * never an empty answer; an answer whose task did not succeed is not
- * evidence of anything, so it is excluded from the base scope itself.
- */
 import { promptCohortSchema } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 
@@ -19,17 +10,8 @@ import { chunked, groupBy } from '../lists.ts';
 
 const visibility = policy.visibility;
 
-/**
- * Why a selection cannot be served. They are different answers, and a reader
- * must be able to tell them apart:
- * - `not_found`: a named run, run set or analysis that does not exist here.
- * - `not_measured`: nothing dashboard-ready to read yet (no completed run, or a
- *   period that measured nothing).
- * - `metrics_pending`: the run exists but its metric snapshot is not written.
- */
 export type AnalysisMissing = 'not_found' | 'not_measured' | 'metrics_pending';
 
-/** A selection that cannot be served: the route answers 404 with a code per reason. */
 export class AnalysisNotFoundError extends Error {
   readonly reason: AnalysisMissing;
 
@@ -39,13 +21,11 @@ export class AnalysisNotFoundError extends Error {
   }
 }
 
-/** A selection that is malformed: the route answers 422 with this message. */
 export class TrendQueryError extends Error {}
 
 export type RunSelection = {
   workspaceId: string;
   projectId: string;
-  /** The measurement market; `null` is the project default. Named runs imply their own. */
   marketId: string | null;
   auditId: string | null;
   auditIds: string[] | null;
@@ -53,7 +33,6 @@ export type RunSelection = {
   cohort: string;
   fromAt: ParsedDatetime | null;
   toAt: ParsedDatetime | null;
-  /** Answers whose prompt was filed under this topic when its run froze it. */
   topicId?: string | null;
 };
 
@@ -71,7 +50,6 @@ function requireAware(label: string, value: ParsedDatetime | null): void {
   }
 }
 
-/** A known engine and an aware, ordered window, or a 422. */
 export function validateEngineAndRange(
   selection: Pick<RunSelection, 'logicalEngine' | 'fromAt' | 'toAt'>,
 ): void {
@@ -95,40 +73,23 @@ export function validateCohort(cohort: string): void {
   }
 }
 
-/**
- * A per-prompt read also serves a prompt's own cohort that no headline read
- * requests (brand questions): every group shows on its prompt (owner, 2026-11-15).
- */
 export function validatePromptCohort(cohort: string): void {
   if (!promptCohortSchema.safeParse(cohort).success) validateCohort(cohort);
 }
 
-/**
- * The cohorts a selection reads: core is every organic cohort, and "all" is
- * the unbranded and branded prompts together.
- */
 export function selectedCohorts(cohort: string): readonly string[] {
   if (cohort === visibility.all_cohort) return visibility.all_cohorts;
   return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 
-/**
- * The cohorts a Perception read takes: the branded and "all" selections also
- * read the brand questions, whose answers are about the brand (AV-24).
- */
 export function perceptionCohorts(cohort: string): readonly string[] {
   const mapped: Readonly<Record<string, readonly string[]>> = visibility.perception_cohorts;
   return Object.hasOwn(mapped, cohort) ? mapped[cohort]! : selectedCohorts(cohort);
 }
 
-/** Without named runs a selection reads its market; named runs bring their own. */
 const readsMarket = (selection: Pick<RunSelection, 'auditId' | 'auditIds'>) =>
   selection.auditId === null && !selection.auditIds?.length;
 
-/**
- * Every run in `auditIds` belongs to the project, is dashboard-ready and
- * measured one market, or throw: markets never pool.
- */
 export async function authorizeRunSet(
   db: Database,
   scope: { workspaceId: string; projectId: string },
@@ -153,11 +114,6 @@ export async function authorizeRunSet(
     throw new TrendQueryError('Selected runs measured different markets');
 }
 
-/**
- * Validate the request, normalize its window to UTC and authorize its runs:
- * `_authorized_selection` at the default evidence limit, which always passes
- * the limit bound.
- */
 export async function authorizedSelection(
   db: Database,
   selection: RunSelection,
@@ -183,12 +139,6 @@ export async function authorizedSelection(
   return normalized;
 }
 
-/**
- * The evidence base scope: successful answers of the project's dashboard-ready
- * runs, filtered by the selection. Every reader narrows or groups this one
- * statement, so they agree on what "the selection" contains. Perception
- * passes its own wider `cohorts`.
- */
 export function evidenceScope(
   db: Database,
   selection: RunSelection,
@@ -208,11 +158,6 @@ export function evidenceScope(
   return query;
 }
 
-/**
- * The latest dashboard-ready brand run of a market (`null` is the project
- * default), or null when none finished: what "latest" means on every
- * Visibility, Opportunity and Overview read. A Commerce run is never it.
- */
 export async function latestBrandRunId(
   db: Database,
   scope: { workspaceId: string; projectId: string; marketId: string | null },
@@ -233,12 +178,6 @@ export async function latestBrandRunId(
   return latest?.id ?? null;
 }
 
-/**
- * The project's dashboard-ready brand runs the selection names, or those of
- * its market and window: the runs `evidenceScope` reads answers from, for
- * readers of a run's persisted facts. Visibility measures brand runs only, so
- * a named Commerce run reads as empty here.
- */
 export function selectedRuns(db: Database, selection: RunSelection) {
   let query = db
     .selectFrom('audits as audit')
@@ -259,10 +198,8 @@ export function selectedRuns(db: Database, selection: RunSelection) {
   return query;
 }
 
-/** `coalesce(audit.completed_at, audit.created_at)`: when the run was observed. */
 export const observedAt = sql`coalesce(audit.completed_at, audit.created_at)`;
 
-/** Each analysis's citations in answer order, for readers that report cited domains. */
 export async function citationsByAnalysis(
   db: Database,
   workspaceId: string,

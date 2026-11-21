@@ -86,7 +86,6 @@ describe('committed API work at PostgreSQL', () => {
   it('answers the committing request without waiting for the runner start', async () => {
     let started = 0;
     const app = createApp(config, db, {
-      // A stalled metadata or Cloud Run call: the start never settles.
       startRunner: () => {
         started++;
         return new Promise<boolean>(() => {});
@@ -144,13 +143,11 @@ describe('committed API work at PostgreSQL', () => {
         .execute();
     }, wake);
     const afterPayload = wake.mock.calls.length;
-    // The same observer wakes for a real task insert.
     let id = '';
     await observeCommittedWork(async () => {
       id = await enqueue(db);
     }, wake);
     const afterInsert = wake.mock.calls.length;
-    // A raw statement wakes only when it writes a work table (the crawl task writer is raw).
     await observeCommittedWork(async () => {
       await sql`update workspaces set name = name where id = ${workspaces[0]!}`.execute(db);
     }, wake);
@@ -293,8 +290,6 @@ describe('committed API work at PostgreSQL', () => {
 it('overlapping runners share real leases and settle each workspace task once', async () => {
   const ids = await Promise.all(workspaces.map((workspace) => enqueue(db, workspace)));
   const executed: string[] = [];
-  // A claim scope is one workspace, so each runner drains one lane per workspace
-  // and both runners still overlap on every task.
   const lanes = () =>
     workspaces.map((workspaceId, index) => {
       const worker = new AnalyticsWorker(db, loadWorkerSettings({}), {
@@ -323,8 +318,6 @@ it('overlapping runners share real leases and settle each workspace task once', 
 });
 
 it('composes every production lane and periodic owner on an idle disposable database', async () => {
-  // Global workers must not claim rows retained by other files in the shared suite.
-  // A scratch schema is DDL, so this test connects as the schema owner throughout.
   const schema = `runner_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(ownerDatabaseUrl());
   url.searchParams.set('options', `-c search_path=${schema}`);
@@ -339,7 +332,6 @@ it('composes every production lane and periodic owner on an idle disposable data
     const tables = await sql<{
       tablename: string;
     }>`select tablename from pg_catalog.pg_tables where schemaname = 'public'`.execute(isolated);
-    // Idle owners need column contracts, without duplicating every production index.
     for (const table of tables.rows)
       await sql`create table ${sql.id(schema, table.tablename)} (like ${sql.id('public', table.tablename)})`.execute(
         isolated,

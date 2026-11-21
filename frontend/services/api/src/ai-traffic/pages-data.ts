@@ -1,4 +1,3 @@
-/** Each population reaches one row per path hash before the cross-signal join. */
 import { sql, type RawBuilder } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from '../crawl-logs/state.ts';
@@ -23,7 +22,6 @@ export type PageOptions = CrawlReadOptions & {
   pattern?: string | null;
   after?: string[];
   dataset_limit?: number;
-  /** Aggregate each row's source ids (`crawl_ids`, `landing_ids`, `citation_ids`, `audit_ids`). */
   provenance?: boolean;
 };
 export const pageSorts = {
@@ -72,7 +70,6 @@ function pageCursor(sortValue: RawBuilder<unknown>, ascending: boolean, after: s
   if (ascending) return sql`(${sortValue},url_hash)>(${sortAfter},${hashAfter})`;
   return sql`(${sortValue},url_hash)<(${Number(sortAfter)},${hashAfter})`;
 }
-/** A Pages sort key; an unknown one is refused. */
 export function pageSortKey(sort?: string | null): keyof typeof pageSorts {
   if (sort === null || sort === undefined) return 'requests_desc';
   if (!isPageSort(sort)) throw new ApiError(422, 'Invalid Pages sort');
@@ -81,11 +78,6 @@ export function pageSortKey(sort?: string | null): keyof typeof pageSorts {
 function isPageSort(sort: string): sort is keyof typeof pageSorts {
   return Object.hasOwn(pageSorts, sort);
 }
-/**
- * The joined rows for a page, `dataset_limit` (else one past the page size)
- * after the keyset position, in sort order. Provenance id arrays aggregate
- * only for `provenance`, the persisted insight derivation; reads leave them null.
- */
 export async function pageDataset(db: Database, scope: CrawlScope, input: PageOptions = {}) {
   const { options, crawl, filtered, formatted, format } = await pageSelection(db, scope, input);
   const sort = pageSortKey(options.sort);
@@ -103,7 +95,6 @@ export async function pageDataset(db: Database, scope: CrawlScope, input: PageOp
   ).execute(db);
   return { rows: rows.rows, crawl };
 }
-/** How many rows the filters select across the whole window; an export counts before it reads. */
 export async function pageCount(db: Database, scope: CrawlScope, input: PageOptions = {}) {
   const { filtered } = await pageSelection(db, scope, input);
   const result = await sql<{

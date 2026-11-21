@@ -1,15 +1,9 @@
-/**
- * The TypeScript service's OpenAPI document, generated from its route
- * contracts with zod's JSON Schema output. Request schemas use zod's input
- * view and responses its output view.
- */
 import { z } from 'zod';
 
 import type { RouteContract } from './routes.ts';
 
 export type JsonSchema = { [key: string]: unknown };
 
-/** Emits a request (`input`) or response (`output`) schema for the document. */
 export type SchemaEmitter = (schema: z.ZodType, io: 'input' | 'output') => JsonSchema;
 
 type OpenApiParameter = {
@@ -89,7 +83,6 @@ function operation(route: RouteContract<string>, emit: SchemaEmitter): OpenApiOp
   return result;
 }
 
-/** Bodies and responses are inlined unless `emit` references shared components. */
 export function openApiDocument(
   routes: readonly RouteContract<string>[],
   emit: SchemaEmitter = jsonSchema,

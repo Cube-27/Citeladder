@@ -5,11 +5,6 @@ import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { holdsWrite } from './config.ts';
 
-/**
- * A connection names the workspaces it may read, never their IDs alone. The
- * personal view lists the grant's workspaces the account still belongs to; an
- * Owner/Admin sees only their own workspace and which account connected.
- */
 export async function listConnections(
   db: Database,
   scope: { userId: string; workspaceId?: string },
@@ -62,7 +57,6 @@ export async function listConnections(
   });
 }
 
-/** Names of the given workspaces, limited to the member's own when one is named. */
 async function workspaceNames(db: Database, ids: string[], memberId: string | null) {
   const unique = [...new Set(ids)];
   if (!unique.length) return new Map<string, string>();
@@ -82,7 +76,6 @@ async function workspaceNames(db: Database, ids: string[], memberId: string | nu
     );
   return new Map((await query.execute()).map((row) => [row.id, row.name]));
 }
-/** The grant's workspace list with one workspace removed. */
 const withoutWorkspace = (workspaceId: string) => sql<string>`workspace_ids - ${workspaceId}::text`;
 
 /**

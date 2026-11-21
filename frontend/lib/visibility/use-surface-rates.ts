@@ -5,19 +5,6 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
 
-/**
- * The observed-surface rates, scoped to the same resolved run selection the
- * rest of the tab reads.
- *
- * Its own hook rather than more lines inside `useVisibilityQueries`: it is the
- * only read here that is gated on WHICH surface is selected, and folding that
- * condition into the shared body put a filter-specific branch in front of
- * every other query.
- *
- * Requested only when the filter names an observed surface. The five rates are
- * properties of that surface, and asking an answer engine for a trigger rate
- * is a category error rather than a query with an empty result.
- */
 export function useSurfaceRates({
   requestScope,
   engine,

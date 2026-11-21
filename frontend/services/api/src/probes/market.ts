@@ -1,8 +1,3 @@
-/**
- * The Market tab (W12, AV-35/36): what the newest labelled probe's answers
- * say the brand is known for, and the brand's rank, leader and gap on every
- * current theme. Every number is a position score code computes here.
- */
 import type { ProbeMarket, ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { policy } from '../config.ts';
@@ -20,7 +15,6 @@ const OTHER = 'other';
 const BRAND = 'brand';
 const TOP_THEMES = 3;
 
-/** The brand's known-for scores over `answers`, highest first; Other is `theme_id: null`. */
 function knownFor(answers: readonly ProbeAnswer[], themes: readonly Theme[]) {
   const asked = answers.filter((answer) => answer.question.question === 'known_for');
   const scores = positionScores(
@@ -42,7 +36,6 @@ function knownFor(answers: readonly ProbeAnswer[], themes: readonly Theme[]) {
     .sort((a, b) => b.score - a.score || a.theme.localeCompare(b.theme));
 }
 
-/** Every tracked business's score on one theme's answers, the brand first, then its rank, leader and gap. */
 function themeRow(answers: readonly ProbeAnswer[], roster: readonly TrackedName[]) {
   const scores = positionScores(
     answers.map((answer) =>
@@ -62,8 +55,6 @@ function themeRow(answers: readonly ProbeAnswer[], roster: readonly TrackedName[
     named: (scores.get(id ?? BRAND)?.raised ?? 0) > 0,
   }));
   const own = entities.find((entity) => entity.kind === 'brand')!;
-  // Ties keep the brand first, so a shared top score reads as "You lead";
-  // a named business beats an unnamed one on a score that rounded to 0.
   const leader = entities.reduce(
     (best, entity) =>
       entity.score > best.score || (entity.score === best.score && entity.named && !best.named)
@@ -92,7 +83,6 @@ const themeAnswers = (answers: readonly ProbeAnswer[], themeId: string) =>
     (answer) => answer.question.question === 'theme' && answer.question.theme_id === themeId,
   );
 
-/** The brand's rank on an engine's top theme: its first real theme, never Other. */
 export function rankInTopTheme(
   own: readonly ProbeAnswer[],
   top: readonly KnownFor[],
@@ -107,7 +97,6 @@ export function rankInTopTheme(
   return named ? { kind: 'rank', rank: row.rank } : { kind: 'not_named' };
 }
 
-/** The probe's language when every market shares one, else empty. */
 function oneLanguage(markets: readonly { language_code: string }[]) {
   const [language = '', ...others] = new Set(markets.map((market) => market.language_code));
   return others.length ? '' : language;

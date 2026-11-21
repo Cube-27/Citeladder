@@ -1,8 +1,3 @@
-/**
- * Market probes on Perception (AV-29 to AV-36): the probe bar and Run probe
- * quote, the launch, the Market and Objections reads and the objection-group
- * edits. Each handler calls one owner in `src/probes/`.
- */
 import { auditSchema } from '@citeladder/contracts/audits';
 import {
   objectionGroupMergeRequestSchema,

@@ -1,7 +1,3 @@
-/**
- * The probe bar and the Run probe dialog: what a probe would ask and charge
- * before anything runs (AV-34), the newest probe's state and its schedule.
- */
 import { auditScheduleCadenceSchema } from '@citeladder/contracts/audits';
 import type { ProbeQuote, ProbeStatus } from '@citeladder/contracts/probes';
 
@@ -28,7 +24,6 @@ async function aiCreditBalance(db: Database, workspaceId: string, at: Date) {
   return [...balances.values()].reduce((sum, balance) => sum + balance.remaining, 0);
 }
 
-/** What Run probe would ask and its exact AI-credit cost: only the engine-market pairs that run. */
 async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Promise<ProbeQuote> {
   const at = new Date();
   const [plan, balance] = await Promise.all([
@@ -49,7 +44,6 @@ async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Pr
   };
 }
 
-/** The probe bar: the quote, the newest launch and the probe schedule. */
 export async function probeStatus(
   db: Database,
   scope: Scope,

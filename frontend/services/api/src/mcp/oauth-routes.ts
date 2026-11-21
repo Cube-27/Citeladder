@@ -106,7 +106,6 @@ async function authenticatedClient(
     .where('client_id', '=', clientId)
     .executeTakeFirst();
   const metadata = record(row?.client_metadata);
-  // A secret is a secret in the body or the header; a public client sends none.
   const registered = metadata.token_endpoint_auth_method === 'none' ? 'none' : 'secret';
   if (!row || registered !== (method === 'none' ? 'none' : 'secret'))
     throw new OAuthError('invalid_client', 'Invalid client authentication');
@@ -153,7 +152,6 @@ async function credentialFreeHeaders(c: Context<AppEnv>, next: Next) {
   }
   await next();
 }
-/** What the OAuth route groups share: configuration, database, MCP settings and resource URL. */
 type OAuthRoutes = { config: ServiceConfig; db: Database; mcp: McpConfig; resource: string };
 function registerMetadataRoutes(
   app: Hono<AppEnv>,
@@ -185,7 +183,6 @@ function registerMetadataRoutes(
     });
   app.get('/.well-known/oauth-protected-resource/mcp', protectedMetadata);
 }
-/** The client an authorization request names, locked for the request's admission. */
 async function authorizationClient(trx: Database, q: URLSearchParams) {
   const client = await trx
     .selectFrom('mcp_oauth_clients')
@@ -200,7 +197,6 @@ async function authorizationClient(trx: Database, q: URLSearchParams) {
     );
   return client;
 }
-/** The scopes an authorization request may be granted, once PKCE, scope and resource check out. */
 function authorizationScopes({
   q,
   clientMetadata,
@@ -216,18 +212,15 @@ function authorizationScopes({
     !/^[A-Za-z0-9_-]{43}$/u.test(q.get('code_challenge') ?? '')
   )
     throw new OAuthError('invalid_request', 'S256 PKCE is required');
-  // Write is only offered here; the person decides on the consent page.
   const requested = (q.get('scope') ?? '').split(/\s+/u).filter(Boolean);
   if (requested.length && !requested.includes(mcpPolicy.read_scope))
     throw new OAuthError('invalid_scope', 'Unsupported scope');
-  // Never more than the client registered for.
   const registered = grantableScopes(scalarText(record(clientMetadata).scope) || null);
   const scopes = grantableScopes(q.get('scope')).filter((scope) => registered.includes(scope));
   if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
     throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
   return scopes;
 }
-/** Cap a client's pending requests, then admit this one by network and prior approval. */
 async function admitAuthorizationRequest(
   trx: Database,
   {
@@ -354,8 +347,6 @@ export function registerOAuthRoutes(
   const app = new Hono<AppEnv>();
   app.onError(oauthError);
   const resource = `${mcp.origin}/mcp`;
-  // Protocol endpoints are guarded by the transport owner before dispatch. The
-  // credential-free OAuth endpoints answer browser-hosted clients too.
   for (const path of ['/mcp/register', '/authorize', '/token', '/revoke', '/.well-known/*'])
     app.use(path, credentialFreeHeaders);
   const routes = { config, db, mcp, resource };

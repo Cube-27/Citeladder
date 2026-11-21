@@ -28,7 +28,6 @@ const FILTERS = ['Latest run', 'All engines', 'All markets', 'All topics'] as co
 const METRICS = ['Visibility', 'Share of voice', 'Position', 'Win rate', 'Sentiment'];
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-/** Each week's start: 8 Sep 2026 onwards, so the axis and the event marks share real time. */
 const WEEK_TIMES = WEEKS.map((_, index) => Date.UTC(2026, 8, 8) + index * WEEK_MS);
 
 const winRate = (brand: Brand) => percent((brand.wins / WIN_ANSWERS) * 100);
@@ -36,7 +35,6 @@ const signed = (net: number) => (net > 0 ? `+${net}` : `${net}`);
 
 const OWN = BRANDS.find((brand) => brand.own === true);
 if (!OWN) throw new Error('The demo dataset needs its own brand.');
-/** Where the demo brand ranks by visibility, and the brand just ahead: computed, as the app does. */
 const AHEAD = BRANDS.filter((brand) => brand.visibility > OWN.visibility);
 const RANK = AHEAD.length + 1;
 
@@ -78,7 +76,6 @@ const EVENTS: readonly TrendEvent[] = TREND_EVENTS.map((event) => ({
   kind: event.kind,
 }));
 
-/** "Your brand over time": the demo brand's visibility against the three tracked brands, with what changed. */
 function BrandTrend() {
   return (
     <StepChart
@@ -141,12 +138,6 @@ const COMPETITOR_COLUMNS: readonly ScreenColumn<Brand>[] = [
   },
 ];
 
-/**
- * The home page's first product view: Brand → Insights inside the app's own
- * chrome, as the app and the approved navigation mockup draw it. The lede
- * (where you rank, the five key figures), your brand over time with its
- * event marks, then you and your competitors, cut by the frame's foot.
- */
 export function ScreenAppInsights() {
   return (
     <div className="cl-screen cl-screen--app cl-screen--app-overview">

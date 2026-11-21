@@ -1,13 +1,4 @@
 ---
-/**
- * ApiExamples — the endpoint page's examples column: a request card whose bar
- * switches the language (cURL, JavaScript, Python) beside a Copy button, and
- * a response card whose bar names the status beside its own Copy button, the
- * selected tab on the accent underline. Both cards are CodeBlock markup, so
- * the system's copy behaviour and look apply, with the samples coloured at
- * build time (code-highlight.ts). Held in a viewport-high column, the cards
- * share its height and each scrolls inside itself; the column never scrolls.
- */
 import CodeBlock from '@/components/content/CodeBlock.astro';
 import type { ApiOperation } from '../lib/api-reference';
 import ApiCopyButton from './ApiCopyButton.astro';
@@ -92,8 +83,6 @@ const responseExample =
   .cl-docs-examples :global(.cl-code-bar) {
     flex-shrink: 0;
   }
-  /* A long sample scrolls inside its card, on the narrow scrollbar. In the
-     page flow a vertical swipe on a short sample still scrolls the page. */
   .cl-docs-examples :global(.cl-code-pre) {
     min-height: 0;
     max-height: 420px;
@@ -101,8 +90,6 @@ const responseExample =
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
   }
-  /* In the held column the request keeps its height up to 40% of the
-     viewport and the response takes the rest; neither hands its scroll on. */
   @media (min-width: 1280px) {
     .cl-docs-examples :global(.cl-code-pre) {
       max-height: none;
@@ -175,8 +162,6 @@ const responseExample =
 </style>
 
 <script>
-  // The language tabs swap in the chosen sample's coloured markup, so Copy
-  // reads what is shown.
   for (const root of document.querySelectorAll<HTMLElement>('[data-api-request]')) {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-api-lang]')];
     const code = root.querySelector('pre code');

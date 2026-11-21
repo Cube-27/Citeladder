@@ -10,11 +10,6 @@ import {
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
-/**
- * The Perception tab's read: the same run / engine / prompt-type selection as
- * Sources. It rechecks while answers are still being classified, and a range
- * with no runs reads nothing rather than keeping the previous selection.
- */
 export function usePerception(
   filters: Pick<SourceFilters, 'engine' | 'cohort'>,
   queries: SourceQueries,

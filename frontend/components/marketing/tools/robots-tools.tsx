@@ -75,7 +75,6 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
           return text;
         }}
       >
-        {/* Legend and helper read like a Field's label and hint; each row is a 24px target. */}
         <fieldset className="flex flex-col gap-1">
           <legend className="text-body-sm text-ink mb-2">Block selected crawlers</legend>
           <p className="cl-tool-group-hint">

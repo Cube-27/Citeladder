@@ -75,7 +75,6 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'name', hideLabel: true },
 ];
 
-/** What the list shows instead of rows: the read's loading or error. */
 function connectionsState(
   query: UseQueryResult<McpConnection[]>,
   adminView: boolean,
@@ -100,10 +99,8 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
   const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
   const title = adminView ? 'Connections that can read this workspace' : 'Your connections';
   const empty = query.isSuccess && query.data.length === 0;
-  // The workspace's list shows only what it holds; a failed read still says so.
   if (adminView && (query.isPending || empty)) return null;
   return (
-    // The table is the named region; the group only heads it.
     <SettingsGroup title={title} region={false}>
       {empty ? (
         <StateBlock kind="empty" icon={ICONS.agent} heading="No connections yet" />
@@ -183,7 +180,6 @@ export function McpConnections() {
           <ConnectStrip surface="app" />
         </SettingRows>
       </SettingsGroup>
-      {/* Your approvals and the workspace's: one group each. */}
       <ConnectionList />
       {mayManage && activeWorkspaceId ? (
         <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />

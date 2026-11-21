@@ -27,7 +27,6 @@ test('built app hydrates root, deep links and direct HTML while blocking injecte
       body: JSON.stringify({ error: { code: 'unauthorized', message: 'Sign in' } }),
     }),
   );
-  // Enforced and report-only violations alike: each one is a report production receives.
   await page.addInitScript(() => {
     const seen: string[] = [];
     Reflect.set(window, 'cspViolations', seen);
@@ -75,11 +74,6 @@ test('built marketing hydrates with one enforced header and blocks injected scri
     if (/violates.*(security policy|directive)/i.test(message.text()))
       violations.push(message.text());
   });
-  // Exactly one policy per page (docs/frontend-architecture.md): Astro puts a
-  // prerendered page's policy in a <meta> element, served as a static asset,
-  // and an on-demand page's in the response header. On-demand pricing reads
-  // the plan catalog from ORIGIN_UPSTREAM, which nothing serves here, so it
-  // renders its catalog-outage page (503) under the same policy.
   const pages = [
     { path: '/', carrier: 'meta', status: 200 },
     { path: '/pricing', carrier: 'header', status: 503 },
@@ -102,8 +96,6 @@ test('built marketing hydrates with one enforced header and blocks injected scri
       [...document.querySelectorAll('astro-island')].every((island) => !island.hasAttribute('ssr')),
     );
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    // The banner is revealed by the chrome's own script, so it proves the
-    // policy admits the page scripts as well as the islands.
     await expect(page.getByRole('region', { name: 'Cookie consent' })).toBeVisible();
   }
   expect(violations).toEqual([]);
@@ -116,7 +108,6 @@ test('built marketing hydrates with one enforced header and blocks injected scri
   await checkInjectedBeacon(page);
   const missing = await page.request.get('http://127.0.0.1:8794/not-a-page.html');
   expect(missing.status()).toBe(404);
-  // The 404 page is prerendered too, so its policy is its one <meta> element.
   expect(missing.headers()['content-security-policy']).toBeUndefined();
   expect((await missing.text()).match(/http-equiv="content-security-policy"/gu)).toHaveLength(1);
 });

@@ -3,7 +3,6 @@ import { Absence } from '@/components/ui/absence';
 import { Inline } from '@/components/ui/layout';
 import { Tag } from '@/components/ui/tag';
 
-/** Each answer format's one label, wherever an answer's formats are named. */
 export const ANSWER_FORMAT_LABELS = {
   shopping: 'Shopping',
   map: 'Map',
@@ -11,7 +10,6 @@ export const ANSWER_FORMAT_LABELS = {
   image: 'Images',
 } as const satisfies Record<AnswerFormat, string>;
 
-/** What an answer showed besides text, as tags; each kind of absence keeps its own word. */
 export function AnswerFormatTags({ formats }: Readonly<{ formats: AnswerFormats }>) {
   switch (formats.kind) {
     case 'observed':

@@ -23,7 +23,6 @@ import { PageForm } from '../sections/page-form';
 import { PageSection } from '../sections/page-section';
 import { FaqList, Steps } from '../sections/steps-faq-cta';
 
-/** What each failed send tells the visitor; every one ends with the email fallback. */
 const FAILURE_COPY = {
   error: "We couldn't send your message. Please try again, or email us at ",
   'rate-limited':
@@ -233,10 +232,6 @@ function ContactForm() {
   );
 }
 
-/**
- * What happens after a message is sent. These describe the reply process,
- * not a response-time commitment.
- */
 const NEXT_STEPS = [
   {
     title: 'Tell us what you need',
@@ -252,10 +247,6 @@ const NEXT_STEPS = [
   },
 ] as const;
 
-/**
- * `/contact`: the opening band, the enquiry form beside what happens next,
- * then the company, support and grievance details the legal pages point to.
- */
 export function ContactPage() {
   return (
     <main id="main">

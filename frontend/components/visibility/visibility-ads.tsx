@@ -26,10 +26,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-/**
- * Paid ads shown in ChatGPT Search answers. Ads are reported apart from
- * sources and citations; an engine without ads is not applicable, never zero.
- */
 export function VisibilityAds({
   filters,
   queries,
@@ -71,7 +67,6 @@ export function AdsView({
   );
 }
 
-/** A read with no ads to show, with each engine's applicability named. */
 function AdsState({
   state,
   engines = [],
@@ -187,7 +182,6 @@ const ADVERTISER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'appearances', label: 'Appearances', width: 'figure', kind: 'number' },
   { key: 'prompts', label: 'Prompts', width: 'figure', kind: 'number' },
   { key: 'share', label: 'Share', width: 'figure', kind: 'number' },
-  // A date range is text, aligned like every other date column.
   { key: 'seen', label: 'Seen', width: 'date' },
 ];
 

@@ -7,15 +7,6 @@ import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SHEET_FACE } from '@/components/ui/slip';
 
-/**
- * Drawer — a sheet for editing or inspecting one item without leaving the
- * list behind it. It floats 8px from the viewport edges, 560 wide (640
- * `wide`), with the sheet face (`raised`, 1px `rule` edge, radius 12, `shadow-sheet`)
- * on the scrim. The header (eyebrow,
- * the section title at 500, 22/28, description) and the footer are fixed behind 1px
- * `line` rules; only the body scrolls, with `modal-padding` and 16px between
- * blocks. `footer` holds the actions on the right.
- */
 export function Drawer({
   open,
   onOpenChange,
@@ -37,22 +28,10 @@ export function Drawer({
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  /**
-   * `scroll`: the body scrolls as one padded column. `dock`: the body is a
-   * docked thread — its thread scrolls in its own padded region and a
-   * composer docks under it, so the body itself neither scrolls nor pads.
-   */
   body?: 'scroll' | 'dock';
   closeLabel?: string;
-  /** `left` is the app's navigation sheet on a narrow screen. */
   side?: 'left' | 'right';
-  /** Keeps the accessible title but removes the visible header. */
   hideHeader?: boolean;
-  /**
-   * `narrow` (default, 560) for one item's fields; `wide` (640) for evidence
-   * that sets an answer beside its sources. The `left` navigation sheet is
-   * always 272px.
-   */
   width?: 'narrow' | 'wide';
 }>) {
   const returnFocus = useReturnFocus(open);
@@ -110,10 +89,6 @@ export function Drawer({
   );
 }
 
-/**
- * The fixed header: eyebrow, title, description and the close button. When
- * `hidden`, the title and description stay for assistive technology only.
- */
 function DrawerHeader({
   title,
   eyebrow,

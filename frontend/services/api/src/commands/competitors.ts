@@ -1,4 +1,3 @@
-/** Tracked-competitor commands: add, edit, remove and accept a suggestion. */
 import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
@@ -38,7 +37,6 @@ export function updateCompetitor(
   return competitors.updateCompetitor(db, scopeOf(actor, projectId), competitorId, input);
 }
 
-/** The project editor's save: the whole list, written as a diff that keeps tracked rows. */
 export function saveCompetitorList(
   db: Database,
   actor: CompetitorWriter,

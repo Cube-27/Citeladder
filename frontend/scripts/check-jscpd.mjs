@@ -1,7 +1,3 @@
-/**
- * Run the pinned jscpd production ratchets (`--scope frontend|api`) and the
- * advisory frontend test scan (`--tests`).
- */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,7 +13,6 @@ const BIN = process.execPath;
 const JSCPD_ENTRYPOINT = path.join(FRONTEND, 'node_modules', 'jscpd', 'run-jscpd.js');
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 export const TOOL_VERSION = '5.2.1';
-/** Each ratchet's baseline below `frontend/` and the production directories it scans. */
 export const SCOPES = {
   frontend: {
     baseline: 'scripts/jscpd-baseline.json',
@@ -131,11 +126,6 @@ function cloneContentSignature(fingerprint) {
   return `${format}|${contentHash}|${lines}|${tokens}`;
 }
 
-/**
- * Structural validation shared by every baseline. A baseline recorded at an
- * older revision was written by whatever tool version and scope existed then,
- * so only the current working-tree baseline is held to the pinned values.
- */
 export function validateHistoricalBaseline(raw) {
   if (
     raw?.format_version !== 1 ||
@@ -224,14 +214,6 @@ function baselineAtRevision(revision, baselineFile) {
   }
 }
 
-/**
- * The gate reports duplication to four decimals, so it judges to four
- * decimals. Deleting clone-free code shrinks the denominator and nudges the
- * ratio in the seventh decimal without adding one duplicated line — failing on
- * that would make removing code harder than adding it. Real duplication is
- * caught by clone fingerprint, which is exact; this ratio is the coarse guard
- * behind it.
- */
 const REPORTED_PRECISION = 4;
 
 function reported(percentage) {
@@ -260,10 +242,6 @@ function appendFrequencyFailures(failures, observed, allowed, label) {
 }
 
 function appendBaselineDiffFailures(failures, baseline, baseBaseline) {
-  // Fingerprints embed file paths under the scanned scope and reflect the
-  // tool's tokenization, so they are only comparable when both match. A
-  // tool upgrade or scope change resets that comparison; the percentage
-  // ratchet below remains the guard in that case.
   const comparable =
     baseline.tool_version === baseBaseline.tool_version &&
     JSON.stringify(baseline.scope) === JSON.stringify(baseBaseline.scope);

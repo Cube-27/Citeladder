@@ -3,13 +3,6 @@ import { useId, useState, type ReactNode } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { textRole, type TextRole } from '@/components/ui/typography';
 
-/**
- * A record's reading page (the Actions v3 Action and URL pages): labelled
- * sections and a Details card across the route's narrow column, on the same
- * edge as the masthead's trail and the frame's h1. The column holds the page's end space
- * itself and is at least the window's height, so a dock after it stays at the
- * window's foot however short the page and however far it is scrolled.
- */
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="flex min-h-dvh w-full min-w-0 flex-col pb-[var(--page-end-space)]">
@@ -18,22 +11,18 @@ export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** The row of ways to take the record elsewhere, under its overview. */
 export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="mt-3 flex flex-wrap gap-2">{children}</div>;
 }
 
-/** Every section title on a reading page, Details and nested ones included. */
 export const READING_SECTION_TITLE = 'label' satisfies TextRole;
 
-/** A section under its title ("Overview", "What to do"). */
 export function Labelled({
   title,
   caption,
   children,
 }: Readonly<{
   title: string;
-  /** Who wrote the words below, when it was not CiteLadder ("Suggested by the agent"). */
   caption?: string | null;
   children: ReactNode;
 }>) {
@@ -55,7 +44,6 @@ export function Prose({ children }: Readonly<{ children: ReactNode }>) {
 
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
 
-/** The "Details" facts on the surface: a 120px label column, one fact a row. */
 export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
   const id = useId();
   return (
@@ -77,10 +65,6 @@ export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] 
   );
 }
 
-/**
- * "What to do" as a checklist the reader ticks while working through it.
- * The ticks are the reader's own scratch marks: nothing is saved.
- */
 export function Checklist({ items }: Readonly<{ items: readonly string[] }>) {
   const [done, setDone] = useState<ReadonlySet<number>>(new Set());
   return (

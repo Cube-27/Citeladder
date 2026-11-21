@@ -35,10 +35,8 @@ import { DraftSheet, type DraftState } from '@/components/ui/draft-sheet';
 
 type Filter = 'open' | 'applied' | 'dismissed';
 type Notice = { tone: NoticeTone; message: string };
-/** A reference Add to context writes into the composer. */
 export type ContextReference = Readonly<{ quote: string; request: string }>;
 
-/** The card of a suggestion, so a highlight can bring it into view. */
 const suggestionCardId = (id: string) => `suggestion-${id}`;
 
 function failureNotice(error: unknown, action: string): Notice {
@@ -53,7 +51,6 @@ function changeNotice(outcome: string, reason: string | null): Notice | null {
   return outcome === 'reverted' ? { tone: 'info', message: REVERTED } : null;
 }
 
-/** Apply all's counts as one sentence: what landed, and what was left and why. */
 function appliedNotice(result: {
   applied: number;
   left_to_choose: number;
@@ -76,14 +73,12 @@ function appliedNotice(result: {
   return { tone: result.applied > 0 ? 'positive' : 'info', message: parts.join(' ') };
 }
 
-/** The text a suggestion was made on: a passage's quote or a field's value then. */
 function originalText(suggestion: AgentSuggestion): string | null {
   const { anchor } = suggestion;
   if (anchor.kind === 'span') return anchor.quote.exact;
   return anchor.kind === 'field' ? anchor.expected : null;
 }
 
-/** Add to context on a suggestion that needs a fact: its question and the text it is about. */
 function suggestionReference(suggestion: AgentSuggestion): ContextReference {
   const original = originalText(suggestion);
   return {
@@ -116,13 +111,11 @@ function SuggestionText({ suggestion }: Readonly<{ suggestion: AgentSuggestion }
 
 type Guidance = NonNullable<AgentSuggestion['guidance']>;
 
-/** A heuristic or a search policy says so beside the category; a recommendation needs no label. */
 function StrengthBadge({ guidance }: Readonly<{ guidance: Guidance | null }>) {
   const badge = guidance ? suggestionStrengthCopy(guidance.strength).badge : null;
   return badge ? <StatusMark tone="neutral">{badge}</StatusMark> : null;
 }
 
-/** Where the suggestion's rule comes from, linked, worded as an option unless it is a policy. */
 function RuleSource({ guidance }: Readonly<{ guidance: Guidance | null }>) {
   if (!guidance) return null;
   return (
@@ -203,7 +196,6 @@ function SuggestionCard({
   CardActions & {
     suggestion: AgentSuggestion;
     selected: boolean;
-    /** Whether the reader's role may act on the suggestion at all. */
     canChange: boolean;
     onShow: (id: string) => void;
   }
@@ -258,7 +250,6 @@ const SUGGESTION_STATE: Readonly<Record<AgentSuggestion['status'], DraftState>> 
   open: 'draft',
   applied: 'accepted',
   dismissed: 'declined',
-  // The page moved on under it: it no longer applies, so it loses its edge too.
   stale: 'declined',
 };
 
@@ -267,7 +258,6 @@ function CoverageGaps({
   onAddToContext,
 }: Readonly<{
   gaps: readonly GapMember[];
-  /** Hands a gap to the composer; omitted for a role that may not ask the agent. */
   onAddToContext?: (reference: ContextReference) => void;
 }>) {
   if (gaps.length === 0) return null;
@@ -305,7 +295,6 @@ function CoverageGaps({
   );
 }
 
-/** Changes to the page document; any answer reads the page and its suggestions again. */
 function useSuggestionChanges(
   workspaceId: string,
   document: { chatId: string; outputId: string; baseRevisionId: string },
@@ -349,7 +338,6 @@ function useSuggestionChanges(
   };
 }
 
-/** Apply all and Dismiss all, while any suggestion is open for review. */
 function BulkActions({
   open,
   ready,
@@ -357,7 +345,6 @@ function BulkActions({
   changes,
 }: Readonly<{
   open: number;
-  /** Whether any open suggestion can be applied as it stands. */
   ready: boolean;
   disabled: boolean;
   changes: Pick<ReturnType<typeof useSuggestionChanges>, 'applyAll' | 'dismissAll'>;
@@ -382,12 +369,6 @@ const EMPTY: Readonly<Record<Filter, string>> = {
   dismissed: 'No suggestions dismissed.',
 };
 
-/**
- * The Suggestions tab: To review / Applied / Dismissed, cards grouped by the
- * passage they sit in, then Apply all and Dismiss all, then the Action's
- * coverage gaps. Every change names the revision on screen; a page that moved
- * on is read again and said so, and a refusal shows the server's reason.
- */
 export function SuggestionsPanel({
   workspaceId,
   target,
@@ -400,13 +381,9 @@ export function SuggestionsPanel({
   onAddToContext,
 }: Readonly<{
   workspaceId: string;
-  /** The page document and the revision on screen, which every change names. */
   target: { chatId: string; outputId: string; baseRevisionId: string };
-  /** The suggestions against the revision on screen. */
   page: AgentSuggestionsPage;
-  /** That revision's body: the passages the suggestions sit in. */
   body: string;
-  /** Why changes are paused (a running turn, unsaved edits), or null. */
   locked: string | null;
   gaps: readonly GapMember[];
   selectedId: string | null;
@@ -416,10 +393,7 @@ export function SuggestionsPanel({
   const [filter, setFilter] = useState<Filter>('open');
   const [shownSelection, setShownSelection] = useState(selectedId);
   const changes = useSuggestionChanges(workspaceId, target);
-  // Changing the page, or asking the agent to, is a run; a role without it
-  // reads the suggestions with no control to act on them.
   const canChange = useWorkspaceCapability('run');
-  // A highlight pressed in the page opens its card, which is always To review.
   if (selectedId !== shownSelection) {
     setShownSelection(selectedId);
     if (selectedId) setFilter('open');

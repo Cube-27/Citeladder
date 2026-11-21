@@ -28,7 +28,6 @@ import { Notice } from '@/components/ui/notice';
 
 type Confirmation = Omit<ConfirmRequest, 'onConfirm'>;
 
-/** What each member change asks before it happens, naming the person and the effect. */
 const confirmations = {
   role: (email: string, role: AssignableWorkspaceRole): Confirmation => ({
     title: 'Change role',
@@ -55,12 +54,10 @@ const confirmations = {
   }),
 };
 
-/** Members whose address contains the search, or everyone without one. */
 function matchingMembers(members: readonly WorkspaceMember[], needle: string) {
   return needle ? members.filter((member) => member.email.toLowerCase().includes(needle)) : members;
 }
 
-/** A search that settled and matched nobody, as opposed to an empty roster. */
 function searchFindsNobody(
   needle: string,
   settled: boolean,
@@ -69,7 +66,6 @@ function searchFindsNobody(
   return needle !== '' && settled && visible.length === 0;
 }
 
-/** The first failed member change, with a retry that clears it. */
 function MemberFailure({
   failure,
   onRetry,
@@ -79,8 +75,6 @@ function MemberFailure({
     <Notice
       kind="mutation"
       notice={mutationNoticeForError(failure.error, { action: 'change workspace members' })}
-      // Clearing the failed mutation is what makes the notice go away;
-      // re-reading the roster alone would leave it standing forever.
       onRetry={() => {
         failure.reset();
         onRetry();
@@ -89,17 +83,6 @@ function MemberFailure({
   );
 }
 
-/**
- * Workspace members and invitations (plan §2.4).
- *
- * Administrative throughout: the workspace panel mounts it only for the
- * `manage_members` capability, and every action it offers is refused by the
- * server for any role that lacks it. Hiding a control is a convenience,
- * never the boundary.
- *
- * This component owns the server conversation; the roster, the invite form
- * and the pending list are presentation.
- */
 export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) {
   const { activeWorkspaceId, activeWorkspace } = useProjectContext();
   const mayTransfer = useWorkspaceCapability('transfer_ownership');
@@ -119,20 +102,11 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
     setIssuedToken(null);
   }
 
-  // Held disabled until the workspace is known, so the placeholder never reaches the API.
   const scopeId = workspaceId ?? 'unresolved';
   const membersQuery = useQuery({ ...workspaceQueries.members(scopeId), enabled });
   const invitationsQuery = useQuery({ ...workspaceQueries.invitations(scopeId), enabled });
 
   const refresh = () => void refreshWorkspaces(queryClient);
-  /**
-   * Show a freshly issued token only if it still belongs where we are.
-   *
-   * An invite or resend for workspace A can land AFTER the reader has
-   * switched to workspace B. Displaying A's one-time acceptance link on B's
-   * screen invites sharing it with the wrong people, so a late answer for a
-   * workspace we have left is dropped rather than rendered.
-   */
   const keepToken = (
     issued: { token: string; delivery?: 'accepted' | 'failed' },
     origin: string,
@@ -140,8 +114,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
     if (origin !== workspaceId) return;
     setIssuedToken(issued.token);
     setDelivery(issued.delivery);
-    // The dialog is the only place the link is shown, and a resend from the
-    // pending table happens with it closed.
     setInviteOpen(true);
   };
 
@@ -151,11 +123,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
   const changeRole = useMutation(workspaceMutations.changeRole(String(workspaceId)));
   const remove = useMutation(workspaceMutations.removeMember(String(workspaceId)));
   const transfer = useMutation(workspaceMutations.transferOwnership(String(workspaceId)));
-  /**
-   * A link belonging to the PREVIOUS invitation must not stay on screen while
-   * a new one is in flight: copying it would share the wrong token. The
-   * workspace the request was sent for travels with it.
-   */
   const handOffToken = () => {
     setIssuedToken(null);
     const origin = String(workspaceId);
@@ -167,18 +134,15 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
   const needle = search.trim().toLowerCase();
   const visibleMembers = matchingMembers(membersQuery.data ?? [], needle);
 
-  // An invitation refusal is shown in the invite dialog, where it was asked for.
   const mutations = [resend, revoke, changeRole, remove, transfer];
   const failure = mutations.find((mutation) => mutation.isError);
   const busy = invite.isPending || mutations.some((mutation) => mutation.isPending);
   const workspaceName = activeWorkspace?.name ?? 'this workspace';
-  /** Ask first; close once the change has landed or failed. */
   // A second click lands before `busy` re-renders, so the guard is synchronous.
   const confirming = useRef(false);
   const confirmThen = (request: Confirmation, run: () => Promise<unknown>) =>
     setConfirm({
       ...request,
-      // A failure is reported by the notice above the roster.
       onConfirm: () => {
         if (confirming.current) return;
         confirming.current = true;
@@ -190,7 +154,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           });
       },
     });
-  // Ownership moves only at the Owner's hand; nobody else is offered it.
   const transferIntent = mayTransfer
     ? (member: WorkspaceMember) =>
         confirmThen(confirmations.transfer(member.email, workspaceName), () =>
@@ -200,7 +163,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
 
   return (
     <>
-      {/* The roster table is the named region; the group only heads it. */}
       <SettingsGroup
         title="Members"
         region={false}

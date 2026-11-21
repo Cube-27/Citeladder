@@ -31,7 +31,6 @@ runs:
       shell: bash
       env:
         LOGO_DEV_PUBLISHABLE: ${{ inputs.logo-dev-publishable }}
-        # The API holds the Turnstile secret (TURNSTILE_SECRET_KEY in gcp-deploy.yml).
         TURNSTILE_SITE_KEY: ${{ inputs.turnstile-site-key }}
         SELF_SERVE_SIGNUP: ${{ inputs.self-serve-signup || 'false' }}
       run: |

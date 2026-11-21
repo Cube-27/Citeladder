@@ -15,7 +15,6 @@ function EmptyEnd() {
 }
 
 const TITLE = 'https://www.example.com/blog/how-to-choose-a-crm-for-a-small-agency';
-/** A 90-character record title. */
 const RECORD =
   'Keyword research for small agency CRM buyers comparing pricing, onboarding and migrations';
 
@@ -25,7 +24,6 @@ describe('Masthead', () => {
     const heading = screen.getByRole('heading', { level: 1, name: TITLE });
     expect(heading).not.toHaveAttribute('tabindex');
 
-    // A title longer than its box is cut (one line from `rail`, two below it).
     Object.defineProperty(heading, 'clientWidth', { configurable: true, value: 320 });
     Object.defineProperty(heading, 'scrollWidth', { configurable: true, value: 640 });
     act(() => emitResize(heading));
@@ -68,13 +66,10 @@ describe('Masthead', () => {
     expect(screen.queryByRole('menu')).toBeNull();
     expect(more).toHaveFocus();
 
-    // An item presses the folded control and closes the menu.
     await user.click(within(await openMore(user, more)).getByRole('menuitem', { name: 'Export' }));
     expect(exported).toBe(1);
     expect(screen.queryByRole('menu')).toBeNull();
 
-    // One control has nothing to fold: it stays in the row. An end that drew
-    // nothing (no "Ask agent" on an Agent page) is not counted.
     rerender(<Masthead title="Website" actions={<Button>Export</Button>} end={<EmptyEnd />} />);
     expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
@@ -92,11 +87,9 @@ describe('Masthead', () => {
       act(() => emitResize(header));
     };
 
-    // At 1366 the title keeps 400px, past its 360 reserve: Export stays in the row.
     fit(1366, 400);
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
 
-    // At 982 Export would leave it 200 of its 360: Export folds behind More.
     fit(982, 200);
     const menu = await openMore(user, await screen.findByRole('button', { name: 'More' }));
     expect(
@@ -130,7 +123,6 @@ describe('Masthead', () => {
         }
       />,
     );
-    // The row lacks 120px however much folds, so the primary folds too.
     const header = document.querySelector<HTMLElement>('[data-masthead]')!;
     const end = document.querySelector<HTMLElement>('[data-masthead-end]')!;
     vi.spyOn(end, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 520, 56));

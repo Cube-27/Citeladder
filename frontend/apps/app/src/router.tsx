@@ -11,14 +11,6 @@ import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RouteError, ScreenError, ShellRouteError } from './route-error';
 import { ApplicationRouteLayout, PrivateRouteLayout } from './private-routes';
 
-/**
- * Begin the route download at matching time, alongside session bootstrap, or
- * earlier on navigation intent. The loader never waits for it; Suspense owns
- * only the route content pane. Inside the application shell its fallback is
- * the route's own loading frame (identity band + loading box), not a bare
- * pane; a flow route outside the shell (sign-in, setup, the chooser) waits on
- * its plain first frame, never a loading card (PR 524).
- */
 function manifestRoute(route: AppRouteRecord): RouteObject {
   let module: ReturnType<AppRouteRecord['screen']> | undefined;
   const load = () => (module ??= route.screen());
@@ -48,14 +40,7 @@ export const appRoutes: RouteObject[] = [
     .map((route) => ({ ...manifestRoute(route), ErrorBoundary: RouteError })),
   {
     element: <PrivateRouteLayout />,
-    // Resolve session, workspace and project BEFORE the shell mounts, so an
-    // account with no projects reaches setup in one paint instead of watching
-    // the application chrome build itself and then be replaced.
     loader: bootstrapPrivateRoutes,
-    // Once per document. In-app navigation is answered by the providers this
-    // seeded, which stay mounted and keep their own queries fresh; re-running
-    // the whole bootstrap on every route change would put a blocking await in
-    // front of every click.
     shouldRevalidate: () => false,
     hydrateFallbackElement: <FirstFrame />,
     ErrorBoundary: ShellRouteError,
@@ -65,8 +50,6 @@ export const appRoutes: RouteObject[] = [
         element: <ApplicationRouteLayout />,
         children: [
           {
-            // Pathless and element-less: a screen's render error replaces only
-            // the screen, so the shell's navigation and sign-out remain.
             ErrorBoundary: ScreenError,
             children: [
               ...routes.filter((route) => route.shell).map(manifestRoute),

@@ -1,7 +1,3 @@
-/**
- * The `visibility` family's Sources reads: the table, per-answer evidence,
- * series, near misses, movers and one URL. Served by `visibility.ts`.
- */
 import {
   visibilityEvidenceResponseSchema,
   visibilitySourceMoversSchema,

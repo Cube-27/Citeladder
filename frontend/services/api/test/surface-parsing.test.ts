@@ -293,7 +293,6 @@ describe('ChatGPT shopping carousel parsing', () => {
         image_url: 'https://images.example/card-4.jpg',
       },
     ]);
-    // The scraper answer still parses with the carousel in the page.
     expect(
       parseScraper(titleTagCards, '11110537-2641-0626-0000-a43fc092bb93', 'chatgpt_search'),
     ).toMatchObject({ logical_engine: 'chatgpt_search' });

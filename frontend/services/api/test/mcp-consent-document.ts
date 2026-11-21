@@ -21,7 +21,6 @@ function elementsAndText(source: string) {
   return { elements, text: text.replace(/\s+/gu, ' ') };
 }
 
-/** What a person sees on a consent page: its inputs, links, refresh target and visible text. */
 export function consentDocument(source: string) {
   const { elements, text } = elementsAndText(source);
   const all = (name: string) => elements.filter((e) => e.name === name).map((e) => e.attrs);

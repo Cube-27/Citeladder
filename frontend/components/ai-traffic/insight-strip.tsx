@@ -19,8 +19,6 @@ export function InsightStrip({
     enabled: !!projectId && !!workspaceId,
   });
   const data = query.isError ? undefined : query.data;
-  // The section keeps its slot when nothing was observed: dropping it after
-  // loading would pull the content below up under the reader.
   return (
     <Section aria-labelledby="observed-patterns">
       <SectionHeader>
@@ -37,8 +35,6 @@ export function InsightStrip({
       {query.isLoading ? (
         <StateBlock kind="loading" label="Loading observed patterns…" shape={{ kind: 'list' }} />
       ) : null}
-      {/* Coverage limits are this card's own caveat, said in the card rather
-          than as a banner that repeats the key figures' connect buttons. */}
       {data && !data.patterns.length ? (
         <StateBlock kind="empty" inline message={data.coverage.notice ?? 'No patterns'} />
       ) : null}

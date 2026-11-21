@@ -1,9 +1,3 @@
-/**
- * Deterministic example values for the public API document, built from a
- * schema's JSON Schema form. Identifiers are obviously fake UUIDs, URLs sit on
- * `example.com`, and a nullable response value shows as null, so an example
- * never turns an unknown into zero.
- */
 import type { JsonSchema } from '../openapi/document.ts';
 
 const REF_PREFIX = '#/components/schemas/';
@@ -24,7 +18,6 @@ export type ExampleContext = {
 
 type Walk = (node: JsonSchema, depth: number, key: string) => unknown;
 
-/** `00000000-0000-4000-8000-000000000001`, the n-th fake identifier. */
 function fakeUuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 }
@@ -51,7 +44,6 @@ function stringExample(node: JsonSchema, key: string, nextId: () => string): str
   return key ? `Example ${key.replaceAll('_', ' ')}` : 'example';
 }
 
-/** A schema's own value: a constant, its default or its first enumerated value. */
 function fixedValue(node: JsonSchema): { value: unknown } | undefined {
   if (node.const !== undefined) return { value: node.const };
   if (node.default !== undefined && node.default !== null) return { value: node.default };
@@ -64,7 +56,6 @@ function numberExample(node: JsonSchema): number {
   return typeof node.maximum === 'number' ? Math.min(preferred, node.maximum) : preferred;
 }
 
-/** A request names only what it must, or one field when nothing is required. */
 function shownProperties(node: JsonSchema, io: ExampleContext['io']) {
   const properties = Object.entries((node.properties ?? {}) as Record<string, JsonSchema>);
   if (io === 'output') return properties;
@@ -84,7 +75,6 @@ function objectExample(node: JsonSchema, context: ExampleContext, walk: Walk, de
   const shown = shownProperties(node, context.io);
   if (shown.length === 0 && typeof node.additionalProperties === 'object')
     return { example: walk(node.additionalProperties as JsonSchema, depth + 1, 'example') };
-  // A response shows an unknown as null, never as a made-up value.
   return Object.fromEntries(
     shown.map(([name, property]) => [
       name,

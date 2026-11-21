@@ -6,7 +6,6 @@ import { pathToFileURL } from 'node:url';
 
 const TRUE = 'true';
 const FALSE = 'false';
-// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
 const GIT_EXECUTABLE = '/usr/bin/git';
 const E2E_RULES = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
 const DOC_FILES = new Set([
@@ -19,8 +18,6 @@ const DOC_FILES = new Set([
   'Review.md',
 ]);
 
-// Configuration read only by external services or by deploy-only workflows.
-// No owner suite exercises these files, so they never escalate to every owner.
 const INERT_CONFIG_FILES = new Set([
   '.sonarcloud.properties',
   '.github/dependabot.yml',
@@ -44,11 +41,6 @@ function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
-// Frontend files outside the API package that its code, scripts or tests read:
-// the PDF brand tokens, the docs artifacts its reference exporters check and
-// its tests import, and the formatter settings the exporters write with.
-// scripts/ci-changes.test.mjs derives these reads from the API sources. The
-// API quality step also runs the complexity and duplication ratchets.
 const API_EXTERNAL_INPUTS = [
   'frontend/apps/app/src/globals.css',
   'frontend/apps/docs/public/templates/',
@@ -61,8 +53,6 @@ const API_EXTERNAL_INPUTS = [
   'frontend/scripts/source-ast.mjs',
 ];
 
-// The TypeScript API service (including its SQL schema baseline), the
-// contracts package it imports, and the frontend files it reads.
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
@@ -125,7 +115,6 @@ function readRepositoryFile(path) {
   }
 }
 
-/** The repository file a spec's import names, or null for a package import. */
 function resolveImport(fromPath, specifier) {
   let base;
   if (specifier.startsWith('@/')) base = `frontend/${specifier.slice(2)}`;
@@ -146,11 +135,6 @@ function resolveImport(fromPath, specifier) {
 
 let e2eImportGraph;
 
-/**
- * Every repository file each app E2E spec reads at run time, transitively:
- * helpers, fixtures and the shared content they assert against. A change to
- * one of them selects every spec that imports it.
- */
 function specsByImportedFile() {
   if (e2eImportGraph) return e2eImportGraph;
   e2eImportGraph = new Map();
@@ -184,7 +168,6 @@ function specsByImportedFile() {
   return e2eImportGraph;
 }
 
-/** The app-suite specs one changed path selects: itself, its importers and its mapped specs. */
 function specsSelectedBy(path) {
   const spec = path.slice('frontend/'.length);
   const own =
@@ -203,12 +186,9 @@ export function selectE2EFiles(paths) {
     }
     selected.add(test);
   }
-  // Test paths, so plain code-point order is the intended ordering; the
-  // comparator only says so out loud.
   return [...selected].sort((left, right) => (left < right ? -1 : Number(left > right)));
 }
 
-// The workflow that defines the browser jobs and the setup action they run.
 const BROWSER_JOB_DEFINITIONS = new Set([
   '.github/workflows/ci.yml',
   '.github/actions/setup-frontend/action.yml',
@@ -221,15 +201,10 @@ function isNonBrowserTooling(path) {
   );
 }
 
-/** A path outside the frontend that can change what a browser suite runs. */
 function isSharedBrowserInput(path) {
   return !isOwnerFree(path) && !isFrontend(path) && !isNonBrowserTooling(path);
 }
 
-/**
- * True when a changed path is a shared browser input or maps to
- * `"frontendE2E": "all"` in e2e-paths.json.
- */
 function selectsEveryE2E(paths) {
   return paths.some(
     (path) =>
@@ -238,7 +213,6 @@ function selectsEveryE2E(paths) {
   );
 }
 
-/** The specs the E2E job passes to Playwright; an empty list runs every spec. */
 export function e2eSpecArgs(paths) {
   return selectsEveryE2E(paths) ? [] : selectE2EFiles(paths);
 }
@@ -261,16 +235,10 @@ function isSecuritySensitive(path) {
   );
 }
 
-// Deploy-time inputs: Terraform and workflow definitions are otherwise first
-// parsed by the deploy itself.
 function isInfra(path) {
   return path.startsWith('infra/') || path.startsWith('.github/workflows/');
 }
 
-// The production Worker CSP and consent suite (frontend/playwright.workers.config.ts)
-// serves the built app and marketing Workers under local Workerd. It runs for
-// their sources and policy owners, its own specs, and any change that selects
-// one of the app-suite specs it reruns against the built Workers.
 const WORKER_SUITE_SOURCES = [
   'frontend/package.json',
   'frontend/pnpm-lock.yaml',
@@ -289,24 +257,12 @@ const WORKER_SUITE_SPECS = new Set([
   'e2e/performance-states.spec.ts',
 ]);
 
-// What Compose uniquely proves: the images build, and a CLEAN database reaches a
-// serving stack. So the trigger is container-shaped changes only -- the images,
-// the stack definition, the schema, and anything that changes what gets
-// installed into a container. Ordinary application code is not on this list: it
-// is already covered by the API, frontend and E2E owners, and across 60
-// Compose runs it never caught a failure main CI missed (the one failure, a Next
-// prerender error, failed the frontend CI job on the same commit). Note that
-// pushes to `main` (unless owner-free) and merge-queue runs classify as `full`
-// and therefore smoke the stack regardless of this function.
 function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
     path === 'scripts/frontend-ingress-smoke.mjs' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
-    // Every image. `frontend/Dockerfile` matched nothing here and reached
-    // Compose only via the old "first push of a PR" escalation, so it silently
-    // stopped selecting Compose on every later push of the same PR.
     path.endsWith('/Dockerfile') ||
     path.startsWith('docker-compose') ||
     path === 'frontend/package.json' ||
@@ -314,9 +270,7 @@ function isComposeSensitive(path) {
     path.startsWith('frontend/apps/app/') ||
     path.startsWith('frontend/apps/docs/') ||
     path.startsWith('frontend/apps/marketing/') ||
-    // Shared server code, including the Worker origin proxy the stack runs.
     path.startsWith('frontend/lib/') ||
-    // Only Compose boots the API service's real entry point on its image.
     path.startsWith('frontend/services/')
   );
 }
@@ -358,7 +312,6 @@ export function classifyPaths(paths, { full = false } = {}) {
   };
 }
 
-/** True only for a known, non-empty change that touches no owner. */
 export function isOwnerFreeChange(paths) {
   return paths.length > 0 && paths.every((path) => isOwnerFree(path));
 }
@@ -374,11 +327,6 @@ export function selectDiff({
 }) {
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
   if (eventName !== 'pull_request') {
-    // Main stays a full validation; the push range only lets an owner-free
-    // push (documentation or inert configuration) skip it, and only when this
-    // workflow already passed on the previous main commit. Otherwise a green
-    // owner-free push would vouch for code whose own run failed or never ran,
-    // and the deploy gate reads only the exact deployed commit's run.
     const range = eventName === 'push' && usableBefore && beforeIsAncestor && previousRunTrusted;
     return { full: true, range: range ? `${beforeSha}..${headSha}` : null };
   }
@@ -429,8 +377,6 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
         'Infra (Terraform and workflows)',
         'CI result',
       ];
-  // Matrix jobs report one job per shard, named `<family> (<shard>/<count>)`; a
-  // skipped matrix reports a single job. Each family needs at least one job.
   const matrixFamilies = compose ? [] : ['Frontend tests', 'API service tests'];
   const familyOf = (name) =>
     matrixFamilies.find((family) => typeof name === 'string' && name.startsWith(`${family} (`));

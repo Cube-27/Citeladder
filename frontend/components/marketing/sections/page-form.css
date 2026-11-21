@@ -1,7 +1,3 @@
-/* ---------- PageForm: a reserved Turnstile slot keeps the submit button still ----------
-   The form fills its column on a flat neutral panel, so its solid fields
-   stand out as wells; fields and buttons inside are 44px, the
-   account-access height. */
 .cl-page-form {
   --control-md: 44px;
 
@@ -129,9 +125,6 @@
     width: 100%;
   }
 }
-
-/* ---------- A PageForm on its stage ---------- */
-/* The stage's own rules are translucent, so the tint runs through them. */
 
 .cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {
   border-color: color-mix(in oklch, var(--color-ink) 10%, transparent);

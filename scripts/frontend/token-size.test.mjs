@@ -55,7 +55,6 @@ test('the hook judges the staged blob at 6,000 tokens and prints the split instr
     assert.match(stderr, /^ {2}frontend\/a\.ts: 6001 tokens \(limit 6000\)$/mu);
     for (const step of SPLIT_INSTRUCTIONS) assert.ok(stderr.includes(step), step);
 
-    // CI judges the commits since the base, so a --no-verify commit still fails.
     const base = repo.git('rev-parse', 'HEAD').trim();
     repo.git('commit', '-qm', 'oversized', '--no-verify');
     assert.equal(repo.check('--base', base).status, 1);
@@ -115,7 +114,6 @@ test('the baseline exempts its files up to their recorded size and may only shri
       grown.stderr,
       /frontend\/big\.ts: now 7001 tokens, over its recorded 7000; split the file/u,
     );
-    // CI judges baselined files whether or not the branch changed them.
     repo.git('commit', '-qm', 'grown', '--no-verify');
     const grownInCi = repo.check('--base', 'HEAD');
     assert.equal(grownInCi.status, 1);

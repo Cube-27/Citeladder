@@ -4,9 +4,6 @@ resource "google_compute_network" "main" {
   routing_mode            = "REGIONAL"
 }
 
-# Cloud Run reaches PostgreSQL through Direct VPC egress from this subnet. The
-# database VM has no external address; Private Google Access lets it read its
-# secret and pull its image from Artifact Registry without NAT.
 resource "google_compute_subnetwork" "main" {
   name                     = local.name
   region                   = var.region
@@ -14,8 +11,6 @@ resource "google_compute_subnetwork" "main" {
   ip_cidr_range            = local.subnet_cidr
   private_ip_google_access = true
 
-  # Sampled, aggregated flow logs keep an audit trail of database access at
-  # negligible cost for this low-traffic subnet.
   log_config {
     aggregation_interval = "INTERVAL_10_MIN"
     flow_sampling        = 0.5
@@ -46,10 +41,6 @@ resource "google_compute_firewall" "postgres" {
   }
 }
 
-# The owner's own account reaches the VM over SSH through IAP only: the
-# break-glass database shell and the database tunnel of
-# scripts/provision-dev-login.mjs (runbook section 3). The deployer holds no
-# SSH or IAP role; nothing else reaches the VM.
 resource "google_compute_firewall" "iap_ssh" {
   name      = "${local.name}-iap-ssh"
   network   = google_compute_network.main.name

@@ -26,16 +26,7 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 
 type ExportFormat = 'csv' | 'md';
 
-/**
- * Authenticated CSV/MD export state for one run. Exports use the audit's
- * persisted workspace identity rather than a headerless navigation that could
- * resolve another workspace. The route owns this so its actions can live in the
- * page's identity band while the panel still reports an export failure.
- */
 export function useRunExport(audit: Audit | undefined) {
-  // The route stays mounted across runs (a repair run is a navigation, not a
-  // remount), so each state belongs to the run it was started for and is ignored
-  // once the reader is looking at another one.
   const [exporting, setExporting] = useState<{ auditId: string; format: ExportFormat } | null>(
     null,
   );
@@ -66,11 +57,6 @@ export function useRunExport(audit: Audit | undefined) {
   };
 }
 
-/**
- * The run's actions: exports, a Cancel offered only while the backend still
- * accepts a cooperative cancel (i.e. not `reporting`/terminal), and a failure
- * rerun when something failed. Rendered in the route's identity band.
- */
 export function RunActions({
   audit,
   cancelPending,
@@ -82,7 +68,6 @@ export function RunActions({
 }: Readonly<{
   audit: Audit;
   cancelPending: boolean;
-  /** Cancel and rerun are offered only to a role that may run audits. */
   onCancel?: () => void;
   onRerunFailures?: () => void;
   rerunPending?: boolean;
@@ -117,7 +102,6 @@ export function RunActions({
   );
 }
 
-/** On a failed run, rerunning its failures is what the page is for: the view's primary. */
 function RerunFailed({
   primary,
   onRerun,
@@ -132,7 +116,6 @@ function RerunFailed({
   return primary ? <MastheadPrimary>{button}</MastheadPrimary> : button;
 }
 
-/** The run's shape while it loads: the status card over its three figures. */
 export function ProgressSkeleton() {
   return (
     <FigureStrip
@@ -148,7 +131,6 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   const timeZone = useDisplayTimeZone();
   return (
     <Inline className="flex-wrap">
-      {/* The masthead title carries the day; the status line adds only the time. */}
       <span className="type-body text-ink-2">
         Started {formatDisplayTime(audit.created_at, timeZone)}
       </span>
@@ -172,7 +154,6 @@ function RunProgress({
   finished,
 }: Readonly<{
   requested: number;
-  /** Answers that reached an outcome, failed ones included: a failure is no longer pending. */
   finished: number;
 }>) {
   const percent = requested > 0 ? Math.min(100, Math.round((finished / requested) * 100)) : 0;
@@ -224,15 +205,6 @@ function ProgressNotices({
   );
 }
 
-/**
- * Run progress panel (F10).
- *
- * Shows the audit's status badge, the requested/completed/failed counts, the
- * created timestamp, and the outcome of the run's actions (export, cancel and
- * rerun failures). The actions themselves are `RunActions`, rendered by the
- * route in its identity band. Progress is driven by the parent's polling of
- * `GET /audits/{id}`.
- */
 export function ProgressPanel({
   audit,
   exportError,
@@ -242,11 +214,8 @@ export function ProgressPanel({
   onRerunRetry,
 }: Readonly<{
   audit: Audit;
-  /** A failed export from `useRunExport`. */
   exportError?: string | null;
-  /** The A4 mutation notice for a failed cancel (verbatim 4xx, transient retry). */
   cancelNotice?: MutationNoticeData | null;
-  /** Retry affordance for a transient cancel failure. */
   onCancelRetry?: () => void;
   rerunNotice?: MutationNoticeData | null;
   onRerunRetry?: () => void;

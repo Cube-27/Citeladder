@@ -1,13 +1,3 @@
-/**
- * Cloudflare Turnstile verification for sign-up, the public email-link
- * requests and a challenged sign-in, decided here so the SPA and any other
- * caller meet one rule.
- *
- * Verification runs before any account row or mail exists. A missing,
- * invalid, replayed or mismatched token is refused with
- * `human_verification_failed`; an unconfigured secret, or Cloudflare being
- * unreachable, fails closed with `human_verification_unavailable`.
- */
 import ipaddr from 'ipaddr.js';
 import { z } from 'zod';
 import type { Context } from 'hono';
@@ -20,7 +10,6 @@ import { trustedClientIdentity } from './client-identity.ts';
 const cfg = policy.auth.turnstile;
 const logger = getLogger('app.auth');
 
-/** The token field every challenged request carries (body or sign-up query). */
 export const turnstileTokenSchema = z.string().max(cfg.token_max_length).optional().default('');
 
 const siteverifySchema = z.object({
@@ -42,7 +31,6 @@ function unavailable(): ApiError {
   });
 }
 
-/** Cloudflare's answer for a real secret: solved for this action on our app host. */
 async function siteverify(
   config: ServiceConfig,
   input: { secret: string; token: string; action: string; ip: string | undefined },
@@ -77,7 +65,6 @@ async function siteverify(
   );
 }
 
-/** Refuse the request unless its Turnstile token verifies for `action`. */
 export async function requireHumanVerification(
   c: Context,
   config: ServiceConfig,

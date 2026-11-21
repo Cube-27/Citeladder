@@ -30,7 +30,6 @@ type DiscoveryTarget = { workspaceId: string; discoveryId: string };
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.workers.brand_discovery_worker');
 type Result = Awaited<ReturnType<typeof researchBrand>>;
-/** Research dependencies; each task meters its own workspace. */
 type WorkerDependencies = Omit<ResearchDependencies, 'meter'> & {
   meter?: (workspaceId: string) => Meter;
 };
@@ -44,7 +43,6 @@ function retryable(error: unknown, attempt: number, maximum: number) {
   if (error instanceof ResearchFailure && !error.retryable) return false;
   return error != null && !siteFailure(error) && attempt < maximum;
 }
-/** The code a failed discovery settles with, so the UI can offer the right recovery. */
 function failureCode(error: unknown) {
   if (siteFailure(error)) return error.code;
   return error instanceof ResearchFailure ? error.code : cfg.error_brand_discovery;
@@ -70,7 +68,6 @@ export class DiscoveryWorker {
       leaseTtlSeconds: this.settings.lease_seconds,
     });
   }
-  /** Claim the next brand-discovery task, or `target`'s, committed before any research. */
   async claim(owner: string, target?: DiscoveryTarget): Promise<DiscoveryTask | null> {
     const [task] = await this.queue.claim({
       owner,
@@ -82,20 +79,15 @@ export class DiscoveryWorker {
     });
     return task ?? null;
   }
-  /** Earliest claimable time or lease expiry, so an idle runner stays for a retry or recovery due soon. */
   nextDue(): Promise<Date | null> {
     return this.queue.nextDue([cfg.task_kind_brand_discovery]);
   }
-  /** The fenced task lock every discovery write takes first. */
   #held(trx: Database, task: DiscoveryTask, owner: string) {
     return this.queue.fence(trx, task, owner, [policy.task_queue.statuses.running]);
   }
   async runOnce(owner: string, target?: DiscoveryTarget, signal?: AbortSignal): Promise<boolean> {
-    // One run's budget, matching the interactive deadline the request applies.
     const started = performance.now();
     const budgetEndsAt = started + this.settings.interactive_timeout_seconds * 1000;
-    // Interactive admission touches only its authorized discovery. The runner
-    // and periodic recovery retain ownership of sweeping expired leases.
     if (!target) await recoverDiscoveryLeases(this.db);
     signal?.throwIfAborted();
     const task = await this.claim(owner, target);
@@ -157,7 +149,6 @@ export class DiscoveryWorker {
       checkCancelled();
       await this.finish(task, owner, result, null);
     } catch (error) {
-      // The queue owner logged the lost lease; recovery settles the task.
       if (heartbeat.signal.aborted) return true;
       logLaneFailure(DISCOVERY_LANE.table, task, {
         phase,

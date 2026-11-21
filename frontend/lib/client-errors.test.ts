@@ -6,7 +6,6 @@ const sink = vi.fn((_url: string, _init: RequestInit) =>
   Promise.resolve(new Response(null, { status: 204 })),
 );
 
-/** The workspace header and release each report carried. */
 function sent() {
   return sink.mock.calls.map(([, init]) => ({
     workspace: new Headers(init.headers).get('X-Workspace-Id'),

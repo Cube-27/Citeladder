@@ -1,8 +1,3 @@
-/**
- * Market probes on Perception: the probe bar's status and quote, Run probe,
- * the schedule, the Market and Objections reads and objection-group edits.
- * Every response passes through `strictValidate`.
- */
 import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -32,7 +27,6 @@ const probesApi = {
       await apiClient.get(root(projectId), options),
       'probes.status',
     ),
-  /** One probe per market, each driven to its first answers like a launched run. */
   run: async (projectId: string, input: ProbeRunRequest, options?: ApiRequestOptions) => {
     const res = await apiClient.post(root(projectId), input, options);
     const audits = strictValidate(z.array(auditSchema), res, 'probes.run');
@@ -88,14 +82,11 @@ const probesApi = {
 };
 
 const scoped = (scope: ProjectScope) => ({ workspaceId: scope.workspaceId });
-/** How often the probe bar re-reads while a probe runs or is being labelled. */
 const PROBE_POLL_MS = 5000;
 
-/** Whether the newest probe is still answering or being labelled. */
 export const probeBusy = (status: ProbeStatus | undefined) =>
   status?.latest?.state === 'running' || status?.latest?.state === 'labelling';
 
-/** The newest probe and its state: a read keyed by it re-reads once a probe finishes. */
 export const probeBasis = (status: ProbeStatus | undefined) =>
   `${status?.latest?.launch_id ?? 'none'}:${status?.latest?.state ?? 'none'}`;
 
@@ -118,7 +109,6 @@ export const probeQueries = {
     }),
 };
 
-/** Re-reads the probe bar and quote: balances and keys change outside this page. */
 export function refreshProbeStatus(client: QueryClient, scope: ProjectScope) {
   void client.invalidateQueries({ queryKey: queryKeys.projects.probes(scope) });
 }
@@ -126,19 +116,16 @@ export function refreshProbeStatus(client: QueryClient, scope: ProjectScope) {
 export const probeMutations = {
   run: (scope: ProjectScope) =>
     mutationOptions({
-      /** `fingerprint` is the confirmed quote's: a changed probe is refused, never charged. */
       mutationFn: (fingerprint: string) =>
         probesApi.run(scope.projectId, { fingerprint }, scoped(scope)),
       onSuccess: (_audits, _input, _result, { client }) => {
         refreshProbeStatus(client, scope);
         void client.invalidateQueries({ queryKey: queryKeys.runs.all });
       },
-      // A refused quote shows its replacement in the dialog.
       onError: (_error, _input, _result, { client }) => refreshProbeStatus(client, scope),
     }),
   schedule: (scope: ProjectScope) =>
     mutationOptions({
-      /** Turning it on sends the confirmed quote's fingerprint, as Run probe does. */
       mutationFn: (input: ProbeScheduleRequest) =>
         probesApi.schedule(scope.projectId, input, scoped(scope)),
       onSuccess: (status, _input, _result, { client }) => {

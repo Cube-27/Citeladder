@@ -39,7 +39,6 @@ const ref = z
   .max(255);
 const hash = (body: string | Uint8Array) => createHash('sha256').update(body).digest('hex');
 
-/** Reads the raw body, refusing it as soon as it exceeds `limit` bytes. */
 async function boundedBody(c: Context<AppEnv>, limit: number) {
   const chunks: Uint8Array[] = [];
   let length = 0;
@@ -53,7 +52,6 @@ async function boundedBody(c: Context<AppEnv>, limit: number) {
   return Buffer.concat(chunks);
 }
 
-/** The current secret, or the previous one inside a bounded rotation overlap. */
 function authentic(settings: ServiceConfig['razorpay'], bytes: Buffer, signature: string) {
   const now = new Date();
   const overlap =
@@ -79,7 +77,6 @@ const PAYLOAD_KEYS: Record<string, string> = {
   'payment.failed': 'payment',
 };
 
-/** The supported event's entity and provider reference; unsupported events have none. */
 function eventEntity(parsed: z.infer<typeof envelope>) {
   const subscriptionEvent = policy.billing.contracts.razorpay_event_types.includes(parsed.event);
   let payloadKey = subscriptionEvent ? 'subscription' : PAYLOAD_KEYS[parsed.event];
@@ -91,7 +88,6 @@ function eventEntity(parsed: z.infer<typeof envelope>) {
     payloadKey = undefined;
   if (!payloadKey) return { entity: null, reference: '' };
   const entity = parsed.payload[payloadKey]?.entity;
-  // A supported event without its entity is malformed, not ignorable.
   if (!entity) throw invalidPayload();
   const reference = payloadKey === 'payment' ? entity.order_id : entity.id;
   if (!ref.safeParse(reference).success)
@@ -101,7 +97,6 @@ function eventEntity(parsed: z.infer<typeof envelope>) {
   return { entity, reference: String(reference) };
 }
 
-/** Size and authentication precede parsing; receipt commit precedes provider I/O. */
 export async function receiveWebhook(
   db: Database,
   config: ServiceConfig,
@@ -173,7 +168,6 @@ export async function receiveWebhook(
         .updateTable('billing_webhook_events')
         .set({ processing_state: 'quarantined', error_code: 'event_id_digest_conflict' })
         .where('id', '=', prior.id)
-        // A completed (applied or ignored) event keeps its state; only unapplied rows quarantine.
         .where('processing_state', '=', 'pending')
         .returning(['id', 'error_code'])
         .execute();

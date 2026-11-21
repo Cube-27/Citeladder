@@ -1,4 +1,3 @@
-/** The one read catalogue shared by hosted MCP and the in-app Agent. */
 import { z } from 'zod';
 import { ACTION_STATUS_ANY, actionStatusSchema } from '@citeladder/contracts/action-status';
 import { verificationSchema } from '@citeladder/contracts/ai-traffic';
@@ -62,7 +61,6 @@ const pageSize = 'How many rows to return; omit for the default page size.';
 const limit = optional(z.number().int().min(1).max(mcpPolicy.max_list_limit).describe(pageSize));
 const cursor = optional(z.string().describe('The next_cursor a previous page returned.'));
 const page = { cursor, limit };
-/** A visibility run, named the way every read returns it. */
 const run = uuid.describe('A run id (audit_id) that read_visibility_overview returned.');
 const latestRun = optional(run.describe('A run id (audit_id); omit for the latest run.'));
 const snapshot_id = optional(
@@ -83,7 +81,6 @@ const cohort = z
   .describe(
     'core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.',
   );
-/** A market id from the project context's markets; omitted is the default market. */
 const market_id = optional(
   uuid.describe(
     'A market id from get_project_business_context; omit for the default market. Markets are never pooled.',
@@ -153,7 +150,6 @@ type ProjectDefinition<S extends z.ZodObject<{ project_id: typeof uuid }>> = {
   schema: S;
   read: (read: ProjectRead, args: z.output<S>) => Promise<Evidence>;
 };
-/** The project is authorized on every call, never by its ID alone. */
 function projectScoped<S extends z.ZodObject<{ project_id: typeof uuid }>>(
   definition: ProjectDefinition<S>,
 ): Definition<S> {
@@ -168,7 +164,6 @@ function projectScoped<S extends z.ZodObject<{ project_id: typeof uuid }>>(
     },
   };
 }
-/** A project evidence read: unknown availability is a defect, never a silent "available". */
 function projectTool<S extends z.ZodObject<{ project_id: typeof uuid }>>(
   definition: ProjectDefinition<S>,
 ): Definition<S> {
@@ -963,10 +958,6 @@ export const presentationTools: ReadonlySet<string> = new Set<ToolName>([
   'open_analytics',
 ]);
 
-/**
- * JSON Schema without the noise models pay for: no $schema, patterns a format
- * already names, safe-integer bounds or null branches.
- */
 const FORMATS = new Set(['uuid', 'date', 'date-time']);
 function compact(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(compact);
@@ -1013,7 +1004,6 @@ const output = z.record(z.string(), z.json());
 function isToolName(name: string): name is ToolName {
   return Object.hasOwn(definitions, name);
 }
-/** Names each invalid field so the model can correct its call. */
 export function argumentProblem(error: z.ZodError) {
   return `Invalid arguments: ${error.issues
     .map((issue) => `${issue.path.join('.') || 'arguments'}: ${issue.message}`)
@@ -1034,6 +1024,5 @@ export async function dispatchTool(
   if (!parsed.success) throw new McpInputError(argumentProblem(parsed.error));
   const call = principalForCall(principal);
   const result = await definition.read({ db, principal: call, origin, maxBytes }, parsed.data);
-  // Dates serialize as ISO instants; an invalid persisted projection fails here.
   return output.parse(plainJson(result));
 }

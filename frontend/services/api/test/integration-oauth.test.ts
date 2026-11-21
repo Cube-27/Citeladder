@@ -39,7 +39,6 @@ function configureOAuth() {
   return fetch;
 }
 
-/** A workspace whose owner completed Google consent once, with a consent to repeat. */
 async function connectedGsc() {
   configureOAuth();
   const userId = await fixtures.user();

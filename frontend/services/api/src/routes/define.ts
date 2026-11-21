@@ -1,18 +1,3 @@
-/**
- * A product route: its published contract, its parameters and its handler.
- *
- * The parameter specs are the single declaration: they validate requests
- * (`http/params.ts`) and generate the route's OpenAPI parameters. A route
- * resolves the active workspace (the default) or, with `authorize: 'project'`,
- * the project's membership:
- * session first (401), then the workspace or project (400/404), the
- * capability (403) and the parameters (422). Authorization precedes parameter validation.
- * Session and membership are one statement, and the workspace's entitlement
- * state one batch kept on the request context (`entitlements`) for the handler.
- * A route under `/projects/{project_id}` declares `authorize: 'active-project'`
- * (or, for a read with no capability, `'project'` when a link or an `<img>` must
- * open it from any workspace); its handler never re-checks the project.
- */
 import type { ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { Context, Hono, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
@@ -47,16 +32,10 @@ import { withIdempotency } from '../public-api/idempotency.ts';
 
 type RouteContext = { c: Context<AppEnv>; db: Database; config: ServiceConfig };
 
-/** The workspace-and-project scope an active-project route's owner call takes. */
 export function projectScopeOf(c: Context<AppEnv>, projectId: string) {
   return { workspaceId: c.get('workspace').workspaceId, projectId };
 }
 
-/**
- * A JSON route's handler must return what its response contract accepts, so
- * the shared contract and the handler cannot drift apart; a raw route builds
- * its own `Response` (a file download, or a status chosen per request).
- */
 type RouteBody<Path extends ParamSpecs, Query extends ParamSpecs, Response extends z.ZodType> =
   | {
       raw?: false;
@@ -80,63 +59,27 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   response: Response;
   method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
   status?: ContentfulStatusCode | 204;
-  /** Another success status the same response is served with, such as a replay's 200. */
   alsoStatus?: ContentfulStatusCode;
   body?: z.ZodType;
   headers?: z.ZodObject;
-  /** Explicit account recovery surface with no product evidence. */
   recovery?: boolean;
-  /**
-   * The handler authenticates and spends attempt quota, then reads its body
-   * through its own bound (compressed or not), so the app's ordinary body
-   * limit must not pre-read it.
-   */
   streamsBody?: true;
-  /**
-   * `project`: resolve the workspace from the path's `project_id` alone (links,
-   * `<img>`). `active-project`: the active workspace, as a flat route resolves
-   * it, must hold the path's `project_id`.
-   */
   authorize?: 'workspace' | 'project' | 'active-project' | 'workspace-path' | 'session' | 'public';
-  /**
-   * Where the route is served: the browser API (default); the public API
-   * under `/v1` for API keys (`public`, declared with its `/v1` path); or
-   * both, the browser path below `/api/v1/projects/{project_id}` also served
-   * below `/v1`. A public call still needs `capability` from the key
-   * creator's live role.
-   */
   exposure?: 'browser' | 'public' | 'both';
-  /**
-   * The public path of a `both` route whose browser path is not below
-   * `/api/v1/projects/{project_id}`: it nests the route under
-   * `/v1/projects/{project_id}`: a write's command finds its record only in
-   * that project, and the key middleware proves a read's owned path IDs belong
-   * to it (`public-api/ownership.ts`).
-   */
   publicPath?: string;
 } & PermissionDeclaration &
   RouteBody<Path, Query, Response>;
 
-/**
- * A route serving a command declares the command's `permission`, from which
- * its capability gate and API key scope derive; its handler takes the checked
- * actor with `routeActor`. Any other route declares its own capability and,
- * when public, its scope; a route never declares both.
- */
 type PermissionDeclaration = {
   permission?: Permission;
   capability?: WorkspaceCapability;
-  /** The API key scope a public call needs; reads default to `read`. */
   scope?: ApiKeyScope;
 };
 
 export type ProductRoute = {
   contract: RouteContract;
-  /** The public API contract of a route served on both APIs. */
   publicContract?: RouteContract;
-  /** The declared parameters, as `validateParams` reads them. */
   params: { path: ParamSpecs; query: ParamSpecs };
-  /** The route bounds its own body (`streamsBody`). */
   streamsBody: boolean;
   register: (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => void;
 };
@@ -171,7 +114,6 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
   }
 }
 
-/** The OpenAPI view of the parameter specs, by wire name. */
 function parameterObject(specs: ParamSpecs): z.ZodObject {
   const shape: Record<string, z.ZodType> = {};
   for (const [name, spec] of Object.entries(specs)) {
@@ -192,21 +134,14 @@ const SESSION_COOKIE = z.object({
   [String(resolveSettingSpec(policy.settings.session_cookie_name, process.env))]: optionalString,
 });
 
-/** An OpenAPI `{name}` path template as a Hono pattern. */
 function honoPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/gu, ':$1'); // NOSONAR -- input is a static OpenAPI route template, never request data
 }
 
-// A matched path requested with another method is 405 before any authorization runs.
 function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
 
-/**
- * The capability gate and API key scope a route declares, from its command's
- * permission or its own. Writes default to `run`; the gate precedes parameter
- * validation.
- */
 function routeGate(
   route: PermissionDeclaration & { path: string; authorize?: string },
   method: string,
@@ -219,7 +154,6 @@ function routeGate(
     );
   const capability =
     permission?.capability ?? route.capability ?? (method === 'get' ? undefined : 'run');
-  // A link or an `<img>` reads through the path project; a gated route never does.
   if (route.authorize === 'project' && capability !== undefined)
     throw new Error(`A gated route resolves the active workspace (active-project): ${route.path}`);
   return { capability, scope: permission?.scope ?? route.scope };
@@ -267,10 +201,7 @@ export function defineRoute<
     exposure === 'browser' ? null : publicOperation({ ...route, scope }, shared, capability);
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const respond = async (c: Context<AppEnv>) => {
-      // The session read named the path project only if the active workspace
-      // holds it; a foreign project is 404 before its parameters are judged.
       if (activeProject && c.get('workspace').projectId === null) throw notFound('Project');
-      // The gate checked this permission; the handler takes its actor with `routeActor`.
       if (route.permission) c.set('permission', route.permission);
       const params = validateParams(route.params, {
         path: c.req.param() as Record<string, string>,
@@ -297,7 +228,6 @@ export function defineRoute<
       ...(publicRoute ? [] : [sessionUser(config, db, membership)]),
       async (c) => {
         if (scoped) {
-          // One entitlement read per request, shared by the gate and the handler.
           const entitlements = new WorkspaceEntitlements(db, c.get('workspace').workspaceId);
           c.set('entitlements', entitlements);
           if (!route.recovery) await entitlements.requireAccess();
@@ -317,7 +247,6 @@ export function defineRoute<
   };
 }
 
-/** `both` serves the browser path below `/api/v1` at the same path below `/v1`. */
 function publicPathOf(route: { path: string; exposure?: string; publicPath?: string }): string {
   if (route.exposure === 'public') return route.path;
   if (route.publicPath !== undefined) {
@@ -332,13 +261,11 @@ function publicPathOf(route: { path: string; exposure?: string; publicPath?: str
   return policy.api.machine_prefix + route.path.slice(policy.api.prefix.length);
 }
 
-/** The public API contract and registration of a `public` or `both` route. */
 function publicOperation(
   route: Pick<
     RouteSpec<ParamSpecs, ParamSpecs, z.ZodType>,
     'path' | 'exposure' | 'publicPath' | 'authorize' | 'scope' | 'headers' | 'params'
   >,
-  /** The contract fields the browser and public contracts share. */
   shared: Pick<RouteContract, 'method' | 'query' | 'body' | 'responses'>,
   capability: WorkspaceCapability | undefined,
 ) {
@@ -346,14 +273,12 @@ function publicOperation(
   const path = publicPathOf(route);
   if (!path.startsWith(`${policy.api.machine_prefix}/`))
     throw new Error(`A public API route must sit below ${policy.api.machine_prefix}: ${path}`);
-  // `authorize: 'public'` on a public route means anonymous (the OpenAPI document).
   const anonymous = route.authorize === 'public';
   const scope = route.scope ?? (method === 'get' ? 'read' : undefined);
   if (!anonymous && scope === undefined)
     throw new Error(`A public write declares its API key scope: ${method} ${path}`);
   const guard =
     anonymous || scope === undefined ? null : { capability: capability ?? 'read', scope };
-  // Every public POST that is not a read creates or spends, so it is replay-safe.
   const idempotent = guard !== null && method === 'post' && guard.scope !== 'read';
   const routeHeaders = Object.fromEntries(
     Object.entries(route.headers?.shape ?? {}).filter(
@@ -436,7 +361,6 @@ export function definePatchRoute<
   return defineRoute({ ...route, method: 'patch' });
 }
 
-/** A `204 No Content` route: the handler performs the deletion and returns nothing. */
 export function defineDeleteRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
   route: Omit<
     RouteSpec<Path, Query, z.ZodType>,
@@ -465,11 +389,6 @@ export function defineDeleteRoute<const Path extends ParamSpecs, const Query ext
   };
 }
 
-/** Register once before handlers: a path may support several methods. */
-/**
- * Whether a request reaches a route that bounds its own body
- * (`streamsBody`); the app skips its ordinary body limit for exactly these.
- */
 export function selfBoundedBodies(
   routes: readonly ProductRoute[],
 ): (method: string, path: string) => boolean {

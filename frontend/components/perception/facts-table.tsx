@@ -16,11 +16,6 @@ const COLUMNS = [
   { key: 'last', label: 'Last raised', kind: 'date' },
 ] as const satisfies readonly DataTableColumn[];
 
-/**
- * Claim verdicts grouped by the fact revision each run froze, so an edited
- * fact never rewrites past claims. A fact no checked claim cited reads "not
- * raised" across its counts, never zeros.
- */
 export function FactsTable({ query }: Readonly<{ query: UseQueryResult<AccuracyFactList> }>) {
   const facts = query.data?.facts ?? [];
   return (

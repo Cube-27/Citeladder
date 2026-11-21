@@ -1,7 +1,3 @@
-// Local Compose Worker images run only `wrangler dev`. This copies the wrangler
-// CLI and its lockfile-resolved dependency closure out of a full pnpm install,
-// so those images ship wrangler instead of the whole build toolchain.
-// Usage (from the workspace root): node scripts/copy-wrangler-runtime.mjs <destination>
 import { cp, mkdir, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 

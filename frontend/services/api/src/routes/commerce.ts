@@ -63,12 +63,10 @@ import {
   projectScopeOf,
 } from './define.ts';
 
-/** Every route here reads the path project inside the active workspace. */
 const family = { family: 'commerce', authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}/commerce';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
-/** The executions a product read covers, shared by the table and the detail page. */
 const windowParam = {
   scalar: { kind: 'int', ge: 1, le: 366 },
   default: policy.commerce.products.default_window_days,
@@ -87,7 +85,6 @@ const applyBody = catalogImportApplyRequestSchema.refine(
 );
 const candidateBody = competitorDecisionRequestSchema;
 const promptBody = buyerPromptDecisionRequestSchema;
-/** A retried generation with the same key replays the prompts its first attempt stored. */
 const buyerGenerateHeaders = z.object({
   'Idempotency-Key': z
     .string()
@@ -96,7 +93,6 @@ const buyerGenerateHeaders = z.object({
 });
 const executeDiscoveriesBody = competitorDiscoveryExecuteRequestSchema;
 
-/** Changes and new work need Commerce in the plan; reads of collected data do not. */
 async function writeScopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
   const scope = projectScopeOf(c, projectId);
   await requireFlag(db, scope.workspaceId, 'commerce');

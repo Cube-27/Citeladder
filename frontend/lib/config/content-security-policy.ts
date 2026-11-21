@@ -3,9 +3,6 @@ import { CSP_REPORTS_PATH } from '@citeladder/contracts/route-ownership';
 import { RAZORPAY_CHECKOUT_SCRIPT } from './billing';
 import { TURNSTILE_ORIGIN } from './turnstile';
 
-// Browser requests use same-origin APIs. Logo.dev supplies app brand images;
-// the existing Razorpay adapter loads its SDK and isolated checkout frame.
-// Inline styles remain necessary for React layout, charts and consent HTML.
 const DOCUMENT_DIRECTIVES = [
   "default-src 'self'",
   "object-src 'none'",
@@ -23,13 +20,9 @@ const CLOUDFLARE_BEACON_SOURCES = [
   'https://static.cloudflareinsights.com/beacon.min.js/',
 ];
 
-// The product's policies report violations to the API's same-origin sink
-// through the Reporting API endpoint this names.
 const REPORT_ENDPOINT = 'csp';
 export const APP_REPORTING_ENDPOINTS = `${REPORT_ENDPOINT}="${CSP_REPORTS_PATH}"`;
 
-// Sign-up and the email-link forms load the Turnstile widget from its origin
-// and render its challenge in a frame from it.
 export const APP_CONTENT_SECURITY_POLICY = [
   ...DOCUMENT_DIRECTIVES,
   `script-src 'self' ${RAZORPAY_CHECKOUT_SCRIPT} ${TURNSTILE_ORIGIN} ${CLOUDFLARE_BEACON_SOURCES.join(' ')}`,
@@ -65,7 +58,6 @@ type AstroDirective = NonNullable<
   Exclude<AstroContentSecurityPolicy, boolean | undefined>['directives']
 >[number];
 
-// The marketing footer hotlinks the launch-directory badges from their hosts.
 const LAUNCH_BADGE_IMAGE_ORIGINS = ['https://www.codehype.ai', 'https://tools.launchllama.co'];
 
 type AstroScriptHash = `sha256-${string}`;
@@ -119,8 +111,6 @@ export function marketingContentSecurityPolicy({
   scriptHashes: readonly AstroScriptHash[];
 }): AstroContentSecurityPolicy {
   return astroContentSecurityPolicy({
-    // The contact form's Turnstile widget loads from this origin and renders
-    // its challenge in a frame from it; no other page requests either.
     scriptSources: [
       TURNSTILE_ORIGIN,
       ...(analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : []),

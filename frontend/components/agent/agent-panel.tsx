@@ -30,19 +30,12 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const EMPTY_SEED: AgentHandoff = { context: {} };
 
-/**
- * A right-side chat over the current screen (any but the Agent's own). It starts from the
- * screen's typed context and uses the same chats, runs and outputs as the
- * Agent workspace; **Open in Agent** continues the chat there.
- */
 export function AgentPanel() {
   const panel = useAgentPanel();
   const pathname = useLocation().pathname ?? '';
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const onDashboard = !isAgentPath(pathname);
   const setOpen = panel?.setOpen;
-  // Going to the Agent's pages (Open in Agent, a workspace link) closes the panel,
-  // so returning does not reopen it over the next screen.
   useEffect(() => {
     if (!onDashboard) setOpen?.(false);
   }, [onDashboard, setOpen]);
@@ -56,7 +49,6 @@ export function AgentPanel() {
       onOpenChange={panel.setOpen}
       title="Agent"
       closeLabel="Close agent"
-      // The panel body lays out its own scroll area and bottom-pinned composer.
       body="dock"
     >
       {chatId ? (
@@ -82,7 +74,6 @@ export function AgentPanel() {
         />
       ) : (
         <PanelStart
-          // A fresh draft for each open, from the context captured then.
           key={`${activeProjectId}:${panel.openCount}`}
           workspaceId={activeWorkspaceId}
           projectId={activeProjectId}
@@ -208,7 +199,6 @@ function PanelConversation({
   const navigate = useNavigate();
   const projectHref = useProjectHref();
   const thread = useChatThread(workspaceId, detail);
-  // The panel is too narrow for the output editor; the workspace owns it.
   const openOutput = () => {
     onLeave();
     navigate(projectHref(`/agent/chats/${chatId}`));

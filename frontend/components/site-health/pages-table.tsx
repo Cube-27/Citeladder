@@ -25,26 +25,6 @@ import {
 } from '@/lib/site-health/status';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 
-/**
- * Analyzed-pages table (Slice 7, mockups 712 + 713).
- *
- * Seven columns: the row's ordinal, the page (its title, which links to the
- * per-URL detail, over its URL), the page-kind badge (v2 P1), the issue count,
- * the Web fundamentals and AEO readiness scores and the last audit. A page whose
- * analysis has not completed (queued, running, error, blocked…) carries its
- * status badge beside the title, so a failure stays visible on every view.
- * Missing / not-yet-analysed scores render the not-measured Absence dash —
- * never a fabricated zero (an error/blocked row shows the dash, not 0).
- * The whole row is clickable and navigates to the Slice 8 per-URL detail route
- * (`/site/crawls/[crawlId]/pages/[siteUrlId]`); the title link is the
- * keyboard/screen-reader affordance.
- *
- * Sorting is SERVER-SIDE and keyset-paged: the Page header asks the backend to
- * reorder the whole result set by URL, never the current page window; clicking
- * it again returns to the default (status) order.
- */
-
-/** Where a failing URL is linked from: the first page, and how many more the crawl found. */
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
   const [first, ...rest] = page.linked_from;
   if (!first || !isFetchFailure(page.analysis_status)) return null;
@@ -75,8 +55,6 @@ function pagesColumns(
           }
         : undefined,
     },
-    // At 982 the fit hides the last audit, then the page kind.
-    // The longest page kind ("Case Study / Review") fits on one line.
     { key: 'type', label: 'Type', kind: 'status', width: 'category', priority: 'low' },
     { key: 'issues', label: 'Issues', kind: 'number', width: 'figure' },
     { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'figure' },
@@ -99,9 +77,7 @@ export function PagesTable({
   pages: PageSummary[];
   crawlId: string;
   sort?: PagesSort;
-  /** Omitted where the table is read-only; the Page header then renders plain. */
   onSortChange?: (sort: PagesSort) => void;
-  /** What the table shows instead of rows (loading, error, empty). */
   state?: DataTableState;
   toolbar?: FilterBarProps;
   pager?: ComponentProps<typeof DataTable>['pager'];
@@ -125,8 +101,6 @@ export function PagesTable({
       pageSize={pageSize}
       rowCount={pages.length}
       busy={busy}
-      // Every Pages view shares one footprint, so switching views never moves
-      // the sections below the table.
       reserveRows
     >
       {pages.map((page) => {
@@ -134,7 +108,6 @@ export function PagesTable({
         return (
           <TableRow
             key={page.site_url_id}
-            // Preserve native row/cell semantics; the title is the announced link.
             tabIndex={0}
             onClick={() => openPage(page.site_url_id)}
             onKeyDown={(event) => {
@@ -145,8 +118,6 @@ export function PagesTable({
             }}
             className="focus-ring cursor-pointer"
           >
-            {/* A URL is one unbreakable token: every line is clamped to the
-                column and carries the full value in a tooltip when cut. */}
             <TableCell>
               <Stack as="span" gap="tight" className="min-w-0">
                 <Inline as="span">
@@ -202,10 +173,6 @@ export function PagesTable({
   );
 }
 
-/**
- * A measured score is the number alone (owner, 2026-11-10: no evidence
- * caption under it); only a score with no value names its state.
- */
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
   if (score === null) return measurementStateValue(state);
   return printed(formatScore(score));

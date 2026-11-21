@@ -30,7 +30,6 @@ type UserMenuState = {
   setOpen: (presenter: UserMenuPresenter, open: boolean) => void;
 };
 
-/** Each mounted trigger is its own presenter: the desktop sidebar and the nav drawer both mount one. */
 type UserMenuPresenter = 'sidebar' | 'drawer' | 'compact';
 
 const UserMenuContext = createContext<UserMenuState | null>(null);
@@ -87,17 +86,11 @@ function UserMenuContent({
   );
 }
 
-/**
- * The account trigger. In the sidebar it is the system's identity button
- * (the email over the workspace, an avatar in the rail); in a signed-in flow
- * bar it is the avatar alone.
- */
 export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { activePresenter, email, setOpen } = useUserMenu();
   const { activeWorkspace } = useProjectContext();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
-  // The deepest match is current: MCP connections, not also Settings.
   const currentHref = ACCOUNT_MENU_ITEMS.filter((item) =>
     isNavItemActive(pathname, searchParams, item),
   ).sort((a, b) => b.href.length - a.href.length)[0]?.href;
@@ -113,7 +106,6 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
           <Avatar name={email} />
         </MenuTrigger>
       ) : (
-        // Labelled, a tooltip would cover the collapse toggle beside the row.
         <SidebarTextTooltip inRail="only">
           <MenuTrigger asChild>
             <SidebarIdentButton
@@ -134,7 +126,6 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
 export function UserMenuController({ children }: Readonly<{ children: ReactNode }>) {
   const { user, clearSession } = useSession();
   const [activePresenter, setActivePresenter] = useState<UserMenuPresenter | null>(null);
-  // clearSession removes account-scoped cache only after cookie revocation succeeds.
   // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
   const logout = useMutation({
     mutationFn: revokeSession,
