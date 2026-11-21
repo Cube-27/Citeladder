@@ -4,7 +4,7 @@ import type { Insertable, Selectable } from 'kysely';
 import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Audits, CommerceRecommendationObservations } from '../generated/db-schema.ts';
-import { parseShoppingResults, type ShoppingResult } from '../search-surfaces/parsing.ts';
+import { parseShoppingResults, type ShoppingResult } from '../search-surfaces/scraper-parsing.ts';
 import { record, strings } from '../db/json.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
 import type { DeriveExecution, ExecutionResult } from '../audits/result-persistence.ts';

@@ -3,7 +3,7 @@ import { providerPolicy } from '../../providers/config.ts';
 import { ProviderError } from '../../providers/errors.ts';
 import type { AuditTask } from '../../queue/audit-queue.ts';
 import { isScraperEngine } from '../../search-surfaces/dataforseo.ts';
-import { parseScraper } from '../../search-surfaces/parsing.ts';
+import { parseScraper } from '../../search-surfaces/scraper-parsing.ts';
 import { readFrozenSearchRequest } from '../frozen-configuration.ts';
 import { persistExecutionSuccess, persistSurfaceFailure } from '../result-persistence.ts';
 import { frozenRequestSettings, observedAdapter, type ObservedSurface } from './dataforseo.ts';

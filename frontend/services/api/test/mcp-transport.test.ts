@@ -303,6 +303,60 @@ describe('hosted MCP transport', () => {
     expect((await service.request('https://protocol.example.test/mcp', reverse)).status).toBe(400);
     expect(dispatchTool).not.toHaveBeenCalled();
   });
+  it.each([
+    ['a non-2.0 version', { jsonrpc: '1.0', id: 1, method: 'tools/list' }, -32600],
+    ['a missing method', { jsonrpc: '2.0', id: 1 }, -32600],
+    ['a null id', { jsonrpc: '2.0', id: null, method: 'tools/list' }, -32600],
+    ['a fractional id', { jsonrpc: '2.0', id: 1.5, method: 'tools/list' }, -32600],
+    ['an unsafe integer id', { jsonrpc: '2.0', id: 2 ** 53, method: 'tools/list' }, -32600],
+    ['array params', { jsonrpc: '2.0', id: 1, method: 'tools/list', params: [] }, -32600],
+    [
+      'array tool arguments',
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'x', arguments: [] } },
+      -32602,
+    ],
+    [
+      'a numeric tool name',
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 7 } },
+      -32602,
+    ],
+    [
+      'a prompt project that is not a UUID',
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'prompts/get',
+        params: { name: 'business_health_review', arguments: { project_id: 'nope' } },
+      },
+      -32602,
+    ],
+  ])('refuses %s with its JSON-RPC error code', async (_case, body, code) => {
+    const base = request('tools/list');
+    const response = await app().request('https://protocol.example.test/mcp', {
+      ...base,
+      body: JSON.stringify(body),
+    });
+    expect([response.status, (await rpc(response)).error.code]).toEqual([400, code]);
+    expect(dispatchTool).not.toHaveBeenCalled();
+  });
+  it('accepts a valid prompt and refuses modern calls whose client metadata is malformed', async () => {
+    const service = app();
+    const project = '0b6f5c3e-8a43-4c2e-9d55-6a3f2f7c1e10';
+    const prompt = await service.request(
+      'https://protocol.example.test/mcp',
+      request('prompts/get', {
+        name: 'business_health_review',
+        arguments: { project_id: project },
+      }),
+    );
+    expect(JSON.stringify((await rpc(prompt)).result)).toContain(`Review project ${project}`);
+    const malformed = request('tools/list', {}, true);
+    const message = JSON.parse(malformed.body);
+    message.params._meta['io.modelcontextprotocol/clientInfo'] = { name: 'test', version: 1 };
+    malformed.body = JSON.stringify(message);
+    const response = await service.request('https://protocol.example.test/mcp', malformed);
+    expect([response.status, (await rpc(response)).error.code]).toEqual([400, -32602]);
+  });
   it('revalidates bearer admission on each request and advertises the protected resource', async () => {
     const service = app();
     await service.request('https://protocol.example.test/mcp', request('tools/list'));
