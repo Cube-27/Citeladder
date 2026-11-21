@@ -133,39 +133,6 @@ export function formatDisplayTimestamp(timestamp: string, timeZone: string): str
   }
 }
 
-export function formatStripTimestamp(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  try {
-    const parts = dateFormat('strip', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-      timeZone,
-    }).formatToParts(date);
-    const part = (type: Intl.DateTimeFormatPartTypes) =>
-      parts.find((item) => item.type === type)?.value ?? '';
-    return `${part('day')} ${part('month')} ${part('hour')}:${part('minute')}`;
-  } catch {
-    return timeZone === 'UTC' ? timestamp : formatStripTimestamp(timestamp, 'UTC');
-  }
-}
-
-export function formatStripDay(isoDay: string): string {
-  const date = new Date(`${isoDay}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return isoDay;
-  const parts = dateFormat('strip-day', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  }).formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((item) => item.type === type)?.value ?? '';
-  return `${part('day')} ${part('month')}`;
-}
-
 export function formatDisplayDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
