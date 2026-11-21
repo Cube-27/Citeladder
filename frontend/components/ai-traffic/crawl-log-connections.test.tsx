@@ -81,7 +81,8 @@ describe('crawl-log token rotation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
-    await user.click(await screen.findByRole('button', { name: 'Rotate token' }));
+    await user.click(await screen.findByRole('button', { name: /actions$/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Rotate token' }));
     const dialog = await screen.findByRole('dialog', { name: 'Rotate token' });
     await user.click(within(dialog).getByRole('button', { name: 'Rotate token' }));
     expect(
@@ -108,7 +109,8 @@ describe('crawl-log token rotation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
-    await user.click(await screen.findByRole('button', { name: 'Rotate token' }));
+    await user.click(await screen.findByRole('button', { name: /actions$/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Rotate token' }));
     const dialog = await screen.findByRole('dialog', { name: 'Rotate token' });
     await user.click(within(dialog).getByRole('button', { name: 'Rotate token' }));
     expect(await within(dialog).findByText(/rotate the token/i)).toBeVisible();
