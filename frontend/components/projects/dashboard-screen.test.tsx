@@ -199,13 +199,15 @@ function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 
-async function openMore(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'More' }));
+async function openPageActions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Page actions' }));
   return screen.findByRole('menu');
 }
 
 async function exportPdf(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }));
+  await user.click(
+    within(await openPageActions(user)).getByRole('menuitem', { name: 'Export PDF' }),
+  );
 }
 
 const DEFAULT_LAYOUT = {
@@ -548,7 +550,7 @@ describe('DashboardScreen', () => {
     ).toEqual(['company_facts', 'project_state']);
     expect(screen.queryByRole('heading', { name: 'Movement' })).not.toBeInTheDocument();
   });
-  it('keeps Layout and Export PDF behind More at desktop width, Layout for editors only', async () => {
+  it('keeps Layout and Export PDF behind Page actions at desktop width, Layout for editors only', async () => {
     // jsdom loads no Tailwind, so the masthead's row is drawn as at desktop width;
     // it has no `checkVisibility`, so it answers as a browser would here.
     Object.defineProperty(HTMLElement.prototype, 'checkVisibility', {
@@ -568,7 +570,7 @@ describe('DashboardScreen', () => {
     );
     expect(screen.getByRole('button', { name: /manage project/i })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Launch run' })).toBeVisible();
-    const menu = await openMore(user);
+    const menu = await openPageActions(user);
     expect(
       within(menu)
         .getAllByRole('menuitem')
@@ -588,7 +590,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     expect(
-      within(await openMore(user))
+      within(await openPageActions(user))
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
     ).toEqual(['Export PDF']);
@@ -689,7 +691,7 @@ describe('DashboardScreen', () => {
     expect(screen.queryByRole('region', { name: 'Project state' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     expect(
-      within(await openMore(user)).getByRole('menuitem', { name: 'Export PDF' }),
+      within(await openPageActions(user)).getByRole('menuitem', { name: 'Export PDF' }),
     ).toBeVisible();
   });
   it('asks a project with no active prompts to add some', () => {
