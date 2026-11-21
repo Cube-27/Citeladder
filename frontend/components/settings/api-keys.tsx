@@ -17,13 +17,7 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { textRole } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
-import {
-  TableActionsCell,
-  TableCell,
-  TableCellLines,
-  TableRow,
-  TableTime,
-} from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import type {
   ApiKey,
   ApiKeyCreated,
@@ -91,37 +85,39 @@ function KeyRow({
     apiKey.project_ids === null
       ? 'All projects'
       : apiKey.project_ids.map((id) => projectNames.get(id) ?? 'A deleted project').join(', ');
+  const access = apiKey.scopes.join(', ');
   return (
     <TableRow>
       <TableCell>
         <div className="grid min-w-0">
-          <ClampText lines={1} className={textRole('body')}>
-            {apiKey.name}
-          </ClampText>
-          <ClampText lines={1} className={textRole('caption')}>
-            <code>{apiKey.prefix}…</code> ·{' '}
-            {apiKey.created_by_email ? `Created by ${apiKey.created_by_email} · ` : null}
-            Created <DisplayTime value={apiKey.created_at} dateOnly />
-            {apiKey.expires_at ? (
-              <>
-                {' '}
-                · Expires <DisplayTime value={apiKey.expires_at} dateOnly />
-              </>
-            ) : null}
-          </ClampText>
+          <ClampText tooltip={apiKey.name}>{apiKey.name}</ClampText>
+          <code className={textRole('caption', 'truncate')}>{apiKey.prefix}…</code>
         </div>
       </TableCell>
       <TableCell>
-        <TableCellLines
-          primary={<KeyStateMark state={apiKey.state} />}
-          secondary={<TableTime value={apiKey.last_used_at} fallback="Not used yet" />}
-        />
+        <div className="grid min-w-0 justify-items-start">
+          <KeyStateMark state={apiKey.state} />
+          {apiKey.expires_at && apiKey.state === 'active' ? (
+            <span className={textRole('caption')}>
+              Expires <DisplayTime value={apiKey.expires_at} dateOnly />
+            </span>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell>
-        <ClampText>{apiKey.scopes.join(', ')}</ClampText>
+        {apiKey.last_used_at ? (
+          <DisplayTime value={apiKey.last_used_at} dateOnly />
+        ) : (
+          <span className="text-ink-2">Never</span>
+        )}
       </TableCell>
       <TableCell>
-        <ClampText lines={1}>{projects}</ClampText>
+        <div className="grid min-w-0">
+          <ClampText tooltip={access}>{access}</ClampText>
+          <ClampText tooltip={projects} className={textRole('caption')}>
+            {projects}
+          </ClampText>
+        </div>
       </TableCell>
       <TableActionsCell>
         {apiKey.state === 'active' ? (
@@ -134,9 +130,9 @@ function KeyRow({
 
 const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
-  { key: 'status', label: 'Status', sublabel: 'Last used', kind: 'status', width: 'category' },
-  { key: 'scopes', label: 'Access', kind: 'text', width: 'name', priority: 'low' },
-  { key: 'projects', label: 'Projects', kind: 'text', width: 'status', priority: 'low' },
+  { key: 'status', label: 'Status', kind: 'status', width: 'status' },
+  { key: 'used', label: 'Last used', kind: 'date', width: 'date' },
+  { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
   { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
 ];
 

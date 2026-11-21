@@ -196,7 +196,6 @@ export function performanceNotices({
   projectionFailed,
   selectedMissing,
   comparisonMissing,
-  qualityFlagged,
   readinessFailed,
 }: Readonly<{
   sync: ReturnType<typeof usePerformanceSync>;
@@ -204,7 +203,6 @@ export function performanceNotices({
   projectionFailed: boolean;
   selectedMissing: boolean;
   comparisonMissing: boolean;
-  qualityFlagged: boolean;
   readinessFailed: boolean;
 }>): PerformanceMessage[] {
   const messages: PerformanceMessage[] = [];
@@ -245,11 +243,5 @@ export function performanceNotices({
       ? null
       : missingCoverageNotice(selectedMissing, comparisonMissing);
   if (coverageNotice) messages.push({ key: 'coverage', tone: 'info', text: coverageNotice });
-  if (qualityFlagged)
-    messages.push({
-      key: 'quality',
-      tone: 'info',
-      text: 'Some imported days are missing or flagged, or come from an earlier complete import. Days without a usable import show no value, not zero.',
-    });
   return messages;
 }

@@ -326,8 +326,6 @@ function researchView({
       tab === 'demand' ? undefined : (
         <FilterBar
           {...pageControls({
-            data: loaded,
-            tab,
             datasets,
             collection: empty ? null : collection,
             onSeed: actions.onSeed,
@@ -475,28 +473,18 @@ function PageActions({
 }
 
 function pageControls({
-  data,
-  tab,
   datasets,
   collection,
   savedView,
   ...actions
 }: Readonly<
   {
-    data: SearchIntelligenceReadiness;
-    tab: Tab;
     datasets: SearchIntelligenceDataset[];
     collection: SearchCollection | null;
     savedView: FilterDefinition[];
   } & CollectionActions
 >) {
-  const newest = datasets.find((item) =>
-    tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
-  );
   return scopeControls({
-    data,
-    tab,
-    latest: collection?.dataset ?? newest,
     savedView,
     collection: collection ?? undefined,
     action: collection ? (

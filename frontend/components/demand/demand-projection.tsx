@@ -13,16 +13,8 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
-import {
-  DemandDataCaveats,
-  DemandDetectorCoverage,
-  DemandSignalFilters,
-} from '@/components/demand/demand-signal-filters';
-import {
-  DemandSignalTable,
-  SIGNAL_COLUMN_COUNT,
-  SignalLegend,
-} from '@/components/demand/demand-signal-table';
+import { DemandSignalFilters } from '@/components/demand/demand-signal-filters';
+import { DemandSignalTable, SIGNAL_COLUMN_COUNT } from '@/components/demand/demand-signal-table';
 import {
   demandMutations,
   demandQueries,
@@ -32,7 +24,7 @@ import {
   type DemandSnapshot,
 } from '@/lib/api/demand';
 import type { DemandRecomputeRequest } from '@citeladder/contracts/demand';
-import { Calendar, RefreshCw, Search, Sparkles } from '@/lib/icons';
+import { RefreshCw, Search, Sparkles } from '@/lib/icons';
 import { isTransientMutationError, mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   countByTab,
@@ -42,13 +34,11 @@ import {
   type FilterTab,
   type RankedSignal,
 } from '@/lib/demand/signals';
-import { formatCount, formatStripDay } from '@/lib/format';
-import { InlineFigure } from '@/components/ui/typography';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -200,7 +190,6 @@ export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
 export function demandControls(demand: Demand): ReactNode {
   const { snapshot, filter } = demand;
   if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
-  const windowLabel = `${formatStripDay(snapshot.window_start)} – ${formatStripDay(snapshot.window_end)}`;
   return (
     <FilterBar
       view={
@@ -218,23 +207,7 @@ export function demandControls(demand: Demand): ReactNode {
           aria-label="Filter queries or pages"
         />
       }
-      status={
-        <Inline
-          as="span"
-          gap="status"
-          className="rail:flex-nowrap rail:whitespace-nowrap items-center whitespace-normal"
-        >
-          <span>
-            <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
-            {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
-          </span>
-          <Inline as="span" gap="tight" className="shrink-0">
-            <Icon icon={Calendar} />
-            <span className="tabular-nums">{windowLabel}</span>
-          </Inline>
-          <DemandLatentDemand snapshot={snapshot} />
-        </Inline>
-      }
+      status={<DemandLatentDemand snapshot={snapshot} />}
     />
   );
 }
@@ -267,13 +240,6 @@ function SignalsFeed({
 }: Readonly<{ demand: Demand; snapshot: DemandSnapshot }>) {
   const selectedSignal =
     snapshot.signals.find((signal) => signal.id === selection.selectedSignalId) ?? null;
-  const caption = (
-    <Inline as="span" gap="meta">
-      <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
-      <DemandDataCaveats snapshot={snapshot} />
-      <DemandDetectorCoverage snapshot={snapshot} />
-    </Inline>
-  );
   return (
     <>
       {snapshot.signals.length === 0 ? (
@@ -284,14 +250,12 @@ function SignalsFeed({
             heading="No qualifying search gaps observed"
             headingLevel={2}
           />
-          <p className="type-caption">{caption}</p>
         </DemandEmpty>
       ) : (
         <DemandSignalTable
           rows={filter.filteredSignals}
           filterKey={`${filter.activeTab}\u0000${filter.searchQuery.trim().toLowerCase()}`}
           onInspect={(signal: DemandSignal) => selection.setSelectedSignalId(signal.id)}
-          description={caption}
           onClearFilters={() => {
             filter.setActiveTab('all');
             filter.setSearchQuery('');

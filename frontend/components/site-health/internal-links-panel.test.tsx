@@ -370,7 +370,7 @@ describe('Internal links', () => {
       screen.getByRole('button', { name: 'Review link from Source to Destination' }),
     );
     const drawer = await screen.findByRole('dialog');
-    expect(within(drawer).getByText('Suggested anchor text')).toBeInTheDocument();
+    expect(within(drawer).getByRole('heading', { name: 'Anchor text' })).toBeVisible();
   });
 
   it('distinguishes failed analysis and unknown diagnostic reasons', async () => {

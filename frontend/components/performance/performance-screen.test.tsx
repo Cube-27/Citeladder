@@ -315,13 +315,12 @@ describe('PerformanceScreen evidence states', () => {
     expect(await screen.findByTestId('readiness-ladder')).toBeVisible();
   });
 
-  it('states the covered history on the Google Search card, and a notice only when there is one', async () => {
+  it('states the covered history on the Google Search card, with no notice for flagged days', async () => {
     const covered = {
       earliest_date: '2026-08-01',
       latest_date: '2026-08-28',
       covered_days: 28,
     };
-    let flagged = false;
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
         HttpResponse.json(
@@ -329,9 +328,9 @@ describe('PerformanceScreen evidence states', () => {
             selected: measuredWindow({ ...emptyTotals, clicks: 4, impressions: 90 }),
             coverage: {
               ...covered,
-              analytics_quality: flagged
-                ? { sessions: [{ day: '2026-08-02', revision: 1, flags: ['missing'] }] }
-                : {},
+              analytics_quality: {
+                sessions: [{ day: '2026-08-02', revision: 1, flags: ['missing'] }],
+              },
             },
           }),
         ),
@@ -341,21 +340,12 @@ describe('PerformanceScreen evidence states', () => {
       ),
     );
 
-    const { unmount } = renderPerformance();
+    renderPerformance();
     expect(await screen.findByTestId('performance-coverage')).toHaveTextContent(
       'Aug 1, 2026 – Aug 28, 2026 · 28 days',
     );
-    expect(screen.queryByTestId('performance-status')).toBeNull();
     expect(screen.getByText('Data through Aug 28, 2026')).toBeVisible();
-    expect(screen.queryAllByRole('alert')).toHaveLength(0);
-    unmount();
-
-    flagged = true;
-    renderPerformance();
-    expect(await screen.findByTestId('performance-status')).toHaveTextContent(
-      'Some imported days are missing or flagged, or come from an earlier complete import. Days without a usable import show no value, not zero.',
-    );
-    expect(screen.queryAllByRole('alert')).toHaveLength(0);
+    expect(screen.queryByTestId('performance-status')).toBeNull();
   });
 
   it('shows no metric or table scaffolding before the first import', async () => {

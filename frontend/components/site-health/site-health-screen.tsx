@@ -106,7 +106,7 @@ function SiteHealthContent({
         {blocking ? (
           <SiteHealthBlocked blocking={blocking} />
         ) : (
-          <Stack gap="workspace" className="min-w-0">
+          <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
             <SiteHealthRefreshFailures screen={screen} />

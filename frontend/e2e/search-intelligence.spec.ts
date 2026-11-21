@@ -189,7 +189,6 @@ for (const viewport of [
     });
     await page.goto(fixtureProjectPath('/search-intelligence?tab=overview'));
     await expect(page.getByText('8,633', { exact: true })).toBeVisible();
-    await expect(page.getByText('United States · en', { exact: true }).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
