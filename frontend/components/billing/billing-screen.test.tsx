@@ -19,16 +19,6 @@ import { EXPORT_CHECKOUT_BODY, fillExportBillingDetails } from '@/test/fixtures/
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 
 let entitlementValue: unknown = null;
-let entitlementLoading = false;
-
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({
-    entitlement: entitlementValue,
-    isLoading: entitlementLoading,
-    hasCapability: () => false,
-    canStartPaidWork: false,
-  }),
-}));
 
 import { BillingScreen } from './billing-screen';
 
@@ -231,13 +221,11 @@ beforeEach(() => mswServer.use(invoicesHandler()));
 afterEach(() => {
   mswServer.resetHandlers();
   entitlementValue = null;
-  entitlementLoading = false;
 });
 afterAll(() => mswServer.close());
 
 describe('BillingScreen', () => {
   it('uses the shared page loading state for the initial entitlement read', async () => {
-    entitlementLoading = true;
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/billing/entitlement', async () => {
@@ -246,7 +234,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { status: 'pending' } });
 
     expect(await screen.findByRole('status')).toHaveAccessibleName('Loading billing…');
   });
@@ -263,7 +251,7 @@ describe('BillingScreen', () => {
     });
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     expect((await screen.findAllByText('Starter')).length).toBeGreaterThan(0);
     const body = document.body.textContent ?? '';
@@ -275,7 +263,7 @@ describe('BillingScreen', () => {
     entitlementValue = null;
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     expect(await screen.findByText("Couldn't load billing")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
@@ -286,7 +274,7 @@ describe('BillingScreen', () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     expect(await screen.findByText('$49 / month')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose Starter/ })).toBeDisabled();
@@ -312,7 +300,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await screen.findByText('$49 / month');
     fillExportBillingDetails();
     await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
@@ -355,7 +343,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await screen.findByText('$49 / month');
     await userEvent.click(screen.getByRole('radio', { name: 'Managed' }));
     expect(screen.getByText('$149 / month')).toBeInTheDocument();
@@ -378,7 +366,7 @@ describe('BillingScreen', () => {
     };
     mswServer.use(catalogHandler(closed), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     expect(
       await screen.findByRole('heading', { name: 'Self-serve plans are not open yet' }),
     ).toBeVisible();
@@ -395,7 +383,7 @@ describe('BillingScreen', () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await screen.findByText('$49 / month');
 
     const enterprise = document.querySelector('[data-tier="enterprise"]') as HTMLElement;
@@ -408,7 +396,7 @@ describe('BillingScreen', () => {
   it('distinguishes an unknown usage allowance from zero', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     const table = await screen.findByRole('table', { name: 'Usage limits' });
     const [, prompts, runs] = within(table).getAllByRole('row');
     expect(prompts?.textContent).toBe('Prompts4210058');
@@ -428,7 +416,7 @@ describe('BillingScreen', () => {
       ],
     });
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler(idle()));
-    const view = renderWithProviders(<BillingScreen />);
+    const view = renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     const table = await screen.findByRole('table', { name: 'Usage limits' });
     const rows = within(table).getAllByRole('row');
@@ -443,7 +431,7 @@ describe('BillingScreen', () => {
 
     view.unmount();
     mswServer.use(usageHandler(idle({ reserved: 3, remaining: 50197 })));
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     const held = await screen.findByRole('table', { name: 'Usage limits' });
     expect(within(held).getByRole('meter', { name: 'Prompts' })).toBeInTheDocument();
   });
@@ -473,7 +461,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     await userEvent.click(
       (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
@@ -510,7 +498,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     expect(await screen.findByText(/Resumable until/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Resume plan' }));
@@ -539,7 +527,7 @@ describe('BillingScreen', () => {
       ),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await userEvent.click(
       (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
     );
@@ -570,7 +558,7 @@ describe('BillingScreen', () => {
       usageHandler(),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     const retry = await screen.findByRole('button', { name: 'Retry' });
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
@@ -625,7 +613,7 @@ describe('BillingScreen', () => {
       ),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     expect(await screen.findByText(/Invoice INV-1001/)).toBeInTheDocument();
     expect(screen.getByText(/Receipt RCT-1001/)).toBeInTheDocument();
@@ -660,7 +648,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByText('No invoices yet')).toBeVisible();
@@ -692,7 +680,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     const upgrade = await screen.findByRole('button', { name: 'Upgrade to Growth' });
     const section = screen.getByRole('region', { name: 'Change plan' });
     expect(within(section).getByRole('button', { name: 'Upgrade to Growth' })).toBe(upgrade);
@@ -726,7 +714,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await userEvent.click(await screen.findByRole('button', { name: 'Downgrade to Starter' }));
     expect(changes).toHaveLength(0);
 
@@ -750,7 +738,7 @@ describe('BillingScreen', () => {
       }),
     );
 
-    renderWithProviders(<BillingScreen />);
+    renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     const quantity = await screen.findByLabelText('Quantity of Extra project');
     await userEvent.clear(quantity);
     await userEvent.type(quantity, '3');
@@ -765,6 +753,7 @@ describe('BillingScreen', () => {
     mswServer.use(catalogHandler(SUBSCRIBER_CATALOG), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingScreen />, {
+      entitlement: { usage: 'network' },
       projectSelection: {
         activeWorkspace: {
           id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
