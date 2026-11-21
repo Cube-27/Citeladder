@@ -69,7 +69,7 @@ function ContextWorkspace({
   return (
     <TabsRoot value={requestedTab} onValueChange={setTab}>
       <SettingsPage
-        wide={requestedTab === 'map'}
+        prose={requestedTab !== 'map'}
         tabs={<TabRow items={CONTEXT_TABS} ariaLabel="Context sections" />}
       >
         <ContextPanels

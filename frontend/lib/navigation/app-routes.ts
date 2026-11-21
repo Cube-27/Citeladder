@@ -361,7 +361,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/context',
-    width: 'compact',
+    width: 'narrow',
     title: 'Context',
     screen: screens.context,
     // The Company facts form's five fields.

@@ -129,8 +129,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   then the metric strip, then sections 24 apart; a section's head sits 12
   above its body. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, page detail, Agent, Billing, Agent
-  context's Business map; 720: Settings, Pricing, Runs, the other Agent
-  context tabs; a tab sets its own with `SettingsPage wide`); the header and tab rules still
+  context; 720: Settings, Pricing, Runs, and Agent context's tabs other than
+  Business map, on the 1040 column's left edge with `SettingsPage prose`, so
+  its header and tabs never move); the header and tab rules still
   span the panel.
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A

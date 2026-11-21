@@ -34,9 +34,11 @@ sites are out of scope.
   the sidebar foot, at the end of the Integrations row when expanded and on
   its own row in the rail. Owner, 2026-11-21.
 - **AR-9 Widths.** Keep today's narrow pages (1040 column: Overview, Projects,
-  Issues, Actions, page detail, Agent, Billing, and Agent context's Business
-  map tab; 720 column: Settings, Runs, the other Agent context tabs). Side
-  space is better than space in the middle. Owner, 2026-11-20.
+  Issues, Actions, page detail, Agent, Billing, and Agent context, whose
+  header and tabs stay put while only Business map's content takes the full
+  column; 720 column: Settings, Runs, and the other Agent context tabs'
+  content, on the left). Side space is better than space in the middle.
+  Owner, 2026-11-20; Agent context 2026-11-21.
 - **AR-10 Layouts first.** Define standard page layouts, then place content in
   them; never arrange a page by hand. Settings and Agent context need a
   rework, not only new components; Actions mostly needs the new components.

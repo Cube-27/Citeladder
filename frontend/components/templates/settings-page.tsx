@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { cn } from '@/lib/utils';
+
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
 /**
@@ -9,17 +11,24 @@ import { PageFrame, type PageFrameSlots } from './page-frame';
  */
 export function SettingsPage({
   children,
-  wide = false,
+  prose = false,
   ...slots
 }: Omit<PageFrameSlots, 'filters' | 'trail' | 'crumb'> &
   Readonly<{
-    /** This view takes the 1040 column instead of the route's 720 (AR-9). */
-    wide?: boolean;
+    /**
+     * The content keeps the 720 column on the 1040 column's left edge, so a
+     * page whose one wide tab sets its route to 1040 never moves its header
+     * and tabs between tabs (AR-9).
+     */
+    prose?: boolean;
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots} width={wide ? 'narrow' : undefined}>
-      <div data-settings-sections="" className="min-w-0">
+    <PageFrame {...slots}>
+      <div
+        data-settings-sections=""
+        className={cn('min-w-0', prose && 'max-w-[var(--container-prose)]')}
+      >
         {children}
       </div>
     </PageFrame>
