@@ -8,6 +8,8 @@ const config = {
     'frontend/**/*.{css,ts,tsx,astro}': () => 'node frontend/scripts/check-design-system.mjs',
     '**/*.{js,jsx,mjs,cjs,ts,tsx,css,json}': () =>
       'node frontend/scripts/check-token-size.mjs --staged',
+    '**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,css,astro}': () =>
+      'node frontend/scripts/check-source-comments.mjs',
   },
 };
 
