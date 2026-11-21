@@ -16,7 +16,10 @@ export function isIconGlyph(type: unknown): boolean {
 }
 
 function glyph(name: string, Base: Lucide.LucideIcon): IconGlyph {
-  const Glyph: IconGlyph = (props) => createElement(Base, { ...props, 'data-glyph': name });
+  const Glyph: IconGlyph = (props) => {
+    const tagged = { ...props, 'data-glyph': name };
+    return createElement(Base, tagged);
+  };
   Glyph.displayName = Base.displayName;
   glyphs.add(Glyph);
   return Glyph;
