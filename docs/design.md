@@ -2,7 +2,7 @@
 
 The signed-in app's visual reference: tokens, layouts and one entry per
 component family. The app follows the Linear-style look the owner approved
-([app redesign](plans/app-redesign.md), AR-1 to AR-12): quiet greys, hairline
+([AR-1 to AR-17](decisions.md#app-design-ar-owner-2026-11-20-unless-dated)): quiet greys, hairline
 borders, an inset content panel, compact controls.
 
 **Scope.** Tokens live in

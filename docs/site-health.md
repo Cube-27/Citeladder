@@ -27,7 +27,7 @@ does not restate them.
 ## Crawl lifecycle
 
 **Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) is the
-one crawl action ([SH-B7](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)):
+one crawl action ([SH-B7](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)):
 the one Run new crawl button and a scheduled crawl both admit through it. It runs as
 one transaction. It locks workspace, project, runtime, membership, profile,
 then capacity/account, and allows one active crawl per project. Page reruns
@@ -63,7 +63,7 @@ configuration carries `page_rerun`; it hands its pages to
 verification and Opportunities but is never compared as a site crawl. It writes
 no project snapshot and no score summary, so it is never a compared snapshot.
 
-**The current crawl** ([SH-B1](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12))
+**The current crawl** ([SH-B1](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17))
 is the project's newest usable crawl (`completed`, `partially_completed` or
 `cancelled`, by creation) that is not a page rerun. `currentSiteCrawl` in
 `reads/crawl.ts` owns it, and `currentSiteSnapshotQuery` reads its snapshot.
@@ -73,7 +73,7 @@ content context, MCP, AI Traffic pages, internal links and declaration
 evidence. A rerun is
 never the current crawl; it updates only its own page's evidence.
 
-**Each page's latest audit** ([SH-B9](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
+**Each page's latest audit** ([SH-B9](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)).
 A site crawl's page and issue evidence is each page's latest audit as that
 crawl shows it (`pageAuditsSql` and `viewIssuesSql` in `reads/crawl.ts`): for
 every page the crawl audited and every tracked page, the newest finalized
@@ -194,8 +194,8 @@ runner job starts a successor execution (`CLOUD_RUN_RUNNER_JOB`) instead of
 leaving it for the 20-minute scheduled tick. The `DRAIN_LOCK` advisory lock serializes drains.
 The runner's Site Health transactions (claims, heartbeats, `commitTask`,
 transaction-kind runs, thrown-failure settles and dependency deferrals) commit
-with `synchronous_commit = off` (`SET LOCAL`, owner decision CO-1 in the
-[optimization plan](plans/site-health-crawl-optimization.md#owner-decisions-2026-11-17)):
+with `synchronous_commit = off` (`SET LOCAL`, owner decision
+[CO-1](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)):
 a database crash can lose their last fraction of a second, which lease recovery
 redoes. Every other lane, billing, ledger and webhook commit stays durable.
 
@@ -350,7 +350,7 @@ frontier is skipped. In sample mode, a twin that was already observed also
 counts. Stored identities are not merged, and scope and depth apply before a
 twin is chosen.
 
-**Discovery** ([SH-B5](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
+**Discovery** ([SH-B5](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)).
 Every full crawl's `site_setup` reads the sitemaps first. When they list
 admissible URLs, their deduplicated count is the crawl's `discovered_url_count`
 and `site_facts.sitemap.discovered_count` ("Discovered N").
@@ -845,7 +845,7 @@ do. The Overview's open-issues trend card (SH-B9, SH-B11) reads `site_issue_tren
 as `open_issue_trend`, oldest first, up to `overview_issue_trend_day_limit` days;
 it is the only change graph, and there is no score trend.
 
-**Mark fixed and Re-run all** ([SH-B12](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12);
+**Mark fixed and Re-run all** ([SH-B12](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17);
 `issue-fixes.ts`, routes in the `site-health-crawls` family) act on one issue
 group of a crawl, across the pages the issues the crawl shows name: each
 page's latest audit (`viewIssuesSql`), as the Issues list reads them.

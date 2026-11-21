@@ -332,7 +332,7 @@ distinct expectation, each scoped to what the Action changed:
 
 | Finding | Check | Read by |
 |---|---|---|
-| Site rule (`site_rule`, link-graph findings) | each Site Health rule the page finding's evidence names passes on the page, one check per rule ([SH-B2](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)); a finding whose evidence names no rule gets no check | the next crawl that analyzes the page after go-live |
+| Site rule (`site_rule`, link-graph findings) | each Site Health rule the page finding's evidence names passes on the page, one check per rule ([SH-B2](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)); a finding whose evidence names no rule gets no check | the next crawl that analyzes the page after go-live |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |

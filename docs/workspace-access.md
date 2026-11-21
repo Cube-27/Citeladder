@@ -160,7 +160,7 @@ most one owned workspace per person; Admin, Member and Viewer memberships are
 unlimited. A role outside the matrix confers nothing. Role authorization and entitlement availability are
 separate checks; both must permit an action. The app does not render a control
 whose capability the caller's role lacks (hidden, not disabled; owner decision
-AR-7 in the [audit remediation plan](plans/audit-remediation.md#owner-decisions-2026-11-12)).
+[AR-7 of the audit](decisions.md#audit-remediation-owner-2026-11-12)).
 It reads the capabilities the workspace response publishes through one hook,
 `useWorkspaceCapability`; the server still refuses every denied action itself.
 Workspace Admin is not an operator
