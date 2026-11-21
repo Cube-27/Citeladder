@@ -51,8 +51,7 @@ const glyph = (name: 'copy' | 'check', children: Element[]) =>
   element(
     'svg',
     {
-      className: [`cl-code-icon-${name}`],
-      dataGlyph: name,
+      className: ['lucide', `cl-code-icon-${name}`],
       width: 16,
       height: 16,
       viewBox: '0 0 24 24',

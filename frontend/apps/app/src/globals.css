@@ -1501,13 +1501,12 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-regular);
   }
 
-  /* Glyphs (`data-glyph`, set by lib/icons) draw at 1.75, so a 16px glyph
-     matches the label beside it. The stroke scales with the box, so the app's
-     12-14px glyphs take 2. */
-  [data-glyph] {
+  /* Lucide icons draw at 1.75, so a 16px glyph matches the label beside it.
+     The stroke scales with the box, so the app's 12-14px glyphs take 2. */
+  .lucide {
     stroke-width: 1.75;
   }
-  :root:not([data-public-surface]) [data-glyph]:is(.size-3, .size-3\.5) {
+  :root:not([data-public-surface]) .lucide:is(.size-3, .size-3\.5) {
     stroke-width: 2;
   }
   /* ProductImage: in light a shot's white backdrop melts into its tile. */
@@ -2333,10 +2332,10 @@ label {
 
 /* A dropdown's chevron turns over while its list is open (not a disclosure's,
    which points by itself), on the same --motion-open as every chevron. */
-:is([aria-haspopup], [role='combobox']) [data-glyph='chevron-down'] {
+:is([aria-haspopup], [role='combobox']) .lucide-chevron-down {
   transition: rotate var(--motion-open) var(--ease-standard);
 }
-:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] [data-glyph='chevron-down'] {
+:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .lucide-chevron-down {
   rotate: 180deg;
 }
 

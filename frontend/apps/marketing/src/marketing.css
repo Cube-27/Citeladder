@@ -94,13 +94,13 @@
 /* Arrow glyphs in calls to action lean toward where they go, only for
    readers who have not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
-  [data-public-surface] .marketing-cta-button [data-glyph='arrow-up-right'] {
+  [data-public-surface] .marketing-cta-button svg.lucide-arrow-up-right {
     transition: transform var(--motion-slow) var(--ease-standard);
   }
 }
 
 @media (hover: hover) and (pointer: fine) {
-  [data-public-surface] .marketing-cta-button:hover [data-glyph='arrow-up-right'] {
+  [data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-up-right {
     transform: translate(2px, -2px);
   }
 }
