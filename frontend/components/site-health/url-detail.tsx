@@ -1,5 +1,5 @@
 import { useRef, useState, type MutableRefObject } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -10,6 +10,7 @@ import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
+import { urlParamHref, useUrlParam } from '@/lib/navigation/url-params';
 import { History } from '@/lib/icons';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
@@ -27,7 +28,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 const HISTORY_LIMIT = 25;
-const RERUN_SEARCH_PARAM = 'rerun';
 
 export function PageDetailScreen() {
   const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
@@ -42,8 +42,8 @@ export function UrlDetail({
 }: Readonly<{ crawlId: string; siteUrlId: string }>) {
   const { workspaceId } = useProjectScope();
   const router = useNavigate();
-  const searchParams = useSearchParams()[0];
-  const [rerunPolling] = useState(() => searchParams.get(RERUN_SEARCH_PARAM) === '1');
+  const rerunRequested = useUrlParam('rerun');
+  const [rerunPolling] = useState(() => rerunRequested);
   // The cache can still hold the prior terminal snapshot immediately after a
   // rerun succeeds. Polling must continue until the fresh queued/running state
   // has been observed, rather than treating that stale terminal status as done.
@@ -68,7 +68,7 @@ export function UrlDetail({
       {
         onSuccess: (result) =>
           router(
-            `/site/crawls/${result.crawl_id}/pages/${result.site_url_id}?${RERUN_SEARCH_PARAM}=1`,
+            `/site/crawls/${result.crawl_id}/pages/${result.site_url_id}${urlParamHref('rerun', true)}`,
           ),
         onError: (error) => setRerunError(rerunErrorMessage(error)),
       },

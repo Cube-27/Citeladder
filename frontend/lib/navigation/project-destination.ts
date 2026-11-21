@@ -1,8 +1,9 @@
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect } from 'react';
 
 import { useOptionalProjectContext, useProjectContext } from '@/lib/project/project-context';
 import { isAppRoute } from '@/lib/navigation/app-route';
+import { useUrlSearch } from '@/lib/navigation/url-params';
 import { projectSwitchPathname, workspaceSwitchPathname } from '@/lib/navigation/app-routes';
 
 const PROJECT_PARAM = 'project';
@@ -75,7 +76,7 @@ export function useProjectHref() {
 export function useCanonicalProjectUrl(enabled: boolean) {
   const router = useNavigate();
   const pathname = useLocation().pathname;
-  const searchParams = useSearchParams()[0];
+  const searchParams = useUrlSearch();
   const { activeProjectId } = useProjectContext();
 
   useEffect(() => {
@@ -122,7 +123,7 @@ export type SelectProjectOptions = {
 export function useSelectProject() {
   const router = useNavigate();
   const pathname = useLocation().pathname;
-  const searchParams = useSearchParams()[0];
+  const searchParams = useUrlSearch();
   const { activeProjectId, setActiveProjectId } = useProjectContext();
 
   return useCallback(
@@ -152,7 +153,7 @@ export function useSelectProject() {
 export function useSelectWorkspace() {
   const router = useNavigate();
   const pathname = useLocation().pathname;
-  const searchParams = useSearchParams()[0];
+  const searchParams = useUrlSearch();
   const { activeWorkspaceId, setActiveWorkspaceId } = useProjectContext();
 
   return useCallback(

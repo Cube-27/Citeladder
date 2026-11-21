@@ -1,5 +1,5 @@
 import { lazy, useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { pageSection } from '@/components/layout/nav-items';
 import { PageTitleContext } from '@/components/layout/page-title-context';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/masthead-actions';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
+import { useUrlSearch } from '@/lib/navigation/url-params';
 import { routeTrail } from '@/lib/navigation/route-trail';
 import { cn } from '@/lib/utils';
 
@@ -108,7 +109,7 @@ function PageMasthead({
 }>) {
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
-  const searchParams = useSearchParams()[0];
+  const searchParams = useUrlSearch();
   return (
     <Masthead
       title={title}

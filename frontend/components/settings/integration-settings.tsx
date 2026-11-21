@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
+import { useUrlParam } from '@/lib/navigation/url-params';
 import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
 import {
   FAMILY_META,
@@ -80,14 +80,12 @@ function CallbackNotice({
 
 export function IntegrationSettings() {
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams()[0];
+  const connected = useUrlParam('connected');
+  const error = useUrlParam('error');
   const workspaceId = useActiveWorkspaceId();
 
-  const [notice] = useState(() => ({
-    connected: searchParams.get('connected'),
-    error: searchParams.get('error'),
-  }));
-  const hasCallbackParams = searchParams.has('connected') || searchParams.has('error');
+  const [notice] = useState(() => ({ connected, error }));
+  const hasCallbackParams = connected !== null || error !== null;
   useEffect(() => {
     if (!hasCallbackParams) return;
     if (notice.connected) void refreshIntegrations(queryClient);

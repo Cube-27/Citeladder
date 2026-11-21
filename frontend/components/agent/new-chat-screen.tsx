@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
 import { BriefingCard } from '@/components/agent/briefing-card';
@@ -19,12 +19,13 @@ import { contextChips, parseAgentHandoff, withoutContext } from '@/lib/agent/han
 import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import { useProjectHref } from '@/lib/navigation/project-destination';
+import { useUrlSearch } from '@/lib/navigation/url-params';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 
 export function NewChatScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  const [searchParams] = useSearchParams();
+  const searchParams = useUrlSearch();
   const handoffKey = searchParams.toString();
   return (
     <NewChat

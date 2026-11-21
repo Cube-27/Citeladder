@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
@@ -13,6 +13,7 @@ import { Link2Off } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
+import { useUrlParam } from '@/lib/navigation/url-params';
 
 export function AcceptInvitationPage() {
   return (
@@ -24,9 +25,8 @@ export function AcceptInvitationPage() {
 
 export function AcceptInvitationScreen() {
   const router = useNavigate();
-  const searchParams = useSearchParams()[0];
   const selectWorkspace = useSelectWorkspace();
-  const token = searchParams?.get('token') ?? '';
+  const token = useUrlParam('token') ?? '';
   const attempted = useRef<string | null>(null);
 
   const accept = useMutation(workspaceMutations.acceptInvitation());
