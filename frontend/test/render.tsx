@@ -10,7 +10,7 @@ import type { BillingUsage, WorkspaceEntitlement } from '@/lib/api/billing';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { providerCatalogFixture } from './provider-catalog-fixture';
-import type { Workspace } from '@citeladder/contracts';
+import type { Project, Workspace } from '@citeladder/contracts';
 import { roles } from '@/services/api/src/config/workspaces.json';
 import { SessionProvider } from '@/lib/auth/session-guard';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
@@ -52,6 +52,22 @@ export function testWorkspace(role: TestRole): Workspace {
 export function selectionAs(role: TestRole): Partial<ProjectContextValue> {
   const workspace = testWorkspace(role);
   return { workspaces: [workspace], activeWorkspace: workspace };
+}
+
+export function projectScope(
+  project: Project,
+  role: TestRole = 'owner',
+): Partial<ProjectContextValue> {
+  const workspace = { ...testWorkspace(role), id: project.workspace_id };
+  return {
+    workspaces: [workspace],
+    activeWorkspace: workspace,
+    activeWorkspaceId: workspace.id,
+    projects: [project],
+    activeProject: project,
+    activeProjectId: project.id,
+    status: 'ready',
+  };
 }
 
 export function testProjectSelection(
