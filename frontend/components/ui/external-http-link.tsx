@@ -9,8 +9,8 @@ type ExternalHttpLinkProps = Omit<ComponentPropsWithRef<'a'>, 'href' | 'target' 
 
 /**
  * Render API supplied HTTP(S) destinations as links, or readable plain text.
- * A link is underlined unless its caller styles it as something else (a
- * button face); the plain-text fallback is never underlined, whatever the
+ * A link is underlined (in the app only on hover and focus) unless its
+ * caller styles it as something else (a button face); the plain-text fallback is never underlined, whatever the
  * caller asked for, so it cannot pass for a link.
  */
 export function ExternalHttpLink({
@@ -35,7 +35,10 @@ export function ExternalHttpLink({
   return (
     <a
       {...anchorProps}
-      className={cn('underline underline-offset-2', anchorProps.className)}
+      className={cn(
+        'underline underline-offset-2 [:root:not([data-public-surface])_&]:decoration-transparent [:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current',
+        anchorProps.className,
+      )}
       href={url.toString()}
       target="_blank"
       rel="noopener noreferrer"

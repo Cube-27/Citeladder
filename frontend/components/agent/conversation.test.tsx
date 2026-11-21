@@ -319,7 +319,7 @@ describe('An unanswered turn', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(`Error: Failed at`);
-    expect(within(alert).getByText('Sep 25, 2026, 10:01 AM UTC')).toBeVisible();
+    expect(within(alert).getByText('Sep 25, 2026, 10:01 AM')).toBeVisible();
     expect(alert).toHaveTextContent(PROVIDER_ERROR);
     expect(screen.queryByRole('article', { name: 'Agent reply' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy reply' })).not.toBeInTheDocument();
@@ -376,7 +376,7 @@ describe('An unanswered turn', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Error: Failed 2 times, last at');
-    expect(within(alert).getByText('Sep 25, 2026, 10:05 AM UTC')).toBeVisible();
+    expect(within(alert).getByText('Sep 25, 2026, 10:05 AM')).toBeVisible();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getAllByText('Improve our pricing page snippet.')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
@@ -415,7 +415,7 @@ describe('An unanswered turn', () => {
     );
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      `Note: Did not finish at Sep 25, 2026, 10:01 AM UTC${PROVIDER_ERROR}`,
+      `Note: Did not finish at Sep 25, 2026, 10:01 AM${PROVIDER_ERROR}`,
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     const reply = screen.getByRole('article', { name: 'Agent reply' });
@@ -446,7 +446,7 @@ describe('A reply’s time', () => {
       'time',
     );
     expect(time).toHaveAttribute('datetime', '2026-09-25T10:01:00Z');
-    expect(time?.textContent).toBe('Sep 25, 2026, 10:01 AM UTC');
+    expect(time?.textContent).toBe('Sep 25, 2026, 10:01 AM');
   });
 });
 

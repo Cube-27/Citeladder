@@ -34,7 +34,8 @@ export function savedViewFilters({
 }>): FilterDefinition[] {
   const filters: FilterDefinition[] = [];
   const [firstScope] = scopes;
-  if (firstScope)
+  // A picker with one choice picks nothing: shown only when there is a second.
+  if (firstScope && scopes.length > 1)
     filters.push(
       choiceFilter({
         id: 'scope',

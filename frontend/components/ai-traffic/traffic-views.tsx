@@ -181,7 +181,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
                 />
               </TableCell>
               <TableCell>
-                <CellLines lines={[entries(b.folders), entries(b.resources)]} />
+                <CellLines lines={[topEntries(b.folders), topEntries(b.resources)]} />
               </TableCell>
             </TableRow>
           ))}
@@ -305,6 +305,14 @@ function entries(values: Record<string, number>) {
   return Object.entries(values)
     .map(([key, value]) => words(key) + ': ' + value)
     .join(' · ');
+}
+/** The three largest, then how many more: a crawler can touch hundreds of folders. */
+const TOP_ENTRIES = 3;
+function topEntries(values: Record<string, number>) {
+  const sorted = Object.entries(values).sort(([, a], [, b]) => b - a);
+  const shown = sorted.slice(0, TOP_ENTRIES).map(([key, value]) => words(key) + ': ' + value);
+  const more = sorted.length - TOP_ENTRIES;
+  return [...shown, ...(more > 0 ? [`+${formatCount(more)} more`] : [])].join(' · ');
 }
 function CoverageTable({
   projectId,

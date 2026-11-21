@@ -8,8 +8,6 @@ import {
   formatPercent,
   formatStripDay,
   formatStripTimestamp,
-  formatTableTimestamp,
-  formatTimeZoneNote,
   isOwnHost,
   ownOrigin,
   readableUrl,
@@ -72,23 +70,15 @@ describe('counts', () => {
 });
 
 describe('dates and times', () => {
-  it('prints a date, a date-time with its zone, a table cell without it, and the zone once', () => {
+  it('prints a date and a date-time in the display zone, never naming the zone', () => {
     const at = '2026-11-14T11:33:00Z';
     expect(formatDisplayDate(at, 'Asia/Kolkata')).toBe('Nov 14, 2026');
-    expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM GMT+5:30');
-    expect(formatTableTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
-    // Formatters are cached per variant and zone: neither borrows the other's.
-    expect(formatTableTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM');
-    expect(formatDisplayTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM GMT+1');
+    expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
+    // Formatters are cached per zone: one never borrows another's.
+    expect(formatDisplayTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM');
     // An unknown zone falls back to UTC every time.
-    expect(formatTableTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
-    expect(formatTableTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
-    expect(formatTimeZoneNote('Asia/Kolkata', new Date(at))).toBe('Times in GMT+5:30');
-    // A zone with daylight saving states the offset of the instant it is asked about.
-    expect(formatTimeZoneNote('America/New_York', new Date('2026-07-01T12:00:00Z'))).toBe(
-      'Times in EDT',
-    );
-    expect(formatTimeZoneNote('UTC', new Date(at))).toBe('Times in UTC');
+    expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
+    expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
     // A strip's meta: day, month and 24-hour time in the zone, without year or zone.
     expect(formatStripTimestamp(at, 'Asia/Kolkata')).toBe('14 Nov 17:03');
     expect(formatStripTimestamp('2026-11-18T00:05:00Z', 'Europe/Paris')).toBe('18 Nov 01:05');

@@ -11,7 +11,6 @@ import { SEARCH_RUN_STATES } from '@/lib/search-intelligence/status';
 import { reportedCost, runEstimate } from './search-intelligence-format';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** Why an acquisition stopped, in the reader's terms. */
@@ -106,9 +105,10 @@ export function CostDetails({
   let content = <StateBlock kind="empty" inline message="No analysis has been run yet." />;
   if (runs?.length) {
     content = (
-      <Stack as="ul" gap="compact">
+      // Each run is its title over its one framed strip, never a box around a box.
+      <Stack as="ul" gap="section">
         {runs.map((run) => (
-          <Stack as="li" gap="compact" key={run.id} className={wellClasses()}>
+          <Stack as="li" gap="compact" key={run.id}>
             <Stack gap="tight">
               <p className={textRole('body')}>
                 {words(run.action)} · {SEARCH_RUN_STATES[run.status].label}

@@ -6,7 +6,7 @@ import { ScrollFrame } from './scroll-edges';
 describe('ScrollFrame row', () => {
   it('cues each edge that hides more, the start only once scrolled from it', () => {
     const { container } = render(
-      <ScrollFrame stepper="row">
+      <ScrollFrame>
         {(ref, region) => (
           <div ref={ref} {...region}>
             <span>Tabs</span>

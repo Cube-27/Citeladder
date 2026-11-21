@@ -17,16 +17,9 @@ import {
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatTimeZoneNote } from '@/lib/format';
-import {
-  ScrollSteppers,
-  useScrollFrame,
-  type ScrollFrameState,
-} from '@/components/ui/scroll-edges';
+import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 import { StateBlock } from '@/components/ui/state-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
@@ -40,7 +33,7 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  * DataTable — the record table organism: an optional header bar (title,
  * toolbar) on the page surface, then the table in its `rule` frame (head 32
  * on `raised`, rows 40 with hairlines between them), and a footer bar with
- * the Pager and the sideways steppers. The page passes data, columns and
+ * the Pager. The page passes data, columns and
  * rows; it sets no geometry.
  *
  *   columns — each column declares its kind, which sets the head's and every
@@ -102,7 +95,7 @@ export function DataTable({
   /** A background refetch while the current rows stay on screen. */
   busy?: Readonly<{ active: boolean; label: string }>;
   selection?: DataTableSelection;
-  /** A note in the footer bar (a source, a period, the time zone). */
+  /** A note in the footer bar (a source, a period). */
   footer?: ReactNode;
   /** The table's accessible name when it has no visible title. */
   label?: string;
@@ -125,9 +118,6 @@ export function DataTable({
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   useFlexibleColumnCheck({ columns, title, label });
   const replacing = replacingState(state);
-  const steppers = <ScrollSteppers state={scroll} />;
-  const note = tableNote(footer, parts.zoned);
-  const footed = Boolean(paging.pager ?? note);
   return (
     <section
       aria-labelledby={parts.naming.ariaLabelledBy}
@@ -144,7 +134,6 @@ export function DataTable({
         toolbar={toolbar}
         description={description}
         actions={actions}
-        steppers={footed ? null : steppers}
       />
       <HeldFootprint state={replacing} level={stateLevel(title, level)} held={reserveRows}>
         <DataTableFrame
@@ -155,9 +144,7 @@ export function DataTable({
           frameRef={frameRef}
           scope={scope}
           probe={probe}
-          foot={
-            <DataTableFoot footer={note} pager={paging.pager} steppers={footed ? steppers : null} />
-          }
+          foot={<DataTableFoot footer={footer} pager={paging.pager} />}
         >
           <DataTableColumns columns={columns} selection={selection} />
           <DataTableBody
@@ -240,25 +227,7 @@ function dataTableParts({
     regionLabel: title ?? label ?? 'Table',
     naming,
     pinned,
-    zoned: columns.some((column) => column.kind === 'date'),
   };
-}
-
-/** The footer's note, with the zone its date-times are in stated once. */
-function tableNote(footer: ReactNode, zoned: boolean): ReactNode {
-  if (!zoned) return footer;
-  return (
-    <>
-      {footer}
-      <TimeZoneNote />
-    </>
-  );
-}
-
-/** The zone the table's date-times are in, said once ("Times in GMT+5:30"). */
-function TimeZoneNote() {
-  const timeZone = useDisplayTimeZone();
-  return <span className="type-caption">{formatTimeZoneNote(timeZone)}</span>;
 }
 
 /** A state under the table's own title takes the next level. */
@@ -355,14 +324,13 @@ function DataTableFrame({
 
 /**
  * The foot band, 40 high under a hairline inside the frame: the note
- * (source, period, time zone) on the left, the steppers and the Pager on the
- * right; nothing when there is neither.
+ * (source, period) on the left, the Pager on the right; nothing when there
+ * is neither. A wide table scrolls by its scrollbar, with no stepper buttons.
  */
 function DataTableFoot({
   footer,
   pager,
-  steppers,
-}: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined; steppers: ReactNode }>) {
+}: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined }>) {
   if (!pager && !footer) return null;
   return (
     <div
@@ -372,18 +340,11 @@ function DataTableFoot({
       {footer ? (
         <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>
       ) : null}
-      <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
-        {/* Beside a pager the steppers end on a rule, so the two arrow pairs never
-            read as one pager; a phone swipes instead and shows the pager alone. */}
-        {pager ? (
-          <>
-            <div className="border-rule not-rail:hidden border-e pe-4 empty:hidden">{steppers}</div>
-            <Pager {...pager} />
-          </>
-        ) : (
-          steppers
-        )}
-      </div>
+      {pager ? (
+        <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
+          <Pager {...pager} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -423,8 +384,8 @@ function pagingLayout(
 
 /**
  * The header bar, on the surface above the frame: the title, then the
- * toolbar on one row, the description one caption line under it, and the
- * steppers when no foot band exists; 12 above the frame, on the frame's left edge.
+ * toolbar on one row, the description one caption line under it; 12 above
+ * the frame, on the frame's left edge.
  */
 function DataTableHeader({
   title,
@@ -433,7 +394,6 @@ function DataTableHeader({
   toolbar,
   description,
   actions,
-  steppers,
 }: Readonly<{
   title?: string;
   headingId: string;
@@ -441,16 +401,11 @@ function DataTableHeader({
   toolbar?: FilterBarProps;
   description?: ReactNode;
   actions?: ReactNode;
-  steppers: ReactNode;
 }>) {
-  if (!title && !toolbar && !description && !actions) {
-    return steppers ? <div className="flex justify-end pb-2">{steppers}</div> : null;
-  }
+  if (!title && !toolbar && !description && !actions) return null;
   const head = (
     <>
-      <TitleRow title={title} headingId={headingId} level={level} toolbar={toolbar}>
-        {steppers}
-      </TitleRow>
+      <TitleRow title={title} headingId={headingId} level={level} toolbar={toolbar} />
       {description ? (
         <p data-data-table-description="" className="type-caption max-w-[72ch]">
           {description}
@@ -468,19 +423,17 @@ function DataTableHeader({
   );
 }
 
-/** The title line: the heading, the toolbar beside it, then the steppers. */
+/** The title line: the heading, then the toolbar beside it. */
 function TitleRow({
   title,
   headingId,
   level,
   toolbar,
-  children: steppers,
 }: Readonly<{
   title?: string;
   headingId: string;
   level: HeadingLevel;
   toolbar?: FilterBarProps;
-  children: ReactNode;
 }>) {
   // The level a block in this place takes: h2 on the page, h3 inside a section.
   const Heading = level === 3 ? 'h3' : 'h2';
@@ -498,10 +451,6 @@ function TitleRow({
         <div className="min-w-0 flex-1">
           <FilterBar {...toolbar} />
         </div>
-      ) : null}
-      {/* Hidden while the table fits, so an empty slot takes no gap beside the toolbar. */}
-      {steppers ? (
-        <div className={cn('empty:hidden', !toolbar && 'rail:ms-auto')}>{steppers}</div>
       ) : null}
     </div>
   );

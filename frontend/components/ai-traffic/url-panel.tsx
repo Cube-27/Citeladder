@@ -203,23 +203,20 @@ function UrlEvidence({
           )}
         </p>
       ) : null}
-      <FactList
-        layout="record"
-        label="Page record"
-        facts={[
-          ...(fromRow ? [] : rows).map((row) => ({
+      {fromRow ? null : (
+        <FactList
+          layout="record"
+          label="Page record"
+          facts={rows.map((row) => ({
             key: row.name,
             label: row.name,
             value: row.value,
             note: row.note,
             end: row.link ? <PanelLink to={row.link.to}>{row.link.label}</PanelLink> : null,
-          })),
-          {
-            label: 'First and last observations',
-            value: <Observations data={data} botLabel={botLabel} />,
-          },
-        ]}
-      />
+          }))}
+        />
+      )}
+      <Observations data={data} botLabel={botLabel} />
       <p className={textRole('caption')}>
         {data.provenance.bounded ? 'Timeline reached its display bound. ' : null}
         {data.provenance.crawl_id ? (
@@ -232,31 +229,53 @@ function UrlEvidence({
   );
 }
 
-/** The window's first and last observations per crawler, AI source and citation. */
+/**
+ * The window's first and last observations per crawler, AI source and
+ * citation: its own titled list, one row each, the name left and its count
+ * and dates right, so a long run of crawlers never wraps inside a fact row.
+ */
 function Observations({
   data,
   botLabel,
 }: Readonly<{ data: UrlEvidenceData; botLabel: (botId: string) => string }>) {
-  if (!data.crawls.length && !data.referrals.length && !data.citations.length)
-    return <Absence state="none" />;
+  const rows: { key: string; name: string; detail: ReactNode }[] = [
+    ...data.crawls.map((r) => ({
+      key: `crawl:${r.bot_id}`,
+      name: botLabel(r.bot_id),
+      detail: (
+        <>
+          {formatCount(r.requests)} requests · <DisplayTime value={r.first_seen} dateOnly /> –{' '}
+          <DisplayTime value={r.last_seen} dateOnly />
+        </>
+      ),
+    })),
+    ...data.referrals.map((r) => ({
+      key: `referral:${r.ai_source}`,
+      name: aiSourceLabel(r.ai_source),
+      detail: `${formatCount(r.sessions)} sessions · first ${formatWindowDate(r.first_referral)}`,
+    })),
+    ...data.citations.map((r) => ({
+      key: `citation:${r.citation_id}`,
+      name: 'Tracked citation',
+      detail: formatWindowDate(r.date),
+    })),
+  ];
   return (
-    <span className="flex flex-col">
-      {data.crawls.map((r) => (
-        <span key={r.bot_id}>
-          {botLabel(r.bot_id)}: {formatCount(r.requests)} requests ·{' '}
-          <DisplayTime value={r.first_seen} /> – <DisplayTime value={r.last_seen} />
-        </span>
-      ))}
-      {data.referrals.map((r) => (
-        <span key={r.ai_source}>
-          {aiSourceLabel(r.ai_source)}: first referral {formatWindowDate(r.first_referral)} ·{' '}
-          {formatCount(r.sessions)} sessions
-        </span>
-      ))}
-      {data.citations.map((r) => (
-        <span key={r.citation_id}>Tracked citation: {formatWindowDate(r.date)}</span>
-      ))}
-    </span>
+    <Stack gap="tight">
+      <h3 className={textRole('subheading')}>First and last observations</h3>
+      {rows.length ? (
+        <ul className="grid">
+          {rows.map((row) => (
+            <li key={row.key} className="flex min-h-8 items-center justify-between gap-4">
+              <span className={textRole('body', 'min-w-0 truncate')}>{row.name}</span>
+              <span className={textRole('caption', 'shrink-0 tabular-nums')}>{row.detail}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Absence state="none" />
+      )}
+    </Stack>
   );
 }
 

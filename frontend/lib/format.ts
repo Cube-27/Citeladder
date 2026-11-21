@@ -162,54 +162,24 @@ function dateFormat(variant: string, options: Intl.DateTimeFormatOptions): Intl.
   return format;
 }
 
-function formatInstant({
-  timestamp,
-  timeZone,
-  zoned,
-}: Readonly<{ timestamp: string; timeZone: string; zoned: boolean }>): string {
+/**
+ * A persisted instant in the display timezone (`Nov 14, 2026, 05:03 PM`). No
+ * zone is printed anywhere: the reader knows their own (owner, 2026-11-21).
+ */
+export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
-    return dateFormat(zoned ? 'instant-zoned' : 'instant', {
+    return dateFormat('instant', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
-      timeZoneName: zoned ? 'short' : undefined,
     }).format(date);
   } catch {
-    return timeZone === 'UTC' ? timestamp : formatInstant({ timestamp, timeZone: 'UTC', zoned });
-  }
-}
-
-/** A persisted instant in the display timezone, with its zone (`Nov 14, 2026, 05:03 PM GMT+5:30`). */
-export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
-  return formatInstant({ timestamp, timeZone, zoned: true });
-}
-
-/**
- * A persisted instant in a table's date column, without the zone
- * (`Nov 14, 2026, 05:03 PM`): the table states its zone once
- * (`formatTimeZoneNote`), never on every row.
- */
-export function formatTableTimestamp(timestamp: string, timeZone: string): string {
-  return formatInstant({ timestamp, timeZone, zoned: false });
-}
-
-/**
- * The zone a table or page states once for its date-times: `Times in GMT+5:30`.
- * `at` picks the offset for zones with daylight saving (the newest instant shown).
- */
-export function formatTimeZoneNote(timeZone: string, at: Date = new Date()): string {
-  try {
-    const zone = dateFormat('zone', { timeZone, timeZoneName: 'short' })
-      .formatToParts(at)
-      .find((part) => part.type === 'timeZoneName')?.value;
-    return `Times in ${zone ?? timeZone}`;
-  } catch {
-    return 'Times in UTC';
+    return timeZone === 'UTC' ? timestamp : formatDisplayTimestamp(timestamp, 'UTC');
   }
 }
 
@@ -262,7 +232,7 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-/** Time-of-day portion of a persisted instant, with its zone, in the same display timezone. */
+/** Time-of-day portion of a persisted instant, in the same display timezone. */
 export function formatDisplayTime(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -271,7 +241,6 @@ export function formatDisplayTime(timestamp: string, timeZone: string): string {
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
-      timeZoneName: 'short',
     }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayTime(timestamp, 'UTC');

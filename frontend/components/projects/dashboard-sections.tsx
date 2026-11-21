@@ -10,7 +10,6 @@ import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { ReorderList } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
-import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { pluralCount } from '@/lib/format';
@@ -225,18 +224,7 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   // A partial change names the answers it uses, once, in the first figure's hint.
   const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
-    <WidgetFrame
-      id="project-state"
-      title="Project state"
-      fill="figure"
-      status={
-        data.measurement ? (
-          <StatusMark tone="positive">Citations measured</StatusMark>
-        ) : (
-          <StatusMark>Not run</StatusMark>
-        )
-      }
-    >
+    <WidgetFrame id="project-state" title="Project state" fill="figure">
       <FigureStrip
         segments={[
           {

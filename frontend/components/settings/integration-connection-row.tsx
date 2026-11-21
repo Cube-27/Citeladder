@@ -21,7 +21,7 @@ import {
 } from '@/lib/api/integrations';
 import { humanizeApiError } from '@/lib/api/errors';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatCount, formatShortDate, formatTableTimestamp } from '@/lib/format';
+import { formatCount, formatShortDate, formatDisplayTimestamp } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
 import { isSyncInFlight, pollSyncRun, SYNC_RUN_STATES } from '@/lib/integrations/status';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -392,7 +392,7 @@ function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }
       <ClampText>
         Last synced{' '}
         {lastSynced ? (
-          <time dateTime={lastSynced}>{formatTableTimestamp(lastSynced, timeZone)}</time>
+          <time dateTime={lastSynced}>{formatDisplayTimestamp(lastSynced, timeZone)}</time>
         ) : (
           'never'
         )}

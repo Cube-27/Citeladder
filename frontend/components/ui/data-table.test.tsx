@@ -298,22 +298,6 @@ describe('DataTable', () => {
     expect(screen.queryByRole('heading', { name: 'No measurements yet' })).toBeNull();
   });
 
-  it('states the time zone once in the footer of a table with a date column', () => {
-    const table = (kind: 'date' | 'text') => (
-      <DataTable
-        label="Keys"
-        columns={[{ key: 'created', label: 'Created', kind }]}
-        footer="Source: API"
-      />
-    );
-    const { rerender } = render(table('text'));
-    expect(screen.getByText('Source: API')).toBeVisible();
-    expect(screen.queryByText(/^Times in /)).toBeNull();
-    rerender(table('date'));
-    expect(screen.getByText('Source: API')).toBeVisible();
-    expect(screen.getByText(/^Times in \S+/)).toBeVisible();
-  });
-
   it('loads as rows of blocks under the real head and announces its verb', async () => {
     const { container } = render(
       <DataTable
@@ -344,13 +328,9 @@ describe('DataTable', () => {
     );
     const frame = container.querySelector<HTMLElement>('[data-scroll-content]')!;
     const cue = container.querySelector<HTMLElement>('[data-scroll-frame]')!;
-    // The edges that fade, and the steppers (outside the table) that can still move.
+    // The edges that fade; the table scrolls by its scrollbar, with no stepper buttons.
     const fades = () =>
       (['start', 'end'] as const).filter((edge) => cue.hasAttribute(`data-scroll-${edge}`));
-    const steps = () =>
-      [...container.querySelectorAll<HTMLButtonElement>('[data-scroll-step]')]
-        .filter((step) => !step.disabled && !step.closest('table'))
-        .map((step) => step.getAttribute('data-scroll-step'));
     const layout = (scrollWidth: number, scrollLeft: number) => {
       Object.defineProperty(frame, 'clientWidth', { configurable: true, value: 400 });
       Object.defineProperty(frame, 'scrollWidth', { configurable: true, value: scrollWidth });
@@ -360,21 +340,17 @@ describe('DataTable', () => {
 
     layout(400, 0);
     expect(fades()).toEqual([]);
-    expect(steps()).toEqual([]);
     expect(frame).not.toHaveAttribute('tabindex');
     layout(900, 0);
     expect(fades()).toEqual(['end']);
-    expect(steps()).toEqual(['end']);
     expect(frame).toHaveAttribute('tabindex', '0');
     expect(frame).toHaveAttribute('aria-label', 'Wide');
-    // The pinned first column covers the leading edge, so only the far edge
-    // fades, yet the back stepper still steps back.
+    expect(container.querySelector('[data-scroll-step]')).toBeNull();
+    // The pinned first column covers the leading edge, so only the far edge fades.
     layout(900, 200);
     expect(fades()).toEqual(['end']);
-    expect(steps()).toEqual(['start', 'end']);
     layout(900, 500);
     expect(fades()).toEqual([]);
-    expect(steps()).toEqual(['start']);
   });
 
   it('splits the spare width between flexible columns and hides a low column with its cells', () => {

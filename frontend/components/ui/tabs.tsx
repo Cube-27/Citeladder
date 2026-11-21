@@ -324,7 +324,7 @@ function TabStrip<T extends string>({
   const active = useContext(ActiveTabContext);
   const strip = useRevealSelected(active);
   return (
-    <ScrollFrame stepper="row">
+    <ScrollFrame>
       {(ref, region) => (
         <TabsPrimitive.List
           {...region}
@@ -479,7 +479,7 @@ export function SegmentedControl<T extends string>({
     select((from + delta + options.length) % options.length);
 
   return (
-    <ScrollFrame stepper="row">
+    <ScrollFrame>
       {(ref, region) => (
         <div
           {...region}

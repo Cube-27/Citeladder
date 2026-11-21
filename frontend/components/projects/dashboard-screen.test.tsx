@@ -452,7 +452,6 @@ describe('DashboardScreen', () => {
     );
     const next = within(screen.getByRole('region', { name: 'Next action' }));
     expect(next.getByText('Publish a comparison page')).toBeVisible();
-    expect(next.getByText('Action recommended')).toBeVisible();
     expect(next.getByText('/pricing · 3 evidence items')).toBeVisible();
     expect(next.getByText('High')).toBeVisible();
     expect(next.getByRole('link', { name: 'Open Action' })).toHaveAttribute(

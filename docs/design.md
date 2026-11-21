@@ -131,8 +131,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Tab strip**, 36 high with a `rule`; tabs 20 apart, the current one
   underlined in accent.
 - **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
-  then the metric strip, then sections 24 apart; a section's head sits 12
-  above its body. Narrow pages centre the body in their column (AR-9; 1040:
+  then the metric strip, then sections 24 apart with no rule between them;
+  a section's head sits 12 above its body. Links carry no underline at rest,
+  only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, page detail, Agent, Settings, Agent
   context; 720: Billing, Pricing, Runs); the header and tab rules still
   span the panel.
@@ -204,8 +205,9 @@ One entry per family; wave 2 fills each from the layouts above.
   footer 12 by 24 under a hairline.
 - **States.** Loading draws the final geometry (a table its head over block
   rows, a strip its cells). Empty and error sit quietly inside the frame of
-  the content they replace. A notice is a `rule`-edged strip with the
-  tone's 6px dot and the tone's word for screen readers, never a fill.
+  the content they replace. A notice is a line of text with no frame
+  (owner, 2026-11-21): the tone's 6px dot and the tone's word for screen
+  readers, never a fill.
 - **Charts.** Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
@@ -236,9 +238,10 @@ One entry per family; wave 2 fills each from the layouts above.
   Segmented control: `rule` frame one control high, 2px inset, 24-high
   segments, the selected one on `state-selected`.
 - **Tags and status.** Tag: 20 high, radius 4, `rule` edge, 12px `ink-2`; a
-  draft is dashed; Kbd and composer chips share the face. Status pill
-  (`StatusMark`): 20 high, radius full, `rule` edge, the tone's 6px dot, 12px
-  at 500 in `ink`; a live state draws the spinner and priority its bars.
+  draft is dashed; Kbd and composer chips share the face. Status
+  (`StatusMark`): the tone's 6px dot and a 12px word at 500 in `ink`, 20
+  high, no frame (owner, 2026-11-21); a live state draws the spinner.
+  Priority's bars alone sit in a pill (radius full, `rule` edge).
 - **Navigation.** Sidebar rows: 14px icon, label, 8 apart, radius 6, `ink`
   at rest and `state-hover` on hover; a group label folds its rows and a
   folded group still shows the current row. Collapsed (⌘\ or the toggle,

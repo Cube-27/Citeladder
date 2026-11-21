@@ -171,8 +171,8 @@ function PriorityBars({ filled, tone }: Readonly<{ filled: 1 | 2 | 3; tone: Stat
 
 /**
  * StatusMark — the only way to show a status, priority or severity: the
- * status pill, 20 high, radius full, a `rule` edge, the tone's 6px dot and a
- * 12px word at 500 in `ink`, so a column of marks reads as a pattern and
+ * tone's 6px dot and a 12px word at 500 in `ink`, 20 high, with no frame;
+ * priority's bars sit in a pill (radius full, a `rule` edge), so a column of marks reads as a pattern and
  * every mark still says its state. A running state draws the live rung,
  * priority its bars. It is never cut: it sizes to its word, and its column's
  * floor makes room.
@@ -192,7 +192,9 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       {...attributes}
       data-status-tone={statusMark.tone}
       className={cn(
-        'type-caption text-ink border-rule inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full border px-2 align-middle font-medium whitespace-nowrap',
+        'type-caption text-ink inline-flex h-5 shrink-0 items-center gap-1.5 align-middle font-medium whitespace-nowrap',
+        // A dot or live mark is bare text (owner, 2026-11-21); priority bars keep the pill.
+        typeof statusMark.glyph === 'object' && 'border-rule rounded-full border px-2',
         className,
       )}
     >
