@@ -112,8 +112,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   as tall as the page header (workspace switcher, settings icon), the
   Dashboard | Agent segmented control, 28-high nav rows (current row on a
   `#e7e7ea` pill in light, `state-selected` in dark, with a 2px accent
-  mark), 12px group labels, foot with Integrations, the collapse toggle and
-  the account (AR-8). The main column is the inset panel: 8 from the window
+  mark), 12px group labels, foot with Integrations (the collapse toggle at
+  its end) and the account (AR-8). The main column is the inset panel: 8 from the window
   edges (none on the sidebar side), `rule` edge, radius 8,
   `panel` fill, the page's only scroller. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
@@ -216,8 +216,9 @@ One entry per family; wave 2 fills each from the layouts above.
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
   tick per field, then the add field; Enter (and a comma in a grid cell) adds,
   Tab leaves. A grid cell drops the edge until focused. A share of a whole
-  ([`SplitBar`](../frontend/components/ui/split-bar.tsx)) is a bar of cool
-  series fills with a slider per divider, 5% steps, a dot legend under it.
+  ([`SplitBar`](../frontend/components/ui/split-bar.tsx)) is a bar of light tints
+  of the cool series hues, parted by `panel` gaps as tall as the bar that
+  are its sliders, 5% steps, a dot legend in the full hues under it.
 - **Selects and menus.** A select or filter trigger is a secondary button's
   face (`TRIGGER_BOX`); a typed combobox is an input. Menus, listboxes and
   tooltips are `raised` with a `rule` edge, radius 8, 28-high rows on

@@ -812,7 +812,7 @@
   --page-top-gap: 24px;
   --page-section-gap: 24px;
   --flow-gap: 48px;
-  /* Empty space after a scrolling page's last content (`PageFrame`), so
+  /* Empty space after a reading page's last content (`ReadingColumn`), so
      content shrinking near the bottom never pulls the page or the scroll
      position. `svh`, so a phone's collapsing toolbar never resizes it. */
   --page-end-space: 33svh;

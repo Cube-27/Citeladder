@@ -230,6 +230,7 @@ export function AuthFormShell({
     <FlowBlock
       title={title}
       sub={description}
+      centered
       after={
         <>
           {showFooter ? (

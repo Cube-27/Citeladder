@@ -52,9 +52,9 @@ const STRIP =
  * right edge on every page. A narrow route (its manifest `width`) centres its
  * strips' content and body in `max-w-thread` (1040), a compact one in
  * `--container-prose` (720), and starts the header's title on that column's
- * edge; `fill` keeps a workbench across the panel. A page the panel scrolls
- * ends in `--page-end-space` of empty space; a `fitted` one (a thread, a
- * workbench) fills the panel and scrolls inside itself.
+ * edge; `fill` keeps a workbench across the panel. Every page ends 24
+ * below its content, so one that fits never scrolls; a fitted body (a
+ * thread, a workbench, steps) fills the panel and scrolls inside itself.
  */
 export function PageFrame({
   title,
@@ -64,13 +64,11 @@ export function PageFrame({
   tabs,
   filters,
   fill,
-  fitted,
   width: ownWidth,
   children,
 }: PageFrameSlots &
   Readonly<{
     fill?: true;
-    fitted?: true;
     /** A view's own column, where it differs from its route's (one wide tab). */
     width?: PageWidth;
     children: ReactNode;
@@ -119,7 +117,7 @@ export function PageFrame({
           className={cn(
             'flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]',
             PAGE_COLUMN[width],
-            fitted ? 'pb-6' : 'pb-[var(--page-end-space)]',
+            'pb-6',
           )}
         >
           {children}

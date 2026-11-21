@@ -73,7 +73,7 @@ export function ThreadPage({
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots} fitted>
+    <PageFrame {...slots}>
       <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
         {/* The scrollbar's track is reserved at the end only, so the thread
             starts on the composer's start edge and its scrollbar ends on the

@@ -2,14 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
-import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
-import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow, TableSelectCell } from '@/components/ui/table';
-import { Tag } from '@/components/ui/tag';
 import type { PromptCandidate, PromptSet, Topic } from '@citeladder/contracts';
 import { promptsQueries } from '@/lib/api/prompts';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
@@ -20,10 +17,7 @@ import { pluralCount } from '@/lib/format';
 import { PROMPT_BUILDER_REVIEW_HREF } from '@/lib/prompts/routes';
 import { ProjectLink } from '@/components/ui/project-link';
 
-const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'suggestion', label: 'Suggestion' },
-  { key: 'checks', label: 'Checks', width: 'name' },
-];
+const COLUMNS: readonly DataTableColumn[] = [{ key: 'suggestion', label: 'Suggestion' }];
 
 /** The suggestions picked for review, held by the builder so its footer can track them. */
 export function useCandidateSelection(candidates: readonly PromptCandidate[]) {
@@ -110,12 +104,17 @@ export function CandidateReview({
       >
         {candidates.map((candidate) => {
           const topicName = candidate.topic_id ? topicNames.get(candidate.topic_id) : undefined;
-          const statusId = `${descriptionId}-${candidate.id}`;
+          const notesId = `${descriptionId}-${candidate.id}`;
+          const notes = [
+            candidate.grounded ? 'Informed by your search data' : null,
+            qualityStatusLabel(candidate),
+            ...candidate.quality_flags.map(qualityFlagLabel),
+          ].filter((note) => note !== null);
           return (
             <TableRow key={candidate.id}>
               <TableSelectCell
                 label={`Select “${candidate.text}”`}
-                describedBy={statusId}
+                describedBy={notes.length ? notesId : undefined}
                 checked={picked.has(candidate.id)}
                 onCheckedChange={(checked) => toggle(candidate.id, checked)}
                 disabled={isReviewing}
@@ -124,30 +123,15 @@ export function CandidateReview({
                 <TableCellLines
                   primary={candidate.text}
                   secondary={
-                    <>
-                      {topicName ? `${topicName} · ` : null}
-                      <span id={statusId}>{qualityStatusLabel(candidate)}</span>
-                    </>
+                    topicName || notes.length ? (
+                      <>
+                        {topicName}
+                        {topicName && notes.length ? ' · ' : null}
+                        {notes.length ? <span id={notesId}>{notes.join(' · ')}</span> : null}
+                      </>
+                    ) : null
                   }
                 />
-              </TableCell>
-              <TableCell>
-                <Inline as="span" gap="tight">
-                  {candidate.grounded ? (
-                    <>
-                      <Tag>Informed by your search data</Tag>
-                      <InfoHint label="About search data">
-                        Phrasing was guided by queries from your connected Search Console or keyword
-                        research. The prompt itself was written for AI assistants.
-                      </InfoHint>
-                    </>
-                  ) : null}
-                  {candidate.quality_flags.map((flag) => (
-                    <StatusMark key={flag} variant="status" value="warning">
-                      {qualityFlagLabel(flag)}
-                    </StatusMark>
-                  ))}
-                </Inline>
               </TableCell>
             </TableRow>
           );

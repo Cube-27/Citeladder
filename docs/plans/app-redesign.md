@@ -31,8 +31,8 @@ sites are out of scope.
 - **AR-7 App only.** Website and docs keep their look; the app's tokens split
   from theirs so the app can change freely. Owner, 2026-11-20.
 - **AR-8 Sidebar collapse.** Keep the icon rail; the collapse toggle sits in
-  the sidebar foot, in the same spot expanded and collapsed. Owner,
-  2026-11-20.
+  the sidebar foot, at the end of the Integrations row when expanded and on
+  its own row in the rail. Owner, 2026-11-21.
 - **AR-9 Widths.** Keep today's narrow pages (1040 column: Overview, Projects,
   Issues, Actions, page detail, Agent, Billing, and Agent context's Business
   map tab; 720 column: Settings, Runs, the other Agent context tabs). Side
@@ -60,6 +60,9 @@ sites are out of scope.
 - **AR-16 Shares as split bars.** Distribution shares and the intent mix are
   bars dragged in 5% steps that always total 100, not percentage fields.
   Owner, 2026-11-20.
+- **AR-17 No idle scroll.** A page whose content fits the panel shows no
+  scrollbar: pages end a gutter below their content, with no reserved end
+  space. Owner, 2026-11-21.
 
 ## Visual spec and standard layouts
 

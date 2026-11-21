@@ -50,13 +50,20 @@ describe('CandidateReview', () => {
       />,
     );
     const choices = screen.getAllByRole('checkbox', { name: /Select “/ });
-    const descriptions = choices.map((choice) => {
-      expect(choice).toHaveAccessibleDescription();
-      expect(choice).toBeEnabled();
-      return document.getElementById(choice.getAttribute('aria-describedby')!)?.textContent;
-    });
-    // Disabled judging and skipped/failed checks must not become the same state.
-    expect(new Set(descriptions).size).toBe(4);
+    choices.forEach((choice) => expect(choice).toBeEnabled());
+    // Disabled judging and skipped/failed checks must not become the same
+    // state; a clean pass says nothing.
+    expect(
+      choices.map((choice) => {
+        const id = choice.getAttribute('aria-describedby');
+        return id ? document.getElementById(id)?.textContent : null;
+      }),
+    ).toEqual([
+      'Quality check unavailable. Review carefully.',
+      null,
+      'Quality checking was off for this batch',
+      'Not quality checked',
+    ]);
     await userEvent.setup().click(choices[2]!);
     expect(screen.getByRole('button', { name: /reject selected/i })).toBeEnabled();
   });
@@ -90,8 +97,9 @@ describe('CandidateReview', () => {
     );
 
     expect(screen.getByText('best trail shoes for wet weather')).toBeInTheDocument();
-    expect(screen.getByText('May read unnaturally')).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /best trail shoes/i })).toBeEnabled();
+    const choice = screen.getByRole('checkbox', { name: /best trail shoes/i });
+    expect(choice).toHaveAccessibleDescription('Needs your review · May read unnaturally');
+    expect(choice).toBeEnabled();
   });
 
   it('tags only suggestions whose phrasing your search data informed', () => {
@@ -110,6 +118,5 @@ describe('CandidateReview', () => {
       true,
       false,
     ]);
-    expect(screen.getAllByRole('button', { name: 'About search data' })).toHaveLength(1);
   });
 });

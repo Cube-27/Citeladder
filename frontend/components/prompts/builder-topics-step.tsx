@@ -17,8 +17,9 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const TOPIC_NAME_MAX = 255;
 
-function rowTag(row: TopicRow): string {
-  if (row.kind === 'proposed') return 'Proposed';
+function rowTag(row: TopicRow): string | null {
+  if (row.kind === 'proposed') return null;
+  if (row.kind === 'existing' && row.removed) return 'Removing';
   if (row.kind === 'added') return 'New';
   return row.nested ? 'Subtopic' : 'Existing';
 }
@@ -36,38 +37,33 @@ function TopicRowEditor({
   onRemove: () => void;
 }>) {
   const removed = row.kind === 'existing' && row.removed;
+  const tag = rowTag(row);
   return (
-    <Stack as="li" gap="tight">
-      <Inline>
-        <Input
-          aria-label={`Topic name: ${row.name || 'unnamed'}`}
-          value={row.name}
-          maxLength={TOPIC_NAME_MAX}
-          disabled={disabled || removed}
-          onChange={(event) => onChange({ ...row, name: event.target.value })}
+    <Inline as="li">
+      <Input
+        aria-label={`Topic name: ${row.name || 'unnamed'}`}
+        value={row.name}
+        maxLength={TOPIC_NAME_MAX}
+        disabled={disabled || removed}
+        onChange={(event) => onChange({ ...row, name: event.target.value })}
+      />
+      {tag ? <Tag>{tag}</Tag> : null}
+      {removed ? (
+        <IconButton
+          icon={RotateCcw}
+          label={`Keep ${row.savedName}`}
+          disabled={disabled}
+          onClick={() => onChange({ ...row, removed: false })}
         />
-        <Tag>{removed ? 'Removing' : rowTag(row)}</Tag>
-        {removed ? (
-          <IconButton
-            icon={RotateCcw}
-            label={`Keep ${row.savedName}`}
-            disabled={disabled}
-            onClick={() => onChange({ ...row, removed: false })}
-          />
-        ) : (
-          <IconButton
-            icon={Trash2}
-            label={`Remove ${row.name || 'topic'}`}
-            disabled={disabled}
-            onClick={onRemove}
-          />
-        )}
-      </Inline>
-      {/* A proposal's offering links are saved on confirm; say which, so nothing is hidden. */}
-      {row.kind === 'proposed' && row.offerings.length ? (
-        <span className="type-caption">Covers {row.offerings.join('; ')}</span>
-      ) : null}
-    </Stack>
+      ) : (
+        <IconButton
+          icon={Trash2}
+          label={`Remove ${row.name || 'topic'}`}
+          disabled={disabled}
+          onClick={onRemove}
+        />
+      )}
+    </Inline>
   );
 }
 
@@ -94,7 +90,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
     setName('');
   };
   return (
-    <Stack gap="workspace">
+    <Stack gap="workspace" className="max-w-[var(--container-prose)]">
       <Inline className="flex-wrap justify-end">
         <Button
           variant="secondary"

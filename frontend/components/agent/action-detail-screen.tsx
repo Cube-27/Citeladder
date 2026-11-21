@@ -45,7 +45,7 @@ export function ActionDetailScreen() {
     enabled: Boolean(actionId),
   });
   const fallback = (body: ReactNode) => (
-    <PageFrame fitted>
+    <PageFrame>
       <ReadingColumn>{body}</ReadingColumn>
     </PageFrame>
   );
@@ -93,7 +93,7 @@ function ActionPage({
       return next;
     });
   return (
-    <PageFrame title={title} trail={listCrumbs(from)} fitted>
+    <PageFrame title={title} trail={listCrumbs(from)}>
       <ReadingColumn>
         <Labelled title="Overview" caption={suggested}>
           <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>

@@ -16,7 +16,7 @@ export function WorkbenchPage({
   ...slots
 }: Omit<PageFrameSlots, 'tabs' | 'filters'> & Readonly<{ children: ReactNode }>) {
   return (
-    <PageFrame {...slots} fill fitted>
+    <PageFrame {...slots} fill>
       {children}
     </PageFrame>
   );
