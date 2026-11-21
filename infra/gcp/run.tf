@@ -11,7 +11,7 @@ resource "google_cloud_run_v2_service" "api" {
   labels               = local.labels
 
   template {
-    service_account = google_service_account.runtime.email
+    service_account                  = google_service_account.runtime.email
     timeout                          = "1860s"
     max_instance_request_concurrency = 40
 
@@ -98,7 +98,7 @@ resource "google_cloud_run_v2_service" "api" {
 
 resource "google_cloud_run_v2_job" "execution" {
   for_each = {
-    runner = { args = ["src/runner.ts"], memory = "1Gi" }
+    runner  = { args = ["src/runner.ts"], memory = "1Gi" }
     billing = { args = ["src/cli/billing-admin.ts", "--help"], memory = "512Mi" }
   }
 
@@ -114,7 +114,7 @@ resource "google_cloud_run_v2_job" "execution" {
     template {
       service_account = google_service_account.jobs.email
       max_retries     = 0
-      timeout = "${var.runner_budget_seconds + 600}s"
+      timeout         = "${var.runner_budget_seconds + 600}s"
 
       vpc_access {
         network_interfaces {

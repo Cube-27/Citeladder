@@ -11,8 +11,8 @@ locals {
   db_address = cidrhost(local.subnet_cidr, 10)
 
   required_secret_env = {
-    OAUTH_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
-    OAUTH_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
+    OAUTH_GOOGLE_CLIENT_ID           = "citeladder-google-oauth-client-id"
+    OAUTH_GOOGLE_CLIENT_SECRET       = "citeladder-google-oauth-client-secret"
     DATABASE_URL                     = "citeladder-database-url"
     JWT_SECRET_KEY                   = "citeladder-jwt-secret"
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
@@ -20,21 +20,21 @@ locals {
     API_KEY_PEPPER                   = "citeladder-api-key-pepper"
     INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
     INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
-    BILLING_QUOTE_SIGNING_SECRET = "citeladder-billing-quote-secret"
+    BILLING_QUOTE_SIGNING_SECRET     = "citeladder-billing-quote-secret"
   }
   # Present only while the protected environment supplies a value; Cloud Run
   # cannot reference a secret without an enabled version.
   optional_secret_env = {
-    DEV_LOGIN_PASSWORD                  = "citeladder-demo-password"
-    RESEND_API_KEY                      = "citeladder-resend-api-key"
-    DEFAULT_AGENT_API_KEY               = "citeladder-default-agent-api-key"
-    KEENABLE_API_KEY                    = "citeladder-keenable-api-key"
-    JEV_API_KEY                         = "citeladder-jev-api-key"
-    TAVILY_API_KEY                      = "citeladder-tavily-api-key"
-    INTEGRATION_MICROSOFT_CLIENT_ID     = "citeladder-bing-oauth-client-id"
-    INTEGRATION_MICROSOFT_CLIENT_SECRET = "citeladder-bing-oauth-client-secret"
-    DATAFORSEO_API_LOGIN                = "citeladder-dataforseo-login"
-    DATAFORSEO_API_PASSWORD             = "citeladder-dataforseo-password"
+    DEV_LOGIN_PASSWORD                       = "citeladder-demo-password"
+    RESEND_API_KEY                           = "citeladder-resend-api-key"
+    DEFAULT_AGENT_API_KEY                    = "citeladder-default-agent-api-key"
+    KEENABLE_API_KEY                         = "citeladder-keenable-api-key"
+    JEV_API_KEY                              = "citeladder-jev-api-key"
+    TAVILY_API_KEY                           = "citeladder-tavily-api-key"
+    INTEGRATION_MICROSOFT_CLIENT_ID          = "citeladder-bing-oauth-client-id"
+    INTEGRATION_MICROSOFT_CLIENT_SECRET      = "citeladder-bing-oauth-client-secret"
+    DATAFORSEO_API_LOGIN                     = "citeladder-dataforseo-login"
+    DATAFORSEO_API_PASSWORD                  = "citeladder-dataforseo-password"
     BILLING_RAZORPAY_KEY_SECRET              = "citeladder-razorpay-key-secret"
     BILLING_RAZORPAY_WEBHOOK_SECRET          = "citeladder-razorpay-webhook-secret"
     BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET = "citeladder-razorpay-webhook-previous-secret"
@@ -44,7 +44,7 @@ locals {
   }
   api_secret_env = {
     CITELADDER_ORIGIN_TOKEN = "citeladder-worker-origin-token"
-    TURNSTILE_SECRET_KEY = "citeladder-turnstile-secret"
+    TURNSTILE_SECRET_KEY    = "citeladder-turnstile-secret"
   }
   api_optional_secret_env = {
     CITELADDER_ORIGIN_TOKEN_PREVIOUS = "citeladder-worker-origin-token-previous"

@@ -187,7 +187,7 @@ variable "public_signup_enabled" {
 }
 
 variable "runner_budget_seconds" {
-  type = number
+  type    = number
   default = 3000
   validation {
     condition     = floor(var.runner_budget_seconds) == var.runner_budget_seconds && var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
