@@ -56,10 +56,11 @@ test('flags a switch on a discriminant unless its default proves exhaustiveness'
         "function f() { switch (row.type) { case 'a': break; default: assertNever(row); } }",
         "function f() { switch (name) { case 'a': return 1; default: return 0; } }",
         "function f() { switch (state) { case 'a': return 1; default: return state satisfies never; } }",
+        "function f() { switch (kind) { case 'a': return 1; default: { const check = (x: Kind) => x satisfies never; return 0; } } }",
         "function f() { switch (mode) { case 'a': return 1; default: { const empty: never[] = []; return empty.length; } } }",
       ].join('\n'),
     ),
-    ['exhaustive-switch@1', 'exhaustive-switch@2', 'exhaustive-switch@7'],
+    ['exhaustive-switch@1', 'exhaustive-switch@2', 'exhaustive-switch@7', 'exhaustive-switch@8'],
   );
 });
 

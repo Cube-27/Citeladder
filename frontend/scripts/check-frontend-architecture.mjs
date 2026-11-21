@@ -80,11 +80,13 @@ for (const file of ['apps', 'components', 'lib', 'packages', 'services'].flatMap
     if (count) nonNullCounts[file] = count;
   }
 }
-if (process.argv.includes('--write-non-null-baseline'))
-  fs.writeFileSync(NON_NULL_BASELINE, `${JSON.stringify(nonNullCounts, null, 2)}\n`);
-failures.push(
-  ...nonNullRatchetFailures(nonNullCounts, JSON.parse(fs.readFileSync(NON_NULL_BASELINE, 'utf8'))),
+const nonNullFailures = nonNullRatchetFailures(
+  nonNullCounts,
+  JSON.parse(fs.readFileSync(NON_NULL_BASELINE, 'utf8')),
 );
+failures.push(...nonNullFailures);
+if (process.argv.includes('--write-non-null-baseline') && !nonNullFailures.length)
+  fs.writeFileSync(NON_NULL_BASELINE, `${JSON.stringify(nonNullCounts, null, 2)}\n`);
 
 const tracked = execFileSync('/usr/bin/git', ['-C', root, 'ls-files', '--', ':(top)'], {
   encoding: 'utf8',

@@ -42,26 +42,36 @@ const DISCRIMINANTS = new Set(['kind', 'type', 'status', 'state', 'phase', 'mode
 const discriminantName = (node) =>
   node?.type === 'Identifier' ? node.name : (propertyName(node) ?? '');
 
-function provesExhaustive(clause) {
-  let proven = false;
-  walk(clause.consequent, (node) => {
-    if (
-      node.type === 'VariableDeclarator' &&
-      node.init &&
-      node.id.typeAnnotation?.typeAnnotation?.type === 'TSNeverKeyword'
-    )
-      proven = true;
-    if (node.type === 'TSSatisfiesExpression' && node.typeAnnotation.type === 'TSNeverKeyword')
-      proven = true;
-    if (
-      node.type === 'CallExpression' &&
-      node.callee.type === 'Identifier' &&
-      node.callee.name === 'assertNever'
-    )
-      proven = true;
-  });
-  return proven;
+const isNever = (annotation) => annotation?.type === 'TSNeverKeyword';
+
+function provesNever(expression) {
+  if (expression?.type === 'TSSatisfiesExpression') return isNever(expression.typeAnnotation);
+  return (
+    expression?.type === 'CallExpression' &&
+    expression.callee.type === 'Identifier' &&
+    expression.callee.name === 'assertNever'
+  );
 }
+
+function provesStatement(statement) {
+  switch (statement.type) {
+    case 'BlockStatement':
+      return statement.body.some(provesStatement);
+    case 'VariableDeclaration':
+      return statement.declarations.some(
+        (declarator) => declarator.init && isNever(declarator.id.typeAnnotation?.typeAnnotation),
+      );
+    case 'ReturnStatement':
+    case 'ThrowStatement':
+      return provesNever(statement.argument);
+    case 'ExpressionStatement':
+      return provesNever(statement.expression);
+    default:
+      return false;
+  }
+}
+
+const provesExhaustive = (clause) => clause.consequent.some(provesStatement);
 
 function openSwitch(node) {
   if (node.type !== 'SwitchStatement' || !DISCRIMINANTS.has(discriminantName(node.discriminant)))

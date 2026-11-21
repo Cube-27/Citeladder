@@ -95,6 +95,14 @@ describe('loadConfig', () => {
     }
   });
 
+  it('refuses a setting of unknown type even when its environment variable is absent', () => {
+    const spec = { env: ['TEST_ONLY_SETTING'], type: 'str', default: 'x' };
+    expect(resolveSettingSpec(spec, {})).toBe('x');
+    expect(() => resolveSettingSpec({ ...spec, type: 'text' }, {})).toThrow(
+      'TEST_ONLY_SETTING has an unknown setting type text',
+    );
+  });
+
   it('uses native config defaults when the environment is silent', () => {
     const config = loadConfig({ APP_ENV: 'test' });
     expect(config.database.poolSize).toBe(policy.settings.db_pool_size.default);

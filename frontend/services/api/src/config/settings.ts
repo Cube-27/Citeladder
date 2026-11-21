@@ -75,10 +75,14 @@ function parseDatetimeSetting(name: string, raw: string): Date | null {
   return new Date(Number(epochMicros(parsed) / 1000n));
 }
 
-function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
+function settingType(name: string, spec: SettingSpec) {
   const parsed = settingTypeSchema.safeParse(spec.type);
   if (!parsed.success) throw new ConfigError(`${name} has an unknown setting type ${spec.type}`);
-  const type = parsed.data;
+  return parsed.data;
+}
+
+function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
+  const type = settingType(name, spec);
   switch (type) {
     case 'int':
       return parseInteger(name, raw, spec);
@@ -112,6 +116,7 @@ export type SettingValue<S extends SettingSpec> = S['default'] extends number
       : unknown;
 
 function resolveFromEnv(name: string, spec: SettingSpec, env: Env): unknown {
+  settingType(name, spec);
   const raw = envValue(spec, env);
   const value = raw === undefined ? spec.default : parseSetting(name, spec, raw);
   const expected = typeof spec.default;
