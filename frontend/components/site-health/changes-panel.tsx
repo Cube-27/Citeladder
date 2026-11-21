@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
@@ -17,6 +18,8 @@ import { ChangeEvidenceDrawer } from './changes-panel-evidence';
 import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
+
+const classCountsSchema = z.record(z.string(), z.number());
 
 const CLASS_LABELS = {
   improvement: 'Improvement',
@@ -70,7 +73,7 @@ export function ChangesPanel({
   });
   const counts =
     summary.data?.state === 'available'
-      ? (summary.data.summary.counts_by_class as Record<string, number> | undefined)
+      ? classCountsSchema.safeParse(summary.data.summary.counts_by_class).data
       : undefined;
   const summaryState = comparisonState(summary, pairAvailable);
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);

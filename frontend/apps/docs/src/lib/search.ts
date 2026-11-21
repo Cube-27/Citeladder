@@ -1,10 +1,16 @@
-export interface SearchEntry {
-  title: string;
-  description: string;
-  href: string;
-  group: string;
-  body: string;
-}
+import { z } from 'zod';
+
+export const searchIndexSchema = z.array(
+  z.object({
+    title: z.string(),
+    description: z.string(),
+    href: z.string(),
+    group: z.string(),
+    body: z.string(),
+  }),
+);
+
+export type SearchEntry = z.infer<typeof searchIndexSchema>[number];
 
 function termWeight(term: string, title: string, summary: string): number {
   if (title.includes(term)) return 10;

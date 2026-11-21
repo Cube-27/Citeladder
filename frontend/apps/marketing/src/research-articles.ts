@@ -1,28 +1,30 @@
 import { parseFrontmatter } from 'astro/markdown';
+import { z } from 'zod';
 import { FOUNDER, PRODUCT_HEAD, type PublicPerson } from '@/lib/marketing-content/people';
 
-type ResearchMetadata = {
-  title: string;
-  slug: string;
-  meta_title: string;
-  meta_description: string;
-  primary_keyword: string;
-  secondary_keywords: string[];
-  search_intent: string;
-  content_type: string;
-  reviewed_at: string;
-  published_at?: string;
-  author?: string;
-  related_guides?: readonly string[];
-  index_group?: string;
-  index_meta?: string;
-  image?: string;
-  product?: Readonly<{
-    heading: string;
-    href: string;
-    body: string;
-  }>;
-};
+const researchMetadataSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  meta_title: z.string(),
+  meta_description: z.string(),
+  primary_keyword: z.string(),
+  secondary_keywords: z.array(z.string()),
+  search_intent: z.string(),
+  content_type: z.string(),
+  reviewed_at: z.string(),
+  published_at: z.string().optional(),
+  author: z.string().optional(),
+  related_guides: z.array(z.string()).readonly().optional(),
+  index_group: z.string().optional(),
+  index_meta: z.string().optional(),
+  image: z.string().optional(),
+  product: z
+    .object({ heading: z.string(), href: z.string(), body: z.string() })
+    .readonly()
+    .optional(),
+});
+
+type ResearchMetadata = z.infer<typeof researchMetadataSchema>;
 
 export type ResearchArticle = { frontmatter: ResearchMetadata; markdown: string };
 
@@ -162,7 +164,10 @@ const parseArticles = (modules: Record<string, string>): readonly ResearchArticl
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([, markdown]) => {
       const parsed = parseFrontmatter(markdown);
-      return { frontmatter: parsed.frontmatter as ResearchMetadata, markdown: parsed.content };
+      return {
+        frontmatter: researchMetadataSchema.parse(parsed.frontmatter),
+        markdown: parsed.content,
+      };
     });
 
 export const RESEARCH_ARTICLES = parseArticles(

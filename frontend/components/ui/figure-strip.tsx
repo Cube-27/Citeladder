@@ -1,12 +1,7 @@
-import {
-  Fragment,
-  isValidElement,
-  type ComponentProps,
-  type CSSProperties,
-  type ReactNode,
-} from 'react';
+import { Fragment, isValidElement, type ComponentProps, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
+import { cssVars } from '@/lib/css-vars';
 import { Delta } from '@/components/ui/delta';
 import {
   cellWidth,
@@ -125,7 +120,7 @@ function FigureCell({
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
       // The cell's share of its row: `flex-basis` in globals.css reads `--row`.
-      style={{ '--row': rowSize } as CSSProperties}
+      style={cssVars({ '--row': rowSize })}
       className={cn(
         'relative min-w-0',
         pressable && !segment.selected && 'hover:overlay-hover active:overlay-pressed',

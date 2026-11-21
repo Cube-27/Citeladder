@@ -5,6 +5,8 @@ import { inspectMarkup } from '@/lib/free-tools/markup';
 import { buildSchema, type SchemaKind } from '@/lib/free-tools/generators';
 import { ToolForm, ToolInput } from './tool-form';
 
+const SCHEMA_KINDS: readonly SchemaKind[] = ['Article', 'Organization', 'BreadcrumbList'];
+
 export function MetaChecker() {
   const [html, setHtml] = useState('');
   const [headers, setHeaders] = useState('');
@@ -68,10 +70,7 @@ export function StructuredDataBuilder() {
             {...props}
             ariaLabel="Schema type"
             value={kind}
-            options={['Article', 'Organization', 'BreadcrumbList'].map((value) => ({
-              value: value as SchemaKind,
-              label: value,
-            }))}
+            options={SCHEMA_KINDS.map((value) => ({ value, label: value }))}
             onValueChange={(next) => {
               setKind(next);
               setDetail('');

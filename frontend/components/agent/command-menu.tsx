@@ -142,8 +142,9 @@ export function CommandField({
         {...comboboxProps}
         onChange={(event) => {
           const token = tokenAt(event.target.value, event.target.selectionStart);
-          const input = event.nativeEvent as InputEvent;
+          const input = event.nativeEvent;
           if (
+            input instanceof InputEvent &&
             input.inputType === 'insertText' &&
             input.data === '/' &&
             token?.trigger === '/' &&

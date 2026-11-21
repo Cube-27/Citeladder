@@ -1,4 +1,5 @@
-import { useLayoutEffect, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, type ReactNode, type RefObject } from 'react';
+import { cssVars } from '@/lib/css-vars';
 
 import { LiveVerb, SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateBlock, type StateBlockProps } from '@/components/ui/state-block';
@@ -109,7 +110,7 @@ function InFrame({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-const footprint = (rows: number) => ({ '--data-table-rows': rows }) as CSSProperties;
+const footprint = (rows: number) => cssVars({ '--data-table-rows': rows });
 
 const LOADING_ROWS = 5;
 

@@ -3,7 +3,13 @@ import { Button, IconButton } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { FileText, Search } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { groupResults, highlight, searchArticles, type SearchEntry } from '../lib/search';
+import {
+  groupResults,
+  highlight,
+  searchArticles,
+  searchIndexSchema,
+  type SearchEntry,
+} from '../lib/search';
 
 export function DocsSearchDialog() {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -54,9 +60,10 @@ export function DocsSearchDialog() {
     void fetch('/search-index.json', { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error('Search unavailable');
-        return response.json() as Promise<SearchEntry[]>;
+        return response.json();
       })
-      .then((data) => {
+      .then((json: unknown) => {
+        const data = searchIndexSchema.parse(json);
         setEntries(data);
         setFailed(false);
       })

@@ -294,7 +294,7 @@ function AreaPlot({
           content={({ active, payload }) => (
             <AreaTip
               active={active}
-              row={payload?.[0]?.payload as ChartRow | undefined}
+              row={payload?.[0]?.payload}
               data={data}
               lines={lines}
               shown={shown}

@@ -8,7 +8,12 @@ import { Select } from '@/components/ui/select';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { SearchX, Trash2 } from '@/lib/icons';
-import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
+import {
+  ASSIGNABLE_WORKSPACE_ROLES,
+  type AssignableWorkspaceRole,
+  type WorkspaceMember,
+} from '@/lib/api/workspaces';
+import { isOneOf } from '@/lib/utils';
 
 import { ROLE_OPTIONS, roleLabel } from './member-roles';
 
@@ -120,11 +125,11 @@ function MemberRow({
         </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">
-        {inert ? (
+        {inert || !isOneOf(ASSIGNABLE_WORKSPACE_ROLES, member.role) ? (
           <Tag>{roleLabel(member.role)}</Tag>
         ) : (
           <Select
-            value={member.role as AssignableWorkspaceRole}
+            value={member.role}
             onValueChange={(next) => onChangeRole(member, next)}
             options={ROLE_OPTIONS}
             ariaLabel={`Role for ${member.email}`}

@@ -43,9 +43,9 @@ const pageKeys = [
   'query_offset',
   'prompt_page',
 ];
-const tabCodec = stringUrlCodec(
+const tabCodec = stringUrlCodec<VisibilityTab>(
   VISIBILITY_TABS.map(({ id }) => id),
-  'domains' as VisibilityTab,
+  'domains',
 );
 const sourceKeys = [
   'source_cursor',

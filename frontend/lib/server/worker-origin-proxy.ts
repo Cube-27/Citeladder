@@ -89,7 +89,7 @@ async function originRequest(
   headers.set(ORIGIN_SIGNATURE_HEADER, signature);
   headers.set(ORIGIN_PUBLIC_HOST_HEADER, config.publicHost);
   if (clientIp) headers.set(ORIGIN_CLIENT_IP_HEADER, clientIp);
-  return new Request(upstream, {
+  const init: RequestInit & { duplex: 'half' } = {
     method: request.method,
     headers,
     body: request.body,
@@ -97,7 +97,8 @@ async function originRequest(
     redirect: 'manual',
     signal: request.signal,
     duplex: 'half',
-  } as RequestInit & { duplex: 'half' });
+  };
+  return new Request(upstream, init);
 }
 
 function originResponse(upstreamResponse: Response): Response {

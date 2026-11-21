@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CONTACT_EMAIL = 'contact@citeladder.com';
-export const CONTACT_API_PATH = '/api/v1/contact';
+export const CONTACT_API_PATH = '/contact';
 export const CONTACT_SENDER = 'CiteLadder Website <notifications@citeladder.com>';
 export const CONTACT_MAX_BODY_BYTES = 32_768;
 export const CONTACT_REQUEST_TIMEOUT_MS = 15_000;

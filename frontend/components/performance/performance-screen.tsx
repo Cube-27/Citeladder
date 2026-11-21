@@ -341,7 +341,7 @@ export function PerformanceScreen() {
     );
   if (!dashboard.data) return <PerformanceLoading />;
 
-  const data = dashboard.data as PerformanceDashboard;
+  const data = dashboard.data;
   const refreshing = dashboard.isPlaceholderData || projection.projecting;
   const selectedWindow = data.selected;
   const comparisonWindow = data.comparison;

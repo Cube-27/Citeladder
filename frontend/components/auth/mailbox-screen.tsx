@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { AuthRouteShell } from './auth-route-shell';
 import { AuthEmailField, AuthFormShell, AuthPasswordField, AuthRecoveryLinks } from './auth-form';
@@ -7,14 +7,18 @@ import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { routePath } from '@/lib/navigation/route-path';
+import { useUrlParam } from '@/lib/navigation/url-params';
+import { isOneOf } from '@/lib/utils';
 import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
-type MailboxOperation =
-  | 'verify-email'
-  | 'reset-password'
-  | 'forgot-password'
-  | 'resend-verification';
+const MAILBOX_OPERATIONS = [
+  'verify-email',
+  'reset-password',
+  'forgot-password',
+  'resend-verification',
+] as const;
+type MailboxOperation = (typeof MAILBOX_OPERATIONS)[number];
 
 const MAILBOX_TITLES: Record<MailboxOperation, string> = {
   'verify-email': 'Verify your email',
@@ -40,15 +44,16 @@ function mailboxFooter(operation: MailboxOperation, incomplete: boolean, returnT
 
 export default function MailboxScreen() {
   const location = useLocation();
-  const [search] = useSearchParams();
-  const operation = routePath(location.pathname).slice(1) as MailboxOperation;
+  const queryReturnTo = useUrlParam('return_to');
+  const path = routePath(location.pathname).slice(1);
+  const operation = isOneOf(MAILBOX_OPERATIONS, path) ? path : 'forgot-password';
   const confirmation = operation === 'verify-email' || operation === 'reset-password';
   const [secrets] = useState(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     // Read only during initialization: StrictMode invokes this initializer twice.
     return {
       token: fragment.get('token') ?? '',
-      returnTo: safeAuthReturnPath(fragment.get('return_to') ?? search.get('return_to')),
+      returnTo: safeAuthReturnPath(fragment.get('return_to') ?? queryReturnTo),
     };
   });
   useLayoutEffect(() => {

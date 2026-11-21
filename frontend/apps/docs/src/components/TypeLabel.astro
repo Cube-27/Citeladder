@@ -1,7 +1,11 @@
 ---
 import { schemaHref, type TypePart } from '../lib/json-schema';
 
-const { parts } = Astro.props as { parts: readonly TypePart[] };
+interface Props {
+  parts: readonly TypePart[];
+}
+
+const { parts } = Astro.props;
 ---
 
 <code
