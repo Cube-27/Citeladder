@@ -21,7 +21,7 @@ type StreamOutcome =
   | Readonly<{ kind: 'dropped' }>
   | Readonly<{ kind: 'refused' }>;
 
-export function streamHeaders(
+function streamHeaders(
   workspaceId: string | null,
   lastEventId: string | null,
 ): Record<string, string> {
@@ -29,6 +29,28 @@ export function streamHeaders(
   if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
   if (lastEventId) headers['Last-Event-ID'] = lastEventId;
   return headers;
+}
+
+export function openSseStream({
+  url,
+  method,
+  workspaceId,
+  lastEventId,
+  signal,
+}: Readonly<{
+  url: string;
+  method: 'GET' | 'POST';
+  workspaceId: string | null;
+  lastEventId: string | null;
+  signal: AbortSignal;
+}>): Promise<Response> {
+  return fetch(url, {
+    method,
+    headers: streamHeaders(workspaceId, lastEventId),
+    credentials: 'include',
+    cache: 'no-store',
+    signal,
+  });
 }
 
 export async function readSseResponse(
@@ -86,11 +108,11 @@ export function useSseEventStream({
     };
 
     const connect = async (): Promise<StreamOutcome> => {
-      const response = await fetch(url, {
+      const response = await openSseStream({
+        url,
         method: 'GET',
-        headers: streamHeaders(workspaceId, stream.lastEventId),
-        credentials: 'include',
-        cache: 'no-store',
+        workspaceId,
+        lastEventId: stream.lastEventId,
         signal: controller.signal,
       });
       if (REFUSALS.has(response.status)) return { kind: 'refused' };

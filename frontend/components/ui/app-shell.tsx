@@ -1,4 +1,5 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
+import { cssVars } from '@/lib/css-vars';
 
 import { IconButton } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
@@ -19,10 +20,10 @@ function useFrameState(): { style: CSSProperties | undefined; state: 'collapsed'
   const style =
     width === null
       ? undefined
-      : ({
+      : cssVars({
           '--sidebar-width': `${width}px`,
           '--sidebar-width-compact': `${width}px`,
-        } as CSSProperties);
+        });
   return { style, state: collapsed ? 'collapsed' : 'expanded' };
 }
 

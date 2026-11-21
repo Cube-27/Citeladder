@@ -191,9 +191,7 @@ function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
 }
 
 function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
-  const hosts = [
-    ...new Set(item.citations.map((citation) => hostOf(citation.url)).filter(Boolean)),
-  ] as string[];
+  const hosts = [...new Set(item.citations.flatMap((citation) => hostOf(citation.url) || []))];
   if (!hosts.length) return <ObservedNone />;
   return (
     <ChipRow overflow={hosts.length - MAX_CHIPS}>

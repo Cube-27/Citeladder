@@ -45,9 +45,9 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const DEMAND_TAB_CODEC = stringUrlCodec(
+const DEMAND_TAB_CODEC = stringUrlCodec<FilterTab>(
   FILTER_TABS.map(({ tab }) => tab),
-  'all' as FilterTab,
+  'all',
 );
 
 type RecomputeMutation = UseMutationResult<

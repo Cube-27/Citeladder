@@ -56,11 +56,9 @@ export function buildSnippets(operation: ApiOperation): Snippet[] {
   const idempotent = operation.parameters.some((group) =>
     group.rows.some((row) => row.name === IDEMPOTENCY_KEY),
   );
-  const headers: [string, string][] = [
-    ['Authorization', 'Bearer cl_live_…'],
-    ...(json ? [['Content-Type', 'application/json'] as [string, string]] : []),
-    ...(idempotent ? [[IDEMPOTENCY_KEY, FAKE_UUID] as [string, string]] : []),
-  ];
+  const headers: [string, string][] = [['Authorization', 'Bearer cl_live_…']];
+  if (json) headers.push(['Content-Type', 'application/json']);
+  if (idempotent) headers.push([IDEMPOTENCY_KEY, FAKE_UUID]);
   const method = operation.method;
 
   const verb = method === 'GET' ? '' : ` -X ${method}`;

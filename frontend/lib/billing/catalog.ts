@@ -1,3 +1,4 @@
+import { isOneOf } from '@/lib/utils';
 import type {
   BillingCatalog,
   CatalogAddon,
@@ -129,6 +130,6 @@ export function extrasForPlan(
   planKey: string,
 ): { addons: CatalogAddon[]; topups: CatalogTopup[] } {
   const eligible = (entry: CatalogAddon | CatalogTopup) =>
-    (entry.eligible_plan_keys as readonly string[]).includes(planKey);
+    isOneOf(entry.eligible_plan_keys, planKey);
   return { addons: catalog.addons.filter(eligible), topups: catalog.topups.filter(eligible) };
 }

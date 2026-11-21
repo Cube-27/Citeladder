@@ -9,6 +9,7 @@ import type { z } from 'zod';
 import { AGENT_CHAT_PAGE_SIZE } from '@/lib/config/agent';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { FIRST_CURSOR } from './query-client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
@@ -262,7 +263,7 @@ export const agentQueries = {
         q: filters.q || null,
         actionId: filters.actionId ?? null,
       }),
-      initialPageParam: undefined as string | undefined,
+      initialPageParam: FIRST_CURSOR,
       queryFn: ({ signal, pageParam }) =>
         agentApi.listChats(
           scope.projectId,

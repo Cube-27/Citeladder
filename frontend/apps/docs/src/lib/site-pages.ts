@@ -1,5 +1,6 @@
 import { API_GROUP, articleSearchBody, articles } from './content';
 import { API_OPERATIONS, API_SCHEMAS } from './api-reference';
+import type { SearchEntry } from './search';
 
 export const API_ENDPOINTS_HREF = '/api/endpoints/';
 
@@ -39,4 +40,4 @@ export const sitePages = [
     href: schema.href,
     body: schema.rows.map((row) => row.name).join('\n'),
   })),
-];
+] satisfies SearchEntry[];

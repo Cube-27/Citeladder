@@ -92,6 +92,22 @@ const apiTypeAssertionBaseline = [
   'services/api/src/workers/integration-worker.ts',
 ];
 
+const ICONS_IMPORT = { name: '@tabler/icons-react', message: 'Import glyphs from @/lib/icons.' };
+const SEARCH_PARAMS_IMPORT = {
+  name: 'react-router-dom',
+  importNames: ['useSearchParams'],
+  message: 'Read and write URL params through useUrlParam in @/lib/navigation/url-params.',
+};
+const FETCH_MESSAGE = 'Call the API through @/lib/api/client or @/lib/sse/use-event-stream.';
+const BROWSER_FILES = [
+  'components/**',
+  'lib/**',
+  'apps/*/src/**',
+  'packages/*/src/**',
+  'packages/*/*.{ts,tsx}',
+];
+const TEST_FILES = ['**/*.{test,spec}.{ts,tsx}', 'test/**', 'e2e/**', '**/test/**'];
+
 export const lintConfig: OxlintConfig = {
   plugins: ['typescript'],
   options: {
@@ -152,15 +168,57 @@ export const lintConfig: OxlintConfig = {
     'typescript/prefer-as-const': 'error',
     'typescript/prefer-namespace-keyword': 'error',
     'typescript/triple-slash-reference': 'error',
-    'no-restricted-imports': [
-      'error',
-      { paths: [{ name: '@tabler/icons-react', message: 'Import glyphs from @/lib/icons.' }] },
-    ],
+    'no-restricted-imports': ['error', { paths: [ICONS_IMPORT, SEARCH_PARAMS_IMPORT] }],
   },
   overrides: [
     {
       files: ['**/lib/icons.ts'],
-      rules: { 'no-restricted-imports': 'off' },
+      rules: { 'no-restricted-imports': ['error', { paths: [SEARCH_PARAMS_IMPORT] }] },
+    },
+    {
+      files: ['**/lib/navigation/**'],
+      rules: { 'no-restricted-imports': ['error', { paths: [ICONS_IMPORT] }] },
+    },
+    {
+      files: BROWSER_FILES,
+      rules: {
+        'no-restricted-globals': ['error', { name: 'fetch', message: FETCH_MESSAGE }],
+        'no-restricted-properties': [
+          'error',
+          { object: 'window', property: 'fetch', message: FETCH_MESSAGE },
+          { object: 'globalThis', property: 'fetch', message: FETCH_MESSAGE },
+          { object: 'self', property: 'fetch', message: FETCH_MESSAGE },
+        ],
+        'typescript/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      },
+    },
+    {
+      files: [
+        '**/lib/api/client.ts',
+        '**/lib/sse/use-event-stream.ts',
+        '**/lib/client-errors.ts',
+        '**/lib/server/worker-origin-proxy.ts',
+        '**/apps/docs/src/components/DocsSearchDialog.tsx',
+        '**/apps/marketing/src/turnstile.ts',
+      ],
+      rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
+    },
+    {
+      files: [
+        '**/lib/api/client.ts',
+        '**/components/ui/select.tsx',
+        '**/components/ui/tabs.tsx',
+        '**/components/analytics/google-analytics.ts',
+      ],
+      rules: { 'typescript/consistent-type-assertions': 'off' },
+    },
+    {
+      files: TEST_FILES,
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-properties': 'off',
+        'typescript/consistent-type-assertions': 'off',
+      },
     },
     {
       files: ['services/api/src/**/*.ts'],

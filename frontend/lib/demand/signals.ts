@@ -2,7 +2,7 @@ import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { DemandSignal } from '@/lib/api/demand';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
-import { isRecord } from '@/lib/utils';
+import { isOneOf, isRecord } from '@/lib/utils';
 
 type SignalType =
   | 'striking_distance'
@@ -81,10 +81,8 @@ const FALLBACK_TYPE_META: { label: string; definition: Definition } = {
 };
 
 export function signalTypeMeta(signalType: string) {
-  return (
-    (SIGNAL_TYPE_META as Record<string, typeof FALLBACK_TYPE_META>)[signalType] ??
-    FALLBACK_TYPE_META
-  );
+  const known: Readonly<Record<string, typeof FALLBACK_TYPE_META | undefined>> = SIGNAL_TYPE_META;
+  return known[signalType] ?? FALLBACK_TYPE_META;
 }
 
 export function signalDefinition(signalType: string, policy: DemandDetectorPolicy): string {
@@ -94,7 +92,7 @@ export function signalDefinition(signalType: string, policy: DemandDetectorPolic
 
 export function matchesTab(signal: DemandSignal, tab: FilterTab): boolean {
   if (tab === 'all') return true;
-  return (SIGNAL_GROUPS[tab] as readonly string[]).includes(signal.signal_type);
+  return isOneOf(SIGNAL_GROUPS[tab], signal.signal_type);
 }
 
 export function countByTab(signals: readonly DemandSignal[], tab: FilterTab): number {

@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
@@ -14,6 +14,7 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { WORKSPACE_LOADING_STALL_MS } from '@/lib/config/operational';
 import { ownsWorkspace } from '@/lib/project/bootstrap';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { useUrlParam } from '@/lib/navigation/url-params';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { OnboardingScreen } from './onboarding-screen';
@@ -31,7 +32,7 @@ export function OnboardingPageClient() {
 function ProjectSetupGate() {
   const queryClient = useQueryClient();
   const { status, activeWorkspaceId, workspaces, retry: retryContext } = useProjectContext();
-  const [searchParams] = useSearchParams();
+  const setupParam = useUrlParam('setup');
   const { entitlement, isLoading: entitlementLoading } = useEntitlement();
 
   const retry = () => {
@@ -56,7 +57,7 @@ function ProjectSetupGate() {
       />
     );
   }
-  if (setsUpOwnWorkspace(status, workspaces, searchParams.get('setup'))) return <WorkspaceSetup />;
+  if (setsUpOwnWorkspace(status, workspaces, setupParam)) return <WorkspaceSetup />;
   if (status === 'unavailable') {
     return <ProjectSetupBlocked title="That project is unavailable" projectsHref={projectsHref} />;
   }

@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -19,6 +18,7 @@ import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl } from '@citeladder/contracts';
 import { sharedOrigin } from '@/lib/format';
+import { useUrlParam } from '@/lib/navigation/url-params';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { PAGE_KINDS } from '@/lib/site-health/page-kinds';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -176,7 +176,7 @@ function ScoredInventory({
   active: boolean;
   exportPages: ExportPages | undefined;
 }>) {
-  const requestedSort = useSearchParams()[0].get('sort');
+  const requestedSort = useUrlParam('sort');
   return (
     <ScoredInventoryState
       key={requestedSort ?? ''}

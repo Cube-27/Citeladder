@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 
@@ -15,6 +15,12 @@ import { refreshAfterProjectCreated, refreshBrandLogos } from '@/lib/api/project
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
+import {
+  readUrlParam,
+  useUrlParam,
+  useUrlSearch,
+  withUrlParams,
+} from '@/lib/navigation/url-params';
 import {
   brandStepSchema,
   emptyBrandStep,
@@ -52,13 +58,13 @@ function resumedStep(discoveryId: string | null, stepParameter: string | null): 
   return stepParameter === 'review' ? 2 : 1;
 }
 
-function stepQueryValue(step: OnboardingStep): 'brand' | 'discovery' | 'review' {
-  return ['brand', 'discovery', 'review'][step] as 'brand' | 'discovery' | 'review';
-}
+const STEP_QUERY_VALUES = ['brand', 'discovery', 'review'] as const;
 
 function persistedBrand(input: Record<string, unknown>): BrandStepValues {
-  const text = (key: string, fallback = '') =>
-    typeof input[key] === 'string' ? (input[key] as string) : fallback;
+  const text = (key: string, fallback = '') => {
+    const value = input[key];
+    return typeof value === 'string' ? value : fallback;
+  };
   return {
     brand_name: text('brand_name'),
     website_url: text('website_url'),
@@ -80,7 +86,7 @@ function isOrphanedCompletion(
 export function useOnboardingFlow(transactionKey: string) {
   const router = useNavigate();
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams()[0];
+  const searchParams = useUrlSearch();
   const { activeWorkspaceId, setActiveProjectId } = useProjectContext();
   const openingProject = useRef<string | null>(null);
   const mounted = useRef(false);
@@ -90,10 +96,10 @@ export function useOnboardingFlow(transactionKey: string) {
       mounted.current = false;
     };
   }, []);
-  const isAdditional = searchParams?.get('new') === '1';
-  const returnTo = safeAuthReturnPath(searchParams?.get('return_to'));
-  const initialDiscoveryId = searchParams?.get('discovery') ?? null;
-  const initialStepParameter = searchParams?.get('step') ?? null;
+  const isAdditional = useUrlParam('new');
+  const returnTo = safeAuthReturnPath(useUrlParam('return_to'));
+  const initialDiscoveryId = useUrlParam('discovery');
+  const initialStepParameter = useUrlParam('step');
   const [step, setStep] = useState<OnboardingStep>(() =>
     resumedStep(initialDiscoveryId, initialStepParameter),
   );
@@ -147,9 +153,8 @@ export function useOnboardingFlow(transactionKey: string) {
     setProfile(null);
     form.reset(emptyBrandStep);
     setStep(0);
-    const reset = new URLSearchParams({ new: '1' });
-    const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;
-    if (workspace) reset.set('workspace', workspace);
+    const workspace = readUrlParam(searchParams, 'workspace') ?? activeWorkspaceId;
+    const reset = withUrlParams(null, { new: true, workspace: workspace || null });
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
   }, [activeWorkspaceId, form, initialDiscoveryId, orphanedCompletion, router, searchParams]);
 
@@ -266,11 +271,11 @@ export function useOnboardingFlow(transactionKey: string) {
       // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
       setResumeDiscoveryId(discoveryId);
     }
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
-    params.set('discovery', discoveryId);
-    params.set('step', stepQueryValue(step));
-    const next = params.toString();
-    if (next !== searchParams?.toString())
+    const next = withUrlParams(searchParams, {
+      discovery: discoveryId,
+      step: STEP_QUERY_VALUES[step],
+    }).toString();
+    if (next !== searchParams.toString())
       router(`/onboarding?${next}`, {
         replace: true,
         preventScrollReset: true,

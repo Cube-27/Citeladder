@@ -150,9 +150,10 @@ export function createController(host: Host) {
       const resolved = result.selection;
       if (requestedSelection) {
         if (!resolved) throw new Error('Missing requested selection');
+        const actual = new Map(Object.entries(resolved));
         const matches = Object.entries(requestedSelection).every(([key, expected]) => {
           if ((key === 'audit_id' || key === 'snapshot_id') && expected == null) return true;
-          return (resolved[key as keyof AnalyticsSelection] ?? null) === (expected ?? null);
+          return (actual.get(key) ?? null) === (expected ?? null);
         });
         if (!matches) throw new Error('Result does not match requested selection');
       }

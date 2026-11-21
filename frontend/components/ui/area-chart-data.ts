@@ -21,9 +21,10 @@ export function chartRows(
   const xs = pointXs(data);
   return data.flatMap((point, index) => {
     const x = xs[index] ?? index;
-    const values = Object.fromEntries(
-      lines.map((line, at) => [`l${at}`, line.values[index] ?? null]),
-    ) as Record<`l${number}`, number | null>;
+    const values: Record<`l${number}`, number | null> = {};
+    lines.forEach((line, at) => {
+      values[`l${at}`] = line.values[index] ?? null;
+    });
     const row: ChartRow = { x, index, break: false, ...values };
     const before = xs[index - 1];
     if (!point.breakBefore || before === undefined) return [row];

@@ -241,9 +241,13 @@ export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 
 const KNOWN_CODES: ReadonlySet<string> = new Set(API_ERROR_CODES);
 
+function isApiErrorCode(value: string): value is ApiErrorCode {
+  return KNOWN_CODES.has(value);
+}
+
 export function asApiErrorCode(value: string): ApiErrorCode {
-  if (!KNOWN_CODES.has(value)) {
+  if (!isApiErrorCode(value)) {
     throw new Error(`'${value}' is not a declared API error code`);
   }
-  return value as ApiErrorCode;
+  return value;
 }

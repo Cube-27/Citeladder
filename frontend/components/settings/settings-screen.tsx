@@ -42,9 +42,9 @@ function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean, managed
   );
 }
 
-const SETTINGS_TAB_CODEC = stringUrlCodec(
+const SETTINGS_TAB_CODEC = stringUrlCodec<SettingsTab>(
   SETTINGS_TABS.map((tab) => tab.value),
-  'account' as SettingsTab,
+  'account',
 );
 
 function ProjectDeletionControls() {

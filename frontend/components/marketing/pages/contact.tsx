@@ -14,6 +14,7 @@ import {
   contactSubmissionSchema,
 } from '@/lib/config/contact';
 import { trackContactSubmitted } from '@/components/analytics/google-analytics';
+import { apiClient, httpErrorStatus } from '@/lib/api/client';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 
@@ -33,6 +34,12 @@ const FAILURE_COPY = {
 type Failure = keyof typeof FAILURE_COPY;
 type FormState = 'idle' | 'sending' | 'success' | Failure;
 const isFailure = (state: FormState): state is Failure => state in FAILURE_COPY;
+const FAILURE_BY_STATUS: Readonly<Record<number, Failure | undefined>> = {
+  403: 'unverified',
+  429: 'rate-limited',
+};
+const failedState = (status: number | undefined): Failure =>
+  (status === undefined ? undefined : FAILURE_BY_STATUS[status]) ?? 'error';
 const SUBMIT_LABELS = ['Send message', 'Sending…'] as const;
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
 
@@ -87,26 +94,16 @@ function ContactForm() {
     setErrors({});
     setState('sending');
     try {
-      const response = await fetch(CONTACT_API_PATH, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...parsed.data, turnstile_token: token() }),
-        signal: AbortSignal.timeout(CONTACT_REQUEST_TIMEOUT_MS),
-      });
-      if (response.status === 429) {
-        setState('rate-limited');
-        return;
-      }
-      if (response.status === 403) {
-        setState('unverified');
-        return;
-      }
-      if (!response.ok) throw new Error('Send failed');
+      await apiClient.post<unknown>(
+        CONTACT_API_PATH,
+        { ...parsed.data, turnstile_token: token() },
+        { timeoutMs: CONTACT_REQUEST_TIMEOUT_MS },
+      );
       sent.current = true;
       setState('success');
       trackContactSubmitted();
-    } catch {
-      setState('error');
+    } catch (error) {
+      setState(failedState(httpErrorStatus(error)));
     } finally {
       pending.current = false;
       reset();
