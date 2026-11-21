@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * What the atom hands a glyph: its box, its ink and its accessible name. A
- * lucide icon takes these, and so does a brand glyph (`BrandGlyph`).
+ * library glyph takes these, and so does a brand glyph (`BrandGlyph`).
  */
 type GlyphProps = Readonly<{
   className?: string;
@@ -25,7 +25,7 @@ export type BrandGlyph = ComponentType<GlyphProps>;
 /**
  * Icon — a glyph at the product's one icon size, 16px.
  *
- * Feature screens used to size their lucide glyphs at 12, 14 and 16 beside
+ * Feature screens used to size their glyphs at 12, 14 and 16 beside
  * the same 14px text, so an arrow next to a caption looked different from the
  * same arrow next to a label. The atom has one form: the caller picks the
  * glyph and, through `className`, its ink — never its size. Decorative by

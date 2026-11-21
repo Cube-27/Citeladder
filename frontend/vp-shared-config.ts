@@ -102,7 +102,7 @@ export const lintConfig: OxlintConfig = {
     'typescript/triple-slash-reference': 'error',
     'no-restricted-imports': [
       'error',
-      { paths: [{ name: 'lucide-react', message: 'Import glyphs from @/lib/icons.' }] },
+      { paths: [{ name: '@tabler/icons-react', message: 'Import glyphs from @/lib/icons.' }] },
     ],
   },
   overrides: [

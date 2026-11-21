@@ -562,6 +562,16 @@
       "license": "MIT"
     },
     {
+      "package": "@tabler/icons",
+      "versions": ["3.52.0"],
+      "license": "MIT"
+    },
+    {
+      "package": "@tabler/icons-react",
+      "versions": ["3.52.0"],
+      "license": "MIT"
+    },
+    {
       "package": "@tanstack/query-core",
       "versions": ["5.107.1"],
       "license": "MIT"
@@ -1090,11 +1100,6 @@
       "package": "lru-cache",
       "versions": ["11.5.3"],
       "license": "BlueOak-1.0.0"
-    },
-    {
-      "package": "lucide-react",
-      "versions": ["1.70.0"],
-      "license": "ISC"
     },
     {
       "package": "magic-string",

@@ -14,7 +14,7 @@ import { GITHUB_MARK_PATH } from '../primitives/github-mark';
 import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
 import './site-footer.css';
 
-// lucide-react no longer ships brand marks, so the glyphs are inlined.
+// The networks' own marks, inlined.
 const SOCIAL_GLYPHS: Record<SocialNetwork, string> = {
   github: GITHUB_MARK_PATH,
   linkedin:

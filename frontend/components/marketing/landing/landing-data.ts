@@ -12,7 +12,7 @@ import { McpMark } from './mcp-mark';
 /**
  * An integration's logo: an engine mark the site already draws inline, a
  * logo file served from `public/brand/integrations`, or an inline mark in ink
- * (a lucide icon for a source without a usable logo).
+ * (a glyph for a source without a usable logo).
  */
 export type IntegrationMark =
   | { readonly kind: 'engine'; readonly engine: EngineKey }

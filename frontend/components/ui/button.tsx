@@ -160,7 +160,7 @@ function carriesIcon(children: ReactNode): boolean {
   return Children.toArray(children).some((child) => {
     if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
     if (child.type === Icon || child.type === 'svg' || child.props['aria-hidden']) return true;
-    // A lucide glyph is a forwardRef object with no children.
+    // A library glyph is a forwardRef object with no children.
     if (typeof child.type === 'object' && child.props.children === undefined) return true;
     return typeof child.type !== 'string' || child.type === 'a'
       ? carriesIcon(child.props.children)
