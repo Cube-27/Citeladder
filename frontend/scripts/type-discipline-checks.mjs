@@ -45,7 +45,14 @@ const discriminantName = (node) =>
 function provesExhaustive(clause) {
   let proven = false;
   walk(clause.consequent, (node) => {
-    if (node.type === 'TSNeverKeyword') proven = true;
+    if (
+      node.type === 'VariableDeclarator' &&
+      node.init &&
+      node.id.typeAnnotation?.typeAnnotation?.type === 'TSNeverKeyword'
+    )
+      proven = true;
+    if (node.type === 'TSSatisfiesExpression' && node.typeAnnotation.type === 'TSNeverKeyword')
+      proven = true;
     if (
       node.type === 'CallExpression' &&
       node.callee.type === 'Identifier' &&
