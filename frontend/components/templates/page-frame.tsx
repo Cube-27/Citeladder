@@ -64,20 +64,13 @@ export function PageFrame({
   tabs,
   filters,
   fill,
-  width: ownWidth,
   children,
-}: PageFrameSlots &
-  Readonly<{
-    fill?: true;
-    /** A view's own column, where it differs from its route's (one wide tab). */
-    width?: PageWidth;
-    children: ReactNode;
-  }>) {
+}: PageFrameSlots & Readonly<{ fill?: true; children: ReactNode }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
   const hasTrail = parents.length > 0;
-  const width = pageWidth(pathname, { fill, own: ownWidth });
+  const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const searchParams = useSearchParams()[0];
@@ -182,12 +175,6 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
 }
 
 type PageWidth = ReturnType<typeof routeWidth>;
-
-/** A workbench fills the panel; else the view's own column, else its route's. */
-function pageWidth(pathname: string, view: { fill?: true; own?: PageWidth }): PageWidth {
-  if (view.fill) return 'full';
-  return view.own ?? routeWidth(pathname);
-}
 
 /** A narrow page's column: its record heading and body, centred in the panel. */
 const PAGE_COLUMN: Record<PageWidth, string | false> = {

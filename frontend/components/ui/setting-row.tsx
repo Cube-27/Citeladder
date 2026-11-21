@@ -155,7 +155,8 @@ export function SettingField({
   hint?: string;
   error?: ReactNode;
   required?: boolean;
-  inline?: boolean;
+  /** At the row's right: a short choice, or `wide` a text field in the 320 control column. */
+  inline?: boolean | 'wide';
   children: (props: ControlProps) => ReactNode;
 }>) {
   const id = useId();
@@ -192,7 +193,13 @@ export function SettingField({
           </p>
         ) : null}
       </div>
-      <div className={cn('grid min-w-0 gap-1', inline && 'w-44 max-w-full *:w-full')}>
+      <div
+        className={cn(
+          'grid min-w-0 gap-1',
+          inline === true && 'w-44 max-w-full *:w-full',
+          inline === 'wide' && 'w-80 max-w-full *:w-full',
+        )}
+      >
         {control}
         {error ? <FieldFoot id={errorId} error={error} /> : null}
       </div>

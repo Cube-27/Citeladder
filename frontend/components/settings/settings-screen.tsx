@@ -12,7 +12,7 @@ import { ApiKeys } from '@/components/settings/api-keys';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import AccountSecurity from '@/components/settings/account-security';
-import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
+import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { projectMutations } from '@/lib/api/projects';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -189,8 +189,8 @@ export function SettingsScreen() {
   const activeTab = tabs.some((tab) => tab.value === requestedTab) ? requestedTab : 'account';
 
   return (
-    <TabsRoot value={activeTab} onValueChange={setActiveTab}>
-      <SettingsPage tabs={<TabRow items={tabs} ariaLabel="Settings sections" />}>
+    <TabsRoot value={activeTab} onValueChange={setActiveTab} orientation="vertical">
+      <SettingsPage rail={<TabRail items={tabs} ariaLabel="Settings sections" />}>
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
           <SettingsGroup title="Profile">
             <SettingRows>

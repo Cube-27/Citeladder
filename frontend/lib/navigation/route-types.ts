@@ -73,6 +73,8 @@ export type RouteLoading =
   | Readonly<{
       kind: 'cards';
       tabs?: HeldTabs;
+      /** The page's sections as a left rail instead of a tab strip; `wide` ones fill the column. */
+      rail?: HeldTabs & Readonly<{ wide?: readonly string[] }>;
       filters?: boolean;
       /** The page's heading and its line above the shapes. */
       intro?: boolean;

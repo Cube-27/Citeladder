@@ -212,13 +212,15 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('supports arrow-key navigation across tabs', async () => {
+  it('moves down the section rail with the arrow keys', async () => {
     const ue = userEvent.setup();
     renderScreen();
 
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
+    expect(account).toHaveAttribute('aria-selected', 'true');
+    await ue.keyboard('{ArrowDown}');
     expect(screen.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'API keys' })).toHaveAttribute('aria-selected', 'true');
