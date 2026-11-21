@@ -13,7 +13,7 @@ export function useDocumentTitle(title: string | undefined) {
  * main panel. Focus on a panel that cannot scroll leaves the keys and an
  * overlay scrollbar dead until a click moves focus inside.
  */
-export function focusPageScroller() {
+function focusPageScroller() {
   const target =
     document.querySelector<HTMLElement>('[data-page-scroller]') ?? document.getElementById('main');
   target?.focus({ preventScroll: true });
