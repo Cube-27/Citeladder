@@ -1,13 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { List, RefreshCw } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
+import { List, RefreshCw } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   integrationsMutations,

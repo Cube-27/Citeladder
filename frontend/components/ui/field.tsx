@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react';
-import { CircleAlert } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
+import { CircleAlert } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export type ControlProps = {

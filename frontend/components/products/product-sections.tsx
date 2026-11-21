@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { FileSearch } from 'lucide-react';
 
 import { AnswerDialog } from '@/components/runs/answer-dialog';
 import { BrandMark } from '@/components/ui/brand-mark';
@@ -12,6 +11,7 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/compone
 import { TextLink } from '@/components/ui/text-link';
 import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
+import { FileSearch } from '@/lib/icons';
 import { formatCount, formatMean } from '@/lib/format';
 import { formatRate, holderCaption } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';

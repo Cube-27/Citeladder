@@ -1,9 +1,9 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { Menu } from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
+import { Menu } from '@/lib/icons';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
 
 /**

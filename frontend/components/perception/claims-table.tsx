@@ -1,6 +1,5 @@
 import type { AccuracyClaim, AccuracyClaimPage } from '@citeladder/contracts/fact-checking';
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
-import { PenLine } from 'lucide-react';
 import { useState } from 'react';
 
 import { VerdictChip } from '@/components/runs/evidence-claims';
@@ -15,6 +14,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { Tooltip } from '@/components/ui/tooltip';
+import { PenLine } from '@/lib/icons';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { claimAgentPrompt, VERDICT_LABELS } from '@/lib/visibility/accuracy';

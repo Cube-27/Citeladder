@@ -1,4 +1,3 @@
-import { Check, Plus, X } from 'lucide-react';
 import { useState, type ClipboardEvent, type ReactNode } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { SettingsGroup } from '@/components/ui/setting-row';
 import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import type { BusinessMap } from '@citeladder/contracts';
+import { Check, Plus, X } from '@/lib/icons';
 import { formatCount, pluralCount } from '@/lib/format';
 import {
   acceptAll,

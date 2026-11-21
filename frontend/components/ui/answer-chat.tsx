@@ -1,8 +1,8 @@
-import { ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { textRole } from '@/components/ui/typography';
+import { ArrowUpRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

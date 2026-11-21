@@ -1,10 +1,9 @@
-import { Activity, Rocket } from 'lucide-react';
-
 import { FirstRunAction } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
+import { Activity, Rocket } from '@/lib/icons';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { useWorkspaceCapability } from '@/lib/project/project-context';

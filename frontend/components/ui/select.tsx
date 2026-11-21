@@ -1,9 +1,9 @@
 import { useId, type ReactNode } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
-import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { TRIGGER_BOX } from '@/components/ui/input';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
+import { Check, ChevronDown, ChevronUp } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';

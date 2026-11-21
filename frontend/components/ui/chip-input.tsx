@@ -1,8 +1,8 @@
-import { Check, X } from 'lucide-react';
 import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
+import { Check, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /** One value, and whether it is still a model's or discovery's unaccepted suggestion. */

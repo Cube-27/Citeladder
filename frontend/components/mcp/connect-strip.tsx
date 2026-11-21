@@ -1,4 +1,3 @@
-import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { CodeToken, textRole } from '@/components/ui/typography';
+import { ChevronDown, ExternalLink } from '@/lib/icons';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
 import { slipClasses } from '@/components/ui/slip';

@@ -1,4 +1,3 @@
-import { Search, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits, SeedQueries, Topic } from '@citeladder/contracts';
+import { Search, Users } from '@/lib/icons';
 import { PROMPT_BUILDER } from '@/lib/config/prompts';
 import { formatCount } from '@/lib/format';
 import {

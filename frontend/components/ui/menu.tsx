@@ -1,5 +1,4 @@
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronRight } from 'lucide-react';
 import {
   createContext,
   useContext,
@@ -13,6 +12,7 @@ import {
   type SetStateAction,
 } from 'react';
 
+import { Check, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
 

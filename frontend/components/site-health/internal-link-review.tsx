@@ -5,7 +5,6 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileSearch } from 'lucide-react';
 
 import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -15,6 +14,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
+import { FileSearch } from '@/lib/icons';
 import { formatCount, readableUrl } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 

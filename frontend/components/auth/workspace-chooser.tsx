@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -11,6 +10,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { Workspace } from '@citeladder/contracts';
+import { Plus } from '@/lib/icons';
 import { workspaceQueries } from '@/lib/api/workspaces';
 import { HOME_PATH } from '@/lib/navigation/app-routes';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';

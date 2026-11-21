@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Globe } from 'lucide-react';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import type { DataTableState } from '@/components/ui/data-table';
@@ -18,6 +17,7 @@ import {
   type SourceFilters,
   type SourceTableFrame,
 } from '@/components/visibility/source-rows';
+import { Globe } from '@/lib/icons';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import type { SourceTab } from '@/lib/visibility/dashboard';
 import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';

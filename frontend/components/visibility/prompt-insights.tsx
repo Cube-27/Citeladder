@@ -4,7 +4,6 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { UserPlus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -18,6 +17,7 @@ import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import type { ObservedCompetitor } from '@citeladder/contracts';
 import { ProjectLink } from '@/components/ui/project-link';
+import { UserPlus, X } from '@/lib/icons';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { visibilityMutations } from '@/lib/api/visibility-queries';

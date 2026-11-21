@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { SearchX } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { SearchX } from '@/lib/icons';
 import { sharedOrigin } from '@/lib/format';
 import {
   performanceQueries,

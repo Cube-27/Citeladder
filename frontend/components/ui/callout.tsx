@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle, type LucideIcon } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
+import { AlertTriangle, CheckCircle2, Info, XCircle, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export type CalloutTone = 'neutral' | 'info' | 'positive' | 'warning' | 'negative';
@@ -14,7 +14,7 @@ export type CalloutTone = 'neutral' | 'info' | 'positive' | 'warning' | 'negativ
  * with an `ink` title and `ink-2` body. Every tone keeps a 1px border, so a
  * neutral and a status callout are the same size.
  */
-const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; word: string }> = {
+const TONE: Record<CalloutTone, { box: string; title: string; icon: IconGlyph; word: string }> = {
   neutral: {
     box: 'surface-inset text-ink-2',
     title: 'text-ink',
@@ -55,7 +55,7 @@ export function Callout({
   /** A secondary Button or a TextLink. */
   action?: ReactNode;
   /** Overrides the tone's icon. */
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   className?: string;
 }>) {
   if (children == null && title == null) return null;

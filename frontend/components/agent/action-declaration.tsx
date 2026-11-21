@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ListChecks } from 'lucide-react';
 import { useState } from 'react';
 
 import { DeclarationStatus } from '@/components/agent/declaration-status';
@@ -13,6 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
+import { ListChecks } from '@/lib/icons';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';

@@ -1,5 +1,4 @@
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
-import { Megaphone } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -8,6 +7,7 @@ import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
+import { Megaphone } from '@/lib/icons';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayShortDate, formatPercent, pluralCount } from '@/lib/format';
 import {

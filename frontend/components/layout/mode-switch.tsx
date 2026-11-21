@@ -1,12 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { PanelsTopLeft, type LucideIcon } from 'lucide-react';
 
 import {
   SidebarRowTooltip,
   sidebarModeSegmentClasses,
   sidebarModeTrackClasses,
 } from '@/components/ui/sidebar';
-import { ICONS } from '@/lib/icons';
+import { ICONS, PanelsTopLeft, type IconGlyph } from '@/lib/icons';
 import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -16,7 +15,7 @@ import { useProjectContext } from '@/lib/project/project-context';
  * glyph is the collapsed rail's, where no label shows. Dashboard's is its own,
  * not Overview's.
  */
-export const MODES: readonly { mode: NavigationMode; label: string; icon: LucideIcon }[] = [
+export const MODES: readonly { mode: NavigationMode; label: string; icon: IconGlyph }[] = [
   { mode: 'dashboard', label: 'Dashboard', icon: PanelsTopLeft },
   { mode: 'agent', label: 'Agent', icon: ICONS.agent },
 ];

@@ -1,7 +1,7 @@
-import { Download, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Download, X } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';

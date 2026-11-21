@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow, TableSelectCell } from '@/components/ui/table';
 import type { PromptCandidate, PromptSet, Topic } from '@citeladder/contracts';
+import { X } from '@/lib/icons';
 import { promptsQueries } from '@/lib/api/prompts';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';

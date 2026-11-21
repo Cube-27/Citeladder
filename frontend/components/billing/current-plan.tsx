@@ -1,12 +1,12 @@
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
 import { Tag } from '@/components/ui/tag';
-import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
+import { X } from '@/lib/icons';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';

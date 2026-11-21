@@ -1,4 +1,3 @@
-import { ChevronRight } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
@@ -11,6 +10,7 @@ import { textRole } from '@/components/ui/typography';
 import { ROWS_SHELL } from '@/components/ui/work-rows';
 import { IssuesSummaryLoading } from '@/components/site-health/issues-summary-loading';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
+import { ChevronRight } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { firstSentence, issueTitle, severityCount } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';

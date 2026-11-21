@@ -1,6 +1,5 @@
-import { ArrowUpRight } from 'lucide-react';
-
 import { LogoMark } from '@/components/ui/logo-mark';
+import { ArrowUpRight } from '@/lib/icons';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import {
   FOOTER_COLUMNS,

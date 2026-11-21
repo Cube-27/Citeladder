@@ -1,16 +1,14 @@
-import type { LucideIcon } from 'lucide-react';
-
-import { ICONS } from '@/lib/icons';
 import {
   DASHBOARD_SIDEBAR_GROUPS,
   isAgentPath,
   MODE_HOMES,
   navDestinations,
 } from '@/lib/navigation/app-routes';
+import { ICONS, type IconGlyph } from '@/lib/icons';
 import type { NavDestination } from '@/lib/navigation/route-types';
 
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
-export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
+export type NavItem = Omit<NavDestination, 'icon'> & { icon: IconGlyph };
 
 type DashboardGroup = (typeof DASHBOARD_SIDEBAR_GROUPS)[number];
 
@@ -18,7 +16,7 @@ type DashboardGroup = (typeof DASHBOARD_SIDEBAR_GROUPS)[number];
 export type NavGroup = Readonly<
   DashboardGroup & {
     /** The collapsed rail's one button for the group. */
-    icon: LucideIcon;
+    icon: IconGlyph;
     items: readonly NavItem[];
   }
 >;
@@ -34,7 +32,7 @@ const GROUP_ICONS = {
   website: ICONS.site,
   search: ICONS.searchIntelligence,
   commerce: ICONS.products,
-} satisfies Record<DashboardGroup['group'], LucideIcon>;
+} satisfies Record<DashboardGroup['group'], IconGlyph>;
 
 /** Dashboard mode: Home, Brand, Tracking, Website, Search and Commerce. */
 export const DASHBOARD_GROUPS: readonly NavGroup[] = DASHBOARD_SIDEBAR_GROUPS.map((entry) => ({
@@ -151,7 +149,7 @@ export function isNavItemActive(
 export function pageSection(
   pathname: string,
   searchParams: URLSearchParams,
-): Readonly<{ title: string; icon: LucideIcon }> {
+): Readonly<{ title: string; icon: IconGlyph }> {
   if (isAgentPath(pathname)) return { title: 'Agent', icon: ICONS.agent };
   const group = DASHBOARD_GROUPS.find(({ items }) =>
     items.some((item) => isNavItemActive(pathname, searchParams, item)),

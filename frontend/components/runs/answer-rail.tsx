@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Quote } from 'lucide-react';
 import { Absence } from '@/components/ui/absence';
 import {
   QueryItem,
@@ -19,6 +18,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import type { ExecutionEvidence, VisibilityExecutionEvidence } from '@citeladder/contracts';
+import { Quote } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
 import { pluralCount } from '@/lib/format';

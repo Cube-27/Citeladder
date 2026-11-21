@@ -1,5 +1,4 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { ShoppingBag } from 'lucide-react';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ import type {
   CommerceOverviewProduct,
   CommerceShoppingOverview,
 } from '@citeladder/contracts/commerce-suite';
+import { ShoppingBag } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { PRODUCT_WINDOW_DAYS, type ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';

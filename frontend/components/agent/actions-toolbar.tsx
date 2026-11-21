@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Check, ChevronDown, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { AnalyzePageDialog } from '@/components/agent/analyze-page-dialog';
@@ -25,6 +24,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
+import { Check, ChevronDown, Plus } from '@/lib/icons';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { actionsMutations } from '@/lib/api/actions';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';

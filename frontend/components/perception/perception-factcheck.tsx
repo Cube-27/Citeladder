@@ -1,5 +1,4 @@
 import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
-import { Download, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 import { ClaimsOverTime } from '@/components/perception/claims-over-time';
@@ -9,6 +8,7 @@ import { FactsTable } from '@/components/perception/facts-table';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
+import { Download, Upload } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
 import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';

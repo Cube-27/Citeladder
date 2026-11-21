@@ -1,6 +1,5 @@
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
-
 import { NavigationMenuLink as Link } from '@/components/ui/navigation-menu';
+import { ArrowRight, ArrowUpRight } from '@/lib/icons';
 import { PLATFORM_OVERVIEW, type NavDrop } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 

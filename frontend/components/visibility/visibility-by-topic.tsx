@@ -1,5 +1,4 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Tags } from 'lucide-react';
 
 import type { VisibilityTopics } from '@citeladder/contracts/visibility-topics';
 import { Absence } from '@/components/ui/absence';
@@ -9,6 +8,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
+import { Tags } from '@/lib/icons';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';

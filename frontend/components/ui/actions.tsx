@@ -1,6 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-import { CheckCircle2, Copy, Plug, Plus, Rocket, Sparkles } from 'lucide-react';
-
 import {
   Button,
   buttonClasses,
@@ -9,7 +6,16 @@ import {
 } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { ICONS } from '@/lib/icons';
+import {
+  CheckCircle2,
+  Copy,
+  ICONS,
+  Plug,
+  Plus,
+  Rocket,
+  Sparkles,
+  type IconGlyph,
+} from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,7 +26,7 @@ import { cn } from '@/lib/utils';
  * does or opens something is `secondary`, and anything that destroys is
  * `danger`.
  */
-type ActionPreset = Readonly<{ label: string; variant: ButtonVariant; icon?: LucideIcon }>;
+type ActionPreset = Readonly<{ label: string; variant: ButtonVariant; icon?: IconGlyph }>;
 
 export const ACTIONS = {
   launchRun: { label: 'Launch run', variant: 'primary', icon: Rocket },

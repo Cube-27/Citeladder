@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { ChevronLeft, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /** Which sides of a sideways-scrolling region hide more content. */

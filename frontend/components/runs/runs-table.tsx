@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Play } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -10,6 +9,7 @@ import { Inline } from '@/components/ui/layout';
 import { TitledSection } from '@/components/ui/section';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
+import { Play } from '@/lib/icons';
 import { formatCount, formatDisplayTime } from '@/lib/format';
 import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';

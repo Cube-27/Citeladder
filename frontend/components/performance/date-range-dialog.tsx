@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { X } from '@/lib/icons';
 import { formatWindowDate } from '@/lib/format';
 import { Dialog } from '@/components/ui/dialog';
 import { DateField } from '@/components/ui/date-field';

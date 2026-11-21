@@ -1,7 +1,6 @@
 import { useRef, useState, type MutableRefObject } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { History } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -11,6 +10,7 @@ import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
+import { History } from '@/lib/icons';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
 import { ApiError, isNotFound } from '@/lib/api/errors';

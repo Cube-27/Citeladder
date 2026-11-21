@@ -1,5 +1,4 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { MessageSquare, MessageSquareText } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
@@ -18,6 +17,7 @@ import type {
   VisibilityEvidenceResponse,
   VisibilityExecutionEvidence,
 } from '@citeladder/contracts';
+import { MessageSquare, MessageSquareText } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { SourceFilters } from '@/components/visibility/source-rows';

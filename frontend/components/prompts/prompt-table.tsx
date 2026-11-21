@@ -1,4 +1,3 @@
-import { Archive, Check, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
@@ -22,8 +21,8 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import type { NamedBrand, NetSentiment, Prompt, PromptStatus } from '@citeladder/contracts';
+import { Archive, Check, ICONS, MoreHorizontal, Pencil, Power, Trash2 } from '@/lib/icons';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
-import { ICONS } from '@/lib/icons';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';

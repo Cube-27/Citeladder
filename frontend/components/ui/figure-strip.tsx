@@ -5,7 +5,6 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
 import { Absence } from '@/components/ui/absence';
 import { Delta } from '@/components/ui/delta';
@@ -25,12 +24,13 @@ import {
   type Formatted,
   isAbsent,
 } from '@/lib/format';
+import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 type FigureValue = {
   value: ReactNode | Absent;
   /** A glyph before the label; give one to every figure of a strip or to none. */
-  icon?: LucideIcon;
+  icon?: IconGlyph;
 };
 
 type FigureAction =

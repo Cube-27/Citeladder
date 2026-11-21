@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { Download } from '@/lib/icons';
 import { downloadCsv } from '@/lib/csv/download';
 import {
   searchIntelligenceApi,

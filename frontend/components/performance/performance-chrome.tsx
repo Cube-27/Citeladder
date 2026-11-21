@@ -1,5 +1,3 @@
-import { ChevronDown, RefreshCw, RotateCcw } from 'lucide-react';
-
 import {
   INITIAL_GRANULARITY,
   INITIAL_SELECTION,
@@ -12,6 +10,7 @@ import { Notice } from '@/components/ui/notice';
 import type { useRangeProjection } from './use-range-projection';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
+import { ChevronDown, RefreshCw, RotateCcw } from '@/lib/icons';
 import type { PerformanceGranularity } from '@/lib/api/performance';
 import { formatWindowDate } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';

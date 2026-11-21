@@ -1,4 +1,3 @@
-import { Database } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
@@ -8,6 +7,7 @@ import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
+import { Database } from '@/lib/icons';
 import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
 import { SearchValue } from './search-intelligence-value';

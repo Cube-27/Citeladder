@@ -1,5 +1,3 @@
-import { SearchX, Trash2 } from 'lucide-react';
-
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { Button, IconButton } from '@/components/ui/button';
@@ -9,6 +7,7 @@ import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { SearchX, Trash2 } from '@/lib/icons';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, roleLabel } from './member-roles';

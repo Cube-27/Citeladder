@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -15,6 +14,7 @@ import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
+import { Download, FileText } from '@/lib/icons';
 import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl } from '@citeladder/contracts';

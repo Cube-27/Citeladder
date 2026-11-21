@@ -1,12 +1,12 @@
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
-import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
+import { X } from '@/lib/icons';
 import type { BillingCatalog } from '@/lib/api/billing';
 import { catalogPlanByKey, formatMoney } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';

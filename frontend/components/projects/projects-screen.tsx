@@ -1,4 +1,3 @@
-import { FolderOpen, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
@@ -8,6 +7,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { ReportPage } from '@/components/templates/report-page';
 import type { Project } from '@citeladder/contracts';
 import { useProjectCreation } from '@/components/layout/use-project-creation';
+import { FolderOpen, Plus } from '@/lib/icons';
 import { useProjectContext } from '@/lib/project/project-context';
 import { finishOnboardingNavigationHandoff } from '@/lib/onboarding/timing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';

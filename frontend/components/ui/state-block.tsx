@@ -1,5 +1,4 @@
 import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
-import { CircleDashed, Inbox, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
@@ -7,6 +6,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
+import { CircleDashed, Inbox, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const satisfies Record<HeadingLevel, string>;
@@ -17,7 +17,7 @@ type ActionNote = Readonly<{ id: string; text: string }>;
 type BlockEmpty = Readonly<{
   kind: 'empty';
   inline?: false;
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   heading: string;
   /** One sentence: what is missing and what to do about it (a closing sentence may hold a link). */
   description?: ReactNode;
@@ -36,7 +36,7 @@ type InlineEmpty = Readonly<{
   inline: true;
   /** One short sentence: what is absent. */
   message: ReactNode;
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   /** One control (a `TextLink` or a `Button`). */
   action?: ReactNode;
   /** One line with no well, for a small slip or a table row. */
@@ -316,7 +316,7 @@ function EmptyBody({
   actionNote,
   headingLevel,
 }: Readonly<{
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   heading: string;
   description?: ReactNode;
   action?: ReactNode;

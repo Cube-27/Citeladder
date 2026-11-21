@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Layers, Play, Receipt, RefreshCw, Settings2 } from 'lucide-react';
 
 import type { ReactNode } from 'react';
 
@@ -40,6 +39,7 @@ import {
   type SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 import type { SearchReviewAction } from '@citeladder/contracts/search-intelligence-requests';
+import { Layers, Play, Receipt, RefreshCw, Settings2 } from '@/lib/icons';
 import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { SEARCH_INTELLIGENCE_TABS } from '@/lib/search-intelligence/tabs';

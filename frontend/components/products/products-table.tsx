@@ -1,4 +1,3 @@
-import { PackageOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
@@ -30,6 +29,7 @@ import {
   type ProductFilters,
   type ProductScopeFilters,
 } from '@/lib/products/product-filters';
+import { PackageOpen } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { UseQueryResult } from '@tanstack/react-query';
 

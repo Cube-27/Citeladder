@@ -1,19 +1,19 @@
 import type { ReactNode } from 'react';
-import {
-  ChevronDown,
-  ChevronsUpDown,
-  CircleHelp,
-  Receipt,
-  RefreshCw,
-  Rocket,
-  Search,
-  type LucideIcon,
-} from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
 import { textRole } from '@/components/ui/typography';
-import { ICONS } from '@/lib/icons';
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  CircleHelp,
+  ICONS,
+  Receipt,
+  RefreshCw,
+  Rocket,
+  Search,
+  type IconGlyph,
+} from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import { ScreenButton, ScreenTabs } from './screen-parts';
@@ -115,14 +115,14 @@ const OPEN_COUNTS: Readonly<Partial<Record<string, number>>> = { Actions: 7 };
 
 type NavGroup = Readonly<{
   title: string | null;
-  items: readonly (readonly [string, LucideIcon | null])[];
+  items: readonly (readonly [string, IconGlyph | null])[];
 }>;
 
 function NavRow({
   label,
   icon: Icon,
   active,
-}: Readonly<{ label: string; icon: LucideIcon | null; active: boolean }>) {
+}: Readonly<{ label: string; icon: IconGlyph | null; active: boolean }>) {
   const count = OPEN_COUNTS[label];
   return (
     <span className={cn('type-control cl-app-nav-row', active && 'is-active')}>

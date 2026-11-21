@@ -1,5 +1,4 @@
-import { SearchX } from 'lucide-react';
-
+import { SearchX } from '@/lib/icons';
 import type { DataTableState } from '@/components/ui/data-table';
 import { textRole } from '@/components/ui/typography';
 

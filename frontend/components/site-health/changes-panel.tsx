@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { GitCompare } from 'lucide-react';
 
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { GitCompare } from '@/lib/icons';
 import { readableUrl, sharedOrigin } from '@/lib/format';
 import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';

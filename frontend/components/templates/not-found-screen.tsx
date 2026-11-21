@@ -1,7 +1,6 @@
-import { SearchX } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
+import { SearchX } from '@/lib/icons';
 import { HOME_PATH } from '@/lib/navigation/app-routes';
 
 import { NoticePage } from './notice-page';

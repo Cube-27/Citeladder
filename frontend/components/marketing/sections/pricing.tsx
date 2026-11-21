@@ -1,7 +1,7 @@
 import { Children, type ReactElement, type ReactNode } from 'react';
-import { Check, Minus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Check, Minus } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import { CheckList, columnsFor } from './site-parts';

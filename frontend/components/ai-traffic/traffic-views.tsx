@@ -15,7 +15,7 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { formatCount, formatMean, formatWindowDate, isOwnHost } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { CalendarX, SearchX } from 'lucide-react';
+import { CalendarX, SearchX } from '@/lib/icons';
 import { TabPanel } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
 import { Pressable } from '@/components/ui/pressable';

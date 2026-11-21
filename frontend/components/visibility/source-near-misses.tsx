@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link2Off } from 'lucide-react';
 import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -8,6 +7,7 @@ import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { NumericCell, SourceName } from '@/components/visibility/source-cells';
 import { OpenSource, type SourceFilters } from '@/components/visibility/source-rows';
+import { Link2Off } from '@/lib/icons';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useEngineCatalog } from '@/lib/providers/engines';

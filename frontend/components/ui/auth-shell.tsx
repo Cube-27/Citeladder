@@ -1,8 +1,8 @@
-import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { ChevronRight, type IconGlyph } from '@/lib/icons';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
@@ -154,7 +154,7 @@ export function AuthRow({
 }
 
 /** The create row's lead: the glyph in the lead's 20px box. */
-export function AuthRowTile({ icon }: Readonly<{ icon: LucideIcon }>) {
+export function AuthRowTile({ icon }: Readonly<{ icon: IconGlyph }>) {
   return (
     <span aria-hidden className="text-ink-2 grid size-5 shrink-0 place-items-center">
       <Icon icon={icon} />

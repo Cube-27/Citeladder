@@ -1,5 +1,3 @@
-import { Users } from 'lucide-react';
-
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
@@ -12,6 +10,7 @@ import type {
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
 import { searchDatasetKindsWith } from '@citeladder/contracts/search-intelligence';
+import { Users } from '@/lib/icons';
 import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 
 const COMPARISON_KINDS = searchDatasetKindsWith('comparison');

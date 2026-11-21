@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
-import { CircleStop, Download, RotateCcw } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { MeasurementContext } from '@/components/runs/measurement-context';
+import { CircleStop, Download, RotateCcw } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';

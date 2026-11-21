@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp } from 'lucide-react';
 import type { z } from 'zod';
 
 import { AppGrid } from '@/components/ui/app-grid';
@@ -12,6 +11,7 @@ import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { SourceFilters } from '@/components/visibility/source-rows';
+import { TrendingUp } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { pathOf, percent } from '@/lib/visibility/sources';
 import { topicSelectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';

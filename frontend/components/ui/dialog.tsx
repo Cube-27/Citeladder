@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { AlertTriangle, X } from 'lucide-react';
 import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
+import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { Button, IconButton } from './button';
 import { Icon } from './icon';

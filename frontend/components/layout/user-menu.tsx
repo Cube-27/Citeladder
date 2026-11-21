@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
@@ -15,6 +14,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
+import { LogOut } from '@/lib/icons';
 import { revokeSession } from '@/lib/auth/account-transition';
 import { useSession } from '@/lib/auth/session-guard';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';

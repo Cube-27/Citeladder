@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { SettingsPage } from '@/components/templates/settings-page';
+import { Trash2 } from '@/lib/icons';
 import { projectMutations } from '@/lib/api/projects';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useSessionUser } from '@/lib/auth/session-guard';

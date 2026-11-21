@@ -3,7 +3,6 @@ import type {
   PerceptionQuote,
   PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
-import { MessageSquareQuote } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -13,6 +12,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { MessageSquareQuote } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { coverageLine, stateCopy } from '@/lib/visibility/perception';
 import { SentimentValue } from '@/components/visibility/sentiment-value';

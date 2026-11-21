@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useState } from 'react';
 
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
@@ -9,6 +8,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { X } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';

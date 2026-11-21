@@ -6,7 +6,6 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
@@ -33,6 +32,7 @@ import {
   type DemandSnapshot,
 } from '@/lib/api/demand';
 import type { DemandRecomputeRequest } from '@citeladder/contracts/demand';
+import { Calendar, RefreshCw, Search, Sparkles } from '@/lib/icons';
 import { isTransientMutationError, mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   countByTab,

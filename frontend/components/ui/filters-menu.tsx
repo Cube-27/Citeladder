@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ListFilter } from 'lucide-react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { ControlCount } from '@/components/ui/tabs';
+import { ChevronLeft, ListFilter } from '@/lib/icons';
 import { useMediaQuery } from '@/lib/use-media-query';
 
 /** How many filters are off their default value. */

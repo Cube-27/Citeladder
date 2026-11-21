@@ -1,8 +1,8 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { ArrowRight, X } from 'lucide-react';
 
 import { UrlCutParts } from '@/components/ui/clamp-text';
 import { ProjectLink } from '@/components/ui/project-link';
+import { ArrowRight, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

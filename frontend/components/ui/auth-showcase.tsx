@@ -1,8 +1,8 @@
-import { Pause, Play } from 'lucide-react';
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { textRole } from '@/components/ui/typography';
+import { Pause, Play } from '@/lib/icons';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { cn } from '@/lib/utils';
 

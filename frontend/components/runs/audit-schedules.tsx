@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { CalendarPlus, Play } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -9,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { SettingRow } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { Absence } from '@/components/ui/absence';
+import { CalendarPlus, Play } from '@/lib/icons';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { mainPromptSet } from '@/lib/prompts/prompt-sets';
 import { toggleMarket } from '@/lib/runs/launch';

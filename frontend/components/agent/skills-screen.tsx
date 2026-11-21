@@ -1,20 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  BarChart3,
-  FileText,
-  Link2,
-  ListChecks,
-  ListTodo,
-  type LucideIcon,
-  Megaphone,
-  MessageSquareText,
-  PenLine,
-  Search,
-  Sparkles,
-  Stethoscope,
-  Wrench,
-} from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
@@ -24,6 +8,22 @@ import { Icon } from '@/components/ui/icon';
 import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  BarChart3,
+  ChevronRight,
+  FileText,
+  Link2,
+  ListChecks,
+  ListTodo,
+  Megaphone,
+  MessageSquareText,
+  PenLine,
+  Search,
+  Sparkles,
+  Stethoscope,
+  Wrench,
+  type IconGlyph,
+} from '@/lib/icons';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
@@ -57,7 +57,7 @@ export function SkillsScreen() {
 }
 
 /** A skill's icon, by the catalog's output kind (`config/agent-skills.ts`). */
-const OUTPUT_ICONS: Readonly<Record<string, LucideIcon>> = {
+const OUTPUT_ICONS: Readonly<Record<string, IconGlyph>> = {
   plan: ListTodo,
   measurement: BarChart3,
   research: Search,

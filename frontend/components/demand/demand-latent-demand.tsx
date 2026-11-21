@@ -1,9 +1,8 @@
-import { Zap } from 'lucide-react';
-
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { InlineFigure } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
+import { Zap } from '@/lib/icons';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { isActionableGap, numericMetric } from '@/lib/demand/signals';
 import { formatCount } from '@/lib/format';

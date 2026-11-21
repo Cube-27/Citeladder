@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { MessageSquare } from 'lucide-react';
 
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Textarea } from '@/components/ui/textarea';
 import { Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { MessageSquare } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';

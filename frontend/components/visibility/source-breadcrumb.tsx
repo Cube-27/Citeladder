@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 
+import { ChevronRight } from '@/lib/icons';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';

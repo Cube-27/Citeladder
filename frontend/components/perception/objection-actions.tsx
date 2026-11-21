@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { Ellipsis } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { Notice } from '@/components/ui/notice';
+import { Ellipsis } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeMutations } from '@/lib/api/probes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';

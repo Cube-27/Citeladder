@@ -1,5 +1,4 @@
 import { useIsMutating, useMutation, useQuery } from '@tanstack/react-query';
-import { Lock } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,6 +6,7 @@ import { PageFrame } from '@/components/templates/page-frame';
 import { StateBlock } from '@/components/ui/state-block';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import type { Topic } from '@citeladder/contracts';
+import { Lock } from '@/lib/icons';
 import { promptsMutations } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { topicsQueries } from '@/lib/api/topics';

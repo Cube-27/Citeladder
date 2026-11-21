@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { X } from 'lucide-react';
 
 import { GoalStrip } from '@/components/agent/actions-goal-strip';
 import { ActionsPageContext, useActionsPageContext } from '@/components/agent/actions-page-context';
@@ -19,6 +18,7 @@ import { Button, IconButton } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { SelectionDock } from '@/components/ui/selection-dock';
 import { textRole } from '@/components/ui/typography';
+import { X } from '@/lib/icons';
 import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
 import { formatCount } from '@/lib/format';

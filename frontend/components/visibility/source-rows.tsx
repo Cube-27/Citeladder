@@ -1,5 +1,4 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -34,6 +33,7 @@ import {
   sortProps,
 } from '@/components/visibility/source-cells';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
+import { ChevronRight } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { standingLabel } from '@/lib/visibility/source-pages';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';

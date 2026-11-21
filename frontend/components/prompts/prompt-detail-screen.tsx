@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArchiveRestore } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
@@ -12,6 +11,7 @@ import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
+import { ArchiveRestore } from '@/lib/icons';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';

@@ -1,6 +1,6 @@
-import { Eye, EyeOff } from 'lucide-react';
 import { type ComponentProps, useState } from 'react';
 
+import { Eye, EyeOff } from '@/lib/icons';
 import { Field, type ControlProps } from '@/components/ui/field';
 import { FieldEndButton, Input } from '@/components/ui/input';
 

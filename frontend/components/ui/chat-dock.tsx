@@ -1,4 +1,3 @@
-import { ArrowDown, FileText } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
 import { IconButton } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { wellClasses } from '@/components/ui/slip';
+import { ArrowDown, FileText } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

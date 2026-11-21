@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Columns3, Download, PackageOpen } from 'lucide-react';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure } from '@/components/ui/typography';
 import type { CommerceProductSource, CommerceTarget } from '@citeladder/contracts/commerce-suite';
+import { Columns3, Download, PackageOpen } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';

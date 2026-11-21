@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, EyeOff, GitCompare } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Eye, EyeOff, GitCompare } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, agentQueries, type AgentRevision } from '@/lib/api/agent';

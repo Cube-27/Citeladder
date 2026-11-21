@@ -2,10 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
-import { X } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { X } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';

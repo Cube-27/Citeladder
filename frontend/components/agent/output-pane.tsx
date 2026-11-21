@@ -1,4 +1,3 @@
-import { Download, Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { OutputDeclaration } from '@/components/agent/action-declaration';
@@ -20,6 +19,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
+import { Download, Pencil } from '@/lib/icons';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
 import { type AgentOutput, type AgentRevision } from '@/lib/api/agent';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';

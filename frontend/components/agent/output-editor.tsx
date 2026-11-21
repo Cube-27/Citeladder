@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import type { FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
+import { X } from '@/lib/icons';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
 import { Notice } from '@/components/ui/notice';

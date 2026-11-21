@@ -1,4 +1,3 @@
-import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
@@ -11,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 import { Textarea } from '@/components/ui/textarea';
+import { Pencil } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { Project } from '@citeladder/contracts';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';

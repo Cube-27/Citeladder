@@ -1,5 +1,3 @@
-import { CircleHelp } from 'lucide-react';
-
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { IconButton } from '@/components/ui/button';
@@ -8,6 +6,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
+import { CircleHelp } from '@/lib/icons';
 import { docsHref } from '@/lib/config/docs';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import {

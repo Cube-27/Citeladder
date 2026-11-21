@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { Inbox } from 'lucide-react';
+import { Inbox } from '@/lib/icons';
 import { useState, type ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 

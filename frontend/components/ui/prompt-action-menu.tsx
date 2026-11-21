@@ -1,6 +1,6 @@
-import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { Plus } from '@/lib/icons';
 import { IconButton } from '@/components/ui/button';
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { ProjectLink } from '@/components/ui/project-link';

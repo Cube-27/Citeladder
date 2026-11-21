@@ -4,7 +4,6 @@ import {
   type AccuracyCoverage,
   type AccuracyResponse,
 } from '@citeladder/contracts/fact-checking';
-import { ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Delta } from '@/components/ui/delta';
@@ -17,6 +16,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { ShieldCheck } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   accuracyCoverageExtras,

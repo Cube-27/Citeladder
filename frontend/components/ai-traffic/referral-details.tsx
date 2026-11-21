@@ -1,5 +1,4 @@
-import { SearchX } from 'lucide-react';
-
+import { SearchX } from '@/lib/icons';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';

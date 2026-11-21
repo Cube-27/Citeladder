@@ -1,9 +1,9 @@
-import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
 import { PROMPTS_HREF } from '@/lib/prompts/routes';
 

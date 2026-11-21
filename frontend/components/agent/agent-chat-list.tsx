@@ -1,7 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, MessagesSquare, RefreshCw } from 'lucide-react';
 
 import { RailFlyout } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ import { SearchField } from '@/components/ui/search-field';
 import { RailFlyoutSlot } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { InlineFigure } from '@/components/ui/typography';
+import { ChevronDown, MessagesSquare, RefreshCw } from '@/lib/icons';
 import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
 import { isChatLiveTurnConnected, onLiveTurnClosed } from '@/lib/agent/live-turns';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';

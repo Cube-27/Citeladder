@@ -1,5 +1,4 @@
-import { BarChart3 } from 'lucide-react';
-
+import { BarChart3 } from '@/lib/icons';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { StateBlock } from '@/components/ui/state-block';
 

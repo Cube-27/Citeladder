@@ -1,4 +1,3 @@
-import { Pencil, RotateCcw } from 'lucide-react';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import { ActionChip } from '@/components/agent/action-chip';
@@ -24,6 +23,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
+import { Pencil, RotateCcw } from '@/lib/icons';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { citedActions } from '@/lib/agent/evidence';
 import { agentHandoffHref } from '@/lib/agent/handoff';

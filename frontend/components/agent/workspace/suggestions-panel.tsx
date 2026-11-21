@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { JUMP_LINK } from '@/components/agent/jump-link';
 
@@ -13,6 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { X } from '@/lib/icons';
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
 import { groupByPassage } from '@/lib/agent/page-workspace';
 import {

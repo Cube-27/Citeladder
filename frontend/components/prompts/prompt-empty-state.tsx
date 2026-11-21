@@ -1,5 +1,4 @@
-import { MessageSquarePlus } from 'lucide-react';
-
+import { MessageSquarePlus } from '@/lib/icons';
 import { StateBlock } from '@/components/ui/state-block';
 
 import { AddPromptsMenu, type AddPromptsHandlers } from './prompt-toolbar';

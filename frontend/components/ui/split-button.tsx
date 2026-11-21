@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
 
+import { ChevronDown } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';

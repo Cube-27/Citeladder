@@ -4,13 +4,13 @@ import { useSearchParams } from 'react-router-dom';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
+import { Download } from '@/lib/icons';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { internalLinksMutations, internalLinksQueries } from '@/lib/api/site-health-internal-links';

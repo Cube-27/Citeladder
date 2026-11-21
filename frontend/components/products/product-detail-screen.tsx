@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
@@ -13,6 +12,7 @@ import { ProductImage } from '@/components/ui/product-image';
 import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
+import { MessageSquareOff } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { isNotFound } from '@/lib/api/errors';
 import { promptsQueries } from '@/lib/api/prompts';

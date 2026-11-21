@@ -1,4 +1,3 @@
-import { ChevronDown } from 'lucide-react';
 import { useRef, useState, type FocusEvent, type MouseEvent, type PointerEvent } from 'react';
 
 import {
@@ -10,6 +9,7 @@ import {
   NavigationMenuTrigger as Trigger,
   NavigationMenuViewport as Viewport,
 } from '@/components/ui/navigation-menu';
+import { ChevronDown } from '@/lib/icons';
 import { NAV_DROPS, NAV_LINKS, type NavDrop } from '@/lib/marketing-content/nav';
 
 import { MegaMenu } from './mega-menu';

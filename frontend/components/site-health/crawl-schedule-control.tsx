@@ -1,4 +1,3 @@
-import { ChevronDown } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { CrawlRobotsChoice, CrawlSchedule, CrawlScheduleCadence } from '@citeladder/contracts';
 
@@ -15,6 +14,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { robotsChoiceNote } from '@/components/site-health/robots-choice';
+import { ChevronDown } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';

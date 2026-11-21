@@ -1,5 +1,4 @@
-import { ChevronRight } from 'lucide-react';
-
+import { ChevronRight } from '@/lib/icons';
 import './breadcrumbs.css';
 
 export type Crumb = Readonly<{ label: string; href?: string }>;

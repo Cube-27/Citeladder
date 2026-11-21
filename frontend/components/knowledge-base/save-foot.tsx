@@ -1,6 +1,6 @@
-import { Save } from 'lucide-react';
 import { useId } from 'react';
 
+import { Save } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';

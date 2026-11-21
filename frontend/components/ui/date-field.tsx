@@ -1,10 +1,10 @@
 import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
-import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 
 import { Calendar } from '@/components/ui/calendar';
 import { FIELD_BOX } from '@/components/ui/input';
 import { MENU_PANEL } from '@/components/ui/menu';
+import { CalendarDays } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
@@ -12,6 +11,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { Building2, Plus } from '@/lib/icons';
 import { projectQueries } from '@/lib/api/projects';
 import {
   newProjectDestination,

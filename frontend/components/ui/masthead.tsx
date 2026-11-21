@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { ChevronRight, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /** A masthead control that keeps its text label wherever it is drawn (search, "Ask agent"). */
@@ -38,7 +38,7 @@ export function Masthead({
 }: Readonly<{
   title: string;
   /** The nav group the page sits in, drawn before the title from `rail`. */
-  section?: Readonly<{ title: string; icon: LucideIcon }> | null;
+  section?: Readonly<{ title: string; icon: IconGlyph }> | null;
   /** Before the title: the menu button. */
   lead?: ReactNode;
   /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */

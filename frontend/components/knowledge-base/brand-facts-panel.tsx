@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { Archive, Check, Pencil, Plus, Save, X } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -19,6 +18,7 @@ import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-r
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
+import { Archive, Check, Pencil, Plus, Save, X } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatCount } from '@/lib/format';
 import { projectMutations } from '@/lib/api/projects';

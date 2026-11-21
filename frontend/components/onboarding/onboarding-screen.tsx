@@ -1,4 +1,3 @@
-import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -7,6 +6,7 @@ import { SetupPage, StepBack } from '@/components/templates/setup-page';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
+import { X } from '@/lib/icons';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 

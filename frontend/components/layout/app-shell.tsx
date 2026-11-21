@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings } from 'lucide-react';
 
 import { AgentNav, AgentRail } from '@/components/agent/agent-nav';
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
@@ -13,6 +12,7 @@ import { SidebarFrame, SidebarRailList } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
+import { Settings } from '@/lib/icons';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
 import { navigationMode, resolveTitle } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';

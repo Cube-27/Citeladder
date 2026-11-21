@@ -1,11 +1,10 @@
-import { Bot } from 'lucide-react';
-
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import type { Visibility } from '@citeladder/contracts';
+import { Bot } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatCount } from '@/lib/format';
 import { formatRate, visibleEngines, type VisibilityFilters } from '@/lib/visibility/dashboard';
