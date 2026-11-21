@@ -49,7 +49,7 @@ how to add or change an entry.
 - **Three design checks, no more.** No literal colours in app code, WCAG AA
   contrast of token pairs, and no Radix import outside `components/ui`; every
   other visual choice is the owner's, held by review. Owner, 2026-11-20
-  ([app redesign](plans/app-redesign.md) AR-6).
+  ([AR-6](#app-design-ar-owner-2026-11-20-unless-dated)).
 
 ## Accounts, access and sign-in
 
@@ -70,7 +70,7 @@ how to add or change an entry.
   by the API and failing closed outside development. Owner, 2026-11-02. Sign-in
   is challenged after 5 failures for the address or network, and abuse budgets
   key on the IPv6 /64 (/56 for registration): owner AR-3, 2026-11-12
-  ([audit remediation](plans/audit-remediation.md#owner-decisions-2026-11-12)).
+  ([audit remediation](#audit-remediation-owner-2026-11-12)).
 - **Auth screens keep their look.** Email field `autocomplete="username"`; no
   show-password toggle, no `enterkeyhint`, button label and Confirm password
   unchanged; form errors stay per-field `role="alert"` with no summary. Owner,
@@ -254,3 +254,149 @@ how to add or change an entry.
   Platform. Owner, 2026-11-04 and 2026-11-10.
 - **The desktop navbar island hydrates only from 1280px** (`client:media`); no
   popover rebuild. Owner, 2026-11-13.
+
+## App design (AR, owner 2026-11-20 unless dated)
+
+[Design](design.md) holds the values; these are the rules behind them.
+
+- **AR-1 Look:** quiet greys, hairline borders, an inset content panel, compact
+  controls. **AR-2 Text:** body and labels 14px, captions 12px, controls 28px.
+- **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
+  meters, rings or bars in a cell. **AR-4 Tables:** the first column takes the
+  spare width and the others hug their content.
+- **AR-5** The line language (solid observed, dashed draft, `—` absent, printed
+  `0`) and the accent meaning "you, here" stay; the accent also marks focus.
+- **AR-6** Only the three design checks under Platform remain. **AR-7** The
+  website and docs keep their look; the app's tokens are its own.
+- **AR-8 Sidebar collapse:** the toggle sits at the end of the Integrations row
+  when expanded and on its own row in the icon rail (2026-11-21).
+- **AR-9 Widths:** 1040 column for Overview, Projects, Issues, Actions, page
+  detail, Agent, Settings and Agent context; 720 for Billing and Runs. Settings
+  and Agent context list their sections in a sticky left rail, never a tab row,
+  so their header and rail never move; only Business map's content is wider.
+  Side space beats space in the middle (2026-11-20 and 2026-11-21).
+- **AR-10** Pages are placed in standard layouts, never arranged by hand.
+  **AR-11** A PR that grows the line count needs a reason.
+- **AR-12** Sign-in and account pages keep the split screen with the showcase
+  and an unboxed form; setup keeps its own layout. **AR-13** Focus is a subtle
+  accent edge and glow.
+- **AR-14 No helper text** under a heading or field unless it carries what the
+  label cannot (a limit, a count, an error).
+- **AR-15 Business facts** are edited in the Prompt builder and Agent context's
+  Business map only, sharing one offerings grid; Context's Company tab holds the
+  target audience. The Prompt builder has its own Tracking row and keeps its
+  steps in a left rail.
+- **AR-16** Distribution shares and the intent mix are split bars in 5% steps
+  totalling 100. **AR-17** A page whose content fits shows no scrollbar
+  (2026-11-21).
+
+## Audit remediation (owner 2026-11-12)
+
+IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
+
+- **AR-1** An unset or unknown `APP_ENV` refuses startup. **AR-2** Dev-only seed
+  and reset tooling lives outside the tracked repository.
+- **AR-3** Abuse budgets key on the IPv6 /64 (/56 for registration) with a
+  global login-failure ceiling; Turnstile on login after 5 failures; a separate
+  anonymous MCP registration pool.
+- **AR-4** Agent reply links to unknown hosts confirm with the full URL first.
+- **AR-5** Owned and competitor domains are platform-aware: shared-platform
+  hosts are kept whole. **AR-6** Brand matching joins words only through
+  configured aliases; names under 3 characters are not assessable on cited
+  pages.
+- **AR-7** Controls a role lacks are hidden, not disabled. **AR-8** Browser
+  floor: Chrome/Edge 120, Safari/iOS 17.4, Samsung 25, with an update notice.
+- **AR-9** Non-UTF-8 imports are refused with guidance; every import offers a
+  sample CSV. **AR-10** `GET /health` answers a constant body without the
+  origin token; every other path, `/ready` included, requires it.
+- **AR-11** The API complexity and duplication ratchets skip only
+  `services/api/src/generated/` (2026-11-13).
+
+## Site Health crawling (SH-B owner 2026-11-12, CO owner 2026-11-17)
+
+[Site Health](site-health.md) owns the contracts.
+
+- **SH-B1** Every surface reads one current crawl: the newest usable crawl that
+  is not a one-page rerun; a rerun updates only its page. **SH-B9** Screens read
+  each tracked page's latest audit; re-audits update the totals; the only change
+  graph is open issues over time.
+- **SH-B2** Issues are tracked per page: an issue stays open until it is
+  resolved on all its tracked pages, and a fix verifies only when every rule
+  its finding folds together passes.
+- **SH-B4** Nothing that changes analyzed pages or re-audits runs inside a
+  running crawl; it is refused until the crawl ends.
+- **SH-B5 Discovery:** the sitemap, deduplicated and free, with no product
+  limit; every discovered URL is saved; index entries are followed on the
+  site's own domain to a safety ceiling (about 1,000 files or 500,000 URLs); a
+  file over 50 MB stays unread. Every full crawl re-reads it. The HTML walk runs
+  only when there is no sitemap (with a "No sitemap" issue); an unreadable
+  sitemap is retried, then the crawl analyzes what it knows as partial
+  (2026-11-14 and 2026-11-17).
+- **SH-B6 Tracked pages** are picked by value tier in a stable order, never by
+  the person and never re-picked; full crawls fill the set up to the plan
+  limit; an upgrade extends it, a downgrade keeps the first N.
+- **SH-B7** One crawl action audits the same pages each time. **SH-B8** A
+  tracked page answering 404 or a redirect stays tracked, reads "page
+  unavailable" and opens that issue. **SH-B10** No crawl cooldown.
+- **SH-B12** Mark fixed ("N of M pages fixed") and Re-run all exist; no "new
+  since baseline" deltas and no per-issue score gain. **SH-B13** The tracked set
+  has no editing API and the crawl request no advanced scope options.
+- **Stall and live score** (2026-11-17): a crawl fails as overdue only after 30
+  minutes with no task settled, capped at 12 hours; while it runs the score card
+  is the average of stored page scores.
+- **CO-1** Only the runner's Site Health transactions turn
+  `synchronous_commit` off (`SET LOCAL`); billing, ledger, webhook and paid
+  provider commits stay durable. **CO-2** Terminalization is batched and leased;
+  3 failed attempts end the crawl `failed` with a reason; a cancelled crawl
+  stays `cancelled`.
+- **CO-3** Live counters come from the crawl row, up to about 30 s old.
+  **CO-5** A workspace-only index is dropped only if another index leads with
+  `workspace_id`, else replaced by a composite that does.
+- **CO-6** Evaluations carry their `analysis_id`; snapshots store no evaluation
+  id list; evidence tables are partitioned by crawl month.
+- **CO-7** Crawls of tens of thousands of pages complete on today's
+  infrastructure: analysis, the score and Issues publish in batches while the
+  crawl runs, a cancel keeps what was published, and every crawl-wide step
+  works in bounded batches (2026-11-20).
+
+## AI visibility (AV, owner 2026-11-17 to 2026-11-20)
+
+- **AV-3** Only views of persisted fact-check data return. **AV-4** No strongest
+  or weakest engine. **AV-5** Answers group by the topic frozen at the run;
+  topic renames show.
+- **AV-6** Competitors get theme counts; quotes stay brand-only. **AV-7**
+  Position and win rate count only the tracked roster.
+- **AV-8** Query fanouts count queries exactly as engines returned them, with
+  Share, Change against the previous comparable run and Brands matched.
+- **AV-11** Competitor discovery extends the perception template, adding no
+  call. **AV-12** Verdict overrides count in accuracy with an "N edited" note;
+  brand facts are typed by people, never drafted by models.
+- **AV-13** Cross-run answers are a section on the prompt page. **AV-14** Brand
+  has Insights and Perception; Perception has Brand, Market, Objections and
+  Fact-checking tabs. **AV-15** A screen shows only data CiteLadder stores.
+- **AV-16 Navigation:** Home (Overview, Actions), Brand (Insights, Perception,
+  Competitors), Tracking (Prompts, Prompt builder, Sources, Runs), Website
+  (Site health, Issues, AI traffic), Search (Performance, Keyword research),
+  Commerce (Shopping, Products), Integrations in the foot. **AV-22** The search
+  page is named Keyword research. **AV-23** The palette lists Fact-checking,
+  Query fanouts and Prompt builder.
+- **AV-24** Brand detection is fixed before any probe, and branded answers show
+  on Perception. **AV-25** Brand facts has editable Aliases; matching
+  normalises case, "&"/"and", spaces and punctuation on whole words.
+  **AV-26** For prompts naming the brand, it counts as mentioned and perception
+  reads the whole answer.
+- **AV-27** Onboarding saves 5 to 8 buyer-facing themes (never company facts),
+  hidden during onboarding; users edit them freely; probe answers map onto
+  them. **AV-39** Perception › Brand classifies against these themes plus
+  `Other`, from the next audit, with no backfill.
+- **AV-28** The first probe groups objections by meaning; later probes map onto
+  them and add only genuinely new groups; users rename, merge or delete.
+- **AV-29 to AV-35 Probes:** one run asks market and objection questions, three
+  times per search-capable engine with a saved key (managed mode uses
+  CiteLadder's); direct questions ask about the project's brand only, theme
+  questions cover competitors; on demand with an optional schedule; charged in
+  AI credits shown first; tables lead with the position score (100 when named
+  first, minus 10 per later place, 0 when not raised).
+- **AV-36** No objection detail page and no "Draft rebuttal". **AV-37** An
+  objection's Ask agent opens Agent chat, which lists its sources and suggests
+  edits, outreach or advice, never acting on its own.

@@ -87,9 +87,7 @@ Docs Worker (static, no origin)                            │ starts runner aft
   the container: about a minute of downtime, so deploy it with no crawl running.
   Owner trials, not shipped: `wal_compression=lz4`, `checkpoint_timeout=15min`
   and `max_wal_size=2GB`. Add one at a time and keep it only if WAL bytes per
-  page (K2 in the
-  [optimization plan](../plans/site-health-crawl-optimization.md#measurement-kit))
-  fall without the VM's CPU (K5) rising; otherwise remove it.
+  analyzed page fall without the VM's CPU rising; otherwise remove it.
 - **Identities.** The deployer authenticates through Workload Identity
   Federation pinned to the `Cube-27/Citeladder` repository (name and immutable
   ID), the `gcp-deploy.yml` workflow, `refs/heads/main` and the `gcp-demo`

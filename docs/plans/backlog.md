@@ -77,9 +77,16 @@ The cloud cleanup shipped with tier 1. The rest waits for launch:
 - Measured workspace-wide Demand refresh rate and aggregate limits;
   one-refresh-per-project only partly addresses that risk.
 - Recovery objectives, backup and deletion protections, and a verified isolated
-  restore. The audit's open owner decisions O-1 (database VM protection) and O-2
-  (backups) in the [audit remediation plan](audit-remediation.md#open-owner-decisions)
-  feed this.
+  restore. Two owner decisions from the 2026-11-12 audit are open here. O-1:
+  a routine Terraform change replaces the PostgreSQL VM and its auto-delete
+  boot disk; protect it with a separate `auto_delete = false` data disk plus
+  `prevent_destroy` and a replacement plan gate, the locks and gate only, or no
+  change. O-2: there are no backups; a daily disk snapshot kept 7 days, a
+  nightly `pg_dump` to GCS kept 14 days, or the accepted risk until customers.
+- How local tooling knows a database is local (audit O-3, open): it accepts
+  "loopback plus development `APP_ENV`", which the production IAP tunnel also
+  satisfies; a local marker row with per-run seed passwords, a `--local` flag
+  plus typing the database name, or no change.
 - A data-preserving release and schema-evolution policy before customer data,
   with protection against accidental reset or destruction.
 - Approved production access, recovery access, key lifecycle and
@@ -89,8 +96,7 @@ The cloud cleanup shipped with tier 1. The rest waits for launch:
   row. Add a partial claim index or a per-workspace lateral top-N once queued
   tasks approach tens of thousands. Acceptance is an index-bounded claim plan
   with 50k queued tasks.
-- Alerts on failed job executions and errors: moved to the
-  [audit remediation plan](audit-remediation.md), Spec 3 PR 9.
+- Alerts on failed job executions and errors.
 - Security alerts, explicitly deferred until now.
 
 Infrastructure redesigns and paid security tiers require demonstrated need.
@@ -215,12 +221,23 @@ published legal pages true, live in
 
 ### Site Health crawl scaling (needs spend)
 
-The no-cost work is the
-[crawl optimization plan](site-health-crawl-optimization.md); its measurement
-kit (K1–K9) supplies every trigger below. Nothing here starts until its trigger
-is measured after that plan ships and the owner approves the spend (owner,
-2026-11-17: "i dont want any extra cost"). Prices are rough list prices; confirm
-them before deciding.
+The measurement kit below supplies every trigger. Nothing here starts until its
+trigger is measured and the owner approves the spend (owner, 2026-11-17: "i
+dont want any extra cost"). Prices are rough list prices; confirm them before
+deciding.
+
+Run the kit read-only, with one crawl as the only load, through the database
+SSH tunnel ([daily operation](../operations/GCP_RUNBOOK.md#3-daily-operation)):
+
+- **K1, throughput.** Tasks settled per minute, by kind, for one crawl (`site_crawl_tasks.completed_at`).
+- **K2, commits and WAL per page.** Deltas of `pg_stat_database.xact_commit` and `pg_stat_wal` (`wal_bytes`, `wal_fpi`, `wal_records`), divided by K1's pages.
+- **K3, statements per page.** Deltas of `pg_stat_statements`: calls, `total_exec_time + total_plan_time`, `shared_blks_read`, `wal_bytes`, and the top 15 statements by time.
+- **K4, tables and indexes.** `pg_stat_user_tables` (`n_tup_upd`, `n_tup_hot_upd`), `pg_stat_user_indexes` (`idx_scan`), and index sizes.
+- **K5, database VM.** CPU, disk write ops and throttled operations (Cloud Monitoring).
+- **K6, runner gaps.** `runner_completed` log lines, and the gaps in K1 at execution boundaries.
+- **K7, contention.** `log_lock_waits` lines; tasks with `conflict_count > 0`.
+- **K8, fetch latency.** Percentiles of `site_fetch_attempts.latency_ms` and `site_fetch_artifacts.ttfb_ms`.
+- **K9, terminalization.** Time from the last task's `completed_at` to the crawl's `completed_at`, and the runner's memory use.
 
 | Item | Cost driver | Trigger |
 |---|---|---|
@@ -276,6 +293,7 @@ a fresh scope before work starts.
 | Prompt generation extras | Advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
 | Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
 | Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |
+| Ask agent in the drawer | Ask agent on Dashboard screens opens the Agent drawer with a fresh draft instead of the full-page handoff, closing any open overlay first; pending an owner decision since 2026-11-12. |
 | Engines multi-select | Pick several engines at once. Needs an engines list parameter on about 15 visibility and perception routes and a code-computed merge of per-engine aggregates: positions, sentiment and win rate are not count-additive. Owner undecided (2026-11-18). |
 
 ## Removed
@@ -293,7 +311,7 @@ older text:
 - Traffic impact.
 
 The fact-checking follow-ups and fanout grouping returned on 17 November 2026,
-scoped by the [AI visibility gaps plan](ai-visibility-gaps.md) (AV-3, AV-8).
+scoped by [AV-3 and AV-8](../decisions.md#ai-visibility-av-owner-2026-11-17-to-2026-11-20).
 - Agent journey coverage (eval and end-to-end journey), Agent partial-text
   resume and the expanded Agent evaluation corpus.
 - Already shipped: Site Health Recrawl, the app shell's first-wave bootstrap,

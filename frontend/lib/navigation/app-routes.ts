@@ -289,7 +289,7 @@ export const APP_ROUTES = [
     // The Details card: Page type, Last crawled, Open actions.
     loading: cards([facts(3)]),
   }),
-  // Brand: how AI sees the brand. Built next by docs/plans/ai-visibility-gaps.md.
+  // Brand: how AI sees the brand.
   page({
     path: '/insights',
     title: 'Insights',
