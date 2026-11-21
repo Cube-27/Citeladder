@@ -200,7 +200,12 @@ function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
       {hosts.slice(0, MAX_CHIPS).map((host) => (
         <Tooltip key={host} content={host}>
           <span className="inline-flex">
-            <BrandMark name={host} websiteUrl={`https://${host}`} placement="inline" />
+            <BrandMark
+              name={host}
+              websiteUrl={`https://${host}`}
+              placement="inline"
+              entity="site"
+            />
           </span>
         </Tooltip>
       ))}

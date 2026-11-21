@@ -81,6 +81,7 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
                   name={source.domain || source.url}
                   websiteUrl={source.href}
                   placement="inline"
+                  entity="site"
                 />
                 <span className={textRole('emphasis', 'min-w-0 truncate')}>
                   {source.domain || 'Unknown domain'}
@@ -137,7 +138,12 @@ export function LinksRail({
           {links.map((link) => (
             <RailItem key={link.href}>
               <RailLine>
-                <BrandMark name={link.domain} websiteUrl={link.href} placement="inline" />
+                <BrandMark
+                  name={link.domain}
+                  websiteUrl={link.href}
+                  placement="inline"
+                  entity="site"
+                />
                 <span className={textRole('emphasis', 'min-w-0 truncate')}>{link.domain}</span>
                 {link.you ? <YouMark /> : null}
                 <RailNote>

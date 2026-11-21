@@ -137,6 +137,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
           name={page.matched_competitor || page.domain}
           websiteUrl={page.domain}
           placement="inline"
+          entity="site"
         />
         <span className={textRole('caption')}>
           {site} · {pluralCount(page.citation_count, 'citation')}
