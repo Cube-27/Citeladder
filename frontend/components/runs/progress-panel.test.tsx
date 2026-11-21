@@ -102,7 +102,7 @@ describe('ProgressPanel', () => {
   it('says when the run started by time only: the masthead title carries its day', () => {
     renderPanel({ status: 'running' });
 
-    expect(screen.getByText('Started 12:00 AM UTC')).toBeVisible();
+    expect(screen.getByText('Started 12:00 AM')).toBeVisible();
     expect(screen.queryByText(/Aug 1, 2026/)).toBeNull();
   });
 

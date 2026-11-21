@@ -27,7 +27,7 @@ import remarkGfm from 'remark-gfm';
 
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
-import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { useScrollFrame } from '@/components/ui/scroll-edges';
 import { InlineFigure } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -131,20 +131,9 @@ const MARKDOWN_COMPONENTS: Components = {
   h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
   // Untrusted output: never render images (remote-fetch beacon risk).
   img: () => null,
-  // A wide table scrolls inside its frame, with the fade and stepper that say
+  // A wide table scrolls inside its frame by its scrollbar, the fade saying
   // so; the frame and the table are named by the table's column heads.
-  table: ({ node, ...props }) => {
-    const name = tableName(node);
-    return (
-      <ScrollFrame label={name} className="prose-table-frame">
-        {(ref, region) => (
-          <div ref={ref} {...region} className="overflow-x-auto">
-            <table {...props} aria-label={name} />
-          </div>
-        )}
-      </ScrollFrame>
-    );
-  },
+  table: ({ node, ...props }) => <MarkdownTable name={tableName(node)} {...props} />,
   // GFM makes a head cell only in the head row, so each one heads its column.
   th: ({ node: _node, ...props }) => <th {...props} scope="col" />,
   // Forward the remaining DOM props (id, aria-describedby,
@@ -154,6 +143,20 @@ const MARKDOWN_COMPONENTS: Components = {
   // Markdown never makes a span (raw HTML is escaped); only chip slots do.
   span: MarkdownSpan,
 };
+
+function MarkdownTable({
+  name,
+  ...props
+}: Readonly<{ name: string } & ComponentPropsWithoutRef<'table'>>) {
+  const { ref, region, frame } = useScrollFrame({ label: name });
+  return (
+    <div {...frame} className="prose-table-frame grid min-w-0">
+      <div ref={ref} {...region} className="overflow-x-auto">
+        <table {...props} aria-label={name} />
+      </div>
+    </div>
+  );
+}
 
 type MarkdownBodyProps = Readonly<{
   content: string;
