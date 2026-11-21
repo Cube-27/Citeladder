@@ -1,4 +1,4 @@
-import { lazy, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { lazy, useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { pageSection } from '@/components/layout/nav-items';
@@ -8,7 +8,11 @@ import { NavMenuButton } from '@/components/ui/app-shell';
 import type { Crumb } from '@/components/ui/breadcrumb';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { Masthead, usePublishedHeight } from '@/components/ui/masthead';
-import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
+import {
+  MastheadOverflow,
+  MastheadPrimarySlot,
+  PageEmptyOfferProvider,
+} from '@/components/ui/masthead-actions';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { routeTrail } from '@/lib/navigation/route-trail';
@@ -39,13 +43,16 @@ export function PageFrame({
   tabs,
   filters,
   fill,
+  head = 'page',
   children,
-}: PageFrameSlots & Readonly<{ fill?: true; children: ReactNode }>) {
+}: PageFrameSlots & Readonly<{ fill?: true; head?: 'page' | 'masthead'; children: ReactNode }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
   const hasTrail = parents.length > 0;
-  const width = fill ? 'full' : routeWidth(pathname);
+  const width = fill ? 'fill' : routeWidth(pathname);
+  // A thread keeps its name and actions in the masthead; every other page heads its own column.
+  const headed = head === 'page' || hasTrail;
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const searchParams = useSearchParams()[0];
@@ -53,7 +60,7 @@ export function PageFrame({
     <PageEmptyOfferProvider>
       <div
         data-page-width={width}
-        className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
+        className={cn('flex min-w-0 flex-1 flex-col', width !== 'fill' && CENTRED)}
       >
         <Masthead
           title={resolved}
@@ -72,12 +79,14 @@ export function PageFrame({
             navDrawer ? <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} /> : null
           }
           search={shell?.searchTrigger}
-          actions={actions}
+          heading={!headed}
+          actions={head === 'masthead' ? actions : undefined}
           end={shell?.agentTrigger}
         />
-        {hasTrail ? (
+        {headed ? (
           <PageHeading
             title={resolved}
+            actions={head === 'page' ? actions : undefined}
             strips={Boolean(tabs || filters)}
             className={PAGE_COLUMN[width]}
           />
@@ -100,18 +109,35 @@ export function PageFrame({
 
 function PageHeading({
   title,
+  actions,
   strips,
   className,
-}: Readonly<{ title: string; strips: boolean; className: string | false }>) {
+}: Readonly<{ title: string; actions?: ReactNode; strips: boolean; className: string | false }>) {
   const block = useRef<HTMLDivElement>(null);
   usePublishedHeight(block, '--page-heading-block-size');
+  const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
   return (
     <div
       ref={block}
       data-page-heading=""
-      className={cn('min-w-0 pt-[var(--page-pad-block)]', strips && 'pb-3', className)}
+      className={cn(
+        'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 pt-[var(--page-pad-block)]',
+        strips && 'pb-3',
+        className,
+      )}
     >
-      <h1 className={textRole('title', 'break-words')}>{title}</h1>
+      <h1 className={textRole('pageTitle', 'min-w-0 break-words')}>{title}</h1>
+      {actions === undefined ? null : (
+        <div
+          data-page-actions=""
+          className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2"
+        >
+          <MastheadPrimarySlot value={primarySlot}>
+            <MastheadOverflow>{actions}</MastheadOverflow>
+          </MastheadPrimarySlot>
+          <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
+        </div>
+      )}
     </div>
   );
 }
@@ -142,19 +168,18 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
   );
 }
 
-type PageWidth = ReturnType<typeof routeWidth>;
+type PageWidth = ReturnType<typeof routeWidth> | 'fill';
+
+// Every page starts on the same left edge: the app container centres once, and a
+// narrower page only shortens its measure from the right.
+const COLUMN_START = 'ms-[var(--page-start)] w-full';
+const CENTRED = '[--page-start:max(0px,calc((100cqw_-_var(--container-app))/2))]';
 
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
-  full: false,
-  narrow: 'max-w-thread mx-auto w-full',
-  // `max-w-prose` is Tailwind's 65ch, not the 720 `--container-prose`.
-  compact: 'mx-auto w-full max-w-[var(--container-prose)]',
-};
-
-const PAGE_START: Record<PageWidth, string | false> = {
-  full: false,
-  narrow: '[--page-start:max(0px,calc((100cqw_-_var(--container-thread))/2))]',
-  compact: '[--page-start:max(0px,calc((100cqw_-_var(--container-prose))/2))]',
+  fill: false,
+  full: cn(COLUMN_START, 'max-w-[var(--container-app)]'),
+  narrow: cn(COLUMN_START, 'max-w-[var(--container-page)]'),
+  compact: cn(COLUMN_START, 'max-w-[var(--container-measure)]'),
 };
 
 export function PageSections({

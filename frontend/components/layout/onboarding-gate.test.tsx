@@ -215,7 +215,9 @@ describe('OnboardingGate', () => {
     );
 
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByText('That project is unavailable')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'That project is unavailable' }),
+    ).toBeInTheDocument();
   });
 
   it('hands a project route its resolved project scope', () => {

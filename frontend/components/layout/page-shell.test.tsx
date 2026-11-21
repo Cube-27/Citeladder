@@ -201,7 +201,7 @@ describe('PageFrame', () => {
       widthAt('/site', report),
       widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),
       widthAt('/issues', <RouteLoadingScreen />),
-    ]).toEqual(['compact', 'narrow', 'full', 'full', 'narrow']);
+    ]).toEqual(['compact', 'narrow', 'full', 'fill', 'narrow']);
   });
 
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {

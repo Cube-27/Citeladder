@@ -56,7 +56,7 @@ export function ThreadPage({
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots}>
+    <PageFrame {...slots} head="masthead">
       <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
         <section
           ref={scrollRef}

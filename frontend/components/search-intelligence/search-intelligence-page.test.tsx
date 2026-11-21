@@ -211,19 +211,19 @@ it('offers citation matching only for the website whose list is on screen', asyn
   ).toBeInTheDocument();
 });
 
-it('moves between Demand and the research tabs on one tab row, keeping focus and the masthead', async () => {
+it('moves between Demand and the research tabs on one tab row, keeping focus and the page actions', async () => {
   window.history.replaceState(null, '', '/search-intelligence');
   renderPage({
     ...readiness,
     datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
   });
-  const masthead = () => document.querySelector('header[data-masthead]') as HTMLElement;
+  const pageActions = () => document.querySelector('[data-page-actions]') as HTMLElement;
   const actionNames = () =>
-    within(masthead())
+    within(pageActions())
       .getAllByRole('button')
       .map((button) => button.textContent);
   const demand = await screen.findByRole('tab', { name: 'Demand' });
-  await within(masthead()).findByRole('button', { name: 'New analysis' });
+  await within(pageActions()).findByRole('button', { name: 'New analysis' });
   const onDemand = actionNames();
   expect(onDemand).toEqual(expect.arrayContaining(['Cost details', 'Refresh', 'New analysis']));
   demand.focus();

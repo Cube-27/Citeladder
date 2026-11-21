@@ -300,7 +300,7 @@ const TITLE_SHARE = 0.4;
 
 function rowDeficit(header: HTMLElement): number {
   const title = header.querySelector<HTMLElement>('[data-masthead-title]');
-  const heading = title?.querySelector<HTMLElement>('h1');
+  const heading = title?.querySelector<HTMLElement>('[data-masthead-name]');
   const end = header.querySelector<HTMLElement>('[data-masthead-end]');
   const overflow = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
   const reserve = heading
