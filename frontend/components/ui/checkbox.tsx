@@ -37,7 +37,7 @@ const CHECK_BOX =
 /** Draws the check over 150ms, 15ms after the fill starts (HeroUI v3). */
 const CHECK_DRAW = 'stroke-dashoffset 150ms linear 15ms';
 
-/** Lucide's check on a unit path length, so its stroke draws on and off. */
+/** Tabler's check on a unit path length, so its stroke draws on and off. */
 function CheckMark({ on }: Readonly<{ on: boolean }>) {
   return (
     <svg
@@ -54,7 +54,7 @@ function CheckMark({ on }: Readonly<{ on: boolean }>) {
         pathLength={1}
         strokeDasharray={1}
         style={{ strokeDashoffset: on ? 0 : 1, transition: CHECK_DRAW }}
-        d="M20 6 9 17l-5-5"
+        d="M5 12l5 5l10 -10"
       />
     </svg>
   );

@@ -46,12 +46,12 @@ function codeLines(code: string): Child[] {
   });
 }
 
-// Lucide's copy and check glyphs, drawn at the system's 16px icon size.
+// Tabler's copy and check glyphs, drawn at the system's 16px icon size.
 const glyph = (name: 'copy' | 'check', children: Element[]) =>
   element(
     'svg',
     {
-      className: ['lucide', `cl-code-icon-${name}`],
+      className: ['tabler-icon', `cl-code-icon-${name}`],
       width: 16,
       height: 16,
       viewBox: '0 0 24 24',
@@ -76,10 +76,14 @@ function codeBlock(source: string, language: string | null): Element {
         { type: 'button', className: ['cl-code-copy', 'focus-ring-inset'], dataCodeCopy: '' },
         [
           glyph('copy', [
-            element('rect', { width: 14, height: 14, x: '8', y: '8', rx: '2', ry: '2' }),
-            element('path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }),
+            element('path', {
+              d: 'M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667l0 -8.666',
+            }),
+            element('path', {
+              d: 'M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1',
+            }),
           ]),
-          glyph('check', [element('path', { d: 'M20 6 9 17l-5-5' })]),
+          glyph('check', [element('path', { d: 'M5 12l5 5l10 -10' })]),
           text('Copy'),
         ],
       ),
